@@ -31,19 +31,13 @@ import {
 const SIZES = [100, 1_000, 5_000, 10_000] as const
 const COLORS: ColorToken[] = ['yellow', 'green', 'blue', 'red', 'violet', 'orange']
 /*
- * Written into the web app's public directory so the dev-only fixture loader
- * can simply fetch them. Generated output, gitignored — the generator is the
- * source of truth, not the files.
+ * Deliberately NOT in the web app's `public/` directory: everything there is
+ * copied into every production build, and 4.7MB of benchmark boards shipping to
+ * real users is exactly the kind of thing nobody notices until it is deployed.
+ * A Vite plugin serves this directory at /bench in dev, and copies it into the
+ * bundle only for an explicit benchmark build.
  */
-const OUT_DIR = join(
-  dirname(fileURLToPath(import.meta.url)),
-  '..',
-  '..',
-  'apps',
-  'web',
-  'public',
-  'bench',
-)
+const OUT_DIR = join(dirname(fileURLToPath(import.meta.url)), 'fixtures')
 
 /** Deterministic PRNG, so a fixture is byte-identical between runs. */
 function mulberry32(seed: number): () => number {

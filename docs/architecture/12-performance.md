@@ -121,6 +121,11 @@ verified by a bundle grep, not assumed.
 `pnpm test:bench` runs the same measurements headlessly and is the tool of record
 for anything that runs per frame.
 
+`pnpm build:bench` produces a **deployable** build with the panel and fixtures
+included, so the renderer question can be assessed on real hardware from a URL
+rather than only on a machine with the repo checked out. A normal `pnpm build`
+contains neither — verified by inspecting the output, not assumed.
+
 ---
 
 ## Known limits, and their triggers

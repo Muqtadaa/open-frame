@@ -5,4 +5,3 @@ pnpm-lock.yaml
 test-results/
 playwright-report/
 tools/bench/fixtures/
-apps/web/public/bench/

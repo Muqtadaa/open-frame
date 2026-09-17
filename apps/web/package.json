@@ -3,7 +3,7 @@
   "version": "0.0.0",
   "private": true,
   "type": "module",
-  "description": "OpenFrame web client \u2014 canvas renderer, interaction layer, UI shell and adapters.",
+  "description": "OpenFrame web client — canvas renderer, interaction layer, UI shell and adapters.",
   "scripts": {
     "dev": "vite",
     "typecheck": "tsc -p tsconfig.json --noEmit",
@@ -12,7 +12,8 @@
     "test:e2e": "playwright test --project=chromium",
     "build": "vite build",
     "preview": "vite preview",
-    "test:bench": "playwright test --project=bench"
+    "test:bench": "playwright test --project=bench",
+    "build:bench": "OPENFRAME_BENCH=1 vite build"
   },
   "dependencies": {
     "@openframe/core": "workspace:*",
@@ -22,6 +23,7 @@
   },
   "devDependencies": {
     "@playwright/test": "^1.63.0",
+    "@types/node": "^22.20.3",
     "@types/react": "^19.3.0",
     "@types/react-dom": "^19.3.0",
     "@vitejs/plugin-react": "^6.1.1",

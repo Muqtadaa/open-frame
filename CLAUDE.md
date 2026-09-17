@@ -15,6 +15,7 @@ pnpm test         # unit + integration (~1s)
 pnpm test:e2e     # Playwright; set OPENFRAME_CHROMIUM_PATH if the sandbox ships its own Chromium
 pnpm bench:fixtures   # generate 100/1k/5k/10k boards into apps/web/public/bench/
 pnpm test:bench       # renderer scaling probe (needs the fixtures above)
+pnpm build:bench      # deployable build WITH the bench panel and fixtures
 ```
 
 ## Layout
@@ -103,7 +104,15 @@ frame spikes. Use `groupByParent` when you need every container's children.
 
 Anything that runs per frame gets measured with `pnpm test:bench`, not assumed.
 
-### 11. Break a new architectural rule once, and watch it fail
+### 11. Nothing goes in `apps/web/public/`
+
+Vite copies that directory into every production build. Benchmark fixtures once
+lived there and would have shipped 4.7MB to users. Assets that belong in some
+builds but not others go through an explicit Vite plugin, and the guard that
+enables them must be a compile-time literal (`define`), not a runtime env
+lookup — otherwise the branch stays live and the code ships anyway.
+
+### 12. Break a new architectural rule once, and watch it fail
 
 A rule that passes vacuously is worse than no rule, because it is trusted. This
 practice has already caught a dependency-cruiser rule that never fired on the

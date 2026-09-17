@@ -9,7 +9,6 @@ playwright-report/
 blob-report/
 .playwright/
 tools/bench/fixtures/
-apps/web/public/bench/
 *.local
 .env
 .env.*

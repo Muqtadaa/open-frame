@@ -1,5 +1,6 @@
 import { useBoardDocument } from '../hooks/use-document-object.js'
 import { useInteractionStore } from '../interaction/interaction-store.js'
+import { BENCH_TOOLS_ENABLED } from '../app/bench-flag.js'
 import { DevPanel } from './DevPanel.js'
 
 /**
@@ -23,7 +24,7 @@ export function StatusBar() {
        * bundler drops both it and the DevPanel module. A runtime check would
        * ship the whole panel to production just to never render it.
        */}
-      {import.meta.env.DEV && <DevPanel />}
+      {BENCH_TOOLS_ENABLED && <DevPanel />}
     </div>
   )
 }

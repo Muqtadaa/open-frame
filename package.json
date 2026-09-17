@@ -21,7 +21,8 @@
     "dev": "pnpm --filter @openframe/web dev",
     "verify": "pnpm typecheck && pnpm lint && pnpm depcruise && pnpm test && pnpm build",
     "bench:fixtures": "tsx tools/bench/generate-board.ts",
-    "test:bench": "pnpm --filter @openframe/web test:bench"
+    "test:bench": "pnpm --filter @openframe/web test:bench",
+    "build:bench": "pnpm bench:fixtures && pnpm --filter @openframe/web build:bench"
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",

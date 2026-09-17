@@ -16,6 +16,7 @@ import {
 } from '@openframe/core'
 
 import { IndexedDbBoardRepository } from '../adapters/indexeddb/indexeddb-board-repository.js'
+import { BENCH_TOOLS_ENABLED } from './bench-flag.js'
 
 /**
  * THE composition root.
@@ -135,7 +136,7 @@ export async function createRuntime(options: CreateRuntimeOptions = {}): Promise
     dispose: unsubscribe,
   }
 
-  if (!import.meta.env.DEV) return runtime
+  if (!BENCH_TOOLS_ENABLED) return runtime
 
   return {
     ...runtime,
