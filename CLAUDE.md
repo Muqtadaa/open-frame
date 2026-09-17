@@ -13,7 +13,8 @@ pnpm dev          # http://localhost:5173
 pnpm verify       # typecheck + lint + depcruise + test + build  ← run before every commit
 pnpm test         # unit + integration (~1s)
 pnpm test:e2e     # Playwright; set OPENFRAME_CHROMIUM_PATH if the sandbox ships its own Chromium
-pnpm bench:fixtures
+pnpm bench:fixtures   # generate 100/1k/5k/10k boards into apps/web/public/bench/
+pnpm test:bench       # renderer scaling probe (needs the fixtures above)
 ```
 
 ## Layout
@@ -94,7 +95,15 @@ useInteractionStore((s) => s.drag.dx) // ✓
 A fresh object never compares equal under `Object.is`, so
 `useSyncExternalStore` re-renders forever. This crashed the app once.
 
-### 10. Break a new architectural rule once, and watch it fail
+### 10. Never call an O(n) document helper once per object
+
+`childrenOf` scans the whole document. Calling it per object makes a render pass
+O(n²) — on a flat 10,000-object board that was ~100 million iterations and 600ms
+frame spikes. Use `groupByParent` when you need every container's children.
+
+Anything that runs per frame gets measured with `pnpm test:bench`, not assumed.
+
+### 11. Break a new architectural rule once, and watch it fail
 
 A rule that passes vacuously is worse than no rule, because it is trusted. This
 practice has already caught a dependency-cruiser rule that never fired on the

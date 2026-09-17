@@ -11,6 +11,9 @@ const isCI = process.env['CI'] !== undefined
  */
 const chromiumPath = process.env['OPENFRAME_CHROMIUM_PATH']
 
+const launchOverrides =
+  chromiumPath === undefined ? {} : { launchOptions: { executablePath: chromiumPath } }
+
 export default defineConfig({
   testDir: './e2e',
   fullyParallel: true,
@@ -26,11 +29,21 @@ export default defineConfig({
   },
   projects: [
     {
+      // The functional suite. Fast, deterministic, runs in CI.
       name: 'chromium',
-      use: {
-        ...devices['Desktop Chrome'],
-        ...(chromiumPath === undefined ? {} : { launchOptions: { executablePath: chromiumPath } }),
-      },
+      testIgnore: '**/*.bench.spec.ts',
+      use: { ...devices['Desktop Chrome'], ...launchOverrides },
+    },
+    {
+      /*
+       * Benchmark probes. Separated because they need generated fixtures
+       * (`pnpm bench:fixtures`) and report measurements rather than asserting
+       * thresholds — headless numbers are a smoke signal, not a substitute for
+       * using the canvas on real hardware.
+       */
+      name: 'bench',
+      testMatch: '**/*.bench.spec.ts',
+      use: { ...devices['Desktop Chrome'], ...launchOverrides },
     },
   ],
   webServer: {

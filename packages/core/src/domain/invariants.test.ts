@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 
-import { createEmptyDocument, type BoardDocument } from './document.js'
+import { createEmptyDocument, objectsInPaintOrder, type BoardDocument } from './document.js'
 import { asBoardId, asObjectId, asOrderKey, type ObjectId } from './ids.js'
 import { findParentCycle, repairDocument, wouldCreateCycle } from './invariants.js'
 import type { AnyOpenFrameObject } from './object.js'
@@ -92,5 +92,50 @@ describe('document repair', () => {
     const { document, repairs } = repairDocument(docWith(broken))
     expect(repairs[0]?.kind).toBe('non-finite-frame')
     expect(document.objects.get(asObjectId('a'))?.frame.x).toBe(0)
+  })
+})
+
+describe('paint order', () => {
+  it('returns parents before children, siblings in order', () => {
+    const doc = docWith(
+      { ...obj('b', null), order: asOrderKey('a1') },
+      { ...obj('a', null), order: asOrderKey('a0') },
+      { ...obj('a-child', 'a'), order: asOrderKey('a0') },
+    )
+    expect(objectsInPaintOrder(doc).map((o) => o.id)).toEqual([
+      asObjectId('a'),
+      asObjectId('a-child'),
+      asObjectId('b'),
+    ])
+  })
+
+  it('includes every object exactly once', () => {
+    const doc = docWith(obj('a', null), obj('b', 'a'), obj('c', 'b'), obj('d', null))
+    expect(objectsInPaintOrder(doc)).toHaveLength(4)
+  })
+
+  /**
+   * The renderer must not be the thing that discovers a cycle. Load-time repair
+   * removes them, but a document can acquire one at runtime — and hanging the
+   * canvas is a far worse failure than drawing a slightly wrong hierarchy.
+   */
+  it('terminates on a cyclic document instead of recursing forever', () => {
+    const doc = docWith(obj('a', 'b'), obj('b', 'a'), obj('root', null))
+    const painted = objectsInPaintOrder(doc)
+    expect(painted.map((o) => o.id)).toEqual([asObjectId('root')])
+  })
+
+  /** Guards the O(n²) regression this replaced: a flat board must stay linear. */
+  it('handles a large flat board quickly', () => {
+    const many = Array.from({ length: 5_000 }, (_, i) => ({
+      ...obj(`o${String(i)}`, null),
+      order: asOrderKey(`a${String(i).padStart(5, '0')}`),
+    }))
+    const doc = docWith(...many)
+    const started = performance.now()
+    const painted = objectsInPaintOrder(doc)
+    const elapsed = performance.now() - started
+    expect(painted).toHaveLength(5_000)
+    expect(elapsed).toBeLessThan(250)
   })
 })

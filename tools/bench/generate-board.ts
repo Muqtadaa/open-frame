@@ -30,7 +30,20 @@ import {
 
 const SIZES = [100, 1_000, 5_000, 10_000] as const
 const COLORS: ColorToken[] = ['yellow', 'green', 'blue', 'red', 'violet', 'orange']
-const OUT_DIR = join(dirname(fileURLToPath(import.meta.url)), 'fixtures')
+/*
+ * Written into the web app's public directory so the dev-only fixture loader
+ * can simply fetch them. Generated output, gitignored — the generator is the
+ * source of truth, not the files.
+ */
+const OUT_DIR = join(
+  dirname(fileURLToPath(import.meta.url)),
+  '..',
+  '..',
+  'apps',
+  'web',
+  'public',
+  'bench',
+)
 
 /** Deterministic PRNG, so a fixture is byte-identical between runs. */
 function mulberry32(seed: number): () => number {

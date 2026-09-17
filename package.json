@@ -3,7 +3,7 @@
   "version": "0.0.0",
   "private": true,
   "type": "module",
-  "description": "OpenFrame — a structured visual workspace on an infinite canvas.",
+  "description": "OpenFrame \u2014 a structured visual workspace on an infinite canvas.",
   "engines": {
     "node": ">=22"
   },
@@ -20,7 +20,8 @@
     "build": "pnpm -r build",
     "dev": "pnpm --filter @openframe/web dev",
     "verify": "pnpm typecheck && pnpm lint && pnpm depcruise && pnpm test && pnpm build",
-    "bench:fixtures": "tsx tools/bench/generate-board.ts"
+    "bench:fixtures": "tsx tools/bench/generate-board.ts",
+    "test:bench": "pnpm --filter @openframe/web test:bench"
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",

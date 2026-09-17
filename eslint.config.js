@@ -130,6 +130,12 @@ export default tseslint.config(
   },
 
   {
+    // Benchmark probes report measurements to stdout; that is their output.
+    files: ['**/*.bench.spec.ts'],
+    rules: { 'no-console': 'off' },
+  },
+
+  {
     files: ['**/*.test.ts', '**/*.test.tsx', 'apps/web/e2e/**/*.ts'],
     rules: {
       '@typescript-eslint/no-unsafe-assignment': 'off',

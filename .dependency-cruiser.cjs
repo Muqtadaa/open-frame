@@ -95,6 +95,7 @@ module.exports = {
           '^apps/web/src/(main\\.tsx|test-setup\\.ts)$',
           '^packages/core/src/testing\\.ts$',
           '^tools/',
+          '^apps/web/src/ui/DevPanel\\.tsx$',
         ],
       },
       to: {},

@@ -1,5 +1,6 @@
 import {
   CommandDispatcher,
+  deserializeBoard,
   allowAllCapabilities,
   asBoardId,
   createDefaultRegistry,
@@ -30,6 +31,20 @@ import { IndexedDbBoardRepository } from '../adapters/indexeddb/indexeddb-board-
  * document directly" is enforced by what the types make reachable.
  */
 
+/**
+ * Development-only affordances, absent from production builds.
+ *
+ * This is NOT a mutation path: `loadBoard` performs exactly the same
+ * deserialize-and-replace that opening a board does, through the same validated
+ * load pipeline. It exists because benchmark fixtures are otherwise unreachable
+ * from the running app — the `DocumentWriter` is deliberately not exposed, so
+ * there was no way to put 10,000 objects on screen and look at them.
+ */
+export interface OpenFrameDevTools {
+  loadBoard(raw: unknown): { ok: true; objects: number } | { ok: false; reason: string }
+  clearBoard(): void
+}
+
 export interface OpenFrameRuntime {
   readonly boardId: BoardId
   readonly store: DocumentStore
@@ -40,6 +55,8 @@ export interface OpenFrameRuntime {
   readonly notices: readonly string[]
   /** True when the board could not be read and must not be written back. */
   readonly readOnly: boolean
+  /** Present only in development builds. */
+  readonly devTools?: OpenFrameDevTools
   dispose(): void
 }
 
@@ -107,7 +124,7 @@ export async function createRuntime(options: CreateRuntimeOptions = {}): Promise
         options.autosaveDelayMs ?? DEFAULT_AUTOSAVE_DELAY_MS,
       )
 
-  return {
+  const runtime: OpenFrameRuntime = {
     boardId,
     store,
     registry,
@@ -116,6 +133,34 @@ export async function createRuntime(options: CreateRuntimeOptions = {}): Promise
     notices,
     readOnly,
     dispose: unsubscribe,
+  }
+
+  if (!import.meta.env.DEV) return runtime
+
+  return {
+    ...runtime,
+    devTools: {
+      loadBoard(raw) {
+        const result = deserializeBoard(raw, registry)
+        if (result.status !== 'ok') {
+          return {
+            ok: false,
+            reason: result.status === 'quarantined' ? result.reason : 'not-found',
+          }
+        }
+        /*
+         * `replaceDocument` does not go through the dispatcher, so autosave —
+         * which subscribes to the command stream — does not fire. A loaded
+         * fixture stays in memory until the next real command, and does not
+         * silently overwrite whatever board is on disk.
+         */
+        writer.replaceDocument({ ...result.document, id: boardId })
+        return { ok: true, objects: result.document.objects.size }
+      },
+      clearBoard() {
+        writer.replaceDocument(createEmptyDocument(boardId, 'Untitled board', systemClock.now()))
+      },
+    },
   }
 }
 

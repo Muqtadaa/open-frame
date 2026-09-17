@@ -3,15 +3,16 @@
   "version": "0.0.0",
   "private": true,
   "type": "module",
-  "description": "OpenFrame web client — canvas renderer, interaction layer, UI shell and adapters.",
+  "description": "OpenFrame web client \u2014 canvas renderer, interaction layer, UI shell and adapters.",
   "scripts": {
     "dev": "vite",
     "typecheck": "tsc -p tsconfig.json --noEmit",
     "test": "vitest run",
     "test:watch": "vitest",
-    "test:e2e": "playwright test",
+    "test:e2e": "playwright test --project=chromium",
     "build": "vite build",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "test:bench": "playwright test --project=bench"
   },
   "dependencies": {
     "@openframe/core": "workspace:*",

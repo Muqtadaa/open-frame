@@ -20,6 +20,40 @@ From `pnpm bench:fixtures` (deterministic generator,
 |   5,000 |          1.4 MB |           40 ms |
 |  10,000 |          3.0 MB |           51 ms |
 
+### Renderer scaling probe
+
+From `pnpm test:bench` (headless Chromium, 1280×720, middle-drag pan):
+
+| Objects |  Load | DOM nodes | Visible | Pan p50 | Pan p95 |
+| ------: | ----: | --------: | ------: | ------: | ------: |
+|     100 |  5 ms |        28 |      28 | 16.7 ms | 16.8 ms |
+|   1,000 |  7 ms |        40 |      40 | 16.7 ms | 16.8 ms |
+|   5,000 | 14 ms |        40 |      40 | 16.7 ms | 16.7 ms |
+|  10,000 | 20 ms |        48 |      48 | 16.7 ms | 16.7 ms |
+
+**DOM node count is flat across a 100× range in board size.** That is the
+property the whole DOM-renderer strategy depends on, and the probe asserts it
+rather than merely reporting it.
+
+Headless timings understate real hardware and overstate consistency. They are a
+smoke signal, not a substitute for using the canvas.
+
+### What the probe caught immediately
+
+The first run showed pan p95 of **150 ms at 5,000 objects and 617 ms at 10,000**,
+while p50 stayed at 16.7 ms — the signature of a small number of catastrophic
+frames rather than uniform slowness.
+
+Cause: `objectsInPaintOrder` called `childrenOf` once per object, and
+`childrenOf` scans the entire document. On a flat 10,000-object board that is
+~100 million iterations and 10,000 sorts, **per pan frame**. Replacing it with a
+single grouped index (`groupByParent`) brought p95 to 16.7 ms at every size.
+
+This is the argument for having the instrument at all: the defect was invisible
+to 150 unit tests, invisible at development scale, and would have been read as
+"the custom renderer does not scale" — the wrong conclusion, drawn about the most
+expensive decision in the project.
+
 Those are numbers, not estimates. Everything below is a decision; only these are
 measurements.
 
@@ -79,9 +113,13 @@ The status bar shows object count, visible count and zoom — the three numbers
 worth watching while loading a benchmark board. `ObjectLayer` also exposes
 `data-visible-count` for assertions.
 
-That is the whole instrumentation story for now, and deliberately so: building a
-profiling harness before there is a performance problem is the premature
-optimisation the architecture rejects.
+In development builds only, a panel in the status bar loads benchmark boards and
+reports rolling frame timing (p50/p95). It is statically guarded by
+`import.meta.env.DEV`, so the bundler removes it from production entirely —
+verified by a bundle grep, not assumed.
+
+`pnpm test:bench` runs the same measurements headlessly and is the tool of record
+for anything that runs per frame.
 
 ---
 

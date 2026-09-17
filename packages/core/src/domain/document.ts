@@ -54,13 +54,41 @@ export function getObject(doc: BoardDocument, id: ObjectId): AnyOpenFrameObject 
 }
 
 /** Direct children of a container, in sibling order. `null` means the board root. */
+const byOrder = (a: AnyOpenFrameObject, b: AnyOpenFrameObject): number =>
+  a.order < b.order ? -1 : a.order > b.order ? 1 : 0
+
+/**
+ * Direct children of one container, in sibling order.
+ *
+ * O(n) per call. Fine for a single lookup; use `groupByParent` when you need
+ * every container's children, or this becomes O(n²).
+ */
 export function childrenOf(doc: BoardDocument, parentId: ObjectId | null): AnyOpenFrameObject[] {
   const children: AnyOpenFrameObject[] = []
   for (const object of doc.objects.values()) {
     if (object.parentId === parentId) children.push(object)
   }
-  children.sort((a, b) => (a.order < b.order ? -1 : a.order > b.order ? 1 : 0))
+  children.sort(byOrder)
   return children
+}
+
+/**
+ * Every object grouped by its parent, each group in sibling order.
+ *
+ * One pass plus one sort per group, rather than a full document scan per
+ * container. The naive version — calling `childrenOf` once per object — is
+ * O(n²), which on a flat 10,000-object board is ~100 million iterations and
+ * showed up as 600ms frame spikes while panning.
+ */
+export function groupByParent(doc: BoardDocument): Map<ObjectId | null, AnyOpenFrameObject[]> {
+  const byParent = new Map<ObjectId | null, AnyOpenFrameObject[]>()
+  for (const object of doc.objects.values()) {
+    const siblings = byParent.get(object.parentId)
+    if (siblings === undefined) byParent.set(object.parentId, [object])
+    else siblings.push(object)
+  }
+  for (const siblings of byParent.values()) siblings.sort(byOrder)
+  return byParent
 }
 
 /**
@@ -68,13 +96,23 @@ export function childrenOf(doc: BoardDocument, parentId: ObjectId | null): AnyOp
  * siblings in fractional-index order. This is the order the renderer draws in.
  */
 export function objectsInPaintOrder(doc: BoardDocument): AnyOpenFrameObject[] {
+  const byParent = groupByParent(doc)
   const result: AnyOpenFrameObject[] = []
+  // A cycle would otherwise recurse forever and hang the renderer. Load-time
+  // repair removes cycles, but a document can acquire one at runtime (and,
+  // later, through a concurrent reparent) — the renderer must not be the thing
+  // that discovers it.
+  const seen = new Set<ObjectId>()
+
   const visit = (parentId: ObjectId | null): void => {
-    for (const child of childrenOf(doc, parentId)) {
+    for (const child of byParent.get(parentId) ?? []) {
+      if (seen.has(child.id)) continue
+      seen.add(child.id)
       result.push(child)
       visit(child.id)
     }
   }
+
   visit(null)
   return result
 }

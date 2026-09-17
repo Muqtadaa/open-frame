@@ -293,3 +293,49 @@ body {
 .of-fatal__hint {
   color: var(--of-muted);
 }
+
+/* ---------- development instrumentation (stripped from production) ---------- */
+
+.of-dev {
+  display: flex;
+  gap: 4px;
+  align-items: center;
+  margin-left: auto;
+  font-size: 11px;
+}
+
+.of-dev__label {
+  color: var(--of-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+.of-dev__button {
+  font: inherit;
+  padding: 1px 6px;
+  border: 1px solid var(--of-border);
+  border-radius: 4px;
+  background: var(--of-surface);
+  color: var(--of-muted);
+  cursor: pointer;
+}
+
+.of-dev__button:hover {
+  border-color: var(--of-accent);
+  color: var(--of-text);
+}
+
+.of-dev__button--active {
+  background: var(--of-accent);
+  border-color: var(--of-accent);
+  color: #fff;
+}
+
+.of-dev__timing {
+  font-variant-numeric: tabular-nums;
+  color: var(--of-text);
+}
+
+.of-dev__status {
+  color: var(--of-muted);
+}

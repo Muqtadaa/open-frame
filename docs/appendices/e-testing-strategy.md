@@ -95,10 +95,17 @@ React component trees, rendering internals, library behaviour, styling, and any
 ## Running them
 
 ```bash
-pnpm test        # unit + integration, both packages (~1s)
-pnpm test:e2e    # Playwright, builds and serves the app
-pnpm verify      # typecheck + lint + boundaries + tests + build
+pnpm test            # unit + integration, both packages (~1s)
+pnpm test:e2e        # Playwright functional suite
+pnpm bench:fixtures  # generate benchmark boards
+pnpm test:bench      # renderer scaling probe (needs the fixtures)
+pnpm verify          # typecheck + lint + boundaries + tests + build
 ```
+
+Benchmarks are a separate Playwright project because they need generated
+fixtures and **report** measurements rather than asserting thresholds — with one
+exception, which is asserted because the architecture depends on it: DOM node
+count must not grow with board size.
 
 `pnpm test:e2e` needs a Chromium. In an environment with a pre-installed browser
 whose build differs from Playwright's expected one, set
