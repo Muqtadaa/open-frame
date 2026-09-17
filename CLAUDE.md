@@ -104,12 +104,15 @@ frame spikes. Use `groupByParent` when you need every container's children.
 
 Anything that runs per frame gets measured with `pnpm test:bench`, not assumed.
 
-### 11. Preview deploys carry bench tooling; production must not
+### 11. `OPENFRAME_BENCH` decides what a deployment ships
 
-`vercel.json` branches on `VERCEL_ENV`: previews run `build:bench` so the
-renderer can be assessed from a URL, production runs the clean `build`. If that
-branch is ever flattened, production starts shipping the dev panel and 4.7MB of
-benchmark boards.
+`vercel.json` runs `build:bench` when `OPENFRAME_BENCH=1` and the clean `build`
+otherwise. A bench build carries the dev panel and ~4.7MB of benchmark boards.
+
+**This guard is manual.** While that variable is set in Vercel, _every_
+deployment in that environment carries the bench payload — production included.
+Remove it once the renderer question (ADR 0002) is settled, and do not set it on
+an environment real users reach.
 
 ### 12. Nothing goes in `apps/web/public/`
 
