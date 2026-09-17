@@ -104,7 +104,14 @@ frame spikes. Use `groupByParent` when you need every container's children.
 
 Anything that runs per frame gets measured with `pnpm test:bench`, not assumed.
 
-### 11. Nothing goes in `apps/web/public/`
+### 11. Preview deploys carry bench tooling; production must not
+
+`vercel.json` branches on `VERCEL_ENV`: previews run `build:bench` so the
+renderer can be assessed from a URL, production runs the clean `build`. If that
+branch is ever flattened, production starts shipping the dev panel and 4.7MB of
+benchmark boards.
+
+### 12. Nothing goes in `apps/web/public/`
 
 Vite copies that directory into every production build. Benchmark fixtures once
 lived there and would have shipped 4.7MB to users. Assets that belong in some
@@ -112,7 +119,7 @@ builds but not others go through an explicit Vite plugin, and the guard that
 enables them must be a compile-time literal (`define`), not a runtime env
 lookup — otherwise the branch stays live and the code ships anyway.
 
-### 12. Break a new architectural rule once, and watch it fail
+### 13. Break a new architectural rule once, and watch it fail
 
 A rule that passes vacuously is worse than no rule, because it is trusted. This
 practice has already caught a dependency-cruiser rule that never fired on the
