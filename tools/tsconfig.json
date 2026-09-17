@@ -1,0 +1,9 @@
+{
+  "extends": "../tsconfig.base.json",
+  "compilerOptions": {
+    // Tooling scripts run in Node by definition — unlike packages/core, which
+    // must stay platform-neutral.
+    "types": ["node"]
+  },
+  "include": ["**/*.ts"]
+}

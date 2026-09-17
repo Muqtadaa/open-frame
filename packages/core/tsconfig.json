@@ -1,0 +1,13 @@
+{
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": {
+    "rootDir": "src",
+    // DOM is deliberately absent: the domain must run unchanged in a browser,
+    // in Node and in a worker. Node types are here for the test files only —
+    // `core-is-platform-neutral` in .dependency-cruiser.cjs and the purity test
+    // in src/architecture.test.ts are what actually forbid platform imports in
+    // source, and both are verified to fail when violated.
+    "types": ["node"]
+  },
+  "include": ["src/**/*.ts"]
+}

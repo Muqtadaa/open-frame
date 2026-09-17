@@ -1,0 +1,295 @@
+/*
+ * Phase 1 styling: plain CSS with custom properties.
+ *
+ * No Tailwind, no component library, no design system. There is not yet enough
+ * UI to know what a design system for OpenFrame should contain, and building
+ * one now is the premature-design-system anti-pattern. Tokens live here so that
+ * the document can reference colours by NAME rather than by value.
+ */
+:root {
+  --of-bg: #f6f7f9;
+  --of-surface: #ffffff;
+  --of-border: #d8dce3;
+  --of-text: #16181d;
+  --of-muted: #6b7280;
+  --of-accent: #2563eb;
+  --of-danger: #b42318;
+
+  --of-sticky-yellow: #ffe57f;
+  --of-sticky-green: #b9f0c8;
+  --of-sticky-blue: #bfdcff;
+  --of-sticky-red: #ffc9c2;
+  --of-sticky-violet: #dcd0ff;
+  --of-sticky-orange: #ffd3a8;
+  --of-sticky-gray: #e3e6ea;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body,
+#root {
+  height: 100%;
+  margin: 0;
+}
+
+body {
+  font-family:
+    ui-sans-serif,
+    system-ui,
+    -apple-system,
+    'Segoe UI',
+    Roboto,
+    sans-serif;
+  color: var(--of-text);
+  background: var(--of-bg);
+  overscroll-behavior: none;
+}
+
+/*
+ * Flex column, not a fixed grid template: the notice banner renders
+ * conditionally, so a template with a fixed number of rows silently collapses
+ * the canvas to zero height whenever the banner is absent.
+ */
+.of-app {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+}
+
+.of-toolbar,
+.of-notice,
+.of-status {
+  flex: 0 0 auto;
+}
+
+/* ---------- chrome ---------- */
+
+.of-toolbar {
+  display: flex;
+  gap: 16px;
+  align-items: center;
+  padding: 8px 12px;
+  background: var(--of-surface);
+  border-bottom: 1px solid var(--of-border);
+}
+
+.of-toolbar__group {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+}
+
+.of-toolbar__group--end {
+  margin-left: auto;
+}
+
+.of-button {
+  font: inherit;
+  font-size: 13px;
+  padding: 6px 12px;
+  border: 1px solid var(--of-border);
+  border-radius: 6px;
+  background: var(--of-surface);
+  color: var(--of-text);
+  cursor: pointer;
+}
+
+.of-button:hover:not(:disabled) {
+  border-color: var(--of-accent);
+}
+
+.of-button:disabled {
+  opacity: 0.45;
+  cursor: default;
+}
+
+.of-button--active {
+  background: var(--of-accent);
+  border-color: var(--of-accent);
+  color: #fff;
+}
+
+.of-button--ghost {
+  border-color: transparent;
+  background: transparent;
+}
+
+.of-swatch {
+  width: 22px;
+  height: 22px;
+  border: 1px solid var(--of-border);
+  border-radius: 50%;
+  cursor: pointer;
+  padding: 0;
+}
+
+.of-swatch:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+
+.of-notice {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 8px 12px;
+  font-size: 13px;
+  background: #fff8e6;
+  border-bottom: 1px solid var(--of-border);
+}
+
+.of-notice--danger {
+  background: #fdecea;
+  color: var(--of-danger);
+}
+
+.of-notice__body {
+  flex: 1;
+}
+
+.of-status {
+  display: flex;
+  gap: 16px;
+  padding: 6px 12px;
+  font-size: 12px;
+  color: var(--of-muted);
+  background: var(--of-surface);
+  border-top: 1px solid var(--of-border);
+}
+
+/* ---------- canvas ---------- */
+
+.of-canvas {
+  position: relative;
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow: hidden;
+  background: var(--of-bg);
+  background-image: radial-gradient(circle, #d5d9e0 1px, transparent 1px);
+  background-size: 24px 24px;
+  touch-action: none; /* we handle all panning and zooming ourselves */
+  user-select: none;
+}
+
+.of-canvas--pan {
+  cursor: grab;
+}
+
+.of-canvas--sticky {
+  cursor: crosshair;
+}
+
+/*
+ * The whole world is positioned by ONE transform. Panning and zooming a board
+ * with hundreds of objects therefore moves a single compositor layer rather
+ * than repositioning every element.
+ */
+.of-world {
+  position: absolute;
+  inset: 0;
+  transform-origin: 0 0;
+  will-change: transform;
+}
+
+.of-object-layer {
+  position: absolute;
+  inset: 0;
+}
+
+.of-object {
+  position: absolute;
+  top: 0;
+  left: 0;
+  transform-origin: 0 0;
+}
+
+.of-object--selected::after {
+  content: '';
+  position: absolute;
+  inset: -3px;
+  border: 2px solid var(--of-accent);
+  border-radius: 6px;
+  pointer-events: none;
+}
+
+.of-marquee {
+  position: absolute;
+  top: 0;
+  left: 0;
+  border: 1px solid var(--of-accent);
+  background: rgb(37 99 235 / 10%);
+  pointer-events: none;
+}
+
+/* ---------- object types ---------- */
+
+.of-sticky {
+  width: 100%;
+  height: 100%;
+  border-radius: 4px;
+  padding: 12px;
+  box-shadow: 0 1px 3px rgb(0 0 0 / 18%);
+  overflow: hidden;
+  font-size: 15px;
+  line-height: 1.35;
+}
+
+.of-sticky__text {
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+.of-sticky__editor {
+  font: inherit;
+  border: none;
+  resize: none;
+  outline: 2px solid var(--of-accent);
+}
+
+.of-unknown,
+.of-fallback,
+.of-render-error {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  height: 100%;
+  padding: 8px;
+  text-align: center;
+  border: 1px dashed var(--of-border);
+  border-radius: 4px;
+  background: repeating-linear-gradient(45deg, #fafbfc, #fafbfc 8px, #f1f2f4 8px, #f1f2f4 16px);
+  font-size: 12px;
+  color: var(--of-muted);
+}
+
+.of-render-error {
+  border-color: var(--of-danger);
+  color: var(--of-danger);
+}
+
+.of-unknown__badge,
+.of-fallback__type,
+.of-render-error__label {
+  font-weight: 600;
+}
+
+.of-unknown__hint,
+.of-fallback__hint {
+  font-size: 11px;
+}
+
+.of-fatal {
+  padding: 48px;
+  max-width: 640px;
+  margin: 0 auto;
+}
+
+.of-fatal__hint {
+  color: var(--of-muted);
+}

@@ -1,0 +1,38 @@
+{
+  "name": "openframe",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "description": "OpenFrame — a structured visual workspace on an infinite canvas.",
+  "engines": {
+    "node": ">=22"
+  },
+  "packageManager": "pnpm@10.33.0",
+  "scripts": {
+    "typecheck": "pnpm -r --no-bail typecheck && tsc -p tools/tsconfig.json --noEmit",
+    "lint": "eslint .",
+    "lint:fix": "eslint . --fix",
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
+    "depcruise": "depcruise packages apps --config .dependency-cruiser.cjs",
+    "test": "pnpm -r --no-bail test",
+    "test:e2e": "pnpm --filter @openframe/web test:e2e",
+    "build": "pnpm -r build",
+    "dev": "pnpm --filter @openframe/web dev",
+    "verify": "pnpm typecheck && pnpm lint && pnpm depcruise && pnpm test && pnpm build",
+    "bench:fixtures": "tsx tools/bench/generate-board.ts"
+  },
+  "devDependencies": {
+    "@eslint/js": "^10.0.1",
+    "@openframe/core": "workspace:*",
+    "@types/node": "^22.20.3",
+    "dependency-cruiser": "^18.3.1",
+    "eslint": "^10.10.0",
+    "eslint-plugin-react-hooks": "^7.1.1",
+    "globals": "^16.5.0",
+    "prettier": "^3.9.7",
+    "tsx": "^4.20.6",
+    "typescript": "6.0.3",
+    "typescript-eslint": "^8.70.0"
+  }
+}

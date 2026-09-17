@@ -1,0 +1,15 @@
+node_modules/
+dist/
+coverage/
+*.tsbuildinfo
+.DS_Store
+.vite/
+test-results/
+playwright-report/
+blob-report/
+.playwright/
+tools/bench/fixtures/
+*.local
+.env
+.env.*
+!.env.example

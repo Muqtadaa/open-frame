@@ -1,0 +1,25 @@
+{
+  "format": "openframe.board",
+  "schemaVersion": 1,
+  "savedAt": 1700000000000,
+  "board": {
+    "id": "board_fixture",
+    "meta": { "title": "Fixture board", "createdAt": 1700000000000 },
+    "objects": [
+      {
+        "id": "obj_0001",
+        "type": "sticky",
+        "dataVersion": 1,
+        "frame": { "x": 10, "y": 20, "width": 180, "height": 180, "rotation": 0 },
+        "parentId": null,
+        "order": "a0",
+        "style": { "color": "yellow" },
+        "locked": false,
+        "hidden": false,
+        "data": { "text": "Customers do not understand pricing" },
+        "meta": { "createdAt": 1700000000000, "createdBy": null, "createdVia": "user" }
+      }
+    ],
+    "assets": []
+  }
+}
