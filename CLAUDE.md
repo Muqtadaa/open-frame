@@ -122,7 +122,18 @@ builds but not others go through an explicit Vite plugin, and the guard that
 enables them must be a compile-time literal (`define`), not a runtime env
 lookup — otherwise the branch stays live and the code ships anyway.
 
-### 13. Break a new architectural rule once, and watch it fail
+### 13. `wheel` needs a native non-passive listener
+
+React registers `wheel` passively, so `preventDefault()` inside an `onWheel`
+prop silently does nothing and the browser zooms on top of the canvas. Wheel
+handling lives in `use-wheel-gesture.ts` as a native listener with
+`{ passive: false }`. Same applies to any gesture whose default must be
+suppressed.
+
+Anything bound to Cmd/Ctrl +, −, 0 or 1 must be claimed by the keymap and
+prevented, or it drives browser zoom as well.
+
+### 14. Break a new architectural rule once, and watch it fail
 
 A rule that passes vacuously is worse than no rule, because it is trusted. This
 practice has already caught a dependency-cruiser rule that never fired on the
@@ -141,7 +152,10 @@ that hold functions use property syntax (`readonly create: (…) => …`) rather
 method shorthand, because methods are bivariant and properties are not.
 
 **Files** — one object type per folder in `core/src/types/` and
-`web/src/canvas/views/`. Components stay small; if `Canvas.tsx` starts growing
+`web/src/canvas/views/`. A new registry entry is justified by different
+BEHAVIOUR, not different appearance: the four shape variants are one `shape`
+type with a discriminant, while `text` and `sticky` are separate because they
+mean different things. Components stay small; if `Canvas.tsx` starts growing
 state or geometry, extract it.
 
 **Ports** — `Clock` and `IdGenerator` are injected, so tests are deterministic

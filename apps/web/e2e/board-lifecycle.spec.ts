@@ -98,7 +98,7 @@ test('selects a note and changes its colour', async ({ page }) => {
   await expect(page.locator('.of-object--selected')).toHaveCount(1)
 
   await page.getByTestId('swatch-blue').click()
-  await expect(page.locator('.of-sticky')).toHaveCSS('background-color', 'rgb(191, 220, 255)')
+  await expect(page.locator('.of-sticky')).toHaveCSS('background-color', 'rgb(207, 226, 255)')
 })
 
 test('deletes the selection and restores it with undo', async ({ page }) => {

@@ -1,9 +1,7 @@
 import {
-  clampZoom,
   panViewport,
   rectFromPoints,
   screenToWorld,
-  zoomAtScreenPoint,
   type Point,
   type Viewport,
 } from '@openframe/core'
@@ -13,7 +11,6 @@ import {
   type MouseEvent as ReactMouseEvent,
   type PointerEvent as ReactPointerEvent,
   type RefObject,
-  type WheelEvent,
 } from 'react'
 
 import { useOpenFrame } from '../app/runtime-context.js'
@@ -81,11 +78,13 @@ export function useCanvasGestures(containerRef: RefObject<HTMLElement | null>) {
         case 'begin-pan':
           store.beginPan()
           return 'pan'
-        case 'create-sticky': {
-          const id = commands.createSticky(intent.at)
+        case 'create': {
+          const id = commands.createObject(intent.objectType, intent.at, intent.data)
           if (id !== null) {
             store.setSelection([id])
             store.setTool('select')
+            // Drop straight into editing: the overwhelmingly common next action
+            // after placing a note, a label or a shape is to type in it.
             store.setEditing(id)
           }
           return 'none'
@@ -148,6 +147,7 @@ export function useCanvasGestures(containerRef: RefObject<HTMLElement | null>) {
         shiftKey: event.shiftKey,
         button: event.button,
         spaceHeld: spaceHeld.current,
+        shapeKind: store.shapeKind,
       })
 
       let mode: GestureMode = 'none'
@@ -268,32 +268,9 @@ export function useCanvasGestures(containerRef: RefObject<HTMLElement | null>) {
     [applyIntent, runtime.registry, runtime.store, toWorld],
   )
 
-  const onWheel = useCallback(
-    (event: WheelEvent<HTMLElement>): void => {
-      const store = useInteractionStore.getState()
-      const rect = containerRef.current?.getBoundingClientRect()
-      const anchor = { x: event.clientX - (rect?.left ?? 0), y: event.clientY - (rect?.top ?? 0) }
-
-      // Pinch-zoom and ctrl+wheel zoom; plain wheel scrolls, as in every other
-      // canvas tool. Trackpad pinch arrives as ctrlKey by platform convention.
-      if (event.ctrlKey || event.metaKey) {
-        store.setViewport(
-          zoomAtScreenPoint(
-            store.viewport,
-            anchor,
-            clampZoom(store.viewport.zoom * Math.exp(-event.deltaY / 200)),
-          ),
-        )
-        return
-      }
-      store.setViewport(panViewport(store.viewport, -event.deltaX, -event.deltaY))
-    },
-    [containerRef],
-  )
-
   const setSpaceHeld = useCallback((held: boolean): void => {
     spaceHeld.current = held
   }, [])
 
-  return { onPointerDown, onPointerMove, onPointerUp, onDoubleClick, onWheel, setSpaceHeld }
+  return { onPointerDown, onPointerMove, onPointerUp, onDoubleClick, setSpaceHeld }
 }

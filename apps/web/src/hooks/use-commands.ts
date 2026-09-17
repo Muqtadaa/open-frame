@@ -5,7 +5,10 @@ import { useOpenFrame } from '../app/runtime-context.js'
 import { useInteractionStore } from '../interaction/interaction-store.js'
 
 export interface BoardCommands {
-  createSticky(at: Point): ObjectId | null
+  /** Creates any registered type. No per-type method — that is the registry's job. */
+  createObject(type: string, at: Point, data?: Readonly<Record<string, unknown>>): ObjectId | null
+  duplicateSelection(): void
+  selectAll(): void
   moveObjects(moves: readonly { id: ObjectId; dx: number; dy: number }[]): void
   deleteSelection(): void
   setText(id: ObjectId, text: string): void
@@ -24,6 +27,9 @@ export interface BoardCommands {
  *
  * If logic starts accumulating here, it belongs in a command handler instead.
  */
+/** Enough offset that a copy is visibly a copy, not a misclick. */
+const DUPLICATE_OFFSET = 24
+
 export function useCommands(): BoardCommands {
   const { runtime } = useOpenFrame()
   const dispatcher = runtime.dispatcher
@@ -34,14 +40,62 @@ export function useCommands(): BoardCommands {
     }
 
     return {
-      createSticky(at) {
+      createObject(type, at, data) {
+        const definition = runtime.registry.get(type)
+        if (definition === undefined) {
+          console.warn(`[openframe] no such object type "${type}"`)
+          return null
+        }
+        // Centre the new object on the click point, which is what users expect.
+        // The default size comes from the type, so this stays correct for types
+        // that do not exist yet.
+        const { frame } = definition.create(data === undefined ? undefined : { ...data })
         const result = dispatcher.dispatch({
           kind: 'CreateObjects',
-          // Centre the note on the click point, which is what users expect.
-          objects: [{ type: 'sticky', x: at.x - 90, y: at.y - 90, data: { text: '' } }],
+          objects: [
+            {
+              type,
+              x: at.x - frame.width / 2,
+              y: at.y - frame.height / 2,
+              ...(data === undefined ? {} : { data: { ...data } }),
+            },
+          ],
         })
         report(result)
         return result.ok ? (result.affected[0] ?? null) : null
+      },
+
+      duplicateSelection() {
+        const store = useInteractionStore.getState()
+        const document = runtime.store.getDocument()
+        const sources = [...store.selection]
+          .map((id) => document.objects.get(id))
+          .filter((object) => object !== undefined)
+        if (sources.length === 0) return
+
+        // Built from ordinary CreateObjects rather than a bespoke command: the
+        // copy goes through the same validation and history as anything else.
+        const result = dispatcher.dispatch({
+          kind: 'CreateObjects',
+          objects: sources.map((object) => ({
+            type: object.type,
+            x: object.frame.x + DUPLICATE_OFFSET,
+            y: object.frame.y + DUPLICATE_OFFSET,
+            width: object.frame.width,
+            height: object.frame.height,
+            style: object.style,
+            data: { ...(object.data as Record<string, unknown>) },
+          })),
+        })
+        report(result)
+        if (result.ok) store.setSelection(result.affected)
+      },
+
+      selectAll() {
+        const ids = [...runtime.store.getDocument().objects.values()]
+          .filter((object) => !object.hidden && !object.locked)
+          .map((object) => object.id)
+        useInteractionStore.getState().setSelection(ids)
       },
 
       moveObjects(moves) {
@@ -79,5 +133,5 @@ export function useCommands(): BoardCommands {
           .pruneSelection((id) => runtime.store.getObject(id) !== undefined)
       },
     }
-  }, [dispatcher, runtime.store])
+  }, [dispatcher, runtime.registry, runtime.store])
 }

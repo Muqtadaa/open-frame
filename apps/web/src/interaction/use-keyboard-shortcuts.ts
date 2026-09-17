@@ -1,7 +1,16 @@
 import { useEffect } from 'react'
 
+import { useOpenFrame } from '../app/runtime-context.js'
+import {
+  fitToDocument,
+  fitToObjects,
+  nextZoomIn,
+  nextZoomOut,
+  zoomAtCentre,
+} from '../canvas/zoom.js'
 import { useCommands } from '../hooks/use-commands.js'
 import { useInteractionStore } from './interaction-store.js'
+import { resolveKeyAction } from './keymap.js'
 
 function isTextEntry(target: EventTarget | null): boolean {
   if (!(target instanceof HTMLElement)) return false
@@ -9,51 +18,114 @@ function isTextEntry(target: EventTarget | null): boolean {
 }
 
 /**
- * Board-level keyboard shortcuts.
+ * Binds the keymap to the window.
  *
- * Every one of these goes through the same command layer as the pointer — there
- * is no "keyboard path" that skips validation or history.
+ * Every action here goes through the same command layer as the pointer — there
+ * is no keyboard path that skips validation, authorization or history.
+ *
+ * Anything the keymap claims is `preventDefault`ed. That is what stops
+ * Cmd/Ctrl +/- and Cmd/Ctrl+0 from zooming the *browser* on top of the canvas,
+ * which makes the view unusable within a couple of presses.
  */
 export function useKeyboardShortcuts(setSpaceHeld: (held: boolean) => void): void {
   const commands = useCommands()
+  const { runtime } = useOpenFrame()
 
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent): void => {
       const store = useInteractionStore.getState()
 
+      // Space-drag panning is a hold, not a shortcut, so it sits outside the keymap.
       if (event.code === 'Space' && !isTextEntry(event.target)) {
         setSpaceHeld(true)
         if (!event.repeat) event.preventDefault()
         return
       }
 
-      // Never steal keys from a text field the user is typing in.
-      if (isTextEntry(event.target)) return
+      // Never steal keys from a field the user is typing in — except Escape,
+      // which must always be able to end editing.
+      if (isTextEntry(event.target) && event.key !== 'Escape') return
 
-      const mod = event.metaKey || event.ctrlKey
+      const action = resolveKeyAction(event)
+      if (action === null) return
+      event.preventDefault()
 
-      if (mod && event.key.toLowerCase() === 'z') {
-        event.preventDefault()
-        if (event.shiftKey) commands.redo()
-        else commands.undo()
-        return
+      const { width, height } = store.canvasSize
+
+      switch (action.kind) {
+        case 'tool':
+          store.setTool(action.tool)
+          return
+        case 'cycle-shape':
+          store.cycleShape()
+          return
+        case 'undo':
+          commands.undo()
+          return
+        case 'redo':
+          commands.redo()
+          return
+        case 'delete':
+          commands.deleteSelection()
+          return
+        case 'duplicate':
+          commands.duplicateSelection()
+          return
+        case 'select-all':
+          commands.selectAll()
+          return
+        case 'deselect':
+          store.setEditing(null)
+          store.clearSelection()
+          return
+        case 'edit-selection': {
+          const [first] = [...store.selection]
+          if (first !== undefined) store.setEditing(first)
+          return
+        }
+        case 'nudge': {
+          // Nudge in WORLD units scaled by zoom, so a keypress moves the same
+          // apparent distance whatever the zoom level.
+          const scale = 1 / store.viewport.zoom
+          commands.moveObjects(
+            [...store.selection].map((id) => ({
+              id,
+              dx: action.dx * scale,
+              dy: action.dy * scale,
+            })),
+          )
+          return
+        }
+        case 'zoom-in':
+          store.setViewport(
+            zoomAtCentre(store.viewport, width, height, nextZoomIn(store.viewport.zoom)),
+          )
+          return
+        case 'zoom-out':
+          store.setViewport(
+            zoomAtCentre(store.viewport, width, height, nextZoomOut(store.viewport.zoom)),
+          )
+          return
+        case 'zoom-reset':
+          store.setViewport(zoomAtCentre(store.viewport, width, height, 1))
+          return
+        case 'zoom-fit': {
+          const next = fitToDocument(runtime.store.getDocument(), runtime.registry, width, height)
+          if (next !== null) store.setViewport(next)
+          return
+        }
+        case 'zoom-selection': {
+          const next = fitToObjects(
+            runtime.store.getDocument(),
+            runtime.registry,
+            [...store.selection],
+            width,
+            height,
+          )
+          if (next !== null) store.setViewport(next)
+          return
+        }
       }
-
-      if (event.key === 'Delete' || event.key === 'Backspace') {
-        event.preventDefault()
-        commands.deleteSelection()
-        return
-      }
-
-      if (event.key === 'Escape') {
-        store.setEditing(null)
-        store.clearSelection()
-        return
-      }
-
-      if (event.key === 'v' || event.key === 'V') store.setTool('select')
-      if (event.key === 'n' || event.key === 'N') store.setTool('sticky')
-      if (event.key === 'h' || event.key === 'H') store.setTool('pan')
     }
 
     const onKeyUp = (event: KeyboardEvent): void => {
@@ -66,5 +138,5 @@ export function useKeyboardShortcuts(setSpaceHeld: (held: boolean) => void): voi
       window.removeEventListener('keydown', onKeyDown)
       window.removeEventListener('keyup', onKeyUp)
     }
-  }, [commands, setSpaceHeld])
+  }, [commands, runtime.registry, runtime.store, setSpaceHeld])
 }

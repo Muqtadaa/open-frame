@@ -1,7 +1,44 @@
-import { DEFAULT_VIEWPORT, type ObjectId, type Point, type Viewport } from '@openframe/core'
+import {
+  DEFAULT_VIEWPORT,
+  SHAPE_KINDS,
+  type ObjectId,
+  type Point,
+  type ShapeKind,
+  type Viewport,
+} from '@openframe/core'
 import { create } from 'zustand'
 
-export type Tool = 'select' | 'sticky' | 'pan'
+export type Tool = 'select' | 'pan' | 'sticky' | 'text' | 'shape'
+
+/**
+ * What a plain (unmodified) wheel gesture does.
+ *
+ * Mouse users overwhelmingly expect scroll to zoom on a canvas; trackpad users
+ * often expect it to pan, because two-finger scroll is their pan gesture. There
+ * is no default that suits both, so it is a preference — stored per browser,
+ * never in the document.
+ */
+export type WheelMode = 'zoom' | 'pan'
+
+const WHEEL_MODE_KEY = 'openframe.wheelMode'
+
+function readWheelMode(): WheelMode {
+  try {
+    return localStorage.getItem(WHEEL_MODE_KEY) === 'pan' ? 'pan' : 'zoom'
+  } catch {
+    // Private windows and blocked site data both throw here. A preference is
+    // not worth failing startup over.
+    return 'zoom'
+  }
+}
+
+function writeWheelMode(mode: WheelMode): void {
+  try {
+    localStorage.setItem(WHEEL_MODE_KEY, mode)
+  } catch {
+    // Ignored for the same reason.
+  }
+}
 
 /**
  * What the pointer is currently doing.
@@ -35,19 +72,33 @@ export type DragState =
  */
 interface InteractionState {
   readonly tool: Tool
+  /** Which shape the shape tool will draw. Cycled with `U`. */
+  readonly shapeKind: ShapeKind
+  readonly wheelMode: WheelMode
   readonly selection: ReadonlySet<ObjectId>
   readonly hoveredId: ObjectId | null
   readonly editingId: ObjectId | null
   readonly viewport: Viewport
   readonly drag: DragState
+  /**
+   * Size of the canvas element. Transient view state, but several things
+   * outside the canvas need it — zoom-to-fit, centred zoom, the zoom slider —
+   * and threading a ref through the tree for a number is worse than storing it.
+   */
+  readonly canvasSize: { readonly width: number; readonly height: number }
 
   setTool(tool: Tool): void
+  /** Selects the shape tool, advancing the variant when it is already active. */
+  cycleShape(): void
+  setWheelMode(mode: WheelMode): void
+  toggleWheelMode(): void
   setSelection(ids: readonly ObjectId[]): void
   toggleSelection(id: ObjectId): void
   clearSelection(): void
   setHovered(id: ObjectId | null): void
   setEditing(id: ObjectId | null): void
   setViewport(viewport: Viewport): void
+  setCanvasSize(width: number, height: number): void
   beginTranslate(ids: readonly ObjectId[]): void
   updateTranslate(dx: number, dy: number): void
   beginMarquee(origin: Point): void
@@ -60,13 +111,37 @@ interface InteractionState {
 
 export const useInteractionStore = create<InteractionState>((set) => ({
   tool: 'select',
+  shapeKind: 'rectangle',
+  wheelMode: readWheelMode(),
   selection: new Set<ObjectId>(),
   hoveredId: null,
   editingId: null,
   viewport: DEFAULT_VIEWPORT,
   drag: { kind: 'idle' },
+  canvasSize: { width: 0, height: 0 },
 
   setTool: (tool) => set({ tool, editingId: null }),
+
+  cycleShape: () =>
+    set((state) => {
+      // First press picks the tool; further presses walk the variants, which is
+      // how a single key can reach four shapes without four bindings.
+      if (state.tool !== 'shape') return { tool: 'shape', editingId: null }
+      const next = SHAPE_KINDS[(SHAPE_KINDS.indexOf(state.shapeKind) + 1) % SHAPE_KINDS.length]
+      return { shapeKind: next ?? 'rectangle', editingId: null }
+    }),
+
+  setWheelMode: (wheelMode) => {
+    writeWheelMode(wheelMode)
+    set({ wheelMode })
+  },
+
+  toggleWheelMode: () =>
+    set((state) => {
+      const next: WheelMode = state.wheelMode === 'zoom' ? 'pan' : 'zoom'
+      writeWheelMode(next)
+      return { wheelMode: next }
+    }),
   setSelection: (ids) => set({ selection: new Set(ids) }),
   toggleSelection: (id) =>
     set((state) => {
@@ -79,6 +154,13 @@ export const useInteractionStore = create<InteractionState>((set) => ({
   setHovered: (hoveredId) => set({ hoveredId }),
   setEditing: (editingId) => set({ editingId }),
   setViewport: (viewport) => set({ viewport }),
+
+  setCanvasSize: (width, height) =>
+    set((state) =>
+      state.canvasSize.width === width && state.canvasSize.height === height
+        ? {}
+        : { canvasSize: { width, height } },
+    ),
 
   beginTranslate: (ids) => set({ drag: { kind: 'translate', ids: new Set(ids), dx: 0, dy: 0 } }),
   updateTranslate: (dx, dy) =>

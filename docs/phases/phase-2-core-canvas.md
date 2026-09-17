@@ -1,6 +1,6 @@
 # Phase 2 · Core canvas
 
-**Status: ▶ Next** · ← [Roadmap](README.md)
+**Status: ▶ In progress** · ← [Roadmap](README.md)
 
 Turn the architectural skeleton into a canvas someone would choose to use.
 
@@ -39,9 +39,16 @@ domain does not change either way.
 
 ### Interaction
 
-Resize handles, rotation handle, snapping and alignment guides, keyboard nudge,
-copy/paste/duplicate, zoom-to-fit and zoom-to-selection, right-click context
-menu, multi-select refinements.
+✅ Keyboard shortcuts (V/H/S/T/U, undo, delete, select-all, duplicate, nudge),
+zoom controls with slider and percentage entry, zoom-to-fit and
+zoom-to-selection, scroll-to-zoom with a pan preference, floating tool rail.
+
+Remaining: resize handles, rotation handle, snapping and alignment guides,
+copy/paste, right-click context menu, multi-select refinements.
+
+**Browser zoom must stay out of the way.** `Ctrl/Cmd` with `+`, `−`, `0`, `1`
+and with the wheel are all claimed and prevented; see
+[CLAUDE.md](../../CLAUDE.md) rule 13 for why that needs a native listener.
 
 ### Rendering
 

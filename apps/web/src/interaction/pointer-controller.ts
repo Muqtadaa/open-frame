@@ -1,4 +1,4 @@
-import type { ObjectId, Point } from '@openframe/core'
+import type { ObjectId, Point, ShapeKind } from '@openframe/core'
 
 import type { Tool } from './interaction-store.js'
 
@@ -14,7 +14,12 @@ import type { Tool } from './interaction-store.js'
 
 export type PointerIntent =
   | { readonly kind: 'begin-pan' }
-  | { readonly kind: 'create-sticky'; readonly at: Point }
+  | {
+      readonly kind: 'create'
+      readonly objectType: string
+      readonly at: Point
+      readonly data?: Readonly<Record<string, unknown>>
+    }
   | { readonly kind: 'select'; readonly ids: readonly ObjectId[] }
   | { readonly kind: 'toggle-select'; readonly id: ObjectId }
   | { readonly kind: 'begin-translate'; readonly ids: readonly ObjectId[] }
@@ -31,6 +36,8 @@ export interface PointerDownContext {
   /** 0 = primary, 1 = middle. */
   readonly button: number
   readonly spaceHeld: boolean
+  /** Which variant the shape tool is currently set to. */
+  readonly shapeKind: ShapeKind
 }
 
 const MIDDLE_BUTTON = 1
@@ -42,8 +49,17 @@ export function onPointerDown(ctx: PointerDownContext): readonly PointerIntent[]
     return [{ kind: 'begin-pan' }]
   }
 
-  if (ctx.tool === 'sticky') {
-    return [{ kind: 'create-sticky', at: ctx.worldPoint }]
+  /*
+   * Creation tools are data-driven rather than a branch per tool, so adding an
+   * object type does not add a case here. The registry already knows how to
+   * build any registered type; this only has to name it.
+   */
+  if (ctx.tool === 'sticky') return [{ kind: 'create', objectType: 'sticky', at: ctx.worldPoint }]
+  if (ctx.tool === 'text') return [{ kind: 'create', objectType: 'text', at: ctx.worldPoint }]
+  if (ctx.tool === 'shape') {
+    return [
+      { kind: 'create', objectType: 'shape', at: ctx.worldPoint, data: { shape: ctx.shapeKind } },
+    ]
   }
 
   if (ctx.hitId === null) {

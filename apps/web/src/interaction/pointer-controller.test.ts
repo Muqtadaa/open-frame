@@ -20,6 +20,7 @@ function ctx(overrides: Partial<PointerDownContext> = {}): PointerDownContext {
     shiftKey: false,
     button: 0,
     spaceHeld: false,
+    shapeKind: 'rectangle',
     ...overrides,
   }
 }
@@ -41,7 +42,19 @@ describe('pointer down', () => {
 
   it('creates a sticky at the pointer with the sticky tool', () => {
     expect(onPointerDown(ctx({ tool: 'sticky', worldPoint: { x: 4, y: 9 } }))).toEqual([
-      { kind: 'create-sticky', at: { x: 4, y: 9 } },
+      { kind: 'create', objectType: 'sticky', at: { x: 4, y: 9 } },
+    ])
+  })
+
+  it('creates text with the text tool', () => {
+    expect(onPointerDown(ctx({ tool: 'text', worldPoint: { x: 1, y: 2 } }))).toEqual([
+      { kind: 'create', objectType: 'text', at: { x: 1, y: 2 } },
+    ])
+  })
+
+  it('carries the current variant when creating a shape', () => {
+    expect(onPointerDown(ctx({ tool: 'shape', shapeKind: 'ellipse' }))).toEqual([
+      { kind: 'create', objectType: 'shape', at: { x: 10, y: 10 }, data: { shape: 'ellipse' } },
     ])
   })
 
