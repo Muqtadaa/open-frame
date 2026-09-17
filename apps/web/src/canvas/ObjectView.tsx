@@ -41,6 +41,13 @@ function ObjectViewInner({ id, views }: Props) {
   const dragDy = useInteractionStore((state) =>
     state.drag.kind === 'translate' ? state.drag.dy : 0,
   )
+  // `Map.get` returns a stable reference while the map is unchanged, so this is
+  // a safe selector despite looking like it constructs something.
+  const preview = useInteractionStore((state) =>
+    state.drag.kind === 'resize' || state.drag.kind === 'rotate'
+      ? state.drag.frames.get(id)
+      : undefined,
+  )
   const commands = useCommands()
 
   if (object === undefined) return null
@@ -49,8 +56,9 @@ function ObjectViewInner({ id, views }: Props) {
   const Renderer = view?.Renderer ?? FallbackView
   const InlineEditor = view?.InlineEditor
 
-  const x = object.frame.x + (isDragging ? dragDx : 0)
-  const y = object.frame.y + (isDragging ? dragDy : 0)
+  const frame = preview ?? object.frame
+  const x = frame.x + (isDragging ? dragDx : 0)
+  const y = frame.y + (isDragging ? dragDy : 0)
 
   return (
     <div
@@ -59,9 +67,9 @@ function ObjectViewInner({ id, views }: Props) {
       data-object-type={object.type}
       data-testid={`object-${id}`}
       style={{
-        transform: `translate(${String(x)}px, ${String(y)}px)`,
-        width: `${String(object.frame.width)}px`,
-        height: `${String(object.frame.height)}px`,
+        transform: `translate(${String(x)}px, ${String(y)}px) rotate(${String(frame.rotation)}rad)`,
+        width: `${String(frame.width)}px`,
+        height: `${String(frame.height)}px`,
       }}
     >
       <ObjectErrorBoundary objectId={id} objectType={object.type}>

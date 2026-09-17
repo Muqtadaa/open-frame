@@ -1,6 +1,7 @@
 import {
   contains,
   containsPoint,
+  containsRotatedPoint,
   objectsInPaintOrder,
   type BoardDocument,
   type ObjectId,
@@ -26,7 +27,11 @@ export function hitTest(
   for (let i = painted.length - 1; i >= 0; i--) {
     const object = painted[i]
     if (object === undefined || object.hidden) continue
-    if (containsPoint(registry.boundsOf(object), worldPoint)) return object.id
+    // Cheap axis-aligned reject first, then the precise oriented test — the
+    // rotated bounds are a superset, so anything outside them cannot be a hit.
+    if (!containsPoint(registry.boundsOf(object), worldPoint)) continue
+    const { x, y, width, height, rotation } = object.frame
+    if (containsRotatedPoint({ x, y, width, height }, rotation, worldPoint)) return object.id
   }
   return null
 }

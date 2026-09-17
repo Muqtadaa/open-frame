@@ -1,4 +1,4 @@
-import type { Point } from './point.js'
+import { rotatePoint, type Point } from './point.js'
 
 /**
  * An axis-aligned rectangle. `width` and `height` are always non-negative;
@@ -94,4 +94,48 @@ export function translateRect(r: Rect, dx: number, dy: number): Rect {
 
 export function rectsEqual(a: Rect, b: Rect): boolean {
   return a.x === b.x && a.y === b.y && a.width === b.width && a.height === b.height
+}
+
+/** The four corners, clockwise from top-left. */
+export function corners(r: Rect): [Point, Point, Point, Point] {
+  return [
+    { x: r.x, y: r.y },
+    { x: right(r), y: r.y },
+    { x: right(r), y: bottom(r) },
+    { x: r.x, y: bottom(r) },
+  ]
+}
+
+/**
+ * The axis-aligned box enclosing `r` after rotation about its own centre.
+ *
+ * Culling and marquee selection work on axis-aligned boxes, so a rotated object
+ * still needs one — and it must be the rotated extent, not the original frame,
+ * or a rotated object vanishes at the edge of the viewport while still visible.
+ */
+export function rotatedBounds(r: Rect, radians: number): Rect {
+  if (radians === 0) return r
+  const origin = center(r)
+  const points = corners(r).map((p) => rotatePoint(p, origin, radians))
+  let minX = Infinity
+  let minY = Infinity
+  let maxX = -Infinity
+  let maxY = -Infinity
+  for (const p of points) {
+    minX = Math.min(minX, p.x)
+    minY = Math.min(minY, p.y)
+    maxX = Math.max(maxX, p.x)
+    maxY = Math.max(maxY, p.y)
+  }
+  return { x: minX, y: minY, width: maxX - minX, height: maxY - minY }
+}
+
+/**
+ * Point-in-rotated-rect.
+ *
+ * Rotates the POINT into the rect's local space rather than rotating the rect,
+ * which turns an oriented-box test back into the trivial axis-aligned one.
+ */
+export function containsRotatedPoint(r: Rect, radians: number, p: Point): boolean {
+  return containsPoint(r, radians === 0 ? p : rotatePoint(p, center(r), -radians))
 }

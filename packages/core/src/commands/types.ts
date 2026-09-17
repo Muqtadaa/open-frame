@@ -45,6 +45,20 @@ export type Command =
       readonly patch: Readonly<Record<string, unknown>>
     }
   | { readonly kind: 'UpdateStyle'; readonly ids: readonly ObjectId[]; readonly style: ObjectStyle }
+  | {
+      readonly kind: 'RotateObjects'
+      readonly rotations: readonly { readonly id: ObjectId; readonly rotation: number }[]
+    }
+  | {
+      readonly kind: 'ReorderObjects'
+      readonly ids: readonly ObjectId[]
+      readonly placement: Placement
+    }
+  | { readonly kind: 'SetLocked'; readonly ids: readonly ObjectId[]; readonly locked: boolean }
+  | { readonly kind: 'SetHidden'; readonly ids: readonly ObjectId[]; readonly hidden: boolean }
+
+/** Where a reorder puts the objects within their container. */
+export type Placement = 'front' | 'back' | 'forward' | 'backward'
 
 export type CommandKind = Command['kind']
 

@@ -432,16 +432,38 @@ body {
   position: absolute;
   top: 0;
   left: 0;
-  transform-origin: 0 0;
+  /* Centre origin so rotate() turns the object about itself. Translation is
+     unaffected by transform-origin, so top-left positioning still holds. */
+  transform-origin: 50% 50%;
 }
 
-.of-object--selected::after {
-  content: '';
+.of-object--selected {
+  /* The selection box and handles are drawn once by SelectionOverlay rather
+     than per object, so a multi-selection shows one frame, not N. */
+  z-index: 1;
+}
+
+.of-selection {
   position: absolute;
-  inset: -3px;
-  border: 2px solid var(--of-accent);
-  border-radius: 7px;
+  top: 0;
+  left: 0;
+  outline: 1.5px solid var(--of-accent);
+  outline-offset: 0;
+  transform-origin: 50% 50%;
+  /* The box itself must not swallow pointer events — only its handles do. */
   pointer-events: none;
+}
+
+.of-handle {
+  position: absolute;
+  background: #fff;
+  border: 1px solid var(--of-accent);
+  pointer-events: auto;
+}
+
+.of-handle--rotate {
+  border-radius: 50%;
+  cursor: grab;
 }
 
 .of-marquee {
@@ -620,5 +642,55 @@ body {
 }
 
 .of-dev__status {
+  color: var(--of-ink-muted);
+}
+
+/* ---------- context menu ---------- */
+
+.of-menu {
+  position: fixed;
+  z-index: 50;
+  min-width: 196px;
+  padding: 5px;
+  background: var(--of-panel);
+  border: 1px solid var(--of-panel-border);
+  border-radius: 10px;
+  box-shadow: var(--of-shadow);
+}
+
+.of-menu__group + .of-menu__group {
+  margin-top: 4px;
+  padding-top: 4px;
+  border-top: 1px solid var(--of-panel-border);
+}
+
+.of-menu__item {
+  display: flex;
+  gap: 16px;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  padding: 6px 9px;
+  font: inherit;
+  font-size: 13px;
+  color: var(--of-ink);
+  text-align: left;
+  background: transparent;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+}
+
+.of-menu__item:hover:not(:disabled) {
+  background: var(--of-accent-soft);
+}
+
+.of-menu__item:disabled {
+  opacity: 0.38;
+  cursor: default;
+}
+
+.of-menu__shortcut {
+  font-size: 11px;
   color: var(--of-ink-muted);
 }

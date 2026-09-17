@@ -1,4 +1,5 @@
 import { Canvas } from '../canvas/Canvas.js'
+import { ContextMenu } from '../ui/ContextMenu.js'
 import { NoticeBanner } from '../ui/NoticeBanner.js'
 import { StatusBar } from '../ui/StatusBar.js'
 import { Toolbar } from '../ui/Toolbar.js'
@@ -36,6 +37,8 @@ export function App() {
       <div className="of-overlay of-overlay--bottom-left">
         <StatusBar />
       </div>
+
+      <ContextMenu />
     </div>
   )
 }

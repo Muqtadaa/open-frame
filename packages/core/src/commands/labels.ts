@@ -17,5 +17,19 @@ export function describeCommand(command: Command): string {
       return 'Edit object'
     case 'UpdateStyle':
       return `Restyle ${plural(command.ids.length, 'object')}`
+    case 'RotateObjects':
+      return `Rotate ${plural(command.rotations.length, 'object')}`
+    case 'ReorderObjects':
+      return command.placement === 'front'
+        ? 'Bring to front'
+        : command.placement === 'back'
+          ? 'Send to back'
+          : command.placement === 'forward'
+            ? 'Bring forward'
+            : 'Send backward'
+    case 'SetLocked':
+      return command.locked ? 'Lock' : 'Unlock'
+    case 'SetHidden':
+      return command.hidden ? 'Hide' : 'Show'
   }
 }

@@ -33,9 +33,12 @@ domain does not change either way.
 
 ### Commands
 
-`ReparentObjects` (with the existing cycle guard), `ReorderObjects`,
-`RotateObjects`, `GroupObjects` / `UngroupObjects` (composites, via `transact`),
-`CreateConnector`, `SetLocked`, `SetHidden`, `DuplicateObjects`.
+✅ `ReorderObjects`, `RotateObjects`, `SetLocked`, `SetHidden`. Duplicate, copy
+and paste are built from ordinary `CreateObjects` rather than bespoke commands,
+so they inherit the same validation and history.
+
+Remaining: `ReparentObjects` (the cycle guard already exists and is tested),
+`GroupObjects` / `UngroupObjects` as `transact` composites, `CreateConnector`.
 
 ### Interaction
 
@@ -43,8 +46,12 @@ domain does not change either way.
 zoom controls with slider and percentage entry, zoom-to-fit and
 zoom-to-selection, scroll-to-zoom with a pan preference, floating tool rail.
 
-Remaining: resize handles, rotation handle, snapping and alignment guides,
-copy/paste, right-click context menu, multi-select refinements.
+✅ Resize handles (single and multi-selection, aspect lock on corners, Alt for
+centre), rotation handle with 15° snapping, right-click context menu, clipboard,
+z-order via bracket keys.
+
+Remaining: snapping and alignment guides between objects, reparenting into
+frames, connectors.
 
 **Browser zoom must stay out of the way.** `Ctrl/Cmd` with `+`, `−`, `0`, `1`
 and with the wheel are all claimed and prevented; see

@@ -27,8 +27,14 @@ describe('tool shortcuts', () => {
 
   it('ignores tool keys held with a modifier, so Cmd+S is not "sticky"', () => {
     expect(resolveKeyAction(key('s', { metaKey: true }))).toBeNull()
-    expect(resolveKeyAction(key('v', { ctrlKey: true }))).toBeNull()
+    expect(resolveKeyAction(key('h', { ctrlKey: true }))).toBeNull()
     expect(resolveKeyAction(key('t', { altKey: true }))).toBeNull()
+  })
+
+  /** Mod+V is paste, not the select tool — the modifier decides. */
+  it('distinguishes V from Mod+V', () => {
+    expect(resolveKeyAction(key('v'))).toEqual({ kind: 'tool', tool: 'select' })
+    expect(resolveKeyAction(key('v', { metaKey: true }))).toEqual({ kind: 'paste' })
   })
 })
 
@@ -44,6 +50,25 @@ describe('editing shortcuts', () => {
     expect(resolveKeyAction(key('d', { metaKey: true }))).toEqual({ kind: 'duplicate' })
     expect(resolveKeyAction(key('Delete'))).toEqual({ kind: 'delete' })
     expect(resolveKeyAction(key('Backspace'))).toEqual({ kind: 'delete' })
+  })
+
+  it('cuts, copies and pastes', () => {
+    expect(resolveKeyAction(key('x', { metaKey: true }))).toEqual({ kind: 'cut' })
+    expect(resolveKeyAction(key('c', { metaKey: true }))).toEqual({ kind: 'copy' })
+    expect(resolveKeyAction(key('v', { metaKey: true }))).toEqual({ kind: 'paste' })
+  })
+
+  it('reorders with bracket keys', () => {
+    expect(resolveKeyAction(key(']'))).toEqual({ kind: 'reorder', placement: 'forward' })
+    expect(resolveKeyAction(key('['))).toEqual({ kind: 'reorder', placement: 'backward' })
+    expect(resolveKeyAction(key(']', { shiftKey: true }))).toEqual({
+      kind: 'reorder',
+      placement: 'front',
+    })
+    expect(resolveKeyAction(key('[', { shiftKey: true }))).toEqual({
+      kind: 'reorder',
+      placement: 'back',
+    })
   })
 
   it('escapes and enters editing', () => {

@@ -1,6 +1,6 @@
 import type { ZodType } from 'zod'
 
-import type { Rect } from '../geometry/rect.js'
+import { rotatedBounds, type Rect } from '../geometry/rect.js'
 import type { AnyOpenFrameObject, ObjectBase, StyleProp } from './object.js'
 
 /**
@@ -198,10 +198,15 @@ export class ObjectTypeRegistry {
   }
 
   /** Bounds for hit testing and culling, defaulting to the object's frame. */
+  /**
+   * The axis-aligned bounds used for culling, hit-test prefiltering and marquee
+   * selection. Rotation is accounted for here so that every consumer gets the
+   * rotated extent without knowing rotation exists.
+   */
   boundsOf(object: AnyOpenFrameObject): Rect {
     const custom = this.#definitions.get(object.type)?.getBounds?.(object)
     if (custom !== undefined) return custom
-    const { x, y, width, height } = object.frame
-    return { x, y, width, height }
+    const { x, y, width, height, rotation } = object.frame
+    return rotatedBounds({ x, y, width, height }, rotation)
   }
 }

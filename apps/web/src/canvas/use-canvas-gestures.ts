@@ -2,7 +2,11 @@ import {
   panViewport,
   rectFromPoints,
   screenToWorld,
+  type AnyOpenFrameObject,
+  type ObjectFrame,
+  type ObjectId,
   type Point,
+  type Rect,
   type Viewport,
 } from '@openframe/core'
 import {
@@ -23,8 +27,17 @@ import {
   type PointerIntent,
 } from '../interaction/pointer-controller.js'
 import { hitTest, objectsInMarquee } from './hit-testing.js'
+import {
+  CORNER_HANDLES,
+  angleFrom,
+  framesBounds,
+  resizeBounds,
+  scaleFrames,
+  snapAngle,
+  type HandleId,
+} from './resize.js'
 
-type GestureMode = 'pan' | 'translate' | 'marquee' | 'none'
+type GestureMode = 'pan' | 'translate' | 'marquee' | 'resize' | 'rotate' | 'none'
 
 /** Pointer events originating in a text control belong to that control. */
 function isTextEntry(target: EventTarget | null): boolean {
@@ -41,7 +54,18 @@ interface Gesture {
   readonly startWorld: Point
   readonly startClient: Point
   readonly startViewport: Viewport
+  /** Snapshot of the objects being transformed, taken once at gesture start. */
+  readonly subjects: readonly AnyOpenFrameObject[]
+  readonly startBounds: Rect | null
+  readonly handle: HandleId | null
+  readonly startAngle: number
   moved: boolean
+}
+
+/** Reads the handle under the pointer, if the gesture began on one. */
+function handleUnderPointer(target: EventTarget | null): string | null {
+  if (!(target instanceof HTMLElement)) return null
+  return target.closest<HTMLElement>('[data-handle]')?.dataset.handle ?? null
 }
 
 /**
@@ -118,6 +142,9 @@ export function useCanvasGestures(containerRef: RefObject<HTMLElement | null>) {
        */
       if (isTextEntry(event.target)) return
 
+      // Any press dismisses an open menu.
+      useInteractionStore.getState().closeContextMenu()
+
       /*
        * Stop the browser moving focus to the canvas element. An editor opened
        * during this very gesture (creating a sticky note focuses it
@@ -136,6 +163,40 @@ export function useCanvasGestures(containerRef: RefObject<HTMLElement | null>) {
         const active = window.document.activeElement
         if (active instanceof HTMLElement) active.blur()
         else store.setEditing(null)
+      }
+
+      const grabbed = handleUnderPointer(event.target)
+      if (grabbed !== null) {
+        const document = runtime.store.getDocument()
+        const subjects = [...store.selection]
+          .map((id) => document.objects.get(id))
+          .filter((object): object is AnyOpenFrameObject => object !== undefined)
+        const startBounds = framesBounds(subjects)
+        if (startBounds !== null) {
+          const worldStart = toWorld(event.clientX, event.clientY)
+          const centre = {
+            x: startBounds.x + startBounds.width / 2,
+            y: startBounds.y + startBounds.height / 2,
+          }
+          const rotating = grabbed === 'rotate'
+          if (rotating) store.beginRotate()
+          else store.beginResize(grabbed as HandleId)
+
+          event.currentTarget.setPointerCapture(event.pointerId)
+          gesture.current = {
+            pointerId: event.pointerId,
+            mode: rotating ? 'rotate' : 'resize',
+            startWorld: worldStart,
+            startClient: { x: event.clientX, y: event.clientY },
+            startViewport: store.viewport,
+            subjects,
+            startBounds,
+            handle: rotating ? null : (grabbed as HandleId),
+            startAngle: angleFrom(centre, worldStart) - (subjects[0]?.frame.rotation ?? 0),
+            moved: false,
+          }
+          return
+        }
       }
 
       const worldPoint = toWorld(event.clientX, event.clientY)
@@ -166,6 +227,10 @@ export function useCanvasGestures(containerRef: RefObject<HTMLElement | null>) {
           // Re-read: `store` is a snapshot from BEFORE the intents ran, so its
           // selection and viewport are stale by this point.
           startViewport: useInteractionStore.getState().viewport,
+          subjects: [],
+          startBounds: null,
+          handle: null,
+          startAngle: 0,
           moved: false,
         }
       }
@@ -217,6 +282,38 @@ export function useCanvasGestures(containerRef: RefObject<HTMLElement | null>) {
       if (active.mode === 'marquee') {
         active.moved = true
         store.updateMarquee(worldPoint)
+        return
+      }
+
+      if (active.mode === 'resize' && active.startBounds !== null && active.handle !== null) {
+        active.moved = true
+        const delta = {
+          x: worldPoint.x - active.startWorld.x,
+          y: worldPoint.y - active.startWorld.y,
+        }
+        const next = resizeBounds(active.startBounds, active.handle, delta, {
+          // Corners keep proportions by default; Shift releases that, matching
+          // the convention in design tools.
+          preserveAspect: CORNER_HANDLES.includes(active.handle) ? !event.shiftKey : event.shiftKey,
+          fromCentre: event.altKey,
+        })
+        store.previewFrames(toFrameMap(scaleFrames(active.subjects, active.startBounds, next)))
+        return
+      }
+
+      if (active.mode === 'rotate' && active.startBounds !== null) {
+        active.moved = true
+        const centre = {
+          x: active.startBounds.x + active.startBounds.width / 2,
+          y: active.startBounds.y + active.startBounds.height / 2,
+        }
+        const rotation = snapAngle(
+          angleFrom(centre, worldPoint) - active.startAngle,
+          event.shiftKey,
+        )
+        store.previewFrames(
+          new Map(active.subjects.map((object) => [object.id, { ...object.frame, rotation }])),
+        )
       }
     },
     [runtime.registry, runtime.store, toWorld],
@@ -241,6 +338,16 @@ export function useCanvasGestures(containerRef: RefObject<HTMLElement | null>) {
       if (active.mode === 'translate' && active.moved && store.drag.kind === 'translate') {
         const { dx, dy, ids } = store.drag
         commands.moveObjects([...ids].map((id) => ({ id, dx, dy })))
+      }
+
+      if (active.mode === 'resize' && active.moved && store.drag.kind === 'resize') {
+        commands.resizeObjects([...store.drag.frames].map(([id, frame]) => ({ id, frame })))
+      }
+
+      if (active.mode === 'rotate' && active.moved && store.drag.kind === 'rotate') {
+        commands.rotateObjects(
+          [...store.drag.frames].map(([id, frame]) => ({ id, rotation: frame.rotation })),
+        )
       }
 
       if (active.mode === 'marquee' && store.drag.kind === 'marquee') {
@@ -268,9 +375,39 @@ export function useCanvasGestures(containerRef: RefObject<HTMLElement | null>) {
     [applyIntent, runtime.registry, runtime.store, toWorld],
   )
 
+  const onContextMenu = useCallback(
+    (event: ReactMouseEvent<HTMLElement>): void => {
+      event.preventDefault()
+      const store = useInteractionStore.getState()
+      const worldPoint = toWorld(event.clientX, event.clientY)
+      const hit = hitTest(runtime.store.getDocument(), runtime.registry, worldPoint)
+
+      // Right-clicking an unselected object selects it first, so the menu always
+      // acts on what the user pointed at.
+      if (hit !== null && !store.selection.has(hit)) store.setSelection([hit])
+      if (hit === null) store.clearSelection()
+
+      store.openContextMenu({ x: event.clientX, y: event.clientY })
+    },
+    [runtime.registry, runtime.store, toWorld],
+  )
+
   const setSpaceHeld = useCallback((held: boolean): void => {
     spaceHeld.current = held
   }, [])
 
-  return { onPointerDown, onPointerMove, onPointerUp, onDoubleClick, setSpaceHeld }
+  return {
+    onPointerDown,
+    onPointerMove,
+    onPointerUp,
+    onDoubleClick,
+    onContextMenu,
+    setSpaceHeld,
+  }
+}
+
+function toFrameMap(
+  entries: readonly { readonly id: ObjectId; readonly frame: ObjectFrame }[],
+): ReadonlyMap<ObjectId, ObjectFrame> {
+  return new Map(entries.map((entry) => [entry.id, entry.frame]))
 }

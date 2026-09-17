@@ -4,6 +4,7 @@ import { useInteractionStore } from '../interaction/interaction-store.js'
 import { useKeyboardShortcuts } from '../interaction/use-keyboard-shortcuts.js'
 import { MarqueeOverlay } from './MarqueeOverlay.js'
 import { ObjectLayer } from './ObjectLayer.js'
+import { SelectionOverlay } from './SelectionOverlay.js'
 import { useCanvasGestures } from './use-canvas-gestures.js'
 import { useWheelGesture } from './use-wheel-gesture.js'
 import { useCanvasSize } from './use-canvas-size.js'
@@ -48,6 +49,7 @@ export function Canvas() {
       onPointerUp={gestures.onPointerUp}
       onPointerCancel={gestures.onPointerUp}
       onDoubleClick={gestures.onDoubleClick}
+      onContextMenu={gestures.onContextMenu}
     >
       <div
         className="of-world"
@@ -56,6 +58,7 @@ export function Canvas() {
         }}
       >
         <ObjectLayer width={width} height={height} />
+        <SelectionOverlay />
         <MarqueeOverlay />
       </div>
     </div>

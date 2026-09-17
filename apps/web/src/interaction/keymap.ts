@@ -27,6 +27,11 @@ export type KeyAction =
   | { readonly kind: 'redo' }
   | { readonly kind: 'delete' }
   | { readonly kind: 'duplicate' }
+  | { readonly kind: 'copy' }
+  | { readonly kind: 'cut' }
+  | { readonly kind: 'paste' }
+  | { readonly kind: 'reorder'; readonly placement: 'front' | 'back' | 'forward' | 'backward' }
+  | { readonly kind: 'toggle-lock' }
   | { readonly kind: 'select-all' }
   | { readonly kind: 'deselect' }
   | { readonly kind: 'edit-selection' }
@@ -81,6 +86,15 @@ export function resolveKeyAction(ctx: KeyContext): KeyAction | null {
       case 'd':
       case 'D':
         return { kind: 'duplicate' }
+      case 'c':
+      case 'C':
+        return { kind: 'copy' }
+      case 'x':
+      case 'X':
+        return { kind: 'cut' }
+      case 'v':
+      case 'V':
+        return { kind: 'paste' }
       case '0':
         return { kind: 'zoom-reset' }
       case '1':
@@ -121,6 +135,11 @@ export function resolveKeyAction(ctx: KeyContext): KeyAction | null {
     default:
       break
   }
+
+  // Bracket keys for z-order, matching the convention in design tools.
+  // Checked before the shift bail-out below, because Shift is part of them.
+  if (key === ']') return { kind: 'reorder', placement: ctx.shiftKey ? 'front' : 'forward' }
+  if (key === '[') return { kind: 'reorder', placement: ctx.shiftKey ? 'back' : 'backward' }
 
   if (ctx.shiftKey) return null
 

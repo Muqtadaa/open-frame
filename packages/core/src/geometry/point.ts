@@ -43,3 +43,13 @@ export function distanceSquared(a: Point, b: Point): number {
 export function pointsEqual(a: Point, b: Point): boolean {
   return a.x === b.x && a.y === b.y
 }
+
+/** Rotates `p` around `origin` by `radians` (clockwise in screen coordinates). */
+export function rotatePoint(p: Point, origin: Point, radians: number): Point {
+  if (radians === 0) return p
+  const cos = Math.cos(radians)
+  const sin = Math.sin(radians)
+  const dx = p.x - origin.x
+  const dy = p.y - origin.y
+  return { x: origin.x + dx * cos - dy * sin, y: origin.y + dx * sin + dy * cos }
+}

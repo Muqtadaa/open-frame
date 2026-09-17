@@ -71,12 +71,32 @@ export function useKeyboardShortcuts(setSpaceHeld: (held: boolean) => void): voi
         case 'duplicate':
           commands.duplicateSelection()
           return
+        case 'copy':
+          commands.copySelection()
+          return
+        case 'cut':
+          commands.cutSelection()
+          return
+        case 'paste':
+          commands.paste()
+          return
+        case 'reorder':
+          commands.reorder(action.placement)
+          return
+        case 'toggle-lock': {
+          const anyLocked = [...store.selection].some(
+            (id) => runtime.store.getObject(id)?.locked === true,
+          )
+          commands.setLocked(!anyLocked)
+          return
+        }
         case 'select-all':
           commands.selectAll()
           return
         case 'deselect':
           store.setEditing(null)
           store.clearSelection()
+          store.closeContextMenu()
           return
         case 'edit-selection': {
           const [first] = [...store.selection]

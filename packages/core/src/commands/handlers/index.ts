@@ -2,6 +2,9 @@ import type { BoardDocument } from '../../domain/document.js'
 import type { Patch } from '../../domain/patch.js'
 import type { CommandContext, Command } from '../types.js'
 import { createObjects } from './create-objects.js'
+import { reorderObjects } from './reorder-objects.js'
+import { rotateObjects } from './rotate-objects.js'
+import { setHidden, setLocked } from './set-flags.js'
 import { deleteObjects } from './delete-objects.js'
 import { moveObjects } from './move-objects.js'
 import { resizeObjects } from './resize-objects.js'
@@ -34,7 +37,26 @@ export function handleCommand(
       return updateObjectData(doc, command, ctx)
     case 'UpdateStyle':
       return updateStyle(doc, command, ctx)
+    case 'RotateObjects':
+      return rotateObjects(doc, command, ctx)
+    case 'ReorderObjects':
+      return reorderObjects(doc, command)
+    case 'SetLocked':
+      return setLocked(doc, command)
+    case 'SetHidden':
+      return setHidden(doc, command)
   }
 }
 
-export { createObjects, deleteObjects, moveObjects, resizeObjects, updateObjectData, updateStyle }
+export {
+  createObjects,
+  deleteObjects,
+  moveObjects,
+  reorderObjects,
+  resizeObjects,
+  rotateObjects,
+  setHidden,
+  setLocked,
+  updateObjectData,
+  updateStyle,
+}

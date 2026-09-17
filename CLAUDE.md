@@ -133,7 +133,17 @@ suppressed.
 Anything bound to Cmd/Ctrl +, −, 0 or 1 must be claimed by the keymap and
 prevented, or it drives browser zoom as well.
 
-### 14. Break a new architectural rule once, and watch it fail
+### 14. Transform gestures preview, they do not write
+
+Resize and rotate carry preview frames in interaction state and dispatch ONE
+command on pointer-up, exactly like dragging. A gesture that wrote per frame
+would flood undo, persistence and (later) the network.
+
+Rotation is stored on `frame.rotation` and honoured by `registry.boundsOf`, so
+culling and marquee selection get the rotated extent for free. Hit testing
+rotates the POINT into the object's local space rather than rotating the rect.
+
+### 15. Break a new architectural rule once, and watch it fail
 
 A rule that passes vacuously is worse than no rule, because it is trusted. This
 practice has already caught a dependency-cruiser rule that never fired on the

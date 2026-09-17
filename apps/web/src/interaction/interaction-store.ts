@@ -1,11 +1,15 @@
 import {
   DEFAULT_VIEWPORT,
   SHAPE_KINDS,
+  type AnyOpenFrameObject,
+  type ObjectFrame,
   type ObjectId,
   type Point,
   type ShapeKind,
   type Viewport,
 } from '@openframe/core'
+
+import type { HandleId } from '../canvas/resize.js'
 import { create } from 'zustand'
 
 export type Tool = 'select' | 'pan' | 'sticky' | 'text' | 'shape'
@@ -60,6 +64,17 @@ export type DragState =
     }
   | { readonly kind: 'marquee'; readonly origin: Point; readonly current: Point }
   | { readonly kind: 'pan' }
+  /*
+   * Resize and rotate carry PREVIEW FRAMES rather than writing to the document.
+   * Same rule as dragging: the gesture is transient, and exactly one command is
+   * dispatched when it commits.
+   */
+  | {
+      readonly kind: 'resize'
+      readonly handle: HandleId
+      readonly frames: ReadonlyMap<ObjectId, ObjectFrame>
+    }
+  | { readonly kind: 'rotate'; readonly frames: ReadonlyMap<ObjectId, ObjectFrame> }
 
 /**
  * TRANSIENT, CLIENT-ONLY state.
@@ -86,6 +101,16 @@ interface InteractionState {
    * and threading a ref through the tree for a number is worse than storing it.
    */
   readonly canvasSize: { readonly width: number; readonly height: number }
+  /**
+   * Copied objects, held in memory rather than the system clipboard.
+   *
+   * The system clipboard needs permission prompts and a serialization format
+   * that other applications could interpret — worth doing, and not worth
+   * blocking copy/paste on. Cross-tab paste is the deliberate gap.
+   */
+  readonly clipboard: readonly AnyOpenFrameObject[]
+  /** Screen coordinates of the open context menu, or null. */
+  readonly contextMenu: Point | null
 
   setTool(tool: Tool): void
   /** Selects the shape tool, advancing the variant when it is already active. */
@@ -99,11 +124,18 @@ interface InteractionState {
   setEditing(id: ObjectId | null): void
   setViewport(viewport: Viewport): void
   setCanvasSize(width: number, height: number): void
+  setClipboard(objects: readonly AnyOpenFrameObject[]): void
+  openContextMenu(at: Point): void
+  closeContextMenu(): void
   beginTranslate(ids: readonly ObjectId[]): void
   updateTranslate(dx: number, dy: number): void
   beginMarquee(origin: Point): void
   updateMarquee(current: Point): void
   beginPan(): void
+  beginResize(handle: HandleId): void
+  beginRotate(): void
+  /** Replaces the live preview frames mid-gesture. */
+  previewFrames(frames: ReadonlyMap<ObjectId, ObjectFrame>): void
   endDrag(): void
   /** Drops references to objects that no longer exist (after delete or undo). */
   pruneSelection(exists: (id: ObjectId) => boolean): void
@@ -119,6 +151,8 @@ export const useInteractionStore = create<InteractionState>((set) => ({
   viewport: DEFAULT_VIEWPORT,
   drag: { kind: 'idle' },
   canvasSize: { width: 0, height: 0 },
+  clipboard: [],
+  contextMenu: null,
 
   setTool: (tool) => set({ tool, editingId: null }),
 
@@ -155,6 +189,10 @@ export const useInteractionStore = create<InteractionState>((set) => ({
   setEditing: (editingId) => set({ editingId }),
   setViewport: (viewport) => set({ viewport }),
 
+  setClipboard: (clipboard) => set({ clipboard: [...clipboard] }),
+  openContextMenu: (contextMenu) => set({ contextMenu }),
+  closeContextMenu: () => set({ contextMenu: null }),
+
   setCanvasSize: (width, height) =>
     set((state) =>
       state.canvasSize.width === width && state.canvasSize.height === height
@@ -169,6 +207,14 @@ export const useInteractionStore = create<InteractionState>((set) => ({
   updateMarquee: (current) =>
     set((state) => (state.drag.kind === 'marquee' ? { drag: { ...state.drag, current } } : {})),
   beginPan: () => set({ drag: { kind: 'pan' } }),
+  beginResize: (handle) => set({ drag: { kind: 'resize', handle, frames: new Map() } }),
+  beginRotate: () => set({ drag: { kind: 'rotate', frames: new Map() } }),
+  previewFrames: (frames) =>
+    set((state) =>
+      state.drag.kind === 'resize' || state.drag.kind === 'rotate'
+        ? { drag: { ...state.drag, frames } }
+        : {},
+    ),
   endDrag: () => set({ drag: { kind: 'idle' } }),
 
   pruneSelection: (exists) =>
