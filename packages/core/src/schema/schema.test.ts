@@ -79,7 +79,15 @@ describe('unknown object types', () => {
       objects: [
         {
           id: 'obj_future',
-          type: 'evidence',
+          /*
+           * Deliberately not a type on the roadmap. This fixture stands for a
+           * board written by a NEWER build, so its type must be one this build
+           * will never gain — `evidence` was used here until the day it was
+           * implemented, at which point the payload stopped being unreadable
+           * and started being merely invalid, and the test failed for a reason
+           * that had nothing to do with quarantine.
+           */
+          type: 'type-from-a-newer-build',
           dataVersion: 3,
           frame: { x: 5, y: 6, width: 220, height: 140, rotation: 0 },
           parentId: null,
@@ -108,7 +116,7 @@ describe('unknown object types', () => {
     expect(object?.type).toBe('unknown')
     expect(result.degraded).toHaveLength(1)
     expect(result.degraded[0]?.reason).toBe('unknown-type')
-    expect(result.degraded[0]?.originalType).toBe('evidence')
+    expect(result.degraded[0]?.originalType).toBe('type-from-a-newer-build')
   })
 
   it('preserves position and style so the board still looks right', () => {

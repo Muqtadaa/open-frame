@@ -1,5 +1,6 @@
 import { ObjectTypeRegistry } from '../domain/registry.js'
 import { connectorType } from './connector/definition.js'
+import { evidenceType } from './evidence/definition.js'
 import { frameType } from './frame/definition.js'
 import { groupType } from './group/definition.js'
 import { imageType } from './image/definition.js'
@@ -21,6 +22,8 @@ export {
   type Routing,
 } from './connector/schema.js'
 export { endpointDependencies, resolveEndpoints } from './connector/geometry.js'
+export { EVIDENCE_TYPE, evidenceType } from './evidence/definition.js'
+export { EvidenceDataSchema, type EvidenceData } from './evidence/schema.js'
 export { FRAME_TYPE, frameType } from './frame/definition.js'
 export { GROUP_TYPE, groupType } from './group/definition.js'
 export { RELATION_TYPE, relationType } from './relation/definition.js'
@@ -54,6 +57,7 @@ export function createDefaultRegistry(): ObjectTypeRegistry {
     connectorType,
     imageType,
     groupType,
+    evidenceType,
     relationType,
     unknownType,
   ])

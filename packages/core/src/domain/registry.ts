@@ -122,6 +122,53 @@ export interface ObjectDescription {
   readonly fields: Readonly<Record<string, string | number | readonly string[]>>
 }
 
+/**
+ * How a semantic field is edited, and therefore what shape its value has.
+ *
+ * Deliberately small. Each kind exists because a shipped type uses it, and a
+ * kind nothing uses is a control nobody has ever seen render — which is how
+ * `sticky` came to declare a `fill` its view ignored (rule 21).
+ */
+export type FieldKind = 'text' | 'longText' | 'tags' | 'select'
+
+/**
+ * One editable field on an object's `data`, declared by the type.
+ *
+ * The inspector reads these instead of enumerating fields itself. A panel that
+ * knew evidence had a `participant` would be a second source of truth about
+ * what a type can do, and it would drift the first time the type changed
+ * (rule 21) — the same reason `styleProps` is a declaration rather than a list
+ * in the panel.
+ *
+ * `key` addresses `data[key]` directly rather than a path. A nested field would
+ * need a path language here, a patch that can address one, and a migration
+ * story for the nesting; none of the eight structured types needs one, so the
+ * flat key stays until something genuinely does.
+ */
+export interface FieldDefinition {
+  readonly key: string
+  /** Shown beside the control. Sentence case, because it is a label, not a heading. */
+  readonly label: string
+  readonly kind: FieldKind
+  /** Only for `select`, and the only values its schema accepts. */
+  readonly options?: readonly string[]
+  /**
+   * Shown in an empty control. This is where a type says what it MEANS by a
+   * field — "P07", not "Enter participant" — because the label already said the
+   * name and the example is what makes the distinction legible.
+   */
+  readonly placeholder?: string
+  /**
+   * Whether an empty value is meaningful.
+   *
+   * Never enforced as "you may not save": structure is earned, not demanded
+   * (PRODUCT.md principle 2). A user drops an evidence card with nothing but a
+   * quote and fills the source in later. This marks what is INCOMPLETE, for a
+   * panel that wants to show it and for a future filter, and nothing rejects.
+   */
+  readonly essential?: boolean
+}
+
 export type ValidationResult =
   | { readonly ok: true; readonly data: unknown }
   | { readonly ok: false; readonly issues: readonly string[] }
@@ -230,6 +277,18 @@ export interface ObjectTypeDefinition<TType extends string, TData> {
    */
   readonly relation?: (object: ObjectBase<TType, TData>) => RelationEdge | null
 
+  /**
+   * The editable semantic fields of this type, in the order they are presented.
+   *
+   * Omitted by types whose content is not a record — a sticky's text is edited
+   * on the canvas, where it is, rather than in a panel away from it.
+   *
+   * Every key here MUST be accepted by `schema`, which the registry contract
+   * test proves by round-tripping a value through `validate` for each one. A
+   * declared field the schema rejects is a control that silently fails to save.
+   */
+  readonly fields?: readonly FieldDefinition[]
+
   readonly describe: (object: ObjectBase<TType, TData>) => ObjectDescription
 }
 
@@ -258,6 +317,7 @@ export interface ErasedObjectTypeDefinition {
   readonly hitTest?: (object: AnyOpenFrameObject, doc: BoardDocument, point: Point) => boolean
   readonly dependencies?: (object: AnyOpenFrameObject) => readonly ObjectId[]
   readonly relation?: (object: AnyOpenFrameObject) => RelationEdge | null
+  readonly fields?: readonly FieldDefinition[]
   readonly endpoints?: (object: AnyOpenFrameObject, doc: BoardDocument) => readonly DraggableEndpoint[]
   readonly retargetEndpoint?: (
     object: AnyOpenFrameObject,
@@ -320,9 +380,21 @@ export function defineObjectType<TType extends string, TData>(
     describe: (object) => definition.describe(object as ObjectBase<TType, TData>),
   }
 
-  const { getBounds, hitTest, dependencies, endpoints, retargetEndpoint, relation } = definition
+  const { getBounds, hitTest, dependencies, endpoints, retargetEndpoint, relation, fields } =
+    definition
   return {
     ...erased,
+    /*
+     * Plain data, so it copies rather than being re-wrapped like the callbacks
+     * below. It is listed here at all because EVERY optional member has to be:
+     * both sides of this function declare them optional, so omitting one type
+     * checks perfectly and erases the member to `undefined` at runtime. `fields`
+     * was forgotten exactly once, and the two contract tests that existed to
+     * police field declarations passed on the empty set instead of failing —
+     * which is why `registry-contract.test.ts` now asserts a known type's
+     * declarations survive the trip.
+     */
+    ...(fields === undefined ? {} : { fields }),
     ...(getBounds === undefined
       ? {}
       : {

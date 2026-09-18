@@ -16,8 +16,11 @@ starts carrying meaning:
   data: { text: 'Participants skipped the pricing page entirely',
           source: 'September usability study',
           participant: 'P07',
-          tags: ['pricing', 'comprehension'],
-          linkedInsightIds: ['obj_insight_42'] } }
+          tags: ['pricing', 'comprehension'] } }
+
+// The link is its own object, not a field on either end — see ADR 0011.
+{ type: 'relation',
+  data: { from: 'obj_insight_42', to: 'obj_evidence_7', predicate: 'cites' } }
 ```
 
 Still a normal canvas object — draggable, selectable, styleable, undoable — and
@@ -50,6 +53,12 @@ will likely need:
 These are registry additions, not application changes. Designing them is the
 main architectural work of this phase.
 
+The second is **decided**: [ADR 0011](../adr/0011-relations-as-objects.md). A
+relation is an object, `spatial: false` keeps it off the board, and a memoized
+index answers the reverse lookup. What the ADR deliberately left open —
+whether the predicate vocabulary is closed, and whether the registry validates
+which types may relate to which — waits until the real pairings exist.
+
 ### Features these unlock
 
 Board search (via `describe().searchText`, which already exists), filter by tag
@@ -69,7 +78,9 @@ live in `data` as `ObjectId[]`, which works until something asks:
 A reverse lookup over every object's `data` does not scale, and a first-class
 edge model is a significant change to the document, migrations and collaboration.
 **This phase is where the information to decide finally exists** — and where an
-ADR gets written.
+ADR gets written. It now is:
+[ADR 0011 · Relations are objects, not fields](../adr/0011-relations-as-objects.md),
+rejecting the embedded array on merge behaviour rather than on query cost.
 
 ---
 
