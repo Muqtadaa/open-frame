@@ -43,35 +43,35 @@ import { useCanvasSize } from './use-canvas-size.js'
  * That density is correct — it is what quadrille IS — but only at the right
  * weight: drawn as strongly as the decade it reads as noise, and dropping it
  * instead leaves 100px cells that read as tiles rather than as a ruled page.
- * The answer was ink, not spacing, so both weights are faint and the fine rule
- * stays until its lines would be closer than about nine pixels.
+ * The answer was ink, not spacing, so every weight is faint.
+ *
+ * THREE weights, because `ZOOM_STEPS` reaches 0.05. With only two, both dropped
+ * out below 12% and the board became a flat, unruled void — the neutral canvas
+ * this design exists to refuse, appearing exactly when someone zooms out to
+ * survey the whole record. The century rule takes over there, so the page is
+ * ruled at every reachable zoom.
  */
-const MIN_RULE_ZOOM = 0.9
+const MIN_RULE_ZOOM = 0.7
 const MIN_DECADE_ZOOM = 0.12
 
 function gridStyle(viewport: { x: number; y: number; zoom: number }): React.CSSProperties {
   const fine = GRID_SIZE * viewport.zoom
-  const decade = fine * 10
   const offsetX = -viewport.x * viewport.zoom
   const offsetY = -viewport.y * viewport.zoom
 
   const layers: string[] = []
   const sizes: string[] = []
-  if (viewport.zoom >= MIN_RULE_ZOOM) {
+  const rule = (cell: number, token: string): void => {
     layers.push(
-      'linear-gradient(to right, var(--of-rule) 1px, transparent 1px)',
-      'linear-gradient(to bottom, var(--of-rule) 1px, transparent 1px)',
+      `linear-gradient(to right, var(${token}) 1px, transparent 1px)`,
+      `linear-gradient(to bottom, var(${token}) 1px, transparent 1px)`,
     )
-    sizes.push(`${String(fine)}px ${String(fine)}px`, `${String(fine)}px ${String(fine)}px`)
+    sizes.push(`${String(cell)}px ${String(cell)}px`, `${String(cell)}px ${String(cell)}px`)
   }
-  if (viewport.zoom >= MIN_DECADE_ZOOM) {
-    layers.push(
-      'linear-gradient(to right, var(--of-rule-decade) 1px, transparent 1px)',
-      'linear-gradient(to bottom, var(--of-rule-decade) 1px, transparent 1px)',
-    )
-    sizes.push(`${String(decade)}px ${String(decade)}px`, `${String(decade)}px ${String(decade)}px`)
-  }
-  if (layers.length === 0) return { backgroundImage: 'none' }
+
+  if (viewport.zoom >= MIN_RULE_ZOOM) rule(fine, '--of-rule')
+  if (viewport.zoom >= MIN_DECADE_ZOOM) rule(fine * 10, '--of-rule-decade')
+  else rule(fine * 100, '--of-rule-decade')
 
   return {
     backgroundImage: layers.join(', '),

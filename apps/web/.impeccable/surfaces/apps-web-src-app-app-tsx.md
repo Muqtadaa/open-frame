@@ -23,8 +23,9 @@ material out fast without stopping to classify it.
 
 FIRST VIEWPORT: Board edge to edge, ruled ground. Left margin gutter ~56px,
 creation tools only, icons with labels on hover. Selection actions leave the
-rail entirely. Record line bottom-left in mono, folio-small. Zoom bottom-right,
-collapsed. With a selection, a floating record panel near the object: mono label
+rail entirely. Record line bottom-left in mono, folio-small. Zoom bottom-right with
+its slider and percentage VISIBLE — the user pinned "a slider or a number input
+or both" before this contract existed, and a pinned decision outranks it. With a selection, a floating record panel near the object: mono label
 column, value column, exposing fill, stroke, font, align and opacity for the
 first time. Empty board is almost entirely board.
 

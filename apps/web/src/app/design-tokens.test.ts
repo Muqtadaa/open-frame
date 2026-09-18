@@ -91,6 +91,18 @@ describe('palette contrast', () => {
     expect(contrast(token('rule-decade'), token('page'))).toBeGreaterThan(1.2)
   })
 
+  /**
+   * The world reserves ONE red for destructive and corrective meaning. When the
+   * content red sat 8 units away from it in sRGB the reservation was defeated by
+   * the palette itself: a red slip on the page read as a correction mark, and
+   * the inspector offered that hue as an ordinary choice.
+   */
+  it('keeps the content red clear of the correction red', () => {
+    const [cr, cg, cb] = channels(token('c-red'))
+    const [dr, dg, db] = channels(token('danger'))
+    expect(Math.hypot(cr - dr, cg - dg, cb - db)).toBeGreaterThan(30)
+  })
+
   it('never uses pure black as ink', () => {
     expect(token('ink')).not.toBe('#000000')
     const [r, , b] = channels(token('ink'))

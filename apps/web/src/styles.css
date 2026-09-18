@@ -48,10 +48,21 @@
   /* Reserved for destructive and corrective meaning. Never decoration. */
   --of-danger: #a3231b;
 
-  --of-shadow: 0 1px 2px rgb(22 32 43 / 8%), 0 8px 24px rgb(22 32 43 / 10%);
-  /* A slip laid ON the page, not a card floating above an app. */
-  --of-slip-shadow: 0 1px 1px rgb(22 32 43 / 10%), 0 2px 6px rgb(22 32 43 / 8%);
-  --of-radius: 10px;
+  /*
+   * Chrome is page apparatus, not cards. A white capsule with a 24px blur
+   * floating over the board is the "floating candy chrome" this design refuses,
+   * and three of them at once was the single biggest reason the interface read
+   * as a toy. Apparatus takes the page's own colour, a hairline margin rule and
+   * a contact shadow just deep enough to separate it from the ruling.
+   */
+  --of-shadow: 0 1px 0 rgb(22 32 43 / 4%), 0 2px 8px rgb(22 32 43 / 7%);
+  /*
+   * A slip laid ON the page. Deeper and tighter than the chrome shadow, because
+   * this is the ONE place the world asks for physical depth — an index slip
+   * sitting on the rule rather than printed into it.
+   */
+  --of-slip-shadow: 0 1px 1px rgb(22 32 43 / 18%), 0 3px 7px rgb(22 32 43 / 14%);
+  --of-radius: 6px;
 
   --of-font: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
   /*
@@ -63,7 +74,7 @@
   --of-c-yellow: #7a5c00;
   --of-c-green: #146045;
   --of-c-blue: #17529e;
-  --of-c-red: #9f2820;
+  --of-c-red: #8a4038;
   --of-c-violet: #5b3ba8;
   --of-c-orange: #8c4715;
   --of-c-gray: #3f5163;
@@ -169,7 +180,8 @@ body {
 
 .of-overlay--bottom-left {
   bottom: 12px;
-  left: 96px;
+  /* Clears the rail's real footprint (48px + a 12px margin), not a guess. */
+  left: 72px;
 }
 
 /* ---------- tool rail ---------- */
@@ -178,10 +190,12 @@ body {
   display: flex;
   flex-direction: column;
   gap: 2px;
-  padding: 5px;
-  background: var(--of-panel);
+  padding: 5px 4px;
+  /* The page's own stock, with a margin rule down its inner edge — the way a
+     ruled pad prints its margin — rather than a white card hovering over it. */
+  background: var(--of-page);
   border: 1px solid var(--of-panel-border);
-  border-radius: var(--of-radius);
+  border-radius: 4px;
   box-shadow: var(--of-shadow);
 }
 
@@ -260,7 +274,7 @@ body {
 
 .of-tool:hover:not(:disabled) {
   color: var(--of-ink);
-  background: var(--of-bg);
+  background: var(--of-accent-soft);
 }
 
 .of-tool--active {
@@ -380,9 +394,9 @@ body {
   align-items: center;
   padding: 4px 6px;
   font-family: var(--of-mono);
-  background: var(--of-panel);
+  background: var(--of-page);
   border: 1px solid var(--of-panel-border);
-  border-radius: 8px;
+  border-radius: 4px;
   box-shadow: var(--of-shadow);
 }
 
@@ -503,9 +517,9 @@ body {
   font-family: var(--of-mono);
   font-size: 11px;
   color: var(--of-ink-muted);
-  background: var(--of-panel);
+  background: var(--of-page);
   border: 1px solid var(--of-panel-border);
-  border-radius: 8px;
+  border-radius: 4px;
   box-shadow: var(--of-shadow);
 }
 
@@ -1273,4 +1287,65 @@ body {
   .of-overlay--bottom-left {
     bottom: 64px;
   }
+}
+
+/* Measurement controls ------------------------------------------------------ */
+
+/*
+ * Sliders as instruments, not consumer volume controls.
+ *
+ * A saturated filled track with a large round knob is the stock component every
+ * app ships, and next to a ruled page it was the loudest remaining toy tell.
+ * A measurement control is a thin track with a square index that reads as a
+ * position on a scale.
+ */
+.of-zoom__slider,
+.of-inspector__slider input[type='range'] {
+  appearance: none;
+  height: 18px;
+  background: transparent;
+  cursor: pointer;
+}
+
+.of-zoom__slider::-webkit-slider-runnable-track,
+.of-inspector__slider input[type='range']::-webkit-slider-runnable-track {
+  height: 3px;
+  background: var(--of-rule-decade);
+  border-radius: 0;
+}
+
+.of-zoom__slider::-moz-range-track,
+.of-inspector__slider input[type='range']::-moz-range-track {
+  height: 3px;
+  background: var(--of-rule-decade);
+  border-radius: 0;
+}
+
+.of-zoom__slider::-webkit-slider-thumb,
+.of-inspector__slider input[type='range']::-webkit-slider-thumb {
+  appearance: none;
+  width: 4px;
+  height: 14px;
+  margin-top: -5px;
+  background: var(--of-ink);
+  border: none;
+  border-radius: 1px;
+}
+
+.of-zoom__slider::-moz-range-thumb,
+.of-inspector__slider input[type='range']::-moz-range-thumb {
+  width: 4px;
+  height: 14px;
+  background: var(--of-ink);
+  border: none;
+  border-radius: 1px;
+}
+
+/*
+ * Swatches as index-slip stock rather than paint dots. Seven saturated circles
+ * read as a paint app; a slip is a rectangle, and the page already speaks that
+ * language.
+ */
+.of-swatch {
+  border-radius: 2px;
 }
