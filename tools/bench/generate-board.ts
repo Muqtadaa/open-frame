@@ -24,11 +24,23 @@ import {
   createEmptyDocument,
   createSequentialIdGenerator,
   fixedClock,
+  richFromPlain,
   serializeBoard,
   type ColorToken,
 } from '@openframe/core'
 
-const SIZES = [100, 1_000, 5_000, 10_000] as const
+/*
+ * `pnpm bench:fixtures 60` generates one small pair instead of the full set.
+ *
+ * `pnpm verify` runs exactly that, because this file goes through the command
+ * layer and every schema in the registry — so it breaks whenever a type
+ * changes, and it broke silently when `text` became a list of spans. Nothing
+ * noticed: verify never ran it, and `build:bench` only runs when
+ * OPENFRAME_BENCH=1, which production correctly has set to 0. A build path
+ * nothing exercises is a build path that is already broken.
+ */
+const ARGUMENT = Number(process.argv[2])
+const SIZES = Number.isFinite(ARGUMENT) && ARGUMENT > 0 ? ([ARGUMENT] as const) : ([100, 1_000, 5_000, 10_000] as const)
 const COLORS: ColorToken[] = ['yellow', 'green', 'blue', 'red', 'violet', 'orange']
 /** Spread across the kinds so the mixed board exercises several label insets. */
 const SHAPES = ['rectangle', 'ellipse', 'triangle', 'diamond', 'hexagon'] as const
@@ -84,7 +96,7 @@ function generate(count: number): string {
         type: 'sticky',
         x: (i % columns) * 220 + Math.floor(random() * 20),
         y: Math.floor(i / columns) * 220 + Math.floor(random() * 20),
-        data: { text: `Note ${String(i + 1)}` },
+        data: { text: richFromPlain(`Note ${String(i + 1)}`) },
         style: { color: COLORS[Math.floor(random() * COLORS.length)] ?? 'yellow' },
       })
     }
@@ -146,7 +158,7 @@ function generateMixed(count: number): string {
           type: 'sticky',
           parentId: groupId,
           ...at(base + k),
-          data: { text: `Grouped ${String(base + k)}` },
+          data: { text: richFromPlain(`Grouped ${String(base + k)}`) },
         })),
       ],
     })
@@ -167,13 +179,13 @@ function generateMixed(count: number): string {
           ? {
               type: 'shape',
               ...at(index),
-              data: { shape: SHAPES[index % SHAPES.length] ?? 'rectangle', text: '' },
+              data: { shape: SHAPES[index % SHAPES.length] ?? 'rectangle', text: richFromPlain('') },
               style: { color: COLORS[Math.floor(random() * COLORS.length)] ?? 'yellow' },
             }
           : {
               type: 'sticky',
               ...at(index),
-              data: { text: `Note ${String(index)}` },
+              data: { text: richFromPlain(`Note ${String(index)}`) },
               style: { color: COLORS[Math.floor(random() * COLORS.length)] ?? 'yellow' },
             },
       )
@@ -200,6 +212,31 @@ function generateMixed(count: number): string {
           to: { kind: 'object', objectId: b, anchor: { kind: 'auto' } },
         },
       })
+    }
+    if (objects.length > 0) {
+      const result = dispatcher.dispatch({ kind: 'CreateObjects', objects })
+      if (!result.ok) throw result.error
+    }
+  }
+
+  /*
+   * Relations, because ADR 0011 says the index that answers "what cites this?"
+   * gets CHECKED at scale rather than assumed — and because a board of 500
+   * evidence items clustered into 40 insights carries more relations than
+   * objects, which is the case that would make a naive reverse lookup hurt.
+   *
+   * They are also the one thing on this board with no geometry, so they prove
+   * the culling, hit-testing and marquee exclusions hold under load rather than
+   * only in a three-object unit test.
+   */
+  const relationCount = Math.floor(count / 5)
+  for (let start = 0; start < relationCount; start += BATCH) {
+    const objects = []
+    for (let i = start; i < Math.min(start + BATCH, relationCount); i++) {
+      const from = leaves[(i * 13) % leaves.length]
+      const to = leaves[(i * 13 + 3) % leaves.length]
+      if (from === undefined || to === undefined || from === to) continue
+      objects.push({ type: 'relation', x: 0, y: 0, data: { from, to, predicate: 'cites' } })
     }
     if (objects.length > 0) {
       const result = dispatcher.dispatch({ kind: 'CreateObjects', objects })

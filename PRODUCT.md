@@ -111,7 +111,10 @@ Real, and usable:
 
 - Renderer measurements, reproducible via `pnpm test:bench` and
   `pnpm bench:cull`: DOM node count stays flat (54 and 66) from 100 to 10,000
-  objects; a cull pass on a 10,000-object mixed board costs ~3ms.
+  objects; a cull pass on a 10,000-object mixed board costs ~3ms, unchanged by
+  the 2,000 relations on it. Two hundred "what cites this?" lookups against a
+  cold index cost 0.34ms at that scale.
+- Board search over semantic fields: 6.8ms per query across 10,000 objects.
 - A working deployment, and the repository itself.
 
 **Absent — must not be fabricated:** there are no users yet, no testimonials, no

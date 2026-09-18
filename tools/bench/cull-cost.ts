@@ -53,14 +53,40 @@ function withoutGroups(doc: BoardDocument): BoardDocument {
 const count = (doc: BoardDocument, type: string): number =>
   [...doc.objects.values()].filter((object) => object.type === type).length
 
-console.log('\n  board             | objects | groups | connectors |    cull | without groups')
-console.log('  ------------------|---------|--------|------------|---------|---------------')
+/**
+ * The reverse lookup ADR 0011 promised would be O(1) after one pass.
+ *
+ * Measured on a COLD registry each time, so the number includes building the
+ * index rather than only reading a warm one — the honest cost of the first
+ * query after any edit, which is what a user actually waits for. A board of 500
+ * evidence items clustered into 40 insights carries more relations than
+ * objects, so this is the lookup a naive implementation would have made hurt.
+ */
+function timeRelationLookup(doc: BoardDocument): number {
+  const ids = [...doc.objects.keys()].slice(0, 200)
+  const runs = 20
+  const started = performance.now()
+  for (let i = 0; i < runs; i++) {
+    const cold = createDefaultRegistry()
+    for (const id of ids) cold.relationsTo(doc, id)
+  }
+  return (performance.now() - started) / runs
+}
+
+console.log(
+  '\n  board             | objects | groups | connectors | relations |    cull | without groups | 200 lookups',
+)
+console.log(
+  '  ------------------|---------|--------|------------|-----------|---------|----------------|------------',
+)
 for (const name of ['board-1000', 'board-10000', 'board-mixed-1000', 'board-mixed-10000']) {
   const doc = load(`tools/bench/fixtures/${name}.json`)
   console.log(
     `  ${name.padEnd(17)} | ${String(doc.objects.size).padStart(7)} | ` +
       `${String(count(doc, 'group')).padStart(6)} | ${String(count(doc, 'connector')).padStart(10)} | ` +
-      `${timeCull(doc).toFixed(2).padStart(6)}ms | ${timeCull(withoutGroups(doc)).toFixed(2).padStart(10)}ms`,
+      `${String(count(doc, 'relation')).padStart(9)} | ` +
+      `${timeCull(doc).toFixed(2).padStart(6)}ms | ${timeCull(withoutGroups(doc)).toFixed(2).padStart(12)}ms | ` +
+      `${timeRelationLookup(doc).toFixed(2).padStart(9)}ms`,
   )
 }
 console.log()

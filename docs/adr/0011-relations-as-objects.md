@@ -137,6 +137,13 @@ is what keeps that from mattering, and `pnpm bench:cull` is where it gets checke
 rather than assumed — with a fixture that contains relations, because a fixture
 of one object type measures one object type (rule 10).
 
+Measured, on `board-mixed-10000`: 2,000 relations among 12,250 objects. The cull
+costs 3.2ms, unchanged from before relations existed — they are excluded before
+anything asks for their bounds, so they are free. Two hundred reverse lookups
+against a COLD registry, index build included, cost 0.34ms; that is the honest
+price of the first "what cites this?" after any edit, since an edit replaces the
+document and invalidates the index.
+
 ## What this does not decide
 
 - **The predicate vocabulary.** Whether `cites` is a closed enum, a per-type
