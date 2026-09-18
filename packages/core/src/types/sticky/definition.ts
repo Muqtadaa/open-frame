@@ -33,6 +33,14 @@ export const stickyType = defineObjectType<typeof STICKY_TYPE, StickyData>({
     styleProps: ['color', 'font', 'align', 'opacity'],
   },
 
+  /*
+   * A note becomes evidence once the user knows what it was. This is the
+   * "structure is earned, never demanded" principle in one line: nothing asks
+   * for a classification up front, and the promotion keeps the object's
+   * identity, so anything already citing it still does.
+   */
+  promotions: ['evidence'],
+
   describe: (object) => ({
     searchText: object.data.text,
     summary: object.data.text.trim() === '' ? 'Empty sticky note' : object.data.text.slice(0, 120),

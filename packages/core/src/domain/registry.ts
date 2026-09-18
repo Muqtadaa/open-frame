@@ -289,6 +289,22 @@ export interface ObjectTypeDefinition<TType extends string, TData> {
    */
   readonly fields?: readonly FieldDefinition[]
 
+  /**
+   * Types this one can be PROMOTED to, in the order they are offered.
+   *
+   * The third registry addition Phase 3 needs: which types can convert into
+   * which others. Declared by the source type, so the menu offering the
+   * promotion names no type at all — and a new structured type becomes
+   * reachable by adding itself to whatever should promote into it, rather than
+   * by editing the menu.
+   *
+   * It says what is OFFERED, not what is legal. `ConvertObjects` enforces the
+   * rules that must hold whatever the caller asks for — a locked object, a
+   * container with children, a target with no place on the board — because a UI
+   * affordance is a courtesy and the command layer is the rule.
+   */
+  readonly promotions?: readonly string[]
+
   readonly describe: (object: ObjectBase<TType, TData>) => ObjectDescription
 }
 
@@ -318,6 +334,7 @@ export interface ErasedObjectTypeDefinition {
   readonly dependencies?: (object: AnyOpenFrameObject) => readonly ObjectId[]
   readonly relation?: (object: AnyOpenFrameObject) => RelationEdge | null
   readonly fields?: readonly FieldDefinition[]
+  readonly promotions?: readonly string[]
   readonly endpoints?: (object: AnyOpenFrameObject, doc: BoardDocument) => readonly DraggableEndpoint[]
   readonly retargetEndpoint?: (
     object: AnyOpenFrameObject,
@@ -380,7 +397,7 @@ export function defineObjectType<TType extends string, TData>(
     describe: (object) => definition.describe(object as ObjectBase<TType, TData>),
   }
 
-  const { getBounds, hitTest, dependencies, endpoints, retargetEndpoint, relation, fields } =
+  const { getBounds, hitTest, dependencies, endpoints, retargetEndpoint, relation, fields, promotions } =
     definition
   return {
     ...erased,
@@ -395,6 +412,7 @@ export function defineObjectType<TType extends string, TData>(
      * declarations survive the trip.
      */
     ...(fields === undefined ? {} : { fields }),
+    ...(promotions === undefined ? {} : { promotions }),
     ...(getBounds === undefined
       ? {}
       : {

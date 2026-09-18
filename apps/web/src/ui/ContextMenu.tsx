@@ -56,6 +56,24 @@ export function ContextMenu() {
     return type !== undefined && runtime.registry.get(type)?.capabilities.selectsAsUnit === true
   })
 
+  /*
+   * Promotions come from the REGISTRY, so this menu names no type. A selection
+   * is offered only what EVERY member can become — the same intersection rule
+   * as the inspector's style properties, and for the same reason: one entry
+   * must mean one thing, and an entry that promotes three of five objects is a
+   * partial action the user cannot see the shape of.
+   */
+  const promotions = selected
+    .map((id) => {
+      const type = runtime.store.getObject(id)?.type
+      return type === undefined ? [] : (runtime.registry.get(type)?.promotions ?? [])
+    })
+    .reduce<readonly string[]>(
+      (common, list, index) =>
+        index === 0 ? list : common.filter((target) => list.includes(target)),
+      [],
+    )
+
   const groups: Item[][] = [
     [
       {
@@ -83,6 +101,18 @@ export function ContextMenu() {
         disabled: !hasSelection,
       },
     ],
+    promotions.map((target) => ({
+      /*
+       * "Promote to evidence", not "Convert to evidence": the user is saying
+       * what the note turns out to have been, which is the vocabulary
+       * PRODUCT.md uses for the whole synthesis motion.
+       */
+      label: `Promote to ${target}`,
+      run: () => {
+        commands.promoteSelection(target)
+      },
+      disabled: !hasSelection || locked,
+    })),
     [
       {
         label: 'Group',
@@ -149,29 +179,36 @@ export function ContextMenu() {
       data-testid="context-menu"
       style={{ left: `${String(at.x)}px`, top: `${String(at.y)}px` }}
     >
-      {groups.map((group, index) => (
-        <div key={index} className="of-menu__group">
-          {group.map((item) => (
-            <button
-              key={item.label}
-              type="button"
-              role="menuitem"
-              className="of-menu__item"
-              disabled={item.disabled === true}
-              data-testid={`menu-${item.label.toLowerCase().replace(/ /g, '-')}`}
-              onClick={() => {
-                item.run()
-                close()
-              }}
-            >
-              <span>{item.label}</span>
-              {item.shortcut !== undefined && (
-                <span className="of-menu__shortcut">{item.shortcut}</span>
-              )}
-            </button>
-          ))}
-        </div>
-      ))}
+      {/*
+       * Empty groups are dropped, not rendered. A group carries a separator
+       * rule, so a selection with no promotions on offer would otherwise show
+       * a divider with nothing under it.
+       */}
+      {groups
+        .filter((group) => group.length > 0)
+        .map((group, index) => (
+          <div key={index} className="of-menu__group">
+            {group.map((item) => (
+              <button
+                key={item.label}
+                type="button"
+                role="menuitem"
+                className="of-menu__item"
+                disabled={item.disabled === true}
+                data-testid={`menu-${item.label.toLowerCase().replace(/ /g, '-')}`}
+                onClick={() => {
+                  item.run()
+                  close()
+                }}
+              >
+                <span>{item.label}</span>
+                {item.shortcut !== undefined && (
+                  <span className="of-menu__shortcut">{item.shortcut}</span>
+                )}
+              </button>
+            ))}
+          </div>
+        ))}
     </div>
   )
 }

@@ -48,6 +48,23 @@ describe('object type registry contract', () => {
   it('carries a type\'s field declarations through erasure', () => {
     const evidence = registry.get('evidence')
     expect(evidence?.fields?.map((f) => f.key)).toEqual(['source', 'participant', 'tags'])
+    // Same trap, same guard: `promotions` is optional on both sides too.
+    expect(registry.get('sticky')?.promotions).toEqual(['evidence'])
+  })
+
+  /**
+   * A promotion offered to a type that does not exist is a menu entry that
+   * throws when clicked, and one to a non-spatial type is an entry the command
+   * layer will always refuse — an affordance for something impossible.
+   */
+  it('offers promotions only to types that exist and can be on the board', () => {
+    for (const definition of definitions) {
+      for (const target of definition.promotions ?? []) {
+        const destination = registry.get(target)
+        expect(destination, `${definition.type} promotes to unregistered "${target}"`).toBeDefined()
+        expect(destination?.capabilities.spatial).toBe(true)
+      }
+    }
   })
 
   it('rejects duplicate registration', () => {

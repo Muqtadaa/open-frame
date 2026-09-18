@@ -44,6 +44,8 @@ export interface BoardCommands {
   deleteSelection(): void
   setText(id: ObjectId, text: string): void
   updateData(id: ObjectId, patch: Readonly<Record<string, unknown>>): void
+  /** Promotes the selection to another type, keeping every object's identity. */
+  promoteSelection(toType: string): void
   /** Moves one draggable end of an object. The TYPE decides what that means. */
   retargetEndpoint(id: ObjectId, endpointId: string, target: EndpointTarget): void
   setColor(ids: readonly ObjectId[], color: ColorToken): void
@@ -334,6 +336,12 @@ export function useCommands(): BoardCommands {
 
       updateData(id, patch) {
         report(dispatcher.dispatch({ kind: 'UpdateObjectData', id, patch }))
+      },
+
+      promoteSelection(toType) {
+        const ids = [...useInteractionStore.getState().selection]
+        if (ids.length === 0) return
+        report(dispatcher.dispatch({ kind: 'ConvertObjects', ids, toType }))
       },
 
       retargetEndpoint(id, endpointId, target) {

@@ -1,6 +1,7 @@
 import type { BoardDocument } from '../../domain/document.js'
 import type { Patch } from '../../domain/patch.js'
 import type { CommandContext, Command } from '../types.js'
+import { convertObjects } from './convert-objects.js'
 import { createObjects } from './create-objects.js'
 import { reorderObjects } from './reorder-objects.js'
 import { reparentObjects } from './reparent-objects.js'
@@ -30,6 +31,8 @@ export function handleCommand(
       return createObjects(doc, command, ctx)
     case 'DeleteObjects':
       return deleteObjects(doc, command, ctx)
+    case 'ConvertObjects':
+      return convertObjects(doc, command, ctx)
     case 'MoveObjects':
       return moveObjects(doc, command)
     case 'ResizeObjects':
@@ -52,6 +55,7 @@ export function handleCommand(
 }
 
 export {
+  convertObjects,
   createObjects,
   deleteObjects,
   moveObjects,

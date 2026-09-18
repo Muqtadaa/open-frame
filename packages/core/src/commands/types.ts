@@ -42,6 +42,15 @@ export interface NewObjectSpec {
 export type Command =
   | { readonly kind: 'CreateObjects'; readonly objects: readonly NewObjectSpec[] }
   | { readonly kind: 'DeleteObjects'; readonly ids: readonly ObjectId[] }
+  /**
+   * Changes objects' TYPE while keeping their identity — a sticky becoming a
+   * piece of evidence, evidence becoming an insight.
+   *
+   * `toType` is a plain string rather than a union, like `NewObjectSpec.type`:
+   * the set of types is the registry's, and a union here would have to be
+   * edited every time one is added.
+   */
+  | { readonly kind: 'ConvertObjects'; readonly ids: readonly ObjectId[]; readonly toType: string }
   | {
       readonly kind: 'MoveObjects'
       readonly moves: readonly { readonly id: ObjectId; readonly dx: number; readonly dy: number }[]
