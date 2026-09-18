@@ -216,7 +216,7 @@ test.describe('synthesis', () => {
    */
   async function synthesiseFrom(page: Page, at: { x: number; y: number }): Promise<void> {
     await page.locator(CANVAS).click({ position: at, button: 'right' })
-    await page.getByTestId('menu-synthesise-into-insight').click()
+    await page.getByTestId('menu-derive-insight').click()
     await expect(page.locator(EDITOR)).toBeFocused()
     await page.keyboard.press('Escape')
     await expect(page.locator(EDITOR)).toHaveCount(0)
@@ -244,7 +244,7 @@ test.describe('synthesis', () => {
     // Not `synthesiseFrom`, which leaves the editor — this test is about
     // arriving in it.
     await page.locator(CANVAS).click({ position: FIRST, button: 'right' })
-    await page.getByTestId('menu-synthesise-into-insight').click()
+    await page.getByTestId('menu-derive-insight').click()
 
     await expect(page.locator(EDITOR)).toBeFocused()
     await page.locator(EDITOR).fill('Pricing is not discoverable before checkout')
@@ -346,5 +346,71 @@ test.describe('synthesis', () => {
     await expect(confidence).toHaveValue('unstated')
     await confidence.selectOption('high')
     await expect(confidence).toHaveValue('high')
+  })
+})
+
+/**
+ * Phase 3's first "done when", walked in a browser by one person in one go:
+ * capture evidence, cluster it, promote the cluster to an insight, link that
+ * insight to a hypothesis — and on down the spine to a task.
+ *
+ * Asserted as a PATH rather than as six separate derivations. Each link is
+ * declared by a type and nothing in the menu names one, so a dropped link does
+ * not fail a unit test; it just quietly stops being offered, and this is where
+ * that shows.
+ */
+test.describe('the synthesis spine', () => {
+  const START = { x: 300, y: 560 }
+  const CLEAR = { x: 1120, y: 140 }
+
+  test.beforeEach(async ({ page }) => {
+    await freshBoard(page)
+  })
+
+  test('runs from a note to a task without leaving the board', async ({ page }) => {
+    await page.keyboard.press('s')
+    await page.locator(CANVAS).click({ position: START })
+    await page.locator(EDITOR).fill('Could not find the price')
+    // Clicking away COMMITS; Escape would abandon what was just typed, which is
+    // what this test did at first and why every card came back empty.
+    await page.locator(CANVAS).click({ position: CLEAR })
+    await page.keyboard.press('v')
+
+    const spine: readonly [string, string][] = [
+      ['insight', 'Pricing is not discoverable'],
+      ['hypothesis', 'Showing price earlier lifts checkout'],
+      ['experiment', 'A/B the pricing block'],
+      ['decision', 'Move pricing above the fold'],
+      ['task', 'Ship the pricing block change'],
+    ]
+
+    let at = START
+    for (const [type, text] of spine) {
+      await page.locator(CANVAS).click({ position: at })
+      await page.locator(CANVAS).click({ position: at, button: 'right' })
+      await page.getByTestId(`menu-derive-${type}`).click()
+      await expect(page.locator(EDITOR)).toBeFocused()
+      await page.locator(EDITOR).fill(text)
+      await page.locator(CANVAS).click({ position: CLEAR })
+      await page.keyboard.press('v')
+
+      // The new object is where the next derivation starts from.
+      const box = await page.locator('[data-object-id]').last().boundingBox()
+      const canvas = await page.locator(CANVAS).boundingBox()
+      at = {
+        x: (box?.x ?? 0) - (canvas?.x ?? 0) + (box?.width ?? 0) / 2,
+        y: (box?.y ?? 0) - (canvas?.y ?? 0) + (box?.height ?? 0) / 2,
+      }
+    }
+
+    // Six objects, and five relations joining them into one chain.
+    await expect(page.locator('[data-object-type="task"]')).toHaveCount(1)
+    await expect(page.locator('[data-object-type="decision"]')).toHaveCount(1)
+
+    // The task can be asked what it stands on, all the way back.
+    await page.locator(CANVAS).click({ position: at })
+    await expect(page.getByRole('list', { name: 'stands on' })).toContainText(
+      'Move pricing above the fold',
+    )
   })
 })

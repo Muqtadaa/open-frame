@@ -37,15 +37,13 @@ function EvidenceRenderer({ object }: ObjectViewProps<EvidenceData>) {
        * screen reader user gets the same thing a sighted one does from the
        * footer — which is the point of the type existing at all.
        */
-      aria-label={
-        [
-          isEmptyText(text) ? 'Empty evidence' : `Evidence: ${plainTextOf(text)}`,
-          trail,
-          tags.join(', '),
-        ]
-          .filter((part) => part !== '')
-          .join('. ')
-      }
+      aria-label={[
+        isEmptyText(text) ? 'Empty evidence' : `Evidence: ${plainTextOf(text)}`,
+        trail,
+        tags.join(', '),
+      ]
+        .filter((part) => part !== '')
+        .join('. ')}
     >
       <div
         className="of-slip__body"

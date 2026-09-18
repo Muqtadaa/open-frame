@@ -9,8 +9,8 @@ one existing. Nothing here is a commitment to a date.
 | ------------------------------------------------------- | ---------------------------------------------------------------- | ----------- |
 | [1 · Foundation](phase-1-foundation.md)                 | The architectural skeleton, proved end to end by one object type | ✅ **Done** |
 | [2 · Core canvas](phase-2-core-canvas.md)               | The canvas a person would actually use                           | ✅ **Done** |
-| [3 · Structured objects](phase-3-structured-objects.md) | The reason OpenFrame exists                                      | ▶ Next      |
-| [4 · Collaboration](phase-4-collaboration.md)           | Multiplayer, presence, comments                                  | Planned     |
+| [3 · Structured objects](phase-3-structured-objects.md) | The reason OpenFrame exists                                      | ✅ **Done** |
+| [4 · Collaboration](phase-4-collaboration.md)           | Multiplayer, presence, comments                                  | ▶ Next      |
 | [5 · AI and MCP](phase-5-ai-and-mcp.md)                 | Agents as first-class board participants                         | Planned     |
 
 ---

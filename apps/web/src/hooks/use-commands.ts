@@ -61,13 +61,15 @@ export interface BoardCommands {
   /** Promotes the selection to another type, keeping every object's identity. */
   promoteSelection(toType: string): void
   /**
-   * Creates an insight above the selection, citing every member of it.
+   * Creates an object of `toType` above the selection, related back to every
+   * member of it.
    *
-   * The synthesis motion: a cluster of evidence becomes a claim that can be
-   * asked what it stands on. Returns the new object's id so the caller can put
-   * the user straight into editing it.
+   * The synthesis motion, generalised: a cluster of evidence becomes an insight
+   * citing it, an insight becomes a hypothesis derived from it, and so on down
+   * the spine. WHICH derivations exist and what their relations mean are the
+   * registry's business — this only carries them out.
    */
-  synthesise(): ObjectId | null
+  derive(toType: string, predicate: string): ObjectId | null
   /**
    * Selects an object and pans the minimum needed to see it.
    *
@@ -284,7 +286,7 @@ export function useCommands(): BoardCommands {
 
       reveal: revealObject,
 
-      synthesise() {
+      derive(toType, predicate) {
         const store = useInteractionStore.getState()
         const doc = runtime.store.getDocument()
         const cited = [...store.selection]
@@ -298,7 +300,7 @@ export function useCommands(): BoardCommands {
         const bounds = unionAll(cited.map((object) => runtime.registry.boundsOf(object, doc)))
         if (bounds === null) return null
 
-        const definition = runtime.registry.get('insight')
+        const definition = runtime.registry.get(toType)
         if (definition === undefined) return null
         const size = definition.create().frame
 
@@ -316,25 +318,28 @@ export function useCommands(): BoardCommands {
 
         // Minted here because the relations must name the insight, and
         // `transact` takes its commands upfront — the grouping precedent.
-        const insightId = runtime.ids.objectId()
-        const result = runtime.dispatcher.transact('Synthesise insight', [
+        const derivedId = runtime.ids.objectId()
+        const result = runtime.dispatcher.transact(`Derive ${toType}`, [
           {
             kind: 'CreateObjects',
-            objects: [{ type: 'insight', id: insightId, x: at.x, y: at.y }],
+            objects: [{ type: toType, id: derivedId, x: at.x, y: at.y }],
           },
           {
             kind: 'CreateObjects',
             /*
-             * One relation per cited object, all in the same transaction as the
-             * insight. Split across transactions, an undo would leave an
+             * One relation per source object, all in the same transaction as
+             * the new one. Split across transactions, an undo would leave an
              * insight standing on nothing — a claim whose provenance vanished,
              * which is the one thing this product must not do.
+             *
+             * Direction is new → selected: the new object is the one making the
+             * claim, so it is the one that cites, derives from or tests.
              */
             objects: cited.map((object) => ({
               type: 'relation',
               x: 0,
               y: 0,
-              data: { from: insightId, to: object.id, predicate: 'cites' },
+              data: { from: derivedId, to: object.id, predicate },
             })),
           },
         ])
@@ -346,16 +351,16 @@ export function useCommands(): BoardCommands {
          * screen — synthesis would produce a card the user never sees, with a
          * panel describing it as if it were in front of them.
          */
-        revealObject(insightId)
+        revealObject(derivedId)
         /*
-         * Straight into editing. A synthesised insight is an empty card that
-         * exists only to hold a claim nobody has written yet — leaving the user
-         * to find it and double-click is asking them to do the obvious next
-         * step by hand, and an unwritten claim citing real evidence is the
-         * worst thing this board can contain.
+         * Straight into editing. A derived object is an empty card that exists
+         * only to hold something nobody has written yet — leaving the user to
+         * find it and double-click is asking them to do the obvious next step
+         * by hand, and an unwritten claim citing real evidence is the worst
+         * thing this board can contain.
          */
-        useInteractionStore.getState().setEditing(insightId)
-        return insightId
+        useInteractionStore.getState().setEditing(derivedId)
+        return derivedId
       },
 
       ungroup() {

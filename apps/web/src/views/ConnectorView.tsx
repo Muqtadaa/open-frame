@@ -49,10 +49,10 @@ function ConnectorRenderer({ object, document: doc, zoom }: ObjectViewProps<Conn
       />
 
       {/*
-        * Arrowheads are NOT dashed. The pattern says something about the
-        * relationship the line represents; a broken-up arrowhead just looks
-        * like a rendering fault.
-        */}
+       * Arrowheads are NOT dashed. The pattern says something about the
+       * relationship the line represents; a broken-up arrowhead just looks
+       * like a rendering fault.
+       */}
       {object.data.endArrow === 'arrow' && (
         <path
           d={arrow(end, angle)}

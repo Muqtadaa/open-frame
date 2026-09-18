@@ -63,6 +63,23 @@ export function ContextMenu() {
    * must mean one thing, and an entry that promotes three of five objects is a
    * partial action the user cannot see the shape of.
    */
+  /*
+   * Only what EVERY selected object can derive, the same intersection rule as
+   * promotions and style properties: one entry must mean one thing, and an
+   * entry that relates three of five objects is a partial action nobody can see
+   * the shape of.
+   */
+  const derivations = selected
+    .map((id) => {
+      const type = runtime.store.getObject(id)?.type
+      return type === undefined ? [] : (runtime.registry.get(type)?.derivations ?? [])
+    })
+    .reduce<readonly { type: string; predicate: string }[]>(
+      (common, list, index) =>
+        index === 0 ? [...list] : common.filter((d) => list.some((o) => o.type === d.type)),
+      [],
+    )
+
   const promotions = selected
     .map((id) => {
       const type = runtime.store.getObject(id)?.type
@@ -102,19 +119,20 @@ export function ContextMenu() {
       },
     ],
     /*
-     * Synthesis is not a promotion: it CREATES a claim standing on what is
-     * selected, rather than turning the selection into one. Conflating the two
+     * Deriving is not promoting: it CREATES something standing on what is
+     * selected, rather than turning the selection into it. Conflating the two
      * would mean the evidence disappeared at the moment it started being cited.
+     *
+     * Which derivations exist comes from the registry, so this menu names no
+     * type — and the next one is reachable by declaring itself.
      */
-    [
-      {
-        label: 'Synthesise into insight',
-        run: () => {
-          commands.synthesise()
-        },
-        disabled: !hasSelection,
+    derivations.map((derivation) => ({
+      label: `Derive ${derivation.type}`,
+      run: () => {
+        commands.derive(derivation.type, derivation.predicate)
       },
-    ],
+      disabled: !hasSelection,
+    })),
     promotions.map((target) => ({
       /*
        * "Promote to evidence", not "Convert to evidence": the user is saying

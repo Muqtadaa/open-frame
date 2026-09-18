@@ -52,6 +52,16 @@ export const insightType = defineObjectType<typeof INSIGHT_TYPE, InsightData>({
     },
   ],
 
+  /*
+   * A claim leads to something testable, or to something the product must do.
+   * Both are real next steps from an insight and the board should not have to
+   * pick one.
+   */
+  derivations: [
+    { type: 'hypothesis', predicate: 'derivesFrom' },
+    { type: 'requirement', predicate: 'motivates' },
+  ],
+
   describe: (object) => {
     const { confidence } = object.data
     const text = plainTextOf(object.data.text)

@@ -5,6 +5,12 @@ import { frameType } from './frame/definition.js'
 import { groupType } from './group/definition.js'
 import { imageType } from './image/definition.js'
 import { insightType } from './insight/definition.js'
+import { hypothesisType } from './hypothesis/definition.js'
+import { experimentType } from './experiment/definition.js'
+import { decisionType } from './decision/definition.js'
+import { taskType } from './task/definition.js'
+import { journeystageType } from './journey-stage/definition.js'
+import { requirementType } from './requirement/definition.js'
 import { relationType } from './relation/definition.js'
 import { shapeType } from './shape/definition.js'
 import { stickyType } from './sticky/definition.js'
@@ -32,6 +38,18 @@ export { RelationDataSchema, type RelationData } from './relation/schema.js'
 export { GroupDataSchema, type GroupData } from './group/schema.js'
 export { IMAGE_TYPE, imageType, placedSize } from './image/definition.js'
 export { INSIGHT_TYPE, insightType } from './insight/definition.js'
+export { HYPOTHESIS_TYPE, hypothesisType } from './hypothesis/definition.js'
+export * from './hypothesis/schema.js'
+export { EXPERIMENT_TYPE, experimentType } from './experiment/definition.js'
+export * from './experiment/schema.js'
+export { DECISION_TYPE, decisionType } from './decision/definition.js'
+export * from './decision/schema.js'
+export { TASK_TYPE, taskType } from './task/definition.js'
+export * from './task/schema.js'
+export { JOURNEY_STAGE_TYPE, journeystageType } from './journey-stage/definition.js'
+export * from './journey-stage/schema.js'
+export { REQUIREMENT_TYPE, requirementType } from './requirement/definition.js'
+export * from './requirement/schema.js'
 export {
   CONFIDENCE_LEVELS,
   InsightDataSchema,
@@ -67,6 +85,12 @@ export function createDefaultRegistry(): ObjectTypeRegistry {
     groupType,
     evidenceType,
     insightType,
+    hypothesisType,
+    experimentType,
+    decisionType,
+    taskType,
+    journeystageType,
+    requirementType,
     relationType,
     unknownType,
   ])

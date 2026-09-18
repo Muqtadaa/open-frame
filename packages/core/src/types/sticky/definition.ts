@@ -46,7 +46,7 @@ export const stickyType = defineObjectType<typeof STICKY_TYPE, StickyData>({
    * for a classification up front, and the promotion keeps the object's
    * identity, so anything already citing it still does.
    */
-  promotions: ['evidence'],
+  promotions: ['evidence', 'insight'],
 
   /*
    * Plain text is DERIVED here, never stored (ADR 0012). Keeping a flattened
@@ -54,6 +54,14 @@ export const stickyType = defineObjectType<typeof STICKY_TYPE, StickyData>({
    * characters, and they would diverge the first time one path was updated and
    * the other was not.
    */
+  /*
+   * A cluster of plain notes becoming a claim is the most common synthesis
+   * motion there is — people cluster stickies long before they classify any of
+   * them. Requiring evidence first would be demanding the structure this
+   * product says is earned.
+   */
+  derivations: [{ type: 'insight', predicate: 'cites' }],
+
   describe: (object) => {
     const text = plainTextOf(object.data.text)
     return {

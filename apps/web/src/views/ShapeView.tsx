@@ -86,12 +86,12 @@ function ShapeRenderer({ object }: ObjectViewProps<ShapeData>) {
           }}
         >
           {/*
-            * The text is its own element rather than a bare string. As an
-            * anonymous flex item it had no box anything could measure, so the
-            * alignment it is placed with was invisible to tests — which is part
-            * of why "shape labels are permanently centred" reached a deployed
-            * build. Layout is unchanged: one flex item either way.
-            */}
+           * The text is its own element rather than a bare string. As an
+           * anonymous flex item it had no box anything could measure, so the
+           * alignment it is placed with was invisible to tests — which is part
+           * of why "shape labels are permanently centred" reached a deployed
+           * build. Layout is unchanged: one flex item either way.
+           */}
           <span className="of-shape__label-text">
             <RichTextView value={label} />
           </span>

@@ -5,6 +5,12 @@ import { frameView } from './FrameView.js'
 import { groupView } from './GroupView.js'
 import { imageView } from './ImageView.js'
 import { insightView } from './InsightView.js'
+import { hypothesisView } from './HypothesisView.js'
+import { experimentView } from './ExperimentView.js'
+import { decisionView } from './DecisionView.js'
+import { taskView } from './TaskView.js'
+import { journeyStageView } from './JourneyStageView.js'
+import { requirementView } from './RequirementView.js'
 import { shapeView } from './ShapeView.js'
 import { stickyView } from './StickyView.js'
 import { textView } from './TextView.js'
@@ -30,6 +36,12 @@ export function createDefaultViewRegistry(): ObjectViewRegistry {
     groupView,
     evidenceView,
     insightView,
+    hypothesisView,
+    experimentView,
+    decisionView,
+    taskView,
+    journeyStageView,
+    requirementView,
     unknownView,
   ])
 }

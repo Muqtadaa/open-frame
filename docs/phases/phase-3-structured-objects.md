@@ -1,6 +1,6 @@
 # Phase 3 · Structured objects
 
-**Status: Planned** · ← [Roadmap](README.md)
+**Status: Complete** · ← [Roadmap](README.md)
 
 The phase where OpenFrame stops being a whiteboard.
 
@@ -53,6 +53,17 @@ will likely need:
 These are registry additions, not application changes. Designing them is the
 main architectural work of this phase.
 
+All three shipped, as `fields`, `derivations` and `promotions`. The distinction
+that took the longest to see: a **promotion** turns an object INTO another
+("this was always evidence"), a **derivation** creates something new standing on
+it ("here is a claim that cites it"). Conflating them would mean the evidence
+vanished at the moment it started being cited.
+
+`derivations` is also where ADR 0011's deferred predicate vocabulary settled.
+The pairings — `cites`, `derivesFrom`, `tests`, `informs`, `implements`,
+`motivates` — are declared beside the types they join rather than chosen at each
+call site.
+
 The second is **decided**: [ADR 0011](../adr/0011-relations-as-objects.md). A
 relation is an object, `spatial: false` keeps it off the board, and a memoized
 index answers the reverse lookup. What the ADR deliberately left open —
@@ -86,10 +97,32 @@ rejecting the embedded array on merge behaviour rather than on query cost.
 
 ## Done when
 
-- A researcher can run a synthesis session end to end: capture evidence, cluster
-  it, promote clusters to insights, link insights to hypotheses.
-- Adding a ninth structured type is genuinely a two-file change.
-- Board search finds objects by their semantic fields, not only their text.
+- ✅ A researcher can run a synthesis session end to end: capture evidence,
+  cluster it, promote clusters to insights, link insights to hypotheses. The
+  whole spine — note → insight → hypothesis → experiment → decision → task —
+  is walked by one e2e test, asserted as a PATH so a dropped link fails
+  somewhere rather than quietly ceasing to be offered.
+- ✅ Adding a ninth structured type is genuinely a two-file change. Six types
+  were added at once to check it: a folder in `core/src/types/`, a file in
+  `web/src/views/`, and two registration lines each. Nothing in the command
+  layer, persistence, undo, culling, hit testing or search learned they exist.
+- ✅ Board search finds objects by their semantic fields, not only their text —
+  reading `describe()`, which every type had declared since Phase 1 and which
+  nothing consumed until now.
+
+## What is deliberately not here
+
+- **The status vocabularies are a first cut.** `todo/doing/done/blocked`,
+  MoSCoW, `proposed/accepted/superseded` are the schemes these users already
+  argue in, but none has met a real session. Changing one is a migration, which
+  is the intended friction.
+- **Nothing validates which types may relate to which.** `derivations` says what
+  is OFFERED; a relation between any two objects is still legal, because the
+  first person to want an unusual one is more likely to be right than the
+  registry is.
+- **No filtering by field value beyond tag and type.** `status:done` is an
+  obvious next term and was left out: a query language grows a parser, and this
+  grammar still fits in a placeholder string.
 
 ---
 

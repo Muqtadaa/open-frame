@@ -20,14 +20,12 @@ function InsightRenderer({ object }: ObjectViewProps<InsightData>) {
         opacity: object.style.opacity ?? 1,
       }}
       role="group"
-      aria-label={
-        [
-          isEmptyText(text) ? 'Empty insight' : `Insight: ${plainTextOf(text)}`,
-          confidence === 'unstated' ? '' : `${confidence} confidence`,
-        ]
-          .filter((part) => part !== '')
-          .join('. ')
-      }
+      aria-label={[
+        isEmptyText(text) ? 'Empty insight' : `Insight: ${plainTextOf(text)}`,
+        confidence === 'unstated' ? '' : `${confidence} confidence`,
+      ]
+        .filter((part) => part !== '')
+        .join('. ')}
     >
       <div
         className="of-slip__body of-insight__claim"
@@ -40,10 +38,10 @@ function InsightRenderer({ object }: ObjectViewProps<InsightData>) {
       </div>
 
       {/*
-        * Only shown once someone has said it. An unstated confidence rendered
-        * as "unstated" would put a word on every card that means nothing, and
-        * would read as an assessment rather than the absence of one.
-        */}
+       * Only shown once someone has said it. An unstated confidence rendered
+       * as "unstated" would put a word on every card that means nothing, and
+       * would read as an assessment rather than the absence of one.
+       */}
       {confidence !== 'unstated' && (
         <div className="of-slip__record" aria-hidden="true">
           <span className="of-slip__trail">confidence: {confidence}</span>

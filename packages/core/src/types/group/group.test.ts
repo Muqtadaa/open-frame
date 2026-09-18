@@ -62,7 +62,7 @@ describe('group bounds', () => {
    * A group holding a connector is the obvious thing to do — a diagram with its
    * arrows — and a connector's frame is 0x0, so using frames here would clip.
    */
-  it('uses a child connector\'s derived extent, not its empty frame', () => {
+  it("uses a child connector's derived extent, not its empty frame", () => {
     const group = create(h, 'group')
     create(h, 'connector', 0, 0, {
       parentId: group,
@@ -106,9 +106,9 @@ describe('group behaviour', () => {
     const group = create(h, 'group')
     create(h, 'sticky', 0, 0, { parentId: group })
     // Dead centre of the group's own bounds.
-    expect(h.registry.hitTestObject(object(h, group), h.store.getDocument(), { x: 90, y: 90 })).toBe(
-      false,
-    )
+    expect(
+      h.registry.hitTestObject(object(h, group), h.store.getDocument(), { x: 90, y: 90 }),
+    ).toBe(false)
   })
 
   it('declares itself as selecting as a unit, which nothing else does', () => {
@@ -157,9 +157,11 @@ describe('caller-supplied ids', () => {
     ])
 
     expect(result.ok).toBe(true)
-    expect(childrenOf(h.store.getDocument(), groupId).map((o) => o.id).sort()).toEqual(
-      [note, other].sort(),
-    )
+    expect(
+      childrenOf(h.store.getDocument(), groupId)
+        .map((o) => o.id)
+        .sort(),
+    ).toEqual([note, other].sort())
   })
 
   it('is one undo entry, not two', () => {

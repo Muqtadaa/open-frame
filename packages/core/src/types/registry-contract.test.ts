@@ -23,14 +23,20 @@ describe('object type registry contract', () => {
     // unnoticed is how the app and the persisted format quietly diverge.
     expect(definitions.map((d) => d.type).sort()).toEqual([
       'connector',
+      'decision',
       'evidence',
+      'experiment',
       'frame',
       'group',
+      'hypothesis',
       'image',
       'insight',
+      'journey-stage',
       'relation',
+      'requirement',
       'shape',
       'sticky',
+      'task',
       'text',
       'unknown',
     ])
@@ -46,11 +52,15 @@ describe('object type registry contract', () => {
    * set. A test that passes vacuously is worse than no test, because it is
    * trusted (rule 23), so this asserts a known declaration survives erasure.
    */
-  it('carries a type\'s field declarations through erasure', () => {
+  it("carries a type's field declarations through erasure", () => {
     const evidence = registry.get('evidence')
     expect(evidence?.fields?.map((f) => f.key)).toEqual(['source', 'participant', 'tags'])
-    // Same trap, same guard: `promotions` is optional on both sides too.
-    expect(registry.get('sticky')?.promotions).toEqual(['evidence'])
+    // Same trap, same guard: every optional member is copied one at a time in
+    // `defineObjectType`, and forgetting one type checks perfectly.
+    expect(registry.get('sticky')?.promotions).toEqual(['evidence', 'insight'])
+    expect(registry.get('evidence')?.derivations).toEqual([
+      { type: 'insight', predicate: 'cites' },
+    ])
   })
 
   /**
@@ -58,6 +68,41 @@ describe('object type registry contract', () => {
    * throws when clicked, and one to a non-spatial type is an entry the command
    * layer will always refuse — an affordance for something impossible.
    */
+  /**
+   * A derivation to a type that does not exist is a menu entry that throws, and
+   * one to a type with no place on the board is an object nobody could ever
+   * find. The predicate must say something: an empty one is a relation that
+   * means nothing, which is worse than no relation.
+   */
+  it('derives only to types that exist, with a predicate that says something', () => {
+    for (const definition of definitions) {
+      for (const derivation of definition.derivations ?? []) {
+        const destination = registry.get(derivation.type)
+        expect(
+          destination,
+          `${definition.type} derives to unregistered "${derivation.type}"`,
+        ).toBeDefined()
+        expect(destination?.capabilities.spatial).toBe(true)
+        expect(derivation.predicate.trim().length).toBeGreaterThan(0)
+      }
+    }
+  })
+
+  /**
+   * The synthesis spine the phase is defined by, asserted as a path rather than
+   * as six separate declarations: evidence → insight → hypothesis → experiment
+   * → decision → task. If a link is dropped, the story stops working and this
+   * is where it shows.
+   */
+  it('connects the whole synthesis spine', () => {
+    const spine = ['evidence', 'insight', 'hypothesis', 'experiment', 'decision', 'task']
+    for (const [index, from] of spine.slice(0, -1).entries()) {
+      const next = spine[index + 1]
+      const offered = registry.get(from)?.derivations?.map((d) => d.type) ?? []
+      expect(offered, `${from} cannot derive a ${String(next)}`).toContain(next)
+    }
+  })
+
   it('offers promotions only to types that exist and can be on the board', () => {
     for (const definition of definitions) {
       for (const target of definition.promotions ?? []) {

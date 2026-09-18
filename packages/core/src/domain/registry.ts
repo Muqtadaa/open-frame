@@ -19,6 +19,18 @@ export interface RelationEdge {
   readonly predicate: string
 }
 
+/**
+ * Something that can be made FROM an object of some type.
+ *
+ * `predicate` is the relation the new object will carry back to the one it was
+ * drawn from, so the vocabulary lives beside the pairing it belongs to rather
+ * than being chosen by whatever code happens to create the relation.
+ */
+export interface Derivation {
+  readonly type: string
+  readonly predicate: string
+}
+
 /** A relation as seen from one end: the edge, and the object carrying it. */
 export interface RelationLink {
   readonly id: ObjectId
@@ -305,6 +317,29 @@ export interface ObjectTypeDefinition<TType extends string, TData> {
    */
   readonly promotions?: readonly string[]
 
+  /**
+   * What can be DERIVED from this type, and what the new object's relation to
+   * it means.
+   *
+   * The second registry addition Phase 3 named — relationship declarations, so
+   * links can be validated and traversed. A derivation creates a new object and
+   * a relation pointing from it BACK to the selection: an insight cites the
+   * evidence it was drawn from, a hypothesis derives from that insight, an
+   * experiment tests that hypothesis. Direction is always new → selected,
+   * because the new object is the one making the claim.
+   *
+   * Distinct from `promotions`, which turns this object INTO another. A
+   * promotion is "this was always evidence"; a derivation is "here is something
+   * new that stands on it", and conflating them would mean the evidence
+   * vanished at the moment it started being cited.
+   *
+   * This is also where the predicate vocabulary finally settles. ADR 0011
+   * deferred it until the types existed and their real pairings were known;
+   * these declarations ARE those pairings, in one place, rather than a free
+   * string chosen at each call site.
+   */
+  readonly derivations?: readonly Derivation[]
+
   readonly describe: (object: ObjectBase<TType, TData>) => ObjectDescription
 }
 
@@ -335,6 +370,7 @@ export interface ErasedObjectTypeDefinition {
   readonly relation?: (object: AnyOpenFrameObject) => RelationEdge | null
   readonly fields?: readonly FieldDefinition[]
   readonly promotions?: readonly string[]
+  readonly derivations?: readonly Derivation[]
   readonly endpoints?: (object: AnyOpenFrameObject, doc: BoardDocument) => readonly DraggableEndpoint[]
   readonly retargetEndpoint?: (
     object: AnyOpenFrameObject,
@@ -397,7 +433,7 @@ export function defineObjectType<TType extends string, TData>(
     describe: (object) => definition.describe(object as ObjectBase<TType, TData>),
   }
 
-  const { getBounds, hitTest, dependencies, endpoints, retargetEndpoint, relation, fields, promotions } =
+  const { getBounds, hitTest, dependencies, endpoints, retargetEndpoint, relation, fields, promotions, derivations } =
     definition
   return {
     ...erased,
@@ -413,6 +449,7 @@ export function defineObjectType<TType extends string, TData>(
      */
     ...(fields === undefined ? {} : { fields }),
     ...(promotions === undefined ? {} : { promotions }),
+    ...(derivations === undefined ? {} : { derivations }),
     ...(getBounds === undefined
       ? {}
       : {

@@ -177,73 +177,76 @@ export function RichTextEditor({
         }}
       />
       <div
-      ref={ref}
-      className={className}
-      style={style}
-      contentEditable
-      suppressContentEditableWarning
-      role="textbox"
-      aria-multiline="true"
-      aria-label={ariaLabel}
-      data-testid="rich-text-editor"
-      onBlur={() => {
-        if (cancelled.current) return
-        const element = ref.current
-        onCommit(element === null ? draft.current : spansFromElement(element))
-      }}
-      onPaste={(event) => {
-        /*
-         * Paste is intercepted and reduced to PLAIN TEXT.
-         *
-         * A browser's own paste inserts arbitrary markup — fonts, colours,
-         * tables, scripts — into a document this product is committed to
-         * accepting from other people. Keeping the characters and dropping
-         * everything else is the only version of this that is safe without a
-         * sanitiser, and a half-sanitised paste is worse than a plain one
-         * because it looks handled.
-         */
-        event.preventDefault()
-        const text = event.clipboardData.getData('text/plain')
-        if (text !== '') event.currentTarget.ownerDocument.execCommand('insertText', false, text)
-      }}
-      onKeyDown={(event) => {
-        // Keep board shortcuts from firing while typing: a 'v' in a note must
-        // stay a 'v', not switch tools.
-        event.stopPropagation()
-
-        if (event.key === 'Escape') {
-          event.preventDefault()
-          cancelled.current = true
-          onCancel()
-          return
-        }
-        if (event.key === 'Enter' && (event.metaKey || event.ctrlKey)) {
-          event.preventDefault()
+        ref={ref}
+        className={className}
+        style={style}
+        contentEditable
+        suppressContentEditableWarning
+        role="textbox"
+        aria-multiline="true"
+        aria-label={ariaLabel}
+        data-testid="rich-text-editor"
+        onBlur={() => {
+          if (cancelled.current) return
           const element = ref.current
           onCommit(element === null ? draft.current : spansFromElement(element))
-          return
-        }
-
-        const mark = (event.metaKey || event.ctrlKey) && SHORTCUTS[event.key.toLowerCase()]
-        if (mark !== undefined && mark !== false) {
+        }}
+        onPaste={(event) => {
+          /*
+           * Paste is intercepted and reduced to PLAIN TEXT.
+           *
+           * A browser's own paste inserts arbitrary markup — fonts, colours,
+           * tables, scripts — into a document this product is committed to
+           * accepting from other people. Keeping the characters and dropping
+           * everything else is the only version of this that is safe without a
+           * sanitiser, and a half-sanitised paste is worse than a plain one
+           * because it looks handled.
+           */
           event.preventDefault()
-          reformat((text, from, to) =>
-            applyMark(text, from, to, mark, !markCovers(text, from, to, mark)),
-          )
-        }
-      }}
+          const text = event.clipboardData.getData('text/plain')
+          if (text !== '') event.currentTarget.ownerDocument.execCommand('insertText', false, text)
+        }}
+        onKeyDown={(event) => {
+          // Keep board shortcuts from firing while typing: a 'v' in a note must
+          // stay a 'v', not switch tools.
+          event.stopPropagation()
+
+          if (event.key === 'Escape') {
+            event.preventDefault()
+            cancelled.current = true
+            onCancel()
+            return
+          }
+          if (event.key === 'Enter' && (event.metaKey || event.ctrlKey)) {
+            event.preventDefault()
+            const element = ref.current
+            onCommit(element === null ? draft.current : spansFromElement(element))
+            return
+          }
+
+          const mark = (event.metaKey || event.ctrlKey) && SHORTCUTS[event.key.toLowerCase()]
+          if (mark !== undefined && mark !== false) {
+            event.preventDefault()
+            reformat((text, from, to) =>
+              applyMark(text, from, to, mark, !markCovers(text, from, to, mark)),
+            )
+          }
+        }}
       />
     </>
   )
 }
 
-const MARK_BUTTONS: readonly { readonly mark: Mark; readonly label: string; readonly glyph: string }[] =
-  [
-    { mark: 'bold', label: 'Bold', glyph: 'B' },
-    { mark: 'italic', label: 'Italic', glyph: 'I' },
-    { mark: 'underline', label: 'Underline', glyph: 'U' },
-    { mark: 'strike', label: 'Strikethrough', glyph: 'S' },
-  ]
+const MARK_BUTTONS: readonly {
+  readonly mark: Mark
+  readonly label: string
+  readonly glyph: string
+}[] = [
+  { mark: 'bold', label: 'Bold', glyph: 'B' },
+  { mark: 'italic', label: 'Italic', glyph: 'I' },
+  { mark: 'underline', label: 'Underline', glyph: 'U' },
+  { mark: 'strike', label: 'Strikethrough', glyph: 'S' },
+]
 
 /**
  * The size the selection currently reads as, for stepping up and down from.
@@ -332,14 +335,14 @@ function FormatBar({
       <span className="of-format-bar__rule" aria-hidden="true" />
 
       {/*
-        * Stepping buttons, not a dropdown.
-        *
-        * Every control here has to prevent `mousedown` or it takes focus, which
-        * blurs the editor and COMMITS — and preventing mousedown on a native
-        * `<select>` also stops the browser opening it, so the dropdown could
-        * not be used at all. It also matches what was asked for: increasing and
-        * decreasing the size, rather than naming one.
-        */}
+       * Stepping buttons, not a dropdown.
+       *
+       * Every control here has to prevent `mousedown` or it takes focus, which
+       * blurs the editor and COMMITS — and preventing mousedown on a native
+       * `<select>` also stops the browser opening it, so the dropdown could
+       * not be used at all. It also matches what was asked for: increasing and
+       * decreasing the size, rather than naming one.
+       */}
       <button
         type="button"
         className="of-format-bar__button of-format-bar__button--size"

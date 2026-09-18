@@ -73,7 +73,15 @@ architecture here spent its first phase on, ahead of anything visible.
 shape kinds, frames, connectors, images, groups; selection, resize, rotation,
 z-order, clipboard, undo/redo; snap-to-grid and alignment guides; local
 persistence with schema versioning and migrations; image upload validated by
-content.
+content; inline rich text.
+
+**The structured half:** eight semantic types — evidence, insight, hypothesis,
+experiment, decision, task, journey stage, requirement — each editable through a
+record panel driven by the type's own declarations. A plain note is promoted
+into one when its meaning is clear; a cluster is derived into the thing that
+stands on it, carrying a relation back. Provenance is readable in both
+directions, and board search finds objects by their fields rather than only
+their text.
 
 **Technical constraints that are settled and load-bearing:**
 

@@ -38,7 +38,9 @@ export const shapeType = defineObjectType<typeof SHAPE_TYPE, ShapeData>({
     return {
       searchText: text,
       summary:
-        text.trim() === '' ? `Empty ${object.data.shape}` : `${object.data.shape}: ${text.slice(0, 100)}`,
+        text.trim() === ''
+          ? `Empty ${object.data.shape}`
+          : `${object.data.shape}: ${text.slice(0, 100)}`,
       fields: { shape: object.data.shape, text },
     }
   },

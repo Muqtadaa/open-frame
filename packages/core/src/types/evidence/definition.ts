@@ -51,6 +51,12 @@ export const evidenceType = defineObjectType<typeof EVIDENCE_TYPE, EvidenceData>
     { key: 'tags', label: 'Tags', kind: 'tags', placeholder: 'pricing' },
   ],
 
+  /*
+   * The synthesis motion: a cluster of evidence becomes a claim that can be
+   * asked what it stands on.
+   */
+  derivations: [{ type: 'insight', predicate: 'cites' }],
+
   describe: (object) => {
     const { source, participant, tags } = object.data
     const text = plainTextOf(object.data.text)
