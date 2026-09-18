@@ -4,6 +4,7 @@ import { evidenceType } from './evidence/definition.js'
 import { frameType } from './frame/definition.js'
 import { groupType } from './group/definition.js'
 import { imageType } from './image/definition.js'
+import { insightType } from './insight/definition.js'
 import { relationType } from './relation/definition.js'
 import { shapeType } from './shape/definition.js'
 import { stickyType } from './sticky/definition.js'
@@ -30,6 +31,13 @@ export { RELATION_TYPE, relationType } from './relation/definition.js'
 export { RelationDataSchema, type RelationData } from './relation/schema.js'
 export { GroupDataSchema, type GroupData } from './group/schema.js'
 export { IMAGE_TYPE, imageType, placedSize } from './image/definition.js'
+export { INSIGHT_TYPE, insightType } from './insight/definition.js'
+export {
+  CONFIDENCE_LEVELS,
+  InsightDataSchema,
+  type Confidence,
+  type InsightData,
+} from './insight/schema.js'
 export { ImageDataSchema, type ImageData } from './image/schema.js'
 export { FrameDataSchema, type FrameData } from './frame/schema.js'
 export { SHAPE_TYPE, shapeType } from './shape/definition.js'
@@ -58,6 +66,7 @@ export function createDefaultRegistry(): ObjectTypeRegistry {
     imageType,
     groupType,
     evidenceType,
+    insightType,
     relationType,
     unknownType,
   ])

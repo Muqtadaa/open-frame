@@ -101,6 +101,20 @@ export function ContextMenu() {
         disabled: !hasSelection,
       },
     ],
+    /*
+     * Synthesis is not a promotion: it CREATES a claim standing on what is
+     * selected, rather than turning the selection into one. Conflating the two
+     * would mean the evidence disappeared at the moment it started being cited.
+     */
+    [
+      {
+        label: 'Synthesise into insight',
+        run: () => {
+          commands.synthesise()
+        },
+        disabled: !hasSelection,
+      },
+    ],
     promotions.map((target) => ({
       /*
        * "Promote to evidence", not "Convert to evidence": the user is saying

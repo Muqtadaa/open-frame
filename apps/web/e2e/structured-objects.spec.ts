@@ -147,3 +147,123 @@ test.describe('structured objects', () => {
     await expect(page.locator('.of-slip__record')).toHaveCount(0)
   })
 })
+
+/**
+ * Phase 3's "done when", walked in a browser: capture evidence, cluster it,
+ * promote the cluster to an insight, and be able to ask what that insight
+ * stands on.
+ *
+ * This is the test ADR 0011 asks for. Relations are objects with no appearance,
+ * which is what buys clean merges — and it means nothing on the BOARD shows a
+ * citation exists. If the provenance panel is wrong or absent, the whole
+ * relation model is unfalsifiable by use, and these assertions are the only
+ * thing standing between "it works" and "nobody has looked".
+ */
+test.describe('synthesis', () => {
+  /*
+   * Stacked vertically, not side by side. The record panel floats to the right
+   * of the selection, so a neighbour placed there is genuinely underneath it —
+   * an accepted cost of floating rather than a bug, but it makes a
+   * shift-click on that neighbour a click on the panel.
+   */
+  const FIRST = { x: 300, y: 300 }
+  const SECOND = { x: 300, y: 520 }
+
+  test.beforeEach(async ({ page }) => {
+    await freshBoard(page)
+  })
+
+  async function placeAt(page: Page, at: { x: number; y: number }, text: string): Promise<void> {
+    await page.keyboard.press('s')
+    await page.locator(CANVAS).click({ position: at })
+    await expect(page.locator('textarea')).toBeFocused()
+    await page.locator('textarea').fill(text)
+    await page.locator(CANVAS).click({ position: EMPTY })
+    await expect(page.locator('textarea')).toHaveCount(0)
+    await page.keyboard.press('v')
+  }
+
+  test('an insight cites the evidence it was drawn from, both ways', async ({ page }) => {
+    await placeAt(page, FIRST, 'Could not find the price')
+    await placeAt(page, SECOND, 'Gave up before checkout')
+
+    await page.locator(CANVAS).click({ position: FIRST })
+    await page.locator(CANVAS).click({ position: SECOND, modifiers: ['Shift'] })
+    await page.locator(CANVAS).click({ position: SECOND, button: 'right' })
+    await page.getByTestId('menu-synthesise-into-insight').click()
+
+    // The new insight is selected, and its panel says what it stands on.
+    await expect(page.getByTestId('inspector')).toBeVisible()
+    const stands = page.getByRole('list', { name: 'stands on' })
+    await expect(stands).toBeVisible()
+    await expect(stands.getByRole('button')).toHaveCount(2)
+    await expect(stands).toContainText('Could not find the price')
+    await expect(stands).toContainText('Gave up before checkout')
+
+    // And the reverse direction — the question Phase 1 deferred the decision on.
+    await page.locator(CANVAS).click({ position: FIRST })
+    await expect(page.getByRole('list', { name: 'cited by' })).toBeVisible()
+  })
+
+  test('clicking a trail entry takes you to the object', async ({ page }) => {
+    await placeAt(page, FIRST, 'Could not find the price')
+    await page.locator(CANVAS).click({ position: FIRST })
+    await page.locator(CANVAS).click({ position: FIRST, button: 'right' })
+    await page.getByTestId('menu-synthesise-into-insight').click()
+
+    await page.getByRole('list', { name: 'stands on' }).getByRole('button').first().click()
+    // The evidence is now the selection, so ITS panel is showing.
+    await expect(page.getByRole('list', { name: 'cited by' })).toBeVisible()
+  })
+
+  /**
+   * One transaction. Split across two, an undo would leave an insight standing
+   * on nothing — a claim whose provenance vanished, which is the single thing
+   * this product must not do.
+   */
+  test('undo removes the insight and its citations together', async ({ page }) => {
+    await placeAt(page, FIRST, 'Could not find the price')
+    await page.locator(CANVAS).click({ position: FIRST })
+    await page.locator(CANVAS).click({ position: FIRST, button: 'right' })
+    await page.getByTestId('menu-synthesise-into-insight').click()
+    await expect(page.getByRole('list', { name: 'stands on' })).toBeVisible()
+
+    await page.keyboard.press('Control+z')
+
+    await page.locator(CANVAS).click({ position: FIRST })
+    await expect(page.getByTestId('inspector')).toBeVisible()
+    await expect(page.getByRole('list', { name: 'cited by' })).toHaveCount(0)
+  })
+
+  /**
+   * A relation dies with either end (ADR 0011), and the trail must not then
+   * list a card that is no longer there.
+   */
+  test('deleting the insight clears the trail on its evidence', async ({ page }) => {
+    await placeAt(page, FIRST, 'Could not find the price')
+    await page.locator(CANVAS).click({ position: FIRST })
+    await page.locator(CANVAS).click({ position: FIRST, button: 'right' })
+    await page.getByTestId('menu-synthesise-into-insight').click()
+
+    // The insight is selected straight after synthesis.
+    await page.keyboard.press('Delete')
+
+    await page.locator(CANVAS).click({ position: FIRST })
+    await expect(page.getByTestId('inspector')).toBeVisible()
+    await expect(page.getByRole('list', { name: 'cited by' })).toHaveCount(0)
+  })
+
+  test('an insight carries the confidence its type declares', async ({ page }) => {
+    await placeAt(page, FIRST, 'Could not find the price')
+    await page.locator(CANVAS).click({ position: FIRST })
+    await page.locator(CANVAS).click({ position: FIRST, button: 'right' })
+    await page.getByTestId('menu-synthesise-into-insight').click()
+
+    const confidence = page.getByTestId('field-confidence')
+    await expect(confidence).toBeVisible()
+    // Structure is earned: nothing has asserted a confidence yet.
+    await expect(confidence).toHaveValue('unstated')
+    await confidence.selectOption('high')
+    await expect(confidence).toHaveValue('high')
+  })
+})

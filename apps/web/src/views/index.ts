@@ -4,6 +4,7 @@ import { evidenceView } from './EvidenceView.js'
 import { frameView } from './FrameView.js'
 import { groupView } from './GroupView.js'
 import { imageView } from './ImageView.js'
+import { insightView } from './InsightView.js'
 import { shapeView } from './ShapeView.js'
 import { stickyView } from './StickyView.js'
 import { textView } from './TextView.js'
@@ -28,6 +29,7 @@ export function createDefaultViewRegistry(): ObjectViewRegistry {
     imageView,
     groupView,
     evidenceView,
+    insightView,
     unknownView,
   ])
 }

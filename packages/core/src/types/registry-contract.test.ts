@@ -27,6 +27,7 @@ describe('object type registry contract', () => {
       'frame',
       'group',
       'image',
+      'insight',
       'relation',
       'shape',
       'sticky',

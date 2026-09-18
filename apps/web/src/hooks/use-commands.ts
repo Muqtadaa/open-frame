@@ -9,7 +9,7 @@ import type {
   Placement,
   Point,
 } from '@openframe/core'
-import { childrenOf } from '@openframe/core'
+import { childrenOf, unionAll } from '@openframe/core'
 import { useMemo } from 'react'
 
 import { useOpenFrame } from '../runtime/context.js'
@@ -46,6 +46,14 @@ export interface BoardCommands {
   updateData(id: ObjectId, patch: Readonly<Record<string, unknown>>): void
   /** Promotes the selection to another type, keeping every object's identity. */
   promoteSelection(toType: string): void
+  /**
+   * Creates an insight above the selection, citing every member of it.
+   *
+   * The synthesis motion: a cluster of evidence becomes a claim that can be
+   * asked what it stands on. Returns the new object's id so the caller can put
+   * the user straight into editing it.
+   */
+  synthesise(): ObjectId | null
   /** Moves one draggable end of an object. The TYPE decides what that means. */
   retargetEndpoint(id: ObjectId, endpointId: string, target: EndpointTarget): void
   setColor(ids: readonly ObjectId[], color: ColorToken): void
@@ -71,6 +79,8 @@ export interface BoardCommands {
  */
 /** Enough offset that a copy is visibly a copy, not a misclick. */
 const DUPLICATE_OFFSET = 24
+/** Clearance between a new insight and the evidence it was drawn from. */
+const SYNTHESIS_GAP = 80
 
 /** Top-left of a group of objects, used to anchor a paste. */
 function framesOrigin(objects: readonly { frame: { x: number; y: number } }[]): Point {
@@ -169,13 +179,75 @@ export function useCommands(): BoardCommands {
         if (result.ok) store.setSelection([id])
       },
 
+      synthesise() {
+        const store = useInteractionStore.getState()
+        const doc = runtime.store.getDocument()
+        const cited = [...store.selection]
+          .map((id) => doc.objects.get(id))
+          .filter((object) => object !== undefined)
+          // A relation to something with no place on the board would be a
+          // citation of a citation, which nothing today means.
+          .filter((object) => runtime.registry.get(object.type)?.capabilities.spatial !== false)
+        if (cited.length === 0) return null
+
+        const bounds = unionAll(cited.map((object) => runtime.registry.boundsOf(object, doc)))
+        if (bounds === null) return null
+
+        const definition = runtime.registry.get('insight')
+        if (definition === undefined) return null
+        const size = definition.create().frame
+
+        /*
+         * Above the cluster, centred on it, with a gap. Placing it on top of
+         * the evidence would hide what the claim is made of at the moment the
+         * claim is made — and the spatial relationship IS the explanation until
+         * the user has read the panel.
+         */
+        const origin = {
+          x: bounds.x + bounds.width / 2 - size.width / 2,
+          y: bounds.y - size.height - SYNTHESIS_GAP,
+        }
+        const at = store.snapToGrid ? snapPoint(origin) : origin
+
+        // Minted here because the relations must name the insight, and
+        // `transact` takes its commands upfront — the grouping precedent.
+        const insightId = runtime.ids.objectId()
+        const result = runtime.dispatcher.transact('Synthesise insight', [
+          {
+            kind: 'CreateObjects',
+            objects: [{ type: 'insight', id: insightId, x: at.x, y: at.y }],
+          },
+          {
+            kind: 'CreateObjects',
+            /*
+             * One relation per cited object, all in the same transaction as the
+             * insight. Split across transactions, an undo would leave an
+             * insight standing on nothing — a claim whose provenance vanished,
+             * which is the one thing this product must not do.
+             */
+            objects: cited.map((object) => ({
+              type: 'relation',
+              x: 0,
+              y: 0,
+              data: { from: insightId, to: object.id, predicate: 'cites' },
+            })),
+          },
+        ])
+        report(result)
+        if (!result.ok) return null
+        store.setSelection([insightId])
+        return insightId
+      },
+
       ungroup() {
         const store = useInteractionStore.getState()
         const doc = runtime.store.getDocument()
         const groups = [...store.selection]
           .map((id) => doc.objects.get(id))
           .filter((object) => object !== undefined)
-          .filter((object) => runtime.registry.get(object.type)?.capabilities.selectsAsUnit === true)
+          .filter(
+            (object) => runtime.registry.get(object.type)?.capabilities.selectsAsUnit === true,
+          )
         if (groups.length === 0) return
 
         const commands: Command[] = []

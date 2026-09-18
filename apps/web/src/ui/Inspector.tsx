@@ -25,6 +25,7 @@ import { useInteractionStore } from '../interaction/interaction-store.js'
 import { useOpenFrame } from '../runtime/context.js'
 import { SURFACE_VARS } from '../scene/style-tokens.js'
 import { AlignIcon, FillIcon, StrokeIcon, TrashIcon } from './icons.js'
+import { Provenance } from './Provenance.js'
 import { RecordFields } from './RecordFields.js'
 
 /** Clearance between the selection and the panel, in screen pixels. */
@@ -105,6 +106,22 @@ export function Inspector() {
     return runtime.registry.get(only.type)?.fields ?? []
   }, [objects, runtime.registry])
 
+  /*
+   * The relation index answers both directions in O(1) after one pass per
+   * document version, so asking it on every render is not the O(n) scan rule 10
+   * forbids — the pass is shared with every other consumer of the same
+   * document.
+   */
+  const only = objects.length === 1 ? objects[0] : undefined
+  const cites = useMemo(
+    () => (only === undefined ? [] : runtime.registry.relationsFrom(document, only.id)),
+    [only, document, runtime.registry],
+  )
+  const citedBy = useMemo(
+    () => (only === undefined ? [] : runtime.registry.relationsTo(document, only.id)),
+    [only, document, runtime.registry],
+  )
+
   /** Only properties EVERY selected object honours — see the note above. */
   const props = useMemo<ReadonlySet<StyleProp>>(() => {
     const lists = objects.map(
@@ -120,9 +137,11 @@ export function Inspector() {
   if (objects.length === 0 || bounds === null) return null
   if (dragKind !== 'idle' || editingId !== null) return null
   if (objects.some((object) => object.locked)) return null
-  // A type with fields but no style properties still has a panel worth showing,
-  // and one with neither has nothing to say.
-  if (props.size === 0 && fields.length === 0) return null
+  // A type with fields or a trail but no style properties still has a panel
+  // worth showing; one with none of the three has nothing to say.
+  if (props.size === 0 && fields.length === 0 && cites.length === 0 && citedBy.length === 0) {
+    return null
+  }
 
   const topLeft = worldToScreen(viewport, { x: bounds.x, y: bounds.y })
   const bottomRight = worldToScreen(viewport, {
@@ -165,10 +184,14 @@ export function Inspector() {
   }
 
   const apply = (style: ObjectStyle): void => {
-    commands.setStyle(objects.map((object) => object.id), style)
+    commands.setStyle(
+      objects.map((object) => object.id),
+      style,
+    )
   }
 
-  const label = objects.length === 1 ? (objects[0]?.type ?? '') : `${String(objects.length)} objects`
+  const label =
+    objects.length === 1 ? (objects[0]?.type ?? '') : `${String(objects.length)} objects`
 
   return (
     <div
@@ -176,7 +199,11 @@ export function Inspector() {
       data-testid="inspector"
       role="group"
       aria-label="Selected object properties"
-      style={{ left: `${String(left)}px`, top: `${String(top)}px`, width: `${String(PANEL_WIDTH)}px` }}
+      style={{
+        left: `${String(left)}px`,
+        top: `${String(top)}px`,
+        width: `${String(PANEL_WIDTH)}px`,
+      }}
     >
       <div className="of-inspector__head">
         <span className="of-inspector__subject">{label}</span>
@@ -192,17 +219,33 @@ export function Inspector() {
         </button>
       </div>
 
-      {fields.length > 0 && objects[0] !== undefined && (
-        <>
-          <RecordFields
-            object={objects[0]}
-            fields={fields}
-            onCommit={(id, patch) => {
-              commands.updateData(id, patch)
-            }}
-          />
-          {props.size > 0 && <hr className="of-inspector__rule" />}
-        </>
+      {fields.length > 0 && only !== undefined && (
+        <RecordFields
+          object={only}
+          fields={fields}
+          onCommit={(id, patch) => {
+            commands.updateData(id, patch)
+          }}
+        />
+      )}
+
+      {/*
+       * What the object stands on, and what stands on it. Relations have no
+       * appearance on the board by design (ADR 0011), so this is the only
+       * place they are visible at all.
+       */}
+      <Provenance
+        doc={document}
+        registry={runtime.registry}
+        cites={cites}
+        citedBy={citedBy}
+        onReveal={(id) => {
+          useInteractionStore.getState().setSelection([id])
+        }}
+      />
+
+      {props.size > 0 && (fields.length > 0 || cites.length > 0 || citedBy.length > 0) && (
+        <hr className="of-inspector__rule" />
       )}
 
       {props.has('color') && (
