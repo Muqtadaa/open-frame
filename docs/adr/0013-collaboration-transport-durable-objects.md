@@ -54,21 +54,33 @@ instead of depending on an unmaintained few hundred.
 
 ### The free tier this rests on
 
-Verified against Cloudflare's own docs, 2026-09-18:
+Re-verified 2026-09-18, immediately before Stage 2, because this table is the
+whole basis of the decision:
 
 | Durable Objects   | Workers Free       |
 | ----------------- | ------------------ |
 | Requests          | 100,000 / day      |
 | Duration          | 13,000 GB-s / day  |
-| SQLite storage    | 5 GB total         |
+| SQLite storage    | 10 GB per object, not billed on Free |
 | Rows read         | 5 million / day    |
 | Rows written      | 100,000 / day      |
 
-**A WebSocket message bills as 1/20 of a request**, so 100,000 requests/day is
-roughly two million messages a day. Hibernation means the duration budget is
-spent only while a room is actually being edited. Going over moves the account
-to Workers Paid at **$5/month**, which is the first bill this project will ever
-have and is not due yet.
+Three details decide whether that number is generous or tight, and all three
+fall the right way for a collaboration room:
+
+- **Incoming WebSocket messages bill at 20:1**, so the 100,000 requests/day is
+  roughly two million messages a day.
+- **Outgoing messages are not billed at all**, and neither are incoming protocol
+  pings. A room is mostly fan-out — one person's edit broadcast to everyone
+  else — so the expensive direction is the quiet one.
+- **Hibernation** means an idle room holds no compute, so the duration budget is
+  spent only while somebody is actually editing.
+
+SQLite-backed Durable Objects reached the Free plan after this project started,
+which is what makes any of this possible; storage billing began in January 2026
+and explicitly does not apply to Free. Going over moves the account to Workers
+Paid at **$5/month**, the first bill this project will ever have, and it is not
+due yet.
 
 ## Alternatives considered
 
@@ -105,7 +117,7 @@ stateless, so two people in the same room would not meet.
 is deterministic, so the tests are two `Y.Doc`s and a function — no server, no
 sockets. If a test needs a socket, the seam is in the wrong place.
 
-**Persistence is the room's, not Postgres's.** A Durable Object has 5 GB of
+**Persistence is the room's, not Postgres's.** A Durable Object has 10 GB of
 SQLite; the encoded Yjs update for a board is small. The database, when it
 arrives, is for identity, membership and board lists — not for the document.
 

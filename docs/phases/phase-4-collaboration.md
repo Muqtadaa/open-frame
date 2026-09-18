@@ -40,7 +40,7 @@ collaborator is a cost with no counterparty.
 
 | Piece        | Choice                                   | Free allowance                                                        | First bill                      |
 | ------------ | ---------------------------------------- | --------------------------------------------------------------------- | ------------------------------- |
-| Room server  | Cloudflare Durable Objects ([ADR 0013](../adr/0013-collaboration-transport-durable-objects.md)) | 100k requests/day, 13k GB-s/day, 5 GB SQLite. A WS message bills as **1/20 of a request** | Workers Paid, $5/mo             |
+| Room server  | Cloudflare Durable Objects ([ADR 0013](../adr/0013-collaboration-transport-durable-objects.md)) | 100k requests/day, 13k GB-s/day, 10 GB SQLite. Incoming WS messages bill **20:1**; outgoing are free | Workers Paid, $5/mo             |
 | Database     | Supabase Postgres                        | 500 MB database, 10 GB bandwidth/month                                | Pro, $25/mo                     |
 | Auth         | Clerk                                    | 50,000 monthly retained users                                         | $25/mo Pro                      |
 | Assets       | Cloudflare R2                            | 10 GB, 1M writes, 10M reads, **zero egress**                          | $0.015/GB past 10 GB            |
@@ -212,6 +212,34 @@ transport that does not exist:
    live drag is presence and the `Y.Doc` must never see it.
 4. **Two browser windows on the same URL editing the same board.** That is the
    whole of "done" for the stage.
+
+**What Stage 2 needs from you.** Everything else in this phase I can build and
+test alone; these four cannot be done from inside the repo.
+
+1. **A Cloudflare account** — free, no card. Signing up and picking a
+   `*.workers.dev` subdomain is the whole of it.
+2. **A way to deploy the Worker.** Either you run `wrangler deploy` yourself
+   after `wrangler login`, or CI does it from a scoped API token (the dashboard's
+   "Edit Cloudflare Workers" template) stored as a GitHub repository secret.
+   **A token goes in the secret store, never in a message** — anything pasted
+   into a conversation lives in that transcript afterwards.
+3. **One Vercel environment variable**, once the Worker exists: the room URL,
+   `wss://<worker>.<subdomain>.workers.dev`. Vercel's settings are yours.
+4. **Three decisions**, none of which have a right answer I can pick for you:
+   - **Who can open a room.** Stage 2 is link-only by design. A board id is 16
+     random base-36 characters, so it is not guessable — but it is then the only
+     thing between a board and the internet, and a link can be forwarded. The
+     alternative is a shared passphrase on the Worker until Stage 3 brings real
+     identity, which is a thing built to be removed.
+   - **Whether the deployed app gets collaboration at all**, or only behind a
+     flag. A flag means a sync loop with a bug in it cannot touch anybody's solo
+     board.
+   - **`OPENFRAME_BENCH`.** It is `0`, so builds are clean, but rule 11 says to
+     remove the variable entirely once ADR 0002 is settled — while it exists,
+     one typo ships 4.7MB of benchmark boards to users.
+
+Nothing here needs Supabase, Clerk or R2. Those are Stage 3 and later, and the
+running cost of Stage 2 is zero.
 
 **Known traps, from the decisions already taken:**
 
