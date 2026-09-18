@@ -110,3 +110,26 @@ describe('palette contrast', () => {
     expect(Math.abs(b - r)).toBeGreaterThan(4)
   })
 })
+
+/**
+ * Colour lives on `:root` and nowhere else.
+ *
+ * The redesign changed the accent and left `.of-marquee` painting the OLD one as
+ * an `rgb()` literal, and the notice banner kept a cream-on-tan pair that the
+ * world's own header bans — both invisible because a literal answers to nothing.
+ * Every value the app paints must come from a token, so changing a token changes
+ * the app.
+ */
+describe('no colour literals outside the token block', () => {
+  /** `.of-dev__*` is development instrumentation, stripped from production. */
+  const DEV_ONLY = /\.of-dev__[^{]*\{[^}]*\}/g
+
+  it('defines every colour as a token', () => {
+    const withoutRoot = CSS.replace(/:root[^{]*\{[^}]*\}/g, '')
+      .replace(/\/\*[\s\S]*?\*\//g, '')
+      .replace(DEV_ONLY, '')
+
+    const literals = withoutRoot.match(/#[0-9a-fA-F]{3,8}\b|rgba?\([^)]*\)/g) ?? []
+    expect(literals).toEqual([])
+  })
+})
