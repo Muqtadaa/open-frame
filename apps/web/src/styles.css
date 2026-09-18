@@ -724,8 +724,14 @@ body {
  */
 .of-slip__record {
   display: flex;
-  flex-wrap: wrap;
-  gap: 2px 10px;
+  /*
+   * A column of single-line rows, never a wrapping row. Wrapping put a source
+   * and two tags on three separate lines and gave 11px mono most of a 180px
+   * card — the quote it was describing had been squeezed into a corner.
+   * Bounded at one line each, the record stays subordinate to the content.
+   */
+  flex-direction: column;
+  gap: 2px;
   padding-top: 6px;
   margin-top: 8px;
   font-family: var(--of-mono);
@@ -742,7 +748,8 @@ body {
   border-top: 1px solid color-mix(in srgb, currentcolor 16%, transparent);
 }
 
-.of-slip__trail {
+.of-slip__trail,
+.of-slip__tags {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -1236,26 +1243,46 @@ body {
   background: var(--of-danger-wash);
 }
 
-/* A record row: label column, value column. */
+/*
+ * A record row: label column, value column.
+ *
+ * The label column is 76px, not the 52px that fitted the six hardcoded style
+ * labels. Labels now come from the REGISTRY — a type declares them — so they
+ * can be any length, and "participant" rendered as "participa": a panel
+ * clipped into telling the user the wrong field name. 76px holds eleven mono
+ * characters; anything longer ellipsises and keeps its full text in a title,
+ * which is honest in a way a silent truncation is not.
+ */
 .of-field {
   display: grid;
-  grid-template-columns: 52px 1fr;
+  grid-template-columns: 76px 1fr;
   gap: 8px;
   align-items: center;
   min-height: 30px;
 }
 
 .of-field__label {
+  overflow: hidden;
   font-family: var(--of-mono);
   font-size: 11px;
   color: var(--of-ink-muted);
   text-align: right;
+  text-overflow: ellipsis;
+  white-space: nowrap;
   letter-spacing: 0.02em;
 }
 
 .of-field__control {
   display: flex;
   align-items: center;
+  /*
+   * A grid item's default `min-width: auto` is its CONTENT's minimum, so a
+   * long provenance entry pushed the column wider than the panel and the text
+   * ran out past its right edge — ellipsis and `overflow: hidden` on the entry
+   * itself did nothing, because the box it was told to fit had already grown to
+   * hold it. This is the fix for that whole class, not just for the trail.
+   */
+  min-width: 0;
 }
 
 /*

@@ -173,6 +173,20 @@ test.describe('synthesis', () => {
     await freshBoard(page)
   })
 
+  /*
+   * Synthesis now lands in the editor, so every assertion about the record
+   * panel has to leave it first — the panel is deliberately hidden while an
+   * object is being edited, since a panel that jumps around under the pointer
+   * is worse than no panel. Escape exits the editor and keeps the selection.
+   */
+  async function synthesiseFrom(page: Page, at: { x: number; y: number }): Promise<void> {
+    await page.locator(CANVAS).click({ position: at, button: 'right' })
+    await page.getByTestId('menu-synthesise-into-insight').click()
+    await expect(page.locator('textarea')).toBeFocused()
+    await page.keyboard.press('Escape')
+    await expect(page.locator('textarea')).toHaveCount(0)
+  }
+
   async function placeAt(page: Page, at: { x: number; y: number }, text: string): Promise<void> {
     await page.keyboard.press('s')
     await page.locator(CANVAS).click({ position: at })
@@ -183,14 +197,50 @@ test.describe('synthesis', () => {
     await page.keyboard.press('v')
   }
 
+  /**
+   * A synthesised insight is an empty card whose only purpose is to hold a
+   * claim. Landing in the editor is the difference between "here is a box, go
+   * find it" and finishing the thought — and an unwritten claim citing real
+   * evidence is the worst thing this board can contain.
+   */
+  test('lands in the editor so the claim can be written', async ({ page }) => {
+    await placeAt(page, FIRST, 'Could not find the price')
+    await page.locator(CANVAS).click({ position: FIRST })
+    // Not `synthesiseFrom`, which leaves the editor — this test is about
+    // arriving in it.
+    await page.locator(CANVAS).click({ position: FIRST, button: 'right' })
+    await page.getByTestId('menu-synthesise-into-insight').click()
+
+    await expect(page.locator('textarea')).toBeFocused()
+    await page.locator('textarea').fill('Pricing is not discoverable before checkout')
+    await page.locator(CANVAS).click({ position: EMPTY })
+    await expect(page.locator(CANVAS)).toContainText('Pricing is not discoverable before checkout')
+  })
+
+  /**
+   * An insight is placed ABOVE the cluster it was drawn from, which for a
+   * cluster near the top of the window is off screen. Without a reveal, the
+   * record panel would describe a card the user cannot find — which reads as
+   * the panel being wrong rather than the view being elsewhere.
+   */
+  test('brings a newly placed insight into view', async ({ page }) => {
+    await placeAt(page, { x: 300, y: 150 }, 'Near the top of the window')
+    await page.locator(CANVAS).click({ position: { x: 300, y: 150 } })
+    await synthesiseFrom(page, { x: 300, y: 150 })
+
+    const insight = page.locator('[data-object-id]').filter({ hasText: '' }).first()
+    const box = await insight.boundingBox()
+    expect(box).not.toBeNull()
+    expect(box?.y ?? -1).toBeGreaterThanOrEqual(0)
+  })
+
   test('an insight cites the evidence it was drawn from, both ways', async ({ page }) => {
     await placeAt(page, FIRST, 'Could not find the price')
     await placeAt(page, SECOND, 'Gave up before checkout')
 
     await page.locator(CANVAS).click({ position: FIRST })
     await page.locator(CANVAS).click({ position: SECOND, modifiers: ['Shift'] })
-    await page.locator(CANVAS).click({ position: SECOND, button: 'right' })
-    await page.getByTestId('menu-synthesise-into-insight').click()
+    await synthesiseFrom(page, SECOND)
 
     // The new insight is selected, and its panel says what it stands on.
     await expect(page.getByTestId('inspector')).toBeVisible()
@@ -208,8 +258,7 @@ test.describe('synthesis', () => {
   test('clicking a trail entry takes you to the object', async ({ page }) => {
     await placeAt(page, FIRST, 'Could not find the price')
     await page.locator(CANVAS).click({ position: FIRST })
-    await page.locator(CANVAS).click({ position: FIRST, button: 'right' })
-    await page.getByTestId('menu-synthesise-into-insight').click()
+    await synthesiseFrom(page, FIRST)
 
     await page.getByRole('list', { name: 'stands on' }).getByRole('button').first().click()
     // The evidence is now the selection, so ITS panel is showing.
@@ -224,8 +273,7 @@ test.describe('synthesis', () => {
   test('undo removes the insight and its citations together', async ({ page }) => {
     await placeAt(page, FIRST, 'Could not find the price')
     await page.locator(CANVAS).click({ position: FIRST })
-    await page.locator(CANVAS).click({ position: FIRST, button: 'right' })
-    await page.getByTestId('menu-synthesise-into-insight').click()
+    await synthesiseFrom(page, FIRST)
     await expect(page.getByRole('list', { name: 'stands on' })).toBeVisible()
 
     await page.keyboard.press('Control+z')
@@ -242,8 +290,7 @@ test.describe('synthesis', () => {
   test('deleting the insight clears the trail on its evidence', async ({ page }) => {
     await placeAt(page, FIRST, 'Could not find the price')
     await page.locator(CANVAS).click({ position: FIRST })
-    await page.locator(CANVAS).click({ position: FIRST, button: 'right' })
-    await page.getByTestId('menu-synthesise-into-insight').click()
+    await synthesiseFrom(page, FIRST)
 
     // The insight is selected straight after synthesis.
     await page.keyboard.press('Delete')
@@ -256,8 +303,7 @@ test.describe('synthesis', () => {
   test('an insight carries the confidence its type declares', async ({ page }) => {
     await placeAt(page, FIRST, 'Could not find the price')
     await page.locator(CANVAS).click({ position: FIRST })
-    await page.locator(CANVAS).click({ position: FIRST, button: 'right' })
-    await page.getByTestId('menu-synthesise-into-insight').click()
+    await synthesiseFrom(page, FIRST)
 
     const confidence = page.getByTestId('field-confidence')
     await expect(confidence).toBeVisible()

@@ -77,6 +77,48 @@ export function viewportForBounds(
   }
 }
 
+/**
+ * The smallest pan that brings `bounds` into view. Zoom is never touched.
+ *
+ * Two things produce an object the user cannot see. Synthesising an insight
+ * places it above the cluster it was drawn from, which can be above the top of
+ * the window; and following a provenance trail selects an object that may be
+ * anywhere on the board. Both would otherwise leave the record panel describing
+ * something invisible, which reads as the panel being wrong.
+ *
+ * Minimal rather than centred, and never re-zoomed: the user built this view,
+ * and a reveal that reframed the board would lose the spatial arrangement they
+ * are in the middle of thinking with. When the bounds are larger than the
+ * window, the near edge wins — showing the start of something is more useful
+ * than showing its middle.
+ *
+ * Returns the SAME viewport object when nothing needs to move, so an already
+ * visible target costs no store write and no re-render.
+ */
+export function panToReveal(
+  viewport: Viewport,
+  bounds: Rect,
+  screenWidth: number,
+  screenHeight: number,
+  paddingPx = 48,
+): Viewport {
+  const visibleWidth = screenWidth / viewport.zoom
+  const visibleHeight = screenHeight / viewport.zoom
+  const margin = paddingPx / viewport.zoom
+
+  let { x, y } = viewport
+  if (bounds.x - margin < x) x = bounds.x - margin
+  else if (bounds.x + bounds.width + margin > x + visibleWidth) {
+    x = bounds.x + bounds.width + margin - visibleWidth
+  }
+  if (bounds.y - margin < y) y = bounds.y - margin
+  else if (bounds.y + bounds.height + margin > y + visibleHeight) {
+    y = bounds.y + bounds.height + margin - visibleHeight
+  }
+
+  return x === viewport.x && y === viewport.y ? viewport : { ...viewport, x, y }
+}
+
 function boundsOf(
   doc: BoardDocument,
   registry: ObjectTypeRegistry,

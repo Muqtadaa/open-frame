@@ -133,3 +133,47 @@ describe('no colour literals outside the token block', () => {
     expect(literals).toEqual([])
   })
 })
+
+/**
+ * The record panel's columns have to add up.
+ *
+ * Its width was chosen so all seven colour swatches sit on ONE row, and the
+ * swatches live in the control column — so the label column is spending the
+ * same budget. Widening labels (which had to happen: they come from the
+ * registry now, and "participant" was being clipped to "participa") silently
+ * takes space from the swatches, and a wrapped 5 + 2 swatch row reads as an
+ * accident rather than a grid.
+ *
+ * The numbers live in two files — the panel's width in `Inspector.tsx`, the
+ * columns in the stylesheet — so nothing but arithmetic connects them. This is
+ * that arithmetic, run on every build.
+ */
+describe('the record panel fits what it promises to show', () => {
+  const px = (pattern: RegExp): number => {
+    const match = pattern.exec(CSS)
+    const value = match?.[1]
+    if (value === undefined) throw new Error(`No match for ${String(pattern)}`)
+    return Number(value)
+  }
+
+  it('leaves room for seven swatches on one row', () => {
+    const inspector = readFileSync(resolve(process.cwd(), 'src/ui/Inspector.tsx'), 'utf8')
+    const widthMatch = /const PANEL_WIDTH = (\d+)/.exec(inspector)
+    expect(widthMatch?.[1]).toBeDefined()
+    const panelWidth = Number(widthMatch?.[1])
+
+    const labelColumn = px(/\.of-field \{[^}]*grid-template-columns:\s*(\d+)px/)
+    const columnGap = px(/\.of-field \{[^}]*\n\s*gap:\s*(\d+)px/)
+    const swatch = px(/\.of-swatch \{[^}]*\n\s*width:\s*(\d+)px/)
+    const swatchGap = px(/\.of-swatches \{[^}]*gap:\s*(\d+)px/)
+    // `padding: 9px 10px 11px` — the horizontal value, taken from both sides.
+    const sidePadding = px(/\.of-inspector \{[^}]*padding:\s*\d+px (\d+)px/)
+    // The panel's own 1px border, both sides.
+    const border = 2
+
+    const control = panelWidth - border - sidePadding * 2 - labelColumn - columnGap
+    const swatchRow = swatch * 7 + swatchGap * 6
+
+    expect(swatchRow).toBeLessThanOrEqual(control)
+  })
+})

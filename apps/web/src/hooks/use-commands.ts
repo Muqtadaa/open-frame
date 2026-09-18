@@ -15,6 +15,7 @@ import { useMemo } from 'react'
 import { useOpenFrame } from '../runtime/context.js'
 import { useInteractionStore } from '../interaction/interaction-store.js'
 import { snapPoint } from '../scene/snapping.js'
+import { panToReveal } from '../scene/zoom.js'
 
 export interface BoardCommands {
   /** Creates any registered type. No per-type method — that is the registry's job. */
@@ -54,6 +55,14 @@ export interface BoardCommands {
    * the user straight into editing it.
    */
   synthesise(): ObjectId | null
+  /**
+   * Selects an object and pans the minimum needed to see it.
+   *
+   * Selecting something off-screen leaves the record panel describing an object
+   * the user cannot find, which reads as the panel being wrong rather than the
+   * view being elsewhere.
+   */
+  reveal(id: ObjectId): void
   /** Moves one draggable end of an object. The TYPE decides what that means. */
   retargetEndpoint(id: ObjectId, endpointId: string, target: EndpointTarget): void
   setColor(ids: readonly ObjectId[], color: ColorToken): void
@@ -97,6 +106,30 @@ export function useCommands(): BoardCommands {
   return useMemo<BoardCommands>(() => {
     const report = (result: { ok: boolean; error?: unknown }): void => {
       if (!result.ok) console.warn('[openframe] command rejected', result.error)
+    }
+
+    /*
+     * Shared by synthesis and the provenance trail, so "show me that object"
+     * means one thing. Declared as a closure rather than a method on the
+     * returned object, because a method calling a sibling through `this` breaks
+     * the moment anyone destructures the hook's result.
+     */
+    const revealObject = (id: ObjectId): void => {
+      const store = useInteractionStore.getState()
+      const doc = runtime.store.getDocument()
+      const object = doc.objects.get(id)
+      if (object === undefined) return
+      store.setSelection([id])
+      // Nothing to pan to for an object with no place on the board.
+      if (runtime.registry.get(object.type)?.capabilities.spatial === false) return
+      store.setViewport(
+        panToReveal(
+          store.viewport,
+          runtime.registry.boundsOf(object, doc),
+          store.canvasSize.width,
+          store.canvasSize.height,
+        ),
+      )
     }
 
     return {
@@ -179,6 +212,8 @@ export function useCommands(): BoardCommands {
         if (result.ok) store.setSelection([id])
       },
 
+      reveal: revealObject,
+
       synthesise() {
         const store = useInteractionStore.getState()
         const doc = runtime.store.getDocument()
@@ -235,7 +270,21 @@ export function useCommands(): BoardCommands {
         ])
         report(result)
         if (!result.ok) return null
-        store.setSelection([insightId])
+        /*
+         * Revealed, not merely selected. The insight is placed ABOVE the
+         * cluster, which on a cluster near the top of the window puts it off
+         * screen — synthesis would produce a card the user never sees, with a
+         * panel describing it as if it were in front of them.
+         */
+        revealObject(insightId)
+        /*
+         * Straight into editing. A synthesised insight is an empty card that
+         * exists only to hold a claim nobody has written yet — leaving the user
+         * to find it and double-click is asking them to do the obvious next
+         * step by hand, and an unwritten claim citing real evidence is the
+         * worst thing this board can contain.
+         */
+        useInteractionStore.getState().setEditing(insightId)
         return insightId
       },
 

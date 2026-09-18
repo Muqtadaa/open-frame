@@ -19,6 +19,7 @@ import {
   viewportForBounds,
   zoomAtCentre,
   zoomToSlider,
+  panToReveal,
 } from './zoom.js'
 
 const registry = createDefaultRegistry()
@@ -141,5 +142,50 @@ describe('fitting', () => {
     const fitted = fitToDocument(doc, registry, 800, 600)
     const onlyVisible = fitToObjects(doc, registry, [asObjectId('a')], 800, 600)
     expect(fitted?.zoom).toBeCloseTo(onlyVisible?.zoom ?? 0, 6)
+  })
+})
+
+describe('revealing an object without reframing the board', () => {
+  const view = { x: 0, y: 0, zoom: 1 }
+
+  it('leaves an already visible object alone, by identity', () => {
+    const same = panToReveal(view, { x: 100, y: 100, width: 50, height: 50 }, 1000, 800)
+    // Identity, not equality: a new object would be a pointless store write and
+    // a re-render on every reveal of something already on screen.
+    expect(same).toBe(view)
+  })
+
+  it('pans up for something above the window, by the minimum', () => {
+    const moved = panToReveal(view, { x: 100, y: -200, width: 100, height: 100 }, 1000, 800, 48)
+    expect(moved.y).toBe(-248)
+    expect(moved.x).toBe(0)
+    // Zoom is the user's, and a reveal does not get to change it.
+    expect(moved.zoom).toBe(1)
+  })
+
+  it('pans right for something past the right edge, by the minimum', () => {
+    const moved = panToReveal(view, { x: 1200, y: 100, width: 100, height: 100 }, 1000, 800, 48)
+    // Right edge at 1300 + 48 margin = 1348, minus the 1000 visible.
+    expect(moved.x).toBe(348)
+    expect(moved.y).toBe(0)
+  })
+
+  it('shows the near edge of something larger than the window', () => {
+    const moved = panToReveal(view, { x: -500, y: -500, width: 5000, height: 5000 }, 1000, 800, 48)
+    expect(moved.x).toBe(-548)
+    expect(moved.y).toBe(-548)
+  })
+
+  /** The margin is in SCREEN pixels, so it must not grow when zoomed out. */
+  it('keeps the margin constant on screen at any zoom', () => {
+    const zoomed = { x: 0, y: 0, zoom: 0.5 }
+    const moved = panToReveal(zoomed, { x: 100, y: -200, width: 100, height: 100 }, 1000, 800, 48)
+    // 48 screen pixels is 96 world units at 0.5.
+    expect(moved.y).toBe(-296)
+  })
+
+  it('does not move an axis that was already fine', () => {
+    const moved = panToReveal(view, { x: 100, y: -200, width: 100, height: 100 }, 1000, 800)
+    expect(moved.x).toBe(view.x)
   })
 })

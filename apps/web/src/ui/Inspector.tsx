@@ -34,8 +34,13 @@ const GAP_PX = 14
  * Wide enough for all seven colours on ONE row. At 248 the row wrapped 5 + 2,
  * which reads as an accident rather than a grid — and a wrapped swatch row is
  * exactly what this panel exists to stop.
+ *
+ * Grown from 276 with the label column, which had to widen to stop type-declared
+ * field labels being clipped. The two are linked: the swatch row lives in the
+ * control column, so taking 24px for labels without giving it back here would
+ * have wrapped the swatches again.
  */
-const PANEL_WIDTH = 276
+const PANEL_WIDTH = 300
 /** Keeps the panel off the viewport edge when the selection is near one. */
 const MARGIN_PX = 12
 /**
@@ -240,7 +245,7 @@ export function Inspector() {
         cites={cites}
         citedBy={citedBy}
         onReveal={(id) => {
-          useInteractionStore.getState().setSelection([id])
+          commands.reveal(id)
         }}
       />
 
