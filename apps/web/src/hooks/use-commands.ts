@@ -10,6 +10,7 @@ import { useMemo } from 'react'
 
 import { useOpenFrame } from '../runtime/context.js'
 import { useInteractionStore } from '../interaction/interaction-store.js'
+import { snapPoint } from '../scene/snapping.js'
 
 export interface BoardCommands {
   /** Creates any registered type. No per-type method — that is the registry's job. */
@@ -81,13 +82,17 @@ export function useCommands(): BoardCommands {
         // The default size comes from the type, so this stays correct for types
         // that do not exist yet.
         const { frame } = definition.create(data === undefined ? undefined : { ...data })
+        // Snapped at creation as well as on move: otherwise a board is off-grid
+        // from its very first object and snapping only ever half-applies.
+        const origin = { x: at.x - frame.width / 2, y: at.y - frame.height / 2 }
+        const placed = useInteractionStore.getState().snapToGrid ? snapPoint(origin) : origin
         const result = dispatcher.dispatch({
           kind: 'CreateObjects',
           objects: [
             {
               type,
-              x: at.x - frame.width / 2,
-              y: at.y - frame.height / 2,
+              x: placed.x,
+              y: placed.y,
               ...(data === undefined ? {} : { data: { ...data } }),
             },
           ],

@@ -185,7 +185,19 @@ Consequences to respect when adding a type like this:
 - per-object subscriptions mean a dependent object goes stale unless the type
   declares `dependencies`
 
-### 17. Break a new architectural rule once, and watch it fail
+### 17. Snapping is a preference with a held-key override
+
+Snap-to-grid is ON by default (`GRID_SIZE` = 10 world units) and applies to
+creation, move and resize. Holding Cmd/Ctrl suspends it for the duration of a
+gesture WITHOUT changing the preference — an override only reachable from a
+menu is useless once a drag has started.
+
+A multi-selection snaps as ONE unit: the selection bounds are snapped and the
+resulting delta applied to every member. Snapping each object independently
+shuffles them relative to one another, which looks like a bug even though each
+object is individually aligned.
+
+### 18. Break a new architectural rule once, and watch it fail
 
 A rule that passes vacuously is worse than no rule, because it is trusted. This
 practice has already caught a dependency-cruiser rule that never fired on the

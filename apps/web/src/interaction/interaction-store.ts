@@ -26,6 +26,25 @@ export type Tool = 'select' | 'pan' | 'sticky' | 'text' | 'shape' | 'frame' | 'c
 export type WheelMode = 'zoom' | 'pan'
 
 const WHEEL_MODE_KEY = 'openframe.wheelMode'
+const SNAP_KEY = 'openframe.snapToGrid'
+
+function readSnap(): boolean {
+  try {
+    // Defaults ON: aligned boards are what people want, and the override is one
+    // held key away. An explicit 'false' is the only thing that turns it off.
+    return localStorage.getItem(SNAP_KEY) !== 'false'
+  } catch {
+    return true
+  }
+}
+
+function writeSnap(enabled: boolean): void {
+  try {
+    localStorage.setItem(SNAP_KEY, String(enabled))
+  } catch {
+    // Same reason as the wheel preference: not worth failing startup over.
+  }
+}
 
 function readWheelMode(): WheelMode {
   try {
@@ -99,6 +118,11 @@ interface InteractionState {
   /** Which shape the shape tool will draw. Cycled with `U`. */
   readonly shapeKind: ShapeKind
   readonly wheelMode: WheelMode
+  /**
+   * Whether transforms snap to the grid. On by default; held Cmd/Ctrl overrides
+   * it for the duration of a gesture without changing the preference.
+   */
+  readonly snapToGrid: boolean
   readonly selection: ReadonlySet<ObjectId>
   readonly hoveredId: ObjectId | null
   readonly editingId: ObjectId | null
@@ -125,6 +149,8 @@ interface InteractionState {
   /** Selects the shape tool, advancing the variant when it is already active. */
   cycleShape(): void
   setWheelMode(mode: WheelMode): void
+  setSnapToGrid(enabled: boolean): void
+  toggleSnapToGrid(): void
   toggleWheelMode(): void
   setSelection(ids: readonly ObjectId[]): void
   toggleSelection(id: ObjectId): void
@@ -156,6 +182,7 @@ export const useInteractionStore = create<InteractionState>((set) => ({
   tool: 'select',
   shapeKind: 'rectangle',
   wheelMode: readWheelMode(),
+  snapToGrid: readSnap(),
   selection: new Set<ObjectId>(),
   hoveredId: null,
   editingId: null,
@@ -180,6 +207,18 @@ export const useInteractionStore = create<InteractionState>((set) => ({
     writeWheelMode(wheelMode)
     set({ wheelMode })
   },
+
+  setSnapToGrid: (snapToGrid) => {
+    writeSnap(snapToGrid)
+    set({ snapToGrid })
+  },
+
+  toggleSnapToGrid: () =>
+    set((state) => {
+      const next = !state.snapToGrid
+      writeSnap(next)
+      return { snapToGrid: next }
+    }),
 
   toggleWheelMode: () =>
     set((state) => {

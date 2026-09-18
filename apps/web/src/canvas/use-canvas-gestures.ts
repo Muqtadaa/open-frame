@@ -27,6 +27,7 @@ import {
   type PointerIntent,
 } from '../interaction/pointer-controller.js'
 import { containerAt, hitTest, objectsInMarquee } from '../scene/hit-testing.js'
+import { snapDelta, snapRect } from '../scene/snapping.js'
 import {
   CORNER_HANDLES,
   angleFrom,
@@ -248,16 +249,27 @@ export function useCanvasGestures(containerRef: RefObject<HTMLElement | null>) {
 
       if (mode !== 'none') {
         event.currentTarget.setPointerCapture(event.pointerId)
+        // Re-read: `store` is a snapshot from BEFORE the intents ran, so its
+        // selection and viewport are stale by this point.
+        const settled = useInteractionStore.getState()
+        const doc = runtime.store.getDocument()
+        const subjects =
+          mode === 'translate'
+            ? [...settled.selection]
+                .map((id) => doc.objects.get(id))
+                .filter((object): object is AnyOpenFrameObject => object !== undefined)
+            : []
+
         gesture.current = {
           pointerId: event.pointerId,
           mode,
           startWorld: worldPoint,
           startClient: { x: event.clientX, y: event.clientY },
-          // Re-read: `store` is a snapshot from BEFORE the intents ran, so its
-          // selection and viewport are stale by this point.
-          startViewport: useInteractionStore.getState().viewport,
-          subjects: [],
-          startBounds: null,
+          startViewport: settled.viewport,
+          subjects,
+          // Captured so the whole selection snaps as ONE unit rather than each
+          // object independently, which would shuffle them apart.
+          startBounds: framesBounds(subjects),
           handle: null,
           startAngle: 0,
           moved: false,
@@ -301,10 +313,16 @@ export function useCanvasGestures(containerRef: RefObject<HTMLElement | null>) {
           return
         }
         active.moved = true
-        store.updateTranslate(
-          worldPoint.x - active.startWorld.x,
-          worldPoint.y - active.startWorld.y,
-        )
+        const raw = { x: worldPoint.x - active.startWorld.x, y: worldPoint.y - active.startWorld.y }
+        /*
+         * Cmd/Ctrl suspends snapping for this gesture without touching the
+         * preference — the convention in design tools, and the only override
+         * that can be reached while already dragging.
+         */
+        const snapping = store.snapToGrid && !(event.metaKey || event.ctrlKey)
+        const delta =
+          snapping && active.startBounds !== null ? snapDelta(active.startBounds, raw) : raw
+        store.updateTranslate(delta.x, delta.y)
         return
       }
 
@@ -327,12 +345,14 @@ export function useCanvasGestures(containerRef: RefObject<HTMLElement | null>) {
           x: worldPoint.x - active.startWorld.x,
           y: worldPoint.y - active.startWorld.y,
         }
-        const next = resizeBounds(active.startBounds, active.handle, delta, {
+        const resized = resizeBounds(active.startBounds, active.handle, delta, {
           // Corners keep proportions by default; Shift releases that, matching
           // the convention in design tools.
           preserveAspect: CORNER_HANDLES.includes(active.handle) ? !event.shiftKey : event.shiftKey,
           fromCentre: event.altKey,
         })
+        const next =
+          store.snapToGrid && !(event.metaKey || event.ctrlKey) ? snapRect(resized) : resized
         store.previewFrames(toFrameMap(scaleFrames(active.subjects, active.startBounds, next)))
         return
       }

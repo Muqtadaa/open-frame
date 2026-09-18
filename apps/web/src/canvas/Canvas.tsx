@@ -2,6 +2,7 @@ import { useEffect, useRef } from 'react'
 
 import { useInteractionStore } from '../interaction/interaction-store.js'
 import { useKeyboardShortcuts } from '../interaction/use-keyboard-shortcuts.js'
+import { GRID_SIZE } from '../scene/snapping.js'
 import { ConnectorPreview } from './ConnectorPreview.js'
 import { MarqueeOverlay } from './MarqueeOverlay.js'
 import { ObjectLayer } from './ObjectLayer.js'
@@ -22,6 +23,28 @@ import { useCanvasSize } from './use-canvas-size.js'
  * with hundreds of objects moves a single compositor layer rather than
  * repositioning every element.
  */
+/**
+ * Background dots, positioned so they sit on WORLD grid lines.
+ *
+ * Painted on the canvas element rather than the world layer — a background that
+ * scaled with the transform would blur and would repaint an enormous area when
+ * zoomed out. Offsetting by the viewport modulo the cell size gives the same
+ * result at constant cost.
+ *
+ * Below a threshold the dots are dropped entirely: at 20% zoom they would be
+ * two pixels apart and read as noise.
+ */
+const MIN_GRID_ZOOM = 0.4
+
+function gridStyle(viewport: { x: number; y: number; zoom: number }): React.CSSProperties {
+  const cell = GRID_SIZE * viewport.zoom
+  if (viewport.zoom < MIN_GRID_ZOOM) return { backgroundImage: 'none' }
+  return {
+    backgroundSize: `${String(cell)}px ${String(cell)}px`,
+    backgroundPosition: `${String(-viewport.x * viewport.zoom)}px ${String(-viewport.y * viewport.zoom)}px`,
+  }
+}
+
 export function Canvas() {
   const containerRef = useRef<HTMLDivElement>(null)
   const { width, height } = useCanvasSize(containerRef)
@@ -42,6 +65,7 @@ export function Canvas() {
     <div
       ref={containerRef}
       className={`of-canvas of-canvas--${tool}`}
+      style={gridStyle(viewport)}
       data-testid="canvas"
       role="application"
       aria-label="OpenFrame board canvas"

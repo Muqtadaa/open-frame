@@ -793,3 +793,8 @@ body {
 .of-canvas--connector {
   cursor: crosshair;
 }
+
+.of-zoom__button--on {
+  color: var(--of-accent);
+  background: var(--of-accent-soft);
+}

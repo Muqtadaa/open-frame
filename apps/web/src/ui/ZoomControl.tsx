@@ -11,7 +11,7 @@ import {
   zoomToSlider,
 } from '../scene/zoom.js'
 import { useInteractionStore } from '../interaction/interaction-store.js'
-import { FitIcon, MinusIcon, MouseIcon, PlusIcon } from './icons.js'
+import { FitIcon, GridIcon, MinusIcon, MouseIcon, PlusIcon } from './icons.js'
 
 const isMac = typeof navigator !== 'undefined' && /Mac|iPhone|iPad/.test(navigator.platform)
 const mod = isMac ? '⌘' : 'Ctrl'
@@ -28,6 +28,8 @@ export function ZoomControl() {
   const setViewport = useInteractionStore((state) => state.setViewport)
   const wheelMode = useInteractionStore((state) => state.wheelMode)
   const toggleWheelMode = useInteractionStore((state) => state.toggleWheelMode)
+  const snapToGrid = useInteractionStore((state) => state.snapToGrid)
+  const toggleSnapToGrid = useInteractionStore((state) => state.toggleSnapToGrid)
   const { width, height } = useInteractionStore((state) => state.canvasSize)
   const { runtime } = useOpenFrame()
 
@@ -64,6 +66,19 @@ export function ZoomControl() {
       >
         <MouseIcon />
         <span className="of-zoom__mode">{wheelMode}</span>
+      </button>
+
+      <button
+        type="button"
+        className={`of-zoom__button${snapToGrid ? ' of-zoom__button--on' : ''}`}
+        aria-pressed={snapToGrid}
+        aria-label={`Snap to grid ${snapToGrid ? 'on' : 'off'}. Hold ${mod} while dragging to override.`}
+        title={`Snap to grid: ${snapToGrid ? 'on' : 'off'} — hold ${mod} while dragging to override`}
+        data-testid="snap-toggle"
+        data-snap={snapToGrid ? 'on' : 'off'}
+        onClick={() => toggleSnapToGrid()}
+      >
+        <GridIcon />
       </button>
 
       <span className="of-zoom__sep" />

@@ -309,3 +309,106 @@ test.describe('frames', () => {
     await expect(page.locator('[data-object-type="sticky"]')).toHaveCount(1)
   })
 })
+
+test.describe('snap to grid', () => {
+  test('is on by default and lands a drag on the grid', async ({ page }) => {
+    await expect(page.getByTestId('snap-toggle')).toHaveAttribute('data-snap', 'on')
+    await create(page, 's', 405, 307, 'Snappy')
+
+    const note = page.locator('[data-object-type="sticky"]')
+    const before = await note.boundingBox()
+    if (before === null) return
+
+    // A deliberately awkward distance: 37 and 23 are not grid multiples.
+    await drag(
+      page,
+      { x: before.x + 40, y: before.y + 40 },
+      { x: before.x + 40 + 37, y: before.y + 40 + 23 },
+    )
+
+    const after = await note.boundingBox()
+    if (after === null) return
+    // The POSITION is what snaps, not the distance travelled — an object that
+    // began off-grid must end up on it.
+    expect(Math.round(after.x) % 10).toBe(0)
+    expect(Math.round(after.y) % 10).toBe(0)
+    expect(after.x).not.toBe(before.x)
+  })
+
+  test('places a newly created object on the grid', async ({ page }) => {
+    await create(page, 's', 407, 313, 'Aligned')
+    const box = await page.locator('[data-object-type="sticky"]').boundingBox()
+    if (box === null) return
+    expect(Math.round(box.x) % 10).toBe(0)
+    expect(Math.round(box.y) % 10).toBe(0)
+  })
+
+  /** The override has to be reachable mid-gesture, which is why it is a held key. */
+  test('is suspended while the modifier is held, without changing the setting', async ({
+    page,
+  }) => {
+    await create(page, 's', 405, 307, 'Free')
+
+    const note = page.locator('[data-object-type="sticky"]')
+    const before = await note.boundingBox()
+    if (before === null) return
+
+    const key = process.platform === 'darwin' ? 'Meta' : 'Control'
+    await page.keyboard.down(key)
+    await drag(
+      page,
+      { x: before.x + 40, y: before.y + 40 },
+      { x: before.x + 40 + 37, y: before.y + 40 + 23 },
+    )
+    await page.keyboard.up(key)
+
+    const after = await note.boundingBox()
+    if (after === null) return
+    expect(Math.round(after.x - before.x)).toBe(37)
+    expect(Math.round(after.y - before.y)).toBe(23)
+
+    // The preference itself is untouched.
+    await expect(page.getByTestId('snap-toggle')).toHaveAttribute('data-snap', 'on')
+  })
+
+  test('can be turned off, and the choice survives a reload', async ({ page }) => {
+    await page.getByTestId('snap-toggle').click()
+    await expect(page.getByTestId('snap-toggle')).toHaveAttribute('data-snap', 'off')
+
+    await create(page, 's', 405, 307, 'Loose')
+    const note = page.locator('[data-object-type="sticky"]')
+    const before = await note.boundingBox()
+    if (before === null) return
+
+    await drag(
+      page,
+      { x: before.x + 40, y: before.y + 40 },
+      { x: before.x + 40 + 37, y: before.y + 40 + 23 },
+    )
+
+    const after = await note.boundingBox()
+    if (after === null) return
+    expect(Math.round(after.x - before.x)).toBe(37)
+
+    await page.reload()
+    await expect(page.getByTestId('snap-toggle')).toHaveAttribute('data-snap', 'off')
+  })
+
+  test('snaps a resize to the grid', async ({ page }) => {
+    await create(page, 's', 405, 307, 'Resize')
+    await page.locator('[data-object-type="sticky"]').click()
+
+    const handle = await page.getByTestId('handle-se').boundingBox()
+    if (handle === null) return
+    await drag(
+      page,
+      { x: handle.x + handle.width / 2, y: handle.y + handle.height / 2 },
+      { x: handle.x + 73, y: handle.y + 47 },
+    )
+
+    const after = await page.locator('[data-object-type="sticky"]').boundingBox()
+    if (after === null) return
+    expect(Math.round(after.width) % 10).toBe(0)
+    expect(Math.round(after.height) % 10).toBe(0)
+  })
+})
