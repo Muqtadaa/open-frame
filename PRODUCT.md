@@ -102,8 +102,15 @@ their text.
 - Licensed **AGPL-3.0**, with the section 13 offer of source reachable from
   inside the running application. A fork that hosts a modified version must
   point that link at its own source.
-- No logo, wordmark, typeface licence, colour ownership or other identity asset
-  exists yet. None has been commissioned or chosen.
+- The **logo, wordmark and hero artwork** were supplied by the project owner on
+  2026-09-18: a neon synthwave lockup and a matching hero. Provenance and
+  processing are recorded in `apps/web/src/assets/PROVENANCE.md`. No typeface
+  licence has been acquired and none is needed — the lettering ships as artwork,
+  and the interface uses system faces because local-first forbids a font
+  request.
+- The identity is **loud and the workspace is quiet**, deliberately. Brand
+  colour paints the splash and the tab icon; the board reserves saturated colour
+  for the user's own material.
 
 ## Evidence on Hand
 

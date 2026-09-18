@@ -3,9 +3,116 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no" />
+    <meta name="theme-color" content="#150a2e" />
     <title>OpenFrame</title>
+    <link rel="icon" type="image/png" sizes="32x32" href="/src/assets/logo-mark-32.png" />
+    <link rel="apple-touch-icon" href="/src/assets/logo-mark-180.png" />
+    <!--
+      The splash lives HERE, not in a React component, and the reason is
+      structural: `main.tsx` opens with a top-level `await createRuntime()`, so
+      `#root` is empty until IndexedDB answers. A React splash cannot paint
+      during the wait it exists to cover — React is most of that wait.
+
+      The colours below are literals because a stylesheet has not loaded yet at
+      first paint. `app/brand-splash.test.ts` asserts they equal the
+      `--of-brand-*` tokens in styles.css, so there is still one source of truth.
+
+      The backdrop is a 146-byte inlined thumbnail of the artwork, so the first
+      frame is already the right image, blurred. The full picture fades in over
+      it if it arrives first; if the board is ready sooner, it never appears and
+      is never waited for. A loading screen that delays loading is a joke at the
+      user's expense.
+    -->
+    <style>
+      #of-splash {
+        position: fixed;
+        inset: 0;
+        z-index: 2147483647;
+        display: grid;
+        place-items: center;
+        background-color: #150a2e;
+        background-image: url('data:image/webp;base64,UklGRooAAABXRUJQVlA4IH4AAAAwBQCdASoYABIAPu1gqE2ppSOiMBgMATAdiWoAsR7T9tAgF7XeqWqC2Me0+fdjovXJzAD+5ZlELRh+q8gR17+r34uyjGpIPPhf1FvWFcOJjnsds0wkVxz6raHpkG+0EqiIa8DfxfCoDiAdiLhYwtDYlH6RA67qhClq+KvxiAA=');
+        background-size: cover;
+        background-position: center;
+        transition: opacity 220ms ease-out;
+      }
+      #of-splash[data-state='leaving'] {
+        opacity: 0;
+        pointer-events: none;
+      }
+      #of-splash img {
+        position: absolute;
+        inset: 0;
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+        opacity: 0;
+        transition: opacity 320ms ease-out;
+      }
+      #of-splash img[data-loaded='true'] {
+        opacity: 1;
+      }
+      /*
+       * The artwork is 4:3 and its lettering runs from 7% to 93% of the width,
+       * so `cover` starts slicing the wordmark off below roughly 8/7 — which is
+       * every phone held upright. Letterbox instead of decapitating the logo;
+       * the void behind it is the same colour the artwork fades to anyway.
+       */
+      @media (max-aspect-ratio: 8 / 7) {
+        #of-splash img {
+          object-fit: contain;
+        }
+        /*
+         * And drop the blurred backdrop with it. Stretched to cover a portrait
+         * viewport it puts the artwork's brightest band — the magenta sky —
+         * above and below the picture, which fights the thing it is framing.
+         * The void is what the artwork fades to at its own edges anyway.
+         */
+        #of-splash {
+          background-image: none;
+        }
+      }
+      #of-splash p {
+        position: relative;
+        align-self: end;
+        margin: 0 0 max(32px, env(safe-area-inset-bottom));
+        padding: 7px 14px;
+        border-radius: 999px;
+        background: rgb(21 10 46 / 82%);
+        color: #ece8fb;
+        font: 13px/1.3 ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+        letter-spacing: 0.01em;
+      }
+      @media (prefers-reduced-motion: reduce) {
+        #of-splash,
+        #of-splash img {
+          transition: none;
+        }
+      }
+    </style>
   </head>
   <body>
+    <!--
+      No `role="status"` on the container. The toast is the application's status
+      region, and a second one is a real problem rather than a test-only
+      collision: two live regions competing to speak. Content that is already
+      present at load is not announced by a live region anyway, so the role was
+      buying nothing here.
+
+      The LABEL keeps `aria-live`, because the one thing worth announcing is the
+      one thing that changes — `failSplash()` replacing it when the board cannot
+      be opened.
+    -->
+    <div id="of-splash">
+      <img
+        src="/src/assets/splash-hero.webp"
+        alt=""
+        decoding="async"
+        fetchpriority="high"
+        onload="this.dataset.loaded = 'true'"
+      />
+      <p aria-live="polite">Opening your board</p>
+    </div>
     <div id="root"></div>
     <script type="module" src="/src/main.tsx"></script>
   </body>
