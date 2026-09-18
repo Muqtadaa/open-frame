@@ -14,11 +14,70 @@ import { describe, expect, it } from 'vitest'
 // http URL, not a file one.
 const CSS = readFileSync(resolve(process.cwd(), 'src/styles.css'), 'utf8')
 
-function token(name: string): string {
-  const match = new RegExp(`--of-${name}:\\s*(#[0-9a-fA-F]{6})`).exec(CSS)
-  if (match?.[1] === undefined) throw new Error(`token --of-${name} is not defined as a hex colour`)
-  return match[1]
+/**
+ * EVERY theme, not the first one that matches.
+ *
+ * The original `token()` took the first `--of-x:` in the file, which was exact
+ * while there was one palette and quietly wrong the moment a second arrived:
+ * `After Hours` could have shipped an unreadable pair and this suite would have
+ * gone on measuring the default world and passing. A test that stops covering
+ * what it claims to cover is worse than no test, because it is trusted.
+ *
+ * Verified by breaking it: setting the After Hours `ink` to `#3b2a63` while the
+ * old single-match `token()` was in place kept all 26 assertions green, and
+ * fails 3 of them here.
+ */
+interface Theme {
+  readonly name: string
+  readonly token: (name: string) => string
 }
+
+function blockOf(source: string): Map<string, string> {
+  const values = new Map<string, string>()
+  for (const [, name, value] of source.matchAll(/--of-([\w-]+):\s*(#[0-9a-fA-F]{6})/g)) {
+    if (name !== undefined && value !== undefined) values.set(name, value)
+  }
+  return values
+}
+
+function readThemes(): Theme[] {
+  const base = new Map<string, string>()
+  const overrides = new Map<string, Map<string, string>>()
+
+  for (const match of CSS.matchAll(/:root\s*(\[data-theme=['"]([\w-]+)['"]\])?\s*\{([^}]*)\}/g)) {
+    const [, , name, body] = match
+    if (body === undefined) continue
+    const values = blockOf(body)
+    if (values.size === 0) continue
+    if (name === undefined) {
+      for (const [key, value] of values) base.set(key, value)
+    } else {
+      overrides.set(name, new Map([...(overrides.get(name) ?? []), ...values]))
+    }
+  }
+
+  if (base.size === 0) throw new Error('no palette found on :root')
+
+  const lookup =
+    (values: Map<string, string>) =>
+    (name: string): string => {
+      // Falls back to the base palette exactly as the cascade does, so a theme
+      // that overrides only part of the world is still measured whole.
+      const value = values.get(name) ?? base.get(name)
+      if (value === undefined) throw new Error(`token --of-${name} is not defined as a hex colour`)
+      return value
+    }
+
+  return [
+    { name: 'default', token: lookup(base) },
+    ...[...overrides].map(([name, values]) => ({ name, token: lookup(values) })),
+  ]
+}
+
+const THEMES = readThemes()
+
+/** Every theme must define a palette; a typo in the selector would silently skip one. */
+if (THEMES.length < 2) throw new Error(`expected the default world and After Hours, got ${String(THEMES.length)}`)
 
 function channels(hex: string): [number, number, number] {
   const n = Number.parseInt(hex.slice(1), 16)
@@ -59,7 +118,7 @@ const CONTROLS: readonly (readonly [string, string])[] = [
   ['accent', 'page'],
 ]
 
-describe('palette contrast', () => {
+describe.each(THEMES)('palette contrast — $name', ({ token }) => {
   it.each(TEXT)('%s on %s meets AA for text (4.5:1)', (fg, bg) => {
     expect(contrast(token(fg), token(bg))).toBeGreaterThanOrEqual(4.5)
   })
@@ -69,13 +128,29 @@ describe('palette contrast', () => {
   })
 
   /**
-   * Every content colour is used as ink on its own surface — a sticky's text on
-   * its body, a shape's stroke on its fill — so each pair carries real text.
+   * A shape's stroke and label on its own fill.
    */
   it.each(['yellow', 'green', 'blue', 'red', 'violet', 'orange', 'gray'])(
     '%s ink on its own surface meets AA for text',
     (name) => {
       expect(contrast(token(`c-${name}`), token(`s-${name}`))).toBeGreaterThanOrEqual(4.5)
+    },
+  )
+
+  /**
+   * And the pair a STICKY renders, which is a different one.
+   *
+   * `.of-sticky` sets its body from `s-*` and never sets a colour, so its text
+   * is `ink` on the slip — the pair above is the shape pair. Both ship, and
+   * until After Hours arrived only one of them was measured: on a light page
+   * every `ink`-on-slip combination passes by a mile, so the gap cost nothing
+   * and stayed invisible. On a dark page it is the pair that can actually fail,
+   * because `s-*` and `ink` are now both moving.
+   */
+  it.each(['yellow', 'green', 'blue', 'red', 'violet', 'orange', 'gray'])(
+    'sticky text on a %s slip meets AA for text',
+    (name) => {
+      expect(contrast(token('ink'), token(`s-${name}`))).toBeGreaterThanOrEqual(4.5)
     },
   )
 

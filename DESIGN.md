@@ -1,6 +1,6 @@
 ---
 name: OpenFrame
-description: An engineering quadrille page that treats every mark on it as a record.
+description: An engineering quadrille page that treats every mark on it as a record, with a second world for after hours.
 colors:
   bg: "#eef2f6"
   page: "#f7f9fb"
@@ -190,6 +190,60 @@ with what the user put down.
 - System faces only — no webfont request leaves the machine
 - Mono for records and measurement, never as a costume
 - WCAG 2.2 AA enforced against the stylesheet by a build test
+
+## Two worlds
+
+The board ships in two, and they are not a light palette and a dark variant of
+it. They share token NAMES and nothing else, which is the entire reason a saved
+board never has to be touched when one is swapped for the other: documents store
+`color: 'blue'`, and what blue IS belongs to the world.
+
+**The Notebook** is the default and the one above: the engineering computation
+pad, cold stock, printed rule.
+
+**After Hours** (`:root[data-theme='after-hours']`) is the same notebook at
+night, lit by its own grid. The quadrille stops being printed rule and becomes a
+lit horizon; ink inverts to a violet-white that never reaches pure white; the
+synthwave palette earns its place because the GROUND is doing the glowing. It is
+opt-in from the record line and remembered, and it is deliberately not wired to
+`prefers-color-scheme` — a system preference set for reading email at night is
+not a statement about how somebody wants to look at their research.
+
+Three things carried across rather than being redesigned:
+
+- **Content hues keep their meaning.** A red slip is still red — inverted to
+  light ink on a deep body, not re-hued. `danger` moved instead: on a dark
+  ground a content red and a correction red must both be light, which put them
+  18 sRGB units apart until the correction red was pushed to a hot red-orange.
+- **Depth needs a lit edge, not a deeper shadow.** A cast shadow works by being
+  darker than what it falls on and there is very little room below the night
+  page, so slips read as holes cut in it. A hairline highlight on the top edge
+  is where light catches a raised edge — the physics the default world gets free
+  from a white page.
+- **Chrome still does not glow.** Saturated colour belongs to the user's
+  material in both worlds. Glowing apparatus would compete with a magenta slip
+  that MEANS something, which is the whole reason the neon lives on the ground
+  and in the brand rather than on the controls.
+
+Every pair in both worlds is measured by the same build test.
+`design-tokens.test.ts` walks EVERY theme block rather than the first it finds —
+it took the first `--of-x:` in the file until After Hours arrived, which would
+have let a second world ship unreadable while the suite went on measuring the
+first one and passing.
+
+## The brand
+
+The mark, the wordmark and the synthwave hero are one supplied artwork
+(`src/assets/PROVENANCE.md`). They are the source of the `--of-brand-*` tokens,
+and those tokens paint exactly three things: the boot splash, the browser tab
+icon, and nothing else.
+
+That restraint is the point. The identity is loud on purpose and the workspace
+is quiet on purpose, and the boundary between them is where a brand stops being
+decoration. The splash is the one full-bleed brand moment the product has, and
+it is free: it lives in `index.html`, paints before the module graph loads, and
+carries its own first frame as a 146-byte inlined thumbnail — a loading screen
+that waits on the network to prove it is loading has the logic backwards.
 
 ## Colors
 

@@ -251,6 +251,21 @@ export function CloseIcon({ className }: IconProps) {
   )
 }
 
+/**
+ * The setting sun with its banded horizon — the artwork's own motif, and the
+ * one glyph that says "after hours" without reaching for the stock crescent
+ * moon every theme toggle in the category already uses.
+ */
+export function AfterHoursIcon({ className }: IconProps) {
+  return (
+    <svg {...base} className={className}>
+      <path d="M6 14a6 6 0 0112 0" />
+      <path d="M3 17.5h18" />
+      <path d="M7.5 11h9M6.4 14h11.2" />
+    </svg>
+  )
+}
+
 export function GridIcon({ className }: IconProps) {
   return (
     <svg {...base} className={className}>

@@ -10,7 +10,17 @@ canvas-app default of a neutral void with floating candy chrome; every mark sits
 on a ruled page that accounts for it. Provenance is the product, so the surface
 is the artifact whose only job is provenance.
 
-OWN-WORLD: Engineering quadrille, not stationery. Cold blue-grey paper stock,
+OWN-WORLD (TWO, since 2026-09-18): The default is unchanged below. A second,
+`After Hours`, is opt-in from the record line and remembered: the same notebook
+at night, lit by its own grid, from the supplied synthwave artwork. The worlds
+share token NAMES and nothing else, so a saved board never changes. Content hues
+keep their meaning across both — a red slip stays red, inverted rather than
+re-hued — and chrome glows in neither, because saturated colour belongs to the
+user's material. Brand colour paints the boot splash and the tab icon and
+nothing else. Every pair in both worlds is measured: `design-tokens.test.ts`
+walks every theme block, having taken only the first until the second arrived.
+
+OWN-WORLD (DEFAULT): Engineering quadrille, not stationery. Cold blue-grey paper stock,
 cyan-grey rule at world scale, blue-black ink (never pure black), one correction
 red reserved for destructive meaning. Content colour is separate: coloured index
 slips laid ON the page, with real elevation. System UI and system mono stacks,

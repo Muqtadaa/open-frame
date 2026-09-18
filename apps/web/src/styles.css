@@ -98,6 +98,101 @@
   --of-s-violet: #e3daff;
   --of-s-orange: #ffddb8;
   --of-s-gray: #dfe5ec;
+
+  /*
+   * BRAND. Shared by every theme, because the identity does not change when the
+   * ground does. Sampled from the supplied artwork (see assets/PROVENANCE.md).
+   *
+   * These are deliberately NOT part of the working palette. They paint the
+   * splash, the mark's halo and nothing else: the board reserves saturated
+   * colour for the user's own material, and a chrome that glowed magenta would
+   * compete with a magenta slip that MEANS something.
+   */
+  --of-brand-void: #150a2e;
+  --of-brand-horizon: #4a2b7a;
+  --of-brand-magenta: #ff2fbf;
+  --of-brand-cyan: #35e2ff;
+}
+
+/*
+ * AFTER HOURS — the second world, opt-in.
+ *
+ * The same notebook at night, lit by its own grid: the quadrille stops being
+ * printed rule and becomes a lit horizon line, and ink inverts to a violet-white
+ * that never reaches pure white. The synthwave palette earns its place here
+ * because the ground is doing the glowing, not the chrome.
+ *
+ * Every pair in here is measured by the same build test as the default world —
+ * `design-tokens.test.ts` walks EVERY theme block, not the first one it finds.
+ * A theme that only looked checked would be worse than an unchecked one.
+ *
+ * Content hues keep their MEANING across both worlds: a red slip is still red,
+ * inverted to light ink on a deep body rather than re-hued. `danger` moved
+ * instead — on a dark ground both a content red and a correction red have to be
+ * light, which put them 18 sRGB units apart until the correction red was pushed
+ * to a hot red-orange.
+ */
+:root[data-theme='after-hours'] {
+  color-scheme: dark;
+
+  --of-bg: #140c24;
+  --of-page: #1b1033;
+
+  --of-rule: #2a1a4d;
+  --of-rule-decade: #3d2770;
+
+  --of-panel: #231645;
+  --of-panel-border: #4b3280;
+
+  --of-control-border: #9a83d4;
+
+  --of-ink: #ece8fb;
+  --of-ink-muted: #b3a6d8;
+
+  --of-accent: #5cd8f2;
+  --of-accent-soft: #10324a;
+  --of-guide: #ff5fd6;
+
+  --of-danger: #ff6a55;
+  --of-danger-wash: #3a1620;
+  --of-danger-edge: #6b2e3a;
+
+  --of-hover: #2c1c52;
+
+  /*
+   * Depth on a dark ground. The same offset-and-blur structure as the default
+   * world at greater opacity, because a 7% black shadow over #1b1033 is nothing.
+   * No glow: a zero-offset halo is decoration, and the light in this world comes
+   * from the ground, not from every edge.
+   */
+  --of-shadow: 0 1px 0 rgb(5 2 14 / 40%), 0 2px 8px rgb(5 2 14 / 55%);
+  /*
+   * A slip needs a LIT TOP EDGE here, not just a deeper shadow. A cast shadow
+   * works by being darker than the surface it falls on, and there is very little
+   * room below #1b1033 — the slips read as holes cut in the page rather than
+   * cards laid on it. The hairline is where the light catches the raised edge,
+   * which is the same physics the default world gets for free from a white page.
+   */
+  --of-slip-shadow:
+    inset 0 1px 0 rgb(255 255 255 / 9%), 0 1px 2px rgb(5 2 14 / 65%),
+    0 4px 12px rgb(5 2 14 / 55%);
+  --of-pressed-shadow: 0 1px 2px rgb(5 2 14 / 50%);
+
+  --of-c-yellow: #ffd95e;
+  --of-c-green: #5eeaba;
+  --of-c-blue: #8cc8ff;
+  --of-c-red: #ffa79c;
+  --of-c-violet: #cbaaff;
+  --of-c-orange: #ffb478;
+  --of-c-gray: #bcc8de;
+
+  --of-s-yellow: #463400;
+  --of-s-green: #053626;
+  --of-s-blue: #12294f;
+  --of-s-red: #4d1b1b;
+  --of-s-violet: #301a5e;
+  --of-s-orange: #4a2408;
+  --of-s-gray: #27314a;
 }
 
 /*
@@ -570,6 +665,11 @@ body {
 .of-status__action:disabled {
   opacity: 0.3;
   cursor: default;
+}
+
+/* A toggle that is ON reads as on without needing a second glyph. */
+.of-status__action[aria-pressed='true'] {
+  color: var(--of-accent);
 }
 
 /* A ruled divider, the way a ledger column is separated. */

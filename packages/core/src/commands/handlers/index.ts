@@ -1,9 +1,11 @@
 import type { BoardDocument } from '../../domain/document.js'
 import type { Patch } from '../../domain/patch.js'
 import type { CommandContext, Command } from '../types.js'
+import { applyRemotePatches } from './apply-remote-patches.js'
 import { convertObjects } from './convert-objects.js'
 import { createObjects } from './create-objects.js'
 import { reorderObjects } from './reorder-objects.js'
+import { repairParentage } from './repair-parentage.js'
 import { reparentObjects } from './reparent-objects.js'
 import { rotateObjects } from './rotate-objects.js'
 import { setHidden, setLocked } from './set-flags.js'
@@ -51,15 +53,21 @@ export function handleCommand(
       return setHidden(doc, command)
     case 'ReparentObjects':
       return reparentObjects(doc, command, ctx)
+    case 'ApplyRemotePatches':
+      return applyRemotePatches(doc, command, ctx)
+    case 'RepairParentage':
+      return repairParentage(doc, command)
   }
 }
 
 export {
+  applyRemotePatches,
   convertObjects,
   createObjects,
   deleteObjects,
   moveObjects,
   reorderObjects,
+  repairParentage,
   reparentObjects,
   resizeObjects,
   rotateObjects,

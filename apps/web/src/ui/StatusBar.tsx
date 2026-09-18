@@ -1,11 +1,14 @@
+import { useState } from 'react'
+
 import { useBoardDocument } from '../hooks/use-document-object.js'
 import { useCommands } from '../hooks/use-commands.js'
 import { useUndoState } from '../hooks/use-document-object.js'
 import { useInteractionStore } from '../interaction/interaction-store.js'
 import { BENCH_TOOLS_ENABLED } from '../app/bench-flag.js'
 import { SOURCE_URL } from '../app/source-link.js'
+import { applyTheme, readTheme, type Theme } from '../app/theme.js'
 import { DevPanel } from './DevPanel.js'
-import { RedoIcon, UndoIcon } from './icons.js'
+import { AfterHoursIcon, RedoIcon, UndoIcon } from './icons.js'
 
 const isMac = typeof navigator !== 'undefined' && /Mac|iPhone|iPad/.test(navigator.platform)
 const mod = isMac ? '⌘' : 'Ctrl'
@@ -23,6 +26,13 @@ export function StatusBar() {
   const selection = useInteractionStore((state) => state.selection)
   const commands = useCommands()
   const { canUndo, canRedo, undoLabel } = useUndoState()
+  /*
+   * The only piece of local state on this line, and it is a mirror rather than
+   * a source: the document element already holds the truth, and localStorage
+   * holds it across reloads. This exists so React re-renders the pressed state.
+   */
+  const [theme, setTheme] = useState<Theme>(readTheme)
+  const afterHours = theme === 'after-hours'
 
   return (
     <div className="of-status" data-testid="status-bar">
@@ -76,6 +86,27 @@ export function StatusBar() {
       >
         Source
       </a>
+
+      {/*
+       * App-level apparatus sits at this end of the line, after the rule — the
+       * source offer established that, and a theme is the same kind of thing:
+       * not a record of the page, but something about the page you are reading.
+       */}
+      <button
+        type="button"
+        className="of-status__action"
+        aria-pressed={afterHours}
+        aria-label="After Hours theme"
+        title={afterHours ? 'After Hours — on' : 'After Hours — off'}
+        data-testid="theme-toggle"
+        onClick={() => {
+          const next: Theme = afterHours ? 'notebook' : 'after-hours'
+          setTheme(next)
+          applyTheme(next)
+        }}
+      >
+        <AfterHoursIcon />
+      </button>
 
       {/*
        * Statically guarded, not runtime-guarded: the flag is replaced at build

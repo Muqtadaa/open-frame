@@ -39,5 +39,12 @@ export function describeCommand(command: Command): string {
       return command.parentId === null
         ? `Remove ${plural(command.ids.length, 'object')} from frame`
         : `Move ${plural(command.ids.length, 'object')} into frame`
+    // Both of these are skipUndo by construction, so neither label reaches an
+    // undo menu. They are still written for a person, because they are what a
+    // change log or a sync trace will show when something has gone wrong.
+    case 'ApplyRemotePatches':
+      return `Merge ${plural(command.patches.length, 'remote change')}`
+    case 'RepairParentage':
+      return 'Repair board structure'
   }
 }

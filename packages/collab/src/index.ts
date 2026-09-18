@@ -16,6 +16,8 @@ export {
   objectsFromDoc,
   objectsOf,
   seedDoc,
+  LOCAL_ORIGIN,
   OBJECTS,
-  REMOTE_ORIGIN,
 } from './document-map.js'
+export { parentageCandidates, patchesFromEvent } from './remote-patches.js'
+export { CollabSession, type CollabSessionDeps } from './session.js'
