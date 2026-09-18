@@ -7,6 +7,7 @@ import {
   COLOR_VARS,
   SURFACE_VARS,
   fontFamily,
+  dashArray,
   justifyAlign,
   textAlign,
 } from '../scene/style-tokens.js'
@@ -37,6 +38,7 @@ function ShapeOutline({ object }: { object: ObjectBase<string, ShapeData> }) {
           fill={fill}
           stroke={stroke}
           strokeWidth={strokeWidth}
+          strokeDasharray={dashArray(object.style.dash, strokeWidth)}
         />
       ) : (
         <path

@@ -64,9 +64,32 @@ describe('pointer down', () => {
     ])
   })
 
-  it('carries the current variant when creating a shape', () => {
+  /**
+   * Shapes and frames are DRAWN to size, the way they are in every graphics
+   * tool. A click that does not travel still places one at the type's default
+   * size, so nothing was taken away — that fallback lives in the gesture, which
+   * is the only place that knows how far the pointer went.
+   */
+  it('carries the current variant when drawing a shape', () => {
     expect(onPointerDown(ctx({ tool: 'shape', shapeKind: 'ellipse' }))).toEqual([
-      { kind: 'create', objectType: 'shape', at: { x: 10, y: 10 }, data: { shape: 'ellipse' } },
+      { kind: 'begin-draw', objectType: 'shape', at: { x: 10, y: 10 }, data: { shape: 'ellipse' } },
+    ])
+  })
+
+  it('draws a frame to size rather than placing one', () => {
+    expect(onPointerDown(ctx({ tool: 'frame' }))).toEqual([
+      { kind: 'begin-draw', objectType: 'frame', at: { x: 10, y: 10 } },
+    ])
+  })
+
+  /**
+   * A sticky is not drawn. Every sticky is the same size on purpose — a wall of
+   * notes at different sizes stops reading as a wall of notes — and a text
+   * object sizes itself to what is typed into it.
+   */
+  it('still places the types whose size is not the user\'s to choose', () => {
+    expect(onPointerDown(ctx({ tool: 'sticky' }))).toEqual([
+      { kind: 'create', objectType: 'sticky', at: { x: 10, y: 10 } },
     ])
   })
 

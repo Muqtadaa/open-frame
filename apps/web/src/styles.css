@@ -1595,3 +1595,36 @@ textarea.of-input {
   font-size: 17px;
   line-height: 1.3;
 }
+
+/*
+ * An object being drawn to size, before it exists.
+ *
+ * Deliberately thinner and quieter than the finished object: outline only, in
+ * the accent, with no fill and no label. A preview that looked finished would
+ * be indistinguishable from an object that had already been created — and
+ * nothing exists until the pointer comes up.
+ */
+.of-draw-preview {
+  position: absolute;
+  top: 0;
+  left: 0;
+  border: 1px dashed var(--of-accent);
+  pointer-events: none;
+}
+
+.of-draw-preview svg {
+  display: block;
+  width: 100%;
+  height: 100%;
+  /* The border above is the rectangle; a shape draws its own outline inside it. */
+  overflow: visible;
+}
+
+.of-draw-preview path,
+.of-draw-preview ellipse {
+  fill: none;
+  stroke: var(--of-accent);
+  stroke-dasharray: 4 3;
+  stroke-width: 1;
+  vector-effect: non-scaling-stroke;
+}

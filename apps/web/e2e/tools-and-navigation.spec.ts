@@ -102,10 +102,12 @@ test.describe('zoom', () => {
   test('zooms with the toolbar buttons and resets', async ({ page }) => {
     await expect(zoomPercent(page)).resolves.toBe(100)
     await page.getByTestId('zoom-in').click()
-    await expect(zoomPercent(page)).resolves.toBe(150)
+    // Round percentages only: 100 → 200, never 150. The readout shows this
+    // number directly, and 75% reads as having landed somewhere by accident.
+    await expect(zoomPercent(page)).resolves.toBe(200)
     await page.getByTestId('zoom-out').click()
     await page.getByTestId('zoom-out').click()
-    await expect(zoomPercent(page)).resolves.toBe(75)
+    await expect(zoomPercent(page)).resolves.toBe(50)
   })
 
   test('accepts a typed percentage', async ({ page }) => {
@@ -124,7 +126,7 @@ test.describe('zoom', () => {
     const mod = process.platform === 'darwin' ? 'Meta' : 'Control'
 
     await page.keyboard.press(`${mod}+=`)
-    await expect(zoomPercent(page)).resolves.toBe(150)
+    await expect(zoomPercent(page)).resolves.toBe(200)
 
     await page.keyboard.press(`${mod}+-`)
     await expect(zoomPercent(page)).resolves.toBe(100)

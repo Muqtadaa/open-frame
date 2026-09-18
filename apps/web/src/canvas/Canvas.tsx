@@ -5,6 +5,7 @@ import { useKeyboardShortcuts } from '../interaction/use-keyboard-shortcuts.js'
 import { gridStyle } from '../scene/grid.js'
 import { AlignmentOverlay } from './AlignmentOverlay.js'
 import { ConnectorPreview } from './ConnectorPreview.js'
+import { DrawPreview } from './DrawPreview.js'
 import { EndpointOverlay } from './EndpointOverlay.js'
 import { MarqueeOverlay } from './MarqueeOverlay.js'
 import { ObjectLayer } from './ObjectLayer.js'
@@ -81,6 +82,7 @@ export function Canvas() {
       >
         <ObjectLayer width={width} height={height} />
         <SelectionOverlay />
+        <DrawPreview />
         <MarqueeOverlay />
         <AlignmentOverlay />
         <EndpointOverlay />

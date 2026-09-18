@@ -195,6 +195,27 @@ export function StrokeIcon({ className, variant }: IconProps & { variant: string
   )
 }
 
+/**
+ * The pattern, drawn at one weight.
+ *
+ * Deliberately not also varying the line's thickness: weight has its own
+ * control beside this one, and an icon that changed two things at once would
+ * suggest the two properties were the same choice.
+ */
+export function DashIcon({ className, variant }: IconProps & { variant: string }) {
+  const pattern = { dashed: '6 4', dotted: '0 4.5' }[variant]
+  return (
+    <svg {...base} className={className}>
+      <path
+        d="M4 12h16"
+        strokeWidth={2.4}
+        strokeLinecap="round"
+        {...(pattern === undefined ? {} : { strokeDasharray: pattern })}
+      />
+    </svg>
+  )
+}
+
 export function AlignIcon({ className, variant }: IconProps & { variant: string }) {
   // Short lines sit where the text would: ragged edge away from the alignment.
   const rows =

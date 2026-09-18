@@ -127,7 +127,7 @@ describe('object type registry contract', () => {
       })
 
       it('declares only real style properties', () => {
-        const allowed = new Set(['color', 'fill', 'stroke', 'font', 'align', 'opacity'])
+        const allowed = new Set(['color', 'fill', 'stroke', 'dash', 'font', 'align', 'opacity'])
         for (const prop of definition.capabilities.styleProps) {
           expect(allowed.has(prop)).toBe(true)
         }

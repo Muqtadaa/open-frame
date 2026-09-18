@@ -1,4 +1,4 @@
-import type { AlignToken, ColorToken, FontToken } from '@openframe/core'
+import type { AlignToken, ColorToken, DashToken, FontToken } from '@openframe/core'
 
 /**
  * The one place design tokens become CSS values.
@@ -54,4 +54,21 @@ export function textAlign(token: AlignToken | undefined): 'left' | 'center' | 'r
  */
 export function justifyAlign(token: AlignToken | undefined): 'flex-start' | 'center' | 'flex-end' {
   return token === 'center' ? 'center' : token === 'end' ? 'flex-end' : 'flex-start'
+}
+
+/**
+ * A dash pattern in units of the line's own width, so it reads the same at
+ * every weight.
+ *
+ * A fixed "4 3" looks dashed on a thin line and nearly solid on a thick one;
+ * scaling by stroke width keeps a dashed connector recognisably dashed
+ * whatever weight the board is using. `undefined` means solid — an explicit
+ * pattern for "no pattern" would have to be excluded again everywhere.
+ */
+export function dashArray(token: DashToken | undefined, width: number): string | undefined {
+  if (token === 'dashed') return `${String(width * 3)} ${String(width * 2)}`
+  // Dotted needs a round cap to be dots rather than very short dashes; the
+  // zero-length segment is what a round cap turns into a circle.
+  if (token === 'dotted') return `0 ${String(width * 2)}`
+  return undefined
 }

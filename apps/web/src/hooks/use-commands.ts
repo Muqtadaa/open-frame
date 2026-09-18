@@ -8,6 +8,7 @@ import type {
   ObjectId,
   Placement,
   Point,
+  Rect,
 } from '@openframe/core'
 import { childrenOf, unionAll } from '@openframe/core'
 import { useMemo } from 'react'
@@ -23,6 +24,18 @@ export interface BoardCommands {
   /** Creates a connector between two resolved endpoints. */
   createConnector(from: ConnectorEndpoint, to: ConnectorEndpoint): ObjectId | null
   createObject(type: string, at: Point, data?: Readonly<Record<string, unknown>>): ObjectId | null
+  /**
+   * Creates an object at an explicit rectangle, for a draw-to-size gesture.
+   *
+   * Separate from `createObject` rather than an optional size on it, because
+   * the two answer different questions: one is told where to put something the
+   * TYPE has sized, the other is told exactly what rectangle to fill.
+   */
+  createObjectInRect(
+    type: string,
+    rect: Rect,
+    data?: Readonly<Record<string, unknown>>,
+  ): ObjectId | null
   duplicateSelection(): void
   copySelection(): void
   cutSelection(): void
@@ -133,6 +146,65 @@ export function useCommands(): BoardCommands {
       )
     }
 
+    /**
+     * Puts a new object at an exact rectangle, adopting what it lands on.
+     *
+     * Shared by click-to-place and draw-to-size so the two cannot drift: a
+     * frame drawn around three notes and a frame dropped on top of them must
+     * end up holding the same three notes.
+     */
+    const placeObject = (
+      type: string,
+      rect: Rect,
+      data: Readonly<Record<string, unknown>> | undefined,
+    ): ObjectId | null => {
+      const definition = runtime.registry.get(type)
+      if (definition === undefined) return null
+
+      const id = runtime.ids.objectId()
+      const spec = {
+        type,
+        id,
+        x: rect.x,
+        y: rect.y,
+        width: rect.width,
+        height: rect.height,
+        ...(data === undefined ? {} : { data: { ...data } }),
+      }
+
+      /*
+       * A container adopts what it lands on.
+       *
+       * Dropping a frame over existing notes used to leave them where they
+       * were — outside it — so the frame painted over them and they simply
+       * vanished, and moving the frame left them behind. A frame drawn AROUND
+       * something means that something is in it; that is the only reading.
+       *
+       * Only top-level objects are taken. An object already inside another
+       * frame belongs to that frame, and a container that quietly stole
+       * another's contents would be worse than one that adopted nothing.
+       */
+      const doc = runtime.store.getDocument()
+      const adopts = definition.capabilities.canHaveChildren
+        ? objectsInMarquee(doc, runtime.registry, rect).filter(
+            (other) => (doc.objects.get(other)?.parentId ?? null) === null,
+          )
+        : []
+
+      const result =
+        adopts.length === 0
+          ? dispatcher.dispatch({ kind: 'CreateObjects', objects: [spec] })
+          : // One transaction, so undoing the placement also undoes the
+            // adoption — otherwise undo leaves the notes parented to a frame
+            // that no longer exists.
+            dispatcher.transact(`Create ${type}`, [
+              { kind: 'CreateObjects', objects: [spec] },
+              { kind: 'ReparentObjects', ids: adopts, parentId: id },
+            ])
+      report(result)
+      return result.ok ? id : null
+    }
+
     return {
       createObject(type, at, data) {
         const definition = runtime.registry.get(type)
@@ -148,50 +220,17 @@ export function useCommands(): BoardCommands {
         // from its very first object and snapping only ever half-applies.
         const origin = { x: at.x - frame.width / 2, y: at.y - frame.height / 2 }
         const placed = useInteractionStore.getState().snapToGrid ? snapPoint(origin) : origin
+        return placeObject(type, { ...placed, ...frame }, data)
+      },
 
-        /*
-         * A container adopts what it lands on.
-         *
-         * Dropping a frame over existing notes used to leave them where they
-         * were — outside it — so the frame painted over them and they simply
-         * vanished, and moving the frame left them behind. A frame drawn AROUND
-         * something means that something is in it; that is the only reading.
-         *
-         * Only top-level objects are taken. An object already inside another
-         * frame belongs to that frame, and a container that quietly stole
-         * another's contents would be worse than one that adopted nothing.
-         */
-        const id = runtime.ids.objectId()
-        const spec = {
-          type,
-          id,
-          x: placed.x,
-          y: placed.y,
-          ...(data === undefined ? {} : { data: { ...data } }),
+      createObjectInRect(type, rect, data) {
+        if (runtime.registry.get(type) === undefined) {
+          console.warn(`[openframe] no such object type "${type}"`)
+          return null
         }
-
-        const doc = runtime.store.getDocument()
-        const adopts = definition.capabilities.canHaveChildren
-          ? objectsInMarquee(doc, runtime.registry, {
-              x: placed.x,
-              y: placed.y,
-              width: frame.width,
-              height: frame.height,
-            }).filter((other) => (doc.objects.get(other)?.parentId ?? null) === null)
-          : []
-
-        const result =
-          adopts.length === 0
-            ? dispatcher.dispatch({ kind: 'CreateObjects', objects: [spec] })
-            : // One transaction, so undoing the placement also undoes the
-              // adoption — otherwise undo leaves the notes parented to a frame
-              // that no longer exists.
-              dispatcher.transact(`Create ${type}`, [
-                { kind: 'CreateObjects', objects: [spec] },
-                { kind: 'ReparentObjects', ids: adopts, parentId: id },
-              ])
-        report(result)
-        return result.ok ? id : null
+        // Already snapped by the gesture, which snaps both EDGES rather than a
+        // corner and a size — see scene/draw.ts.
+        return placeObject(type, rect, data)
       },
 
       createConnector(from, to) {

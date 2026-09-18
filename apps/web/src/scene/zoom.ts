@@ -14,7 +14,19 @@ import {
  * Discrete zoom stops, so repeated keyboard zooming lands on predictable,
  * legible values instead of drifting to 37%.
  */
-export const ZOOM_STEPS = [0.05, 0.1, 0.25, 0.5, 0.75, 1, 1.5, 2, 3, 4, 8, 16] as const
+/**
+ * Where Cmd/Ctrl +/- stops.
+ *
+ * Every stop is a percentage a person would say out loud — 25%, 50%, 100%,
+ * 400% — because the readout beside the slider shows exactly this number and
+ * "75%" or "300%" reads as having landed somewhere by accident. The doubling
+ * above 100% and the quartering below it keep the steps even on a log scale, so
+ * each press feels like the same size of move in both directions.
+ *
+ * 5% is included although it is not a doubling: it is `MIN_ZOOM`, and a step
+ * list that cannot reach the clamp leaves the last press doing nothing.
+ */
+export const ZOOM_STEPS = [0.05, 0.1, 0.25, 0.5, 1, 2, 4, 8, 16] as const
 
 export function nextZoomIn(zoom: number): number {
   return clampZoom(ZOOM_STEPS.find((step) => step > zoom + 1e-6) ?? MAX_ZOOM)

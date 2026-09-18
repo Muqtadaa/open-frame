@@ -87,6 +87,23 @@ export type DragState =
       readonly dy: number
     }
   | { readonly kind: 'marquee'; readonly origin: Point; readonly current: Point }
+  /**
+   * Drawing a new object to size, the way every graphics tool creates a shape.
+   *
+   * Carries the type it will become so the preview can be drawn as that type
+   * rather than as a generic rectangle, and so the commit needs nothing but
+   * this state. Like every other gesture it writes NOTHING until pointer-up:
+   * one command, one undo entry, however many frames the drag took.
+   */
+  | {
+      readonly kind: 'draw'
+      readonly objectType: string
+      readonly data: Readonly<Record<string, unknown>> | undefined
+      readonly origin: Point
+      readonly current: Point
+      /** Held Shift: a square, a circle, a frame with equal sides. */
+      readonly constrained: boolean
+    }
   | { readonly kind: 'pan' }
   /*
    * Resize and rotate carry PREVIEW FRAMES rather than writing to the document.
@@ -183,6 +200,13 @@ interface InteractionState {
   beginTranslate(ids: readonly ObjectId[]): void
   updateTranslate(dx: number, dy: number): void
   beginMarquee(origin: Point): void
+  /** Starts drawing a new object to size. Nothing is created until it commits. */
+  beginDraw(
+    objectType: string,
+    at: Point,
+    data: Readonly<Record<string, unknown>> | undefined,
+  ): void
+  updateDraw(current: Point, constrained: boolean): void
   updateMarquee(current: Point): void
   beginPan(): void
   beginResize(handle: HandleId): void
@@ -280,6 +304,14 @@ export const useInteractionStore = create<InteractionState>((set) => ({
   beginMarquee: (origin) => set({ drag: { kind: 'marquee', origin, current: origin } }),
   updateMarquee: (current) =>
     set((state) => (state.drag.kind === 'marquee' ? { drag: { ...state.drag, current } } : {})),
+  beginDraw: (objectType, at, data) =>
+    set({
+      drag: { kind: 'draw', objectType, data, origin: at, current: at, constrained: false },
+    }),
+  updateDraw: (current, constrained) =>
+    set((state) =>
+      state.drag.kind === 'draw' ? { drag: { ...state.drag, current, constrained } } : {},
+    ),
   beginPan: () => set({ drag: { kind: 'pan' } }),
   beginResize: (handle) => set({ drag: { kind: 'resize', handle, frames: new Map() } }),
   beginRotate: () => set({ drag: { kind: 'rotate', frames: new Map() } }),

@@ -30,6 +30,7 @@ import {
   onPointerDown as decidePointerDown,
   type PointerIntent,
 } from '../interaction/pointer-controller.js'
+import { committedRect, constrainToAxis } from '../scene/draw.js'
 import { containerAt, hitTest, hitTestRaw, objectsInMarquee } from '../scene/hit-testing.js'
 import { alignToNeighbours, alignmentTargets, type AlignmentGuide } from '../scene/alignment.js'
 import { cullToViewport } from '../scene/culling.js'
@@ -48,6 +49,8 @@ type GestureMode =
   | 'pan'
   | 'translate'
   | 'marquee'
+  /** Sweeping out a NEW object's size, before anything exists. */
+  | 'draw'
   | 'resize'
   | 'rotate'
   | 'connect'
@@ -255,6 +258,9 @@ export function useCanvasGestures(containerRef: RefObject<HTMLElement | null>) {
         case 'begin-marquee':
           store.beginMarquee(worldPoint)
           return 'marquee'
+        case 'begin-draw':
+          store.beginDraw(intent.objectType, intent.at, intent.data)
+          return 'draw'
         case 'begin-edit':
           // Selected as well as edited: a double-click into a group targets the
           // MEMBER, and leaving the group selected while editing a note inside
@@ -493,14 +499,31 @@ export function useCanvasGestures(containerRef: RefObject<HTMLElement | null>) {
         return
       }
 
+      if (active.mode === 'draw') {
+        active.moved = true
+        // Shift is read per FRAME, not at gesture start: a user decides a shape
+        // should be square halfway through drawing it, which is exactly when
+        // they reach for the key.
+        store.updateDraw(worldPoint, event.shiftKey)
+        return
+      }
+
       if (active.mode === 'connect' || active.mode === 'endpoint') {
         active.moved = true
-        const over = hitTest(runtime.store.getDocument(), runtime.registry, worldPoint)
+        /*
+         * Shift holds the connector to one axis, as it does in every graphics
+         * tool. The hit test uses the CONSTRAINED point, not the raw pointer:
+         * attaching to whatever happens to be under the cursor while the drawn
+         * line points somewhere else would make the connector attach to
+         * something it visibly does not touch.
+         */
+        const free = event.shiftKey ? constrainToAxis(active.startWorld, worldPoint) : worldPoint
+        const over = hitTest(runtime.store.getDocument(), runtime.registry, free)
         // The object being edited must not offer itself as a target: attaching
         // an end to its own connector is unresolvable, so it would silently
         // become a no-op rather than the free point the drop implied.
         const editing = active.subjects[0]?.id
-        store.updateConnect(worldPoint, over === editing ? null : over)
+        store.updateConnect(free, over === editing ? null : over)
         return
       }
 
@@ -634,6 +657,33 @@ export function useCanvasGestures(containerRef: RefObject<HTMLElement | null>) {
         commands.rotateObjects(
           [...store.drag.frames].map(([id, frame]) => ({ id, rotation: frame.rotation })),
         )
+      }
+
+      if (active.mode === 'draw' && store.drag.kind === 'draw') {
+        const { objectType, data, origin, current, constrained } = store.drag
+        const rect = committedRect(origin, current, constrained, store.snapToGrid)
+        /*
+         * A gesture too small to be a drag falls back to click-to-place, at the
+         * type's own default size and centred where the pointer went down. The
+         * shape tool must still work with a single click.
+         */
+        const id =
+          rect === null
+            ? commands.createObject(objectType, origin, data)
+            : commands.createObjectInRect(objectType, rect, data)
+        if (id !== null) {
+          store.setSelection([id])
+          /*
+           * Back to the select tool, exactly as click-to-place does. Without
+           * this the shape tool stays armed and the very next click — the one
+           * that commits the label you just typed — draws a second shape.
+           */
+          store.setTool('select')
+          // The next thing anyone does with a new shape or frame is name it.
+          store.setEditing(id)
+        }
+        store.endDrag()
+        return
       }
 
       if (active.mode === 'marquee' && store.drag.kind === 'marquee') {

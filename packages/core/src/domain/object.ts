@@ -31,6 +31,15 @@ export interface ObjectStyle {
   readonly color?: ColorToken
   readonly fill?: FillToken
   readonly stroke?: StrokeToken
+  /**
+   * The line's pattern, separate from its weight.
+   *
+   * Two properties rather than one `dashed-thin` axis, because they are chosen
+   * for different reasons and combine freely: weight is how loud a line is,
+   * pattern is what it MEANS — a dashed connector conventionally reads as
+   * provisional or inferred, at whatever weight suits the board.
+   */
+  readonly dash?: DashToken
   readonly font?: FontToken
   readonly align?: AlignToken
   /** 0..1 */
@@ -40,12 +49,14 @@ export interface ObjectStyle {
 export const COLOR_TOKENS = ['gray', 'yellow', 'green', 'blue', 'red', 'violet', 'orange'] as const
 export const FILL_TOKENS = ['none', 'tint', 'solid'] as const
 export const STROKE_TOKENS = ['none', 'thin', 'medium', 'thick'] as const
+export const DASH_TOKENS = ['solid', 'dashed', 'dotted'] as const
 export const FONT_TOKENS = ['sans', 'serif', 'mono'] as const
 export const ALIGN_TOKENS = ['start', 'center', 'end'] as const
 
 export type ColorToken = (typeof COLOR_TOKENS)[number]
 export type FillToken = (typeof FILL_TOKENS)[number]
 export type StrokeToken = (typeof STROKE_TOKENS)[number]
+export type DashToken = (typeof DASH_TOKENS)[number]
 export type FontToken = (typeof FONT_TOKENS)[number]
 export type AlignToken = (typeof ALIGN_TOKENS)[number]
 

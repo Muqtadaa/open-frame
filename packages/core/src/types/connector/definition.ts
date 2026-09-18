@@ -39,7 +39,7 @@ export const connectorType = defineObjectType<typeof CONNECTOR_TYPE, ConnectorDa
     canHaveChildren: false,
     selectsAsUnit: false,
     connectable: false,
-    styleProps: ['color', 'stroke', 'opacity'],
+    styleProps: ['color', 'stroke', 'dash', 'opacity'],
   },
 
   /**

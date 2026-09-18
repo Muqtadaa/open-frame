@@ -17,6 +17,7 @@ import {
   nextZoomOut,
   sliderToZoom,
   viewportForBounds,
+  ZOOM_STEPS,
   zoomAtCentre,
   zoomToSlider,
   panToReveal,
@@ -48,8 +49,22 @@ function docWith(...objects: AnyOpenFrameObject[]): BoardDocument {
 
 describe('zoom steps', () => {
   it('moves to the next stop up and down', () => {
-    expect(nextZoomIn(1)).toBe(1.5)
-    expect(nextZoomOut(1)).toBe(0.75)
+    expect(nextZoomIn(1)).toBe(2)
+    expect(nextZoomOut(1)).toBe(0.5)
+  })
+
+  /**
+   * Every stop is a percentage someone would say out loud. The readout beside
+   * the slider shows this number directly, and landing on 75% or 300% reads as
+   * having arrived somewhere by accident rather than having chosen it.
+   */
+  it('stops only on round percentages', () => {
+    const readable = new Set([5, 10, 25, 50, 100, 200, 400, 800, 1600])
+    for (const step of ZOOM_STEPS) {
+      expect(readable.has(Math.round(step * 100)), `${String(step * 100)}% is not a round stop`).toBe(
+        true,
+      )
+    }
   })
 
   it('stops at the limits rather than running away', () => {
@@ -59,7 +74,7 @@ describe('zoom steps', () => {
 
   it('lands on a stop from an arbitrary zoom', () => {
     expect(nextZoomIn(0.83)).toBe(1)
-    expect(nextZoomOut(0.83)).toBe(0.75)
+    expect(nextZoomOut(0.83)).toBe(0.5)
   })
 })
 

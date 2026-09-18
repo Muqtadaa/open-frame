@@ -1,7 +1,7 @@
 import { resolveEndpoints, type ConnectorData } from '@openframe/core'
 
 import { ARROW_SIZE, arrivalAngle, connectorPath, pathMidpoint } from '../scene/connector-path.js'
-import { COLOR_VARS } from '../scene/style-tokens.js'
+import { COLOR_VARS, dashArray } from '../scene/style-tokens.js'
 import { defineObjectView, type ObjectEditorProps, type ObjectViewProps } from './registry.js'
 import { InlineTextEditor } from './shared-editor.js'
 
@@ -45,8 +45,14 @@ function ConnectorRenderer({ object, document: doc, zoom }: ObjectViewProps<Conn
         stroke={stroke}
         strokeWidth={width}
         strokeLinecap="round"
+        strokeDasharray={dashArray(object.style.dash, width)}
       />
 
+      {/*
+        * Arrowheads are NOT dashed. The pattern says something about the
+        * relationship the line represents; a broken-up arrowhead just looks
+        * like a rendering fault.
+        */}
       {object.data.endArrow === 'arrow' && (
         <path
           d={arrow(end, angle)}

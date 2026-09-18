@@ -1,6 +1,7 @@
 import {
   ALIGN_TOKENS,
   COLOR_TOKENS,
+  DASH_TOKENS,
   FILL_TOKENS,
   FONT_TOKENS,
   STROKE_TOKENS,
@@ -9,6 +10,7 @@ import {
   type AlignToken,
   type AnyOpenFrameObject,
   type ColorToken,
+  type DashToken,
   type FieldDefinition,
   type FillToken,
   type FontToken,
@@ -24,7 +26,7 @@ import { useBoardDocument } from '../hooks/use-document-object.js'
 import { useInteractionStore } from '../interaction/interaction-store.js'
 import { useOpenFrame } from '../runtime/context.js'
 import { SURFACE_VARS } from '../scene/style-tokens.js'
-import { AlignIcon, FillIcon, StrokeIcon, TrashIcon } from './icons.js'
+import { AlignIcon, DashIcon, FillIcon, StrokeIcon, TrashIcon } from './icons.js'
 import { Provenance } from './Provenance.js'
 import { RecordFields } from './RecordFields.js'
 
@@ -293,6 +295,18 @@ export function Inspector() {
             name="stroke"
             onPick={(stroke) => apply({ stroke })}
             render={(token) => <StrokeIcon variant={token} />}
+          />
+        </Field>
+      )}
+
+      {props.has('dash') && (
+        <Field name="line">
+          <Choice<DashToken>
+            options={DASH_TOKENS}
+            current={value('dash') ?? 'solid'}
+            name="line"
+            onPick={(dash) => apply({ dash })}
+            render={(token) => <DashIcon variant={token} />}
           />
         </Field>
       )}
