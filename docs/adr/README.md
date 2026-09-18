@@ -22,6 +22,7 @@ Format: Status · Context · Decision · Alternatives considered · Consequences
 | [0010](0010-typescript-6-until-ts71.md)           | TypeScript 6, not 7, for now                       | Accepted (revisit)  |
 | [0011](0011-relations-as-objects.md)              | **Relations are objects, not fields**              | Accepted            |
 | [0012](0012-rich-text-as-spans.md)                | **Text is a list of spans, not a string**          | Accepted            |
+| [0013](0013-collaboration-transport-durable-objects.md) | **Durable Objects, sync loop written here**  | Accepted            |
 
 ## Writing a new one
 
