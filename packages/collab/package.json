@@ -1,0 +1,26 @@
+{
+  "name": "@openframe/collab",
+  "version": "0.0.0",
+  "private": true,
+  "license": "AGPL-3.0-only",
+  "type": "module",
+  "description": "The only place Yjs exists. Translates OpenFrame patches to and from a Y.Doc, so no CRDT type ever reaches the domain, the command layer or the UI.",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "scripts": {
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "build": "tsc -p tsconfig.json --noEmit"
+  },
+  "dependencies": {
+    "@openframe/core": "workspace:*",
+    "yjs": "^13.6.32"
+  },
+  "devDependencies": {
+    "@types/node": "^22.20.3",
+    "typescript": "6.0.3",
+    "vitest": "^5.0.1"
+  }
+}

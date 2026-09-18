@@ -1,0 +1,10 @@
+{
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": {
+    "rootDir": "src",
+    // No DOM, for the same reason as core: this code runs in a browser tab and
+    // inside a Cloudflare Durable Object, and must not notice the difference.
+    "types": ["node"]
+  },
+  "include": ["src/**/*.ts"]
+}

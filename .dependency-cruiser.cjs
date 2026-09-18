@@ -39,6 +39,35 @@ module.exports = {
       },
     },
     {
+      name: 'yjs-lives-only-in-collab',
+      severity: 'error',
+      comment:
+        'Yjs exists in exactly one package. ADR 0007 made patches OpenFrame\'s own format precisely ' +
+        'so that a CRDT could be translated at one seam rather than threaded through the domain, and ' +
+        'ADR 0013 is reversible only for as long as that holds. A `yjs` import anywhere else is the ' +
+        'phase\'s last "done when" quietly failing.',
+      from: { pathNot: '^packages/collab' },
+      to: {
+        /*
+         * Both spellings, for the same reason as `core-is-pure`: pnpm gives
+         * each package its own node_modules, so importing yjs from a package
+         * that has not declared it leaves the specifier UNRESOLVED — and a rule
+         * matching only `node_modules/yjs` would pass vacuously on exactly the
+         * mistake it exists to catch.
+         */
+        path: '^(yjs|y-protocols|lib0)($|/)' + '|node_modules/(yjs|y-protocols|lib0)($|/)',
+      },
+    },
+    {
+      name: 'collab-does-not-depend-on-apps',
+      severity: 'error',
+      comment:
+        'The collaboration adapter is consumed by the app, never the other way round. It also runs ' +
+        'inside a Durable Object, where nothing from apps/web exists at all.',
+      from: { path: '^packages/collab' },
+      to: { path: '^apps' },
+    },
+    {
       name: 'no-unresolvable',
       severity: 'error',
       comment:

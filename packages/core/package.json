@@ -13,7 +13,8 @@
     "./commands": "./src/commands/index.ts",
     "./ports": "./src/ports/index.ts",
     "./store": "./src/store/index.ts",
-    "./types": "./src/types/index.ts"
+    "./types": "./src/types/index.ts",
+    "./testing": "./src/testing.ts"
   },
   "scripts": {
     "typecheck": "tsc -p tsconfig.json --noEmit",
