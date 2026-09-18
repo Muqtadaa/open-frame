@@ -2,6 +2,7 @@ import {
   DEFAULT_VIEWPORT,
   SHAPE_KINDS,
   type AnyOpenFrameObject,
+  type ConnectorEndpoint,
   type ObjectFrame,
   type ObjectId,
   type Point,
@@ -12,7 +13,7 @@ import {
 import type { HandleId } from '../scene/resize.js'
 import { create } from 'zustand'
 
-export type Tool = 'select' | 'pan' | 'sticky' | 'text' | 'shape' | 'frame'
+export type Tool = 'select' | 'pan' | 'sticky' | 'text' | 'shape' | 'frame' | 'connector'
 
 /**
  * What a plain (unmodified) wheel gesture does.
@@ -75,6 +76,14 @@ export type DragState =
       readonly frames: ReadonlyMap<ObjectId, ObjectFrame>
     }
   | { readonly kind: 'rotate'; readonly frames: ReadonlyMap<ObjectId, ObjectFrame> }
+  /** Drawing a connector: one end fixed, the other following the pointer. */
+  | {
+      readonly kind: 'connect'
+      readonly from: ConnectorEndpoint
+      readonly to: Point
+      /** The object currently under the pointer, highlighted as a drop target. */
+      readonly over: ObjectId | null
+    }
 
 /**
  * TRANSIENT, CLIENT-ONLY state.
@@ -134,6 +143,8 @@ interface InteractionState {
   beginPan(): void
   beginResize(handle: HandleId): void
   beginRotate(): void
+  beginConnect(from: ConnectorEndpoint, at: Point): void
+  updateConnect(to: Point, over: ObjectId | null): void
   /** Replaces the live preview frames mid-gesture. */
   previewFrames(frames: ReadonlyMap<ObjectId, ObjectFrame>): void
   endDrag(): void
@@ -209,6 +220,9 @@ export const useInteractionStore = create<InteractionState>((set) => ({
   beginPan: () => set({ drag: { kind: 'pan' } }),
   beginResize: (handle) => set({ drag: { kind: 'resize', handle, frames: new Map() } }),
   beginRotate: () => set({ drag: { kind: 'rotate', frames: new Map() } }),
+  beginConnect: (from, at) => set({ drag: { kind: 'connect', from, to: at, over: null } }),
+  updateConnect: (to, over) =>
+    set((state) => (state.drag.kind === 'connect' ? { drag: { ...state.drag, to, over } } : {})),
   previewFrames: (frames) =>
     set((state) =>
       state.drag.kind === 'resize' || state.drag.kind === 'rotate'

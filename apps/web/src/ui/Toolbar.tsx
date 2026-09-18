@@ -10,6 +10,7 @@ import {
   CursorIcon,
   HandIcon,
   RedoIcon,
+  ConnectorIcon,
   FrameIcon,
   ShapeIcon,
   StickyIcon,
@@ -34,6 +35,7 @@ const TOOLS: readonly ToolSpec[] = [
   { id: 'text', label: 'Text', shortcut: 'T' },
   { id: 'shape', label: 'Shape', shortcut: 'U' },
   { id: 'frame', label: 'Frame', shortcut: 'F' },
+  { id: 'connector', label: 'Connect', shortcut: 'C' },
 ]
 
 /**
@@ -68,6 +70,8 @@ export function Toolbar() {
         return <ShapeIcon kind={shapeKind} />
       case 'frame':
         return <FrameIcon />
+      case 'connector':
+        return <ConnectorIcon />
     }
   }
 

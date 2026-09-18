@@ -41,7 +41,7 @@ export function cullToViewport(
   const result: AnyOpenFrameObject[] = []
   for (const object of objectsInPaintOrder(doc)) {
     if (object.hidden) continue
-    if (intersects(region, registry.boundsOf(object))) result.push(object)
+    if (intersects(region, registry.boundsOf(object, doc))) result.push(object)
   }
   return result
 }

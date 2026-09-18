@@ -1,4 +1,4 @@
-import type { ShapeData, ShapeKind } from '@openframe/core'
+import type { ObjectBase, ShapeData, ShapeKind } from '@openframe/core'
 
 import { defineObjectView, type ObjectEditorProps, type ObjectViewProps } from './registry.js'
 import { InlineTextEditor } from './shared-editor.js'
@@ -17,7 +17,7 @@ const PATHS: Record<ShapeKind, string> = {
   ellipse: '',
 }
 
-function ShapeOutline({ object }: ObjectViewProps<ShapeData>) {
+function ShapeOutline({ object }: { object: ObjectBase<string, ShapeData> }) {
   const stroke = COLOR_VARS[object.style.color ?? 'gray']
   const filled = (object.style.fill ?? 'tint') !== 'none'
   const fill = filled ? SURFACE_VARS[object.style.color ?? 'gray'] : 'transparent'
@@ -54,8 +54,7 @@ function ShapeOutline({ object }: ObjectViewProps<ShapeData>) {
   )
 }
 
-function ShapeRenderer(props: ObjectViewProps<ShapeData>) {
-  const { object } = props
+function ShapeRenderer({ object }: ObjectViewProps<ShapeData>) {
   const label = object.data.text
   return (
     <div
@@ -66,7 +65,7 @@ function ShapeRenderer(props: ObjectViewProps<ShapeData>) {
         label.trim() === '' ? `${object.data.shape} shape` : `${object.data.shape}: ${label}`
       }
     >
-      <ShapeOutline {...props} />
+      <ShapeOutline object={object} />
       {label.trim() !== '' && (
         <span
           className="of-shape__label"
@@ -85,7 +84,7 @@ function ShapeRenderer(props: ObjectViewProps<ShapeData>) {
 function ShapeEditor({ object, onCommit, onCancel }: ObjectEditorProps<ShapeData>) {
   return (
     <div className="of-shape" style={{ opacity: object.style.opacity ?? 1 }}>
-      <ShapeOutline object={object} selected={false} zoom={1} />
+      <ShapeOutline object={object} />
       <InlineTextEditor
         initialText={object.data.text}
         className="of-shape__label of-shape__editor"

@@ -1,6 +1,6 @@
 import type { ComponentType } from 'react'
 
-import type { AnyOpenFrameObject, ObjectBase } from '@openframe/core'
+import type { AnyOpenFrameObject, BoardDocument, ObjectBase } from '@openframe/core'
 
 /**
  * The REACT half of the object type system.
@@ -27,11 +27,18 @@ export interface ObjectViewProps<TData = unknown> {
    * leaf module and cannot read the interaction store themselves.
    */
   readonly zoom: number
+  /**
+   * The board, for types whose rendering depends on OTHER objects — a connector
+   * resolves its endpoints through this. Read at render time rather than
+   * subscribed to; the registry's `dependencies` is what makes it reactive.
+   */
+  readonly document: BoardDocument
 }
 
 export interface ObjectEditorProps<TData = unknown> {
   readonly object: ObjectBase<string, TData>
   readonly zoom: number
+  readonly document: BoardDocument
   readonly onCommit: (patch: Partial<TData>) => void
   readonly onCancel: () => void
 }

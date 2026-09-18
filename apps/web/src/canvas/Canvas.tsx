@@ -2,6 +2,7 @@ import { useEffect, useRef } from 'react'
 
 import { useInteractionStore } from '../interaction/interaction-store.js'
 import { useKeyboardShortcuts } from '../interaction/use-keyboard-shortcuts.js'
+import { ConnectorPreview } from './ConnectorPreview.js'
 import { MarqueeOverlay } from './MarqueeOverlay.js'
 import { ObjectLayer } from './ObjectLayer.js'
 import { SelectionOverlay } from './SelectionOverlay.js'
@@ -60,6 +61,7 @@ export function Canvas() {
         <ObjectLayer width={width} height={height} />
         <SelectionOverlay />
         <MarqueeOverlay />
+        <ConnectorPreview />
       </div>
     </div>
   )

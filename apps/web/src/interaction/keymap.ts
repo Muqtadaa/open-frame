@@ -53,6 +53,7 @@ const TOOL_KEYS: Readonly<Record<string, Tool>> = {
   n: 'sticky',
   t: 'text',
   f: 'frame',
+  c: 'connector',
 }
 
 const NUDGE_KEYS: Readonly<Record<string, { dx: number; dy: number }>> = {

@@ -25,6 +25,8 @@ export type PointerIntent =
   | { readonly kind: 'begin-translate'; readonly ids: readonly ObjectId[] }
   | { readonly kind: 'begin-marquee'; readonly at: Point }
   | { readonly kind: 'begin-edit'; readonly id: ObjectId }
+  /** Starts drawing a connector from whatever is under the pointer. */
+  | { readonly kind: 'begin-connect'; readonly from: ObjectId | null; readonly at: Point }
 
 export interface PointerDownContext {
   readonly tool: Tool
@@ -56,6 +58,9 @@ export function onPointerDown(ctx: PointerDownContext): readonly PointerIntent[]
    */
   if (ctx.tool === 'sticky') return [{ kind: 'create', objectType: 'sticky', at: ctx.worldPoint }]
   if (ctx.tool === 'text') return [{ kind: 'create', objectType: 'text', at: ctx.worldPoint }]
+  if (ctx.tool === 'connector') {
+    return [{ kind: 'begin-connect', from: ctx.hitId, at: ctx.worldPoint }]
+  }
   if (ctx.tool === 'frame') return [{ kind: 'create', objectType: 'frame', at: ctx.worldPoint }]
   if (ctx.tool === 'shape') {
     return [

@@ -37,7 +37,7 @@ import {
   type HandleId,
 } from '../scene/resize.js'
 
-type GestureMode = 'pan' | 'translate' | 'marquee' | 'resize' | 'rotate' | 'none'
+type GestureMode = 'pan' | 'translate' | 'marquee' | 'resize' | 'rotate' | 'connect' | 'none'
 
 /** Pointer events originating in a text control belong to that control. */
 function isTextEntry(target: EventTarget | null): boolean {
@@ -144,6 +144,16 @@ export function useCanvasGestures(containerRef: RefObject<HTMLElement | null>) {
         case 'begin-edit':
           store.setEditing(intent.id)
           return 'none'
+        case 'begin-connect': {
+          // Attaching by `auto` rather than a fixed side, so the connector picks
+          // the sensible edge as either end moves.
+          const from =
+            intent.from === null
+              ? ({ kind: 'point', x: intent.at.x, y: intent.at.y } as const)
+              : ({ kind: 'object', objectId: intent.from, anchor: { kind: 'auto' } } as const)
+          store.beginConnect(from, intent.at)
+          return 'connect'
+        }
       }
     },
     [commands],
@@ -304,6 +314,13 @@ export function useCanvasGestures(containerRef: RefObject<HTMLElement | null>) {
         return
       }
 
+      if (active.mode === 'connect') {
+        active.moved = true
+        const over = hitTest(runtime.store.getDocument(), runtime.registry, worldPoint)
+        store.updateConnect(worldPoint, over)
+        return
+      }
+
       if (active.mode === 'resize' && active.startBounds !== null && active.handle !== null) {
         active.moved = true
         const delta = {
@@ -385,6 +402,27 @@ export function useCanvasGestures(containerRef: RefObject<HTMLElement | null>) {
 
         if (membershipChanged) commands.moveAndReparent(moves, target)
         else commands.moveObjects(moves)
+      }
+
+      if (active.mode === 'connect' && store.drag.kind === 'connect') {
+        const { from, to, over } = store.drag
+        const target =
+          over === null
+            ? ({ kind: 'point', x: to.x, y: to.y } as const)
+            : ({ kind: 'object', objectId: over, anchor: { kind: 'auto' } } as const)
+
+        // A connector to nowhere from nowhere is a stray click, not a gesture.
+        const trivial =
+          from.kind === 'point' &&
+          target.kind === 'point' &&
+          Math.hypot(target.x - from.x, target.y - from.y) < 8
+        if (!trivial) {
+          const id = commands.createConnector(from, target)
+          if (id !== null) {
+            store.setSelection([id])
+            store.setTool('select')
+          }
+        }
       }
 
       if (active.mode === 'resize' && active.moved && store.drag.kind === 'resize') {

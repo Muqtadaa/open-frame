@@ -86,7 +86,7 @@ function boundsOf(
   for (const object of doc.objects.values()) {
     if (object.hidden) continue
     if (ids !== null && !ids.includes(object.id)) continue
-    rects.push(registry.boundsOf(object))
+    rects.push(registry.boundsOf(object, doc))
   }
   return unionAll(rects)
 }

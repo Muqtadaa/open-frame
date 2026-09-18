@@ -1,6 +1,9 @@
 import type { ZodType } from 'zod'
 
-import { rotatedBounds, type Rect } from '../geometry/rect.js'
+import { containsRotatedPoint, rotatedBounds, type Rect } from '../geometry/rect.js'
+import type { Point } from '../geometry/point.js'
+import type { BoardDocument } from './document.js'
+import type { ObjectId } from './ids.js'
 import type { AnyOpenFrameObject, ObjectBase, StyleProp } from './object.js'
 
 /**
@@ -68,8 +71,34 @@ export interface ObjectTypeDefinition<TType extends string, TData> {
 
   readonly capabilities: ObjectCapabilities
 
-  /** Only for types whose bounds are not their frame. Most types omit this. */
-  readonly getBounds?: (object: ObjectBase<TType, TData>) => Rect
+  /**
+   * Only for types whose bounds are not their frame.
+   *
+   * Receives the document because some bounds depend on OTHER objects — a
+   * connector's extent is wherever its endpoints resolve to, and it has no
+   * meaningful frame of its own.
+   */
+  readonly getBounds?: (object: ObjectBase<TType, TData>, doc: BoardDocument) => Rect
+
+  /**
+   * Precise containment, for types whose BOUNDS are much larger than their ink.
+   *
+   * A connector's bounds are the rectangle spanning its endpoints, so bounds
+   * containment alone would select it from anywhere in that rectangle —
+   * including the empty space between the two objects it joins. Types that omit
+   * this are hit-tested by their bounds, which is right for anything solid.
+   */
+  readonly hitTest?: (object: ObjectBase<TType, TData>, doc: BoardDocument, point: Point) => boolean
+
+  /**
+   * Other objects this one's geometry or rendering depends on.
+   *
+   * The renderer subscribes to these as well as to the object itself, so a
+   * connector redraws when either end moves. Without it, per-object
+   * subscriptions — which are what keep a large board fast — would leave
+   * dependent objects stale.
+   */
+  readonly dependencies?: (object: ObjectBase<TType, TData>) => readonly ObjectId[]
 
   readonly describe: (object: ObjectBase<TType, TData>) => ObjectDescription
 }
@@ -91,7 +120,9 @@ export interface ErasedObjectTypeDefinition {
     frame: { width: number; height: number }
   }
   readonly describe: (object: AnyOpenFrameObject) => ObjectDescription
-  readonly getBounds?: (object: AnyOpenFrameObject) => Rect
+  readonly getBounds?: (object: AnyOpenFrameObject, doc: BoardDocument) => Rect
+  readonly hitTest?: (object: AnyOpenFrameObject, doc: BoardDocument, point: Point) => boolean
+  readonly dependencies?: (object: AnyOpenFrameObject) => readonly ObjectId[]
 }
 
 export class ObjectTypeError extends Error {
@@ -148,11 +179,21 @@ export function defineObjectType<TType extends string, TData>(
     describe: (object) => definition.describe(object as ObjectBase<TType, TData>),
   }
 
-  const { getBounds } = definition
-  if (getBounds !== undefined) {
-    return { ...erased, getBounds: (object) => getBounds(object as ObjectBase<TType, TData>) }
+  const { getBounds, hitTest, dependencies } = definition
+  return {
+    ...erased,
+    ...(getBounds === undefined
+      ? {}
+      : { getBounds: (object, doc) => getBounds(object as ObjectBase<TType, TData>, doc) }),
+    ...(hitTest === undefined
+      ? {}
+      : {
+          hitTest: (object, doc, point) => hitTest(object as ObjectBase<TType, TData>, doc, point),
+        }),
+    ...(dependencies === undefined
+      ? {}
+      : { dependencies: (object) => dependencies(object as ObjectBase<TType, TData>) }),
   }
-  return erased
 }
 
 /**
@@ -197,14 +238,30 @@ export class ObjectTypeRegistry {
     return [...this.#definitions.values()]
   }
 
+  /**
+   * Precise containment. Falls back to bounds for types that do not define it.
+   * Callers should reject on bounds first; this is the expensive, exact answer.
+   */
+  hitTestObject(object: AnyOpenFrameObject, doc: BoardDocument, point: Point): boolean {
+    const precise = this.#definitions.get(object.type)?.hitTest
+    if (precise !== undefined) return precise(object, doc, point)
+    const { x, y, width, height } = object.frame
+    return containsRotatedPoint({ x, y, width, height }, object.frame.rotation, point)
+  }
+
+  /** Objects whose rendering depends on this one — the reverse of `dependencies`. */
+  dependenciesOf(object: AnyOpenFrameObject): readonly ObjectId[] {
+    return this.#definitions.get(object.type)?.dependencies?.(object) ?? []
+  }
+
   /** Bounds for hit testing and culling, defaulting to the object's frame. */
   /**
    * The axis-aligned bounds used for culling, hit-test prefiltering and marquee
    * selection. Rotation is accounted for here so that every consumer gets the
    * rotated extent without knowing rotation exists.
    */
-  boundsOf(object: AnyOpenFrameObject): Rect {
-    const custom = this.#definitions.get(object.type)?.getBounds?.(object)
+  boundsOf(object: AnyOpenFrameObject, doc: BoardDocument): Rect {
+    const custom = this.#definitions.get(object.type)?.getBounds?.(object, doc)
     if (custom !== undefined) return custom
     const { x, y, width, height, rotation } = object.frame
     return rotatedBounds({ x, y, width, height }, rotation)

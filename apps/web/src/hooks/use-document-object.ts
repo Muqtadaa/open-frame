@@ -53,3 +53,54 @@ export function useUndoState(): { canUndo: boolean; canRedo: boolean; undoLabel:
   useSyncExternalStore(subscribe, getSnapshot, getSnapshot)
   return { canUndo: stack.canUndo, canRedo: stack.canRedo, undoLabel: stack.undoLabel }
 }
+
+/**
+ * Subscribes to the objects a given object's rendering depends on.
+ *
+ * A connector must redraw when either end moves, but per-object subscriptions —
+ * which are what keep a large board fast — only wake it for changes to itself.
+ * The registry declares the dependencies; this turns them into subscriptions.
+ *
+ * Returns a counter that changes whenever a dependency does, so callers can use
+ * it as a render signal.
+ */
+export function useDependencySubscriptions(id: ObjectId): number {
+  const { runtime } = useOpenFrame()
+
+  const subscribe = useCallback(
+    (onChange: () => void) => {
+      const object = runtime.store.getObject(id)
+      if (object === undefined) return () => undefined
+
+      const unsubscribes = runtime.registry
+        .dependenciesOf(object)
+        .map((dependency) => runtime.store.subscribeToObject(dependency, onChange))
+
+      /*
+       * The dependency LIST can itself change — reattaching an endpoint points
+       * the connector at a different object — so also watch the object, which
+       * re-runs this subscription.
+       */
+      unsubscribes.push(runtime.store.subscribeToObject(id, onChange))
+      return () => {
+        for (const unsubscribe of unsubscribes) unsubscribe()
+      }
+    },
+    [runtime.registry, runtime.store, id],
+  )
+
+  const getSnapshot = useCallback(() => {
+    const object = runtime.store.getObject(id)
+    if (object === undefined) return 0
+    // Version sum over dependencies: changes whenever any of them does, and is
+    // a primitive so it is a valid snapshot.
+    let signal = 0
+    for (const dependency of runtime.registry.dependenciesOf(object)) {
+      const target = runtime.store.getObject(dependency)
+      if (target !== undefined) signal += target.frame.x + target.frame.y + target.frame.width
+    }
+    return signal
+  }, [runtime.registry, runtime.store, id])
+
+  return useSyncExternalStore(subscribe, getSnapshot, getSnapshot)
+}

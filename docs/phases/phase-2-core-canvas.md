@@ -39,8 +39,10 @@ so they inherit the same validation and history.
 
 ✅ `ReparentObjects`, with the cycle guard finally getting a caller.
 
-Remaining: `GroupObjects` / `UngroupObjects` as `transact` composites,
-`CreateConnector`.
+Connectors are created through ordinary `CreateObjects` — no bespoke command
+was needed, because the endpoints are just data.
+
+Remaining: `GroupObjects` / `UngroupObjects` as `transact` composites.
 
 **Coordinates are absolute.** Objects inside a frame store board coordinates, so
 moving a container explicitly moves its contents. Relative coordinates were
@@ -60,7 +62,11 @@ z-order via bracket keys.
 ✅ Drop-to-nest: dropping objects on a frame changes membership, committed with
 the move as one undoable action.
 
-Remaining: snapping and alignment guides between objects, connectors.
+✅ Connector drawing: drag from one object to another, or to empty space for a
+free end.
+
+Remaining: snapping and alignment guides, dragging an existing connector
+endpoint to re-attach it.
 
 **Browser zoom must stay out of the way.** `Ctrl/Cmd` with `+`, `−`, `0`, `1`
 and with the wheel are all claimed and prevented; see
@@ -80,9 +86,14 @@ measured, not assumed.
 IndexedDB; the document holds only `AssetRef`. Upload validation and SVG
 sanitization start here ([Security](../architecture/11-security.md)).
 
-**Connector geometry.** Paths are derived from endpoints, never stored. This is
-the first real test of that rule: it must survive move, resize and delete of the
-objects a connector attaches to.
+**Connector geometry.** ✅ Paths are derived from endpoints, never stored, and
+that survives move, resize and delete. Deleting an attached object converts that
+end to a free point; deleting both ends deletes the connector, because a line
+between two things that no longer exist is litter rather than content.
+
+Making this work required two registry additions — `getBounds(object, doc)` and
+`hitTest` — because a connector's geometry depends on objects it only
+references. See [CLAUDE.md](../../CLAUDE.md) rule 16.
 
 **Frame membership.** The first type with children. `ReparentObjects` must use
 `wouldCreateCycle`, and deleting a frame must cascade — both already exist and

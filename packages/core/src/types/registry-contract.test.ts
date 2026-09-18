@@ -22,6 +22,7 @@ describe('object type registry contract', () => {
     // Asserted explicitly rather than loosely: a type appearing or vanishing
     // unnoticed is how the app and the persisted format quietly diverge.
     expect(definitions.map((d) => d.type).sort()).toEqual([
+      'connector',
       'frame',
       'shape',
       'sticky',
@@ -44,10 +45,21 @@ describe('object type registry contract', () => {
       })
 
       it('creates data that satisfies its own schema', () => {
-        const { data, frame } = definition.create()
+        const { data } = definition.create()
         expect(definition.validate(data).ok).toBe(true)
-        expect(frame.width).toBeGreaterThan(0)
-        expect(frame.height).toBeGreaterThan(0)
+      })
+
+      /**
+       * A type must be findable on the board: either it has a positive default
+       * size, or it computes its own bounds. A connector has no meaningful
+       * frame — its extent is wherever its endpoints resolve — so it supplies
+       * `getBounds` instead. A type with neither would be invisible and
+       * unclickable.
+       */
+      it('is either sized or self-bounding', () => {
+        const { frame } = definition.create()
+        const sized = frame.width > 0 && frame.height > 0
+        expect(sized || definition.getBounds !== undefined).toBe(true)
       })
 
       it('has a migration for every version below the current one', () => {

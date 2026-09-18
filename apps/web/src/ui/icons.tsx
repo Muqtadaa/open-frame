@@ -128,3 +128,13 @@ export function FrameIcon({ className }: IconProps) {
     </svg>
   )
 }
+
+export function ConnectorIcon({ className }: IconProps) {
+  return (
+    <svg {...base} className={className}>
+      <circle cx="5.5" cy="18.5" r="2.5" />
+      <circle cx="18.5" cy="5.5" r="2.5" />
+      <path d="M7.6 16.4 16.4 7.6" />
+    </svg>
+  )
+}

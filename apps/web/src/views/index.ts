@@ -1,4 +1,5 @@
 import { ObjectViewRegistry } from './registry.js'
+import { connectorView } from './ConnectorView.js'
 import { frameView } from './FrameView.js'
 import { shapeView } from './ShapeView.js'
 import { stickyView } from './StickyView.js'
@@ -15,5 +16,12 @@ export * from './registry.js'
  * `types/index.ts`. Nothing else in the application changes.
  */
 export function createDefaultViewRegistry(): ObjectViewRegistry {
-  return new ObjectViewRegistry([stickyView, textView, shapeView, frameView, unknownView])
+  return new ObjectViewRegistry([
+    stickyView,
+    textView,
+    shapeView,
+    frameView,
+    connectorView,
+    unknownView,
+  ])
 }

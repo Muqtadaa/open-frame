@@ -1,8 +1,9 @@
 import type { ObjectId } from '@openframe/core'
 import { memo } from 'react'
 
-import { useDocumentObject } from '../hooks/use-document-object.js'
+import { useDependencySubscriptions, useDocumentObject } from '../hooks/use-document-object.js'
 import { useCommands } from '../hooks/use-commands.js'
+import { useOpenFrame } from '../runtime/context.js'
 import { useInteractionStore } from '../interaction/interaction-store.js'
 import { ObjectErrorBoundary } from './ObjectErrorBoundary.js'
 import { FallbackView } from '../views/FallbackView.js'
@@ -24,6 +25,10 @@ function ObjectViewInner({ id, views }: Props) {
   const object = useDocumentObject(id)
   const selected = useInteractionStore((state) => state.selection.has(id))
   const zoom = useInteractionStore((state) => state.viewport.zoom)
+  // Subscribes to the objects this one's rendering depends on — a connector's
+  // endpoints — so it redraws when they move. Without this, per-object
+  // subscriptions would leave dependent objects stale.
+  useDependencySubscriptions(id)
   const editing = useInteractionStore((state) => state.editingId === id)
   const setEditing = useInteractionStore((state) => state.setEditing)
   /*
@@ -50,6 +55,7 @@ function ObjectViewInner({ id, views }: Props) {
       : undefined,
   )
   const commands = useCommands()
+  const { runtime } = useOpenFrame()
 
   if (object === undefined) return null
 
@@ -58,19 +64,29 @@ function ObjectViewInner({ id, views }: Props) {
   const InlineEditor = view?.InlineEditor
 
   const frame = preview ?? object.frame
+  /*
+   * A connector's geometry is its resolved endpoints, in absolute world
+   * coordinates — it has no frame to be positioned by. Anchoring its wrapper at
+   * the origin lets the view draw where it actually belongs.
+   */
+  const selfPositioned = object.type === 'connector'
   const x = frame.x + (isDragging ? dragDx : 0)
   const y = frame.y + (isDragging ? dragDy : 0)
 
   return (
     <div
-      className={`of-object${selected ? ' of-object--selected' : ''}`}
+      className={`of-object${selected ? ' of-object--selected' : ''}${
+        selfPositioned ? ' of-object--self-positioned' : ''
+      }`}
       data-object-id={id}
       data-object-type={object.type}
       data-testid={`object-${id}`}
       style={{
-        transform: `translate(${String(x)}px, ${String(y)}px) rotate(${String(frame.rotation)}rad)`,
-        width: `${String(frame.width)}px`,
-        height: `${String(frame.height)}px`,
+        transform: selfPositioned
+          ? undefined
+          : `translate(${String(x)}px, ${String(y)}px) rotate(${String(frame.rotation)}rad)`,
+        width: selfPositioned ? undefined : `${String(frame.width)}px`,
+        height: selfPositioned ? undefined : `${String(frame.height)}px`,
       }}
     >
       <ObjectErrorBoundary objectId={id} objectType={object.type}>
@@ -78,6 +94,7 @@ function ObjectViewInner({ id, views }: Props) {
           <InlineEditor
             object={object}
             zoom={zoom}
+            document={runtime.store.getDocument()}
             onCommit={(patch) => {
               // Types name their editable field differently (`text`, `name`),
               // so the patch is passed through rather than picked apart here.
@@ -87,7 +104,12 @@ function ObjectViewInner({ id, views }: Props) {
             onCancel={() => setEditing(null)}
           />
         ) : (
-          <Renderer object={object} selected={selected} zoom={zoom} />
+          <Renderer
+            object={object}
+            selected={selected}
+            zoom={zoom}
+            document={runtime.store.getDocument()}
+          />
         )}
       </ObjectErrorBoundary>
     </div>

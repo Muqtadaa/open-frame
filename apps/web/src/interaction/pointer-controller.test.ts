@@ -46,6 +46,18 @@ describe('pointer down', () => {
     ])
   })
 
+  it('starts a connector from the object under the pointer', () => {
+    expect(onPointerDown(ctx({ tool: 'connector', hitId: A }))).toEqual([
+      { kind: 'begin-connect', from: A, at: { x: 10, y: 10 } },
+    ])
+  })
+
+  it('starts a connector from empty canvas as a free end', () => {
+    expect(onPointerDown(ctx({ tool: 'connector' }))).toEqual([
+      { kind: 'begin-connect', from: null, at: { x: 10, y: 10 } },
+    ])
+  })
+
   it('creates text with the text tool', () => {
     expect(onPointerDown(ctx({ tool: 'text', worldPoint: { x: 1, y: 2 } }))).toEqual([
       { kind: 'create', objectType: 'text', at: { x: 1, y: 2 } },

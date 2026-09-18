@@ -1,10 +1,23 @@
 import { ObjectTypeRegistry } from '../domain/registry.js'
+import { connectorType } from './connector/definition.js'
 import { frameType } from './frame/definition.js'
 import { shapeType } from './shape/definition.js'
 import { stickyType } from './sticky/definition.js'
 import { textType } from './text/definition.js'
 import { unknownType } from './unknown/definition.js'
 
+export { CONNECTOR_TYPE, connectorType } from './connector/definition.js'
+export {
+  ARROWHEADS,
+  ConnectorDataSchema,
+  ROUTINGS,
+  type Anchor,
+  type Arrowhead,
+  type ConnectorData,
+  type ConnectorEndpoint,
+  type Routing,
+} from './connector/schema.js'
+export { endpointDependencies, resolveEndpoints } from './connector/geometry.js'
 export { FRAME_TYPE, frameType } from './frame/definition.js'
 export { FrameDataSchema, type FrameData } from './frame/schema.js'
 export { SHAPE_TYPE, shapeType } from './shape/definition.js'
@@ -24,5 +37,12 @@ export { UnknownDataSchema, type UnknownData } from './unknown/schema.js'
  * testing, search or serialization needs to know it exists.
  */
 export function createDefaultRegistry(): ObjectTypeRegistry {
-  return new ObjectTypeRegistry([stickyType, textType, shapeType, frameType, unknownType])
+  return new ObjectTypeRegistry([
+    stickyType,
+    textType,
+    shapeType,
+    frameType,
+    connectorType,
+    unknownType,
+  ])
 }

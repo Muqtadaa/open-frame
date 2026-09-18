@@ -1,4 +1,11 @@
-import type { ColorToken, ObjectFrame, ObjectId, Placement, Point } from '@openframe/core'
+import type {
+  ColorToken,
+  ConnectorEndpoint,
+  ObjectFrame,
+  ObjectId,
+  Placement,
+  Point,
+} from '@openframe/core'
 import { useMemo } from 'react'
 
 import { useOpenFrame } from '../runtime/context.js'
@@ -6,6 +13,8 @@ import { useInteractionStore } from '../interaction/interaction-store.js'
 
 export interface BoardCommands {
   /** Creates any registered type. No per-type method — that is the registry's job. */
+  /** Creates a connector between two resolved endpoints. */
+  createConnector(from: ConnectorEndpoint, to: ConnectorEndpoint): ObjectId | null
   createObject(type: string, at: Point, data?: Readonly<Record<string, unknown>>): ObjectId | null
   duplicateSelection(): void
   copySelection(): void
@@ -80,6 +89,24 @@ export function useCommands(): BoardCommands {
               x: at.x - frame.width / 2,
               y: at.y - frame.height / 2,
               ...(data === undefined ? {} : { data: { ...data } }),
+            },
+          ],
+        })
+        report(result)
+        return result.ok ? (result.affected[0] ?? null) : null
+      },
+
+      createConnector(from, to) {
+        const result = dispatcher.dispatch({
+          kind: 'CreateObjects',
+          objects: [
+            {
+              type: 'connector',
+              // A connector's position comes from its endpoints; the frame is
+              // vestigial and deliberately zero.
+              x: 0,
+              y: 0,
+              data: { from, to },
             },
           ],
         })

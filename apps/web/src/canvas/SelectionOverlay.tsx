@@ -3,7 +3,8 @@ import { useMemo } from 'react'
 import { useOpenFrame } from '../runtime/context.js'
 import { useBoardDocument } from '../hooks/use-document-object.js'
 import { useInteractionStore } from '../interaction/interaction-store.js'
-import { HANDLES, HANDLE_CURSORS, framesBounds, handleAnchor } from '../scene/resize.js'
+import { HANDLES, HANDLE_CURSORS, handleAnchor } from '../scene/resize.js'
+import { unionAll, type Rect } from '@openframe/core'
 
 /** Handles stay this many SCREEN pixels across, whatever the zoom. */
 const HANDLE_PX = 9
@@ -43,13 +44,31 @@ export function SelectionOverlay() {
     [selection, document, previewFrames],
   )
 
-  const bounds = useMemo(() => framesBounds(objects), [objects])
+  /*
+   * Bounds come from the REGISTRY, not from `object.frame`.
+   *
+   * A connector has no meaningful frame — its extent is wherever its endpoints
+   * resolve — so reading the frame drew a degenerate selection box at the
+   * origin. Asking the registry is also what makes this correct for any future
+   * type with computed bounds.
+   */
+  const bounds = useMemo<Rect | null>(
+    () => unionAll(objects.map((object) => runtime.registry.boundsOf(object, document))),
+    [objects, runtime.registry, document],
+  )
 
   // Hidden while marquee-selecting or editing text: the box would sit on top of
   // the thing the user is currently working with.
   if (bounds === null || dragKind === 'marquee' || editingId !== null) return null
 
-  const single = objects.length === 1 ? objects[0] : undefined
+  /*
+   * A single object with a real frame gets an ORIENTED box that turns with it.
+   * Anything else — a multi-selection, or a type with no frame of its own —
+   * gets the axis-aligned bounds, since there is no shared orientation to use.
+   */
+  const only = objects.length === 1 ? objects[0] : undefined
+  const single =
+    only !== undefined && only.frame.width > 0 && only.frame.height > 0 ? only : undefined
   const rotation = single?.frame.rotation ?? 0
   const box = single === undefined ? bounds : single.frame
   const rotatable =
@@ -57,8 +76,9 @@ export function SelectionOverlay() {
     !single.locked &&
     runtime.registry.get(single.type)?.capabilities.rotatable === true
   const resizable =
+    objects.length > 0 &&
     objects.every((object) => !object.locked) &&
-    objects.every((object) => runtime.registry.get(object.type)?.capabilities.resizable !== false)
+    objects.every((object) => runtime.registry.get(object.type)?.capabilities.resizable === true)
 
   const size = HANDLE_PX / zoom
   const half = size / 2

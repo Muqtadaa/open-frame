@@ -1,5 +1,7 @@
 import type { BoardDocument } from '../../domain/document.js'
+import type { ObjectId } from '../../domain/ids.js'
 import type { Patch } from '../../domain/patch.js'
+import { detachConnectors } from '../../types/connector/detach.js'
 import { CommandError } from '../errors.js'
 import type { Command } from '../types.js'
 import { collectWithDescendants, requireObject, requireUnlocked } from './shared.js'
@@ -18,5 +20,15 @@ export function deleteObjects(doc: BoardDocument, command: DeleteObjects): Patch
   // silently reparent to the root — a confusing way to lose structure.
   const doomed = collectWithDescendants(doc, command.ids)
 
-  return [...doomed].map((id) => ({ op: 'remove', id }))
+  /*
+   * Connectors attached to anything being deleted are handled before the
+   * removal patches, so their endpoints can still be resolved. One orphaned end
+   * becomes a free point; two orphaned ends delete the connector.
+   */
+  const { patches: detachPatches, alsoDelete } = detachConnectors(doc, doomed)
+  for (const id of alsoDelete) doomed.add(id)
+
+  const removals: Patch[] = [...doomed].map((id: ObjectId) => ({ op: 'remove', id }))
+  // Detach first: a patch against an object that has already been removed throws.
+  return [...detachPatches.filter((patch) => !doomed.has(patch.id)), ...removals]
 }

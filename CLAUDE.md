@@ -168,7 +168,24 @@ cannot see it. Rather than special-casing types in the geometry, pointer
 handling falls back to `closest('[data-object-id]')`. Any future chrome with the
 same property gets this for free.
 
-### 16. Break a new architectural rule once, and watch it fail
+### 16. Derived geometry is asked for, never stored
+
+A connector has no meaningful `frame`. Its extent comes from `getBounds(object,
+doc)` and its ink from a precise `hitTest` — both on the registry, because a
+connector's geometry depends on objects it merely references. Moving an
+endpoint's object must never patch the connector.
+
+Consequences to respect when adding a type like this:
+
+- anything needing bounds asks `registry.boundsOf(object, doc)`, never
+  `object.frame` — the selection overlay got this wrong and drew a degenerate
+  box at the origin
+- bounds are a superset, so hit testing rejects on bounds then asks
+  `registry.hitTestObject`
+- per-object subscriptions mean a dependent object goes stale unless the type
+  declares `dependencies`
+
+### 17. Break a new architectural rule once, and watch it fail
 
 A rule that passes vacuously is worse than no rule, because it is trusted. This
 practice has already caught a dependency-cruiser rule that never fired on the

@@ -727,3 +727,69 @@ body {
   background: var(--of-panel);
   outline: 1px solid var(--of-accent);
 }
+
+/*
+ * A self-positioned object (a connector) draws in absolute world coordinates,
+ * so its wrapper must SPAN the world layer rather than occupy a frame —
+ * otherwise the SVG inside it has zero size and nothing renders.
+ */
+.of-object--self-positioned {
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  /* It covers the whole world layer, so it must not intercept anything.
+     Hit testing for these types is geometric, via the registry. */
+  pointer-events: none;
+}
+
+/* ---------- connectors ---------- */
+
+/*
+ * A connector spans the board rather than occupying a frame, so its SVG covers
+ * the whole world layer and only the drawn path takes pointer events.
+ */
+.of-connector {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  overflow: visible;
+  pointer-events: none;
+}
+
+.of-connector__label {
+  font-family: inherit;
+  font-size: 12px;
+  fill: var(--of-ink);
+  paint-order: stroke;
+  stroke: var(--of-bg);
+  stroke-width: 4px;
+  stroke-linejoin: round;
+}
+
+.of-connector__editor-wrap {
+  position: absolute;
+  top: 0;
+  left: 0;
+}
+
+.of-connector__editor {
+  width: 160px;
+  height: 28px;
+  padding: 3px 6px;
+  font: inherit;
+  font-size: 12px;
+  text-align: center;
+  background: var(--of-panel);
+  border-radius: 5px;
+  transform: translate(-50%, -50%);
+}
+
+.of-connector--preview {
+  z-index: 2;
+}
+
+.of-canvas--connector {
+  cursor: crosshair;
+}

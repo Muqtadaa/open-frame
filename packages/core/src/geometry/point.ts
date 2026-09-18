@@ -53,3 +53,19 @@ export function rotatePoint(p: Point, origin: Point, radians: number): Point {
   const dy = p.y - origin.y
   return { x: origin.x + dx * cos - dy * sin, y: origin.y + dx * sin + dy * cos }
 }
+
+/**
+ * Shortest distance from a point to a line segment.
+ *
+ * Used for precise hit testing of thin, long objects — a connector occupies a
+ * large bounding box but almost none of it.
+ */
+export function distanceToSegment(p: Point, a: Point, b: Point): number {
+  const dx = b.x - a.x
+  const dy = b.y - a.y
+  const lengthSquared = dx * dx + dy * dy
+  if (lengthSquared === 0) return distance(p, a)
+  // Projection parameter, clamped so the nearest point stays on the segment.
+  const t = Math.max(0, Math.min(1, ((p.x - a.x) * dx + (p.y - a.y) * dy) / lengthSquared))
+  return distance(p, { x: a.x + t * dx, y: a.y + t * dy })
+}
