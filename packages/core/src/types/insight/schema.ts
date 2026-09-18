@@ -29,7 +29,7 @@ export interface InsightData {
 export const CONFIDENCE_LEVELS = ['unstated', 'low', 'medium', 'high'] as const
 export type Confidence = (typeof CONFIDENCE_LEVELS)[number]
 
-export const INSIGHT_VERSION = 2
+export const INSIGHT_VERSION = 3
 
 export const InsightDataSchema: ZodType<InsightData> = z
   .object({

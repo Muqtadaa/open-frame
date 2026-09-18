@@ -18,8 +18,24 @@ export type Mark = (typeof MARKS)[number]
  * and becomes a document. Tokens also keep theming possible, keep documents
  * small, and keep "make this bigger" expressible by an AI command — the same
  * reasoning as every other style token.
+ *
+ * Nine steps spanning 0.6× to 7.6×, a √2 progression. The first ladder ran
+ * 0.8× to 1.9× and was designed when every shape was the same 160×120;
+ * draw-to-size made a shape any size someone cares to draw, and on a large one
+ * the largest token still read as small type in a big box. A scale this wide
+ * needs numbered names — there is no honest word after "huge".
+ *
+ * ORDER IS THE LADDER: A− and A+ step through this array, so it must stay
+ * sorted from smallest to largest.
+ *
+ * `md` is the object's own size and is stored as NO size at all, so a span
+ * carrying it would be a second way to say the default. It is in the list
+ * because stepping has to pass through it.
  */
-export const SIZE_TOKENS = ['small', 'normal', 'large', 'huge'] as const
+export const SIZE_TOKENS = ['xs', 'sm', 'md', 'lg', 'xl', '2xl', '3xl', '4xl', '5xl'] as const
+
+/** The size a span with no token of its own renders at. */
+export const DEFAULT_SIZE = 'md' satisfies SizeToken
 export type SizeToken = (typeof SIZE_TOKENS)[number]
 
 /** One run of characters that share their formatting. */

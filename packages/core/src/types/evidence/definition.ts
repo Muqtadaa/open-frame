@@ -1,5 +1,6 @@
 import { plainTextOf } from '../../domain/rich-text.js'
 import { defineObjectType } from '../../domain/registry.js'
+import { resizeTokens } from '../shared/resize-tokens.js'
 import { textToSpans } from '../shared/text-to-spans.js'
 import { EVIDENCE_VERSION, EvidenceDataSchema, type EvidenceData } from './schema.js'
 
@@ -10,8 +11,11 @@ export const evidenceType = defineObjectType<typeof EVIDENCE_TYPE, EvidenceData>
 
   schema: EvidenceDataSchema,
   currentVersion: EVIDENCE_VERSION,
-  // ADR 0012: `text` was a plain string until v2.
-  migrations: { 2: textToSpans },
+  /*
+   * v2: `text` was a plain string until spans (ADR 0012).
+   * v3: the size scale widened, and its tokens were renamed.
+   */
+  migrations: { 2: textToSpans, 3: resizeTokens },
 
   create: (init) => ({
     data: {

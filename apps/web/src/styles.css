@@ -1667,23 +1667,51 @@ textarea.of-input {
 }
 
 /*
- * Size tokens for a run of text inside an object.
+ * The type scale for a run of text inside an object.
  *
- * Relative to the object's own size rather than absolute, so a large run in a
- * sticky and a large run in a text object both mean "bigger than the rest of
- * this", which is what the user picked. Absolute pixels would make "large"
- * smaller than a text object's normal.
+ * Nine steps in a √2 progression, spanning 0.6× to 7.6×. The first ladder ran
+ * 0.8× to 1.9× and was designed when every shape was the same 160×120;
+ * draw-to-size made a shape any size someone cares to draw, and on a large one
+ * the largest step still read as small type in a big box.
+ *
+ * Relative to the object's own size rather than absolute, so `lg` in a sticky
+ * and `lg` in a text object both mean "bigger than the rest of this" — which is
+ * what was picked. Absolute pixels would make `lg` SMALLER than a text
+ * object's normal.
+ *
+ * `md` has no rule: it is the object's own size, and a span at that size
+ * carries no token at all.
  */
-.of-size--small {
+.of-size--xs {
+  font-size: 0.6em;
+}
+
+.of-size--sm {
   font-size: 0.8em;
 }
 
-.of-size--large {
-  font-size: 1.35em;
+.of-size--lg {
+  font-size: 1.4em;
 }
 
-.of-size--huge {
-  font-size: 1.9em;
+.of-size--xl {
+  font-size: 2em;
+}
+
+.of-size--2xl {
+  font-size: 2.8em;
+}
+
+.of-size--3xl {
+  font-size: 3.9em;
+}
+
+.of-size--4xl {
+  font-size: 5.5em;
+}
+
+.of-size--5xl {
+  font-size: 7.6em;
 }
 
 /*

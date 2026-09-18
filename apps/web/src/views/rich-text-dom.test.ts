@@ -63,7 +63,7 @@ describe('reading formatted text out of an element', () => {
   })
 
   it('reads a size token', () => {
-    expect(parse('<span data-size="large">x</span>')).toEqual([{ text: 'x', size: 'large' }])
+    expect(parse('<span data-size="lg">x</span>')).toEqual([{ text: 'x', size: 'lg' }])
   })
 
   it('ignores a size it does not recognise', () => {
@@ -130,7 +130,7 @@ describe('writing formatted text into an element', () => {
   })
 
   it('round-trips sizes', () => {
-    expect(roundTrip([{ text: 'x', size: 'huge' }])).toEqual([{ text: 'x', size: 'huge' }])
+    expect(roundTrip([{ text: 'x', size: '5xl' }])).toEqual([{ text: 'x', size: '5xl' }])
   })
 
   it('round-trips a mixed run', () => {
@@ -138,7 +138,7 @@ describe('writing formatted text into an element', () => {
       { text: 'plain ' },
       { text: 'bold', marks: ['bold'] },
       { text: ' and ' },
-      { text: 'big', size: 'large' },
+      { text: 'big', size: 'lg' },
     ]
     expect(roundTrip(spans)).toEqual(spans)
   })

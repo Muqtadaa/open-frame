@@ -11,6 +11,7 @@ import { migrateDocumentPayload, MigrationError } from './migrations/index.js'
 import { serializeBoard } from './serialize.js'
 import { CURRENT_SCHEMA_VERSION } from './version.js'
 import fixtureV1 from './__fixtures__/v1-minimal.json' with { type: 'json' }
+import fixtureV2 from './__fixtures__/v2-sized-spans.json' with { type: 'json' }
 
 const registry = createDefaultRegistry()
 
@@ -18,8 +19,8 @@ function sticky(id: string, text: string): AnyOpenFrameObject {
   return {
     id: asObjectId(id),
     type: 'sticky',
-    // v2: `text` became a list of spans (ADR 0012).
-    dataVersion: 2,
+    // v3: spans (ADR 0012), then a widened size scale.
+    dataVersion: 3,
     frame: { x: 1, y: 2, width: 180, height: 180, rotation: 0 },
     parentId: null,
     order: asOrderKey('a0'),
@@ -66,7 +67,7 @@ describe('serialization round trip', () => {
     expect(result.document.objects.size).toBe(1)
 
     const migrated = result.document.objects.get(asObjectId('obj_0001'))
-    expect(migrated?.dataVersion).toBe(2)
+    expect(migrated?.dataVersion).toBe(3)
     expect(migrated?.data).toEqual({
       text: [{ text: 'Customers do not understand pricing' }],
     })
@@ -74,6 +75,52 @@ describe('serialization round trip', () => {
     expect(plainTextOf((migrated?.data as { text: RichText }).text)).toBe(
       'Customers do not understand pricing',
     )
+  })
+
+  /**
+   * A board written with the FIRST size scale — small/normal/large/huge — from
+   * before draw-to-size made shapes any size and the ladder had to widen.
+   *
+   * Frozen, like every migration fixture: never regenerated, so if the v3
+   * migration is broken or dropped, a board someone made last week stops
+   * opening here rather than in their browser.
+   */
+  it('loads a frozen v2 board and renames its size tokens', () => {
+    const result = deserializeBoard(fixtureV2, registry)
+    expect(result.status).toBe('ok')
+    if (result.status !== 'ok') return
+
+    const note = result.document.objects.get(asObjectId('obj_0001'))
+    expect(note?.dataVersion).toBe(3)
+    expect(note?.data).toEqual({
+      text: [
+        { text: 'Small ', size: 'sm' },
+        // `normal` was the default and is now stored as no size at all, so the
+        // run merges with nothing and simply loses the key.
+        { text: 'normal ' },
+        { text: 'large ', size: 'lg' },
+        { text: 'huge', size: 'xl', marks: ['bold'] },
+      ],
+    })
+    // Nothing was degraded: renaming is not a failure to read.
+    expect(result.degraded).toEqual([])
+  })
+
+  /**
+   * A size this migration has never heard of is DROPPED, not kept. Keeping it
+   * would leave a value the v3 schema rejects, which quarantines the whole
+   * object — losing someone's words over a font size. The size is recoverable
+   * in one click; the note is not.
+   */
+  it('drops an unknown size rather than losing the object', () => {
+    const result = deserializeBoard(fixtureV2, registry)
+    if (result.status !== 'ok') return
+    const shape = result.document.objects.get(asObjectId('obj_0002'))
+    expect(shape?.type).toBe('shape')
+    expect(shape?.data).toEqual({
+      shape: 'rectangle',
+      text: [{ text: 'A size nobody shipped' }],
+    })
   })
 
   it('leaves a v1 board that has already been migrated alone', () => {

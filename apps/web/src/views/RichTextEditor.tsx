@@ -2,6 +2,7 @@ import {
   applyMark,
   applySize,
   markCovers,
+  DEFAULT_SIZE,
   plainTextOf,
   SIZE_TOKENS,
   type Mark,
@@ -169,9 +170,9 @@ export function RichTextEditor({
         onResize={(by) => {
           apply((text, from, to) => {
             const next = stepSize(sizeOfRange(text, from, to), by)
-            // `normal` is the object's own size, so it is stored as no size at
-            // all rather than as a token meaning "the default".
-            return applySize(text, from, to, next === 'normal' ? undefined : next)
+            // `md` is the object's own size, so it is stored as no size at all
+            // rather than as a token meaning "the default".
+            return applySize(text, from, to, next === DEFAULT_SIZE ? undefined : next)
           })
         }}
       />
@@ -247,8 +248,8 @@ const MARK_BUTTONS: readonly { readonly mark: Mark; readonly label: string; read
 /**
  * The size the selection currently reads as, for stepping up and down from.
  *
- * `normal` when the runs disagree: stepping from a mixed selection has to start
- * somewhere, and the object's own default is the least surprising place.
+ * The object's own size when the runs disagree: stepping from a mixed selection
+ * has to start somewhere, and the default is the least surprising place.
  */
 function sizeOfRange(text: RichText, from: number, to: number): SizeToken {
   let seen = 0
@@ -257,11 +258,11 @@ function sizeOfRange(text: RichText, from: number, to: number): SizeToken {
     const start = seen
     seen += span.text.length
     if (seen <= from || start >= to) continue
-    const size = span.size ?? 'normal'
+    const size = span.size ?? DEFAULT_SIZE
     if (found === undefined) found = size
-    else if (found !== size) return 'normal'
+    else if (found !== size) return DEFAULT_SIZE
   }
-  return found ?? 'normal'
+  return found ?? DEFAULT_SIZE
 }
 
 function stepSize(current: SizeToken, by: 1 | -1): SizeToken {

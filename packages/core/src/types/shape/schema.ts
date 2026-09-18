@@ -38,7 +38,7 @@ export interface ShapeData {
   readonly text: RichText
 }
 
-export const SHAPE_VERSION = 2
+export const SHAPE_VERSION = 3
 
 export const ShapeDataSchema: ZodType<ShapeData> = z.object({
   shape: z.enum(SHAPE_KINDS),

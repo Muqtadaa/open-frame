@@ -1,0 +1,48 @@
+{
+  "format": "openframe.board",
+  "schemaVersion": 1,
+  "savedAt": 1700000000000,
+  "board": {
+    "id": "board_fixture",
+    "meta": { "title": "Sized spans", "createdAt": 1700000000000 },
+    "objects": [
+      {
+        "id": "obj_0001",
+        "type": "sticky",
+        "dataVersion": 2,
+        "frame": { "x": 10, "y": 20, "width": 180, "height": 180, "rotation": 0 },
+        "parentId": null,
+        "order": "a0",
+        "style": { "color": "yellow" },
+        "locked": false,
+        "hidden": false,
+        "data": {
+          "text": [
+            { "text": "Small ", "size": "small" },
+            { "text": "normal ", "size": "normal" },
+            { "text": "large ", "size": "large" },
+            { "text": "huge", "size": "huge", "marks": ["bold"] }
+          ]
+        },
+        "meta": { "createdAt": 1700000000000, "createdBy": null, "createdVia": "user" }
+      },
+      {
+        "id": "obj_0002",
+        "type": "shape",
+        "dataVersion": 2,
+        "frame": { "x": 300, "y": 20, "width": 160, "height": 120, "rotation": 0 },
+        "parentId": null,
+        "order": "a1",
+        "style": { "color": "blue" },
+        "locked": false,
+        "hidden": false,
+        "data": {
+          "shape": "rectangle",
+          "text": [{ "text": "A size nobody shipped", "size": "gigantic" }]
+        },
+        "meta": { "createdAt": 1700000000000, "createdBy": null, "createdVia": "user" }
+      }
+    ],
+    "assets": []
+  }
+}

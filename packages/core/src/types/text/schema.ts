@@ -14,7 +14,7 @@ export interface TextData {
   readonly text: RichText
 }
 
-export const TEXT_VERSION = 2
+export const TEXT_VERSION = 3
 
 export const TextDataSchema: ZodType<TextData> = z.object({
   text: RichTextSchema,

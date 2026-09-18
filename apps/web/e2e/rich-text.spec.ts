@@ -115,7 +115,7 @@ test.describe('formatting selected text', () => {
     await noteSaying(page, 'Pricing is unclear')
     await selectFirst(page, 7)
     await page.getByTestId('format-bigger').click()
-    await expect(page.locator(`${EDITOR} [data-size="large"]`)).toHaveText('Pricing')
+    await expect(page.locator(`${EDITOR} [data-size="lg"]`)).toHaveText('Pricing')
   })
 
   test('steps up and back down again', async ({ page }) => {
@@ -123,19 +123,42 @@ test.describe('formatting selected text', () => {
     await selectFirst(page, 7)
     await page.getByTestId('format-bigger').click()
     await page.getByTestId('format-bigger').click()
-    await expect(page.locator(`${EDITOR} [data-size="huge"]`)).toHaveText('Pricing')
+    await expect(page.locator(`${EDITOR} [data-size="xl"]`)).toHaveText('Pricing')
 
     await page.getByTestId('format-smaller').click()
-    await expect(page.locator(`${EDITOR} [data-size="large"]`)).toHaveText('Pricing')
+    await expect(page.locator(`${EDITOR} [data-size="lg"]`)).toHaveText('Pricing')
   })
 
   test('stops at the ends rather than running off them', async ({ page }) => {
     await noteSaying(page, 'Pricing is unclear')
     await selectFirst(page, 7)
-    for (let i = 0; i < 5; i++) await page.getByTestId('format-smaller').click()
-    await expect(page.locator(`${EDITOR} [data-size="small"]`)).toHaveText('Pricing')
-    for (let i = 0; i < 6; i++) await page.getByTestId('format-bigger').click()
-    await expect(page.locator(`${EDITOR} [data-size="huge"]`)).toHaveText('Pricing')
+    for (let i = 0; i < 6; i++) await page.getByTestId('format-smaller').click()
+    await expect(page.locator(`${EDITOR} [data-size="xs"]`)).toHaveText('Pricing')
+    for (let i = 0; i < 12; i++) await page.getByTestId('format-bigger').click()
+    await expect(page.locator(`${EDITOR} [data-size="5xl"]`)).toHaveText('Pricing')
+  })
+
+  /**
+   * The reported problem: a large shape needs type big enough to read when the
+   * whole shape is on screen, and the old ladder topped out at 1.9× — small
+   * type in a big box. The ladder is what makes this reachable, so its SPAN is
+   * the thing worth asserting, not just its ends.
+   */
+  test('reaches a size that suits a large shape', async ({ page }) => {
+    await page.keyboard.press('u')
+    await page.locator(CANVAS).click({ position: { x: 300, y: 200 } })
+    await page.locator(EDITOR).fill('Discovery')
+    await page.locator(EDITOR).click()
+
+    const measure = async (): Promise<number> =>
+      page
+        .locator(`${EDITOR}`)
+        .evaluate((el) => Number.parseFloat(getComputedStyle(el.firstElementChild ?? el).fontSize))
+
+    const base = await measure()
+    for (let i = 0; i < 12; i++) await page.getByTestId('format-bigger').click()
+    // Comfortably past the old 1.9× ceiling, which is the whole point.
+    expect(await measure()).toBeGreaterThan(base * 4)
   })
 
   /** `normal` is the object's own size, so it is stored as no size at all. */
@@ -234,7 +257,7 @@ test.describe('formatting selected text', () => {
     await page.locator(EDITOR).click()
     await page.getByTestId('format-bigger').click()
 
-    const sized = page.locator(`${EDITOR} [data-size="large"]`)
+    const sized = page.locator(`${EDITOR} [data-size="lg"]`)
     await expect(sized).toHaveText('Pricing is unclear')
   })
 
@@ -250,6 +273,6 @@ test.describe('formatting selected text', () => {
     await page.locator(EDITOR).click()
     await page.getByTestId('format-bigger').click()
     await page.locator(CANVAS).click({ position: CLEAR })
-    await expect(page.locator('.of-sticky [data-size="large"]')).toHaveText('Pricing is unclear')
+    await expect(page.locator('.of-sticky [data-size="lg"]')).toHaveText('Pricing is unclear')
   })
 })

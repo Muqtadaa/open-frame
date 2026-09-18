@@ -80,17 +80,17 @@ describe('rich text', () => {
 
   describe('size', () => {
     it('applies to a range and clears back to the object default', () => {
-      const big = applySize(plain, 0, 9, 'large')
-      expect(big[0]).toEqual({ text: 'Customers', size: 'large' })
+      const big = applySize(plain, 0, 9, 'lg')
+      expect(big[0]).toEqual({ text: 'Customers', size: 'lg' })
       expect(applySize(big, 0, 9, undefined)).toEqual(plain)
     })
 
     it('keeps marks when size changes', () => {
       const marked = applyMark(plain, 0, 9, 'bold', true)
-      expect(applySize(marked, 0, 9, 'huge')[0]).toEqual({
+      expect(applySize(marked, 0, 9, 'xl')[0]).toEqual({
         text: 'Customers',
         marks: ['bold'],
-        size: 'huge',
+        size: 'xl',
       })
     })
   })
@@ -179,7 +179,7 @@ describe('rich text', () => {
     for (const [from, to] of ops) {
       rich = applyMark(rich, from, to, 'bold', true)
       rich = applyMark(rich, from, to, 'italic', true)
-      rich = applySize(rich, from, to, 'large')
+      rich = applySize(rich, from, to, 'lg')
       rich = applyMark(rich, from, to, 'bold', false)
       expect(plainTextOf(rich)).toBe('The quick brown fox jumps')
     }

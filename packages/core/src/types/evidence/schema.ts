@@ -25,7 +25,7 @@ export interface EvidenceData {
   readonly tags: readonly string[]
 }
 
-export const EVIDENCE_VERSION = 2
+export const EVIDENCE_VERSION = 3
 
 export const EvidenceDataSchema: ZodType<EvidenceData> = z
   .object({

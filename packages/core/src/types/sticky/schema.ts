@@ -13,7 +13,7 @@ export interface StickyData {
   readonly text: RichText
 }
 
-export const STICKY_VERSION = 2
+export const STICKY_VERSION = 3
 
 export const StickyDataSchema: ZodType<StickyData> = z.object({
   text: RichTextSchema,
