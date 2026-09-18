@@ -35,14 +35,19 @@ export function objectsOf(doc: Y.Doc): Y.Map<AnyOpenFrameObject> {
 }
 
 /**
- * The origin stamped on every transaction this adapter makes.
+ * The origin stamped on every transaction THIS client writes.
  *
- * `origin` already exists on every command envelope and `skipUndo` already
- * exists on dispatch — both were built in Phase 1 for exactly this
- * (ADR 0007). A change arriving from the network is tagged so the local undo
- * stack can ignore it: undo must revert YOUR change, not the most recent one.
+ * The polarity matters and is easy to get backwards, so it is worth stating
+ * plainly: the observer cannot recognise a remote change, because a remote
+ * change can arrive with any origin at all — whatever `Y.applyUpdate` was
+ * given, a provider object, or nothing. What it can recognise with certainty is
+ * its OWN writes, because it stamps them. So the rule is "ignore what I wrote",
+ * never "accept what is tagged remote".
+ *
+ * Getting that inverted does not fail loudly. It makes two peers hand one edit
+ * back and forth forever.
  */
-export const REMOTE_ORIGIN = 'openframe:remote'
+export const LOCAL_ORIGIN = 'openframe:local'
 
 /** Deep-frozen structural copy, so a document never shares a reference with the CRDT. */
 function plain<T>(value: T): T {

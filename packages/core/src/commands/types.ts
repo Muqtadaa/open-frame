@@ -1,5 +1,6 @@
 import type { ObjectId, TransactionId, UserId } from '../domain/ids.js'
 import type { ObjectFrame, ObjectStyle, Origin } from '../domain/object.js'
+import type { Patch } from '../domain/patch.js'
 import type { ObjectTypeRegistry } from '../domain/registry.js'
 import type { Clock } from '../ports/clock.js'
 import type { IdGenerator } from '../ports/id-generator.js'
@@ -81,6 +82,23 @@ export type Command =
       readonly ids: readonly ObjectId[]
       /** `null` moves the objects back to the board root. */
       readonly parentId: ObjectId | null
+    }
+  | {
+      /**
+       * A change another client already made. Refused unless `origin` is
+       * `remote`; see `handlers/apply-remote-patches.ts` for why this is the one
+       * command that carries patches rather than intent.
+       */
+      readonly kind: 'ApplyRemotePatches'
+      readonly patches: readonly Patch[]
+    }
+  | {
+      /**
+       * Restore parentage for these objects after a merge. An id that no longer
+       * exists is read as a former parent and its orphans checked instead.
+       */
+      readonly kind: 'RepairParentage'
+      readonly ids: readonly ObjectId[]
     }
 
 /** Where a reorder puts the objects within their container. */

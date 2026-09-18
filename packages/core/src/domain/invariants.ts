@@ -40,14 +40,8 @@ function hasFiniteFrame(object: AnyOpenFrameObject): boolean {
   )
 }
 
-/**
- * Detects a parent cycle reachable from `startId`.
- * Returns the ids on the cycle, or `null` when the chain terminates at the root.
- */
-export function findParentCycle(
-  objects: ReadonlyMap<ObjectId, AnyOpenFrameObject>,
-  startId: ObjectId,
-): ObjectId[] | null {
+/** Walks up a parent chain, reporting the loop it entered or `null` if it ends. */
+function cycleFrom(parentOf: (id: ObjectId) => ObjectId | null, startId: ObjectId): ObjectId[] | null {
   const path: ObjectId[] = []
   const seen = new Set<ObjectId>()
   let current: ObjectId | null = startId
@@ -58,9 +52,107 @@ export function findParentCycle(
     }
     seen.add(current)
     path.push(current)
-    current = objects.get(current)?.parentId ?? null
+    current = parentOf(current)
   }
   return null
+}
+
+/**
+ * Detects a parent cycle reachable from `startId`.
+ * Returns the ids on the cycle, or `null` when the chain terminates at the root.
+ */
+export function findParentCycle(
+  objects: ReadonlyMap<ObjectId, AnyOpenFrameObject>,
+  startId: ObjectId,
+): ObjectId[] | null {
+  return cycleFrom((id) => objects.get(id)?.parentId ?? null, startId)
+}
+
+export type ParentageRepairKind = Extract<
+  RepairKind,
+  'detached-cycle' | 'dangling-parent' | 'self-parent'
+>
+
+export interface ParentageRepair {
+  readonly kind: ParentageRepairKind
+  /** The object to detach to the board root. Always the one that gets the write. */
+  readonly objectId: ObjectId
+  readonly detail: string
+}
+
+/**
+ * The detachments that restore parentage along the chains reachable from
+ * `candidates`, without touching anything else.
+ *
+ * This exists as its own function for one reason: the rule it encodes — which
+ * member of a cycle gets detached — must be IDENTICAL everywhere it runs.
+ * Load-time repair (`repairDocument`) and merge-time repair are the same
+ * decision made at different moments by different machines, and if the two
+ * implementations ever disagreed, two clients would repair the same corruption
+ * differently and diverge permanently. One implementation, two callers.
+ *
+ * `candidates` is what makes it usable per merge. `repairDocument` passes every
+ * object; the collaboration adapter passes only the handful whose parentage the
+ * incoming batch could have disturbed, because scanning the whole document on
+ * every remote change is the O(n)-per-event trap rule 10 exists to prevent.
+ */
+export function parentageRepairs(
+  objects: ReadonlyMap<ObjectId, AnyOpenFrameObject>,
+  candidates: Iterable<ObjectId>,
+): ParentageRepair[] {
+  const ids = [...candidates]
+  const repairs: ParentageRepair[] = []
+
+  /*
+   * Repairs decided so far, laid over the document. Two candidates on the same
+   * cycle must not each produce a detachment: the first one breaks the loop and
+   * the second must see that it is already broken.
+   */
+  const detached = new Set<ObjectId>()
+  const parentOf = (id: ObjectId): ObjectId | null =>
+    detached.has(id) ? null : (objects.get(id)?.parentId ?? null)
+
+  /*
+   * Two passes, in this order, matching what `repairDocument` has always done.
+   * A self-parent IS a cycle of length one, so a single interleaved pass would
+   * report it as a broken cycle or not, depending on which object the caller
+   * happened to list first — the same corruption described differently on two
+   * machines.
+   */
+  for (const id of ids) {
+    const object = objects.get(id)
+    if (object === undefined) continue
+    if (object.parentId === id) {
+      repairs.push({ kind: 'self-parent', objectId: id, detail: 'Object was its own parent' })
+      detached.add(id)
+      continue
+    }
+    if (object.parentId !== null && !objects.has(object.parentId)) {
+      repairs.push({
+        kind: 'dangling-parent',
+        objectId: id,
+        detail: `Parent "${object.parentId}" does not exist`,
+      })
+      detached.add(id)
+    }
+  }
+
+  for (const id of ids) {
+    if (!objects.has(id)) continue
+    const cycle = cycleFrom(parentOf, id)
+    if (cycle === null) continue
+    // Lowest id wins, so every client detaches the same member of the loop.
+    const detach = [...cycle].sort()[0]
+    if (detach === undefined) continue
+    repairs.push({
+      kind: 'detached-cycle',
+      objectId: detach,
+      detail: `Broke parent cycle [${cycle.join(' -> ')}] by detaching to root`,
+    })
+    detached.add(detach)
+  }
+
+  return repairs
 }
 
 /**
@@ -108,35 +200,12 @@ export function repairDocument(doc: BoardDocument): RepairResult {
     }
   }
 
-  for (const [id, object] of objects) {
-    if (object.parentId === id) {
-      repairs.push({ kind: 'self-parent', objectId: id, detail: 'Object was its own parent' })
-      objects.set(id, { ...object, parentId: null })
-      continue
-    }
-    if (object.parentId !== null && !objects.has(object.parentId)) {
-      repairs.push({
-        kind: 'dangling-parent',
-        objectId: id,
-        detail: `Parent "${object.parentId}" does not exist`,
-      })
-      objects.set(id, { ...object, parentId: null })
-    }
-  }
-
-  for (const id of [...objects.keys()]) {
-    const cycle = findParentCycle(objects, id)
-    if (cycle === null) continue
-    const detach = [...cycle].sort()[0]
-    if (detach === undefined) continue
-    const object = objects.get(detach)
+  // Every object is a candidate at load time; the merge path passes far fewer.
+  for (const repair of parentageRepairs(objects, [...objects.keys()])) {
+    const object = objects.get(repair.objectId)
     if (object === undefined) continue
-    repairs.push({
-      kind: 'detached-cycle',
-      objectId: detach,
-      detail: `Broke parent cycle [${cycle.join(' -> ')}] by detaching to root`,
-    })
-    objects.set(detach, { ...object, parentId: null })
+    repairs.push(repair)
+    objects.set(repair.objectId, { ...object, parentId: null })
   }
 
   for (const [id, object] of objects) {

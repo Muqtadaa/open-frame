@@ -41,16 +41,36 @@ collaborator is a cost with no counterparty.
 | Piece        | Choice                                   | Free allowance                                                        | First bill                      |
 | ------------ | ---------------------------------------- | --------------------------------------------------------------------- | ------------------------------- |
 | Room server  | Cloudflare Durable Objects ([ADR 0013](../adr/0013-collaboration-transport-durable-objects.md)) | 100k requests/day, 13k GB-s/day, 5 GB SQLite. A WS message bills as **1/20 of a request** | Workers Paid, $5/mo             |
-| Database     | Neon Postgres                            | 0.5 GB, 100 CU-hours/month, scales to zero                            | Past 0.5 GB or 100 CU-hours     |
+| Database     | Supabase Postgres                        | 500 MB database, 10 GB bandwidth/month                                | Pro, $25/mo                     |
 | Auth         | Clerk                                    | 50,000 monthly retained users                                         | $25/mo Pro                      |
 | Assets       | Cloudflare R2                            | 10 GB, 1M writes, 10M reads, **zero egress**                          | $0.015/GB past 10 GB            |
 | Web app      | Vercel                                   | Hobby                                                                 | Pro, $20/mo — see the flag below |
 
-**Supabase was rejected for the database** despite a larger free tier, on one
-line of its terms: a free project **pauses after 7 days of inactivity**.
-`PRODUCT.md` says boards are "long and returned to, not one-shot… re-opened days
-later". A database that sleeps through exactly that is the wrong shape, however
-generous.
+**Supabase is the database, with the pause accepted as a known cost.** A free
+project is paused after 7 days of low activity, which reads badly against
+`PRODUCT.md` — boards are "long and returned to, not one-shot… re-opened days
+later". Three things make it survivable, and they are the reason it is written
+down rather than left as a surprise:
+
+- The threshold is **activity, not traffic**: "typically a few user requests to
+  the database each day over the previous week is enough". A daily health check
+  costs nothing and is worth having regardless.
+- A warning email arrives roughly a week before the pause, and a paused project
+  is restorable for 90 days.
+- **Nothing on a board lives in Postgres.** The document is in the room's
+  Durable Object ([ADR 0013](../adr/0013-collaboration-transport-durable-objects.md));
+  the database holds identity, membership and board lists. A pause blocks
+  sign-in and the board list, which is bad — it does not touch anyone's work.
+
+If the pause becomes a real problem, Pro is $25/month and the decision reverses
+by paying, not by migrating.
+
+**Open, and not decided here: whether Clerk survives this.** Supabase ships auth
+on the same free project, and auth that already knows the database is one less
+integration and one less set of user ids to reconcile. Clerk is the better
+standalone product. This is a Stage 3 question with nothing riding on it until
+then, so it stays open rather than being settled as a side effect of choosing a
+database.
 
 **Flag, for the day someone pays you:** Vercel's Hobby plan is non-commercial.
 Nothing about the current deployment is wrong, but the first paying user makes
@@ -112,8 +132,9 @@ and nothing more: no auth, no database, no board list. Two browser windows on
 the same URL must edit the same board.
 
 **Stage 3 — identity. Free tier.**
-Clerk and Neon arrive together, because a board list needs owners and a
-membership needs somewhere to live. Every command re-authorized server-side
+Auth and the database arrive together, because a board list needs owners and a
+membership needs somewhere to live. Supabase is the database; whether it is also
+the auth provider is the open question above. Every command re-authorized server-side
 through the existing `Capabilities` interface.
 
 **Stage 4 — the surface.**
@@ -130,16 +151,26 @@ Comments, mentions, sharing links, workspaces.
 
 ## Pick up here
 
-**Current position: Stage 1 is half done.**
+**Current position: Stage 1 is done. Stage 2 is the next thing, and it is the
+first that needs an account anywhere.**
 
 Built and on `main`:
 
-- `packages/collab`, depending on `@openframe/core` and `yjs` and nothing else.
-- `yjs-lives-only-in-collab` in `.dependency-cruiser.cjs`, broken once against
-  `apps/web` to watch it fail.
-- `Patch[] → Y.Doc` and `Y.Doc → objects`, with the merge cases from ADR 0011
-  and ADR 0007 tested against two `Y.Doc`s and no sockets. 10 tests.
-- `@openframe/core/testing` exposed as a declared subpath.
+- `packages/collab`, depending on `@openframe/core` and `yjs` and nothing else,
+  with `yjs-lives-only-in-collab` in `.dependency-cruiser.cjs` — broken once
+  against `apps/web` to watch it fail.
+- **Both directions of the translation.** `Patch[] → Y.Doc`, and `Y.Doc →
+  Patch[]` from a `Y.Map` change event.
+- **`CollabSession`**, binding a `Y.Doc` to the `CommandDispatcher` both ways
+  with no transport at all. Two clients, joined by their update streams and
+  nothing else, converge on the same `BoardDocument`.
+- **Merge repair**, through the command layer: `parentageRepairs` in core is the
+  one implementation of "which member of a cycle gets detached", shared by the
+  load-time path and the merge path, and `RepairParentage` is the command that
+  applies it. It ignores locks on purpose — a repair that can be refused is not
+  a repair.
+- **`ApplyRemotePatches`**, the one command that carries patches rather than
+  intent, refused unless `origin` is `remote`.
 
 Everything below is decided and needs no further discussion:
 
@@ -148,32 +179,46 @@ Everything below is decided and needs no further discussion:
   ([ADR 0013](../adr/0013-collaboration-transport-durable-objects.md)).
 - Hocuspocus is the named fallback. It is a week of work away because
   `packages/collab` is quarantined, so choosing wrong here is survivable.
-- Stages 1 and 2 require no account with anyone.
+- The database is Supabase, its 7-day idle pause knowingly accepted. Nothing
+  needs it before Stage 3.
 
-**The next commit finishes Stage 1**, in this order:
+**Two things Stage 1 deliberately left for Stage 2 to decide.** Both are written
+here rather than solved early, because solving them now means guessing at a
+transport that does not exist:
 
-1. **`Y.Doc → Patch[]`, the direction that does not exist yet.** Observe a
-   `Y.Map` change event and turn it back into patches the dispatcher can apply
-   with `origin: 'remote'` and `skipUndo`. Both already exist on the envelope —
-   they were built in Phase 1 for exactly this. The subtlety is that an observer
-   must not re-emit its own writes: tag the transaction (`REMOTE_ORIGIN` is
-   already defined) and ignore events carrying it, or two peers will ping-pong
-   one edit forever.
-2. **Concurrent-reparent cycle repair, moved into the merge path.** The
-   deterministic repair already exists and runs at load time; reuse it rather
-   than rewriting it. This is the one corruption last-writer-wins cannot
-   prevent — two people each dragging A into B and B into A — and the only
-   invariant the CRDT can genuinely break.
-3. **A `CollabSession`** binding a `Y.Doc` to the `CommandDispatcher` in both
-   directions, still with no transport: two `Y.Doc`s in one test file, joined by
-   their update streams, must converge on the same `BoardDocument`.
+1. **Whether remote objects are validated as they arrive.** `ApplyRemotePatches`
+   filters patches it cannot apply; it does not check that an incoming object is
+   a valid one of its type. Today nothing untrusted can reach it — Stage 1 has
+   no peers. The moment a socket exists, another client IS an untrusted
+   boundary, and rule 8 applies. The registry already exposes `validate` per
+   type, so the cost is small; the question is what to do with a failure, which
+   is the same question as the next one.
+2. **What a client does when a merged change will not apply.** `CollabSession`
+   takes a required `onError` precisely so this cannot be defaulted quietly. A
+   read-only participant is the case that forces the answer: `dispatch` refuses
+   an edit they are not allowed to make, so today they would stop seeing other
+   people's changes entirely. That wants solving with authorization in Stage 3,
+   not patched around in Stage 2.
 
-Only then Stage 2, and only then does anything need an account.
+**Stage 2, in order:**
+
+1. **A Worker and a Durable Object per board**, reachable by link. No auth, no
+   database, no board list.
+2. **The sync loop** — `y-protocols` sync and awareness over a WebSocket, with
+   Hibernation so an idle room costs nothing. This is the part no wrapper is
+   supplying, and it is two message types.
+3. **Presence**: cursors, selections, live drag deltas, viewport for follow-mode.
+   All awareness, never persisted — a drag writes nothing until it commits, so a
+   live drag is presence and the `Y.Doc` must never see it.
+4. **Two browser windows on the same URL editing the same board.** That is the
+   whole of "done" for the stage.
 
 **Known traps, from the decisions already taken:**
 
-- A drag writes nothing until it commits, so a live drag is **presence**, not
-  document history. Do not let the Yjs adapter see it.
+- The observer must ignore what it wrote ITSELF, never "accept what is tagged
+  remote" — a remote change can arrive with any origin at all. Inverting that
+  fails loudly; omitting it does not, which is why
+  `ignores its own writes coming back out of the document` exists.
 - `origin` is already on every command envelope and `skipUndo` already exists on
   dispatch. They were built for this. Use them rather than inventing a second
   mechanism.

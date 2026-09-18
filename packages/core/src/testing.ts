@@ -4,7 +4,7 @@ import { asBoardId } from './domain/ids.js'
 import type { ObjectTypeRegistry } from './domain/registry.js'
 import { allowAllCapabilities } from './ports/capabilities.js'
 import { fixedClock } from './ports/clock.js'
-import { createSequentialIdGenerator } from './ports/id-generator.js'
+import { createSequentialIdGenerator, type IdGenerator } from './ports/id-generator.js'
 import {
   createDocumentStore,
   type DocumentStore,
@@ -25,7 +25,18 @@ export interface TestHarness {
  * Every dependency that could make a test flaky is a port, so this needs no
  * mocking framework, no fake timers and no DOM.
  */
-export function createTestHarness(options: { registry?: ObjectTypeRegistry } = {}): TestHarness {
+export function createTestHarness(
+  options: {
+    readonly registry?: ObjectTypeRegistry
+    /**
+     * Only for a test with TWO harnesses in it — two collaborating clients.
+     * Sequential ids restart at the same number in each, so without separate
+     * generators both peers name their first object `obj_0001` and the merge
+     * being tested is a collision that could never happen in production.
+     */
+    readonly ids?: IdGenerator
+  } = {},
+): TestHarness {
   const registry = options.registry ?? createDefaultRegistry()
   const { store, writer } = createDocumentStore(
     createEmptyDocument(asBoardId('board_test'), 'Test board', 0),
@@ -35,7 +46,7 @@ export function createTestHarness(options: { registry?: ObjectTypeRegistry } = {
     writer,
     registry,
     clock: fixedClock(1_700_000_000_000),
-    ids: createSequentialIdGenerator(),
+    ids: options.ids ?? createSequentialIdGenerator(),
     capabilities: allowAllCapabilities,
   })
   return { store, writer, registry, dispatcher }
