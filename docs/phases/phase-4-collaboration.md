@@ -213,24 +213,53 @@ transport that does not exist:
 4. **Two browser windows on the same URL editing the same board.** That is the
    whole of "done" for the stage.
 
+**The access model, decided.** Link-only first, then a **per-board password** and
+**named guests** — not accounts. This is a product decision with a consequence
+worth stating: an account, when it arrives in Stage 3, is for OWNERSHIP and
+board lists. It is not what gets you into a board. Somebody a researcher wants
+in a workshop should not have to sign up to be there.
+
+Three things follow, and each is a constraint rather than a preference:
+
+- **A guest is a label, never an authorization.** Presence needs an identity
+  anyway — a cursor has to be somebody's — so a guest id, display name and
+  colour live in awareness and are never persisted. Nothing may ever decide
+  access from them, because a client picks its own.
+- **A password gates a room; it does not encrypt it.** The board sits in the
+  Durable Object as plain data. The password stops a forwarded link, and that
+  is the whole of what it claims.
+- **The password never travels in a URL.** URLs are logged, by proxies and by
+  Cloudflare. It is exchanged for a short-lived token before the socket opens.
+
+**Who may set one, with no accounts to ask?** Trust on first use: anyone in a
+room with no password may set one; changing or clearing it needs the current
+one. That is the honest ceiling for Stage 2 and it is why Stage 3 exists.
+
+**A constraint that shapes the implementation: the Workers Free plan allows
+10 ms of CPU per invocation** (Paid allows five minutes). A password hash worth
+having costs far more than that, so the expensive derivation runs in the
+BROWSER, where CPU is free, and the Worker stores and compares a fast hash of
+the result. That keeps the stolen-database case slow to attack — an attacker
+still has to go back through the derivation — while the request stays inside
+10 ms. The same limit is worth watching for the initial state sync of a very
+large board, which is the other place this could bite.
+
 **What Stage 2 needs from you.** Everything else in this phase I can build and
 test alone; these four cannot be done from inside the repo.
 
 1. **A Cloudflare account** — free, no card. Signing up and picking a
    `*.workers.dev` subdomain is the whole of it.
-2. **A way to deploy the Worker.** Either you run `wrangler deploy` yourself
-   after `wrangler login`, or CI does it from a scoped API token (the dashboard's
-   "Edit Cloudflare Workers" template) stored as a GitHub repository secret.
-   **A token goes in the secret store, never in a message** — anything pasted
-   into a conversation lives in that transcript afterwards.
+2. **A deploy credential for CI.** Settled by what the Cloudflare connector
+   turned out to be: its Workers tools are read-only (`workers_list`,
+   `workers_get_worker`, `workers_get_worker_code`) and it exposes no Durable
+   Objects tools at all, so it can inspect a deployment but not make one.
+   Deployment is therefore a GitHub Actions workflow reading a scoped API token
+   (the dashboard's "Edit Cloudflare Workers" template) from the repository's
+   Actions secrets. **A token goes in the secret store, never in a message** —
+   anything pasted into a conversation lives in that transcript afterwards.
 3. **One Vercel environment variable**, once the Worker exists: the room URL,
    `wss://<worker>.<subdomain>.workers.dev`. Vercel's settings are yours.
 4. **Three decisions**, none of which have a right answer I can pick for you:
-   - **Who can open a room.** Stage 2 is link-only by design. A board id is 16
-     random base-36 characters, so it is not guessable — but it is then the only
-     thing between a board and the internet, and a link can be forwarded. The
-     alternative is a shared passphrase on the Worker until Stage 3 brings real
-     identity, which is a thing built to be removed.
    - **Whether the deployed app gets collaboration at all**, or only behind a
      flag. A flag means a sync loop with a bug in it cannot touch anybody's solo
      board.
