@@ -672,6 +672,70 @@ body {
   color: var(--of-accent);
 }
 
+/*
+ * The room: whether it can be reached, and who is in it.
+ *
+ * Reads as apparatus, not as a call to action. Sharing a board is a deliberate
+ * act somebody goes looking for, and a button loud enough to be noticed by
+ * accident is a button that gets pressed by accident.
+ */
+.of-status__share {
+  display: flex;
+  gap: 5px;
+  align-items: center;
+  height: 22px;
+  padding: 0 7px;
+  font: inherit;
+  color: var(--of-ink-muted);
+  background: transparent;
+  border: 1px solid var(--of-panel-border);
+  border-radius: 4px;
+  cursor: pointer;
+}
+
+.of-status__share:hover:not(:disabled) {
+  color: var(--of-ink);
+  background: var(--of-bg);
+}
+
+.of-status__share:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+
+.of-status__share svg {
+  width: 13px;
+  height: 13px;
+}
+
+.of-status__share-label {
+  font-family: var(--of-font);
+  font-size: 11px;
+}
+
+/*
+ * Connection state as a dot. Colour alone never carries it — the label beside
+ * it says the same thing in words, because a red and a green dot are the same
+ * dot to a good number of people.
+ */
+.of-status__dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+}
+
+.of-status__dot--connected {
+  background: var(--of-c-green);
+}
+
+.of-status__dot--connecting {
+  background: var(--of-c-orange);
+}
+
+.of-status__dot--offline {
+  background: var(--of-control-border);
+}
+
 /* A ruled divider, the way a ledger column is separated. */
 .of-status__rule {
   width: 1px;

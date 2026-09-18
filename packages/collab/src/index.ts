@@ -40,4 +40,16 @@ export {
   type BoardRoomOptions,
   type RoomPeer,
 } from './room.js'
+export {
+  RoomProvider,
+  type ConnectionStatus,
+  type RoomProviderOptions,
+  type RoomSocket,
+} from './provider.js'
+export {
+  connectBoard,
+  type BoardConnection,
+  type ConnectBoardOptions,
+  type PeerPresence,
+} from './connect.js'
 export { CollabSession, type CollabSessionDeps } from './session.js'

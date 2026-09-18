@@ -19,6 +19,9 @@ export default tseslint.config(
       '**/playwright-report/**',
       '**/test-results/**',
       'tools/bench/fixtures/**',
+      // Wrangler's temporary bundles. Generated on every `wrangler dev`, in no
+      // tsconfig project, and not ours.
+      '**/.wrangler/**',
       // Vendored third-party tooling (the impeccable design skill). Not ours to
       // lint, and its browser bundles are not in any tsconfig project.
       '.claude/**',

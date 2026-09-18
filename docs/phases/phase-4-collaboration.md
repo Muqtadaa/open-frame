@@ -151,143 +151,80 @@ Comments, mentions, sharing links, workspaces.
 
 ## Pick up here
 
-**Current position: Stage 1 is done. Stage 2 is the next thing, and it is the
-first that needs an account anywhere.**
+**Current position: Stages 1 and 2 are built. Nothing is deployed yet.**
 
-Built and on `main`:
+Two browser windows on the same link edit the same board, against a real
+Durable Object, proved by `pnpm test:rooms` rather than by hand. Undo reverts
+YOUR change and not the most recent one, a late joiner receives the whole board,
+and a board opened without a link joins no room at all.
 
-- `packages/collab`, depending on `@openframe/core` and `yjs` and nothing else,
-  with `yjs-lives-only-in-collab` in `.dependency-cruiser.cjs` — broken once
-  against `apps/web` to watch it fail.
-- **Both directions of the translation.** `Patch[] → Y.Doc`, and `Y.Doc →
-  Patch[]` from a `Y.Map` change event.
-- **`CollabSession`**, binding a `Y.Doc` to the `CommandDispatcher` both ways
-  with no transport at all. Two clients, joined by their update streams and
-  nothing else, converge on the same `BoardDocument`.
-- **Merge repair**, through the command layer: `parentageRepairs` in core is the
-  one implementation of "which member of a cycle gets detached", shared by the
-  load-time path and the merge path, and `RepairParentage` is the command that
-  applies it. It ignores locks on purpose — a repair that can be refused is not
-  a repair.
-- **`ApplyRemotePatches`**, the one command that carries patches rather than
-  intent, refused unless `origin` is `remote`.
+Built and on the branch:
 
-Everything below is decided and needs no further discussion:
+- **`packages/collab`** — patch translation both ways, `CollabSession`, merge
+  repair through the command layer, the wire protocol, `BoardRoom`, and the
+  client `RoomProvider` with backoff and reconnection. 39 tests, none of which
+  opens a socket.
+- **`apps/rooms`** — the Worker and the Durable Object. Holds sockets, storage
+  and the fact that any of this is Cloudflare; decides nothing.
+- **The web app** — `?room=<id>` opens a shared board, a Share control copies
+  the current board to a new unguessable id, and the status line says whether
+  the room is reachable and who is in it.
 
-- The transport is Durable Objects, and the Yjs sync loop is written in this
-  repo rather than taken from a wrapper — both wrappers are over a year stale
-  ([ADR 0013](../adr/0013-collaboration-transport-durable-objects.md)).
-- Hocuspocus is the named fallback. It is a week of work away because
-  `packages/collab` is quarantined, so choosing wrong here is survivable.
-- The database is Supabase, its 7-day idle pause knowingly accepted. Nothing
-  needs it before Stage 3.
+Three rules keep the shape, and each has been broken once to watch it fail:
+`yjs-lives-only-in-collab`, `cloudflare-lives-only-in-rooms`, and the boundary
+that means the web app never names a Yjs type.
 
-**Two things Stage 1 deliberately left for Stage 2 to decide.** Both are written
-here rather than solved early, because solving them now means guessing at a
-transport that does not exist:
+**What deploying needs, and it is two settings:**
 
-1. **Whether remote objects are validated as they arrive.** `ApplyRemotePatches`
-   filters patches it cannot apply; it does not check that an incoming object is
-   a valid one of its type. Today nothing untrusted can reach it — Stage 1 has
-   no peers. The moment a socket exists, another client IS an untrusted
-   boundary, and rule 8 applies. The registry already exposes `validate` per
-   type, so the cost is small; the question is what to do with a failure, which
-   is the same question as the next one.
-2. **What a client does when a merged change will not apply.** `CollabSession`
-   takes a required `onError` precisely so this cannot be defaulted quietly. A
-   read-only participant is the case that forces the answer: `dispatch` refuses
-   an edit they are not allowed to make, so today they would stop seeing other
-   people's changes entirely. That wants solving with authorization in Stage 3,
-   not patched around in Stage 2.
+1. **Merge.** `.github/workflows/deploy-rooms.yml` runs `wrangler deploy` on
+   push to `main`, path-filtered so a stylesheet change cannot restart rooms
+   people are editing in. It can also be run from the Actions tab. Nothing
+   needs creating in Cloudflare first — the Worker is created by its first
+   deploy, and the account already has a `workers.dev` subdomain.
+2. **`VITE_COLLAB_URL` in Vercel**, once the Worker is up:
+   `wss://openframe-rooms.<your-subdomain>.workers.dev`. Without it the build
+   simply does not collaborate — the Share control is absent rather than
+   broken — so the order is safe either way.
 
-**Stage 2, in order:**
+Add `CLOUDFLARE_ACCOUNT_ID` as a repository *variable* only if the deploy
+complains that the token can see more than one account.
 
-1. **A Worker and a Durable Object per board**, reachable by link. No auth, no
-   database, no board list.
-2. **The sync loop** — `y-protocols` sync and awareness over a WebSocket, with
-   Hibernation so an idle room costs nothing. This is the part no wrapper is
-   supplying, and it is two message types.
-3. **Presence**: cursors, selections, live drag deltas, viewport for follow-mode.
-   All awareness, never persisted — a drag writes nothing until it commits, so a
-   live drag is presence and the `Y.Doc` must never see it.
-4. **Two browser windows on the same URL editing the same board.** That is the
-   whole of "done" for the stage.
+**Known and deliberate, in what is built:**
 
-**The access model, decided.** Link-only first, then a **per-board password** and
-**named guests** — not accounts. This is a product decision with a consequence
-worth stating: an account, when it arrives in Stage 3, is for OWNERSHIP and
-board lists. It is not what gets you into a board. Somebody a researcher wants
-in a workshop should not have to sign up to be there.
+- **A board is published into its room exactly once per browser.** After that
+  the room is the truth. A `Y.Doc` built fresh from IndexedDB carries no
+  deletion history, so re-publishing local state would resurrect everything
+  anyone else had deleted. Persisting the CRDT itself removes the asymmetry and
+  is the first thing Stage 3 should do.
+- **No presence cursors yet.** The channel is there and carries a guest name
+  and colour; drawing other people's pointers is the next visible step.
+- **Remote objects are not schema-validated** as they arrive, and a read-only
+  participant would stop receiving changes rather than watching. Both were
+  deferred deliberately and both belong with authorization in Stage 3.
+- **Link-only, still.** The per-board password and the guest model are recorded
+  above and not built.
 
-Three things follow, and each is a constraint rather than a preference:
-
-- **A guest is a label, never an authorization.** Presence needs an identity
-  anyway — a cursor has to be somebody's — so a guest id, display name and
-  colour live in awareness and are never persisted. Nothing may ever decide
-  access from them, because a client picks its own.
-- **A password gates a room; it does not encrypt it.** The board sits in the
-  Durable Object as plain data. The password stops a forwarded link, and that
-  is the whole of what it claims.
-- **The password never travels in a URL.** URLs are logged, by proxies and by
-  Cloudflare. It is exchanged for a short-lived token before the socket opens.
-
-**Who may set one, with no accounts to ask?** Trust on first use: anyone in a
-room with no password may set one; changing or clearing it needs the current
-one. That is the honest ceiling for Stage 2 and it is why Stage 3 exists.
-
-**A constraint that shapes the implementation: the Workers Free plan allows
-10 ms of CPU per invocation** (Paid allows five minutes). A password hash worth
-having costs far more than that, so the expensive derivation runs in the
-BROWSER, where CPU is free, and the Worker stores and compares a fast hash of
-the result. That keeps the stolen-database case slow to attack — an attacker
-still has to go back through the derivation — while the request stays inside
-10 ms. The same limit is worth watching for the initial state sync of a very
-large board, which is the other place this could bite.
-
-**What Stage 2 needs from you.** Everything else in this phase I can build and
-test alone; these four cannot be done from inside the repo.
-
-1. **A Cloudflare account** — free, no card. Signing up and picking a
-   `*.workers.dev` subdomain is the whole of it.
-2. **A deploy credential for CI.** Settled by what the Cloudflare connector
-   turned out to be: its Workers tools are read-only (`workers_list`,
-   `workers_get_worker`, `workers_get_worker_code`) and it exposes no Durable
-   Objects tools at all, so it can inspect a deployment but not make one.
-   Deployment is therefore a GitHub Actions workflow reading a scoped API token
-   (the dashboard's "Edit Cloudflare Workers" template) from the repository's
-   Actions secrets. **A token goes in the secret store, never in a message** —
-   anything pasted into a conversation lives in that transcript afterwards.
-3. **One Vercel environment variable**, once the Worker exists: the room URL,
-   `wss://<worker>.<subdomain>.workers.dev`. Vercel's settings are yours.
-4. **Three decisions**, none of which have a right answer I can pick for you:
-   - **Whether the deployed app gets collaboration at all**, or only behind a
-     flag. A flag means a sync loop with a bug in it cannot touch anybody's solo
-     board.
-   - **`OPENFRAME_BENCH`.** It is `0`, so builds are clean, but rule 11 says to
-     remove the variable entirely once ADR 0002 is settled — while it exists,
-     one typo ships 4.7MB of benchmark boards to users.
-
-Nothing here needs Supabase, Clerk or R2. Those are Stage 3 and later, and the
-running cost of Stage 2 is zero.
+**Stage 3, in order:** persist the CRDT locally, then presence cursors, then
+identity — Supabase, the per-board password, and server-side authorization
+through the existing `Capabilities` interface.
 
 **Known traps, from the decisions already taken:**
 
+- The sync handshake is symmetric. A client that only ANSWERS the room's step 1
+  sits on an empty board forever; each step 1 asks for one direction of the
+  diff. Written onto `BoardRoom.join`, because two tests failed exactly that way.
+- Yjs updates cannot be concatenated. A snapshot and the updates after it are
+  replayed one at a time — joining them into one buffer silently drops
+  everything after the first, which is a board losing every edit since its last
+  compaction, in production only.
 - The observer must ignore what it wrote ITSELF, never "accept what is tagged
-  remote" — a remote change can arrive with any origin at all. Inverting that
-  fails loudly; omitting it does not, which is why
-  `ignores its own writes coming back out of the document` exists.
-- `origin` is already on every command envelope and `skipUndo` already exists on
-  dispatch. They were built for this. Use them rather than inventing a second
-  mechanism.
-- Text is a list of spans shaped deliberately like a `Y.Text` delta
-  ([ADR 0012](../adr/0012-rich-text-as-spans.md)). The adapter maps one onto the
-  other; it does not invent a third representation.
-- A relation is an object, so it merges as an `add` like anything else
-  ([ADR 0011](../adr/0011-relations-as-objects.md)). There is no edge table to
-  reconcile.
-
-**Before the first line of Stage 2**, re-verify the Cloudflare free-tier numbers
-in the table above. They are the whole basis of the transport choice.
+  remote": a remote change can arrive with any origin at all.
+- A drag writes nothing until it commits, so a live drag is presence, not
+  history. It is also why one storage write is one user action rather than one
+  mouse move, which is what keeps the free tier's 100k writes/day comfortable.
+- Text is a list of spans shaped like a `Y.Text` delta
+  ([ADR 0012](../adr/0012-rich-text-as-spans.md)); a relation is an object and
+  merges as an `add` ([ADR 0011](../adr/0011-relations-as-objects.md)).
 
 ---
 

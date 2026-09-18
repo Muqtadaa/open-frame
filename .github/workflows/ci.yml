@@ -42,6 +42,30 @@ jobs:
       - name: Build
         run: pnpm build
 
+  rooms:
+    name: Shared boards, against a real Durable Object
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - run: pnpm install --frozen-lockfile
+
+      - run: pnpm --filter @openframe/web exec playwright install --with-deps chromium
+
+      # Boots a real workerd with a real SQLite-backed Durable Object and drives
+      # two browsers at it. Separate from the `e2e` job because it needs a
+      # server, and `pnpm test:e2e` has to stay runnable from a clean checkout
+      # with no account anywhere.
+      - name: Two windows, one board
+        run: pnpm test:rooms
+
   e2e:
     name: End-to-end
     runs-on: ubuntu-latest

@@ -1,5 +1,7 @@
 import { createContext, useContext } from 'react'
 
+import type { BoardConnection } from '@openframe/collab'
+
 import type {
   BoardId,
   BoardRepository,
@@ -59,6 +61,14 @@ export interface OpenFrameRuntime {
 
 export interface OpenFrameContextValue {
   readonly runtime: OpenFrameRuntime
+  /**
+   * The room this board is in, or `null` for a board that is nobody else's.
+   *
+   * A type from `@openframe/collab`, which is a package rather than an adapter,
+   * so the layer rules are satisfied — and it is an interface with no Yjs in
+   * it, so the quarantine holds too.
+   */
+  readonly collaboration?: BoardConnection | null
   readonly views: ObjectViewRegistry
 }
 

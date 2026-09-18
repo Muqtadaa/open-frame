@@ -63,6 +63,9 @@ importers:
 
   apps/web:
     dependencies:
+      '@openframe/collab':
+        specifier: workspace:*
+        version: link:../../packages/collab
       '@openframe/core':
         specifier: workspace:*
         version: link:../../packages/core

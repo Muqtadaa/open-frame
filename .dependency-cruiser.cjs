@@ -196,6 +196,10 @@ module.exports = {
         pathNot: [
           '\\.d\\.ts$',
           '(^|/)(eslint|vite|vitest|playwright)\\.config\\.(js|ts)$',
+          // Listed rather than folded into the pattern above: a regex with a
+          // nested optional group there is flagged as catastrophic, and
+          // dependency-cruiser refuses to run at all rather than risk it.
+          '(^|/)playwright\\.rooms\\.config\\.ts$',
           '^apps/web/src/(main\\.tsx|test-setup\\.ts)$',
           '^packages/core/src/testing\\.ts$',
           '^tools/',
@@ -209,7 +213,7 @@ module.exports = {
     doNotFollow: { path: 'node_modules' },
     tsConfig: { fileName: 'tsconfig.base.json' },
     tsPreCompilationDeps: true,
-    exclude: { path: '(\\.test\\.tsx?$|^apps/web/e2e/|/dist/|/coverage/)' },
+    exclude: { path: '(\\.test\\.tsx?$|^apps/web/e2e(-rooms)?/|/dist/|/coverage/)' },
     enhancedResolveOptions: {
       exportsFields: ['exports'],
       conditionNames: ['import', 'require', 'types'],

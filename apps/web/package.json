@@ -4,7 +4,7 @@
   "private": true,
   "license": "AGPL-3.0-only",
   "type": "module",
-  "description": "OpenFrame web client — canvas renderer, interaction layer, UI shell and adapters.",
+  "description": "OpenFrame web client \u2014 canvas renderer, interaction layer, UI shell and adapters.",
   "scripts": {
     "dev": "vite",
     "typecheck": "tsc -p tsconfig.json --noEmit",
@@ -14,9 +14,11 @@
     "build": "vite build",
     "preview": "vite preview",
     "test:bench": "playwright test --project=bench",
-    "build:bench": "OPENFRAME_BENCH=1 vite build"
+    "build:bench": "OPENFRAME_BENCH=1 vite build",
+    "test:rooms": "playwright test --config=playwright.rooms.config.ts"
   },
   "dependencies": {
+    "@openframe/collab": "workspace:*",
     "@openframe/core": "workspace:*",
     "react": "^19.3.0",
     "react-dom": "^19.3.0",
