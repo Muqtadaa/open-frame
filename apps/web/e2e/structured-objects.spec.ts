@@ -148,6 +148,33 @@ test.describe('structured objects', () => {
     await expect(page.locator(CANVAS)).toContainText('conversion review')
   })
 
+  /**
+   * Clicking the canvas must SAVE what was typed into a field, not discard it.
+   *
+   * Every text control here writes on blur, and the canvas prevents the default
+   * focus change so that an editor opened during the same gesture is not
+   * immediately closed. That left a field typed into the record panel holding
+   * focus, never written, and thrown away the moment the selection changed —
+   * found by a search that could not find a tag the card was visibly not
+   * showing.
+   */
+  test('a field typed into the panel is saved by clicking the canvas', async ({ page }) => {
+    await placeNote(page, 'Could not find the price')
+    await promote(page, NOTE)
+    await page.locator(CANVAS).click({ position: NOTE })
+
+    await page.getByTestId('field-source').fill('September usability study')
+    // Straight to the canvas, with no other field to blur into.
+    await page.locator(CANVAS).click({ position: EMPTY })
+
+    await expect(page.locator(CANVAS)).toContainText('September usability study')
+
+    // And it is in the DOCUMENT, not just on screen.
+    await page.waitForTimeout(800) // autosave is debounced
+    await page.reload()
+    await expect(page.locator(CANVAS)).toContainText('September usability study')
+  })
+
   test('an empty evidence card shows no record line at all', async ({ page }) => {
     await placeNote(page, 'Nothing filled in')
     await promote(page, NOTE)

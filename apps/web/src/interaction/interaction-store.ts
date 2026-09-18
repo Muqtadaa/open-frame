@@ -177,6 +177,14 @@ interface InteractionState {
   readonly clipboard: readonly AnyOpenFrameObject[]
   /** Screen coordinates of the open context menu, or null. */
   readonly contextMenu: Point | null
+  /**
+   * Whether the search panel is open.
+   *
+   * Interaction state, not document state: what someone is looking for is not
+   * part of the board, and a search open in one tab has nothing to say to
+   * another person's.
+   */
+  readonly searchOpen: boolean
 
   setTool(tool: Tool): void
   /** Selects the shape tool, advancing the variant when it is already active. */
@@ -197,6 +205,7 @@ interface InteractionState {
   setClipboard(objects: readonly AnyOpenFrameObject[]): void
   openContextMenu(at: Point): void
   closeContextMenu(): void
+  setSearchOpen(open: boolean): void
   beginTranslate(ids: readonly ObjectId[]): void
   updateTranslate(dx: number, dy: number): void
   beginMarquee(origin: Point): void
@@ -235,6 +244,7 @@ export const useInteractionStore = create<InteractionState>((set) => ({
   canvasSize: { width: 0, height: 0 },
   clipboard: [],
   contextMenu: null,
+  searchOpen: false,
 
   setTool: (tool) => set({ tool, editingId: null }),
 
@@ -290,6 +300,7 @@ export const useInteractionStore = create<InteractionState>((set) => ({
   setClipboard: (clipboard) => set({ clipboard: [...clipboard] }),
   openContextMenu: (contextMenu) => set({ contextMenu }),
   closeContextMenu: () => set({ contextMenu: null }),
+  setSearchOpen: (searchOpen) => set({ searchOpen }),
 
   setCanvasSize: (width, height) =>
     set((state) =>

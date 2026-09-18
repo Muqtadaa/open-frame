@@ -132,5 +132,5 @@ function Group({
  * label — which is the drift rule 21 exists to stop.
  */
 function summarise(object: AnyOpenFrameObject, registry: ObjectTypeRegistry): string {
-  return registry.get(object.type)?.describe(object).summary ?? object.type
+  return registry.describeObject(object).summary
 }

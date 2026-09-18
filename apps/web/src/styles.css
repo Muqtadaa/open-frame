@@ -1809,3 +1809,101 @@ textarea.of-input {
   white-space: pre-wrap;
   outline: 2px solid var(--of-accent);
 }
+
+/*
+ * Find on board.
+ *
+ * Top centre, over the canvas: it is summoned, answers, and leaves. Page
+ * apparatus like every other panel — the page's own stock, a hairline and a
+ * contact shadow — never a floating capsule.
+ */
+.of-search {
+  position: absolute;
+  top: 16px;
+  left: 50%;
+  z-index: 8;
+  display: flex;
+  flex-direction: column;
+  width: min(440px, calc(100vw - 32px));
+  overflow: hidden;
+  background: var(--of-panel);
+  border: 1px solid var(--of-panel-border);
+  border-radius: var(--of-radius);
+  box-shadow: var(--of-shadow);
+  transform: translateX(-50%);
+}
+
+.of-search__input {
+  width: 100%;
+  padding: 10px 12px;
+  font-family: var(--of-font);
+  font-size: 14px;
+  color: var(--of-ink);
+  background: transparent;
+  border: none;
+  outline: none;
+}
+
+.of-search__input::placeholder {
+  /* The placeholder is the grammar, so it is content and holds the 4.5:1 floor. */
+  color: var(--of-ink-muted);
+}
+
+.of-search__count {
+  padding: 0 12px 7px;
+  font-family: var(--of-mono);
+  /* The eleven pixel floor: a readout, like the zoom percentage. */
+  font-size: 11px;
+  color: var(--of-ink-muted);
+  letter-spacing: 0.02em;
+}
+
+.of-search__results {
+  max-height: min(50vh, 420px);
+  padding: 0;
+  margin: 0;
+  overflow-y: auto;
+  list-style: none;
+}
+
+.of-search__results:not(:empty) {
+  border-top: 1px solid var(--of-panel-border);
+}
+
+.of-search__result {
+  display: flex;
+  gap: 10px;
+  align-items: baseline;
+  width: 100%;
+  /* The AA 2.5.8 target minimum, like every other control in the system. */
+  min-height: 32px;
+  padding: 6px 12px;
+  font-family: var(--of-font);
+  font-size: 13px;
+  color: var(--of-ink);
+  text-align: left;
+  background: transparent;
+  border: none;
+  cursor: pointer;
+}
+
+.of-search__result--on,
+.of-search__result:hover {
+  background: var(--of-hover);
+}
+
+/* Mono marks the record — here, which KIND of thing was found. */
+.of-search__type {
+  flex: none;
+  min-width: 56px;
+  font-family: var(--of-mono);
+  font-size: 11px;
+  color: var(--of-ink-muted);
+  letter-spacing: 0.02em;
+}
+
+.of-search__summary {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}

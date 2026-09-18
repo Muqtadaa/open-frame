@@ -135,6 +135,9 @@ export function useKeyboardShortcuts(setSpaceHeld: (held: boolean) => void): voi
         case 'zoom-reset':
           store.setViewport(zoomAtCentre(store.viewport, width, height, 1))
           return
+        case 'search':
+          store.setSearchOpen(true)
+          return
         case 'zoom-fit': {
           const next = fitToDocument(runtime.store.getDocument(), runtime.registry, width, height)
           if (next !== null) store.setViewport(next)

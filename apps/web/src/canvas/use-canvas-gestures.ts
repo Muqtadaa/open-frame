@@ -315,16 +315,20 @@ export function useCanvasGestures(containerRef: RefObject<HTMLElement | null>) {
       event.preventDefault()
 
       const store = useInteractionStore.getState()
-      if (store.editingId !== null) {
-        /*
-         * Blur rather than clearing `editingId` outright: the editor commits on
-         * blur, and unmounting it directly would silently discard whatever the
-         * user had just typed. Clicking away from a note must save it.
-         */
-        const active = window.document.activeElement
-        if (active instanceof HTMLElement) active.blur()
-        else store.setEditing(null)
-      }
+      /*
+       * Commit whatever was being typed, WHEREVER it lives.
+       *
+       * Every text control in this app writes on blur, and `preventDefault`
+       * above stops the browser moving focus — so unless the blur is done
+       * explicitly here, nothing commits. This used to be gated on
+       * `editingId`, which only covers the editor inside an object: a source or
+       * a tag typed into the record panel kept focus, was never written, and
+       * was discarded the moment the selection changed. Losing what someone
+       * typed is the one unacceptable failure.
+       */
+      const active = window.document.activeElement
+      if (active instanceof HTMLElement && isTextEntry(active)) active.blur()
+      else if (store.editingId !== null) store.setEditing(null)
 
       const grabbed = handleUnderPointer(event.target)
 

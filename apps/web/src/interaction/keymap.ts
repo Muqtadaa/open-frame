@@ -43,6 +43,7 @@ export type KeyAction =
   | { readonly kind: 'zoom-reset' }
   | { readonly kind: 'zoom-fit' }
   | { readonly kind: 'zoom-selection' }
+  | { readonly kind: 'search' }
 
 const NUDGE = 1
 const NUDGE_COARSE = 10
@@ -103,6 +104,15 @@ export function resolveKeyAction(ctx: KeyContext): KeyAction | null {
       case 'v':
       case 'V':
         return { kind: 'paste' }
+      /*
+       * Claimed from the browser's own find-in-page, which would otherwise open
+       * over the canvas and search the DOM — finding only what happens to be
+       * culled IN, and nothing about an object's semantic fields. Same reason
+       * the zoom keys are claimed (rule 13).
+       */
+      case 'f':
+      case 'F':
+        return { kind: 'search' }
       case '0':
         return { kind: 'zoom-reset' }
       case '1':

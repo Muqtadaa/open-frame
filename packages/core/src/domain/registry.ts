@@ -494,6 +494,27 @@ export class ObjectTypeRegistry {
    * Precise containment. Falls back to bounds for types that do not define it.
    * Callers should reject on bounds first; this is the expensive, exact answer.
    */
+  /**
+   * A type's own account of an object: its search text, one-line summary and
+   * named fields.
+   *
+   * The single seam board search, AI context, MCP and export all read from. It
+   * lives here rather than at each call site so that the answer for a type this
+   * build does not understand is given once — a board written by a newer build
+   * still searches, and still lists, rather than throwing.
+   */
+  describeObject(object: AnyOpenFrameObject): ObjectDescription {
+    return (
+      this.#definitions.get(object.type)?.describe(object) ?? {
+        searchText: '',
+        // Its type is the only true thing available about an object whose
+        // definition is missing.
+        summary: object.type,
+        fields: {},
+      }
+    )
+  }
+
   hitTestObject(object: AnyOpenFrameObject, doc: BoardDocument, point: Point): boolean {
     const precise = this.#definitions.get(object.type)?.hitTest
     if (precise !== undefined) return precise(object, doc, point)

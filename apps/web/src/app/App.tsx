@@ -2,6 +2,7 @@ import { Canvas } from '../canvas/Canvas.js'
 import { ContextMenu } from '../ui/ContextMenu.js'
 import { Inspector } from '../ui/Inspector.js'
 import { NoticeBanner } from '../ui/NoticeBanner.js'
+import { SearchPanel } from '../ui/SearchPanel.js'
 import { StatusBar } from '../ui/StatusBar.js'
 import { Toast } from '../ui/Toast.js'
 import { Toolbar } from '../ui/Toolbar.js'
@@ -43,6 +44,7 @@ export function App() {
 
       <Inspector />
       <ContextMenu />
+      <SearchPanel />
     </div>
   )
 }
