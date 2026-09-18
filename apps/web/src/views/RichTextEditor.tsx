@@ -2,6 +2,8 @@ import {
   applyMark,
   applySize,
   markCovers,
+  plainTextOf,
+  SIZE_TOKENS,
   type Mark,
   type RichText,
   type SizeToken,
@@ -115,10 +117,23 @@ export function RichTextEditor({
   const reformat = (transform: (text: RichText, from: number, to: number) => RichText): void => {
     const element = ref.current
     if (element === null) return
-    const range = selectionOffsets(element)
-    if (range === null || range.to <= range.from) return
-
     const current = spansFromElement(element)
+
+    /*
+     * No selection means the WHOLE object.
+     *
+     * Someone who clicks into a note and presses "bigger" means the note, not
+     * the empty space at the caret — and silently doing nothing is how this
+     * read as broken. It applies to every formatting action, not just size, so
+     * there is one rule to learn rather than one per button.
+     */
+    const selected = selectionOffsets(element)
+    const range =
+      selected === null || selected.to <= selected.from
+        ? { from: 0, to: plainTextOf(current).length }
+        : selected
+    if (range.to <= range.from) return
+
     const next = transform(current, range.from, range.to)
     draft.current = next
     renderSpansInto(element, next)
@@ -151,8 +166,13 @@ export function RichTextEditor({
             applyMark(text, from, to, mark, !markCovers(text, from, to, mark)),
           )
         }
-        onResize={(size) => {
-          apply((text, from, to) => applySize(text, from, to, size))
+        onResize={(by) => {
+          apply((text, from, to) => {
+            const next = stepSize(sizeOfRange(text, from, to), by)
+            // `normal` is the object's own size, so it is stored as no size at
+            // all rather than as a token meaning "the default".
+            return applySize(text, from, to, next === 'normal' ? undefined : next)
+          })
         }}
       />
       <div
@@ -224,12 +244,31 @@ const MARK_BUTTONS: readonly { readonly mark: Mark; readonly label: string; read
     { mark: 'strike', label: 'Strikethrough', glyph: 'S' },
   ]
 
-const SIZES: readonly { readonly size: SizeToken; readonly label: string }[] = [
-  { size: 'small', label: 'Small' },
-  { size: 'normal', label: 'Normal' },
-  { size: 'large', label: 'Large' },
-  { size: 'huge', label: 'Huge' },
-]
+/**
+ * The size the selection currently reads as, for stepping up and down from.
+ *
+ * `normal` when the runs disagree: stepping from a mixed selection has to start
+ * somewhere, and the object's own default is the least surprising place.
+ */
+function sizeOfRange(text: RichText, from: number, to: number): SizeToken {
+  let seen = 0
+  let found: SizeToken | undefined
+  for (const span of text) {
+    const start = seen
+    seen += span.text.length
+    if (seen <= from || start >= to) continue
+    const size = span.size ?? 'normal'
+    if (found === undefined) found = size
+    else if (found !== size) return 'normal'
+  }
+  return found ?? 'normal'
+}
+
+function stepSize(current: SizeToken, by: 1 | -1): SizeToken {
+  const index = SIZE_TOKENS.indexOf(current)
+  const next = Math.min(SIZE_TOKENS.length - 1, Math.max(0, index + by))
+  return SIZE_TOKENS[next] ?? current
+}
 
 /**
  * The formatting controls, shown only while editing.
@@ -251,7 +290,7 @@ function FormatBar({
   readonly zoom: number
   readonly active: readonly Mark[]
   readonly onToggle: (mark: Mark) => void
-  readonly onResize: (size: SizeToken | undefined) => void
+  readonly onResize: (by: 1 | -1) => void
 }) {
   /*
    * `onMouseDown` is prevented on every control. A button that took focus would
@@ -291,23 +330,41 @@ function FormatBar({
 
       <span className="of-format-bar__rule" aria-hidden="true" />
 
-      <select
-        className="of-format-bar__size"
-        aria-label="Text size"
-        data-testid="format-size"
-        defaultValue=""
+      {/*
+        * Stepping buttons, not a dropdown.
+        *
+        * Every control here has to prevent `mousedown` or it takes focus, which
+        * blurs the editor and COMMITS — and preventing mousedown on a native
+        * `<select>` also stops the browser opening it, so the dropdown could
+        * not be used at all. It also matches what was asked for: increasing and
+        * decreasing the size, rather than naming one.
+        */}
+      <button
+        type="button"
+        className="of-format-bar__button of-format-bar__button--size"
+        aria-label="Smaller text"
+        title="Smaller"
+        data-testid="format-smaller"
         onMouseDown={keepFocus}
-        onChange={(event) => {
-          onResize(event.target.value === '' ? undefined : (event.target.value as SizeToken))
+        onClick={() => {
+          onResize(-1)
         }}
       >
-        <option value="">Size</option>
-        {SIZES.map(({ size, label }) => (
-          <option key={size} value={size}>
-            {label}
-          </option>
-        ))}
-      </select>
+        A−
+      </button>
+      <button
+        type="button"
+        className="of-format-bar__button of-format-bar__button--size of-format-bar__button--bigger"
+        aria-label="Bigger text"
+        title="Bigger"
+        data-testid="format-bigger"
+        onMouseDown={keepFocus}
+        onClick={() => {
+          onResize(1)
+        }}
+      >
+        A+
+      </button>
     </div>
   )
 }

@@ -1759,17 +1759,16 @@ textarea.of-input {
   background: var(--of-panel-border);
 }
 
-.of-format-bar__size {
-  height: 24px;
-  padding: 0 4px;
-  font-family: var(--of-mono);
-  /* The eleven pixel floor: functional text, not decoration. */
+/*
+ * The size steppers. The glyph carries the meaning — a smaller A for smaller
+ * text — so the pair reads without either label.
+ */
+.of-format-bar__button--size {
   font-size: 11px;
-  color: var(--of-ink);
-  background: var(--of-page);
-  border: 1px solid var(--of-panel-border);
-  border-radius: 4px;
-  cursor: pointer;
+}
+
+.of-format-bar__button--bigger {
+  font-size: 15px;
 }
 
 /*

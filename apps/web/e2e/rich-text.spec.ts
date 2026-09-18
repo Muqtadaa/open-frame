@@ -102,12 +102,53 @@ test.describe('formatting selected text', () => {
     await expect(page.locator(EDITOR)).toHaveText('Pricing is unclear')
   })
 
-  test('applies a size to the selection', async ({ page }) => {
+  /**
+   * Clicked with a real mouse, deliberately.
+   *
+   * The first version of this test used `selectOption`, which sets a native
+   * select's value programmatically and never opens it — so it passed against a
+   * dropdown a human could not open at all, because the `mousedown` guard that
+   * stops the editor committing also stops Chrome opening a native select. Any
+   * control on this bar has to be provably clickable, not merely settable.
+   */
+  test('a size step applies to the selection', async ({ page }) => {
     await noteSaying(page, 'Pricing is unclear')
     await selectFirst(page, 7)
-    await page.getByTestId('format-size').selectOption('large')
+    await page.getByTestId('format-bigger').click()
     await expect(page.locator(`${EDITOR} [data-size="large"]`)).toHaveText('Pricing')
   })
+
+  test('steps up and back down again', async ({ page }) => {
+    await noteSaying(page, 'Pricing is unclear')
+    await selectFirst(page, 7)
+    await page.getByTestId('format-bigger').click()
+    await page.getByTestId('format-bigger').click()
+    await expect(page.locator(`${EDITOR} [data-size="huge"]`)).toHaveText('Pricing')
+
+    await page.getByTestId('format-smaller').click()
+    await expect(page.locator(`${EDITOR} [data-size="large"]`)).toHaveText('Pricing')
+  })
+
+  test('stops at the ends rather than running off them', async ({ page }) => {
+    await noteSaying(page, 'Pricing is unclear')
+    await selectFirst(page, 7)
+    for (let i = 0; i < 5; i++) await page.getByTestId('format-smaller').click()
+    await expect(page.locator(`${EDITOR} [data-size="small"]`)).toHaveText('Pricing')
+    for (let i = 0; i < 6; i++) await page.getByTestId('format-bigger').click()
+    await expect(page.locator(`${EDITOR} [data-size="huge"]`)).toHaveText('Pricing')
+  })
+
+  /** `normal` is the object's own size, so it is stored as no size at all. */
+  test('returning to normal leaves no size on the run', async ({ page }) => {
+    await noteSaying(page, 'Pricing is unclear')
+    await selectFirst(page, 7)
+    await page.getByTestId('format-bigger').click()
+    await expect(page.locator(`${EDITOR} [data-size]`)).toHaveCount(1)
+    await page.getByTestId('format-smaller').click()
+    await expect(page.locator(`${EDITOR} [data-size]`)).toHaveCount(0)
+  })
+
+
 
   test('the keyboard shortcut does the same thing', async ({ page }) => {
     await noteSaying(page, 'Pricing is unclear')
@@ -178,5 +219,37 @@ test.describe('formatting selected text', () => {
 
     await expect(page.locator('.of-sticky strong')).toHaveCount(0)
     await expect(page.locator('.of-sticky')).toContainText('A plain note')
+  })
+
+  /*
+   * The three below are the behaviour that was reported missing: with nothing
+   * selected, formatting applies to the WHOLE object. Each fails against the
+   * previous version, which returned early on a collapsed caret and so did
+   * nothing at all — which is what "font size is not working" turned out to
+   * mean, once the dropdown was clickable.
+   */
+  test('a size step with no selection resizes the whole object', async ({ page }) => {
+    await noteSaying(page, 'Pricing is unclear')
+    // A click puts a caret in without selecting anything.
+    await page.locator(EDITOR).click()
+    await page.getByTestId('format-bigger').click()
+
+    const sized = page.locator(`${EDITOR} [data-size="large"]`)
+    await expect(sized).toHaveText('Pricing is unclear')
+  })
+
+  test('bold with no selection bolds the whole object', async ({ page }) => {
+    await noteSaying(page, 'Pricing is unclear')
+    await page.locator(EDITOR).click()
+    await page.getByTestId('format-bold').click()
+    await expect(page.locator(`${EDITOR} strong`)).toHaveText('Pricing is unclear')
+  })
+
+  test('and it survives the commit', async ({ page }) => {
+    await noteSaying(page, 'Pricing is unclear')
+    await page.locator(EDITOR).click()
+    await page.getByTestId('format-bigger').click()
+    await page.locator(CANVAS).click({ position: CLEAR })
+    await expect(page.locator('.of-sticky [data-size="large"]')).toHaveText('Pricing is unclear')
   })
 })
