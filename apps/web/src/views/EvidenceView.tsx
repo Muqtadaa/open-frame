@@ -1,7 +1,8 @@
-import type { ColorToken, EvidenceData } from '@openframe/core'
+import { isEmptyText, plainTextOf, type ColorToken, type EvidenceData } from '@openframe/core'
 
 import { defineObjectView, type ObjectEditorProps, type ObjectViewProps } from './registry.js'
-import { InlineTextEditor } from './shared-editor.js'
+import { RichTextEditor } from './RichTextEditor.js'
+import { RichTextView } from './RichTextView.js'
 import { SURFACE_VARS, fontFamily, textAlign } from '../scene/style-tokens.js'
 
 function background(color: ColorToken | undefined): string {
@@ -37,7 +38,11 @@ function EvidenceRenderer({ object }: ObjectViewProps<EvidenceData>) {
        * footer — which is the point of the type existing at all.
        */
       aria-label={
-        [text === '' ? 'Empty evidence' : `Evidence: ${text}`, trail, tags.join(', ')]
+        [
+          isEmptyText(text) ? 'Empty evidence' : `Evidence: ${plainTextOf(text)}`,
+          trail,
+          tags.join(', '),
+        ]
           .filter((part) => part !== '')
           .join('. ')
       }
@@ -49,7 +54,7 @@ function EvidenceRenderer({ object }: ObjectViewProps<EvidenceData>) {
           textAlign: textAlign(object.style.align),
         }}
       >
-        {text}
+        <RichTextView value={text} />
       </div>
 
       {(trail !== '' || tags.length > 0) && (
@@ -70,10 +75,11 @@ function EvidenceRenderer({ object }: ObjectViewProps<EvidenceData>) {
  * The other three fields are in the record panel, and `text` deliberately is
  * not — one string with two editors is how an edit gets lost.
  */
-function EvidenceEditor({ object, onCommit, onCancel }: ObjectEditorProps<EvidenceData>) {
+function EvidenceEditor({ object, zoom, onCommit, onCancel }: ObjectEditorProps<EvidenceData>) {
   return (
-    <InlineTextEditor
+    <RichTextEditor
       initialText={object.data.text}
+      zoom={zoom}
       className="of-slip of-evidence of-slip__editor"
       style={{
         background: background(object.style.color),

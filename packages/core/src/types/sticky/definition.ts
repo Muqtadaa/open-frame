@@ -1,4 +1,6 @@
+import { plainTextOf } from '../../domain/rich-text.js'
 import { defineObjectType } from '../../domain/registry.js'
+import { textToSpans } from '../shared/text-to-spans.js'
 import { STICKY_VERSION, StickyDataSchema, type StickyData } from './schema.js'
 
 export const STICKY_TYPE = 'sticky'
@@ -8,10 +10,11 @@ export const stickyType = defineObjectType<typeof STICKY_TYPE, StickyData>({
 
   schema: StickyDataSchema,
   currentVersion: STICKY_VERSION,
-  migrations: {},
+  // ADR 0012: `text` was a plain string until v2.
+  migrations: { 2: textToSpans },
 
   create: (init) => ({
-    data: { text: init?.text ?? '' },
+    data: { text: init?.text ?? [{ text: '' }] },
     frame: { width: 180, height: 180 },
   }),
 
@@ -41,9 +44,18 @@ export const stickyType = defineObjectType<typeof STICKY_TYPE, StickyData>({
    */
   promotions: ['evidence'],
 
-  describe: (object) => ({
-    searchText: object.data.text,
-    summary: object.data.text.trim() === '' ? 'Empty sticky note' : object.data.text.slice(0, 120),
-    fields: { text: object.data.text },
-  }),
+  /*
+   * Plain text is DERIVED here, never stored (ADR 0012). Keeping a flattened
+   * copy beside the spans would be two sources of truth about the same
+   * characters, and they would diverge the first time one path was updated and
+   * the other was not.
+   */
+  describe: (object) => {
+    const text = plainTextOf(object.data.text)
+    return {
+      searchText: text,
+      summary: text.trim() === '' ? 'Empty sticky note' : text.slice(0, 120),
+      fields: { text },
+    }
+  },
 })

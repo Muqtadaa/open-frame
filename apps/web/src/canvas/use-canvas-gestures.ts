@@ -55,12 +55,22 @@ type GestureMode =
   | 'endpoint'
   | 'none'
 
-/** Pointer events originating in a text control belong to that control. */
+/**
+ * Pointer events originating in a text control, or in the chrome that drives
+ * one, belong to that control.
+ *
+ * The format bar counts. It lives INSIDE the canvas, beside the editor it acts
+ * on, so without this a press on "bold" reads as a canvas gesture: the handler
+ * below blurs the active element, the editor commits and unmounts, and the mark
+ * is then applied to a selection that no longer exists. The symptom is a button
+ * that silently does nothing while the same action from the keyboard works.
+ */
 function isTextEntry(target: EventTarget | null): boolean {
   return (
     target instanceof HTMLTextAreaElement ||
     target instanceof HTMLInputElement ||
-    (target instanceof HTMLElement && target.isContentEditable)
+    (target instanceof HTMLElement &&
+      (target.isContentEditable || target.closest('.of-format-bar') !== null))
   )
 }
 

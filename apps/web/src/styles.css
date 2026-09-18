@@ -776,10 +776,18 @@ body {
   opacity: 0.72;
 }
 
+/*
+ * Every in-place editor inherits the object's own type and drops its border,
+ * carrying an accent outline instead. The rich editors are `contenteditable`
+ * divs rather than textareas — a textarea cannot show a bold word — so they
+ * also need the wrapping behaviour a textarea had for free.
+ */
 .of-sticky__editor,
 .of-slip__editor,
 .of-text__editor,
 .of-shape__editor {
+  overflow-wrap: anywhere;
+  white-space: pre-wrap;
   font: inherit;
   border: none;
   resize: none;
@@ -1594,4 +1602,121 @@ textarea.of-input {
 .of-insight__claim {
   font-size: 17px;
   line-height: 1.3;
+}
+
+/*
+ * Size tokens for a run of text inside an object.
+ *
+ * Relative to the object's own size rather than absolute, so a large run in a
+ * sticky and a large run in a text object both mean "bigger than the rest of
+ * this", which is what the user picked. Absolute pixels would make "large"
+ * smaller than a text object's normal.
+ */
+.of-size--small {
+  font-size: 0.8em;
+}
+
+.of-size--large {
+  font-size: 1.35em;
+}
+
+.of-size--huge {
+  font-size: 1.9em;
+}
+
+/*
+ * The format bar, shown only while text is being edited.
+ *
+ * Above the object rather than in the record panel: the panel is hidden during
+ * an edit, and formatting applies to a SELECTION, which only exists while the
+ * caret is in the text. Page apparatus, like every other piece of chrome — the
+ * page's own stock, a hairline and a contact shadow, never a floating capsule.
+ */
+.of-format-bar {
+  position: absolute;
+  bottom: 100%;
+  left: 0;
+  z-index: 7;
+  display: flex;
+  gap: 2px;
+  align-items: center;
+  padding: 3px;
+  margin-bottom: 6px;
+  background: var(--of-panel);
+  border: 1px solid var(--of-panel-border);
+  border-radius: var(--of-radius);
+  box-shadow: var(--of-shadow);
+}
+
+.of-format-bar__button {
+  display: grid;
+  place-items: center;
+  /* The AA 2.5.8 target minimum, like every other control in the system. */
+  min-width: 24px;
+  height: 24px;
+  padding: 0 4px;
+  font-family: var(--of-font);
+  font-size: 13px;
+  color: var(--of-ink);
+  background: transparent;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+}
+
+.of-format-bar__button:hover {
+  background: var(--of-hover);
+}
+
+.of-format-bar__button[aria-pressed='true'] {
+  color: var(--of-accent);
+  background: var(--of-accent-soft);
+}
+
+/* The glyphs SHOW the formatting, so the button is legible without its label. */
+.of-format-bar__button--bold {
+  font-weight: 700;
+}
+
+.of-format-bar__button--italic {
+  font-style: italic;
+}
+
+.of-format-bar__button--underline {
+  text-decoration: underline;
+}
+
+.of-format-bar__button--strike {
+  text-decoration: line-through;
+}
+
+.of-format-bar__rule {
+  width: 1px;
+  height: 16px;
+  margin: 0 2px;
+  background: var(--of-panel-border);
+}
+
+.of-format-bar__size {
+  height: 24px;
+  padding: 0 4px;
+  font-family: var(--of-mono);
+  /* The eleven pixel floor: functional text, not decoration. */
+  font-size: 11px;
+  color: var(--of-ink);
+  background: var(--of-page);
+  border: 1px solid var(--of-panel-border);
+  border-radius: 4px;
+  cursor: pointer;
+}
+
+/*
+ * The editable surface. A contenteditable, not a textarea — a textarea cannot
+ * show a bold word. `pre-wrap` makes a newline character a line break, which is
+ * what lets the model store newlines as text rather than as markup.
+ */
+.of-rich-editor {
+  overflow-wrap: anywhere;
+  white-space: pre-wrap;
+  outline: 2px solid var(--of-accent);
 }

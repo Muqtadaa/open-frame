@@ -4,6 +4,7 @@ import { createEmptyDocument } from '../domain/document.js'
 import { asBoardId, asObjectId, asOrderKey } from '../domain/ids.js'
 import type { ObjectId } from '../domain/ids.js'
 import type { AnyOpenFrameObject } from '../domain/object.js'
+import { plainTextOf, richFromPlain, type RichText } from '../domain/rich-text.js'
 import { createDefaultRegistry } from '../types/index.js'
 import { deserializeBoard, deserializeBoardJson } from './deserialize.js'
 import { migrateDocumentPayload, MigrationError } from './migrations/index.js'
@@ -17,14 +18,15 @@ function sticky(id: string, text: string): AnyOpenFrameObject {
   return {
     id: asObjectId(id),
     type: 'sticky',
-    dataVersion: 1,
+    // v2: `text` became a list of spans (ADR 0012).
+    dataVersion: 2,
     frame: { x: 1, y: 2, width: 180, height: 180, rotation: 0 },
     parentId: null,
     order: asOrderKey('a0'),
     style: { color: 'yellow' },
     locked: false,
     hidden: false,
-    data: { text },
+    data: { text: richFromPlain(text) },
     meta: { createdAt: 5, createdBy: null, createdVia: 'user' },
   }
 }
@@ -48,13 +50,40 @@ describe('serialization round trip', () => {
     expect(result.repairs).toEqual([])
   })
 
-  it('loads a frozen v1 fixture', () => {
+  /**
+   * The fixture is frozen at v1 — a board written before `text` became a list
+   * of spans — and the migration is what makes it open at all.
+   *
+   * This is the test that keeps ADR 0012's migration honest: the fixture is
+   * never regenerated, so if the migration is ever broken or dropped, a real
+   * board written by the shipped build stops loading here rather than in
+   * somebody's browser.
+   */
+  it('loads a frozen v1 fixture and migrates its text', () => {
     const result = deserializeBoard(fixtureV1, registry)
     expect(result.status).toBe('ok')
     if (result.status !== 'ok') return
     expect(result.document.objects.size).toBe(1)
-    expect(result.document.objects.get(asObjectId('obj_0001'))?.data).toEqual({
-      text: 'Customers do not understand pricing',
+
+    const migrated = result.document.objects.get(asObjectId('obj_0001'))
+    expect(migrated?.dataVersion).toBe(2)
+    expect(migrated?.data).toEqual({
+      text: [{ text: 'Customers do not understand pricing' }],
+    })
+    // The characters are what matter; the wrapping is an implementation detail.
+    expect(plainTextOf((migrated?.data as { text: RichText }).text)).toBe(
+      'Customers do not understand pricing',
+    )
+  })
+
+  it('leaves a v1 board that has already been migrated alone', () => {
+    // Idempotence: loading, saving and loading again must not double-wrap.
+    const once = deserializeBoard(fixtureV1, registry)
+    if (once.status !== 'ok') throw new Error('fixture did not load')
+    const twice = deserializeBoard(serializeBoard(once.document, 1), registry)
+    if (twice.status !== 'ok') throw new Error('round trip did not load')
+    expect(twice.document.objects.get(asObjectId('obj_0001'))?.data).toEqual({
+      text: [{ text: 'Customers do not understand pricing' }],
     })
   })
 })

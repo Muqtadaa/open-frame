@@ -1,12 +1,13 @@
 import { beforeEach, describe, expect, it } from 'vitest'
 
 import type { ObjectId } from '../domain/ids.js'
+import { richFromPlain } from '../domain/rich-text.js'
 import { createTestHarness, type TestHarness } from '../testing.js'
 
 function sticky(h: TestHarness, text: string): ObjectId {
   const result = h.dispatcher.dispatch({
     kind: 'CreateObjects',
-    objects: [{ type: 'sticky', x: 0, y: 0, data: { text } }],
+    objects: [{ type: 'sticky', x: 0, y: 0, data: { text: richFromPlain(text) } }],
   })
   if (!result.ok) throw result.error
   const id = result.affected[0]

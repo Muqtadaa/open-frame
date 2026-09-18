@@ -1,4 +1,4 @@
-import { asBoardId, type BoardRepository } from '@openframe/core'
+import { asBoardId, richFromPlain, type BoardRepository } from '@openframe/core'
 import { beforeEach, describe, expect, it } from 'vitest'
 
 import { createRuntime, type OpenFrameRuntime } from '../app/composition-root.js'
@@ -33,7 +33,7 @@ describe.each([
     const runtime = await createRuntime({ boardId: BOARD, repository, autosaveDelayMs: 0 })
     runtime.dispatcher.dispatch({
       kind: 'CreateObjects',
-      objects: [{ type: 'sticky', x: 25, y: 35, data: { text: 'persisted' } }],
+      objects: [{ type: 'sticky', x: 25, y: 35, data: { text: richFromPlain('persisted') } }],
     })
     await repository.saveBoard(runtime.store.getDocument())
     runtime.dispose()
@@ -42,7 +42,7 @@ describe.each([
     expect(loaded.status).toBe('ok')
     if (loaded.status !== 'ok') return
     const object = [...loaded.document.objects.values()][0]
-    expect(object?.data).toEqual({ text: 'persisted' })
+    expect(object?.data).toEqual({ text: richFromPlain('persisted') })
     expect(object?.frame.x).toBe(25)
   })
 

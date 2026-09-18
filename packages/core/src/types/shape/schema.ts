@@ -1,5 +1,7 @@
 import { type ZodType, z } from 'zod'
 
+import { RichTextSchema, type RichText } from '../../domain/rich-text.js'
+
 /**
  * Geometric shapes, as ONE object type with a discriminant rather than four
  * registry entries.
@@ -33,12 +35,12 @@ export type ShapeKind = (typeof SHAPE_KINDS)[number]
 export interface ShapeData {
   readonly shape: ShapeKind
   /** Shapes carry an optional label; empty is the common case. */
-  readonly text: string
+  readonly text: RichText
 }
 
-export const SHAPE_VERSION = 1
+export const SHAPE_VERSION = 2
 
 export const ShapeDataSchema: ZodType<ShapeData> = z.object({
   shape: z.enum(SHAPE_KINDS),
-  text: z.string(),
+  text: RichTextSchema,
 })

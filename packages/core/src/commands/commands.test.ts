@@ -4,6 +4,7 @@ import { childrenOf } from '../domain/document.js'
 import { asObjectId, type ObjectId } from '../domain/ids.js'
 import { applyPatches } from '../domain/patch.js'
 import { allowAllCapabilities, readOnlyCapabilities } from '../ports/capabilities.js'
+import { richFromPlain } from '../domain/rich-text.js'
 import { createTestHarness, type TestHarness } from '../testing.js'
 import { CommandDispatcher } from './dispatcher.js'
 import { createDocumentStore } from '../store/document-store.js'
@@ -21,7 +22,7 @@ function deepClone<T>(value: T): T {
 function createSticky(h: TestHarness, x = 0, y = 0, text = ''): ObjectId {
   const result = h.dispatcher.dispatch({
     kind: 'CreateObjects',
-    objects: [{ type: 'sticky', x, y, data: { text } }],
+    objects: [{ type: 'sticky', x, y, data: { text: richFromPlain(text) } }],
   })
   if (!result.ok) throw result.error
   const id = result.affected[0]
@@ -41,7 +42,9 @@ describe('command dispatch', () => {
       const object = h.store.getObject(id)
       expect(object?.type).toBe('sticky')
       expect(object?.frame).toEqual({ x: 10, y: 20, width: 180, height: 180, rotation: 0 })
-      expect(object?.data).toEqual({ text: '' })
+      // One empty span, never an empty list — the two would be two spellings
+      // of "no text" and every consumer would have to handle both (ADR 0012).
+      expect(object?.data).toEqual({ text: [{ text: '' }] })
     })
 
     it('records the origin that created it', () => {
@@ -160,8 +163,12 @@ describe('command dispatch', () => {
   describe('UpdateObjectData', () => {
     it('merges a partial payload', () => {
       const id = createSticky(h, 0, 0, 'before')
-      h.dispatcher.dispatch({ kind: 'UpdateObjectData', id, patch: { text: 'after' } })
-      expect(h.store.getObject(id)?.data).toEqual({ text: 'after' })
+      h.dispatcher.dispatch({
+        kind: 'UpdateObjectData',
+        id,
+        patch: { text: richFromPlain('after') },
+      })
+      expect(h.store.getObject(id)?.data).toEqual({ text: richFromPlain('after') })
     })
 
     it('rejects a payload the type schema refuses', () => {
@@ -169,12 +176,15 @@ describe('command dispatch', () => {
       const result = h.dispatcher.dispatch({
         kind: 'UpdateObjectData',
         id,
-        patch: { text: 42 },
+        // A plain string is no longer valid text, which is the point of the
+        // boundary: an AI or an importer sending the old shape is rejected
+        // rather than silently written.
+        patch: { text: 'a plain string' },
       })
       expect(result.ok).toBe(false)
       if (result.ok) return
       expect(result.error.code).toBe('invalid-data')
-      expect(h.store.getObject(id)?.data).toEqual({ text: '' })
+      expect(h.store.getObject(id)?.data).toEqual({ text: [{ text: '' }] })
     })
   })
 

@@ -9,6 +9,14 @@ import { expect, test, type Page } from '@playwright/test'
  */
 
 const CANVAS = '[data-testid="canvas"]'
+/*
+ * Whatever is currently editable in place.
+ *
+ * Body text is a `contenteditable` since rich text (ADR 0012); a frame's title
+ * and an image's alt text are labels and stay plain textareas. A spec should
+ * not have to know which it is about to type into.
+ */
+const EDITOR = 'textarea, [contenteditable="true"]'
 
 async function freshBoard(page: Page): Promise<void> {
   await page.goto('/')
@@ -72,7 +80,7 @@ test.describe('keyboard tool selection', () => {
   test('shortcuts do not fire while typing in an object', async ({ page }) => {
     await page.keyboard.press('s')
     await page.locator(CANVAS).click({ position: { x: 400, y: 300 } })
-    await page.locator('textarea').fill('vsth')
+    await page.locator(EDITOR).fill('vsth')
     await expect(page.getByTestId('tool-select')).toHaveAttribute('aria-pressed', 'true')
     await page.locator(CANVAS).click({ position: { x: 800, y: 500 } })
     await expect(page.locator('[data-object-type="sticky"]')).toContainText('vsth')
@@ -83,7 +91,7 @@ test.describe('creating each object type', () => {
   test('creates text', async ({ page }) => {
     await page.keyboard.press('t')
     await page.locator(CANVAS).click({ position: { x: 400, y: 300 } })
-    await page.locator('textarea').fill('A heading')
+    await page.locator(EDITOR).fill('A heading')
     await page.locator(CANVAS).click({ position: { x: 800, y: 500 } })
     await expect(page.locator('[data-object-type="text"]')).toContainText('A heading')
   })
@@ -91,7 +99,7 @@ test.describe('creating each object type', () => {
   test('creates a shape with a label', async ({ page }) => {
     await page.keyboard.press('u')
     await page.locator(CANVAS).click({ position: { x: 400, y: 300 } })
-    await page.locator('textarea').fill('Process')
+    await page.locator(EDITOR).fill('Process')
     await page.locator(CANVAS).click({ position: { x: 800, y: 500 } })
     await expect(page.locator('[data-object-type="shape"]')).toContainText('Process')
     await expect(page.locator('.of-shape__svg')).toBeVisible()

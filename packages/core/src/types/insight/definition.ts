@@ -1,4 +1,6 @@
+import { plainTextOf } from '../../domain/rich-text.js'
 import { defineObjectType } from '../../domain/registry.js'
+import { textToSpans } from '../shared/text-to-spans.js'
 import {
   CONFIDENCE_LEVELS,
   INSIGHT_VERSION,
@@ -13,11 +15,12 @@ export const insightType = defineObjectType<typeof INSIGHT_TYPE, InsightData>({
 
   schema: InsightDataSchema,
   currentVersion: INSIGHT_VERSION,
-  migrations: {},
+  // ADR 0012: `text` was a plain string until v2.
+  migrations: { 2: textToSpans },
 
   create: (init) => ({
     data: {
-      text: init?.text ?? '',
+      text: init?.text ?? [{ text: '' }],
       confidence: init?.confidence ?? 'unstated',
     },
     // Wider than an evidence card and no taller. An insight is one sentence
@@ -46,7 +49,8 @@ export const insightType = defineObjectType<typeof INSIGHT_TYPE, InsightData>({
   ],
 
   describe: (object) => {
-    const { text, confidence } = object.data
+    const { confidence } = object.data
+    const text = plainTextOf(object.data.text)
     return {
       searchText: text,
       summary: text.trim() === '' ? 'Empty insight' : text.slice(0, 120),

@@ -1,5 +1,7 @@
 import { type ZodType, z } from 'zod'
 
+import { RichTextSchema, type RichText } from '../../domain/rich-text.js'
+
 /**
  * A claim the board makes, standing on evidence.
  *
@@ -11,7 +13,7 @@ import { type ZodType, z } from 'zod'
  * added one at the same time.
  */
 export interface InsightData {
-  readonly text: string
+  readonly text: RichText
   /**
    * How well supported the claim is, in the author's judgement.
    *
@@ -27,11 +29,11 @@ export interface InsightData {
 export const CONFIDENCE_LEVELS = ['unstated', 'low', 'medium', 'high'] as const
 export type Confidence = (typeof CONFIDENCE_LEVELS)[number]
 
-export const INSIGHT_VERSION = 1
+export const INSIGHT_VERSION = 2
 
 export const InsightDataSchema: ZodType<InsightData> = z
   .object({
-    text: z.string(),
+    text: RichTextSchema,
     confidence: z.enum(CONFIDENCE_LEVELS),
   })
   .strict()
