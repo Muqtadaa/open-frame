@@ -41,3 +41,17 @@ export function fontFamily(token: FontToken | undefined): string {
 export function textAlign(token: AlignToken | undefined): 'left' | 'center' | 'right' {
   return token === 'center' ? 'center' : token === 'end' ? 'right' : 'left'
 }
+
+/**
+ * The same token as a flex main-axis alignment.
+ *
+ * A shape's label is centred in its inset box by a flex container, and a flex
+ * container sizes its text to the content and then places it — so `text-align`
+ * on the inside had nothing to align within, and every label stayed centred
+ * whatever the user picked. Any container that CENTRES its text has to honour
+ * the token twice: once for where the text block sits, once for how its lines
+ * sit within it.
+ */
+export function justifyAlign(token: AlignToken | undefined): 'flex-start' | 'center' | 'flex-end' {
+  return token === 'center' ? 'center' : token === 'end' ? 'flex-end' : 'flex-start'
+}

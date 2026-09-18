@@ -76,12 +76,21 @@ function ObjectViewInner({ id, views }: Props) {
    * the origin lets the view draw where it actually belongs.
    */
   const selfPositioned = object.type === 'connector'
+  /*
+   * A selected object is lifted above its unselected siblings so the selection
+   * reads clearly — but a CONTAINER lifted above the board is lifted above its
+   * own contents, and a frame with a solid fill then paints over everything
+   * inside it the moment it is clicked. Asked of the registry rather than
+   * compared against 'frame', so any later container type is right for free.
+   */
+  const holdsChildren =
+    runtime.registry.get(object.type)?.capabilities.canHaveChildren === true
   const x = frame.x + (isDragging ? dragDx : 0)
   const y = frame.y + (isDragging ? dragDy : 0)
 
   return (
     <div
-      className={`of-object${selected ? ' of-object--selected' : ''}${
+      className={`of-object${selected && !holdsChildren ? ' of-object--selected' : ''}${
         selfPositioned ? ' of-object--self-positioned' : ''
       }`}
       data-object-id={id}

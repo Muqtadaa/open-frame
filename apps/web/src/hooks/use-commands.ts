@@ -14,6 +14,7 @@ import { useMemo } from 'react'
 
 import { useOpenFrame } from '../runtime/context.js'
 import { useInteractionStore } from '../interaction/interaction-store.js'
+import { objectsInMarquee } from '../scene/hit-testing.js'
 import { snapPoint } from '../scene/snapping.js'
 import { panToReveal } from '../scene/zoom.js'
 
@@ -147,19 +148,50 @@ export function useCommands(): BoardCommands {
         // from its very first object and snapping only ever half-applies.
         const origin = { x: at.x - frame.width / 2, y: at.y - frame.height / 2 }
         const placed = useInteractionStore.getState().snapToGrid ? snapPoint(origin) : origin
-        const result = dispatcher.dispatch({
-          kind: 'CreateObjects',
-          objects: [
-            {
-              type,
+
+        /*
+         * A container adopts what it lands on.
+         *
+         * Dropping a frame over existing notes used to leave them where they
+         * were — outside it — so the frame painted over them and they simply
+         * vanished, and moving the frame left them behind. A frame drawn AROUND
+         * something means that something is in it; that is the only reading.
+         *
+         * Only top-level objects are taken. An object already inside another
+         * frame belongs to that frame, and a container that quietly stole
+         * another's contents would be worse than one that adopted nothing.
+         */
+        const id = runtime.ids.objectId()
+        const spec = {
+          type,
+          id,
+          x: placed.x,
+          y: placed.y,
+          ...(data === undefined ? {} : { data: { ...data } }),
+        }
+
+        const doc = runtime.store.getDocument()
+        const adopts = definition.capabilities.canHaveChildren
+          ? objectsInMarquee(doc, runtime.registry, {
               x: placed.x,
               y: placed.y,
-              ...(data === undefined ? {} : { data: { ...data } }),
-            },
-          ],
-        })
+              width: frame.width,
+              height: frame.height,
+            }).filter((other) => (doc.objects.get(other)?.parentId ?? null) === null)
+          : []
+
+        const result =
+          adopts.length === 0
+            ? dispatcher.dispatch({ kind: 'CreateObjects', objects: [spec] })
+            : // One transaction, so undoing the placement also undoes the
+              // adoption — otherwise undo leaves the notes parented to a frame
+              // that no longer exists.
+              dispatcher.transact(`Create ${type}`, [
+                { kind: 'CreateObjects', objects: [spec] },
+                { kind: 'ReparentObjects', ids: adopts, parentId: id },
+              ])
         report(result)
-        return result.ok ? (result.affected[0] ?? null) : null
+        return result.ok ? id : null
       },
 
       createConnector(from, to) {

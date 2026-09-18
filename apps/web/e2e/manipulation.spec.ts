@@ -419,3 +419,80 @@ test.describe('snap to grid', () => {
     expect(Math.round(after.height) % 10).toBe(0)
   })
 })
+
+/**
+ * Reported from the deployed build, and each one is a fix that a unit test
+ * structurally could not have caught: they are all about what the browser
+ * finally paints.
+ */
+test.describe('reported regressions', () => {
+  const AT = { x: 340, y: 280 }
+  const CLEAR = { x: 1120, y: 140 }
+
+  test.beforeEach(async ({ page }) => {
+    await freshBoard(page)
+  })
+
+  /**
+   * A shape's label sits in a flex box that centres it, and a flex container
+   * sizes text to its content before placing it — so `text-align` had nothing
+   * to align within and every label stayed centred whatever the panel said.
+   */
+  test('a shape label honours the alignment that was picked', async ({ page }) => {
+    await page.keyboard.press('u')
+    await page.locator(CANVAS).click({ position: AT })
+    await page.locator('textarea').fill('align me')
+    await page.locator(CANVAS).click({ position: CLEAR })
+    await page.keyboard.press('v')
+
+    await page.locator(CANVAS).click({ position: AT })
+    const text = page.locator('.of-shape__label-text')
+
+    await page.getByTestId('align-start').click()
+    const left = (await text.boundingBox())?.x ?? 0
+    await page.getByTestId('align-center').click()
+    const middle = (await text.boundingBox())?.x ?? 0
+    await page.getByTestId('align-end').click()
+    const right = (await text.boundingBox())?.x ?? 0
+
+    // Before the fix all three were identical, because the flex container
+    // centred the text whatever `text-align` said.
+    expect(left).toBeLessThan(middle)
+    expect(middle).toBeLessThan(right)
+  })
+
+  /**
+   * A selected object is lifted above its siblings so the selection reads
+   * clearly. Lifting a FRAME lifts it above its own contents, and a filled one
+   * then hid everything inside it for as long as it was selected.
+   */
+  test('selecting a frame does not hide what is inside it', async ({ page }) => {
+    await page.keyboard.press('s')
+    await page.locator(CANVAS).click({ position: AT })
+    await page.locator('textarea').fill('inside')
+    await page.locator(CANVAS).click({ position: CLEAR })
+    await page.keyboard.press('v')
+
+    await page.keyboard.press('f')
+    await page.locator(CANVAS).click({ position: AT })
+    await page.locator('textarea').fill('Findings')
+    await page.locator(CANVAS).click({ position: CLEAR })
+    await page.keyboard.press('v')
+
+    // The frame adopted the note it landed on, rather than covering it.
+    const note = page.locator('.of-sticky').first()
+    await expect(note).toBeVisible()
+
+    // Selecting the frame by its edge, away from the note.
+    await page.locator(CANVAS).click({ position: { x: AT.x - 150, y: AT.y } })
+    await expect(page.getByTestId('selection-overlay')).toBeVisible()
+    await expect(note).toBeVisible()
+    // Still painted above its container, not behind it.
+    const covered = await note.evaluate((el) => {
+      const r = el.getBoundingClientRect()
+      const top = document.elementFromPoint(r.x + r.width / 2, r.y + r.height / 2)
+      return top === null || !el.contains(top)
+    })
+    expect(covered).toBe(false)
+  })
+})

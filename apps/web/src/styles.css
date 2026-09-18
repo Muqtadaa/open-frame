@@ -626,9 +626,15 @@ body {
   transform-origin: 50% 50%;
 }
 
+/*
+ * A selected object sits above its unselected siblings, so a selection is
+ * never half-covered by whatever was painted after it.
+ *
+ * NOT applied to containers — see ObjectView. Lifting a frame above the board
+ * lifts it above its own contents, and a filled one then hides everything
+ * inside it for as long as it is selected.
+ */
 .of-object--selected {
-  /* The selection box and handles are drawn once by SelectionOverlay rather
-     than per object, so a multi-selection shows one frame, not N. */
   z-index: 1;
 }
 
@@ -648,6 +654,17 @@ body {
   background: var(--of-panel);
   border: 1px solid var(--of-accent);
   pointer-events: auto;
+}
+
+/*
+ * The grabbable area, sized in SelectionOverlay. Invisible, and deliberately
+ * much larger than the 9px square it surrounds: the drawn handle is a design
+ * decision and the target is an accessibility one (WCAG 2.5.8 puts the floor at
+ * 24px), and they are allowed to differ.
+ */
+.of-handle__target {
+  position: absolute;
+  background: transparent;
 }
 
 .of-handle--rotate {

@@ -37,8 +37,25 @@ function FrameRenderer({ object, zoom }: ObjectViewProps<FrameData>) {
 }
 
 function FrameEditor({ object, zoom, onCommit, onCancel }: ObjectEditorProps<FrameData>) {
+  const filled = (object.style.fill ?? 'solid') !== 'none'
   return (
-    <div className="of-frame" style={{ background: 'transparent' }}>
+    /*
+     * The frame is drawn while it is being named, exactly as it will look
+     * afterwards.
+     *
+     * A newly placed frame opens its title editor immediately, and this editor
+     * used to force a transparent background — so for as long as the user was
+     * typing a name, the frame was a hairline outline on a ruled page and read
+     * as nothing having been created at all. Naming is a label being written on
+     * something that already exists, not a condition of its existing.
+     */
+    <div
+      className="of-frame"
+      style={{
+        background: filled ? SURFACE_VARS[object.style.color ?? 'gray'] : 'transparent',
+        opacity: object.style.opacity ?? 1,
+      }}
+    >
       <InlineTextEditor
         initialText={object.data.name}
         className="of-frame__title of-frame__editor"

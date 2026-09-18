@@ -2,7 +2,7 @@ import { useEffect, useRef } from 'react'
 
 import { useInteractionStore } from '../interaction/interaction-store.js'
 import { useKeyboardShortcuts } from '../interaction/use-keyboard-shortcuts.js'
-import { GRID_SIZE } from '../scene/snapping.js'
+import { gridStyle } from '../scene/grid.js'
 import { AlignmentOverlay } from './AlignmentOverlay.js'
 import { ConnectorPreview } from './ConnectorPreview.js'
 import { EndpointOverlay } from './EndpointOverlay.js'
@@ -37,49 +37,8 @@ import { useCanvasSize } from './use-canvas-size.js'
  * Painted on the canvas element rather than the world layer: a background that
  * scaled with the transform would blur, and would repaint an enormous area when
  * zoomed out. Offsetting by the viewport modulo the cell gives the same result
- * at constant cost.
- *
- * The fine rule is 10 world units, so at 100% it lands every 10 screen pixels.
- * That density is correct — it is what quadrille IS — but only at the right
- * weight: drawn as strongly as the decade it reads as noise, and dropping it
- * instead leaves 100px cells that read as tiles rather than as a ruled page.
- * The answer was ink, not spacing, so every weight is faint.
- *
- * THREE weights, because `ZOOM_STEPS` reaches 0.05. With only two, both dropped
- * out below 12% and the board became a flat, unruled void — the neutral canvas
- * this design exists to refuse, appearing exactly when someone zooms out to
- * survey the whole record. The century rule takes over there, so the page is
- * ruled at every reachable zoom.
+ * at constant cost. How the levels themselves are chosen lives in `scene/grid.ts`.
  */
-const MIN_RULE_ZOOM = 0.7
-const MIN_DECADE_ZOOM = 0.12
-
-function gridStyle(viewport: { x: number; y: number; zoom: number }): React.CSSProperties {
-  const fine = GRID_SIZE * viewport.zoom
-  const offsetX = -viewport.x * viewport.zoom
-  const offsetY = -viewport.y * viewport.zoom
-
-  const layers: string[] = []
-  const sizes: string[] = []
-  const rule = (cell: number, token: string): void => {
-    layers.push(
-      `linear-gradient(to right, var(${token}) 1px, transparent 1px)`,
-      `linear-gradient(to bottom, var(${token}) 1px, transparent 1px)`,
-    )
-    sizes.push(`${String(cell)}px ${String(cell)}px`, `${String(cell)}px ${String(cell)}px`)
-  }
-
-  if (viewport.zoom >= MIN_RULE_ZOOM) rule(fine, '--of-rule')
-  if (viewport.zoom >= MIN_DECADE_ZOOM) rule(fine * 10, '--of-rule-decade')
-  else rule(fine * 100, '--of-rule-decade')
-
-  return {
-    backgroundImage: layers.join(', '),
-    backgroundSize: sizes.join(', '),
-    backgroundPosition: layers.map(() => `${String(offsetX)}px ${String(offsetY)}px`).join(', '),
-  }
-}
-
 export function Canvas() {
   const containerRef = useRef<HTMLDivElement>(null)
   const { width, height } = useCanvasSize(containerRef)

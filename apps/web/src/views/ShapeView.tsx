@@ -3,7 +3,13 @@ import type { ObjectBase, ShapeData } from '@openframe/core'
 import { defineObjectView, type ObjectEditorProps, type ObjectViewProps } from './registry.js'
 import { InlineTextEditor } from './shared-editor.js'
 import { ELLIPSE, labelInset, shapePath } from '../scene/shape-geometry.js'
-import { COLOR_VARS, SURFACE_VARS, fontFamily, textAlign } from '../scene/style-tokens.js'
+import {
+  COLOR_VARS,
+  SURFACE_VARS,
+  fontFamily,
+  justifyAlign,
+  textAlign,
+} from '../scene/style-tokens.js'
 
 function ShapeOutline({ object }: { object: ObjectBase<string, ShapeData> }) {
   const stroke = COLOR_VARS[object.style.color ?? 'gray']
@@ -65,10 +71,22 @@ function ShapeRenderer({ object }: ObjectViewProps<ShapeData>) {
             // runs straight out through any sloped edge.
             inset: labelInset(object.data.shape),
             fontFamily: fontFamily(object.style.font),
+            // Both, and for different jobs: `justifyContent` places the text
+            // block inside the flex box, `textAlign` places each line inside
+            // the block. Without the first, a shape label is permanently
+            // centred no matter what the panel says.
+            justifyContent: justifyAlign(object.style.align),
             textAlign: textAlign(object.style.align),
           }}
         >
-          {label}
+          {/*
+            * The text is its own element rather than a bare string. As an
+            * anonymous flex item it had no box anything could measure, so the
+            * alignment it is placed with was invisible to tests — which is part
+            * of why "shape labels are permanently centred" reached a deployed
+            * build. Layout is unchanged: one flex item either way.
+            */}
+          <span className="of-shape__label-text">{label}</span>
         </span>
       )}
     </div>
