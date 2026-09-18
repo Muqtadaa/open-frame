@@ -2,6 +2,7 @@
   "name": "openframe",
   "version": "0.0.0",
   "private": true,
+  "license": "AGPL-3.0-only",
   "type": "module",
   "description": "OpenFrame \u2014 a structured visual workspace on an infinite canvas.",
   "engines": {

@@ -1,6 +1,7 @@
 import { useBoardDocument } from '../hooks/use-document-object.js'
 import { useInteractionStore } from '../interaction/interaction-store.js'
 import { BENCH_TOOLS_ENABLED } from '../app/bench-flag.js'
+import { SOURCE_URL } from '../app/source-link.js'
 import { DevPanel } from './DevPanel.js'
 
 /**
@@ -18,6 +19,19 @@ export function StatusBar() {
       <span data-testid="object-count">{document.objects.size} objects</span>
       <span>{selection.size} selected</span>
       <span>{Math.round(zoom * 100)}%</span>
+      {/*
+       * The AGPL section 13 offer of source. A hosted, modified version has to
+       * make this available to the people using it — see app/source-link.ts.
+       */}
+      <a
+        className="of-status__source"
+        href={SOURCE_URL}
+        target="_blank"
+        rel="noreferrer"
+        data-testid="source-link"
+      >
+        Source
+      </a>
       {/*
        * Statically guarded, not runtime-guarded: `import.meta.env.DEV` is
        * replaced with `false` at build time, so the branch is dead code and the

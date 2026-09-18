@@ -2,6 +2,7 @@
   "name": "@openframe/web",
   "version": "0.0.0",
   "private": true,
+  "license": "AGPL-3.0-only",
   "type": "module",
   "description": "OpenFrame web client — canvas renderer, interaction layer, UI shell and adapters.",
   "scripts": {

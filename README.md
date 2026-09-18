@@ -84,4 +84,22 @@ docs/           Architecture, decision records, roadmap, appendices.
 
 ## Licence
 
-Not yet chosen.
+[GNU Affero General Public License v3.0](LICENSE) — see [`LICENSE`](LICENSE) for
+the full text.
+
+Copyright (C) 2026 Muqtadaa.
+
+The AGPL is the GPL plus one clause that matters for software like this:
+**section 13**. If you modify OpenFrame and let people use it over a network,
+you have to offer those users the source of your modified version. Running it
+privately, or using it unmodified, carries no such obligation.
+
+That is the point of choosing it. A canvas app's natural failure mode is someone
+hosting it as their own product while contributing nothing back; the AGPL does
+not prevent that, it just requires the improvements to be published too. As sole
+copyright holder I can also grant commercial licences on different terms, which
+a permissive licence would have given away for free.
+
+This deployment therefore links to its source from the status bar, which is how
+section 13's offer is made. **If you fork and host it, that link is yours to
+keep pointing at your own source.**
