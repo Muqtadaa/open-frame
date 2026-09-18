@@ -240,10 +240,26 @@ icon, and nothing else.
 
 That restraint is the point. The identity is loud on purpose and the workspace
 is quiet on purpose, and the boundary between them is where a brand stops being
-decoration. The splash is the one full-bleed brand moment the product has, and
-it is free: it lives in `index.html`, paints before the module graph loads, and
-carries its own first frame as a 146-byte inlined thumbnail — a loading screen
-that waits on the network to prove it is loading has the logic backwards.
+decoration.
+
+The splash is the one full-bleed brand moment the product has. It lives in
+`index.html` and paints before the module graph loads, carrying its own first
+frame as a 146-byte inlined thumbnail — a loading screen that waits on the
+network to prove it is loading has the logic backwards.
+
+It then **holds for two seconds**, and that part is not free. On a warm load the
+board is ready well inside it, so the hold IS the loading time. It was chosen
+knowingly: a moment nobody sees is not a moment, and the first build flashed the
+artwork past in under 300ms. Whichever finishes last wins, so a slow board is
+never delayed further. If the wait ever starts to grate, spend it once per
+session rather than shaving it back to a flicker — a shorter splash is worse
+than no splash.
+
+Two things follow from covering a live board for that long. `#root` is `inert`
+until the splash goes, because a sheet blocks the mouse but not the Tab key. And
+the end-to-end suite turns the hold off through `storageState`, since 154 specs
+each waiting behind it would add five minutes to a two-minute run; the splash
+still appears there and is still really removed.
 
 ## Colors
 

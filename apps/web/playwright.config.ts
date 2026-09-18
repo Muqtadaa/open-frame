@@ -26,6 +26,26 @@ export default defineConfig({
   use: {
     baseURL: 'http://127.0.0.1:5173',
     trace: 'on-first-retry',
+    /*
+     * The splash holds itself on screen for two seconds so the artwork is
+     * actually seen. That is right for a person opening their board and wrong
+     * for 154 specs, each of which would sit behind an opaque sheet for the
+     * whole of it — about five minutes added to a two-minute suite, to re-test
+     * one `setTimeout`.
+     *
+     * Seeded here rather than in the specs so none of them has to know: the
+     * splash still appears and is still really removed, only the WAIT is gone.
+     * `brand.spec.ts` clears this key to test the hold itself.
+     */
+    storageState: {
+      cookies: [],
+      origins: [
+        {
+          origin: 'http://127.0.0.1:5173',
+          localStorage: [{ name: 'openframe:splash-hold', value: 'off' }],
+        },
+      ],
+    },
   },
   projects: [
     {

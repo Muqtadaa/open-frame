@@ -36,6 +36,50 @@ test.describe('the boot splash', () => {
   })
 
   /**
+   * The artwork stays up long enough to be seen, even when the board is ready
+   * at once — which, on a warm load, it is.
+   *
+   * This spec clears the `splash-hold` key the Playwright config seeds for
+   * every other spec, so it is measuring the real production behaviour rather
+   * than the suite's own shortcut.
+   */
+  test('stays up long enough to be looked at', async ({ page }) => {
+    await page.addInitScript(() => {
+      localStorage.removeItem('openframe:splash-hold')
+    })
+
+    const opened = Date.now()
+    await page.goto('/')
+    await page.waitForSelector(STATUS_BAR, { timeout: 20_000 })
+
+    // The board is ready and the splash is STILL there — that is the point.
+    await expect(page.locator('#of-splash')).toBeVisible()
+
+    await expect(page.locator('#of-splash')).toHaveCount(0, { timeout: 8_000 })
+    const held = Date.now() - opened
+    /*
+     * 1,800 rather than 2,000: the hold is measured from navigation start
+     * inside the page, and `Date.now()` out here starts before the browser has
+     * even asked for the document. Asserting the exact constant would fail on
+     * the difference between the two clocks.
+     */
+    expect(held).toBeGreaterThan(1_800)
+  })
+
+  /** Focus cannot reach a board that is still behind the artwork. */
+  test('keeps the board out of the tab order while it is covered', async ({ page }) => {
+    await page.addInitScript(() => {
+      localStorage.removeItem('openframe:splash-hold')
+    })
+    await page.goto('/')
+    await page.waitForSelector(STATUS_BAR, { timeout: 20_000 })
+
+    await expect(page.locator('#root')).toHaveAttribute('inert', '')
+    await expect(page.locator('#of-splash')).toHaveCount(0, { timeout: 8_000 })
+    await expect(page.locator('#root')).not.toHaveAttribute('inert', /.*/)
+  })
+
+  /**
    * The application's status region is the toast, and exactly one thing may
    * hold that role. A splash that also claimed it put two live regions in
    * competition — caught when the SVG-rejection spec started resolving two

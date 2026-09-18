@@ -113,7 +113,13 @@
       />
       <p aria-live="polite">Opening your board</p>
     </div>
-    <div id="root"></div>
+    <!--
+      `inert` until the splash goes. The splash covers the board and swallows
+      the mouse, but focus is not blocked by a sheet on top of it — without
+      this, two seconds is long enough to Tab into a toolbar nobody can see.
+      `splash.ts` lifts it.
+    -->
+    <div id="root" inert></div>
     <script type="module" src="/src/main.tsx"></script>
   </body>
 </html>
