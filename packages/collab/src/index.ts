@@ -20,4 +20,24 @@ export {
   OBJECTS,
 } from './document-map.js'
 export { parentageCandidates, patchesFromEvent } from './remote-patches.js'
+export {
+  createAwareness,
+  encodeAllAwareness,
+  encodeAwareness,
+  encodeSyncStep1,
+  encodeSyncStep2,
+  encodeUpdate,
+  readMessage,
+  removeAwarenessClients,
+  MESSAGE_AWARENESS,
+  MESSAGE_SYNC,
+  type Awareness,
+  type Handled,
+} from './protocol.js'
+export {
+  BoardRoom,
+  documentFromSnapshot,
+  type BoardRoomOptions,
+  type RoomPeer,
+} from './room.js'
 export { CollabSession, type CollabSessionDeps } from './session.js'
