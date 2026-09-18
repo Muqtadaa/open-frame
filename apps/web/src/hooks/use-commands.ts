@@ -1,6 +1,7 @@
 import type {
   ColorToken,
   Command,
+  ObjectStyle,
   ConnectorEndpoint,
   EndpointTarget,
   ObjectFrame,
@@ -46,6 +47,12 @@ export interface BoardCommands {
   /** Moves one draggable end of an object. The TYPE decides what that means. */
   retargetEndpoint(id: ObjectId, endpointId: string, target: EndpointTarget): void
   setColor(ids: readonly ObjectId[], color: ColorToken): void
+  /**
+   * Sets any style properties at once. `setColor` is the one-property case kept
+   * for its call sites; this is what the inspector uses, because a type's
+   * honoured properties come from its registry entry, not from a fixed list.
+   */
+  setStyle(ids: readonly ObjectId[], style: ObjectStyle): void
   undo(): void
   redo(): void
 }
@@ -347,6 +354,11 @@ export function useCommands(): BoardCommands {
       setColor(ids, color) {
         if (ids.length === 0) return
         report(dispatcher.dispatch({ kind: 'UpdateStyle', ids: [...ids], style: { color } }))
+      },
+
+      setStyle(ids, style) {
+        if (ids.length === 0 || Object.keys(style).length === 0) return
+        report(dispatcher.dispatch({ kind: 'UpdateStyle', ids: [...ids], style }))
       },
 
       undo() {

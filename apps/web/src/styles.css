@@ -1,39 +1,72 @@
 /*
- * Phase 2 interface styling.
+ * OpenFrame — The Notebook.
  *
- * Still plain CSS with custom properties — there is not yet enough UI to know
- * what a design system for OpenFrame should contain, and building one before
- * that is the premature-design-system anti-pattern.
+ * The board is a laboratory record, not a drawing surface. The ground is
+ * engineering quadrille: cold stock, a cyan-grey rule, blue-black ink, and one
+ * correction red that appears only where something is being undone or removed.
  *
- * Two token families, deliberately separate:
+ * Deliberately NOT stationery. Cream, parchment, serif display, handwriting and
+ * paper texture are the twee rendition of a notebook and are banned here — the
+ * register is the engineering computation pad, not the diary.
+ *
+ * Two token families stay separate, as before:
  *   --of-c-*  content colours  (strokes, text)      the token's "ink"
  *   --of-s-*  content surfaces (fills, note bodies) the token's "paper"
  * Documents store token NAMES, never these values, so a theme can change
  * without touching a single saved board.
+ *
+ * Contrast is not asserted here, it is tested: `app/design-tokens.test.ts` parses
+ * this block and fails the build if a pair drops below its WCAG 2.2 AA floor.
  */
 :root {
   color-scheme: light;
 
-  --of-bg: #f4f5f7;
-  --of-grid: #dcdfe5;
-  --of-panel: #ffffff;
-  --of-panel-border: #e3e6eb;
-  --of-ink: #14171c;
-  --of-ink-muted: #6b7280;
-  --of-accent: #2f6df6;
-  --of-accent-soft: #e8efff;
-  --of-guide: #f0399c;
-  --of-danger: #c02a1b;
-  --of-shadow: 0 1px 2px rgb(16 24 40 / 6%), 0 8px 24px rgb(16 24 40 / 10%);
-  --of-radius: 12px;
+  /* Ground. The desk the page sits on, and the page itself. */
+  --of-bg: #eef2f6;
+  --of-page: #f7f9fb;
 
-  --of-c-yellow: #8a6a00;
-  --of-c-green: #16794a;
-  --of-c-blue: #1a5fb4;
-  --of-c-red: #b3261e;
-  --of-c-violet: #6941c6;
-  --of-c-orange: #a2551a;
-  --of-c-gray: #475467;
+  /*
+   * Quadrille. Two weights, because the grid is a real 10-unit rule and
+   * snapping lands on it — the heavier decade line is the one you aim at.
+   * Both are deliberately below the 3:1 UI-component floor: the rule is ground,
+   * not a control, and a rule you cannot ignore fights the content on it.
+   */
+  --of-rule: #e4ebf2;
+  --of-rule-decade: #c9d6e4;
+
+  --of-panel: #ffffff;
+  --of-panel-border: #c7d2de;
+  /* Boundaries you must SEE to operate a control. Held at 3:1 by test. */
+  --of-control-border: #758596;
+
+  --of-ink: #16202b;
+  --of-ink-muted: #4e6070;
+
+  --of-accent: #1450b5;
+  --of-accent-soft: #e4ecfa;
+  --of-guide: #b0197a;
+  /* Reserved for destructive and corrective meaning. Never decoration. */
+  --of-danger: #a3231b;
+
+  --of-shadow: 0 1px 2px rgb(22 32 43 / 8%), 0 8px 24px rgb(22 32 43 / 10%);
+  /* A slip laid ON the page, not a card floating above an app. */
+  --of-slip-shadow: 0 1px 1px rgb(22 32 43 / 10%), 0 2px 6px rgb(22 32 43 / 8%);
+  --of-radius: 10px;
+
+  --of-font: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  /*
+   * Mono is for records and measurement — counts, zoom, field values — never as
+   * a costume for "technical".
+   */
+  --of-mono: ui-monospace, SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace;
+
+  --of-c-yellow: #7a5c00;
+  --of-c-green: #146045;
+  --of-c-blue: #17529e;
+  --of-c-red: #9f2820;
+  --of-c-violet: #5b3ba8;
+  --of-c-orange: #8c4715;
+  --of-c-gray: #3f5163;
 
   --of-s-yellow: #ffe9a3;
   --of-s-green: #bff0d4;
@@ -41,7 +74,36 @@
   --of-s-red: #ffd5d0;
   --of-s-violet: #e3daff;
   --of-s-orange: #ffddb8;
-  --of-s-gray: #e6e9ee;
+  --of-s-gray: #dfe5ec;
+}
+
+/*
+ * Browser surfaces. Selection, caret, scrollbars and focus rings ship with
+ * defaults that belong to no design system; left alone they are the tell that a
+ * page was assembled rather than built.
+ */
+::selection {
+  background: var(--of-accent-soft);
+  color: var(--of-ink);
+}
+
+:root {
+  caret-color: var(--of-accent);
+  scrollbar-color: var(--of-control-border) transparent;
+  scrollbar-width: thin;
+}
+
+:focus-visible {
+  outline: 2px solid var(--of-accent);
+  outline-offset: 2px;
+  border-radius: 3px;
+}
+
+/* Numerals in any record read as columns, never as ransom text. */
+.of-status,
+.of-zoom__value,
+.of-inspector {
+  font-variant-numeric: tabular-nums;
 }
 
 * {
@@ -116,42 +178,36 @@ body {
   display: flex;
   flex-direction: column;
   gap: 2px;
-  padding: 6px;
+  padding: 5px;
   background: var(--of-panel);
   border: 1px solid var(--of-panel-border);
   border-radius: var(--of-radius);
   box-shadow: var(--of-shadow);
 }
 
-.of-rail__group {
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-}
-
 .of-rail__slot {
   position: relative;
 }
 
-.of-rail__divider {
+.of-rail__rule {
   height: 1px;
   margin: 6px 4px;
   background: var(--of-panel-border);
 }
 
 .of-tool {
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-  align-items: center;
-  justify-content: center;
-  width: 62px;
-  padding: 7px 2px 5px;
+  position: relative;
+  display: grid;
+  place-items: center;
+  /* 40px square: the AA 2.5.8 target-size minimum is 24, and a tool you reach
+     for constantly deserves more than the floor. */
+  width: 40px;
+  height: 40px;
   font: inherit;
   color: var(--of-ink-muted);
   background: transparent;
   border: none;
-  border-radius: 9px;
+  border-radius: 8px;
   cursor: pointer;
 }
 
@@ -160,25 +216,56 @@ body {
   height: 21px;
 }
 
-.of-tool__label {
-  font-size: 10px;
+/*
+ * The label, as a tooltip. Eleven standing captions were most of the old rail's
+ * height; the name still has to be reachable, so it appears on hover AND on
+ * keyboard focus — a tooltip only a mouse can summon is not a label.
+ */
+.of-tool__tip {
+  position: absolute;
+  left: calc(100% + 10px);
+  z-index: 5;
+  display: flex;
+  gap: 7px;
+  align-items: center;
+  padding: 5px 8px;
+  font-size: 12px;
   line-height: 1;
-  letter-spacing: 0.01em;
+  color: var(--of-page);
+  white-space: nowrap;
+  background: var(--of-ink);
+  border-radius: 6px;
+  opacity: 0;
+  transition: opacity 110ms ease-out;
+  pointer-events: none;
+}
+
+.of-tool__tip kbd {
+  font-family: var(--of-mono);
+  /* 11px is the legibility floor for functional text, shortcuts included. */
+  font-size: 11px;
+  color: var(--of-rule-decade);
+}
+
+.of-tool:hover .of-tool__tip,
+.of-tool:focus-visible .of-tool__tip {
+  opacity: 1;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .of-tool__tip {
+    transition: none;
+  }
 }
 
 .of-tool:hover:not(:disabled) {
   color: var(--of-ink);
-  background: #f1f3f6;
+  background: var(--of-bg);
 }
 
 .of-tool--active {
   color: var(--of-accent);
   background: var(--of-accent-soft);
-}
-
-.of-tool--danger:hover:not(:disabled) {
-  color: var(--of-danger);
-  background: #fdeeec;
 }
 
 .of-tool:disabled {
@@ -188,15 +275,25 @@ body {
 
 .of-rail__more {
   position: absolute;
-  right: 3px;
-  bottom: 3px;
-  padding: 0 2px;
-  font-size: 9px;
-  line-height: 1;
+  right: 0;
+  bottom: 0;
+  display: grid;
+  place-items: center;
+  width: 16px;
+  height: 16px;
   color: var(--of-ink-muted);
   background: transparent;
   border: none;
   cursor: pointer;
+}
+
+.of-rail__more svg {
+  width: 12px;
+  height: 12px;
+}
+
+.of-rail__more:hover {
+  color: var(--of-accent);
 }
 
 .of-flyout {
@@ -251,24 +348,23 @@ body {
   background: var(--of-accent-soft);
 }
 
-.of-rail__swatches {
-  display: grid;
-  grid-template-columns: repeat(4, 1fr);
-  gap: 5px;
-  padding: 2px 5px 4px;
-}
-
 .of-swatch {
-  width: 12px;
-  height: 12px;
+  /* 24px: the AA 2.5.8 target-size minimum exactly. These were 12 — half it. */
+  width: 24px;
+  height: 24px;
   padding: 0;
-  border: 1px solid rgb(0 0 0 / 12%);
+  border: 1px solid var(--of-control-border);
   border-radius: 50%;
   cursor: pointer;
 }
 
 .of-swatch:hover:not(:disabled) {
-  transform: scale(1.18);
+  border-color: var(--of-ink);
+}
+
+.of-swatch--on {
+  border-color: var(--of-ink);
+  box-shadow: inset 0 0 0 2px var(--of-panel);
 }
 
 .of-swatch:disabled {
@@ -283,15 +379,16 @@ body {
   gap: 2px;
   align-items: center;
   padding: 4px 6px;
+  font-family: var(--of-mono);
   background: var(--of-panel);
   border: 1px solid var(--of-panel-border);
-  border-radius: 10px;
+  border-radius: 8px;
   box-shadow: var(--of-shadow);
 }
 
 .of-zoom__sep {
   width: 1px;
-  height: 18px;
+  height: 14px;
   margin: 0 4px;
   background: var(--of-panel-border);
 }
@@ -324,9 +421,13 @@ body {
   cursor: default;
 }
 
+/*
+ * The wheel-mode VALUE, not a heading. Mono and small so it reads as a setting
+ * beside its icon; at body size next to a mouse it looked like a panel title.
+ */
 .of-zoom__mode {
   font-size: 11px;
-  text-transform: capitalize;
+  letter-spacing: 0.02em;
 }
 
 .of-zoom__slider {
@@ -396,9 +497,10 @@ body {
 
 .of-status {
   display: flex;
-  gap: 14px;
+  gap: 10px;
   align-items: center;
-  padding: 5px 10px;
+  padding: 4px 10px 4px 5px;
+  font-family: var(--of-mono);
   font-size: 11px;
   color: var(--of-ink-muted);
   background: var(--of-panel);
@@ -407,17 +509,59 @@ body {
   box-shadow: var(--of-shadow);
 }
 
+.of-status b {
+  font-weight: 600;
+  color: var(--of-ink);
+}
+
+.of-status__history {
+  display: flex;
+  gap: 2px;
+}
+
+.of-status__action {
+  display: grid;
+  place-items: center;
+  width: 26px;
+  height: 26px;
+  color: var(--of-ink-muted);
+  background: transparent;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+}
+
+.of-status__action svg {
+  width: 16px;
+  height: 16px;
+}
+
+.of-status__action:hover:not(:disabled) {
+  color: var(--of-ink);
+  background: var(--of-bg);
+}
+
+.of-status__action:disabled {
+  opacity: 0.3;
+  cursor: default;
+}
+
+/* A ruled divider, the way a ledger column is separated. */
+.of-status__rule {
+  width: 1px;
+  height: 14px;
+  background: var(--of-panel-border);
+}
+
 /* ---------- canvas ---------- */
 
 .of-canvas {
   position: absolute;
   inset: 0;
   overflow: hidden;
-  background: var(--of-bg);
-  background-image: radial-gradient(circle, var(--of-grid) 1px, transparent 1px);
-  background-size: 22px 22px;
-  touch-action: none; /* we handle all panning and zooming ourselves */
-  user-select: none;
+  background-color: var(--of-page);
+  touch-action: none;
+  overscroll-behavior: none;
 }
 
 .of-canvas--pan {
@@ -503,10 +647,10 @@ body {
   overflow: hidden;
   font-size: 15px;
   line-height: 1.35;
-  border-radius: 3px;
-  box-shadow:
-    0 1px 2px rgb(16 24 40 / 14%),
-    0 6px 14px rgb(16 24 40 / 8%);
+  border-radius: 2px;
+  /* A slip laid on the page. Shared token so every placed object sits at the
+     same height above the rule. */
+  box-shadow: var(--of-slip-shadow);
 }
 
 .of-sticky__text {
@@ -933,4 +1077,200 @@ body {
 /* A filled dot means this end is attached to an object rather than floating. */
 .of-endpoint--attached {
   background: var(--of-accent);
+}
+
+/* Inspector ---------------------------------------------------------------- */
+
+/*
+ * The record panel. Floats beside the selection rather than occupying a fixed
+ * rail, because the canvas is the product and a standing panel is a permanent
+ * tax on board space for something only relevant when something is selected.
+ */
+.of-inspector {
+  position: absolute;
+  z-index: 6;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 9px 10px 11px;
+  background: var(--of-panel);
+  border: 1px solid var(--of-panel-border);
+  border-radius: var(--of-radius);
+  box-shadow: var(--of-shadow);
+}
+
+.of-inspector__head {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  justify-content: space-between;
+  padding-bottom: 7px;
+  margin-bottom: 5px;
+  border-bottom: 1px solid var(--of-panel-border);
+}
+
+/* The subject of the record, named the way a specimen label names its subject. */
+.of-inspector__subject {
+  font-family: var(--of-mono);
+  font-size: 11px;
+  color: var(--of-ink);
+  text-transform: lowercase;
+  letter-spacing: 0.02em;
+}
+
+.of-inspector__remove {
+  display: grid;
+  place-items: center;
+  width: 26px;
+  height: 26px;
+  color: var(--of-ink-muted);
+  background: transparent;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+}
+
+.of-inspector__remove svg {
+  width: 16px;
+  height: 16px;
+}
+
+/* Correction red, used only where something is being removed. */
+.of-inspector__remove:hover {
+  color: var(--of-danger);
+  background: #fbeceb;
+}
+
+/* A record row: label column, value column. */
+.of-field {
+  display: grid;
+  grid-template-columns: 52px 1fr;
+  gap: 8px;
+  align-items: center;
+  min-height: 30px;
+}
+
+.of-field__label {
+  font-family: var(--of-mono);
+  font-size: 11px;
+  color: var(--of-ink-muted);
+  text-align: right;
+  letter-spacing: 0.02em;
+}
+
+.of-field__control {
+  display: flex;
+  align-items: center;
+}
+
+.of-swatches {
+  display: flex;
+  gap: 4px;
+}
+
+.of-choice {
+  display: flex;
+  gap: 2px;
+  padding: 2px;
+  background: var(--of-bg);
+  border-radius: 7px;
+}
+
+.of-choice__item {
+  display: grid;
+  place-items: center;
+  width: 28px;
+  height: 26px;
+  color: var(--of-ink-muted);
+  background: transparent;
+  border: none;
+  border-radius: 5px;
+  cursor: pointer;
+}
+
+.of-choice__item svg {
+  width: 17px;
+  height: 17px;
+}
+
+.of-choice__item:hover {
+  color: var(--of-ink);
+}
+
+.of-choice__item--on {
+  color: var(--of-accent);
+  background: var(--of-panel);
+  box-shadow: 0 1px 2px rgb(22 32 43 / 12%);
+}
+
+.of-face {
+  font-size: 13px;
+  line-height: 1;
+}
+
+.of-face--sans {
+  font-family: var(--of-font);
+}
+
+.of-face--serif {
+  font-family: ui-serif, Georgia, "Times New Roman", serif;
+}
+
+.of-face--mono {
+  font-family: var(--of-mono);
+}
+
+.of-inspector__slider {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  width: 100%;
+}
+
+.of-inspector__slider input[type='range'] {
+  flex: 1;
+  min-width: 0;
+  accent-color: var(--of-accent);
+}
+
+.of-inspector__reading {
+  min-width: 36px;
+  font-family: var(--of-mono);
+  font-size: 11px;
+  color: var(--of-ink-muted);
+  text-align: right;
+}
+
+/* Narrow viewports ---------------------------------------------------------- */
+
+/*
+ * The two bottom clusters are anchored to opposite corners, which collide and
+ * overflow once the window is narrower than they are together — at 390px they
+ * overlapped and both ran off the right edge.
+ *
+ * Touch interaction is out of scope for now, but a chrome layout that breaks is
+ * not the same thing as one that is merely not optimised. Below this width the
+ * record line drops its counts and the zoom cluster drops its slider: both are
+ * readouts and coarse controls that the canvas itself already provides, and the
+ * controls that remain are the ones with no other route.
+ */
+@media (width < 820px) {
+  .of-overlay--bottom-left {
+    left: 12px;
+  }
+
+  .of-status__counts {
+    display: none;
+  }
+
+  .of-zoom__slider {
+    display: none;
+  }
+}
+
+/* Below the rail's own footprint the record line moves above it entirely. */
+@media (width < 560px) {
+  .of-overlay--bottom-left {
+    bottom: 64px;
+  }
 }

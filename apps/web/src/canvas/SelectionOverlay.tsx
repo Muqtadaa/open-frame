@@ -75,10 +75,18 @@ export function SelectionOverlay() {
     single !== undefined &&
     !single.locked &&
     runtime.registry.get(single.type)?.capabilities.rotatable === true
+  /*
+   * SOME, not every.
+   *
+   * Requiring every member to be resizable meant one connector in the selection
+   * removed the handles entirely — select-all on a diagram offered no resize at
+   * all. The gesture transforms only the resizable members; a connector follows
+   * its endpoints without being touched.
+   */
   const resizable =
     objects.length > 0 &&
     objects.every((object) => !object.locked) &&
-    objects.every((object) => runtime.registry.get(object.type)?.capabilities.resizable === true)
+    objects.some((object) => runtime.registry.get(object.type)?.capabilities.resizable === true)
 
   const size = HANDLE_PX / zoom
   const half = size / 2

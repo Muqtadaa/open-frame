@@ -1,5 +1,6 @@
 import { Canvas } from '../canvas/Canvas.js'
 import { ContextMenu } from '../ui/ContextMenu.js'
+import { Inspector } from '../ui/Inspector.js'
 import { NoticeBanner } from '../ui/NoticeBanner.js'
 import { StatusBar } from '../ui/StatusBar.js'
 import { Toast } from '../ui/Toast.js'
@@ -40,6 +41,7 @@ export function App() {
         <StatusBar />
       </div>
 
+      <Inspector />
       <ContextMenu />
     </div>
   )

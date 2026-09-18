@@ -165,6 +165,12 @@ test('survives a reload', async ({ page }) => {
 test('is not selected by a click far from the line but inside its bounds', async ({ page }) => {
   await connectedPair(page)
 
+  // Drawing a connector leaves it selected, which opens the inspector over part
+  // of the canvas. Clear the selection first so this tests hit testing rather
+  // than which pixels a panel happens to cover.
+  await page.locator(CANVAS).click({ position: { x: 1120, y: 150 } })
+  await expect(page.getByTestId('selection-overlay')).toHaveCount(0)
+
   // Inside the bounding rectangle of the diagonal, nowhere near the line.
   await page.locator(CANVAS).click({ position: { x: B_AT.x - 40, y: A_AT.y + 20 } })
   await expect(page.getByTestId('selection-overlay')).toHaveCount(0)

@@ -322,9 +322,21 @@ export function useCanvasGestures(containerRef: RefObject<HTMLElement | null>) {
 
       if (grabbed !== null && grabbed !== 'endpoint') {
         const document = runtime.store.getDocument()
+        /*
+         * Only the objects a transform can actually act on.
+         *
+         * A connector is not resizable and has no meaningful frame — a
+         * vestigial 0x0 at the origin — so including one would stretch the
+         * gesture's bounds all the way back to world zero. It does not need to
+         * be transformed anyway: its geometry is derived from its endpoints, so
+         * it follows whatever it is attached to for free.
+         */
         const subjects = [...store.selection]
           .map((id) => document.objects.get(id))
           .filter((object): object is AnyOpenFrameObject => object !== undefined)
+          .filter(
+            (object) => runtime.registry.get(object.type)?.capabilities.resizable === true,
+          )
         const startBounds = framesBounds(subjects)
         if (startBounds !== null) {
           const worldStart = toWorld(event.clientX, event.clientY)

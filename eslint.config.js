@@ -19,6 +19,11 @@ export default tseslint.config(
       '**/playwright-report/**',
       '**/test-results/**',
       'tools/bench/fixtures/**',
+      // Vendored third-party tooling (the impeccable design skill). Not ours to
+      // lint, and its browser bundles are not in any tsconfig project.
+      '.claude/**',
+      '.impeccable/**',
+      '**/.impeccable/**',
     ],
   },
 

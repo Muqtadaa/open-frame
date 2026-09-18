@@ -163,6 +163,73 @@ export function ImageIcon({ className }: IconProps) {
   )
 }
 
+/**
+ * Fill, stroke and align icons show the VALUE rather than naming it: a control
+ * whose options read "none / tint / solid" makes you translate words into a
+ * result you can already picture.
+ */
+export function FillIcon({ className, variant }: IconProps & { variant: string }) {
+  return (
+    <svg {...base} className={className}>
+      <rect x="4" y="5" width="16" height="14" rx="2" />
+      {variant === 'tint' && <rect x="4" y="5" width="16" height="14" rx="2" fill="currentColor" opacity="0.25" stroke="none" />}
+      {variant === 'solid' && <rect x="4" y="5" width="16" height="14" rx="2" fill="currentColor" stroke="none" />}
+      {variant === 'none' && <path d="M5.5 18.5 18.5 5.5" />}
+    </svg>
+  )
+}
+
+export function StrokeIcon({ className, variant }: IconProps & { variant: string }) {
+  const weight = { none: 0, thin: 1, medium: 2.4, thick: 4.4 }[variant] ?? 2
+  return (
+    <svg {...base} className={className}>
+      {variant === 'none' ? (
+        <>
+          <path d="M4 12h16" strokeDasharray="2 3" opacity="0.5" />
+          <path d="M6 18 18 6" />
+        </>
+      ) : (
+        <path d="M4 12h16" strokeWidth={weight} />
+      )}
+    </svg>
+  )
+}
+
+export function AlignIcon({ className, variant }: IconProps & { variant: string }) {
+  // Short lines sit where the text would: ragged edge away from the alignment.
+  const rows =
+    variant === 'center'
+      ? ['M6 8h12', 'M8 12h8', 'M5 16h14']
+      : variant === 'end'
+        ? ['M6 8h12', 'M10 12h8', 'M4 16h14']
+        : ['M6 8h12', 'M6 12h8', 'M6 16h14']
+  return (
+    <svg {...base} className={className}>
+      {rows.map((d) => (
+        <path key={d} d={d} />
+      ))}
+    </svg>
+  )
+}
+
+/** Replaces a `\u25b8` text glyph: icons are drawn, at one stroke weight. */
+export function DisclosureIcon({ className }: IconProps) {
+  return (
+    <svg {...base} className={className}>
+      <path d="M10 7l5 5-5 5" />
+    </svg>
+  )
+}
+
+/** Replaces a `\u00d7` text glyph, for the same reason. */
+export function CloseIcon({ className }: IconProps) {
+  return (
+    <svg {...base} className={className}>
+      <path d="M7 7l10 10M17 7 7 17" />
+    </svg>
+  )
+}
+
 export function GridIcon({ className }: IconProps) {
   return (
     <svg {...base} className={className}>

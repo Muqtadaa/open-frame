@@ -22,7 +22,14 @@ export const stickyType = defineObjectType<typeof STICKY_TYPE, StickyData>({
     canHaveChildren: false,
     selectsAsUnit: false,
     connectable: true,
-    styleProps: ['color', 'fill', 'font', 'align', 'opacity'],
+    /*
+     * No `fill`. It was declared here and never implemented by the view, which
+     * went unnoticed while `color` was the only property anything could set —
+     * the inspector surfaced it immediately. Dropping it is the honest fix
+     * rather than inventing a behaviour: a slip is defined by having a body,
+     * and an unfilled sticky is just a text object, which already exists.
+     */
+    styleProps: ['color', 'font', 'align', 'opacity'],
   },
 
   describe: (object) => ({

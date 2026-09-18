@@ -112,7 +112,9 @@ test('deletes the selection and restores it with undo', async ({ page }) => {
   await createSticky(page, 300, 250, 'Temporary')
 
   await page.locator(STICKY).click()
-  await page.getByTestId('delete').click()
+  // Delete lives with the SELECTION now, in the inspector, rather than in the
+  // creation rail.
+  await page.getByTestId('inspector-delete').click()
   await expect(page.locator(STICKY)).toHaveCount(0)
 
   await page.getByTestId('undo').click()

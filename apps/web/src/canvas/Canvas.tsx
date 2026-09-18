@@ -27,24 +27,56 @@ import { useCanvasSize } from './use-canvas-size.js'
  * repositioning every element.
  */
 /**
- * Background dots, positioned so they sit on WORLD grid lines.
+ * The quadrille: the ruled ground the board is written on.
  *
- * Painted on the canvas element rather than the world layer — a background that
- * scaled with the transform would blur and would repaint an enormous area when
- * zoomed out. Offsetting by the viewport modulo the cell size gives the same
- * result at constant cost.
+ * Two weights, and the heavier one is not decoration. `GRID_SIZE` is 10 world
+ * units and snapping lands on it, so the decade line marks the rule you are
+ * actually aiming at — the same relationship a computation pad has between its
+ * fine grid and its heavier tenth.
  *
- * Below a threshold the dots are dropped entirely: at 20% zoom they would be
- * two pixels apart and read as noise.
+ * Painted on the canvas element rather than the world layer: a background that
+ * scaled with the transform would blur, and would repaint an enormous area when
+ * zoomed out. Offsetting by the viewport modulo the cell gives the same result
+ * at constant cost.
+ *
+ * The fine rule is 10 world units, so at 100% it lands every 10 screen pixels.
+ * That density is correct — it is what quadrille IS — but only at the right
+ * weight: drawn as strongly as the decade it reads as noise, and dropping it
+ * instead leaves 100px cells that read as tiles rather than as a ruled page.
+ * The answer was ink, not spacing, so both weights are faint and the fine rule
+ * stays until its lines would be closer than about nine pixels.
  */
-const MIN_GRID_ZOOM = 0.4
+const MIN_RULE_ZOOM = 0.9
+const MIN_DECADE_ZOOM = 0.12
 
 function gridStyle(viewport: { x: number; y: number; zoom: number }): React.CSSProperties {
-  const cell = GRID_SIZE * viewport.zoom
-  if (viewport.zoom < MIN_GRID_ZOOM) return { backgroundImage: 'none' }
+  const fine = GRID_SIZE * viewport.zoom
+  const decade = fine * 10
+  const offsetX = -viewport.x * viewport.zoom
+  const offsetY = -viewport.y * viewport.zoom
+
+  const layers: string[] = []
+  const sizes: string[] = []
+  if (viewport.zoom >= MIN_RULE_ZOOM) {
+    layers.push(
+      'linear-gradient(to right, var(--of-rule) 1px, transparent 1px)',
+      'linear-gradient(to bottom, var(--of-rule) 1px, transparent 1px)',
+    )
+    sizes.push(`${String(fine)}px ${String(fine)}px`, `${String(fine)}px ${String(fine)}px`)
+  }
+  if (viewport.zoom >= MIN_DECADE_ZOOM) {
+    layers.push(
+      'linear-gradient(to right, var(--of-rule-decade) 1px, transparent 1px)',
+      'linear-gradient(to bottom, var(--of-rule-decade) 1px, transparent 1px)',
+    )
+    sizes.push(`${String(decade)}px ${String(decade)}px`, `${String(decade)}px ${String(decade)}px`)
+  }
+  if (layers.length === 0) return { backgroundImage: 'none' }
+
   return {
-    backgroundSize: `${String(cell)}px ${String(cell)}px`,
-    backgroundPosition: `${String(-viewport.x * viewport.zoom)}px ${String(-viewport.y * viewport.zoom)}px`,
+    backgroundImage: layers.join(', '),
+    backgroundSize: sizes.join(', '),
+    backgroundPosition: layers.map(() => `${String(offsetX)}px ${String(offsetY)}px`).join(', '),
   }
 }
 
