@@ -74,7 +74,28 @@ module.exports = {
         'An import that cannot be resolved is either a typo or a package a workspace has not declared. ' +
         'Under pnpm the latter is how a boundary violation first shows up.',
       from: {},
-      to: { couldNotResolve: true },
+      to: {
+        couldNotResolve: true,
+        /*
+         * `cloudflare:workers` is supplied by the Workers runtime, the way
+         * `node:fs` is supplied by Node — there is no package to install and
+         * nothing on disk to resolve to. It is exempted here and then confined
+         * by `cloudflare-lives-only-in-rooms` below, so the exemption cannot
+         * quietly become a way for the runtime to leak somewhere else.
+         */
+        pathNot: '^cloudflare:',
+      },
+    },
+    {
+      name: 'cloudflare-lives-only-in-rooms',
+      severity: 'error',
+      comment:
+        'The Durable Object runtime exists in exactly one app. ADR 0013 is reversible — Hocuspocus is a ' +
+        'week away rather than a rewrite — only because everything that DECIDES anything lives in ' +
+        '@openframe/collab, which has never heard of Cloudflare. A `cloudflare:` import outside ' +
+        'apps/rooms is that guarantee being given up.',
+      from: { pathNot: '^apps/rooms' },
+      to: { path: '^cloudflare:' },
     },
     {
       name: 'core-does-not-depend-on-apps',

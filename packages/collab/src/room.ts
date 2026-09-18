@@ -41,7 +41,7 @@ export interface BoardRoomOptions {
    * persisting it would mean writing to storage on every mouse move to save
    * something meaningless the moment they close the tab.
    */
-  readonly onDocumentChanged?: () => void
+  readonly onDocumentChanged?: (update: Uint8Array) => void
 }
 
 export class BoardRoom {
@@ -56,9 +56,9 @@ export class BoardRoom {
    * drops is to remember what that socket told us about.
    */
   readonly #controlled = new Map<string, Set<number>>()
-  readonly #onDocumentChanged: (() => void) | undefined
+  readonly #onDocumentChanged: ((update: Uint8Array) => void) | undefined
   readonly #onAwareness: (changes: AwarenessChanges, origin: unknown) => void
-  readonly #onUpdate: () => void
+  readonly #onUpdate: (update: Uint8Array) => void
 
   constructor(options: BoardRoomOptions = {}) {
     this.#doc = options.doc ?? new Y.Doc()
@@ -74,8 +74,8 @@ export class BoardRoom {
     }
     this.#awareness.on('update', this.#onAwareness)
 
-    this.#onUpdate = () => {
-      this.#onDocumentChanged?.()
+    this.#onUpdate = (update) => {
+      this.#onDocumentChanged?.(update)
     }
     this.#doc.on('update', this.#onUpdate)
   }
@@ -178,9 +178,25 @@ interface AwarenessChanges {
   readonly removed: number[]
 }
 
-/** Restores a room's document from a stored snapshot. */
-export function documentFromSnapshot(snapshot: Uint8Array | null): Y.Doc {
+/**
+ * Restores a room's document from what storage held.
+ *
+ * Takes a LIST, applied one at a time, and that is the whole point of the
+ * signature: Yjs updates are each a complete self-describing message, so
+ * concatenating a snapshot with the updates that followed it produces bytes
+ * whose decoder stops after the first one and silently drops the rest. A board
+ * that quietly loses everything since its last compaction is exactly the shape
+ * of bug that only shows up in production, on somebody else's work.
+ *
+ * `Y.mergeUpdates` is the other correct answer; applying in turn is the same
+ * result with one fewer thing to get wrong.
+ */
+export function documentFromSnapshot(stored: readonly Uint8Array[]): Y.Doc {
   const doc = new Y.Doc()
-  if (snapshot !== null && snapshot.byteLength > 0) Y.applyUpdate(doc, snapshot)
+  Y.transact(doc, () => {
+    for (const update of stored) {
+      if (update.byteLength > 0) Y.applyUpdate(doc, update)
+    }
+  })
   return doc
 }

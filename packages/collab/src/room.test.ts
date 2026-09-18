@@ -153,13 +153,46 @@ describe('a board room', () => {
     expect(saves).toBe(afterEdit)
   })
 
+  /**
+   * A snapshot plus the updates that landed after it — which is how storage
+   * actually holds a room, because compacting on every edit would rewrite the
+   * whole document per keystroke.
+   *
+   * This exists because the first version of the loader CONCATENATED them into
+   * one buffer. Yjs updates are each a complete self-describing message, so the
+   * decoder stops after the first and silently drops the rest: the board would
+   * have come back as it was at the last compaction, losing up to sixty-four
+   * edits, and only ever in production. Concatenating instead of replaying
+   * fails this test with `obj_before` alone.
+   */
+  it('restores a board from a snapshot plus the updates that followed it', () => {
+    const first = new BoardRoom()
+    sticky(first.doc, 'obj_before', 'saved in the snapshot')
+    const snapshot = first.snapshot()
+
+    const trailing: Uint8Array[] = []
+    first.doc.on('update', (update: Uint8Array) => trailing.push(update))
+    sticky(first.doc, 'obj_after_one', 'after the snapshot')
+    sticky(first.doc, 'obj_after_two', 'also after')
+    first.destroy()
+    expect(trailing.length).toBeGreaterThanOrEqual(2)
+
+    const reopened = documentFromSnapshot([snapshot, ...trailing])
+
+    expect([...objectsFromDoc(reopened).keys()].sort()).toEqual([
+      'obj_after_one',
+      'obj_after_two',
+      'obj_before',
+    ])
+  })
+
   it('reopens a board from its snapshot', () => {
     const first = new BoardRoom()
     sticky(first.doc, 'obj_kept', 'survives a restart')
     const stored = first.snapshot()
     first.destroy()
 
-    const reopened = new BoardRoom({ doc: documentFromSnapshot(stored) })
+    const reopened = new BoardRoom({ doc: documentFromSnapshot([stored]) })
     const late = new Client('late')
     late.connect(reopened)
 
