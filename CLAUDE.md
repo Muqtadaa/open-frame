@@ -276,7 +276,40 @@ Anything asynchronous that the render path needs gets the same treatment — a
 synchronous cache lookup with an explicit `loading`/`ready`/`missing` state,
 plus a subscription that re-renders when it lands. A view cannot await.
 
-### 21. Break a new architectural rule once, and watch it fail
+### 21. The interface comes from the registry, not from a list
+
+A panel that enumerates its own fields is a second source of truth about what a
+type can do, and it drifts the moment a type changes. The inspector reads
+`capabilities.styleProps`; a mixed selection gets the intersection, because one
+control must mean one thing.
+
+This is also how a declaration that was never honoured gets found: `sticky`
+claimed `fill` and its view ignored it, invisible for as long as `color` was the
+only property anything could set. **A capability nothing in the UI consumes is
+untested, whatever the type says.**
+
+Design decisions live in `PRODUCT.md` (who this is for, what is settled),
+`DESIGN.md` (the built visual system) and `apps/web/.impeccable/surfaces/` (the
+direction contract for a surface). They are maintained through the vendored
+`impeccable` skill — `/impeccable` — not by editing tokens ad hoc.
+
+### 22. Contrast is tested, not asserted
+
+WCAG 2.2 AA is a product commitment, so `app/design-tokens.test.ts` parses
+`styles.css` and fails the build when a pair drops below its floor. It restates
+no hex values: a duplicated palette drifts, and the test then passes against
+colours the app stopped using.
+
+Know which floor applies. 4.5:1 is text; 3:1 is a **UI component you must
+perceive to operate** — a control's boundary, a handle, a focus ring. The page
+rule is neither, so it sits below 3:1 on purpose and the test asserts that
+CEILING as well: a later "improve contrast" pass would otherwise turn the ground
+into a cage the content has to fight.
+
+Functional text has an 11px floor. That covers shortcuts, field labels and
+readouts; only non-interactive legal smallprint gets less.
+
+### 23. Break a new architectural rule once, and watch it fail
 
 A rule that passes vacuously is worse than no rule, because it is trusted. This
 practice has already caught a dependency-cruiser rule that never fired on the

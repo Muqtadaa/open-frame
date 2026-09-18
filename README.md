@@ -23,13 +23,19 @@ filtered, linked and reasoned about.
 
 ## Status
 
-**Phase 1 — foundation. Complete.**
+**Phase 2 — core canvas. Complete.**
 
-The architectural skeleton, proved end to end by the smallest object type that
-could prove it: sticky notes you can create, edit, drag, restyle, delete, undo
-and reload. Everything else is deliberately absent.
+A canvas you can actually work on: sticky notes, text, eight shape kinds, frames,
+connectors, images and groups; selection, resize, rotation, z-order, clipboard
+and undo; snap-to-grid and alignment guides; local persistence with schema
+versioning and migrations.
 
-This is not a demo of features. It is a demo of seams.
+[ADR 0002](docs/adr/0002-canvas-engine-custom-dom-svg.md) asked whether a custom
+DOM/SVG renderer could carry this. It can: DOM node count stays flat from 100 to
+10,000 objects, and a cull pass on a 10,000-object mixed board costs about 3ms.
+
+Next is [Phase 3 · Structured objects](docs/phases/phase-3-structured-objects.md)
+— the reason OpenFrame exists.
 
 ---
 
