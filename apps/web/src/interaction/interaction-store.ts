@@ -10,6 +10,7 @@ import {
   type Viewport,
 } from '@openframe/core'
 
+import type { AlignmentGuide } from '../scene/alignment.js'
 import type { HandleId } from '../scene/resize.js'
 import { create } from 'zustand'
 
@@ -27,6 +28,9 @@ export type WheelMode = 'zoom' | 'pan'
 
 const WHEEL_MODE_KEY = 'openframe.wheelMode'
 const SNAP_KEY = 'openframe.snapToGrid'
+
+/** One shared instance, so "no guides" never invalidates a selector. */
+const NO_GUIDES: readonly AlignmentGuide[] = []
 
 function readSnap(): boolean {
   try {
@@ -129,6 +133,12 @@ interface InteractionState {
    * cause belong in the notice banner, which persists.
    */
   readonly toast: string | null
+  /**
+   * Alignment guides for the gesture in flight. Empty between gestures, and
+   * the SAME empty array each time — a fresh `[]` would fail `Object.is` and
+   * re-render every subscriber on every pointer move (rule 9).
+   */
+  readonly guides: readonly AlignmentGuide[]
   readonly selection: ReadonlySet<ObjectId>
   readonly hoveredId: ObjectId | null
   readonly editingId: ObjectId | null
@@ -157,6 +167,7 @@ interface InteractionState {
   setWheelMode(mode: WheelMode): void
   setSnapToGrid(enabled: boolean): void
   showToast(message: string | null): void
+  setGuides(guides: readonly AlignmentGuide[]): void
   toggleSnapToGrid(): void
   toggleWheelMode(): void
   setSelection(ids: readonly ObjectId[]): void
@@ -191,6 +202,7 @@ export const useInteractionStore = create<InteractionState>((set) => ({
   wheelMode: readWheelMode(),
   snapToGrid: readSnap(),
   toast: null,
+  guides: NO_GUIDES,
   selection: new Set<ObjectId>(),
   hoveredId: null,
   editingId: null,
@@ -217,6 +229,8 @@ export const useInteractionStore = create<InteractionState>((set) => ({
   },
 
   showToast: (toast) => set({ toast }),
+
+  setGuides: (guides) => set({ guides: guides.length === 0 ? NO_GUIDES : guides }),
 
   setSnapToGrid: (snapToGrid) => {
     writeSnap(snapToGrid)
@@ -278,7 +292,7 @@ export const useInteractionStore = create<InteractionState>((set) => ({
         ? { drag: { ...state.drag, frames } }
         : {},
     ),
-  endDrag: () => set({ drag: { kind: 'idle' } }),
+  endDrag: () => set({ drag: { kind: 'idle' }, guides: NO_GUIDES }),
 
   pruneSelection: (exists) =>
     set((state) => {

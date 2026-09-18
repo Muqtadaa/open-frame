@@ -22,6 +22,7 @@
   --of-ink-muted: #6b7280;
   --of-accent: #2f6df6;
   --of-accent-soft: #e8efff;
+  --of-guide: #f0399c;
   --of-danger: #c02a1b;
   --of-shadow: 0 1px 2px rgb(16 24 40 / 6%), 0 8px 24px rgb(16 24 40 / 10%);
   --of-radius: 12px;
@@ -892,4 +893,16 @@ body {
   clip-path: inset(50%);
   white-space: nowrap;
   border: 0;
+}
+
+/* Alignment guides ---------------------------------------------------------- */
+
+.of-guide {
+  position: absolute;
+  top: 0;
+  left: 0;
+  z-index: 3;
+  background: var(--of-guide);
+  /* Guides are feedback, never a target. */
+  pointer-events: none;
 }

@@ -73,8 +73,12 @@ the move as one undoable action.
 ✅ Connector drawing: drag from one object to another, or to empty space for a
 free end.
 
-Remaining: snapping and alignment guides, dragging an existing connector
-endpoint to re-attach it.
+✅ Snap to grid (on by default, Cmd/Ctrl suspends it) and alignment guides
+against neighbours' edges and centres, which take precedence over the grid per
+axis.
+
+Remaining: group/ungroup as `transact` composites, dragging an existing
+connector endpoint to re-attach it.
 
 **Browser zoom must stay out of the way.** `Ctrl/Cmd` with `+`, `−`, `0`, `1`
 and with the wheel are all claimed and prevented; see

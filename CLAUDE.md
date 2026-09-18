@@ -197,6 +197,20 @@ resulting delta applied to every member. Snapping each object independently
 shuffles them relative to one another, which looks like a bug even though each
 object is individually aligned.
 
+**Alignment to neighbours beats the grid, per axis.** Lining up with the object
+next to it is what the user is looking at; the grid is the fallback for an axis
+nothing is near. Applying both would fight — the grid drags a selection back off
+an alignment it has just captured. Cmd/Ctrl suspends both, because it is the
+"stop helping" key rather than the "grid off" key.
+
+Anything a gesture compares against is snapshotted at gesture START. Alignment
+candidates are the visible objects minus the selection; recomputing them per
+pointer event is the O(n) scan rule 10 forbids, sixty times a second.
+
+**A test that only uses grid-aligned positions cannot tell alignment from the
+grid.** Both put the object in the same place. Push a neighbour off-grid first,
+or the test passes with the feature deleted — three of these did.
+
 ### 18. An upload is validated by its content, not by what it claims to be
 
 A `File`'s MIME type is derived from its extension, so it is trivially wrong:

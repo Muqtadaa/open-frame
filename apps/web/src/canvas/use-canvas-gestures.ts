@@ -2,6 +2,7 @@ import {
   panViewport,
   rectFromPoints,
   screenToWorld,
+  visibleWorldRect,
   type AnyOpenFrameObject,
   type ObjectFrame,
   type ObjectId,
@@ -27,6 +28,8 @@ import {
   type PointerIntent,
 } from '../interaction/pointer-controller.js'
 import { containerAt, hitTest, objectsInMarquee } from '../scene/hit-testing.js'
+import { alignToNeighbours, alignmentTargets, type AlignmentGuide } from '../scene/alignment.js'
+import { cullToViewport } from '../scene/culling.js'
 import { snapDelta, snapRect } from '../scene/snapping.js'
 import {
   CORNER_HANDLES,
@@ -58,9 +61,50 @@ interface Gesture {
   /** Snapshot of the objects being transformed, taken once at gesture start. */
   readonly subjects: readonly AnyOpenFrameObject[]
   readonly startBounds: Rect | null
+  /** Snapshot too: static objects do not move during a drag (see alignment.ts). */
+  readonly alignTargets: readonly Rect[]
   readonly handle: HandleId | null
   readonly startAngle: number
   moved: boolean
+}
+
+/**
+ * How close, in SCREEN pixels, a drag must come before a guide captures it.
+ *
+ * Screen pixels rather than world units, divided by the zoom at use: a fixed
+ * world tolerance would grab from across the board when zoomed out and be
+ * unreachable when zoomed in.
+ */
+const ALIGN_TOLERANCE_PX = 6
+
+/**
+ * Where a dragged selection actually lands.
+ *
+ * Alignment to neighbours BEATS the grid, per axis. Lining up with the object
+ * next to it is what the user is looking at; the grid is the fallback for an
+ * axis nothing is near. Applying both would fight — the grid would drag the
+ * selection back off an alignment it had just captured.
+ *
+ * Cmd/Ctrl suspends both, because it is the "stop helping" key rather than the
+ * "grid off" key.
+ */
+function resolveDragDelta(
+  startBounds: Rect | null,
+  targets: readonly Rect[],
+  raw: Point,
+  snapping: boolean,
+  zoom: number,
+): { x: number; y: number; guides: readonly AlignmentGuide[] } {
+  if (!snapping || startBounds === null) return { ...raw, guides: [] }
+
+  const aligned = alignToNeighbours(startBounds, raw, targets, ALIGN_TOLERANCE_PX / zoom)
+  const grid = snapDelta(startBounds, aligned.delta)
+
+  return {
+    x: aligned.snapped.x ? aligned.delta.x : grid.x,
+    y: aligned.snapped.y ? aligned.delta.y : grid.y,
+    guides: aligned.guides,
+  }
 }
 
 /** Reads the handle under the pointer, if the gesture began on one. */
@@ -218,6 +262,7 @@ export function useCanvasGestures(containerRef: RefObject<HTMLElement | null>) {
             startViewport: store.viewport,
             subjects,
             startBounds,
+            alignTargets: [],
             handle: rotating ? null : (grabbed as HandleId),
             startAngle: angleFrom(centre, worldStart) - (subjects[0]?.frame.rotation ?? 0),
             moved: false,
@@ -270,6 +315,19 @@ export function useCanvasGestures(containerRef: RefObject<HTMLElement | null>) {
           // Captured so the whole selection snaps as ONE unit rather than each
           // object independently, which would shuffle them apart.
           startBounds: framesBounds(subjects),
+          alignTargets:
+            mode === 'translate'
+              ? alignmentTargets(
+                  doc,
+                  runtime.registry,
+                  cullToViewport(
+                    doc,
+                    runtime.registry,
+                    visibleWorldRect(settled.viewport, settled.canvasSize.width, settled.canvasSize.height),
+                  ),
+                  settled.selection,
+                )
+              : [],
           handle: null,
           startAngle: 0,
           moved: false,
@@ -320,8 +378,14 @@ export function useCanvasGestures(containerRef: RefObject<HTMLElement | null>) {
          * that can be reached while already dragging.
          */
         const snapping = store.snapToGrid && !(event.metaKey || event.ctrlKey)
-        const delta =
-          snapping && active.startBounds !== null ? snapDelta(active.startBounds, raw) : raw
+        const delta = resolveDragDelta(
+          active.startBounds,
+          active.alignTargets,
+          raw,
+          snapping,
+          store.viewport.zoom,
+        )
+        store.setGuides(delta.guides)
         store.updateTranslate(delta.x, delta.y)
         return
       }

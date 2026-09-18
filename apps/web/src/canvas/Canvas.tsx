@@ -3,6 +3,7 @@ import { useEffect, useRef } from 'react'
 import { useInteractionStore } from '../interaction/interaction-store.js'
 import { useKeyboardShortcuts } from '../interaction/use-keyboard-shortcuts.js'
 import { GRID_SIZE } from '../scene/snapping.js'
+import { AlignmentOverlay } from './AlignmentOverlay.js'
 import { ConnectorPreview } from './ConnectorPreview.js'
 import { MarqueeOverlay } from './MarqueeOverlay.js'
 import { ObjectLayer } from './ObjectLayer.js'
@@ -89,6 +90,7 @@ export function Canvas() {
         <ObjectLayer width={width} height={height} />
         <SelectionOverlay />
         <MarqueeOverlay />
+        <AlignmentOverlay />
         <ConnectorPreview />
       </div>
     </div>
