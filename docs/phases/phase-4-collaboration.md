@@ -130,7 +130,16 @@ Comments, mentions, sharing links, workspaces.
 
 ## Pick up here
 
-**Current position: Stage 1 has not started. Nothing in this phase is built.**
+**Current position: Stage 1 is half done.**
+
+Built and on `main`:
+
+- `packages/collab`, depending on `@openframe/core` and `yjs` and nothing else.
+- `yjs-lives-only-in-collab` in `.dependency-cruiser.cjs`, broken once against
+  `apps/web` to watch it fail.
+- `Patch[] → Y.Doc` and `Y.Doc → objects`, with the merge cases from ADR 0011
+  and ADR 0007 tested against two `Y.Doc`s and no sockets. 10 tests.
+- `@openframe/core/testing` exposed as a declared subpath.
 
 Everything below is decided and needs no further discussion:
 
@@ -141,20 +150,25 @@ Everything below is decided and needs no further discussion:
   `packages/collab` is quarantined, so choosing wrong here is survivable.
 - Stages 1 and 2 require no account with anyone.
 
-**The next commit is the first half of Stage 1**, in this order:
+**The next commit finishes Stage 1**, in this order:
 
-1. `packages/collab` as a third workspace package, depending on `@openframe/core`
-   and `yjs` and nothing else.
-2. A `dependency-cruiser` rule forbidding `yjs` outside it — written, and then
-   **broken once to watch it fail** (rule 23), because a rule that passes
-   vacuously is worse than no rule and this one guards the phase's last "done
-   when".
-3. `Patch[] → Y.Doc` and `Y.Doc → Patch[]`, with a property test asserting the
-   round trip over a generated document. The three `Patch` operations map onto a
-   `Y.Map` of objects; the interesting cases are `set` with `value: undefined`
-   (which deletes a key) and an `add` racing a `remove` of the same id.
-4. Concurrent-reparent cycle repair moved from load-time into the merge path,
-   with the existing deterministic repair reused rather than rewritten.
+1. **`Y.Doc → Patch[]`, the direction that does not exist yet.** Observe a
+   `Y.Map` change event and turn it back into patches the dispatcher can apply
+   with `origin: 'remote'` and `skipUndo`. Both already exist on the envelope —
+   they were built in Phase 1 for exactly this. The subtlety is that an observer
+   must not re-emit its own writes: tag the transaction (`REMOTE_ORIGIN` is
+   already defined) and ignore events carrying it, or two peers will ping-pong
+   one edit forever.
+2. **Concurrent-reparent cycle repair, moved into the merge path.** The
+   deterministic repair already exists and runs at load time; reuse it rather
+   than rewriting it. This is the one corruption last-writer-wins cannot
+   prevent — two people each dragging A into B and B into A — and the only
+   invariant the CRDT can genuinely break.
+3. **A `CollabSession`** binding a `Y.Doc` to the `CommandDispatcher` in both
+   directions, still with no transport: two `Y.Doc`s in one test file, joined by
+   their update streams, must converge on the same `BoardDocument`.
+
+Only then Stage 2, and only then does anything need an account.
 
 **Known traps, from the decisions already taken:**
 
