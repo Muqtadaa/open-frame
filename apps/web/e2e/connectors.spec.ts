@@ -289,3 +289,88 @@ test.describe('dragging an existing endpoint', () => {
     await expect(page.getByTestId('endpoint-from')).toHaveCount(0)
   })
 })
+
+/**
+ * Connection points: dragging a connector straight off a selected object,
+ * without reaching for the connector tool.
+ *
+ * Reported as missing from the deployed build — reaching for a tool to join two
+ * things already in front of you is a detour every board tool spares you.
+ */
+test.describe('connection points', () => {
+  const A = { x: 300, y: 250 }
+  const B = { x: 300, y: 520 }
+  const CLEAR = { x: 1120, y: 140 }
+
+  test.beforeEach(async ({ page }) => {
+    await freshBoard(page)
+  })
+
+  async function note(page: Page, at: { x: number; y: number }, text: string): Promise<void> {
+    await page.keyboard.press('s')
+    await page.locator(CANVAS).click({ position: at })
+    await page.locator('textarea').fill(text)
+    await page.locator(CANVAS).click({ position: CLEAR })
+    await page.keyboard.press('v')
+  }
+
+  test('appear on a selected object and not before', async ({ page }) => {
+    await note(page, A, 'one')
+    await expect(page.getByTestId('connect-right')).toHaveCount(0)
+
+    await page.locator(CANVAS).click({ position: A })
+    for (const side of ['top', 'right', 'bottom', 'left']) {
+      await expect(page.getByTestId(`connect-${side}`)).toBeVisible()
+    }
+  })
+
+  test('dragging from one draws a connector to what it is dropped on', async ({ page }) => {
+    await note(page, A, 'one')
+    await note(page, B, 'two')
+    await page.locator(CANVAS).click({ position: A })
+
+    const from = await page.getByTestId('connect-bottom').boundingBox()
+    const canvas = await page.locator(CANVAS).boundingBox()
+    await page.mouse.move((from?.x ?? 0) + 4, (from?.y ?? 0) + 4)
+    await page.mouse.down()
+    await page.mouse.move((canvas?.x ?? 0) + B.x, (canvas?.y ?? 0) + B.y, { steps: 10 })
+    await page.mouse.up()
+
+    await expect(page.locator('[data-object-type="connector"]')).toHaveCount(1)
+  })
+
+  /** Nothing is written until the pointer comes up — one command, one undo. */
+  test('a connector drawn this way is undone in one press', async ({ page }) => {
+    await note(page, A, 'one')
+    await note(page, B, 'two')
+    await page.locator(CANVAS).click({ position: A })
+
+    const from = await page.getByTestId('connect-right').boundingBox()
+    const canvas = await page.locator(CANVAS).boundingBox()
+    await page.mouse.move((from?.x ?? 0) + 4, (from?.y ?? 0) + 4)
+    await page.mouse.down()
+    await page.mouse.move((canvas?.x ?? 0) + B.x, (canvas?.y ?? 0) + B.y, { steps: 10 })
+    await page.mouse.up()
+    await expect(page.locator('[data-object-type="connector"]')).toHaveCount(1)
+
+    await page.locator(CANVAS).click({ position: CLEAR })
+    await page.keyboard.press('Control+z')
+    await expect(page.locator('[data-object-type="connector"]')).toHaveCount(0)
+  })
+
+  /** A connector has its own draggable ends; it must not also sprout these. */
+  test('do not appear on a connector', async ({ page }) => {
+    await note(page, A, 'one')
+    await note(page, B, 'two')
+    await page.keyboard.press('c')
+    const canvas = await page.locator(CANVAS).boundingBox()
+    await page.mouse.move((canvas?.x ?? 0) + A.x, (canvas?.y ?? 0) + A.y)
+    await page.mouse.down()
+    await page.mouse.move((canvas?.x ?? 0) + B.x, (canvas?.y ?? 0) + B.y, { steps: 10 })
+    await page.mouse.up()
+    await page.keyboard.press('v')
+
+    await expect(page.locator('[data-object-type="connector"]')).toHaveCount(1)
+    await expect(page.getByTestId('connect-right')).toHaveCount(0)
+  })
+})

@@ -30,6 +30,7 @@ import {
   onPointerDown as decidePointerDown,
   type PointerIntent,
 } from '../interaction/pointer-controller.js'
+import { anchorForSide } from './ConnectPoints.js'
 import { committedRect, constrainToAxis } from '../scene/draw.js'
 import { containerAt, hitTest, hitTestRaw, objectsInMarquee } from '../scene/hit-testing.js'
 import { alignToNeighbours, alignmentTargets, type AlignmentGuide } from '../scene/alignment.js'
@@ -326,7 +327,45 @@ export function useCanvasGestures(containerRef: RefObject<HTMLElement | null>) {
         }
       }
 
-      if (grabbed !== null && grabbed !== 'endpoint') {
+      /*
+       * Dragging off a connection point draws a connector FROM that object,
+       * attached at the side the point sits on. Starting a line at the right
+       * edge and having it leave from the left is the kind of thing that makes
+       * a tool feel like it is arguing with you.
+       */
+      if (grabbed === 'connect') {
+        const side =
+          event.target instanceof Element
+            ? (event.target.closest<HTMLElement>('[data-connect-side]')?.dataset.connectSide ??
+              null)
+            : null
+        const [subject] = [...store.selection]
+        if (subject !== undefined && side !== null) {
+          const at = toWorld(event.clientX, event.clientY)
+          store.beginConnect(
+            { kind: 'object', objectId: subject, anchor: anchorForSide(side) },
+            at,
+          )
+          event.currentTarget.setPointerCapture(event.pointerId)
+          gesture.current = {
+            pointerId: event.pointerId,
+            mode: 'connect',
+            startWorld: at,
+            startClient: { x: event.clientX, y: event.clientY },
+            startViewport: store.viewport,
+            subjects: [],
+            startBounds: null,
+            alignTargets: [],
+            handle: null,
+            endpointId: null,
+            startAngle: 0,
+            moved: false,
+          }
+          return
+        }
+      }
+
+      if (grabbed !== null && grabbed !== 'endpoint' && grabbed !== 'connect') {
         const document = runtime.store.getDocument()
         /*
          * Only the objects a transform can actually act on.

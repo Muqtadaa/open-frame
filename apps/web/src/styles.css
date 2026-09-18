@@ -1628,3 +1628,32 @@ textarea.of-input {
   stroke-width: 1;
   vector-effect: non-scaling-stroke;
 }
+
+/*
+ * The four places a connector can be started from, on a selected object.
+ *
+ * Round, to read as "attach here" rather than as another resize handle — the
+ * square ones already mean "change the size". Same accent, same counter-scaled
+ * sizing, so the two belong to one system without being confusable.
+ */
+.of-connect-point {
+  position: absolute;
+  top: 0;
+  left: 0;
+  background: var(--of-panel);
+  border: 1px solid var(--of-accent);
+  border-radius: 50%;
+  cursor: crosshair;
+  pointer-events: auto;
+}
+
+/*
+ * The grabbable area, sized in ConnectPoints. Invisible, and much larger than
+ * the dot: the drawn size is a design decision and the 24px pointer target is
+ * an accessibility one (WCAG 2.5.8), exactly as for the resize handles.
+ */
+.of-connect-point__target {
+  position: absolute;
+  background: transparent;
+  border-radius: 50%;
+}
