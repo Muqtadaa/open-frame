@@ -2,9 +2,23 @@ import type { ZodType } from 'zod'
 
 import { containsRotatedPoint, rotatedBounds, type Rect } from '../geometry/rect.js'
 import type { Point } from '../geometry/point.js'
-import type { BoardDocument } from './document.js'
+import { groupByParent, type BoardDocument } from './document.js'
 import type { ObjectId } from './ids.js'
 import type { AnyOpenFrameObject, ObjectBase, StyleProp } from './object.js'
+
+/**
+ * What a container type is handed to work out its own extent.
+ *
+ * Both are supplied rather than reached for, and both are shared across one
+ * bounds pass. `childrenOf` in particular: calling the document helper directly
+ * would scan every object once PER CONTAINER, which on a board of 10,000
+ * objects with 250 groups measured at 7.5ms of pure scanning per cull — half a
+ * frame budget, spent before anything was drawn (rule 10).
+ */
+export interface BoundsContext {
+  readonly boundsOf: (other: AnyOpenFrameObject) => Rect
+  readonly childrenOf: (parentId: ObjectId) => readonly AnyOpenFrameObject[]
+}
 
 /**
  * One draggable end of an object, in world coordinates.
@@ -117,12 +131,11 @@ export interface ObjectTypeDefinition<TType extends string, TData> {
     object: ObjectBase<TType, TData>,
     doc: BoardDocument,
     /**
-     * Bounds of another object, for container types whose extent is their
-     * children's. Supplied by the registry rather than reached for, so a
-     * container does not need to know how every other type computes its extent
-     * — a group holding a connector gets the connector's derived bounds.
+     * Helpers for container types whose extent is their children's, so a
+     * container needs to know neither how another type computes its extent nor
+     * how to find its own members efficiently.
      */
-    boundsOf: (other: AnyOpenFrameObject) => Rect,
+    context: BoundsContext,
   ) => Rect
 
   /**
@@ -195,7 +208,7 @@ export interface ErasedObjectTypeDefinition {
   readonly getBounds?: (
     object: AnyOpenFrameObject,
     doc: BoardDocument,
-    boundsOf: (other: AnyOpenFrameObject) => Rect,
+    context: BoundsContext,
   ) => Rect
   readonly hitTest?: (object: AnyOpenFrameObject, doc: BoardDocument, point: Point) => boolean
   readonly dependencies?: (object: AnyOpenFrameObject) => readonly ObjectId[]
@@ -267,8 +280,8 @@ export function defineObjectType<TType extends string, TData>(
     ...(getBounds === undefined
       ? {}
       : {
-          getBounds: (object, doc, boundsOf) =>
-            getBounds(object as ObjectBase<TType, TData>, doc, boundsOf),
+          getBounds: (object, doc, context) =>
+            getBounds(object as ObjectBase<TType, TData>, doc, context),
         }),
     ...(hitTest === undefined
       ? {}
@@ -299,6 +312,9 @@ export function defineObjectType<TType extends string, TData>(
  */
 export class ObjectTypeRegistry {
   readonly #definitions = new Map<string, ErasedObjectTypeDefinition>()
+  /** One-entry cache for `#childIndexFor`, keyed by document identity. */
+  #childIndexDoc: BoardDocument | undefined
+  #childIndex: Map<ObjectId | null, AnyOpenFrameObject[]> | undefined
 
   constructor(definitions: readonly ErasedObjectTypeDefinition[] = []) {
     for (const definition of definitions) this.register(definition)
@@ -382,6 +398,22 @@ export class ObjectTypeRegistry {
   }
 
   /**
+   * Children by parent, built once per document.
+   *
+   * The document is immutable and replaced wholesale on every change, so its
+   * identity is an exact invalidation key — a stale index is not reachable. One
+   * entry is enough: bounds passes run over one document at a time, and a
+   * caller alternating between two would merely rebuild, never answer wrongly.
+   */
+  #childIndexFor(doc: BoardDocument): Map<ObjectId | null, AnyOpenFrameObject[]> {
+    if (this.#childIndexDoc !== doc || this.#childIndex === undefined) {
+      this.#childIndex = groupByParent(doc)
+      this.#childIndexDoc = doc
+    }
+    return this.#childIndex
+  }
+
+  /**
    * `depth` guards the container case. A group's bounds are its children's, so a
    * parent chain that somehow formed a cycle would recurse forever. The command
    * layer's `wouldCreateCycle` is what should prevent that; this is the belt to
@@ -392,9 +424,10 @@ export class ObjectTypeRegistry {
     const custom =
       depth >= MAX_BOUNDS_DEPTH
         ? undefined
-        : this.#definitions
-            .get(object.type)
-            ?.getBounds?.(object, doc, (other) => this.#boundsOf(other, doc, depth + 1))
+        : this.#definitions.get(object.type)?.getBounds?.(object, doc, {
+            boundsOf: (other) => this.#boundsOf(other, doc, depth + 1),
+            childrenOf: (parentId) => this.#childIndexFor(doc).get(parentId) ?? [],
+          })
     if (custom !== undefined) return custom
     const { x, y, width, height, rotation } = object.frame
     return rotatedBounds({ x, y, width, height }, rotation)

@@ -203,3 +203,70 @@ describe('caller-supplied ids', () => {
     expect(id).toMatch(/^obj_/)
   })
 })
+
+/**
+ * Complexity, asserted by COUNTING rather than timing.
+ *
+ * A group's bounds are its children's, and the obvious implementation —
+ * `childrenOf(doc, group.id)` — scans the whole document once per group. Culling
+ * asks every visible object for its bounds, so on a board with many groups that
+ * is O(n²): measured at 9.6ms per cull on 10,000 objects with 250 groups,
+ * against a 16.7ms frame budget, versus 3.1ms once the scan was shared.
+ *
+ * A timing assertion would be flaky on shared CI hardware. Counting document
+ * scans is exact, and it is the thing that actually went wrong.
+ */
+describe('bounds complexity', () => {
+  /** A document whose object map reports how often it has been scanned. */
+  class CountingMap extends Map<ObjectId, ReturnType<typeof object>> {
+    scans = 0
+    override values() {
+      this.scans += 1
+      return super.values()
+    }
+  }
+
+  function boardWith(groups: number, notesPerGroup: number) {
+    const h = createTestHarness()
+    for (let g = 0; g < groups; g++) {
+      const group = create(h, 'group')
+      for (let n = 0; n < notesPerGroup; n++) {
+        create(h, 'sticky', n * 200, g * 200, { parentId: group })
+      }
+    }
+    const doc = h.store.getDocument()
+    const counting = new CountingMap()
+    for (const [id, value] of doc.objects) counting.set(id, value)
+    return { h, doc: { ...doc, objects: counting }, counting }
+  }
+
+  it('scans the document a constant number of times, however many groups there are', () => {
+    const few = boardWith(2, 3)
+    const many = boardWith(40, 3)
+
+    // One full bounds pass, as culling performs.
+    for (const object of few.doc.objects.values()) few.h.registry.boundsOf(object, few.doc)
+    for (const object of many.doc.objects.values()) many.h.registry.boundsOf(object, many.doc)
+
+    // The loops above each cost one scan; everything beyond that is the index.
+    const fewScans = few.counting.scans - 1
+    const manyScans = many.counting.scans - 1
+
+    expect(fewScans).toBeLessThanOrEqual(2)
+    // 20x the groups must not mean 20x the scans. Before the shared index this
+    // was one scan per group, so this would have been 40 against 2.
+    expect(manyScans).toBe(fewScans)
+  })
+
+  it('rebuilds the index when the document changes, so bounds are never stale', () => {
+    const h = createTestHarness()
+    const group = create(h, 'group')
+    create(h, 'sticky', 0, 0, { parentId: group })
+
+    const before = h.registry.boundsOf(object(h, group), h.store.getDocument())
+    create(h, 'sticky', 600, 0, { parentId: group })
+    const after = h.registry.boundsOf(object(h, group), h.store.getDocument())
+
+    expect(after.width).toBeGreaterThan(before.width)
+  })
+})

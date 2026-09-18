@@ -30,6 +30,8 @@ import {
 
 const SIZES = [100, 1_000, 5_000, 10_000] as const
 const COLORS: ColorToken[] = ['yellow', 'green', 'blue', 'red', 'violet', 'orange']
+/** Spread across the kinds so the mixed board exercises several label insets. */
+const SHAPES = ['rectangle', 'ellipse', 'triangle', 'diamond', 'hexagon'] as const
 /*
  * Deliberately NOT in the web app's `public/` directory: everything there is
  * copied into every production build, and 4.7MB of benchmark boards shipping to
@@ -50,6 +52,13 @@ function mulberry32(seed: number): () => number {
   }
 }
 
+/**
+ * A board of nothing but sticky notes.
+ *
+ * Kept as the baseline because every earlier measurement used it, so the
+ * numbers stay comparable. It is NOT representative: a sticky's bounds are its
+ * frame, which is the cheapest case there is.
+ */
 function generate(count: number): string {
   const random = mulberry32(count)
   const registry = createDefaultRegistry()
@@ -86,15 +95,136 @@ function generate(count: number): string {
   return JSON.stringify(serializeBoard(store.getDocument(), 1_700_000_000_000))
 }
 
-mkdirSync(OUT_DIR, { recursive: true })
-for (const size of SIZES) {
-  const started = performance.now()
-  const json = generate(size)
-  const elapsed = performance.now() - started
-  const file = join(OUT_DIR, `board-${String(size)}.json`)
-  writeFileSync(file, json)
-  console.log(
-    `${String(size).padStart(6)} objects  ${(json.length / 1024).toFixed(0).padStart(6)} KB  ` +
-      `generated in ${elapsed.toFixed(0)}ms  ->  ${file}`,
+/**
+ * A board with the geometry that actually costs something.
+ *
+ * The sticky-only fixture exercises the cheapest possible bounds calculation —
+ * read four numbers off the frame — so a flat frame time on it says the renderer
+ * scales for the ONE type whose cost was never in question. Connectors resolve
+ * their endpoints through the document on every bounds call, and a group's
+ * bounds are the union of its children's. Those are the paths worth measuring,
+ * and until this fixture existed nothing did.
+ *
+ * Composition is roughly what a real diagram looks like rather than a worst
+ * case: mostly leaf objects, a minority of containers and connectors.
+ */
+function generateMixed(count: number): string {
+  const random = mulberry32(count * 7 + 1)
+  const registry = createDefaultRegistry()
+  const { store, writer } = createDocumentStore(
+    createEmptyDocument(asBoardId(`bench_mixed_${String(count)}`), `Mixed ${String(count)}`, 0),
   )
+  const dispatcher = new CommandDispatcher({
+    store,
+    writer,
+    registry,
+    clock: fixedClock(1_700_000_000_000),
+    ids: createSequentialIdGenerator(),
+    capabilities: allowAllCapabilities,
+  })
+
+  const columns = Math.ceil(Math.sqrt(count))
+  const at = (i: number) => ({
+    x: (i % columns) * 220 + Math.floor(random() * 20),
+    y: Math.floor(i / columns) * 220 + Math.floor(random() * 20),
+  })
+
+  const leaves: string[] = []
+  const BATCH = 500
+
+  // Groups of four notes, so a tenth of the board sits behind a container whose
+  // bounds are computed from its children.
+  const groupCount = Math.floor(count / 40)
+  for (let g = 0; g < groupCount; g++) {
+    const groupId = `obj_bench_group_${String(g)}` as never
+    const base = g * 4
+    const result = dispatcher.dispatch({
+      kind: 'CreateObjects',
+      objects: [
+        { type: 'group', id: groupId, x: 0, y: 0 },
+        ...[0, 1, 2, 3].map((k) => ({
+          type: 'sticky',
+          parentId: groupId,
+          ...at(base + k),
+          data: { text: `Grouped ${String(base + k)}` },
+        })),
+      ],
+    })
+    if (!result.ok) throw result.error
+    leaves.push(...result.affected.slice(1))
+  }
+
+  // The remainder: stickies and shapes, laid out on the same loose grid.
+  const placed = groupCount * 4
+  const connectorCount = Math.floor(count / 10)
+  const remaining = count - placed - connectorCount
+  for (let start = 0; start < remaining; start += BATCH) {
+    const objects = []
+    for (let i = start; i < Math.min(start + BATCH, remaining); i++) {
+      const index = placed + i
+      objects.push(
+        i % 4 === 0
+          ? {
+              type: 'shape',
+              ...at(index),
+              data: { shape: SHAPES[index % SHAPES.length] ?? 'rectangle', text: '' },
+              style: { color: COLORS[Math.floor(random() * COLORS.length)] ?? 'yellow' },
+            }
+          : {
+              type: 'sticky',
+              ...at(index),
+              data: { text: `Note ${String(index)}` },
+              style: { color: COLORS[Math.floor(random() * COLORS.length)] ?? 'yellow' },
+            },
+      )
+    }
+    const result = dispatcher.dispatch({ kind: 'CreateObjects', objects })
+    if (!result.ok) throw result.error
+    leaves.push(...result.affected)
+  }
+
+  // Connectors joining NEARBY objects, so they are culled in and out together
+  // rather than spanning the whole board and always being visible.
+  for (let start = 0; start < connectorCount; start += BATCH) {
+    const objects = []
+    for (let i = start; i < Math.min(start + BATCH, connectorCount); i++) {
+      const a = leaves[(i * 9) % leaves.length]
+      const b = leaves[(i * 9 + 1) % leaves.length]
+      if (a === undefined || b === undefined) continue
+      objects.push({
+        type: 'connector',
+        x: 0,
+        y: 0,
+        data: {
+          from: { kind: 'object', objectId: a, anchor: { kind: 'auto' } },
+          to: { kind: 'object', objectId: b, anchor: { kind: 'auto' } },
+        },
+      })
+    }
+    if (objects.length > 0) {
+      const result = dispatcher.dispatch({ kind: 'CreateObjects', objects })
+      if (!result.ok) throw result.error
+    }
+  }
+
+  return JSON.stringify(serializeBoard(store.getDocument(), 1_700_000_000_000))
+}
+
+mkdirSync(OUT_DIR, { recursive: true })
+for (const [label, build] of [
+  ['board', generate],
+  ['board-mixed', generateMixed],
+] as const) {
+  for (const size of SIZES) {
+    const started = performance.now()
+    const json = build(size)
+    const elapsed = performance.now() - started
+    const file = join(OUT_DIR, `${label}-${String(size)}.json`)
+    writeFileSync(file, json)
+    console.log(
+      `${label.padEnd(11)} ${String(size).padStart(6)} objects  ` +
+        `${(json.length / 1024).toFixed(0).padStart(6)} KB  ` +
+        `generated in ${elapsed.toFixed(0)}ms`,
+    )
+  }
 }

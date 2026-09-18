@@ -14,7 +14,19 @@ import { expect, test, type Page } from '@playwright/test'
 
 const SIZES = [100, 1_000, 5_000, 10_000] as const
 
+/**
+ * Two compositions, because they measure different things.
+ *
+ * `board` is sticky notes only: bounds are four numbers off the frame, the
+ * cheapest case there is. `board-mixed` adds shapes, groups whose bounds are the
+ * union of their children's, and connectors that resolve their endpoints
+ * through the document on every bounds call. A flat frame time on the first
+ * says nothing about the second, which is where the cost actually is.
+ */
+const BOARDS = ['board', 'board-mixed'] as const
+
 interface Measurement {
+  readonly board: string
   readonly size: number
   readonly loadMs: number
   readonly domNodes: number
@@ -23,16 +35,19 @@ interface Measurement {
   readonly panP95: number
 }
 
-async function loadFixture(page: Page, size: number): Promise<number> {
-  return page.evaluate(async (count: number) => {
-    const w = window as unknown as {
-      __openframe: { runtime: { devTools?: { loadBoard(raw: unknown): { ok: boolean } } } }
-    }
-    const raw: unknown = await (await fetch(`/bench/board-${String(count)}.json`)).json()
-    const started = performance.now()
-    w.__openframe.runtime.devTools?.loadBoard(raw)
-    return performance.now() - started
-  }, size)
+async function loadFixture(page: Page, board: string, size: number): Promise<number> {
+  return page.evaluate(
+    async ({ board: name, count }: { board: string; count: number }) => {
+      const w = window as unknown as {
+        __openframe: { runtime: { devTools?: { loadBoard(raw: unknown): { ok: boolean } } } }
+      }
+      const raw: unknown = await (await fetch(`/bench/${name}-${String(count)}.json`)).json()
+      const started = performance.now()
+      w.__openframe.runtime.devTools?.loadBoard(raw)
+      return performance.now() - started
+    },
+    { board, count: size },
+  )
 }
 
 /** Pans across the board while sampling frame times. */
@@ -73,24 +88,34 @@ test('renderer scaling probe', async ({ page }) => {
 
   const results: Measurement[] = []
 
-  for (const size of SIZES) {
-    const loadMs = await loadFixture(page, size)
-    await page.waitForTimeout(500)
+  for (const board of BOARDS) {
+    for (const size of SIZES) {
+      const loadMs = await loadFixture(page, board, size)
+      await page.waitForTimeout(500)
 
-    const visible = Number(
-      (await page.locator('.of-object-layer').getAttribute('data-visible-count')) ?? '0',
-    )
-    const domNodes = await page.locator('.of-object').count()
-    const { p50, p95 } = await measurePan(page)
+      const visible = Number(
+        (await page.locator('.of-object-layer').getAttribute('data-visible-count')) ?? '0',
+      )
+      const domNodes = await page.locator('.of-object').count()
+      const { p50, p95 } = await measurePan(page)
 
-    results.push({ size, loadMs: Math.round(loadMs), domNodes, visible, panP50: p50, panP95: p95 })
+      results.push({
+        board,
+        size,
+        loadMs: Math.round(loadMs),
+        domNodes,
+        visible,
+        panP50: p50,
+        panP95: p95,
+      })
+    }
   }
 
-  console.log('\n  objects |  load |  DOM nodes | visible | pan p50 | pan p95')
-  console.log('  --------|-------|------------|---------|---------|--------')
+  console.log('\n  board        | objects |  load |  DOM nodes | visible | pan p50 | pan p95')
+  console.log('  -------------|---------|-------|------------|---------|---------|--------')
   for (const r of results) {
     console.log(
-      `  ${String(r.size).padStart(7)} | ${String(r.loadMs).padStart(4)}ms | ` +
+      `  ${r.board.padEnd(12)} | ${String(r.size).padStart(7)} | ${String(r.loadMs).padStart(4)}ms | ` +
         `${String(r.domNodes).padStart(10)} | ${String(r.visible).padStart(7)} | ` +
         `${String(r.panP50).padStart(6)}ms | ${String(r.panP95).padStart(6)}ms`,
     )
@@ -103,10 +128,12 @@ test('renderer scaling probe', async ({ page }) => {
    * meaningfully more nodes than a 1,000-object board at the same zoom, culling
    * is not working and ADR 0002's premise is false.
    */
-  const small = results.find((r) => r.size === 1_000)
-  const large = results.find((r) => r.size === 10_000)
-  expect(small).toBeDefined()
-  expect(large).toBeDefined()
-  if (small === undefined || large === undefined) return
-  expect(large.domNodes).toBeLessThan(small.domNodes * 2)
+  for (const board of BOARDS) {
+    const small = results.find((r) => r.board === board && r.size === 1_000)
+    const large = results.find((r) => r.board === board && r.size === 10_000)
+    expect(small, board).toBeDefined()
+    expect(large, board).toBeDefined()
+    if (small === undefined || large === undefined) continue
+    expect(large.domNodes, board).toBeLessThan(small.domNodes * 2)
+  }
 })

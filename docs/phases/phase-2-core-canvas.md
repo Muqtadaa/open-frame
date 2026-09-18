@@ -1,6 +1,6 @@
 # Phase 2 · Core canvas
 
-**Status: ▶ In progress** · ← [Roadmap](README.md)
+**Status: ✅ Done** · ← [Roadmap](README.md)
 
 Turn the architectural skeleton into a canvas someone would choose to use.
 
@@ -96,9 +96,14 @@ and with the wheel are all claimed and prevented; see
 
 ### Rendering
 
-Level-of-detail below a zoom threshold (simplified proxies), connector routing
-(straight, orthogonal, curved), `SpatialIndex` swap **if** benchmarks demand it —
-measured, not assumed.
+Connector routing: straight, orthogonal and curved are all implemented in
+`scene/connector-path.ts`, but **only straight is reachable** — nothing in the UI
+sets `routing`, so two of the three are dead code until a control exists.
+
+Level-of-detail and the `SpatialIndex` swap were both scoped here and both went
+unbuilt, because the measurements never asked for them. Culling keeps node count
+flat at 10,000 objects and a cull pass costs ~3ms; a spatial index would be
+optimising something that is not the bottleneck.
 
 ---
 
@@ -169,14 +174,52 @@ renderer interfaces rather than being attempted in SVG.
 
 ---
 
-## Done when
+## Done when — and what actually happened
 
-- A person can build a real diagram — boxes, arrows, labels, grouping — without
-  reaching for another tool.
-- Benchmark boards at 1,000 objects pan and zoom smoothly.
-- Every new object type was added without editing anything outside its own folder
-  and two registration lines.
-- The renderer question above has a clear answer.
+- ✅ **A person can build a real diagram** — boxes, arrows, labels, grouping —
+  without reaching for another tool.
+
+- ✅ **Benchmark boards pan and zoom smoothly.** At 10,000 objects, on both the
+  sticky-only and mixed fixtures, DOM nodes stay flat (54 and 66) and pan p50/p95
+  sit at the refresh rate.
+
+- ⚠️ **"Every new object type was added without editing anything outside its own
+  folder and two registration lines."** This did NOT hold literally, and the
+  claim was too strong. `image` needed an asset lookup on the view props and a
+  `usesAssets` flag; `group` needed a `selectsAsUnit` capability, a bounds
+  context and a change to hit testing. In every case the extension went into the
+  REGISTRY rather than into callers, which is what the rule actually protects —
+  but the two-line promise holds only for a type that needs no behaviour the
+  registry cannot yet express. Restated honestly: adding a type never edits a
+  caller.
+
+- ✅ **The renderer question has a clear answer:** yes. See below.
+
+---
+
+## ADR 0002, answered
+
+The bet was that a custom DOM/SVG renderer could reach the interaction quality
+this product needs. On the evidence of this phase it can, and the roadmap is not
+dominated by interaction primitives — the remaining work is product.
+
+Two caveats worth carrying forward rather than forgetting:
+
+**The frame-time probe cannot see headroom.** `pnpm test:bench` reports 16.7ms
+whether a pass costs 1ms or 15ms, because it is capped by the display refresh
+rate. It answers "did it keep up", not "by how much". `pnpm bench:cull` measures
+a cull pass directly, and exists because the first one hid a real regression.
+
+**A fixture of one object type measures one object type.** The original
+benchmark boards were sticky notes only, whose bounds are four numbers off a
+frame — the cheapest case there is. `board-mixed-*` adds shapes, groups and
+connectors, and on it the cull pass was **9.6ms against a 16.7ms budget** because
+each group scanned the whole document for its children. Sharing one index across
+the pass brought it to 3.1ms. A deterministic test now counts document scans, so
+the complexity cannot regress silently.
+
+Level-of-detail rendering was scoped for this phase and is NOT built. Nothing
+measured so far needs it, so it stays unbuilt until something does.
 
 ---
 

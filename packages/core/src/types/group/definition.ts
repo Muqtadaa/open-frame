@@ -1,4 +1,3 @@
-import { childrenOf } from '../../domain/document.js'
 import { defineObjectType } from '../../domain/registry.js'
 import { unionAll } from '../../geometry/rect.js'
 import { GROUP_VERSION, GroupDataSchema, type GroupData } from './schema.js'
@@ -47,8 +46,8 @@ export const groupType = defineObjectType<typeof GROUP_TYPE, GroupData>({
    * obvious thing to do — gets the connector's derived extent instead of the
    * 0×0 frame it nominally has.
    */
-  getBounds: (object, doc, boundsOf) =>
-    unionAll(childrenOf(doc, object.id).map(boundsOf)) ?? EMPTY_BOUNDS,
+  getBounds: (object, _doc, { boundsOf, childrenOf }) =>
+    unionAll(childrenOf(object.id).map(boundsOf)) ?? EMPTY_BOUNDS,
 
   /**
    * A group is never hit directly — only through a member.

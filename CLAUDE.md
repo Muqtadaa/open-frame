@@ -119,7 +119,24 @@ A fresh object never compares equal under `Object.is`, so
 O(n²) — on a flat 10,000-object board that was ~100 million iterations and 600ms
 frame spikes. Use `groupByParent` when you need every container's children.
 
-Anything that runs per frame gets measured with `pnpm test:bench`, not assumed.
+A container whose bounds are its children's is the same trap wearing a
+different hat, because culling asks EVERY visible object for its bounds. A group
+that called `childrenOf` itself cost 9.6ms per cull on 10,000 objects against a
+16.7ms budget; sharing one index across the pass took it to 3.1ms. Container
+types receive `childrenOf` in their bounds context — never import the document
+helper.
+
+Anything that runs per frame gets measured, not assumed — but measure the RIGHT
+thing. `pnpm test:bench` reports frame time, which is capped at the refresh rate
+and therefore reads 16.7ms whether a pass takes 1ms or 15ms; it only moves once
+the budget is already blown. `pnpm bench:cull` times the pass directly, and is
+what made the above visible.
+
+**A benchmark fixture of one object type measures one object type.** The board
+fixtures were sticky notes only — the cheapest possible bounds, four numbers off
+a frame — so a flat frame time on them said nothing about connectors, which
+resolve endpoints through the document, or groups, which union their children's.
+`board-mixed-*` exists for that reason.
 
 ### 11. `OPENFRAME_BENCH` decides what a deployment ships
 
