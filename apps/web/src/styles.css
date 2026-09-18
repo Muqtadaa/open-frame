@@ -1664,6 +1664,9 @@ textarea.of-input {
   position: absolute;
   background: transparent;
   border-radius: 50%;
+}
+
+/*
  * Size tokens for a run of text inside an object.
  *
  * Relative to the object's own size rather than absolute, so a large run in a

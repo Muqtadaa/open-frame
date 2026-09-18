@@ -177,3 +177,42 @@ describe('the record panel fits what it promises to show', () => {
     expect(swatchRow).toBeLessThanOrEqual(control)
   })
 })
+
+/**
+ * The stylesheet has to PARSE.
+ *
+ * This file is only minified by the production build, so a structurally broken
+ * stylesheet passed every test, ran fine in dev and e2e, and failed in Vercel —
+ * which is the slowest possible place to find out. It happened: resolving a
+ * merge by deleting conflict-marker lines ate a closing brace and the opening
+ * of the next comment, joining a rule to a comment body.
+ *
+ * Not a full CSS parser — just the structure that mechanical editing breaks.
+ */
+describe('the stylesheet is well formed', () => {
+  /** Comments first: a brace inside one is text, not structure. */
+  const withoutComments = CSS.replace(/\/\*[\s\S]*?\*\//g, '')
+
+  it('has no unterminated or stray comment markers', () => {
+    expect(CSS.split('/*').length, 'unbalanced comment markers').toBe(CSS.split('*/').length)
+    /*
+     * A comment body line left outside any comment is the exact shape of the
+     * bug. `* { … }` is the universal selector, not a comment body, so a brace
+     * on the line excludes it.
+     */
+    for (const [index, line] of withoutComments.split('\n').entries()) {
+      const loose = /^\s*\*\s/.test(line) && !line.includes('{')
+      expect(loose, `line ${String(index + 1)} is a loose comment body`).toBe(false)
+    }
+  })
+
+  it('balances its braces', () => {
+    const opens = (withoutComments.match(/\{/g) ?? []).length
+    const closes = (withoutComments.match(/\}/g) ?? []).length
+    expect(opens).toBe(closes)
+  })
+
+  it('never leaves a conflict marker behind', () => {
+    expect(/^(<{7}|={7}|>{7})/m.test(CSS)).toBe(false)
+  })
+})
