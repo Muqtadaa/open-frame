@@ -906,3 +906,21 @@ body {
   /* Guides are feedback, never a target. */
   pointer-events: none;
 }
+
+/* Connector endpoint handles ------------------------------------------------ */
+
+.of-endpoint {
+  position: absolute;
+  top: 0;
+  left: 0;
+  z-index: 4;
+  background: var(--of-panel);
+  border: solid var(--of-accent);
+  border-radius: 50%;
+  cursor: crosshair;
+}
+
+/* A filled dot means this end is attached to an object rather than floating. */
+.of-endpoint--attached {
+  background: var(--of-accent);
+}

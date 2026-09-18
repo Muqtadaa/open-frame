@@ -4,6 +4,9 @@ import {
   screenToWorld,
   visibleWorldRect,
   type AnyOpenFrameObject,
+  type BoardDocument,
+  type ConnectorEndpoint,
+  type ObjectTypeRegistry,
   type ObjectFrame,
   type ObjectId,
   type Point,
@@ -41,7 +44,16 @@ import {
   type HandleId,
 } from '../scene/resize.js'
 
-type GestureMode = 'pan' | 'translate' | 'marquee' | 'resize' | 'rotate' | 'connect' | 'none'
+type GestureMode =
+  | 'pan'
+  | 'translate'
+  | 'marquee'
+  | 'resize'
+  | 'rotate'
+  | 'connect'
+  /** Dragging one END of an already-existing object, rather than drawing a new one. */
+  | 'endpoint'
+  | 'none'
 
 /** Pointer events originating in a text control belong to that control. */
 function isTextEntry(target: EventTarget | null): boolean {
@@ -64,6 +76,8 @@ interface Gesture {
   /** Snapshot too: static objects do not move during a drag (see alignment.ts). */
   readonly alignTargets: readonly Rect[]
   readonly handle: HandleId | null
+  /** Which end is being dragged, in the owning type's own naming. */
+  readonly endpointId: string | null
   readonly startAngle: number
   moved: boolean
 }
@@ -111,6 +125,61 @@ function resolveDragDelta(
 function handleUnderPointer(target: EventTarget | null): string | null {
   if (!(target instanceof HTMLElement)) return null
   return target.closest<HTMLElement>('[data-handle]')?.dataset.handle ?? null
+}
+
+/**
+ * Sets up a drag of one existing endpoint.
+ *
+ * Returns `null` — leaving the press to fall through to ordinary handling — if
+ * anything about the grab does not add up, rather than starting a gesture that
+ * cannot commit.
+ *
+ * The preview reuses the connect drag: it anchors at the end NOT being dragged,
+ * so the line rubber-bands from the fixed end to the pointer exactly as drawing
+ * a new connector does, and the object under the pointer highlights for free.
+ * Nothing is written until pointer-up (rule 4).
+ */
+function beginEndpointDrag(
+  event: ReactPointerEvent<HTMLElement>,
+  store: ReturnType<typeof useInteractionStore.getState>,
+  runtime: { store: { getDocument: () => BoardDocument }; registry: ObjectTypeRegistry },
+  toWorld: (clientX: number, clientY: number) => Point,
+): Gesture | null {
+  const element = event.target instanceof HTMLElement ? event.target : null
+  const endpointId = element?.closest<HTMLElement>('[data-endpoint-id]')?.dataset.endpointId
+  if (endpointId === undefined) return null
+
+  const [selectedId] = [...store.selection]
+  const doc = runtime.store.getDocument()
+  const object = selectedId === undefined ? undefined : doc.objects.get(selectedId)
+  if (object === undefined) return null
+
+  const endpoints = runtime.registry.endpointsOf(object, doc)
+  const fixed = endpoints.find((endpoint) => endpoint.id !== endpointId)
+  if (fixed === undefined) return null
+
+  const anchor: ConnectorEndpoint =
+    fixed.attachedTo === undefined
+      ? { kind: 'point', x: fixed.at.x, y: fixed.at.y }
+      : { kind: 'object', objectId: fixed.attachedTo, anchor: { kind: 'auto' } }
+
+  const worldStart = toWorld(event.clientX, event.clientY)
+  store.beginConnect(anchor, worldStart)
+
+  return {
+    pointerId: event.pointerId,
+    mode: 'endpoint',
+    startWorld: worldStart,
+    startClient: { x: event.clientX, y: event.clientY },
+    startViewport: store.viewport,
+    subjects: [object],
+    startBounds: null,
+    alignTargets: [],
+    handle: null,
+    endpointId,
+    startAngle: 0,
+    moved: false,
+  }
 }
 
 /**
@@ -237,7 +306,17 @@ export function useCanvasGestures(containerRef: RefObject<HTMLElement | null>) {
       }
 
       const grabbed = handleUnderPointer(event.target)
-      if (grabbed !== null) {
+
+      if (grabbed === 'endpoint') {
+        const started = beginEndpointDrag(event, store, runtime, toWorld)
+        if (started !== null) {
+          event.currentTarget.setPointerCapture(event.pointerId)
+          gesture.current = started
+          return
+        }
+      }
+
+      if (grabbed !== null && grabbed !== 'endpoint') {
         const document = runtime.store.getDocument()
         const subjects = [...store.selection]
           .map((id) => document.objects.get(id))
@@ -264,6 +343,7 @@ export function useCanvasGestures(containerRef: RefObject<HTMLElement | null>) {
             startBounds,
             alignTargets: [],
             handle: rotating ? null : (grabbed as HandleId),
+            endpointId: null,
             startAngle: angleFrom(centre, worldStart) - (subjects[0]?.frame.rotation ?? 0),
             moved: false,
           }
@@ -329,12 +409,13 @@ export function useCanvasGestures(containerRef: RefObject<HTMLElement | null>) {
                 )
               : [],
           handle: null,
+          endpointId: null,
           startAngle: 0,
           moved: false,
         }
       }
     },
-    [applyIntent, runtime.registry, runtime.store, toWorld],
+    [applyIntent, runtime, toWorld],
   )
 
   const onPointerMove = useCallback(
@@ -396,10 +477,14 @@ export function useCanvasGestures(containerRef: RefObject<HTMLElement | null>) {
         return
       }
 
-      if (active.mode === 'connect') {
+      if (active.mode === 'connect' || active.mode === 'endpoint') {
         active.moved = true
         const over = hitTest(runtime.store.getDocument(), runtime.registry, worldPoint)
-        store.updateConnect(worldPoint, over)
+        // The object being edited must not offer itself as a target: attaching
+        // an end to its own connector is unresolvable, so it would silently
+        // become a no-op rather than the free point the drop implied.
+        const editing = active.subjects[0]?.id
+        store.updateConnect(worldPoint, over === editing ? null : over)
         return
       }
 
@@ -486,6 +571,22 @@ export function useCanvasGestures(containerRef: RefObject<HTMLElement | null>) {
 
         if (membershipChanged) commands.moveAndReparent(moves, target)
         else commands.moveObjects(moves)
+      }
+
+      if (
+        active.mode === 'endpoint' &&
+        active.endpointId !== null &&
+        store.drag.kind === 'connect'
+      ) {
+        const subject = active.subjects[0]
+        const { to, over } = store.drag
+        if (subject !== undefined && active.moved) {
+          commands.retargetEndpoint(
+            subject.id,
+            active.endpointId,
+            over === null ? { kind: 'point', x: to.x, y: to.y } : { kind: 'object', objectId: over },
+          )
+        }
       }
 
       if (active.mode === 'connect' && store.drag.kind === 'connect') {

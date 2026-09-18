@@ -184,6 +184,10 @@ Consequences to respect when adding a type like this:
   `registry.hitTestObject`
 - per-object subscriptions mean a dependent object goes stale unless the type
   declares `dependencies`
+- a type whose SHAPE is its ends declares `endpoints` and `retargetEndpoint`,
+  and gets drag handles, preview and undo without the canvas knowing what it is.
+  The gesture reports only what was dropped on; where exactly an attachment
+  lands is the type's decision
 
 ### 17. Snapping is a preference with a held-key override
 

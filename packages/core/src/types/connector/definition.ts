@@ -65,6 +65,48 @@ export const connectorType = defineObjectType<typeof CONNECTOR_TYPE, ConnectorDa
   /** Redraw when either end moves. */
   dependencies: (object) => endpointDependencies(object.data.from, object.data.to),
 
+  /** Both ends are draggable, at wherever they currently resolve to. */
+  endpoints: (object, doc) => {
+    const { start, end } = resolveEndpoints(doc, object.data.from, object.data.to)
+    return [
+      {
+        id: 'from',
+        at: start,
+        ...(object.data.from.kind === 'object' ? { attachedTo: object.data.from.objectId } : {}),
+      },
+      {
+        id: 'to',
+        at: end,
+        ...(object.data.to.kind === 'object' ? { attachedTo: object.data.to.objectId } : {}),
+      },
+    ]
+  },
+
+  /**
+   * Dropping an end on an object attaches it; dropping it on empty space makes
+   * it a free point.
+   *
+   * Attachment always uses the `auto` anchor rather than the side nearest the
+   * drop. A dropped end means "join this object", and auto keeps the line
+   * sensible when either object later moves — pinning the side it happened to
+   * be dropped on would leave the connector entering from behind as soon as
+   * anything changed.
+   *
+   * Attaching a connector to ITSELF is refused, since resolving that endpoint
+   * would need the bounds it is currently computing.
+   */
+  retargetEndpoint: (object, endpointId, target) => {
+    if (endpointId !== 'from' && endpointId !== 'to') return {}
+    if (target.kind === 'object' && target.objectId === object.id) return {}
+
+    const endpoint =
+      target.kind === 'point'
+        ? ({ kind: 'point', x: target.x, y: target.y } as const)
+        : ({ kind: 'object', objectId: target.objectId, anchor: { kind: 'auto' } } as const)
+
+    return endpointId === 'from' ? { from: endpoint } : { to: endpoint }
+  },
+
   describe: (object) => ({
     searchText: object.data.text,
     summary: object.data.text.trim() === '' ? 'Connector' : `Connector: ${object.data.text}`,

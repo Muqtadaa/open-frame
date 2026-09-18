@@ -7,6 +7,30 @@ import type { ObjectId } from './ids.js'
 import type { AnyOpenFrameObject, ObjectBase, StyleProp } from './object.js'
 
 /**
+ * One draggable end of an object, in world coordinates.
+ *
+ * `id` is the type's own name for it (`'from'` / `'to'` for a connector) and is
+ * passed straight back to `retargetEndpoint`, so the generic layer never has to
+ * know what ends a type has.
+ */
+export interface DraggableEndpoint {
+  readonly id: string
+  readonly at: Point
+  /** The object this end is currently attached to, if any. */
+  readonly attachedTo?: ObjectId
+}
+
+/**
+ * What a dragged endpoint was dropped on: empty space, or an object.
+ *
+ * Deliberately free of anchor detail. Where exactly on the target an
+ * attachment lands is the TYPE's decision, not the gesture's.
+ */
+export type EndpointTarget =
+  | { readonly kind: 'point'; readonly x: number; readonly y: number }
+  | { readonly kind: 'object'; readonly objectId: ObjectId }
+
+/**
  * What an object type can do. The application asks the registry rather than
  * switching on `object.type`, which is how a selection of mixed types can be
  * styled, resized or described by code that knows nothing about any of them.
@@ -100,6 +124,33 @@ export interface ObjectTypeDefinition<TType extends string, TData> {
    */
   readonly dependencies?: (object: ObjectBase<TType, TData>) => readonly ObjectId[]
 
+  /**
+   * Individually draggable points, for types whose SHAPE is defined by where
+   * its ends are rather than by a frame.
+   *
+   * Declared here rather than detected by the overlay, for the same reason as
+   * `getBounds`: `object.type === 'connector'` in a caller is the type switch
+   * rule 5 forbids, and it would have to be extended for every later type with
+   * ends — a dimension line, a curve with control points, a route with stops.
+   */
+  readonly endpoints?: (
+    object: ObjectBase<TType, TData>,
+    doc: BoardDocument,
+  ) => readonly DraggableEndpoint[]
+
+  /**
+   * Where a dragged endpoint ends up, as a data patch.
+   *
+   * The TYPE decides what attaching means — which anchor to use, whether an
+   * attachment is allowed at all — so the gesture only reports what was dropped
+   * on and lets the type work out the rest.
+   */
+  readonly retargetEndpoint?: (
+    object: ObjectBase<TType, TData>,
+    endpointId: string,
+    target: EndpointTarget,
+  ) => Partial<TData>
+
   readonly describe: (object: ObjectBase<TType, TData>) => ObjectDescription
 }
 
@@ -123,6 +174,12 @@ export interface ErasedObjectTypeDefinition {
   readonly getBounds?: (object: AnyOpenFrameObject, doc: BoardDocument) => Rect
   readonly hitTest?: (object: AnyOpenFrameObject, doc: BoardDocument, point: Point) => boolean
   readonly dependencies?: (object: AnyOpenFrameObject) => readonly ObjectId[]
+  readonly endpoints?: (object: AnyOpenFrameObject, doc: BoardDocument) => readonly DraggableEndpoint[]
+  readonly retargetEndpoint?: (
+    object: AnyOpenFrameObject,
+    endpointId: string,
+    target: EndpointTarget,
+  ) => Record<string, unknown>
 }
 
 export class ObjectTypeError extends Error {
@@ -179,7 +236,7 @@ export function defineObjectType<TType extends string, TData>(
     describe: (object) => definition.describe(object as ObjectBase<TType, TData>),
   }
 
-  const { getBounds, hitTest, dependencies } = definition
+  const { getBounds, hitTest, dependencies, endpoints, retargetEndpoint } = definition
   return {
     ...erased,
     ...(getBounds === undefined
@@ -193,6 +250,15 @@ export function defineObjectType<TType extends string, TData>(
     ...(dependencies === undefined
       ? {}
       : { dependencies: (object) => dependencies(object as ObjectBase<TType, TData>) }),
+    ...(endpoints === undefined
+      ? {}
+      : { endpoints: (object, doc) => endpoints(object as ObjectBase<TType, TData>, doc) }),
+    ...(retargetEndpoint === undefined
+      ? {}
+      : {
+          retargetEndpoint: (object, endpointId, target) =>
+            retargetEndpoint(object as ObjectBase<TType, TData>, endpointId, target),
+        }),
   }
 }
 
@@ -247,6 +313,29 @@ export class ObjectTypeRegistry {
     if (precise !== undefined) return precise(object, doc, point)
     const { x, y, width, height } = object.frame
     return containsRotatedPoint({ x, y, width, height }, object.frame.rotation, point)
+  }
+
+  /**
+   * The draggable ends of an object, or none for types that have no such thing.
+   * Empty for almost everything, which is what lets the overlay ask every
+   * selected object without caring what it is.
+   */
+  endpointsOf(object: AnyOpenFrameObject, doc: BoardDocument): readonly DraggableEndpoint[] {
+    return this.#definitions.get(object.type)?.endpoints?.(object, doc) ?? []
+  }
+
+  /**
+   * The data patch that moves one endpoint, or `null` if the type does not
+   * support it. Null rather than an empty patch, so a caller can tell "nothing
+   * to do" from "this type cannot".
+   */
+  retargetEndpoint(
+    object: AnyOpenFrameObject,
+    endpointId: string,
+    target: EndpointTarget,
+  ): Record<string, unknown> | null {
+    const retarget = this.#definitions.get(object.type)?.retargetEndpoint
+    return retarget === undefined ? null : retarget(object, endpointId, target)
   }
 
   /** Objects whose rendering depends on this one — the reverse of `dependencies`. */

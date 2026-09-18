@@ -77,8 +77,9 @@ free end.
 against neighbours' edges and centres, which take precedence over the grid per
 axis.
 
-Remaining: group/ungroup as `transact` composites, dragging an existing
-connector endpoint to re-attach it.
+✅ Dragging an existing connector endpoint to re-attach or detach it.
+
+Remaining: group/ungroup as `transact` composites.
 
 **Browser zoom must stay out of the way.** `Ctrl/Cmd` with `+`, `−`, `0`, `1`
 and with the wheel are all claimed and prevented; see
@@ -115,9 +116,12 @@ that survives move, resize and delete. Deleting an attached object converts that
 end to a free point; deleting both ends deletes the connector, because a line
 between two things that no longer exist is litter rather than content.
 
-Making this work required two registry additions — `getBounds(object, doc)` and
-`hitTest` — because a connector's geometry depends on objects it only
-references. See [CLAUDE.md](../../CLAUDE.md) rule 16.
+Making this work required four registry additions. `getBounds(object, doc)` and
+`hitTest`, because a connector's geometry depends on objects it only references;
+then `endpoints` and `retargetEndpoint`, so that dragging an end is a property
+of the TYPE rather than a connector special case in the overlay. The gesture
+reports only what was dropped on — which anchor to use, and whether the drop is
+allowed at all, is the type's decision. See [CLAUDE.md](../../CLAUDE.md) rule 16.
 
 **Frame membership.** The first type with children. `ReparentObjects` must use
 `wouldCreateCycle`, and deleting a frame must cascade — both already exist and

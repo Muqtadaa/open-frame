@@ -225,3 +225,130 @@ describe('connector bounds', () => {
     expect(bounds.height).toBeGreaterThan(200)
   })
 })
+
+/**
+ * Dragging an existing endpoint to somewhere else.
+ *
+ * The registry surface is deliberately generic — `endpoints` and
+ * `retargetEndpoint` name no connector concept — so the overlay that draws the
+ * handles never has to ask what type it is looking at.
+ */
+describe('draggable endpoints', () => {
+  let h: TestHarness
+  let a: ObjectId
+  let b: ObjectId
+  let c: ObjectId
+  let connector: ObjectId
+
+  beforeEach(() => {
+    h = createTestHarness()
+    a = create(h, 'sticky', 0, 0)
+    b = create(h, 'sticky', 500, 0)
+    c = create(h, 'sticky', 1000, 400)
+    connector = create(h, 'connector', 0, 0, {
+      from: { kind: 'object', objectId: a, anchor: { kind: 'auto' } },
+      to: { kind: 'object', objectId: b, anchor: { kind: 'auto' } },
+    })
+  })
+
+  const object = () => {
+    const found = h.store.getObject(connector)
+    if (found === undefined) throw new Error('connector went missing')
+    return found
+  }
+
+  it('reports both ends, where they resolve to', () => {
+    const ends = h.registry.endpointsOf(object(), h.store.getDocument())
+    expect(ends.map((e) => e.id)).toEqual(['from', 'to'])
+    // Attached ends sit on the edge of their object, not at its origin.
+    expect(ends[0]?.at.x).toBeGreaterThan(0)
+  })
+
+  it('names the object each end is attached to', () => {
+    const ends = h.registry.endpointsOf(object(), h.store.getDocument())
+    expect(ends[0]?.attachedTo).toBe(a)
+    expect(ends[1]?.attachedTo).toBe(b)
+  })
+
+  it('leaves a free end with no attachment', () => {
+    const free = create(h, 'connector', 0, 0, {
+      from: { kind: 'point', x: 10, y: 20 },
+      to: { kind: 'point', x: 90, y: 20 },
+    })
+    const found = h.store.getObject(free)
+    if (found === undefined) throw new Error('missing')
+    const ends = h.registry.endpointsOf(found, h.store.getDocument())
+    expect(ends[0]?.attachedTo).toBeUndefined()
+    expect(ends[0]?.at).toEqual({ x: 10, y: 20 })
+  })
+
+  it('re-attaches an end to a different object', () => {
+    const patch = h.registry.retargetEndpoint(object(), 'to', { kind: 'object', objectId: c })
+    expect(patch).not.toBeNull()
+    if (patch === null) return
+
+    const result = h.dispatcher.dispatch({ kind: 'UpdateObjectData', id: connector, patch })
+    expect(result.ok).toBe(true)
+    expect(connectorData(h, connector).to).toEqual({
+      kind: 'object',
+      objectId: c,
+      anchor: { kind: 'auto' },
+    })
+  })
+
+  it('detaches an end dropped on empty space', () => {
+    const patch = h.registry.retargetEndpoint(object(), 'from', { kind: 'point', x: -40, y: -60 })
+    if (patch === null) throw new Error('expected a patch')
+
+    h.dispatcher.dispatch({ kind: 'UpdateObjectData', id: connector, patch })
+    expect(connectorData(h, connector).from).toEqual({ kind: 'point', x: -40, y: -60 })
+  })
+
+  it('leaves the other end untouched', () => {
+    const patch = h.registry.retargetEndpoint(object(), 'from', { kind: 'point', x: 5, y: 5 })
+    if (patch === null) throw new Error('expected a patch')
+
+    h.dispatcher.dispatch({ kind: 'UpdateObjectData', id: connector, patch })
+    expect(connectorData(h, connector).to).toEqual({
+      kind: 'object',
+      objectId: b,
+      anchor: { kind: 'auto' },
+    })
+  })
+
+  /** Resolving that endpoint would need the bounds it is in the middle of computing. */
+  it('refuses to attach a connector to itself', () => {
+    const patch = h.registry.retargetEndpoint(object(), 'to', {
+      kind: 'object',
+      objectId: connector,
+    })
+    expect(patch).toEqual({})
+  })
+
+  it('ignores an endpoint id it does not have', () => {
+    expect(h.registry.retargetEndpoint(object(), 'middle', { kind: 'point', x: 0, y: 0 })).toEqual(
+      {},
+    )
+  })
+
+  it('re-attaching is undoable like any other edit', () => {
+    const patch = h.registry.retargetEndpoint(object(), 'to', { kind: 'object', objectId: c })
+    if (patch === null) throw new Error('expected a patch')
+    h.dispatcher.dispatch({ kind: 'UpdateObjectData', id: connector, patch })
+
+    h.dispatcher.undo()
+    expect(connectorData(h, connector).to).toEqual({
+      kind: 'object',
+      objectId: b,
+      anchor: { kind: 'auto' },
+    })
+  })
+
+  /** Every other type has no ends, which is what keeps the overlay type-agnostic. */
+  it('reports no endpoints for an ordinary object', () => {
+    const sticky = h.store.getObject(a)
+    if (sticky === undefined) throw new Error('missing')
+    expect(h.registry.endpointsOf(sticky, h.store.getDocument())).toEqual([])
+    expect(h.registry.retargetEndpoint(sticky, 'from', { kind: 'point', x: 0, y: 0 })).toBeNull()
+  })
+})

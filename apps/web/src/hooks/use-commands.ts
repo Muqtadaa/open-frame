@@ -1,6 +1,7 @@
 import type {
   ColorToken,
   ConnectorEndpoint,
+  EndpointTarget,
   ObjectFrame,
   ObjectId,
   Placement,
@@ -36,6 +37,8 @@ export interface BoardCommands {
   deleteSelection(): void
   setText(id: ObjectId, text: string): void
   updateData(id: ObjectId, patch: Readonly<Record<string, unknown>>): void
+  /** Moves one draggable end of an object. The TYPE decides what that means. */
+  retargetEndpoint(id: ObjectId, endpointId: string, target: EndpointTarget): void
   setColor(ids: readonly ObjectId[], color: ColorToken): void
   undo(): void
   redo(): void
@@ -251,6 +254,21 @@ export function useCommands(): BoardCommands {
       },
 
       updateData(id, patch) {
+        report(dispatcher.dispatch({ kind: 'UpdateObjectData', id, patch }))
+      },
+
+      retargetEndpoint(id, endpointId, target) {
+        const object = runtime.store.getDocument().objects.get(id)
+        if (object === undefined) return
+
+        /*
+         * The type turns "this end was dropped there" into a data patch. The
+         * gesture reports only what was under the pointer; which anchor to use,
+         * and whether the drop is allowed at all, are the type's business.
+         */
+        const patch = runtime.registry.retargetEndpoint(object, endpointId, target)
+        if (patch === null || Object.keys(patch).length === 0) return
+
         report(dispatcher.dispatch({ kind: 'UpdateObjectData', id, patch }))
       },
 

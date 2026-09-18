@@ -5,6 +5,7 @@ import { useKeyboardShortcuts } from '../interaction/use-keyboard-shortcuts.js'
 import { GRID_SIZE } from '../scene/snapping.js'
 import { AlignmentOverlay } from './AlignmentOverlay.js'
 import { ConnectorPreview } from './ConnectorPreview.js'
+import { EndpointOverlay } from './EndpointOverlay.js'
 import { MarqueeOverlay } from './MarqueeOverlay.js'
 import { ObjectLayer } from './ObjectLayer.js'
 import { SelectionOverlay } from './SelectionOverlay.js'
@@ -91,6 +92,7 @@ export function Canvas() {
         <SelectionOverlay />
         <MarqueeOverlay />
         <AlignmentOverlay />
+        <EndpointOverlay />
         <ConnectorPreview />
       </div>
     </div>
