@@ -8,6 +8,7 @@ import { MarqueeOverlay } from './MarqueeOverlay.js'
 import { ObjectLayer } from './ObjectLayer.js'
 import { SelectionOverlay } from './SelectionOverlay.js'
 import { useCanvasGestures } from './use-canvas-gestures.js'
+import { useImageDrop } from './use-image-drop.js'
 import { useWheelGesture } from './use-wheel-gesture.js'
 import { useCanvasSize } from './use-canvas-size.js'
 
@@ -56,6 +57,7 @@ export function Canvas() {
   // prop — see use-wheel-gesture.ts for why that is not optional.
   useWheelGesture(containerRef)
   useKeyboardShortcuts(gestures.setSpaceHeld)
+  const imageDrop = useImageDrop(containerRef)
 
   useEffect(() => {
     setCanvasSize(width, height)
@@ -75,6 +77,8 @@ export function Canvas() {
       onPointerCancel={gestures.onPointerUp}
       onDoubleClick={gestures.onDoubleClick}
       onContextMenu={gestures.onContextMenu}
+      onDragOver={imageDrop.onDragOver}
+      onDrop={imageDrop.onDrop}
     >
       <div
         className="of-world"

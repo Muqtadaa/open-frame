@@ -1,6 +1,7 @@
 import type { ObjectId } from '@openframe/core'
 import { memo } from 'react'
 
+import { useAssetUrl } from '../hooks/use-asset-url.js'
 import { useDependencySubscriptions, useDocumentObject } from '../hooks/use-document-object.js'
 import { useCommands } from '../hooks/use-commands.js'
 import { useOpenFrame } from '../runtime/context.js'
@@ -56,6 +57,11 @@ function ObjectViewInner({ id, views }: Props) {
   )
   const commands = useCommands()
   const { runtime } = useOpenFrame()
+  // Resolved before the early return so hook order never varies. Only views
+  // that declare `usesAssets` actually subscribe.
+  const assetUrl = useAssetUrl(
+    object !== undefined && views.get(object.type)?.usesAssets === true,
+  )
 
   if (object === undefined) return null
 
@@ -109,6 +115,7 @@ function ObjectViewInner({ id, views }: Props) {
             selected={selected}
             zoom={zoom}
             document={runtime.store.getDocument()}
+            assetUrl={assetUrl}
           />
         )}
       </ObjectErrorBoundary>

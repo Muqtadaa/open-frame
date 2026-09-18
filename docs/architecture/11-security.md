@@ -42,13 +42,42 @@ builds is the one the server validates and authorizes.
 | Area                                       | When it matters            | What the architecture already does                                                      |
 | ------------------------------------------ | -------------------------- | --------------------------------------------------------------------------------------- |
 | **XSS via object text**                    | Now, nominally             | All text renders as React children — never `dangerouslySetInnerHTML`. Keep it that way. |
-| **SVG sanitization**                       | Image/SVG import (Phase 2) | Assets are referenced, never inlined into the document                                  |
-| **Asset upload validation**                | Images (Phase 2)           | `AssetStore` is the single choke point for bytes                                        |
+| **SVG sanitization**                       | SVG import (not shipped)   | ✅ SVG is refused outright — see below                                                  |
+| **Asset upload validation**                | Images — **done**          | ✅ Size, declared type and sniffed content, in `runtime/asset-validation.ts`            |
 | **SSRF via URL preview**                   | Link/bookmark objects      | Not built; fetching must be server-side with an allowlist                               |
 | **Server-side authorization**              | First multi-user feature   | `Capabilities` port + commands as data                                                  |
 | **Public board links**                     | Sharing                    | `view`/`comment` capabilities already distinguished                                     |
 | **API rate limits**                        | Public API                 | Commands are discrete and countable                                                     |
 | **AI prompt injection from board content** | AI features (Phase 5)      | ⬇ see below                                                                             |
+
+---
+
+## Image uploads
+
+Three checks, in this order, before any bytes reach the asset store
+(`apps/web/src/runtime/asset-validation.ts`):
+
+1. **Size** — 20MB. Checked first so a pathological file is rejected without
+   being read.
+2. **Declared type** — an allowlist of `image/png`, `image/jpeg`, `image/gif`,
+   `image/webp`. This is the check that produces a good error message.
+3. **Sniffed content** — the leading bytes must match the declared type.
+
+The third exists because the first two can be lied to. A `File`'s MIME type is
+derived from its extension, so renaming `payload.svg` to `photo.png` produces a
+File that claims to be a PNG. Only the bytes are authoritative.
+
+**SVG is deliberately not accepted.** An SVG is not an image but a document: it
+can carry `<script>`, external references, CSS and `<foreignObject>`, so
+rendering an untrusted one is running untrusted markup. Supporting it safely
+means sanitising it, and a half-sanitised SVG is more dangerous than a rejected
+one because it looks handled. It can be added when there is a sanitiser to add
+with it.
+
+Validation is **policy and lives next to the runtime, not in an adapter** —
+replacing IndexedDB with a server must not change what a user may upload. A
+server will of course have to repeat all three checks: this one is a UX
+affordance, never a control.
 
 ---
 

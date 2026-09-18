@@ -2,6 +2,7 @@ import { Canvas } from '../canvas/Canvas.js'
 import { ContextMenu } from '../ui/ContextMenu.js'
 import { NoticeBanner } from '../ui/NoticeBanner.js'
 import { StatusBar } from '../ui/StatusBar.js'
+import { Toast } from '../ui/Toast.js'
 import { Toolbar } from '../ui/Toolbar.js'
 import { ZoomControl } from '../ui/ZoomControl.js'
 import { useOpenFrame } from '../runtime/context.js'
@@ -28,6 +29,7 @@ export function App() {
 
       <div className="of-overlay of-overlay--top">
         <NoticeBanner notices={runtime.notices} readOnly={runtime.readOnly} />
+        <Toast />
       </div>
 
       <div className="of-overlay of-overlay--bottom-right">

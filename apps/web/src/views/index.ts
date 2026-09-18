@@ -1,6 +1,7 @@
 import { ObjectViewRegistry } from './registry.js'
 import { connectorView } from './ConnectorView.js'
 import { frameView } from './FrameView.js'
+import { imageView } from './ImageView.js'
 import { shapeView } from './ShapeView.js'
 import { stickyView } from './StickyView.js'
 import { textView } from './TextView.js'
@@ -22,6 +23,7 @@ export function createDefaultViewRegistry(): ObjectViewRegistry {
     shapeView,
     frameView,
     connectorView,
+    imageView,
     unknownView,
   ])
 }

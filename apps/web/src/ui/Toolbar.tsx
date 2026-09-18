@@ -1,8 +1,10 @@
-import { SHAPE_KINDS, type ColorToken } from '@openframe/core'
+import { SHAPE_KINDS, screenToWorld, type ColorToken } from '@openframe/core'
 import { COLOR_TOKENS } from '@openframe/core'
-import { useState } from 'react'
+import { useRef, useState } from 'react'
 
 import { useCommands } from '../hooks/use-commands.js'
+import { useImageImport } from '../hooks/use-image-import.js'
+import { ALLOWED_IMAGE_TYPES } from '../runtime/asset-validation.js'
 import { useUndoState } from '../hooks/use-document-object.js'
 import { useInteractionStore, type Tool } from '../interaction/interaction-store.js'
 import { SURFACE_VARS } from '../scene/style-tokens.js'
@@ -12,6 +14,7 @@ import {
   RedoIcon,
   ConnectorIcon,
   FrameIcon,
+  ImageIcon,
   ShapeIcon,
   StickyIcon,
   TextIcon,
@@ -55,6 +58,8 @@ export function Toolbar() {
   const commands = useCommands()
   const { canUndo, canRedo, undoLabel } = useUndoState()
   const [shapesOpen, setShapesOpen] = useState(false)
+  const importImages = useImageImport()
+  const fileInput = useRef<HTMLInputElement>(null)
 
   const icon = (id: Tool) => {
     switch (id) {
@@ -143,6 +148,46 @@ export function Toolbar() {
             )}
           </div>
         ))}
+      </div>
+
+      <div className="of-rail__divider" />
+
+      <div className="of-rail__group">
+        {/*
+          * A button rather than a tool mode. Every other tool places something
+          * the app can invent; an image needs a file first, so there is nothing
+          * to arm — clicking the canvas afterwards would have no meaning.
+          */}
+        <button
+          type="button"
+          className="of-tool"
+          title="Insert image"
+          data-testid="tool-image"
+          onClick={() => fileInput.current?.click()}
+        >
+          <ImageIcon />
+          <span className="of-tool__label">Image</span>
+        </button>
+        <input
+          ref={fileInput}
+          type="file"
+          className="of-visually-hidden"
+          accept={ALLOWED_IMAGE_TYPES.join(',')}
+          multiple
+          tabIndex={-1}
+          onChange={(event) => {
+            const files = [...(event.target.files ?? [])]
+            // Reset so choosing the same file twice in a row fires `change`
+            // again — otherwise the second attempt silently does nothing.
+            event.target.value = ''
+            if (files.length === 0) return
+            const { viewport, canvasSize } = useInteractionStore.getState()
+            void importImages(
+              files,
+              screenToWorld(viewport, { x: canvasSize.width / 2, y: canvasSize.height / 2 }),
+            )
+          }}
+        />
       </div>
 
       <div className="of-rail__divider" />

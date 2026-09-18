@@ -119,8 +119,29 @@ A browser `Blob` satisfies it as-is, and so does a Node buffer wrapper, without
 general rule: **the domain names what it needs, and adapters supply something
 that fits.**
 
-_(No asset implementation exists yet — images arrive in
-[Phase 2](../phases/phase-2-core-canvas.md).)_
+Implemented by `IndexedDbAssetStore` ([Phase 2](../phases/phase-2-core-canvas.md)).
+
+Two things about it are worth knowing before writing a second adapter:
+
+**The stored locator is `idb:<id>`, never an object URL.** An object URL is
+minted per page load and dies with the tab, so persisting one would leave every
+image on a reloaded board pointing at nothing. Turning a locator into something
+the browser can paint is the adapter's job — which is exactly the seam that lets
+a server adapter hand back a CDN or signed URL without the document changing.
+
+**Object URLs are cached per asset and revoked on delete.** `resolve` is called
+from the render path, so minting a fresh URL each time would pin one decoded
+blob in memory per frame — a leak that grows with time on the page rather than
+with the size of the board.
+
+Both adapters share one `database.ts`, which owns the database name, its version
+and every object store. An IndexedDB database has a single version and a single
+upgrade path, so two adapters each calling `indexedDB.open` with their own
+version number would fight: whichever opened second with a lower version would
+fail outright. Adding a store means adding it there and bumping the version; the
+upgrade from v1 (boards only) to v2 (boards + assets) is covered by a test that
+builds a real v1 database first, because an upgrade that throws leaves an
+existing user unable to open their own boards.
 
 ---
 

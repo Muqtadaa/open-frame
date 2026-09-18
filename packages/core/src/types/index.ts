@@ -1,6 +1,7 @@
 import { ObjectTypeRegistry } from '../domain/registry.js'
 import { connectorType } from './connector/definition.js'
 import { frameType } from './frame/definition.js'
+import { imageType } from './image/definition.js'
 import { shapeType } from './shape/definition.js'
 import { stickyType } from './sticky/definition.js'
 import { textType } from './text/definition.js'
@@ -19,6 +20,8 @@ export {
 } from './connector/schema.js'
 export { endpointDependencies, resolveEndpoints } from './connector/geometry.js'
 export { FRAME_TYPE, frameType } from './frame/definition.js'
+export { IMAGE_TYPE, imageType, placedSize } from './image/definition.js'
+export { ImageDataSchema, type ImageData } from './image/schema.js'
 export { FrameDataSchema, type FrameData } from './frame/schema.js'
 export { SHAPE_TYPE, shapeType } from './shape/definition.js'
 export { SHAPE_KINDS, ShapeDataSchema, type ShapeData, type ShapeKind } from './shape/schema.js'
@@ -43,6 +46,7 @@ export function createDefaultRegistry(): ObjectTypeRegistry {
     shapeType,
     frameType,
     connectorType,
+    imageType,
     unknownType,
   ])
 }

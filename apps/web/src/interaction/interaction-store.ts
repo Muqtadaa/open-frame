@@ -123,6 +123,12 @@ interface InteractionState {
    * it for the duration of a gesture without changing the preference.
    */
   readonly snapToGrid: boolean
+  /**
+   * A transient message for something the user did that could not be done —
+   * an unsupported file, say. Not an error channel: failures the user did not
+   * cause belong in the notice banner, which persists.
+   */
+  readonly toast: string | null
   readonly selection: ReadonlySet<ObjectId>
   readonly hoveredId: ObjectId | null
   readonly editingId: ObjectId | null
@@ -150,6 +156,7 @@ interface InteractionState {
   cycleShape(): void
   setWheelMode(mode: WheelMode): void
   setSnapToGrid(enabled: boolean): void
+  showToast(message: string | null): void
   toggleSnapToGrid(): void
   toggleWheelMode(): void
   setSelection(ids: readonly ObjectId[]): void
@@ -183,6 +190,7 @@ export const useInteractionStore = create<InteractionState>((set) => ({
   shapeKind: 'rectangle',
   wheelMode: readWheelMode(),
   snapToGrid: readSnap(),
+  toast: null,
   selection: new Set<ObjectId>(),
   hoveredId: null,
   editingId: null,
@@ -207,6 +215,8 @@ export const useInteractionStore = create<InteractionState>((set) => ({
     writeWheelMode(wheelMode)
     set({ wheelMode })
   },
+
+  showToast: (toast) => set({ toast }),
 
   setSnapToGrid: (snapToGrid) => {
     writeSnap(snapToGrid)

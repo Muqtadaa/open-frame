@@ -8,6 +8,7 @@ import type {
   ObjectTypeRegistry,
 } from '@openframe/core'
 
+import type { AssetService } from './asset-service.js'
 import type { ObjectViewRegistry } from '../views/registry.js'
 
 /**
@@ -37,6 +38,8 @@ export interface OpenFrameRuntime {
   readonly registry: ObjectTypeRegistry
   readonly dispatcher: CommandDispatcher
   readonly repository: BoardRepository
+  /** Uploads, and the renderer's synchronous view of resolved asset URLs. */
+  readonly assets: AssetService
   /** Non-fatal problems found while loading, surfaced to the user. */
   readonly notices: readonly string[]
   /** True when the board could not be read and must not be written back. */

@@ -197,7 +197,36 @@ resulting delta applied to every member. Snapping each object independently
 shuffles them relative to one another, which looks like a bug even though each
 object is individually aligned.
 
-### 18. Break a new architectural rule once, and watch it fail
+### 18. An upload is validated by its content, not by what it claims to be
+
+A `File`'s MIME type is derived from its extension, so it is trivially wrong:
+renaming `payload.svg` to `photo.png` produces a File that claims to be a PNG.
+Uploads are checked on size, declared type AND sniffed leading bytes, in that
+order — size first because it is free, the declared type for a readable error,
+the bytes because that is the one a file cannot lie about.
+
+**SVG is not an accepted image format.** It is a document that can carry
+scripts, external references and foreign objects, so accepting one means
+sanitising it — and a half-sanitised SVG is worse than a rejected one because it
+looks handled. Do not add it to the allowlist without a sanitiser in the same
+change.
+
+Validation is policy and lives beside the runtime, never in an adapter: swapping
+IndexedDB for a server must not change what a user may upload.
+
+### 19. A stored locator must survive a reload
+
+An `AssetRef.locator` is `idb:<id>`, never a `blob:` URL. Object URLs are minted
+per page load and die with the tab, so persisting one leaves every image on a
+reloaded board pointing at nothing. Resolving a locator to something paintable
+is the adapter's job, and it caches: `resolve` is called from the render path,
+so minting a URL per call pins one decoded blob in memory per frame.
+
+Anything asynchronous that the render path needs gets the same treatment — a
+synchronous cache lookup with an explicit `loading`/`ready`/`missing` state,
+plus a subscription that re-renders when it lands. A view cannot await.
+
+### 20. Break a new architectural rule once, and watch it fail
 
 A rule that passes vacuously is worse than no rule, because it is trusted. This
 practice has already caught a dependency-cruiser rule that never fired on the

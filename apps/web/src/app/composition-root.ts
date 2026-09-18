@@ -11,10 +11,13 @@ import {
   systemClock,
   type BoardId,
   type BoardRepository,
+  type AssetStore,
   type DocumentStore,
 } from '@openframe/core'
 
+import { IndexedDbAssetStore } from '../adapters/indexeddb/indexeddb-asset-store.js'
 import { IndexedDbBoardRepository } from '../adapters/indexeddb/indexeddb-board-repository.js'
+import { AssetService } from '../runtime/asset-service.js'
 import { BENCH_TOOLS_ENABLED } from './bench-flag.js'
 import type { OpenFrameRuntime } from '../runtime/context.js'
 
@@ -37,6 +40,7 @@ export type { OpenFrameRuntime } from '../runtime/context.js'
 export interface CreateRuntimeOptions {
   readonly boardId?: BoardId
   readonly repository?: BoardRepository
+  readonly assetStore?: AssetStore
   readonly autosaveDelayMs?: number
 }
 
@@ -47,6 +51,8 @@ export async function createRuntime(options: CreateRuntimeOptions = {}): Promise
   const boardId = options.boardId ?? DEFAULT_BOARD_ID
   const repository = options.repository ?? new IndexedDbBoardRepository()
   const registry = createDefaultRegistry()
+  const ids = createIdGenerator()
+  const assets = new AssetService(options.assetStore ?? new IndexedDbAssetStore(), ids)
 
   const notices: string[] = []
   let readOnly = false
@@ -82,7 +88,7 @@ export async function createRuntime(options: CreateRuntimeOptions = {}): Promise
     writer,
     registry,
     clock: systemClock,
-    ids: createIdGenerator(),
+    ids,
     // Phase 1 is single-player and local. When a server exists, every command
     // is re-authorized there; this check is a UX affordance, never a control.
     capabilities: allowAllCapabilities,
@@ -104,6 +110,7 @@ export async function createRuntime(options: CreateRuntimeOptions = {}): Promise
     registry,
     dispatcher,
     repository,
+    assets,
     notices,
     readOnly,
     dispose: unsubscribe,

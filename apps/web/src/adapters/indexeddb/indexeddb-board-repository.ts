@@ -12,22 +12,13 @@ import {
   type Patch,
 } from '@openframe/core'
 
-const DB_NAME = 'openframe'
-const DB_VERSION = 1
-const STORE = 'boards'
+import { STORES, promisify, transact } from './database.js'
 
 interface StoredRecord {
   readonly id: string
   readonly savedAt: number
   readonly title: string
   readonly payload: unknown
-}
-
-function promisify<T>(request: IDBRequest<T>): Promise<T> {
-  return new Promise((resolve, reject) => {
-    request.onsuccess = () => resolve(request.result)
-    request.onerror = () => reject(request.error ?? new Error('IndexedDB request failed'))
-  })
 }
 
 /**
@@ -43,44 +34,13 @@ function promisify<T>(request: IDBRequest<T>): Promise<T> {
  */
 export class IndexedDbBoardRepository implements BoardRepository {
   readonly #registry: ObjectTypeRegistry
-  #db: Promise<IDBDatabase> | undefined
 
   constructor(registry: ObjectTypeRegistry = createDefaultRegistry()) {
     this.#registry = registry
   }
 
-  #open(): Promise<IDBDatabase> {
-    this.#db ??= new Promise<IDBDatabase>((resolve, reject) => {
-      const request = indexedDB.open(DB_NAME, DB_VERSION)
-      request.onupgradeneeded = () => {
-        if (!request.result.objectStoreNames.contains(STORE)) {
-          request.result.createObjectStore(STORE, { keyPath: 'id' })
-        }
-      }
-      request.onsuccess = () => resolve(request.result)
-      request.onerror = () =>
-        reject(request.error ?? new Error('Could not open the OpenFrame database'))
-    })
-    return this.#db
-  }
-
-  async #transaction<T>(
-    mode: IDBTransactionMode,
-    run: (store: IDBObjectStore) => Promise<T>,
-  ): Promise<T> {
-    const db = await this.#open()
-    const tx = db.transaction(STORE, mode)
-    const result = await run(tx.objectStore(STORE))
-    await new Promise<void>((resolve, reject) => {
-      tx.oncomplete = () => resolve()
-      tx.onerror = () => reject(tx.error ?? new Error('IndexedDB transaction failed'))
-      tx.onabort = () => reject(tx.error ?? new Error('IndexedDB transaction aborted'))
-    })
-    return result
-  }
-
   async getBoard(id: BoardId): Promise<LoadResult | { status: 'not-found' }> {
-    const record = await this.#transaction('readonly', (store) =>
+    const record = await transact(STORES.boards, 'readonly', (store) =>
       promisify<StoredRecord | undefined>(store.get(id) as IDBRequest<StoredRecord | undefined>),
     )
     if (record === undefined) return { status: 'not-found' }
@@ -97,7 +57,7 @@ export class IndexedDbBoardRepository implements BoardRepository {
       title: document.meta.title,
       payload: serializeBoard(document, savedAt),
     }
-    await this.#transaction('readwrite', (store) => promisify(store.put(record)))
+    await transact(STORES.boards, 'readwrite', (store) => promisify(store.put(record)))
   }
 
   async applyPatches(id: BoardId, patches: readonly Patch[]): Promise<void> {
@@ -107,7 +67,7 @@ export class IndexedDbBoardRepository implements BoardRepository {
   }
 
   async listBoards(): Promise<readonly BoardSummary[]> {
-    const records = await this.#transaction('readonly', (store) =>
+    const records = await transact(STORES.boards, 'readonly', (store) =>
       promisify<StoredRecord[]>(store.getAll() as IDBRequest<StoredRecord[]>),
     )
     return records.map((record) => ({
@@ -118,6 +78,6 @@ export class IndexedDbBoardRepository implements BoardRepository {
   }
 
   async deleteBoard(id: BoardId): Promise<void> {
-    await this.#transaction('readwrite', (store) => promisify(store.delete(id)))
+    await transact(STORES.boards, 'readwrite', (store) => promisify(store.delete(id)))
   }
 }

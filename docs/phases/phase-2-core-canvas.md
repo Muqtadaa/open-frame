@@ -29,7 +29,7 @@ domain does not change either way.
 | `shape`     | Rectangle, ellipse, triangle, diamond — one type with a `shape` discriminant in `data` |
 | `connector` | Endpoints already modelled; needs routing and rendering                                |
 | `frame`     | A named container. First type with `canHaveChildren: true`                             |
-| `image`     | First consumer of `AssetStore`                                                         |
+| `image`     | ✅ First consumer of `AssetStore`. Drop, paste or pick; alt text is the editable field |
 
 ### Commands
 
@@ -43,6 +43,14 @@ Connectors are created through ordinary `CreateObjects` — no bespoke command
 was needed, because the endpoints are just data.
 
 Remaining: `GroupObjects` / `UngroupObjects` as `transact` composites.
+
+**An image stores its whole `AssetRef`, not an id into `BoardDocument.assets`.**
+A `Patch` addresses an `ObjectId`, so there is no way to write that map through
+the command layer without widening the change format — a cost the collaboration
+adapter, undo and serialization would then carry forever. The map would also not
+have bought what it appears to: deciding which assets are still referenced means
+walking the objects either way. The duplication is a few fields per image, and it
+makes an image self-contained across a copy between boards.
 
 **Coordinates are absolute.** Objects inside a frame store board coordinates, so
 moving a container explicitly moves its contents. Relative coordinates were
@@ -82,9 +90,21 @@ measured, not assumed.
 
 ## Architectural work this phase forces
 
-**Asset pipeline.** `AssetStore` gets its first implementation. Bytes go to
-IndexedDB; the document holds only `AssetRef`. Upload validation and SVG
-sanitization start here ([Security](../architecture/11-security.md)).
+**Asset pipeline.** ✅ `AssetStore` has its first implementation. Bytes go to
+IndexedDB under a stable `idb:<id>` locator — never an object URL, which would
+be dead on the next page load. The document holds only an `AssetRef`.
+
+Uploads are validated by size, declared type **and sniffed content**, because a
+file's declared type comes from its extension and is trivially wrong. **SVG is
+refused rather than sanitised**; see [Security](../architecture/11-security.md).
+
+Two pieces fell out of this. `AssetStore.resolve` is asynchronous because a
+server adapter will have to be, but a view cannot await — so `AssetService`
+bridges them with a synchronous cache lookup that reports `loading`, `ready` or
+`missing`, and re-renders subscribers when bytes land. And because only some
+views need that, `ObjectViewDefinition` gained a `usesAssets` flag: checking
+`type === 'image'` at the call site would be the type switch rule 5 forbids, and
+would also wake all ten thousand objects on a bench board for one image load.
 
 **Connector geometry.** ✅ Paths are derived from endpoints, never stored, and
 that survives move, resize and delete. Deleting an attached object converts that
