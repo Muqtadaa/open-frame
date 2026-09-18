@@ -5,15 +5,29 @@ import { type ZodType, z } from 'zod'
  * registry entries.
  *
  * They share every behaviour — same capabilities, same style properties, same
- * editing, same description — and differ only in the path drawn. Four
- * definitions would be four copies of identical logic, and changing a shared
+ * editing, same description — and differ only in the path drawn. Eight
+ * definitions would be eight copies of identical logic, and changing a shared
  * behaviour would mean editing all of them.
+ *
+ * Adding a kind needs no migration: an existing document's `shape` value stays
+ * valid, and the version is unchanged. REMOVING one would be the opposite —
+ * every board holding that kind would fail to parse — which is why the triangle
+ * stayed when its label was the actual problem.
  *
  * The rule this expresses: a new registry entry is justified by different
  * BEHAVIOUR, not by different appearance. Contrast `text` vs `sticky`, which
  * look similar but mean different things.
  */
-export const SHAPE_KINDS = ['rectangle', 'ellipse', 'triangle', 'diamond'] as const
+export const SHAPE_KINDS = [
+  'rectangle',
+  'ellipse',
+  'triangle',
+  'diamond',
+  'hexagon',
+  'trapezoid',
+  'parallelogram',
+  'octagon',
+] as const
 export type ShapeKind = (typeof SHAPE_KINDS)[number]
 
 export interface ShapeData {

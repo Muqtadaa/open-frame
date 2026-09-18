@@ -1,3 +1,7 @@
+import type { ShapeKind } from '@openframe/core'
+
+import { ELLIPSE, shapePath } from '../scene/shape-geometry.js'
+
 /**
  * Inline SVG icons.
  *
@@ -53,13 +57,23 @@ export function TextIcon({ className }: IconProps) {
   )
 }
 
-export function ShapeIcon({ className, kind }: IconProps & { kind: string }) {
+/**
+ * Drawn from the SAME geometry the canvas uses, in its 0–100 box rather than
+ * the 24×24 grid of the other icons.
+ *
+ * The alternative — a hand-drawn glyph per kind — is a second definition of
+ * every shape that has to be kept in step with the first, and it was already
+ * one kind out of date. Adding a polygon now costs nothing here.
+ */
+export function ShapeIcon({ className, kind }: IconProps & { kind: ShapeKind }) {
+  const path = shapePath(kind)
   return (
-    <svg {...base} className={className}>
-      {kind === 'ellipse' && <ellipse cx="12" cy="12" rx="9" ry="7.5" />}
-      {kind === 'triangle' && <path d="M12 4l8.5 15.5h-17z" />}
-      {kind === 'diamond' && <path d="M12 3.5L20.5 12 12 20.5 3.5 12z" />}
-      {kind === 'rectangle' && <rect x="3.5" y="5.5" width="17" height="13" rx="1.5" />}
+    <svg {...base} viewBox="0 0 100 100" strokeWidth={7} className={className}>
+      {path === null ? (
+        <ellipse cx={ELLIPSE.cx} cy={ELLIPSE.cy} rx={ELLIPSE.rx} ry={ELLIPSE.ry} />
+      ) : (
+        <path d={path} />
+      )}
     </svg>
   )
 }

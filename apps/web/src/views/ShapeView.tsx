@@ -1,27 +1,18 @@
-import type { ObjectBase, ShapeData, ShapeKind } from '@openframe/core'
+import type { ObjectBase, ShapeData } from '@openframe/core'
 
 import { defineObjectView, type ObjectEditorProps, type ObjectViewProps } from './registry.js'
 import { InlineTextEditor } from './shared-editor.js'
+import { ELLIPSE, labelInset, shapePath } from '../scene/shape-geometry.js'
 import { COLOR_VARS, SURFACE_VARS, fontFamily, textAlign } from '../scene/style-tokens.js'
-
-/**
- * Shape outlines in a normalised 0–100 box.
- *
- * `preserveAspectRatio="none"` lets one path definition stretch to any frame,
- * so resizing needs no geometry recalculation and no per-shape special cases.
- */
-const PATHS: Record<ShapeKind, string> = {
-  rectangle: 'M2 2 H98 V98 H2 Z',
-  diamond: 'M50 2 L98 50 L50 98 L2 50 Z',
-  triangle: 'M50 2 L98 98 H2 Z',
-  ellipse: '',
-}
 
 function ShapeOutline({ object }: { object: ObjectBase<string, ShapeData> }) {
   const stroke = COLOR_VARS[object.style.color ?? 'gray']
   const filled = (object.style.fill ?? 'tint') !== 'none'
   const fill = filled ? SURFACE_VARS[object.style.color ?? 'gray'] : 'transparent'
   const strokeWidth = { none: 0, thin: 1, medium: 2, thick: 4 }[object.style.stroke ?? 'medium']
+
+  // Null means the ellipse, which is the one shape that is not a polygon.
+  const path = shapePath(object.data.shape)
 
   return (
     <svg
@@ -31,19 +22,19 @@ function ShapeOutline({ object }: { object: ObjectBase<string, ShapeData> }) {
       aria-hidden="true"
       focusable="false"
     >
-      {object.data.shape === 'ellipse' ? (
+      {path === null ? (
         <ellipse
-          cx="50"
-          cy="50"
-          rx="48"
-          ry="48"
+          cx={ELLIPSE.cx}
+          cy={ELLIPSE.cy}
+          rx={ELLIPSE.rx}
+          ry={ELLIPSE.ry}
           fill={fill}
           stroke={stroke}
           strokeWidth={strokeWidth}
         />
       ) : (
         <path
-          d={PATHS[object.data.shape]}
+          d={path}
           fill={fill}
           stroke={stroke}
           strokeWidth={strokeWidth}
@@ -70,6 +61,9 @@ function ShapeRenderer({ object }: ObjectViewProps<ShapeData>) {
         <span
           className="of-shape__label"
           style={{
+            // Per shape, not a uniform 10%: a label centred in the bounding box
+            // runs straight out through any sloped edge.
+            inset: labelInset(object.data.shape),
             fontFamily: fontFamily(object.style.font),
             textAlign: textAlign(object.style.align),
           }}
@@ -88,7 +82,7 @@ function ShapeEditor({ object, onCommit, onCancel }: ObjectEditorProps<ShapeData
       <InlineTextEditor
         initialText={object.data.text}
         className="of-shape__label of-shape__editor"
-        style={{ fontFamily: fontFamily(object.style.font) }}
+        style={{ inset: labelInset(object.data.shape), fontFamily: fontFamily(object.style.font) }}
         ariaLabel="Edit shape label"
         onCommit={(text) => onCommit({ text })}
         onCancel={onCancel}

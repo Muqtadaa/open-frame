@@ -202,8 +202,16 @@ body {
   position: absolute;
   top: 0;
   left: calc(100% + 10px);
-  display: flex;
-  flex-direction: column;
+  /* Two columns: one column of eight shapes is a list to read rather than a
+     palette to glance at.
+
+     `max-content` is not optional. An absolutely positioned box shrinks to fit
+     its CONTAINING BLOCK, which here is an icon-width rail slot, so the two
+     columns were squeezed until the items overlapped and the second column
+     swallowed clicks meant for the first. */
+  display: grid;
+  grid-template-columns: repeat(2, max-content);
+  width: max-content;
   gap: 2px;
   padding: 6px;
   background: var(--of-panel);
@@ -538,6 +546,7 @@ body {
 
 .of-shape__label {
   position: absolute;
+  /* Overridden per shape by ShapeView — see scene/shape-geometry.ts. */
   inset: 10%;
   display: flex;
   align-items: center;
@@ -549,7 +558,6 @@ body {
 }
 
 .of-shape__editor {
-  inset: 10%;
   display: block;
   background: transparent;
   text-align: center;

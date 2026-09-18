@@ -26,7 +26,7 @@ domain does not change either way.
 | Type        | Notes                                                                                  |
 | ----------- | -------------------------------------------------------------------------------------- |
 | `text`      | Free text without a note background                                                    |
-| `shape`     | Rectangle, ellipse, triangle, diamond — one type with a `shape` discriminant in `data` |
+| `shape`     | ✅ Eight kinds — one type with a `shape` discriminant in `data`, not eight entries      |
 | `connector` | Endpoints already modelled; needs routing and rendering                                |
 | `frame`     | A named container. First type with `canHaveChildren: true`                             |
 | `image`     | ✅ First consumer of `AssetStore`. Drop, paste or pick; alt text is the editable field |
