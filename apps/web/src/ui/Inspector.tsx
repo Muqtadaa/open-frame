@@ -9,6 +9,7 @@ import {
   type AlignToken,
   type AnyOpenFrameObject,
   type ColorToken,
+  type FieldDefinition,
   type FillToken,
   type FontToken,
   type ObjectStyle,
@@ -24,6 +25,7 @@ import { useInteractionStore } from '../interaction/interaction-store.js'
 import { useOpenFrame } from '../runtime/context.js'
 import { SURFACE_VARS } from '../scene/style-tokens.js'
 import { AlignIcon, FillIcon, StrokeIcon, TrashIcon } from './icons.js'
+import { RecordFields } from './RecordFields.js'
 
 /** Clearance between the selection and the panel, in screen pixels. */
 const GAP_PX = 14
@@ -42,11 +44,13 @@ const MARGIN_PX = 12
  */
 const RAIL_CLEARANCE_PX = 84
 /**
- * Roughly the panel's tallest form (every field present). Only used to keep it
- * inside the viewport, so an approximation is enough and measuring would cost a
- * layout read on every render.
+ * Roughly the panel's tallest form: a structured type's semantic fields plus
+ * every style control. Only used to keep the panel inside the viewport, so an
+ * approximation is enough and measuring would cost a layout read on every
+ * render — but it must not UNDER-estimate, or the bottom of the panel leaves
+ * the window on a selection near the lower edge.
  */
-const PANEL_HEIGHT_PX = 300
+const PANEL_HEIGHT_PX = 420
 
 /**
  * The record panel: the fields of whatever is selected.
@@ -83,6 +87,24 @@ export function Inspector() {
     [objects, runtime.registry, document],
   )
 
+  /**
+   * A type's own semantic fields, shown only for a single selection.
+   *
+   * Not an intersection like `styleProps` above, for two reasons. Two types'
+   * `source` fields are not necessarily the same field, so intersecting by key
+   * would put one control over two different meanings — the exact thing the
+   * intersection rule exists to prevent. And `UpdateObjectData` addresses ONE
+   * object, so editing five at once would be five commands and five undo
+   * entries for what the user did once. Bulk editing is a real want and needs a
+   * `transact` composite; it is not this.
+   */
+  const fields = useMemo<readonly FieldDefinition[]>(() => {
+    if (objects.length !== 1) return []
+    const only = objects[0]
+    if (only === undefined) return []
+    return runtime.registry.get(only.type)?.fields ?? []
+  }, [objects, runtime.registry])
+
   /** Only properties EVERY selected object honours — see the note above. */
   const props = useMemo<ReadonlySet<StyleProp>>(() => {
     const lists = objects.map(
@@ -98,7 +120,9 @@ export function Inspector() {
   if (objects.length === 0 || bounds === null) return null
   if (dragKind !== 'idle' || editingId !== null) return null
   if (objects.some((object) => object.locked)) return null
-  if (props.size === 0) return null
+  // A type with fields but no style properties still has a panel worth showing,
+  // and one with neither has nothing to say.
+  if (props.size === 0 && fields.length === 0) return null
 
   const topLeft = worldToScreen(viewport, { x: bounds.x, y: bounds.y })
   const bottomRight = worldToScreen(viewport, {
@@ -167,6 +191,19 @@ export function Inspector() {
           <TrashIcon />
         </button>
       </div>
+
+      {fields.length > 0 && objects[0] !== undefined && (
+        <>
+          <RecordFields
+            object={objects[0]}
+            fields={fields}
+            onCommit={(id, patch) => {
+              commands.updateData(id, patch)
+            }}
+          />
+          {props.size > 0 && <hr className="of-inspector__rule" />}
+        </>
+      )}
 
       {props.has('color') && (
         <Field name="colour">

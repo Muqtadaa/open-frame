@@ -1,5 +1,6 @@
 import { ObjectViewRegistry } from './registry.js'
 import { connectorView } from './ConnectorView.js'
+import { evidenceView } from './EvidenceView.js'
 import { frameView } from './FrameView.js'
 import { groupView } from './GroupView.js'
 import { imageView } from './ImageView.js'
@@ -26,6 +27,7 @@ export function createDefaultViewRegistry(): ObjectViewRegistry {
     connectorView,
     imageView,
     groupView,
+    evidenceView,
     unknownView,
   ])
 }

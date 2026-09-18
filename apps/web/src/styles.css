@@ -685,7 +685,75 @@ body {
   white-space: pre-wrap;
 }
 
+/*
+ * A structured slip: the same physical object as a sticky note, carrying a
+ * record.
+ *
+ * Deliberately the same stock, padding, radius and elevation. PRODUCT.md's
+ * claim is that a sticky and a piece of evidence are the SAME kind of thing
+ * differing only in payload, so a different-looking card would contradict the
+ * thesis the type exists to prove. What distinguishes it is the record line,
+ * and only when there is a record to show.
+ */
+.of-slip {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  height: 100%;
+  padding: 13px;
+  overflow: hidden;
+  border-radius: 2px;
+  box-shadow: var(--of-slip-shadow);
+}
+
+.of-slip__body {
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
+  font-size: 15px;
+  line-height: 1.35;
+  overflow-wrap: anywhere;
+  white-space: pre-wrap;
+}
+
+/*
+ * The record line: mono, because mono marks records and measurement. It sits
+ * under a hairline in the slip's own ink at low alpha rather than a token
+ * colour — the slip's stock varies with the colour token, so a fixed rule
+ * colour would be invisible on some of the seven and heavy on others.
+ */
+.of-slip__record {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 2px 10px;
+  padding-top: 6px;
+  margin-top: 8px;
+  font-family: var(--of-mono);
+  /* The eleven pixel floor: this is functional text, not decoration. */
+  font-size: 11px;
+  line-height: 1.3;
+  letter-spacing: 0.02em;
+  /*
+   * currentcolor rather than a rule token: the slip's stock changes with its
+   * colour token, so one fixed hairline would be invisible on some of the seven
+   * and heavy on others. Mixed toward transparent so it separates without
+   * competing with the quote above it.
+   */
+  border-top: 1px solid color-mix(in srgb, currentcolor 16%, transparent);
+}
+
+.of-slip__trail {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.of-slip__tags {
+  opacity: 0.72;
+}
+
 .of-sticky__editor,
+.of-slip__editor,
 .of-text__editor,
 .of-shape__editor {
   font: inherit;
@@ -1188,6 +1256,69 @@ body {
 .of-field__control {
   display: flex;
   align-items: center;
+}
+
+/*
+ * A long-text row: the label sits at the top of the control rather than
+ * centred against three lines of it, which is how a form reads and how a
+ * centred label against a tall box does not.
+ */
+.of-field--tall {
+  align-items: start;
+}
+
+.of-field--tall .of-field__label {
+  padding-top: 7px;
+}
+
+/*
+ * A written value, as opposed to a chosen one. 12px rather than the 11px
+ * functional floor because this is text the user AUTHORS and will re-read, not
+ * a shortcut hint or a readout.
+ */
+.of-input {
+  width: 100%;
+  min-height: 28px;
+  padding: 5px 7px;
+  font-family: var(--of-font);
+  font-size: 12px;
+  color: var(--of-ink);
+  background: var(--of-page);
+  border: 1px solid var(--of-panel-border);
+  border-radius: 5px;
+}
+
+.of-input::placeholder {
+  /*
+   * Muted, and it must stay above 4.5:1 on the field background — a placeholder
+   * that says what a field MEANS ("P07") is the only explanation of the field
+   * there is, so it is content, not decoration.
+   */
+  color: var(--of-ink-muted);
+}
+
+.of-input:focus-visible {
+  border-color: var(--of-accent);
+  outline: 2px solid var(--of-accent);
+  outline-offset: 1px;
+}
+
+textarea.of-input {
+  min-height: 56px;
+  line-height: 1.45;
+  resize: vertical;
+}
+
+.of-input--select {
+  cursor: pointer;
+}
+
+/* Separates what an object IS from how it looks. */
+.of-inspector__rule {
+  height: 0;
+  margin: 7px 0 5px;
+  border: none;
+  border-top: 1px solid var(--of-panel-border);
 }
 
 .of-swatches {
