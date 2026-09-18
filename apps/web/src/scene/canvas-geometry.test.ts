@@ -122,3 +122,80 @@ describe('marquee selection', () => {
     expect(objectsInMarquee(locked, registry, { x: 0, y: 0, width: 500, height: 500 })).toEqual([])
   })
 })
+
+/**
+ * ADR 0011: a relation joins two objects and is not anywhere.
+ *
+ * Every one of these tests was run against the un-guarded code first (rule 23).
+ * The marquee case is the dangerous one and it FAILED as expected: a relation's
+ * frame is a zero-size box at the origin, so `contains` returns true for any
+ * marquee that covers the origin — and for a degenerate box, for every marquee
+ * anywhere. Dragging a selection box would silently pick up relations the user
+ * cannot see, and the next Delete would destroy provenance with no visible
+ * cause.
+ */
+describe('objects with no place on the board', () => {
+  function relation(id: string, from: string, to: string): AnyOpenFrameObject {
+    return {
+      id: asObjectId(id),
+      type: 'relation',
+      dataVersion: 1,
+      frame: { x: 0, y: 0, width: 0, height: 0, rotation: 0 },
+      parentId: null,
+      order: asOrderKey('a9'),
+      style: {},
+      locked: false,
+      hidden: false,
+      data: { from: asObjectId(from), to: asObjectId(to), predicate: 'cites' },
+      meta: { createdAt: 0, createdBy: null, createdVia: 'user' },
+    }
+  }
+
+  const doc = docWith(
+    sticky('a', 0, 0, 'a0'),
+    sticky('b', 200, 0, 'a1'),
+    relation('rel', 'a', 'b'),
+  )
+
+  it('is never culled into a viewport', () => {
+    const visible = cullToViewport(doc, registry, { x: -500, y: -500, width: 2000, height: 2000 })
+    expect(visible.map((o) => o.id)).not.toContain(asObjectId('rel'))
+    // The spatial objects are still there — this is an exclusion, not a filter
+    // that swallowed the board.
+    expect(visible.map((o) => o.id)).toContain(asObjectId('a'))
+  })
+
+  it('is never hit by a click, even at the origin its frame claims', () => {
+    expect(hitTest(doc, registry, { x: 0, y: 0 })).toBe(asObjectId('a'))
+  })
+
+  it('is never swept up by a marquee', () => {
+    const selected = objectsInMarquee(doc, registry, {
+      x: -500,
+      y: -500,
+      width: 2000,
+      height: 2000,
+    })
+    expect(selected).not.toContain(asObjectId('rel'))
+    expect(selected).toContain(asObjectId('a'))
+    expect(selected).toContain(asObjectId('b'))
+  })
+
+  /*
+   * This one passes with the guard removed, and is kept anyway as the control:
+   * a relation's frame is degenerate but still POSITIONED, so a marquee far
+   * from the origin excludes it on geometry alone. That is exactly why the
+   * three tests above are the real ones — the bug only appears where the
+   * marquee happens to cover the origin, which is where boards start and where
+   * every "select all" drag begins.
+   */
+  it('is not selected by a marquee that selects nothing else', () => {
+    const selected = objectsInMarquee(doc, registry, {
+      x: 5000,
+      y: 5000,
+      width: 100,
+      height: 100,
+    })
+    expect(selected).toEqual([])
+  })
+})

@@ -41,6 +41,9 @@ export function cullToViewport(
   const result: AnyOpenFrameObject[] = []
   for (const object of objectsInPaintOrder(doc)) {
     if (object.hidden) continue
+    // A relation joins two objects and is not anywhere, so there is nothing to
+    // cull it into. Asking for its bounds would be asking where an idea is.
+    if (registry.get(object.type)?.capabilities.spatial === false) continue
     if (intersects(region, registry.boundsOf(object, doc))) result.push(object)
   }
   return result

@@ -20,6 +20,7 @@ Format: Status · Context · Decision · Alternatives considered · Consequences
 | [0008](0008-schema-versioning-and-migrations.md)  | Two version axes, pure migrations                  | Accepted            |
 | [0009](0009-repository-structure-two-packages.md) | Two packages, not five                             | Accepted            |
 | [0010](0010-typescript-6-until-ts71.md)           | TypeScript 6, not 7, for now                       | Accepted (revisit)  |
+| [0011](0011-relations-as-objects.md)              | **Relations are objects, not fields**              | Accepted            |
 
 ## Writing a new one
 

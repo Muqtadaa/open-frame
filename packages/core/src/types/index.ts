@@ -3,6 +3,7 @@ import { connectorType } from './connector/definition.js'
 import { frameType } from './frame/definition.js'
 import { groupType } from './group/definition.js'
 import { imageType } from './image/definition.js'
+import { relationType } from './relation/definition.js'
 import { shapeType } from './shape/definition.js'
 import { stickyType } from './sticky/definition.js'
 import { textType } from './text/definition.js'
@@ -22,6 +23,8 @@ export {
 export { endpointDependencies, resolveEndpoints } from './connector/geometry.js'
 export { FRAME_TYPE, frameType } from './frame/definition.js'
 export { GROUP_TYPE, groupType } from './group/definition.js'
+export { RELATION_TYPE, relationType } from './relation/definition.js'
+export { RelationDataSchema, type RelationData } from './relation/schema.js'
 export { GroupDataSchema, type GroupData } from './group/schema.js'
 export { IMAGE_TYPE, imageType, placedSize } from './image/definition.js'
 export { ImageDataSchema, type ImageData } from './image/schema.js'
@@ -51,6 +54,7 @@ export function createDefaultRegistry(): ObjectTypeRegistry {
     connectorType,
     imageType,
     groupType,
+    relationType,
     unknownType,
   ])
 }

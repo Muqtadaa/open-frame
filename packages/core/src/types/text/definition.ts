@@ -19,6 +19,7 @@ export const textType = defineObjectType<typeof TEXT_TYPE, TextData>({
     resizable: true,
     rotatable: false,
     textEditable: true,
+    spatial: true,
     canHaveChildren: false,
     selectsAsUnit: false,
     connectable: true,

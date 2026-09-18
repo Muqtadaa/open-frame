@@ -35,6 +35,7 @@ export const connectorType = defineObjectType<typeof CONNECTOR_TYPE, ConnectorDa
     resizable: false,
     rotatable: false,
     textEditable: true,
+    spatial: true,
     canHaveChildren: false,
     selectsAsUnit: false,
     connectable: false,

@@ -55,6 +55,7 @@ export const imageType = defineObjectType<typeof IMAGE_TYPE, ImageData>({
     // The editable text is the ALT text, not a caption — accessibility is the
     // thing images most often lack, so it is the thing the editor edits.
     textEditable: true,
+    spatial: true,
     canHaveChildren: false,
     selectsAsUnit: false,
     connectable: true,

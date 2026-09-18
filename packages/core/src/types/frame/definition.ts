@@ -21,6 +21,7 @@ export const frameType = defineObjectType<typeof FRAME_TYPE, FrameData>({
     // positioned in. Not worth the complexity for a feature nobody asks for.
     rotatable: false,
     textEditable: true,
+    spatial: true,
     canHaveChildren: true,
     selectsAsUnit: false,
     connectable: true,

@@ -26,6 +26,7 @@ describe('object type registry contract', () => {
       'frame',
       'group',
       'image',
+      'relation',
       'shape',
       'sticky',
       'text',
@@ -52,13 +53,24 @@ describe('object type registry contract', () => {
       })
 
       /**
-       * A type must be findable on the board: either it has a positive default
-       * size, or it computes its own bounds. A connector has no meaningful
-       * frame — its extent is wherever its endpoints resolve — so it supplies
-       * `getBounds` instead. A type with neither would be invisible and
-       * unclickable.
+       * A type that occupies the board must be findable on it: either it has a
+       * positive default size, or it computes its own bounds. A connector has no
+       * meaningful frame — its extent is wherever its endpoints resolve — so it
+       * supplies `getBounds` instead. A SPATIAL type with neither would be
+       * invisible and unclickable.
+       *
+       * A relation is not on the board at all, so it is exempt — and the
+       * exemption is spelled as `spatial: false` rather than by naming the type,
+       * which is also what keeps it out of culling and marquee selection.
        */
-      it('is either sized or self-bounding', () => {
+      it('is either sized, self-bounding, or not on the board', () => {
+        if (!definition.capabilities.spatial) {
+          const { frame } = definition.create()
+          // A non-spatial type must not pretend to have an extent.
+          expect(frame.width === 0 && frame.height === 0).toBe(true)
+          expect(definition.getBounds).toBeUndefined()
+          return
+        }
         const { frame } = definition.create()
         const sized = frame.width > 0 && frame.height > 0
         expect(sized || definition.getBounds !== undefined).toBe(true)

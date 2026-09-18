@@ -19,6 +19,7 @@ export const stickyType = defineObjectType<typeof STICKY_TYPE, StickyData>({
     resizable: true,
     rotatable: false,
     textEditable: true,
+    spatial: true,
     canHaveChildren: false,
     selectsAsUnit: false,
     connectable: true,

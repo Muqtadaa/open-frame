@@ -29,7 +29,7 @@ export function handleCommand(
     case 'CreateObjects':
       return createObjects(doc, command, ctx)
     case 'DeleteObjects':
-      return deleteObjects(doc, command)
+      return deleteObjects(doc, command, ctx)
     case 'MoveObjects':
       return moveObjects(doc, command)
     case 'ResizeObjects':
