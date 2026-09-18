@@ -56,6 +56,12 @@ export type Command =
     }
   | { readonly kind: 'SetLocked'; readonly ids: readonly ObjectId[]; readonly locked: boolean }
   | { readonly kind: 'SetHidden'; readonly ids: readonly ObjectId[]; readonly hidden: boolean }
+  | {
+      readonly kind: 'ReparentObjects'
+      readonly ids: readonly ObjectId[]
+      /** `null` moves the objects back to the board root. */
+      readonly parentId: ObjectId | null
+    }
 
 /** Where a reorder puts the objects within their container. */
 export type Placement = 'front' | 'back' | 'forward' | 'backward'

@@ -120,3 +120,11 @@ export function MouseIcon({ className }: IconProps) {
     </svg>
   )
 }
+
+export function FrameIcon({ className }: IconProps) {
+  return (
+    <svg {...base} className={className}>
+      <path d="M7 3v18M17 3v18M3 7h18M3 17h18" />
+    </svg>
+  )
+}

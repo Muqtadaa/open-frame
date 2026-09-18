@@ -9,10 +9,10 @@ import {
   type Viewport,
 } from '@openframe/core'
 
-import type { HandleId } from '../canvas/resize.js'
+import type { HandleId } from '../scene/resize.js'
 import { create } from 'zustand'
 
-export type Tool = 'select' | 'pan' | 'sticky' | 'text' | 'shape'
+export type Tool = 'select' | 'pan' | 'sticky' | 'text' | 'shape' | 'frame'
 
 /**
  * What a plain (unmodified) wheel gesture does.

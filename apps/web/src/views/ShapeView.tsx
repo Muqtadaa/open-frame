@@ -2,7 +2,7 @@ import type { ShapeData, ShapeKind } from '@openframe/core'
 
 import { defineObjectView, type ObjectEditorProps, type ObjectViewProps } from './registry.js'
 import { InlineTextEditor } from './shared-editor.js'
-import { COLOR_VARS, SURFACE_VARS, fontFamily, textAlign } from './style-tokens.js'
+import { COLOR_VARS, SURFACE_VARS, fontFamily, textAlign } from '../scene/style-tokens.js'
 
 /**
  * Shape outlines in a normalised 0–100 box.
@@ -85,7 +85,7 @@ function ShapeRenderer(props: ObjectViewProps<ShapeData>) {
 function ShapeEditor({ object, onCommit, onCancel }: ObjectEditorProps<ShapeData>) {
   return (
     <div className="of-shape" style={{ opacity: object.style.opacity ?? 1 }}>
-      <ShapeOutline object={object} selected={false} />
+      <ShapeOutline object={object} selected={false} zoom={1} />
       <InlineTextEditor
         initialText={object.data.text}
         className="of-shape__label of-shape__editor"

@@ -1,10 +1,10 @@
 import { visibleWorldRect } from '@openframe/core'
 import { useMemo } from 'react'
 
-import { useOpenFrame } from '../app/runtime-context.js'
+import { useOpenFrame } from '../runtime/context.js'
 import { useBoardDocument } from '../hooks/use-document-object.js'
 import { useInteractionStore } from '../interaction/interaction-store.js'
-import { cullToViewport } from './culling.js'
+import { cullToViewport } from '../scene/culling.js'
 import { ObjectView } from './ObjectView.js'
 
 interface Props {

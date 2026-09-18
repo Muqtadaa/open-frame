@@ -12,11 +12,13 @@ import {
   type BoardId,
   type BoardRepository,
   type DocumentStore,
-  type ObjectTypeRegistry,
 } from '@openframe/core'
 
 import { IndexedDbBoardRepository } from '../adapters/indexeddb/indexeddb-board-repository.js'
 import { BENCH_TOOLS_ENABLED } from './bench-flag.js'
+import type { OpenFrameRuntime } from '../runtime/context.js'
+
+export type { OpenFrameRuntime } from '../runtime/context.js'
 
 /**
  * THE composition root.
@@ -31,35 +33,6 @@ import { BENCH_TOOLS_ENABLED } from './bench-flag.js'
  * app receives the read-only `DocumentStore`, so "the UI does not mutate the
  * document directly" is enforced by what the types make reachable.
  */
-
-/**
- * Development-only affordances, absent from production builds.
- *
- * This is NOT a mutation path: `loadBoard` performs exactly the same
- * deserialize-and-replace that opening a board does, through the same validated
- * load pipeline. It exists because benchmark fixtures are otherwise unreachable
- * from the running app — the `DocumentWriter` is deliberately not exposed, so
- * there was no way to put 10,000 objects on screen and look at them.
- */
-export interface OpenFrameDevTools {
-  loadBoard(raw: unknown): { ok: true; objects: number } | { ok: false; reason: string }
-  clearBoard(): void
-}
-
-export interface OpenFrameRuntime {
-  readonly boardId: BoardId
-  readonly store: DocumentStore
-  readonly registry: ObjectTypeRegistry
-  readonly dispatcher: CommandDispatcher
-  readonly repository: BoardRepository
-  /** Non-fatal problems found while loading, surfaced to the user. */
-  readonly notices: readonly string[]
-  /** True when the board could not be read and must not be written back. */
-  readonly readOnly: boolean
-  /** Present only in development builds. */
-  readonly devTools?: OpenFrameDevTools
-  dispose(): void
-}
 
 export interface CreateRuntimeOptions {
   readonly boardId?: BoardId

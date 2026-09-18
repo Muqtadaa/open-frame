@@ -37,8 +37,15 @@ domain does not change either way.
 and paste are built from ordinary `CreateObjects` rather than bespoke commands,
 so they inherit the same validation and history.
 
-Remaining: `ReparentObjects` (the cycle guard already exists and is tested),
-`GroupObjects` / `UngroupObjects` as `transact` composites, `CreateConnector`.
+✅ `ReparentObjects`, with the cycle guard finally getting a caller.
+
+Remaining: `GroupObjects` / `UngroupObjects` as `transact` composites,
+`CreateConnector`.
+
+**Coordinates are absolute.** Objects inside a frame store board coordinates, so
+moving a container explicitly moves its contents. Relative coordinates were
+rejected because every geometry consumer works in world space and would have had
+to resolve a parent chain; see the comment on `move-objects.ts`.
 
 ### Interaction
 
@@ -50,8 +57,10 @@ zoom-to-selection, scroll-to-zoom with a pan preference, floating tool rail.
 centre), rotation handle with 15° snapping, right-click context menu, clipboard,
 z-order via bracket keys.
 
-Remaining: snapping and alignment guides between objects, reparenting into
-frames, connectors.
+✅ Drop-to-nest: dropping objects on a frame changes membership, committed with
+the move as one undoable action.
+
+Remaining: snapping and alignment guides between objects, connectors.
 
 **Browser zoom must stay out of the way.** `Ctrl/Cmd` with `+`, `−`, `0`, `1`
 and with the wheel are all claimed and prevented; see

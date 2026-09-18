@@ -694,3 +694,36 @@ body {
   font-size: 11px;
   color: var(--of-ink-muted);
 }
+
+/* ---------- frames ---------- */
+
+.of-frame {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  border: 1px solid var(--of-panel-border);
+  border-radius: 2px;
+  /* The title sits ABOVE the frame, so it must not be clipped. */
+  overflow: visible;
+}
+
+.of-frame__title {
+  position: absolute;
+  left: 0;
+  display: flex;
+  align-items: flex-end;
+  max-width: 480px;
+  overflow: hidden;
+  font-size: 13px;
+  line-height: 1;
+  color: var(--of-ink-muted);
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.of-frame__editor {
+  width: 300px;
+  padding: 0;
+  background: var(--of-panel);
+  outline: 1px solid var(--of-accent);
+}

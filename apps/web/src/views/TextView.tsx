@@ -1,6 +1,6 @@
 import type { TextData } from '@openframe/core'
 
-import { COLOR_VARS, fontFamily, textAlign } from './style-tokens.js'
+import { COLOR_VARS, fontFamily, textAlign } from '../scene/style-tokens.js'
 import { defineObjectView, type ObjectEditorProps, type ObjectViewProps } from './registry.js'
 import { InlineTextEditor } from './shared-editor.js'
 

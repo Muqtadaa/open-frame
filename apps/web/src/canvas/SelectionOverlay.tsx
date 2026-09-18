@@ -1,9 +1,9 @@
 import { useMemo } from 'react'
 
-import { useOpenFrame } from '../app/runtime-context.js'
+import { useOpenFrame } from '../runtime/context.js'
 import { useBoardDocument } from '../hooks/use-document-object.js'
 import { useInteractionStore } from '../interaction/interaction-store.js'
-import { HANDLES, HANDLE_CURSORS, framesBounds, handleAnchor } from './resize.js'
+import { HANDLES, HANDLE_CURSORS, framesBounds, handleAnchor } from '../scene/resize.js'
 
 /** Handles stay this many SCREEN pixels across, whatever the zoom. */
 const HANDLE_PX = 9

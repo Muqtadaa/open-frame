@@ -17,7 +17,7 @@ import {
   type RefObject,
 } from 'react'
 
-import { useOpenFrame } from '../app/runtime-context.js'
+import { useOpenFrame } from '../runtime/context.js'
 import { useCommands } from '../hooks/use-commands.js'
 import { useInteractionStore } from '../interaction/interaction-store.js'
 import {
@@ -26,7 +26,7 @@ import {
   onPointerDown as decidePointerDown,
   type PointerIntent,
 } from '../interaction/pointer-controller.js'
-import { hitTest, objectsInMarquee } from './hit-testing.js'
+import { containerAt, hitTest, objectsInMarquee } from '../scene/hit-testing.js'
 import {
   CORNER_HANDLES,
   angleFrom,
@@ -35,7 +35,7 @@ import {
   scaleFrames,
   snapAngle,
   type HandleId,
-} from './resize.js'
+} from '../scene/resize.js'
 
 type GestureMode = 'pan' | 'translate' | 'marquee' | 'resize' | 'rotate' | 'none'
 
@@ -66,6 +66,22 @@ interface Gesture {
 function handleUnderPointer(target: EventTarget | null): string | null {
   if (!(target instanceof HTMLElement)) return null
   return target.closest<HTMLElement>('[data-handle]')?.dataset.handle ?? null
+}
+
+/**
+ * The object whose rendered chrome was pressed, for chrome that sits OUTSIDE
+ * the object's world bounds.
+ *
+ * A frame's title is drawn above the frame and counter-scaled to stay a
+ * constant size on screen, so it has no fixed world geometry and world-space
+ * hit testing cannot see it — clicking it would deselect instead of selecting.
+ * Rather than special-casing frames in the geometry, the DOM answers for the
+ * cases only the DOM knows about.
+ */
+function objectChromeUnderPointer(target: EventTarget | null): ObjectId | null {
+  if (!(target instanceof HTMLElement)) return null
+  const id = target.closest<HTMLElement>('[data-object-id]')?.dataset.objectId
+  return id === undefined ? null : (id as ObjectId)
 }
 
 /**
@@ -200,10 +216,13 @@ export function useCanvasGestures(containerRef: RefObject<HTMLElement | null>) {
       }
 
       const worldPoint = toWorld(event.clientX, event.clientY)
+      const hitId =
+        hitTest(runtime.store.getDocument(), runtime.registry, worldPoint) ??
+        objectChromeUnderPointer(event.target)
       const intents = decidePointerDown({
         tool: store.tool,
         worldPoint,
-        hitId: hitTest(runtime.store.getDocument(), runtime.registry, worldPoint),
+        hitId,
         selection: store.selection,
         shiftKey: event.shiftKey,
         button: event.button,
@@ -321,6 +340,8 @@ export function useCanvasGestures(containerRef: RefObject<HTMLElement | null>) {
 
   const onPointerUp = useCallback(
     (event: ReactPointerEvent<HTMLElement>): void => {
+      const worldPointOf = (e: ReactPointerEvent<HTMLElement>): Point =>
+        toWorld(e.clientX, e.clientY)
       const active = gesture.current
       gesture.current = null
       if (active === null) return
@@ -337,7 +358,33 @@ export function useCanvasGestures(containerRef: RefObject<HTMLElement | null>) {
       // click that both selects and starts a drag commits an empty move.
       if (active.mode === 'translate' && active.moved && store.drag.kind === 'translate') {
         const { dx, dy, ids } = store.drag
-        commands.moveObjects([...ids].map((id) => ({ id, dx, dy })))
+        const moves = [...ids].map((id) => ({ id, dx, dy }))
+        const document = runtime.store.getDocument()
+
+        /*
+         * Dropping onto a frame changes membership. The excluded set is the
+         * dragged objects and everything inside them, so a frame cannot be
+         * dropped into itself or into its own contents.
+         */
+        const excluded = new Set<ObjectId>()
+        const stack = [...ids]
+        while (stack.length > 0) {
+          const id = stack.pop()
+          if (id === undefined || excluded.has(id)) continue
+          excluded.add(id)
+          for (const object of document.objects.values()) {
+            if (object.parentId === id) stack.push(object.id)
+          }
+        }
+
+        const target = containerAt(document, runtime.registry, worldPointOf(event), excluded)
+        const currentParents = new Set(
+          [...ids].map((id) => document.objects.get(id)?.parentId ?? null),
+        )
+        const membershipChanged = currentParents.size !== 1 || !currentParents.has(target)
+
+        if (membershipChanged) commands.moveAndReparent(moves, target)
+        else commands.moveObjects(moves)
       }
 
       if (active.mode === 'resize' && active.moved && store.drag.kind === 'resize') {
@@ -362,14 +409,16 @@ export function useCanvasGestures(containerRef: RefObject<HTMLElement | null>) {
 
       store.endDrag()
     },
-    [commands, runtime.registry, runtime.store],
+    [commands, runtime.registry, runtime.store, toWorld],
   )
 
   const onDoubleClick = useCallback(
     // Double-click arrives as a MouseEvent in React, not a PointerEvent.
     (event: ReactMouseEvent<HTMLElement>): void => {
       const worldPoint = toWorld(event.clientX, event.clientY)
-      const hitId = hitTest(runtime.store.getDocument(), runtime.registry, worldPoint)
+      const hitId =
+        hitTest(runtime.store.getDocument(), runtime.registry, worldPoint) ??
+        objectChromeUnderPointer(event.target)
       for (const intent of decideDoubleClick(hitId)) applyIntent(intent, worldPoint)
     },
     [applyIntent, runtime.registry, runtime.store, toWorld],
@@ -380,7 +429,9 @@ export function useCanvasGestures(containerRef: RefObject<HTMLElement | null>) {
       event.preventDefault()
       const store = useInteractionStore.getState()
       const worldPoint = toWorld(event.clientX, event.clientY)
-      const hit = hitTest(runtime.store.getDocument(), runtime.registry, worldPoint)
+      const hit =
+        hitTest(runtime.store.getDocument(), runtime.registry, worldPoint) ??
+        objectChromeUnderPointer(event.target)
 
       // Right-clicking an unselected object selects it first, so the menu always
       // acts on what the user pointed at.

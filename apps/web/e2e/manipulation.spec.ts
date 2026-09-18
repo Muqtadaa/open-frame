@@ -221,3 +221,91 @@ test.describe('context menu', () => {
     await expect(page.getByTestId('context-menu')).toHaveCount(0)
   })
 })
+
+test.describe('frames', () => {
+  test('creates a frame and renames it', async ({ page }) => {
+    await page.keyboard.press('f')
+    await page.locator(CANVAS).click({ position: { x: 500, y: 350 } })
+    await expect(page.locator('textarea')).toBeFocused()
+    await page.locator('textarea').fill('Discovery')
+    await page.locator(CANVAS).click({ position: { x: 1150, y: 130 } })
+    await page.keyboard.press('v')
+
+    await expect(page.locator('[data-object-type="frame"]')).toHaveCount(1)
+    await expect(page.locator('.of-frame__title')).toContainText('Discovery')
+  })
+
+  /**
+   * The behaviour frames exist for: dropping a note onto one makes it a member,
+   * and the frame then carries it. Membership is set by the drop, not by
+   * geometry alone.
+   */
+  test('a note dropped on a frame moves with it afterwards', async ({ page }) => {
+    await page.keyboard.press('f')
+    await page.locator(CANVAS).click({ position: { x: 700, y: 400 } })
+    await page.locator(CANVAS).click({ position: { x: 1150, y: 130 } })
+    await page.keyboard.press('v')
+
+    await create(page, 's', 200, 200, 'Inside')
+
+    const note = page.locator('[data-object-type="sticky"]')
+    const before = await note.boundingBox()
+    if (before === null) return
+
+    // Drag the note onto the frame.
+    await drag(page, { x: before.x + 40, y: before.y + 40 }, { x: 700, y: 400 })
+
+    const inFrame = await note.boundingBox()
+    if (inFrame === null) return
+
+    // Now drag the FRAME by its title and confirm the note travels with it.
+    const title = await page.locator('.of-frame__title').boundingBox()
+    if (title === null) return
+    await drag(page, { x: title.x + 10, y: title.y + 5 }, { x: title.x + 10, y: title.y - 120 })
+
+    const after = await note.boundingBox()
+    if (after === null) return
+    expect(Math.round(after.y - inFrame.y)).toBeLessThan(-80)
+  })
+
+  test('undo returns a nested note to the board', async ({ page }) => {
+    await page.keyboard.press('f')
+    await page.locator(CANVAS).click({ position: { x: 700, y: 400 } })
+    await page.locator(CANVAS).click({ position: { x: 1150, y: 130 } })
+    await page.keyboard.press('v')
+
+    await create(page, 's', 200, 200, 'Note')
+    const note = page.locator('[data-object-type="sticky"]')
+    const start = await note.boundingBox()
+    if (start === null) return
+
+    await drag(page, { x: start.x + 40, y: start.y + 40 }, { x: 700, y: 400 })
+    await page.keyboard.press(`${MOD}+z`)
+
+    const restored = await note.boundingBox()
+    if (restored === null) return
+    expect(Math.round(restored.x)).toBe(Math.round(start.x))
+  })
+
+  test('deleting a frame removes its contents, and undo restores both', async ({ page }) => {
+    await page.keyboard.press('f')
+    await page.locator(CANVAS).click({ position: { x: 700, y: 400 } })
+    await page.locator(CANVAS).click({ position: { x: 1150, y: 130 } })
+    await page.keyboard.press('v')
+
+    await create(page, 's', 200, 200, 'Doomed')
+    const note = page.locator('[data-object-type="sticky"]')
+    const start = await note.boundingBox()
+    if (start === null) return
+    await drag(page, { x: start.x + 40, y: start.y + 40 }, { x: 700, y: 400 })
+
+    await page.locator('.of-frame__title').click()
+    await page.keyboard.press('Delete')
+    await expect(page.locator('[data-object-type="frame"]')).toHaveCount(0)
+    await expect(page.locator('[data-object-type="sticky"]')).toHaveCount(0)
+
+    await page.keyboard.press(`${MOD}+z`)
+    await expect(page.locator('[data-object-type="frame"]')).toHaveCount(1)
+    await expect(page.locator('[data-object-type="sticky"]')).toHaveCount(1)
+  })
+})

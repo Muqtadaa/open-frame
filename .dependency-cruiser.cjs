@@ -62,6 +62,60 @@ module.exports = {
       from: { path: '^packages/core', pathNot: '\\.test\\.ts$' },
       to: { dependencyTypes: ['core'] },
     },
+    /*
+     * LAYER ORDER inside apps/web, enforced rather than described.
+     *
+     *   ui ─┐
+     *       ├─► interaction ──► scene ──► @openframe/core
+     *   canvas ─┘
+     *
+     * `no-circular` only catches cycles between FILES, so it happily allowed
+     * `interaction → canvas` alongside `canvas → interaction` — a mutual
+     * dependency between layers that the documented direction forbids. These
+     * rules make the direction real.
+     */
+    {
+      name: 'scene-is-a-leaf',
+      severity: 'error',
+      comment:
+        'scene/ is pure view geometry over core types. It must not reach React, state or chrome.',
+      from: { path: '^apps/web/src/scene' },
+      to: { path: '^apps/web/src/(canvas|interaction|ui|app|adapters|hooks)' },
+    },
+    {
+      name: 'interaction-does-not-depend-on-canvas',
+      severity: 'error',
+      comment:
+        'canvas/ reads interaction state to render, so interaction must not depend back on it. ' +
+        'Shared view geometry belongs in scene/.',
+      from: { path: '^apps/web/src/interaction' },
+      to: { path: '^apps/web/src/(canvas|ui|app|views)' },
+    },
+    {
+      name: 'views-are-a-leaf',
+      severity: 'error',
+      comment:
+        'views/ is the React half of the object type system. It must not reach the renderer, ' +
+        'interaction state or the composition root — everything it needs arrives as props.',
+      from: { path: '^apps/web/src/views' },
+      to: { path: '^apps/web/src/(canvas|interaction|ui|app|adapters|hooks|runtime)' },
+    },
+    {
+      name: 'runtime-context-is-shared',
+      severity: 'error',
+      comment:
+        'runtime/ describes the wired application so every layer can consume it without ' +
+        'depending on the module that builds it.',
+      from: { path: '^apps/web/src/runtime' },
+      to: { path: '^apps/web/src/(canvas|interaction|ui|app|adapters|hooks|scene)' },
+    },
+    {
+      name: 'ui-does-not-depend-on-canvas',
+      severity: 'error',
+      comment: 'Chrome talks to interaction state and commands, never to the renderer.',
+      from: { path: '^apps/web/src/ui' },
+      to: { path: '^apps/web/src/canvas' },
+    },
     {
       name: 'ui-does-not-touch-persistence',
       severity: 'error',

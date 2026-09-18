@@ -5,8 +5,8 @@ import { useDocumentObject } from '../hooks/use-document-object.js'
 import { useCommands } from '../hooks/use-commands.js'
 import { useInteractionStore } from '../interaction/interaction-store.js'
 import { ObjectErrorBoundary } from './ObjectErrorBoundary.js'
-import { FallbackView } from './views/FallbackView.js'
-import type { ObjectViewRegistry } from './views/registry.js'
+import { FallbackView } from '../views/FallbackView.js'
+import type { ObjectViewRegistry } from '../views/registry.js'
 
 interface Props {
   readonly id: ObjectId
@@ -23,6 +23,7 @@ interface Props {
 function ObjectViewInner({ id, views }: Props) {
   const object = useDocumentObject(id)
   const selected = useInteractionStore((state) => state.selection.has(id))
+  const zoom = useInteractionStore((state) => state.viewport.zoom)
   const editing = useInteractionStore((state) => state.editingId === id)
   const setEditing = useInteractionStore((state) => state.setEditing)
   /*
@@ -76,15 +77,17 @@ function ObjectViewInner({ id, views }: Props) {
         {editing && InlineEditor !== undefined ? (
           <InlineEditor
             object={object}
+            zoom={zoom}
             onCommit={(patch) => {
-              const text = (patch as { text?: unknown }).text
-              if (typeof text === 'string') commands.setText(id, text)
+              // Types name their editable field differently (`text`, `name`),
+              // so the patch is passed through rather than picked apart here.
+              commands.updateData(id, patch)
               setEditing(null)
             }}
             onCancel={() => setEditing(null)}
           />
         ) : (
-          <Renderer object={object} selected={selected} />
+          <Renderer object={object} selected={selected} zoom={zoom} />
         )}
       </ObjectErrorBoundary>
     </div>

@@ -1,6 +1,6 @@
 import { useState } from 'react'
 
-import { useOpenFrame } from '../app/runtime-context.js'
+import { useOpenFrame } from '../runtime/context.js'
 import { useFrameTiming } from './use-frame-timing.js'
 
 const SIZES = [100, 1_000, 5_000, 10_000] as const

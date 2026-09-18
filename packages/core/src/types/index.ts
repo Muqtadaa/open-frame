@@ -1,9 +1,12 @@
 import { ObjectTypeRegistry } from '../domain/registry.js'
+import { frameType } from './frame/definition.js'
 import { shapeType } from './shape/definition.js'
 import { stickyType } from './sticky/definition.js'
 import { textType } from './text/definition.js'
 import { unknownType } from './unknown/definition.js'
 
+export { FRAME_TYPE, frameType } from './frame/definition.js'
+export { FrameDataSchema, type FrameData } from './frame/schema.js'
 export { SHAPE_TYPE, shapeType } from './shape/definition.js'
 export { SHAPE_KINDS, ShapeDataSchema, type ShapeData, type ShapeKind } from './shape/schema.js'
 export { STICKY_TYPE, stickyType } from './sticky/definition.js'
@@ -21,5 +24,5 @@ export { UnknownDataSchema, type UnknownData } from './unknown/schema.js'
  * testing, search or serialization needs to know it exists.
  */
 export function createDefaultRegistry(): ObjectTypeRegistry {
-  return new ObjectTypeRegistry([stickyType, textType, shapeType, unknownType])
+  return new ObjectTypeRegistry([stickyType, textType, shapeType, frameType, unknownType])
 }

@@ -56,6 +56,7 @@ export function onPointerDown(ctx: PointerDownContext): readonly PointerIntent[]
    */
   if (ctx.tool === 'sticky') return [{ kind: 'create', objectType: 'sticky', at: ctx.worldPoint }]
   if (ctx.tool === 'text') return [{ kind: 'create', objectType: 'text', at: ctx.worldPoint }]
+  if (ctx.tool === 'frame') return [{ kind: 'create', objectType: 'frame', at: ctx.worldPoint }]
   if (ctx.tool === 'shape') {
     return [
       { kind: 'create', objectType: 'shape', at: ctx.worldPoint, data: { shape: ctx.shapeKind } },

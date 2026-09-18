@@ -1,7 +1,7 @@
 import type { AnyOpenFrameObject, BoardDocument, ObjectId } from '@openframe/core'
 import { useCallback, useSyncExternalStore } from 'react'
 
-import { useOpenFrame } from '../app/runtime-context.js'
+import { useOpenFrame } from '../runtime/context.js'
 
 /**
  * Subscribes a component to ONE object.

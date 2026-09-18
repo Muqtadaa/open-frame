@@ -21,10 +21,17 @@ import type { AnyOpenFrameObject, ObjectBase } from '@openframe/core'
 export interface ObjectViewProps<TData = unknown> {
   readonly object: ObjectBase<string, TData>
   readonly selected: boolean
+  /**
+   * Current board zoom. Supplied so a view can counter-scale chrome that should
+   * stay a constant size on screen — a frame's title, for instance. Views are a
+   * leaf module and cannot read the interaction store themselves.
+   */
+  readonly zoom: number
 }
 
 export interface ObjectEditorProps<TData = unknown> {
   readonly object: ObjectBase<string, TData>
+  readonly zoom: number
   readonly onCommit: (patch: Partial<TData>) => void
   readonly onCancel: () => void
 }

@@ -31,5 +31,9 @@ export function describeCommand(command: Command): string {
       return command.locked ? 'Lock' : 'Unlock'
     case 'SetHidden':
       return command.hidden ? 'Hide' : 'Show'
+    case 'ReparentObjects':
+      return command.parentId === null
+        ? `Remove ${plural(command.ids.length, 'object')} from frame`
+        : `Move ${plural(command.ids.length, 'object')} into frame`
   }
 }

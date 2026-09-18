@@ -4,8 +4,8 @@ import { createRoot } from 'react-dom/client'
 import { App } from './app/App.js'
 import { AppErrorBoundary } from './app/AppErrorBoundary.js'
 import { createRuntime } from './app/composition-root.js'
-import { OpenFrameContext } from './app/runtime-context.js'
-import { createDefaultViewRegistry } from './canvas/views/index.js'
+import { OpenFrameContext } from './runtime/context.js'
+import { createDefaultViewRegistry } from './views/index.js'
 import './styles.css'
 
 const container = document.getElementById('root')

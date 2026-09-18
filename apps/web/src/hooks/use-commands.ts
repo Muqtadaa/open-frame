@@ -1,7 +1,7 @@
 import type { ColorToken, ObjectFrame, ObjectId, Placement, Point } from '@openframe/core'
 import { useMemo } from 'react'
 
-import { useOpenFrame } from '../app/runtime-context.js'
+import { useOpenFrame } from '../runtime/context.js'
 import { useInteractionStore } from '../interaction/interaction-store.js'
 
 export interface BoardCommands {
@@ -13,6 +13,11 @@ export interface BoardCommands {
   paste(at?: Point): void
   selectAll(): void
   moveObjects(moves: readonly { id: ObjectId; dx: number; dy: number }[]): void
+  /** Commits a drag that also changes frame membership, as ONE undoable action. */
+  moveAndReparent(
+    moves: readonly { id: ObjectId; dx: number; dy: number }[],
+    parentId: ObjectId | null,
+  ): void
   resizeObjects(resizes: readonly { id: ObjectId; frame: ObjectFrame }[]): void
   rotateObjects(rotations: readonly { id: ObjectId; rotation: number }[]): void
   reorder(placement: Placement): void
@@ -20,6 +25,7 @@ export interface BoardCommands {
   setHidden(hidden: boolean): void
   deleteSelection(): void
   setText(id: ObjectId, text: string): void
+  updateData(id: ObjectId, patch: Readonly<Record<string, unknown>>): void
   setColor(ids: readonly ObjectId[], color: ColorToken): void
   undo(): void
   redo(): void
@@ -159,6 +165,17 @@ export function useCommands(): BoardCommands {
         report(dispatcher.dispatch({ kind: 'MoveObjects', moves }))
       },
 
+      moveAndReparent(moves, parentId) {
+        if (moves.length === 0) return
+        const ids = moves.map((move) => move.id)
+        report(
+          dispatcher.transact(parentId === null ? 'Move out of frame' : 'Move into frame', [
+            { kind: 'MoveObjects', moves },
+            { kind: 'ReparentObjects', ids, parentId },
+          ]),
+        )
+      },
+
       resizeObjects(resizes) {
         if (resizes.length === 0) return
         report(dispatcher.dispatch({ kind: 'ResizeObjects', resizes }))
@@ -199,6 +216,10 @@ export function useCommands(): BoardCommands {
 
       setText(id, text) {
         report(dispatcher.dispatch({ kind: 'UpdateObjectData', id, patch: { text } }))
+      },
+
+      updateData(id, patch) {
+        report(dispatcher.dispatch({ kind: 'UpdateObjectData', id, patch }))
       },
 
       setColor(ids, color) {

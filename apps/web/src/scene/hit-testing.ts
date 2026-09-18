@@ -52,3 +52,27 @@ export function objectsInMarquee(
   }
   return found
 }
+
+/**
+ * The topmost container whose bounds enclose `worldPoint`, ignoring `exclude`.
+ *
+ * Used when a drag commits, to decide whether the dragged objects should become
+ * members of a frame. The exclusion set matters: an object cannot be dropped
+ * into itself, and a frame cannot be dropped into its own contents.
+ */
+export function containerAt(
+  doc: BoardDocument,
+  registry: ObjectTypeRegistry,
+  worldPoint: Point,
+  exclude: ReadonlySet<ObjectId>,
+): ObjectId | null {
+  const painted = objectsInPaintOrder(doc)
+  for (let i = painted.length - 1; i >= 0; i--) {
+    const object = painted[i]
+    if (object === undefined || object.hidden || object.locked) continue
+    if (exclude.has(object.id)) continue
+    if (registry.get(object.type)?.capabilities.canHaveChildren !== true) continue
+    if (containsPoint(registry.boundsOf(object), worldPoint)) return object.id
+  }
+  return null
+}

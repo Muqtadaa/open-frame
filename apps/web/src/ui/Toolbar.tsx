@@ -5,11 +5,12 @@ import { useState } from 'react'
 import { useCommands } from '../hooks/use-commands.js'
 import { useUndoState } from '../hooks/use-document-object.js'
 import { useInteractionStore, type Tool } from '../interaction/interaction-store.js'
-import { SURFACE_VARS } from '../canvas/views/style-tokens.js'
+import { SURFACE_VARS } from '../scene/style-tokens.js'
 import {
   CursorIcon,
   HandIcon,
   RedoIcon,
+  FrameIcon,
   ShapeIcon,
   StickyIcon,
   TextIcon,
@@ -32,6 +33,7 @@ const TOOLS: readonly ToolSpec[] = [
   { id: 'sticky', label: 'Sticky', shortcut: 'S' },
   { id: 'text', label: 'Text', shortcut: 'T' },
   { id: 'shape', label: 'Shape', shortcut: 'U' },
+  { id: 'frame', label: 'Frame', shortcut: 'F' },
 ]
 
 /**
@@ -64,6 +66,8 @@ export function Toolbar() {
         return <TextIcon />
       case 'shape':
         return <ShapeIcon kind={shapeKind} />
+      case 'frame':
+        return <FrameIcon />
     }
   }
 

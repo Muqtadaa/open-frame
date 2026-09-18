@@ -40,12 +40,29 @@ Adding a runtime dependency to core requires updating the allowlist assertion in
 ### 2. Dependencies point inward
 
 ```
-ui → interaction → canvas → commands → domain → geometry
-                            adapters → ports
+        app  (composition root — may reach anything)
+         │
+   ┌─────┴─────┐
+   ui        canvas ──► views ─┐
+   │           │               │
+   └─────┬─────┘               │
+      interaction ──────► scene ──► @openframe/core
+                                    commands → domain → geometry
+                                    adapters → ports
 ```
+
+`scene/` (pure view geometry) and `views/` (React object views) are LEAVES.
+`runtime/` describes the wired app so any layer can consume it without
+depending on the module that builds it.
 
 `ui`, `canvas` and `interaction` must never import from `adapters`. Nothing in
 `core` may import from `apps`. No cycles.
+
+**`no-circular` does not enforce this.** It detects cycles between FILES, so it
+silently permitted `interaction → canvas` alongside `canvas → interaction` — a
+mutual dependency between layers. The explicit layer rules in
+`.dependency-cruiser.cjs` are what make the direction real; all of them have
+been verified to fail when violated.
 
 ### 3. All persistent mutation goes through `CommandDispatcher.dispatch`
 
@@ -143,7 +160,15 @@ Rotation is stored on `frame.rotation` and honoured by `registry.boundsOf`, so
 culling and marquee selection get the rotated extent for free. Hit testing
 rotates the POINT into the object's local space rather than rotating the rect.
 
-### 15. Break a new architectural rule once, and watch it fail
+### 15. Chrome outside an object's world bounds is found via the DOM
+
+A frame's title is drawn above the frame and counter-scaled to stay a constant
+size on screen, so it has no fixed world geometry and world-space hit testing
+cannot see it. Rather than special-casing types in the geometry, pointer
+handling falls back to `closest('[data-object-id]')`. Any future chrome with the
+same property gets this for free.
+
+### 16. Break a new architectural rule once, and watch it fail
 
 A rule that passes vacuously is worse than no rule, because it is trusted. This
 practice has already caught a dependency-cruiser rule that never fired on the

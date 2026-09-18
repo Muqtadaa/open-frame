@@ -21,7 +21,13 @@ describe('object type registry contract', () => {
   it('registers exactly the expected set', () => {
     // Asserted explicitly rather than loosely: a type appearing or vanishing
     // unnoticed is how the app and the persisted format quietly diverge.
-    expect(definitions.map((d) => d.type).sort()).toEqual(['shape', 'sticky', 'text', 'unknown'])
+    expect(definitions.map((d) => d.type).sort()).toEqual([
+      'frame',
+      'shape',
+      'sticky',
+      'text',
+      'unknown',
+    ])
   })
 
   it('rejects duplicate registration', () => {

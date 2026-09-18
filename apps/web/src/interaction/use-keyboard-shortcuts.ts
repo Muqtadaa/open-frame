@@ -1,13 +1,13 @@
 import { useEffect } from 'react'
 
-import { useOpenFrame } from '../app/runtime-context.js'
+import { useOpenFrame } from '../runtime/context.js'
 import {
   fitToDocument,
   fitToObjects,
   nextZoomIn,
   nextZoomOut,
   zoomAtCentre,
-} from '../canvas/zoom.js'
+} from '../scene/zoom.js'
 import { useCommands } from '../hooks/use-commands.js'
 import { useInteractionStore } from './interaction-store.js'
 import { resolveKeyAction } from './keymap.js'

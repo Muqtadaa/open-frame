@@ -1,7 +1,7 @@
 import { useEffect, useRef } from 'react'
 
 import { useCommands } from '../hooks/use-commands.js'
-import { useOpenFrame } from '../app/runtime-context.js'
+import { useOpenFrame } from '../runtime/context.js'
 import { useInteractionStore } from '../interaction/interaction-store.js'
 
 const isMac = typeof navigator !== 'undefined' && /Mac|iPhone|iPad/.test(navigator.platform)

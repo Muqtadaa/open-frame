@@ -2,7 +2,7 @@ import type { ColorToken, StickyData } from '@openframe/core'
 
 import { defineObjectView, type ObjectEditorProps, type ObjectViewProps } from './registry.js'
 import { InlineTextEditor } from './shared-editor.js'
-import { SURFACE_VARS, fontFamily, textAlign } from './style-tokens.js'
+import { SURFACE_VARS, fontFamily, textAlign } from '../scene/style-tokens.js'
 
 function background(color: ColorToken | undefined): string {
   return SURFACE_VARS[color ?? 'yellow']

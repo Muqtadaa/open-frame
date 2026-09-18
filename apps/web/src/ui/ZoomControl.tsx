@@ -1,7 +1,7 @@
 import { MAX_ZOOM, MIN_ZOOM, clampZoom } from '@openframe/core'
 import { useEffect, useRef, useState } from 'react'
 
-import { useOpenFrame } from '../app/runtime-context.js'
+import { useOpenFrame } from '../runtime/context.js'
 import {
   fitToDocument,
   nextZoomIn,
@@ -9,7 +9,7 @@ import {
   sliderToZoom,
   zoomAtCentre,
   zoomToSlider,
-} from '../canvas/zoom.js'
+} from '../scene/zoom.js'
 import { useInteractionStore } from '../interaction/interaction-store.js'
 import { FitIcon, MinusIcon, MouseIcon, PlusIcon } from './icons.js'
 

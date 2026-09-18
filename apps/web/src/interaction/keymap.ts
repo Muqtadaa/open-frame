@@ -52,6 +52,7 @@ const TOOL_KEYS: Readonly<Record<string, Tool>> = {
   // Miro binds sticky notes to N; accept both rather than make people relearn.
   n: 'sticky',
   t: 'text',
+  f: 'frame',
 }
 
 const NUDGE_KEYS: Readonly<Record<string, { dx: number; dy: number }>> = {

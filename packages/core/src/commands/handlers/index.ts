@@ -3,6 +3,7 @@ import type { Patch } from '../../domain/patch.js'
 import type { CommandContext, Command } from '../types.js'
 import { createObjects } from './create-objects.js'
 import { reorderObjects } from './reorder-objects.js'
+import { reparentObjects } from './reparent-objects.js'
 import { rotateObjects } from './rotate-objects.js'
 import { setHidden, setLocked } from './set-flags.js'
 import { deleteObjects } from './delete-objects.js'
@@ -45,6 +46,8 @@ export function handleCommand(
       return setLocked(doc, command)
     case 'SetHidden':
       return setHidden(doc, command)
+    case 'ReparentObjects':
+      return reparentObjects(doc, command, ctx)
   }
 }
 
@@ -53,6 +56,7 @@ export {
   deleteObjects,
   moveObjects,
   reorderObjects,
+  reparentObjects,
   resizeObjects,
   rotateObjects,
   setHidden,

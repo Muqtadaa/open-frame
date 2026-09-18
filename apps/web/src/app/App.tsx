@@ -4,7 +4,7 @@ import { NoticeBanner } from '../ui/NoticeBanner.js'
 import { StatusBar } from '../ui/StatusBar.js'
 import { Toolbar } from '../ui/Toolbar.js'
 import { ZoomControl } from '../ui/ZoomControl.js'
-import { useOpenFrame } from './runtime-context.js'
+import { useOpenFrame } from '../runtime/context.js'
 
 /**
  * The application shell.
