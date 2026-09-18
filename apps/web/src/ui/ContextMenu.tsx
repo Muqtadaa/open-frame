@@ -47,9 +47,14 @@ export function ContextMenu() {
   if (at === null) return null
 
   const hasSelection = selectionSize > 0
-  const locked = [...useInteractionStore.getState().selection].some(
-    (id) => runtime.store.getObject(id)?.locked === true,
-  )
+  const selected = [...useInteractionStore.getState().selection]
+  const locked = selected.some((id) => runtime.store.getObject(id)?.locked === true)
+  // Asked of the registry rather than compared against 'group', so this stays
+  // correct for any later type that selects as a unit.
+  const hasGroup = selected.some((id) => {
+    const type = runtime.store.getObject(id)?.type
+    return type !== undefined && runtime.registry.get(type)?.capabilities.selectsAsUnit === true
+  })
 
   const groups: Item[][] = [
     [
@@ -76,6 +81,22 @@ export function ContextMenu() {
         shortcut: `${mod}D`,
         run: () => commands.duplicateSelection(),
         disabled: !hasSelection,
+      },
+    ],
+    [
+      {
+        label: 'Group',
+        shortcut: `${mod}G`,
+        run: () => commands.group(),
+        // One object is already a unit; grouping it would add a container with
+        // nothing to contain.
+        disabled: selectionSize < 2,
+      },
+      {
+        label: 'Ungroup',
+        shortcut: `${mod}⇧G`,
+        run: () => commands.ungroup(),
+        disabled: !hasGroup,
       },
     ],
     [

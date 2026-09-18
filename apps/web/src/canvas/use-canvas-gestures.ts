@@ -30,7 +30,7 @@ import {
   onPointerDown as decidePointerDown,
   type PointerIntent,
 } from '../interaction/pointer-controller.js'
-import { containerAt, hitTest, objectsInMarquee } from '../scene/hit-testing.js'
+import { containerAt, hitTest, hitTestRaw, objectsInMarquee } from '../scene/hit-testing.js'
 import { alignToNeighbours, alignmentTargets, type AlignmentGuide } from '../scene/alignment.js'
 import { cullToViewport } from '../scene/culling.js'
 import { snapDelta, snapRect } from '../scene/snapping.js'
@@ -256,6 +256,10 @@ export function useCanvasGestures(containerRef: RefObject<HTMLElement | null>) {
           store.beginMarquee(worldPoint)
           return 'marquee'
         case 'begin-edit':
+          // Selected as well as edited: a double-click into a group targets the
+          // MEMBER, and leaving the group selected while editing a note inside
+          // it would show a selection box around the wrong thing.
+          store.setSelection([intent.id])
           store.setEditing(intent.id)
           return 'none'
         case 'begin-connect': {
@@ -639,8 +643,16 @@ export function useCanvasGestures(containerRef: RefObject<HTMLElement | null>) {
     // Double-click arrives as a MouseEvent in React, not a PointerEvent.
     (event: ReactMouseEvent<HTMLElement>): void => {
       const worldPoint = toWorld(event.clientX, event.clientY)
+      /*
+       * RAW, not group-resolved.
+       *
+       * A single click selects the group, which is what a group is for; a
+       * double-click is the gesture for reaching inside it. Without this a note
+       * inside a group could never be edited again, because every click would
+       * resolve to a container that has no text.
+       */
       const hitId =
-        hitTest(runtime.store.getDocument(), runtime.registry, worldPoint) ??
+        hitTestRaw(runtime.store.getDocument(), runtime.registry, worldPoint) ??
         objectChromeUnderPointer(event.target)
       for (const intent of decideDoubleClick(hitId)) applyIntent(intent, worldPoint)
     },

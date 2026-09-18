@@ -56,6 +56,7 @@ export const imageType = defineObjectType<typeof IMAGE_TYPE, ImageData>({
     // thing images most often lack, so it is the thing the editor edits.
     textEditable: true,
     canHaveChildren: false,
+    selectsAsUnit: false,
     connectable: true,
     styleProps: ['opacity'],
   },

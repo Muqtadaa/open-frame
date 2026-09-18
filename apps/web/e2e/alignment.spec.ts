@@ -24,6 +24,13 @@ async function freshBoard(page: Page): Promise<void> {
   )
   await page.reload()
   await expect(page.locator(CANVAS)).toBeVisible()
+  /*
+   * Also wait for the toolbar. A visible canvas only means React rendered;
+   * `useKeyboardShortcuts` attaches its listener in an effect, which runs after
+   * paint, so a keystroke sent on the canvas alone can land in the gap and be
+   * dropped. That showed up as a rare, unexplained tool-selection failure.
+   */
+  await expect(page.getByTestId("tool-select")).toBeVisible()
 }
 
 async function create(page: Page, tool: string, x: number, y: number, text: string): Promise<void> {
@@ -70,10 +77,16 @@ const box = async (page: Page, nth: number) => {
 async function pushAnchorOffGrid(page: Page): Promise<number> {
   const before = await box(page, 0)
   await page.keyboard.down(MOD)
+  /*
+   * Seven pixels, not three. Three is exactly DRAG_THRESHOLD_PX, so under load
+   * the press could land on the boundary, register as a click, and leave the
+   * anchor on the grid — which failed this suite intermittently rather than
+   * honestly.
+   */
   await dragWith(
     page,
     { x: before.x + 20, y: before.y + 20 },
-    { x: before.x + 23, y: before.y + 20 },
+    { x: before.x + 27, y: before.y + 20 },
   )
   await page.keyboard.up(MOD)
 

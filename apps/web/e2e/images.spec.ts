@@ -35,6 +35,13 @@ async function freshBoard(page: Page): Promise<void> {
   )
   await page.reload()
   await expect(page.locator(CANVAS)).toBeVisible()
+  /*
+   * Also wait for the toolbar. A visible canvas only means React rendered;
+   * `useKeyboardShortcuts` attaches its listener in an effect, which runs after
+   * paint, so a keystroke sent on the canvas alone can land in the gap and be
+   * dropped. That showed up as a rare, unexplained tool-selection failure.
+   */
+  await expect(page.getByTestId("tool-select")).toBeVisible()
 }
 
 async function upload(page: Page, name: string, mimeType: string, body: Buffer): Promise<void> {

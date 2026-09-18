@@ -125,3 +125,27 @@ describe('unclaimed keys', () => {
     expect(resolveKeyAction(key('p', { metaKey: true }))).toBeNull()
   })
 })
+
+describe('grouping', () => {
+  it('groups on Mod+G', () => {
+    expect(resolveKeyAction(key('g', { metaKey: true }))).toEqual({ kind: 'group' })
+    expect(resolveKeyAction(key('g', { ctrlKey: true }))).toEqual({ kind: 'group' })
+  })
+
+  it('ungroups on Shift+Mod+G', () => {
+    expect(resolveKeyAction(key('g', { metaKey: true, shiftKey: true }))).toEqual({
+      kind: 'ungroup',
+    })
+  })
+
+  /** A shifted press reports the uppercase key, which must not fall through. */
+  it('handles the uppercase key', () => {
+    expect(resolveKeyAction(key('G', { metaKey: true, shiftKey: true }))).toEqual({
+      kind: 'ungroup',
+    })
+  })
+
+  it('leaves a bare g alone rather than grouping without a modifier', () => {
+    expect(resolveKeyAction(key('g'))).not.toEqual({ kind: 'group' })
+  })
+})

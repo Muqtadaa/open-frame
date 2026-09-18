@@ -35,11 +35,22 @@ export type EndpointTarget =
  * switching on `object.type`, which is how a selection of mixed types can be
  * styled, resized or described by code that knows nothing about any of them.
  */
+/** Nesting beyond this is a malformed document, not a board someone built. */
+const MAX_BOUNDS_DEPTH = 32
+
 export interface ObjectCapabilities {
   readonly resizable: boolean
   readonly rotatable: boolean
   readonly textEditable: boolean
   readonly canHaveChildren: boolean
+  /**
+   * Clicking a DESCENDANT selects this object instead.
+   *
+   * What makes a group a group. A frame deliberately does not do this: clicking
+   * a note inside a frame selects the note, because a frame organises the board
+   * while a group is meant to behave as one thing.
+   */
+  readonly selectsAsUnit: boolean
   readonly connectable: boolean
   /** Which style tokens this type honours. Others are ignored, not rejected. */
   readonly styleProps: readonly StyleProp[]
@@ -102,7 +113,17 @@ export interface ObjectTypeDefinition<TType extends string, TData> {
    * connector's extent is wherever its endpoints resolve to, and it has no
    * meaningful frame of its own.
    */
-  readonly getBounds?: (object: ObjectBase<TType, TData>, doc: BoardDocument) => Rect
+  readonly getBounds?: (
+    object: ObjectBase<TType, TData>,
+    doc: BoardDocument,
+    /**
+     * Bounds of another object, for container types whose extent is their
+     * children's. Supplied by the registry rather than reached for, so a
+     * container does not need to know how every other type computes its extent
+     * — a group holding a connector gets the connector's derived bounds.
+     */
+    boundsOf: (other: AnyOpenFrameObject) => Rect,
+  ) => Rect
 
   /**
    * Precise containment, for types whose BOUNDS are much larger than their ink.
@@ -171,7 +192,11 @@ export interface ErasedObjectTypeDefinition {
     frame: { width: number; height: number }
   }
   readonly describe: (object: AnyOpenFrameObject) => ObjectDescription
-  readonly getBounds?: (object: AnyOpenFrameObject, doc: BoardDocument) => Rect
+  readonly getBounds?: (
+    object: AnyOpenFrameObject,
+    doc: BoardDocument,
+    boundsOf: (other: AnyOpenFrameObject) => Rect,
+  ) => Rect
   readonly hitTest?: (object: AnyOpenFrameObject, doc: BoardDocument, point: Point) => boolean
   readonly dependencies?: (object: AnyOpenFrameObject) => readonly ObjectId[]
   readonly endpoints?: (object: AnyOpenFrameObject, doc: BoardDocument) => readonly DraggableEndpoint[]
@@ -241,7 +266,10 @@ export function defineObjectType<TType extends string, TData>(
     ...erased,
     ...(getBounds === undefined
       ? {}
-      : { getBounds: (object, doc) => getBounds(object as ObjectBase<TType, TData>, doc) }),
+      : {
+          getBounds: (object, doc, boundsOf) =>
+            getBounds(object as ObjectBase<TType, TData>, doc, boundsOf),
+        }),
     ...(hitTest === undefined
       ? {}
       : {
@@ -350,7 +378,23 @@ export class ObjectTypeRegistry {
    * rotated extent without knowing rotation exists.
    */
   boundsOf(object: AnyOpenFrameObject, doc: BoardDocument): Rect {
-    const custom = this.#definitions.get(object.type)?.getBounds?.(object, doc)
+    return this.#boundsOf(object, doc, 0)
+  }
+
+  /**
+   * `depth` guards the container case. A group's bounds are its children's, so a
+   * parent chain that somehow formed a cycle would recurse forever. The command
+   * layer's `wouldCreateCycle` is what should prevent that; this is the belt to
+   * its braces, because the failure mode is a hung renderer rather than a wrong
+   * rectangle.
+   */
+  #boundsOf(object: AnyOpenFrameObject, doc: BoardDocument, depth: number): Rect {
+    const custom =
+      depth >= MAX_BOUNDS_DEPTH
+        ? undefined
+        : this.#definitions
+            .get(object.type)
+            ?.getBounds?.(object, doc, (other) => this.#boundsOf(other, doc, depth + 1))
     if (custom !== undefined) return custom
     const { x, y, width, height, rotation } = object.frame
     return rotatedBounds({ x, y, width, height }, rotation)

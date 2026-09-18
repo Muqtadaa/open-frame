@@ -27,6 +27,8 @@ export type KeyAction =
   | { readonly kind: 'redo' }
   | { readonly kind: 'delete' }
   | { readonly kind: 'duplicate' }
+  | { readonly kind: 'group' }
+  | { readonly kind: 'ungroup' }
   | { readonly kind: 'copy' }
   | { readonly kind: 'cut' }
   | { readonly kind: 'paste' }
@@ -85,6 +87,10 @@ export function resolveKeyAction(ctx: KeyContext): KeyAction | null {
       case 'a':
       case 'A':
         return { kind: 'select-all' }
+      case 'g':
+      case 'G':
+        // Shift+Cmd+G ungroups, the convention everywhere this gesture exists.
+        return ctx.shiftKey ? { kind: 'ungroup' } : { kind: 'group' }
       case 'd':
       case 'D':
         return { kind: 'duplicate' }

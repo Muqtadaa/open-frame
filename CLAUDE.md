@@ -215,7 +215,22 @@ pointer event is the O(n) scan rule 10 forbids, sixty times a second.
 grid.** Both put the object in the same place. Push a neighbour off-grid first,
 or the test passes with the feature deleted — three of these did.
 
-### 18. An upload is validated by its content, not by what it claims to be
+### 18. A container's behaviour is a capability, not a check for its type
+
+`frame` and `group` both hold children and differ in ONE thing: clicking a
+member of a group selects the group, clicking a member of a frame selects the
+member. That lives in `capabilities.selectsAsUnit`, so the hit tester names
+neither type.
+
+Adding a capability is deliberately a breaking change — every type must state
+its answer. A capability that defaulted to `false` would let a new type acquire
+behaviour nobody chose for it.
+
+Anything that reaches INTO such a container — double-click to edit a member —
+uses `hitTestRaw`, which ignores membership. Without it, grouping a note makes
+its text permanently uneditable.
+
+### 19. An upload is validated by its content, not by what it claims to be
 
 A `File`'s MIME type is derived from its extension, so it is trivially wrong:
 renaming `payload.svg` to `photo.png` produces a File that claims to be a PNG.
@@ -232,7 +247,7 @@ change.
 Validation is policy and lives beside the runtime, never in an adapter: swapping
 IndexedDB for a server must not change what a user may upload.
 
-### 19. A stored locator must survive a reload
+### 20. A stored locator must survive a reload
 
 An `AssetRef.locator` is `idb:<id>`, never a `blob:` URL. Object URLs are minted
 per page load and die with the tab, so persisting one leaves every image on a
@@ -244,11 +259,14 @@ Anything asynchronous that the render path needs gets the same treatment — a
 synchronous cache lookup with an explicit `loading`/`ready`/`missing` state,
 plus a subscription that re-renders when it lands. A view cannot await.
 
-### 20. Break a new architectural rule once, and watch it fail
+### 21. Break a new architectural rule once, and watch it fail
 
 A rule that passes vacuously is worse than no rule, because it is trusted. This
 practice has already caught a dependency-cruiser rule that never fired on the
-mistake it existed to catch.
+mistake it existed to catch, an alignment suite that passed with the feature
+deleted, a shape-label check that was never run against a real outline, and a
+`z.object({})` that accepted every payload because Zod strips unknown keys
+unless you ask it not to.
 
 ---
 

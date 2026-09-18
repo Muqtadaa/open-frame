@@ -23,6 +23,10 @@ export function createObjects(
   const lastOrderByParent = new Map<string, OrderKey | null>()
 
   const patches: Patch[] = []
+  // Tracks ids supplied within THIS command, so two specs cannot claim the same
+  // one — the document does not yet contain the first when the second is checked.
+  const claimed = new Set<string>()
+
   for (const spec of command.objects) {
     const definition = ctx.registry.get(spec.type)
     if (definition === undefined) {
@@ -30,6 +34,13 @@ export function createObjects(
     }
     if (!Number.isFinite(spec.x) || !Number.isFinite(spec.y)) {
       throw new CommandError('invalid-input', 'Object position must be finite')
+    }
+
+    if (spec.id !== undefined) {
+      if (doc.objects.has(spec.id) || claimed.has(spec.id)) {
+        throw new CommandError('invalid-input', `Object id "${spec.id}" is already in use`)
+      }
+      claimed.add(spec.id)
     }
 
     const parentId = spec.parentId ?? null
@@ -44,7 +55,7 @@ export function createObjects(
 
     const object = instantiateObject({
       definition,
-      id: ctx.ids.objectId(),
+      id: spec.id ?? ctx.ids.objectId(),
       order,
       x: spec.x,
       y: spec.y,

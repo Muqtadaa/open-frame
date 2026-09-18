@@ -20,6 +20,7 @@ export const shapeType = defineObjectType<typeof SHAPE_TYPE, ShapeData>({
     rotatable: true,
     textEditable: true,
     canHaveChildren: false,
+    selectsAsUnit: false,
     connectable: true,
     styleProps: ['color', 'fill', 'stroke', 'font', 'align', 'opacity'],
   },

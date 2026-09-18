@@ -109,6 +109,7 @@ export async function createRuntime(options: CreateRuntimeOptions = {}): Promise
     store,
     registry,
     dispatcher,
+    ids,
     repository,
     assets,
     notices,

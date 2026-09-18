@@ -1,5 +1,6 @@
 import type {
   ColorToken,
+  Command,
   ConnectorEndpoint,
   EndpointTarget,
   ObjectFrame,
@@ -7,6 +8,7 @@ import type {
   Placement,
   Point,
 } from '@openframe/core'
+import { childrenOf } from '@openframe/core'
 import { useMemo } from 'react'
 
 import { useOpenFrame } from '../runtime/context.js'
@@ -32,6 +34,10 @@ export interface BoardCommands {
   resizeObjects(resizes: readonly { id: ObjectId; frame: ObjectFrame }[]): void
   rotateObjects(rotations: readonly { id: ObjectId; rotation: number }[]): void
   reorder(placement: Placement): void
+  /** Wraps the selection in a group. Needs at least two objects to mean anything. */
+  group(): void
+  /** Dissolves any groups in the selection, keeping their members. */
+  ungroup(): void
   setLocked(locked: boolean): void
   setHidden(hidden: boolean): void
   deleteSelection(): void
@@ -120,6 +126,72 @@ export function useCommands(): BoardCommands {
         })
         report(result)
         return result.ok ? (result.affected[0] ?? null) : null
+      },
+
+      group() {
+        const store = useInteractionStore.getState()
+        const doc = runtime.store.getDocument()
+        const members = [...store.selection]
+          .map((id) => doc.objects.get(id))
+          .filter((object) => object !== undefined)
+
+        // One object is already a unit, and nothing cannot be grouped.
+        if (members.length < 2) return
+        // Mixed parents would mean lifting objects out of their frames as a
+        // side effect of grouping, which is not what was asked for.
+        const parentId = members[0]?.parentId ?? null
+        if (members.some((object) => (object.parentId ?? null) !== parentId)) return
+
+        /*
+         * The id is minted HERE because the second command has to name the
+         * object the first one creates, and `transact` takes its commands
+         * upfront. That is the whole reason `NewObjectSpec.id` exists.
+         */
+        const id = runtime.ids.objectId()
+        const result = runtime.dispatcher.transact('Group', [
+          {
+            kind: 'CreateObjects',
+            // A group has no frame of its own; its extent is its members'.
+            objects: [{ type: 'group', id, x: 0, y: 0, parentId }],
+          },
+          { kind: 'ReparentObjects', ids: members.map((object) => object.id), parentId: id },
+        ])
+        report(result)
+        if (result.ok) store.setSelection([id])
+      },
+
+      ungroup() {
+        const store = useInteractionStore.getState()
+        const doc = runtime.store.getDocument()
+        const groups = [...store.selection]
+          .map((id) => doc.objects.get(id))
+          .filter((object) => object !== undefined)
+          .filter((object) => runtime.registry.get(object.type)?.capabilities.selectsAsUnit === true)
+        if (groups.length === 0) return
+
+        const commands: Command[] = []
+        const freed: ObjectId[] = []
+        for (const group of groups) {
+          const members = childrenOf(doc, group.id)
+          if (members.length > 0) {
+            commands.push({
+              kind: 'ReparentObjects',
+              ids: members.map((object) => object.id),
+              parentId: group.parentId ?? null,
+            })
+            freed.push(...members.map((object) => object.id))
+          }
+        }
+        /*
+         * Members are lifted out BEFORE the group is deleted. The other order
+         * would cascade the delete into its own contents — deleting a container
+         * takes its children with it.
+         */
+        commands.push({ kind: 'DeleteObjects', ids: groups.map((object) => object.id) })
+
+        const result = runtime.dispatcher.transact('Ungroup', commands)
+        report(result)
+        if (result.ok) store.setSelection(freed)
       },
 
       duplicateSelection() {
@@ -291,5 +363,5 @@ export function useCommands(): BoardCommands {
           .pruneSelection((id) => runtime.store.getObject(id) !== undefined)
       },
     }
-  }, [dispatcher, runtime.registry, runtime.store])
+  }, [dispatcher, runtime])
 }

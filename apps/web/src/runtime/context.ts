@@ -5,6 +5,7 @@ import type {
   BoardRepository,
   CommandDispatcher,
   DocumentStore,
+  IdGenerator,
   ObjectTypeRegistry,
 } from '@openframe/core'
 
@@ -37,6 +38,13 @@ export interface OpenFrameRuntime {
   readonly store: DocumentStore
   readonly registry: ObjectTypeRegistry
   readonly dispatcher: CommandDispatcher
+  /**
+   * Ids, for the one case a caller needs one BEFORE dispatching: a composite
+   * whose later command refers to an object its earlier command creates.
+   * Handing these out is harmless — an id on its own changes nothing, and every
+   * mutation still goes through the dispatcher.
+   */
+  readonly ids: IdGenerator
   readonly repository: BoardRepository
   /** Uploads, and the renderer's synchronous view of resolved asset URLs. */
   readonly assets: AssetService

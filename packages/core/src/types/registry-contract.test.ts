@@ -24,6 +24,7 @@ describe('object type registry contract', () => {
     expect(definitions.map((d) => d.type).sort()).toEqual([
       'connector',
       'frame',
+      'group',
       'image',
       'shape',
       'sticky',

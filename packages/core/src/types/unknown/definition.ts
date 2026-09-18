@@ -26,6 +26,7 @@ export const unknownType = defineObjectType<typeof UNKNOWN_TYPE, UnknownData>({
     rotatable: false,
     textEditable: false,
     canHaveChildren: false,
+    selectsAsUnit: false,
     connectable: false,
     styleProps: [],
   },

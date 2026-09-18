@@ -6,6 +6,17 @@ import type { IdGenerator } from '../ports/id-generator.js'
 
 export interface NewObjectSpec {
   readonly type: string
+  /**
+   * A caller-supplied id, for when a LATER command in the same transaction has
+   * to refer to this object — grouping creates a container and reparents the
+   * selection into it as one action, and cannot wait to be told the id
+   * afterwards.
+   *
+   * Omitted is the normal case and the dispatcher mints one. Supplying an id
+   * that already exists is rejected: silently overwriting an object would
+   * destroy it and produce an inverse patch that restores the wrong thing.
+   */
+  readonly id?: ObjectId
   readonly x: number
   readonly y: number
   readonly width?: number

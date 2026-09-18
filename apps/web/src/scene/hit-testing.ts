@@ -1,4 +1,5 @@
 import {
+  ancestorsOf,
   contains,
   containsPoint,
   objectsInPaintOrder,
@@ -16,7 +17,42 @@ import {
  * renderer's implementation — and would break the moment the object layer moves
  * to Canvas2D, where there are no elements to ask. Geometry answers instead.
  */
-export function hitTest(
+
+/**
+ * What clicking `id` should actually select.
+ *
+ * A member of a group selects the group instead — that is what makes a group
+ * one thing. The OUTERMOST such ancestor wins, so clicking into nested groups
+ * gets the whole assembly rather than the innermost box; getting inside is the
+ * job of an explicit gesture, not of a plain click.
+ *
+ * Driven by the `selectsAsUnit` capability rather than by a check for a group,
+ * so a frame keeps its opposite behaviour — clicking a note in a frame selects
+ * the note — without either type being named here.
+ */
+export function selectionTargetFor(
+  doc: BoardDocument,
+  registry: ObjectTypeRegistry,
+  id: ObjectId,
+): ObjectId {
+  const ancestors = ancestorsOf(doc, id)
+  for (let i = ancestors.length - 1; i >= 0; i--) {
+    const ancestorId = ancestors[i]
+    if (ancestorId === undefined) continue
+    const ancestor = doc.objects.get(ancestorId)
+    if (ancestor === undefined) continue
+    if (registry.get(ancestor.type)?.capabilities.selectsAsUnit === true) return ancestorId
+  }
+  return id
+}
+
+/**
+ * The object directly under the pointer, ignoring group membership.
+ *
+ * Used by gestures that mean "get inside" — double-clicking into a group to
+ * edit one of its members.
+ */
+export function hitTestRaw(
   doc: BoardDocument,
   registry: ObjectTypeRegistry,
   worldPoint: Point,
@@ -34,6 +70,16 @@ export function hitTest(
   return null
 }
 
+/** Hit testing as selection means it: a member resolves to its group. */
+export function hitTest(
+  doc: BoardDocument,
+  registry: ObjectTypeRegistry,
+  worldPoint: Point,
+): ObjectId | null {
+  const hit = hitTestRaw(doc, registry, worldPoint)
+  return hit === null ? null : selectionTargetFor(doc, registry, hit)
+}
+
 /**
  * Marquee selection requires FULL containment, not intersection — dragging a
  * box across a crowded board should not sweep up everything it brushes.
@@ -43,12 +89,16 @@ export function objectsInMarquee(
   registry: ObjectTypeRegistry,
   region: Rect,
 ): ObjectId[] {
-  const found: ObjectId[] = []
+  const found = new Set<ObjectId>()
   for (const object of objectsInPaintOrder(doc)) {
     if (object.hidden || object.locked) continue
-    if (contains(region, registry.boundsOf(object, doc))) found.push(object.id)
+    if (!contains(region, registry.boundsOf(object, doc))) continue
+    // Resolved and de-duplicated: a marquee over a group would otherwise return
+    // the group AND every member, and dragging that selection would move each
+    // member twice.
+    found.add(selectionTargetFor(doc, registry, object.id))
   }
-  return found
+  return [...found]
 }
 
 /**

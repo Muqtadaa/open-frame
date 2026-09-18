@@ -71,6 +71,12 @@ export function useKeyboardShortcuts(setSpaceHeld: (held: boolean) => void): voi
         case 'duplicate':
           commands.duplicateSelection()
           return
+        case 'group':
+          commands.group()
+          return
+        case 'ungroup':
+          commands.ungroup()
+          return
         case 'copy':
           commands.copySelection()
           return

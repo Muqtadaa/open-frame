@@ -28,7 +28,8 @@ domain does not change either way.
 | `text`      | Free text without a note background                                                    |
 | `shape`     | ✅ Eight kinds — one type with a `shape` discriminant in `data`, not eight entries      |
 | `connector` | Endpoints already modelled; needs routing and rendering                                |
-| `frame`     | A named container. First type with `canHaveChildren: true`                             |
+| `frame`     | ✅ A named container. First type with `canHaveChildren: true`                           |
+| `group`     | ✅ Structure only, empty payload. Extent and position are its members'                  |
 | `image`     | ✅ First consumer of `AssetStore`. Drop, paste or pick; alt text is the editable field |
 
 ### Commands
@@ -79,7 +80,15 @@ axis.
 
 ✅ Dragging an existing connector endpoint to re-attach or detach it.
 
-Remaining: group/ungroup as `transact` composites.
+✅ `GroupObjects` / `UngroupObjects` — built as `transact` composites rather
+than bespoke commands. Grouping is create-then-reparent; ungrouping is
+reparent-then-delete, in that order because deleting a container cascades into
+its contents. Both are one undo entry.
+
+This is what `NewObjectSpec.id` is for: `transact` takes its commands upfront,
+so the reparent has to name the container the create is about to make. A
+supplied id that already exists is rejected — overwriting an object would
+destroy it and produce an inverse patch that restores the wrong thing.
 
 **Browser zoom must stay out of the way.** `Ctrl/Cmd` with `+`, `−`, `0`, `1`
 and with the wheel are all claimed and prevented; see
@@ -123,9 +132,25 @@ of the TYPE rather than a connector special case in the overlay. The gesture
 reports only what was dropped on — which anchor to use, and whether the drop is
 allowed at all, is the type's decision. See [CLAUDE.md](../../CLAUDE.md) rule 16.
 
-**Frame membership.** The first type with children. `ReparentObjects` must use
-`wouldCreateCycle`, and deleting a frame must cascade — both already exist and
-are tested.
+**Frame membership.** ✅ The first type with children. `ReparentObjects` uses
+`wouldCreateCycle`, and deleting a frame cascades.
+
+**Groups, and what separates them from frames.** A group is not a frame with the
+chrome turned off; the difference is behavioural, which is what earns it a
+registry entry. Clicking a note inside a FRAME selects the note, because a frame
+organises the board. Clicking a note inside a GROUP selects the group, because a
+group is meant to be one thing.
+
+That difference is a capability, `selectsAsUnit`, not a check for a group in the
+hit tester — so adding it forced every existing type to declare its answer,
+which is the friction working. Double-click is the way back in: it hit-tests
+RAW, ignoring group membership, because otherwise a grouped note's text would be
+permanently uneditable.
+
+A group's extent is the union of its members' bounds, so `getBounds` gained a
+`boundsOf` callback supplied by the registry. Without it a group holding a
+connector — a diagram with its arrows, the obvious thing to group — would have
+clipped to the connector's nominal 0×0 frame.
 
 **First real migration.** Almost certainly triggered by `shape` or `connector`
 gaining a field. This is where the
