@@ -1,7 +1,8 @@
-import type { ColorToken, StickyData } from '@openframe/core'
+import { isEmptyText, plainTextOf, type ColorToken, type StickyData } from '@openframe/core'
 
 import { defineObjectView, type ObjectEditorProps, type ObjectViewProps } from './registry.js'
-import { InlineTextEditor } from './shared-editor.js'
+import { RichTextEditor } from './RichTextEditor.js'
+import { RichTextView } from './RichTextView.js'
 import { SURFACE_VARS, fontFamily, textAlign } from '../scene/style-tokens.js'
 
 function background(color: ColorToken | undefined): string {
@@ -23,18 +24,23 @@ function StickyRenderer({ object }: ObjectViewProps<StickyData>) {
       // a pixel buffer is far harder than keeping it from the start.
       role="group"
       aria-label={
-        object.data.text === '' ? 'Empty sticky note' : `Sticky note: ${object.data.text}`
+        isEmptyText(object.data.text)
+          ? 'Empty sticky note'
+          : `Sticky note: ${plainTextOf(object.data.text)}`
       }
     >
-      <div className="of-sticky__text">{object.data.text}</div>
+      <div className="of-sticky__text">
+        <RichTextView value={object.data.text} />
+      </div>
     </div>
   )
 }
 
-function StickyEditor({ object, onCommit, onCancel }: ObjectEditorProps<StickyData>) {
+function StickyEditor({ object, zoom, onCommit, onCancel }: ObjectEditorProps<StickyData>) {
   return (
-    <InlineTextEditor
+    <RichTextEditor
       initialText={object.data.text}
+      zoom={zoom}
       className="of-sticky of-sticky__editor"
       style={{
         background: background(object.style.color),

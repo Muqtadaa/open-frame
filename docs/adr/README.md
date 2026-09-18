@@ -21,6 +21,7 @@ Format: Status · Context · Decision · Alternatives considered · Consequences
 | [0009](0009-repository-structure-two-packages.md) | Two packages, not five                             | Accepted            |
 | [0010](0010-typescript-6-until-ts71.md)           | TypeScript 6, not 7, for now                       | Accepted (revisit)  |
 | [0011](0011-relations-as-objects.md)              | **Relations are objects, not fields**              | Accepted            |
+| [0012](0012-rich-text-as-spans.md)                | **Text is a list of spans, not a string**          | Accepted            |
 
 ## Writing a new one
 

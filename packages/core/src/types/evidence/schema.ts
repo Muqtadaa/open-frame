@@ -1,5 +1,7 @@
 import { type ZodType, z } from 'zod'
 
+import { RichTextSchema, type RichText } from '../../domain/rich-text.js'
+
 /**
  * A quote, observation or measurement, with the trail back to where it came
  * from.
@@ -15,7 +17,7 @@ import { type ZodType, z } from 'zod'
  * nothing rejects an evidence card that carries only a quote.
  */
 export interface EvidenceData {
-  readonly text: string
+  readonly text: RichText
   /** Where it came from: a study, a ticket, a recording, an analytics export. */
   readonly source: string
   /** Who it came from, when that is a person. Usually anonymised — "P07". */
@@ -23,11 +25,11 @@ export interface EvidenceData {
   readonly tags: readonly string[]
 }
 
-export const EVIDENCE_VERSION = 1
+export const EVIDENCE_VERSION = 2
 
 export const EvidenceDataSchema: ZodType<EvidenceData> = z
   .object({
-    text: z.string(),
+    text: RichTextSchema,
     source: z.string(),
     participant: z.string(),
     tags: z.array(z.string()),

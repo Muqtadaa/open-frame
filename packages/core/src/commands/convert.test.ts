@@ -4,13 +4,18 @@ import { z } from 'zod'
 
 import type { ObjectId } from '../domain/ids.js'
 import { defineObjectType, ObjectTypeRegistry } from '../domain/registry.js'
+import { richFromPlain } from '../domain/rich-text.js'
 import { createTestHarness, type TestHarness } from '../testing.js'
 import { createDefaultRegistry } from '../types/index.js'
 
+/** `text` is a span list now (ADR 0012); tests say what they mean in plain text. */
 function create(h: TestHarness, type: string, data?: Record<string, unknown>): ObjectId {
+  const text = data?.text
+  const payload =
+    data !== undefined && typeof text === 'string' ? { ...data, text: richFromPlain(text) } : data
   const result = h.dispatcher.dispatch({
     kind: 'CreateObjects',
-    objects: [{ type, x: 10, y: 20, ...(data === undefined ? {} : { data }) }],
+    objects: [{ type, x: 10, y: 20, ...(payload === undefined ? {} : { data: payload }) }],
   })
   if (!result.ok) throw result.error
   const id = result.affected[0]
@@ -68,7 +73,7 @@ describe('promoting an object to another type', () => {
     const id = create(h, 'sticky', { text: 'Participants skipped the pricing page' })
     h.dispatcher.dispatch({ kind: 'ConvertObjects', ids: [id], toType: 'evidence' })
     expect(h.store.getObject(id)?.data).toEqual({
-      text: 'Participants skipped the pricing page',
+      text: richFromPlain('Participants skipped the pricing page'),
       source: '',
       participant: '',
       tags: [],
@@ -96,7 +101,7 @@ describe('promoting an object to another type', () => {
     h.dispatcher.undo()
     const object = h.store.getObject(id)
     expect(object?.type).toBe('sticky')
-    expect(object?.data).toEqual({ text: 'a note' })
+    expect(object?.data).toEqual({ text: richFromPlain('a note') })
   })
 
   it('promotes a whole selection as one action', () => {
@@ -182,7 +187,7 @@ describe('promoting an object to another type', () => {
       const object = h.store.getObject(id)
       expect(object?.data).toEqual({
         // A shape's label is its text, and it means the same thing here.
-        text: 'Checkout',
+        text: richFromPlain('Checkout'),
         source: '',
         participant: '',
         tags: [],
@@ -243,9 +248,9 @@ describe('when two types spell a key the same way and mean different things', ()
     })
     expect(result.ok).toBe(true)
 
-    // The number did NOT land in evidence's string `text`.
+    // The number did NOT land in evidence's span list.
     expect(h.store.getObject(id)?.data).toEqual({
-      text: '',
+      text: [{ text: '' }],
       source: '',
       participant: '',
       tags: [],

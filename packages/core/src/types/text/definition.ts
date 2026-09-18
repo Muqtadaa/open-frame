@@ -1,4 +1,6 @@
+import { plainTextOf } from '../../domain/rich-text.js'
 import { defineObjectType } from '../../domain/registry.js'
+import { textToSpans } from '../shared/text-to-spans.js'
 import { TEXT_VERSION, TextDataSchema, type TextData } from './schema.js'
 
 export const TEXT_TYPE = 'text'
@@ -8,10 +10,11 @@ export const textType = defineObjectType<typeof TEXT_TYPE, TextData>({
 
   schema: TextDataSchema,
   currentVersion: TEXT_VERSION,
-  migrations: {},
+  // ADR 0012: `text` was a plain string until v2.
+  migrations: { 2: textToSpans },
 
   create: (init) => ({
-    data: { text: init?.text ?? '' },
+    data: { text: init?.text ?? [{ text: '' }] },
     frame: { width: 240, height: 48 },
   }),
 
@@ -28,9 +31,12 @@ export const textType = defineObjectType<typeof TEXT_TYPE, TextData>({
     styleProps: ['color', 'font', 'align', 'opacity'],
   },
 
-  describe: (object) => ({
-    searchText: object.data.text,
-    summary: object.data.text.trim() === '' ? 'Empty text' : object.data.text.slice(0, 120),
-    fields: { text: object.data.text },
-  }),
+  describe: (object) => {
+    const text = plainTextOf(object.data.text)
+    return {
+      searchText: text,
+      summary: text.trim() === '' ? 'Empty text' : text.slice(0, 120),
+      fields: { text },
+    }
+  },
 })

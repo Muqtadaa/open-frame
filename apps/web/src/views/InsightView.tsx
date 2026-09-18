@@ -1,7 +1,8 @@
-import type { ColorToken, InsightData } from '@openframe/core'
+import { isEmptyText, plainTextOf, type ColorToken, type InsightData } from '@openframe/core'
 
 import { defineObjectView, type ObjectEditorProps, type ObjectViewProps } from './registry.js'
-import { InlineTextEditor } from './shared-editor.js'
+import { RichTextEditor } from './RichTextEditor.js'
+import { RichTextView } from './RichTextView.js'
 import { SURFACE_VARS, fontFamily, textAlign } from '../scene/style-tokens.js'
 
 function background(color: ColorToken | undefined): string {
@@ -21,7 +22,7 @@ function InsightRenderer({ object }: ObjectViewProps<InsightData>) {
       role="group"
       aria-label={
         [
-          text === '' ? 'Empty insight' : `Insight: ${text}`,
+          isEmptyText(text) ? 'Empty insight' : `Insight: ${plainTextOf(text)}`,
           confidence === 'unstated' ? '' : `${confidence} confidence`,
         ]
           .filter((part) => part !== '')
@@ -35,7 +36,7 @@ function InsightRenderer({ object }: ObjectViewProps<InsightData>) {
           textAlign: textAlign(object.style.align),
         }}
       >
-        {text}
+        <RichTextView value={text} />
       </div>
 
       {/*
@@ -52,10 +53,11 @@ function InsightRenderer({ object }: ObjectViewProps<InsightData>) {
   )
 }
 
-function InsightEditor({ object, onCommit, onCancel }: ObjectEditorProps<InsightData>) {
+function InsightEditor({ object, zoom, onCommit, onCancel }: ObjectEditorProps<InsightData>) {
   return (
-    <InlineTextEditor
+    <RichTextEditor
       initialText={object.data.text}
+      zoom={zoom}
       className="of-slip of-insight of-insight__claim of-slip__editor"
       style={{
         background: background(object.style.color),

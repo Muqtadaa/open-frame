@@ -1,5 +1,7 @@
 import { type ZodType, z } from 'zod'
 
+import { RichTextSchema, type RichText } from '../../domain/rich-text.js'
+
 /**
  * The simplest possible semantic payload — deliberately.
  *
@@ -8,11 +10,11 @@ import { type ZodType, z } from 'zod'
  * added the same way, without touching anything outside their own folder.
  */
 export interface StickyData {
-  readonly text: string
+  readonly text: RichText
 }
 
-export const STICKY_VERSION = 1
+export const STICKY_VERSION = 2
 
 export const StickyDataSchema: ZodType<StickyData> = z.object({
-  text: z.string(),
+  text: RichTextSchema,
 })

@@ -1,5 +1,7 @@
 import { type ZodType, z } from 'zod'
 
+import { RichTextSchema, type RichText } from '../../domain/rich-text.js'
+
 /**
  * Free text on the canvas — no card, no background, just words in space.
  *
@@ -9,11 +11,11 @@ import { type ZodType, z } from 'zod'
  * want to tell those apart, and a style flag cannot carry that meaning.
  */
 export interface TextData {
-  readonly text: string
+  readonly text: RichText
 }
 
-export const TEXT_VERSION = 1
+export const TEXT_VERSION = 2
 
 export const TextDataSchema: ZodType<TextData> = z.object({
-  text: z.string(),
+  text: RichTextSchema,
 })

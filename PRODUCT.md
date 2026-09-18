@@ -85,10 +85,7 @@ content.
 
 **Explicitly undecided — do not invent answers:**
 
-- How relationships between objects are modelled (embedded ids vs first-class
-  edges). Forced by the first "which insights cite this evidence?" query.
 - Collaboration transport and presence topology.
-- Rich text versus plain text inside objects.
 - Export formats.
 
 ## Brand Commitments

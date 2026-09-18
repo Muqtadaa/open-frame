@@ -10,6 +10,14 @@ import { expect, test, type Page } from '@playwright/test'
  */
 
 const CANVAS = '[data-testid="canvas"]'
+/*
+ * Whatever is currently editable in place.
+ *
+ * Body text is a `contenteditable` since rich text (ADR 0012); a frame's title
+ * and an image's alt text are labels and stay plain textareas. A spec should
+ * not have to know which it is about to type into.
+ */
+const EDITOR = 'textarea, [contenteditable="true"]'
 const EMPTY = { x: 1120, y: 150 }
 const NOTE = { x: 340, y: 260 }
 
@@ -34,10 +42,10 @@ async function freshBoard(page: Page): Promise<void> {
 async function placeNote(page: Page, text: string): Promise<void> {
   await page.keyboard.press('s')
   await page.locator(CANVAS).click({ position: NOTE })
-  await expect(page.locator('textarea')).toBeFocused()
-  await page.locator('textarea').fill(text)
+  await expect(page.locator(EDITOR)).toBeFocused()
+  await page.locator(EDITOR).fill(text)
   await page.locator(CANVAS).click({ position: EMPTY })
-  await expect(page.locator('textarea')).toHaveCount(0)
+  await expect(page.locator(EDITOR)).toHaveCount(0)
   await page.keyboard.press('v')
 }
 
@@ -182,18 +190,18 @@ test.describe('synthesis', () => {
   async function synthesiseFrom(page: Page, at: { x: number; y: number }): Promise<void> {
     await page.locator(CANVAS).click({ position: at, button: 'right' })
     await page.getByTestId('menu-synthesise-into-insight').click()
-    await expect(page.locator('textarea')).toBeFocused()
+    await expect(page.locator(EDITOR)).toBeFocused()
     await page.keyboard.press('Escape')
-    await expect(page.locator('textarea')).toHaveCount(0)
+    await expect(page.locator(EDITOR)).toHaveCount(0)
   }
 
   async function placeAt(page: Page, at: { x: number; y: number }, text: string): Promise<void> {
     await page.keyboard.press('s')
     await page.locator(CANVAS).click({ position: at })
-    await expect(page.locator('textarea')).toBeFocused()
-    await page.locator('textarea').fill(text)
+    await expect(page.locator(EDITOR)).toBeFocused()
+    await page.locator(EDITOR).fill(text)
     await page.locator(CANVAS).click({ position: EMPTY })
-    await expect(page.locator('textarea')).toHaveCount(0)
+    await expect(page.locator(EDITOR)).toHaveCount(0)
     await page.keyboard.press('v')
   }
 
@@ -211,8 +219,8 @@ test.describe('synthesis', () => {
     await page.locator(CANVAS).click({ position: FIRST, button: 'right' })
     await page.getByTestId('menu-synthesise-into-insight').click()
 
-    await expect(page.locator('textarea')).toBeFocused()
-    await page.locator('textarea').fill('Pricing is not discoverable before checkout')
+    await expect(page.locator(EDITOR)).toBeFocused()
+    await page.locator(EDITOR).fill('Pricing is not discoverable before checkout')
     await page.locator(CANVAS).click({ position: EMPTY })
     await expect(page.locator(CANVAS)).toContainText('Pricing is not discoverable before checkout')
   })

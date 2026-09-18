@@ -57,7 +57,6 @@ export interface BoardCommands {
   setLocked(locked: boolean): void
   setHidden(hidden: boolean): void
   deleteSelection(): void
-  setText(id: ObjectId, text: string): void
   updateData(id: ObjectId, patch: Readonly<Record<string, unknown>>): void
   /** Promotes the selection to another type, keeping every object's identity. */
   promoteSelection(toType: string): void
@@ -520,10 +519,6 @@ export function useCommands(): BoardCommands {
         if (ids.length === 0) return
         report(dispatcher.dispatch({ kind: 'DeleteObjects', ids }))
         useInteractionStore.getState().clearSelection()
-      },
-
-      setText(id, text) {
-        report(dispatcher.dispatch({ kind: 'UpdateObjectData', id, patch: { text } }))
       },
 
       updateData(id, patch) {

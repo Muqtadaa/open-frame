@@ -1,8 +1,11 @@
 import type { ObjectBase, ShapeData } from '@openframe/core'
 
 import { defineObjectView, type ObjectEditorProps, type ObjectViewProps } from './registry.js'
-import { InlineTextEditor } from './shared-editor.js'
+import { RichTextEditor } from './RichTextEditor.js'
+import { RichTextView } from './RichTextView.js'
 import { ELLIPSE, labelInset, shapePath } from '../scene/shape-geometry.js'
+import { plainTextOf } from '@openframe/core'
+
 import {
   COLOR_VARS,
   SURFACE_VARS,
@@ -55,17 +58,18 @@ function ShapeOutline({ object }: { object: ObjectBase<string, ShapeData> }) {
 
 function ShapeRenderer({ object }: ObjectViewProps<ShapeData>) {
   const label = object.data.text
+  const plain = plainTextOf(label)
   return (
     <div
       className="of-shape"
       style={{ opacity: object.style.opacity ?? 1 }}
       role="group"
       aria-label={
-        label.trim() === '' ? `${object.data.shape} shape` : `${object.data.shape}: ${label}`
+        plain.trim() === '' ? `${object.data.shape} shape` : `${object.data.shape}: ${plain}`
       }
     >
       <ShapeOutline object={object} />
-      {label.trim() !== '' && (
+      {plain.trim() !== '' && (
         <span
           className="of-shape__label"
           style={{
@@ -88,19 +92,22 @@ function ShapeRenderer({ object }: ObjectViewProps<ShapeData>) {
             * of why "shape labels are permanently centred" reached a deployed
             * build. Layout is unchanged: one flex item either way.
             */}
-          <span className="of-shape__label-text">{label}</span>
+          <span className="of-shape__label-text">
+            <RichTextView value={label} />
+          </span>
         </span>
       )}
     </div>
   )
 }
 
-function ShapeEditor({ object, onCommit, onCancel }: ObjectEditorProps<ShapeData>) {
+function ShapeEditor({ object, zoom, onCommit, onCancel }: ObjectEditorProps<ShapeData>) {
   return (
     <div className="of-shape" style={{ opacity: object.style.opacity ?? 1 }}>
       <ShapeOutline object={object} />
-      <InlineTextEditor
+      <RichTextEditor
         initialText={object.data.text}
+        zoom={zoom}
         className="of-shape__label of-shape__editor"
         style={{ inset: labelInset(object.data.shape), fontFamily: fontFamily(object.style.font) }}
         ariaLabel="Edit shape label"

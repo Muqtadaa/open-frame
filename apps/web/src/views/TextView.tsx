@@ -1,11 +1,12 @@
-import type { TextData } from '@openframe/core'
+import { isEmptyText, plainTextOf, type TextData } from '@openframe/core'
 
 import { COLOR_VARS, fontFamily, textAlign } from '../scene/style-tokens.js'
 import { defineObjectView, type ObjectEditorProps, type ObjectViewProps } from './registry.js'
-import { InlineTextEditor } from './shared-editor.js'
+import { RichTextEditor } from './RichTextEditor.js'
+import { RichTextView } from './RichTextView.js'
 
 function TextRenderer({ object }: ObjectViewProps<TextData>) {
-  const empty = object.data.text.trim() === ''
+  const empty = isEmptyText(object.data.text)
   return (
     <div
       className={`of-text${empty ? ' of-text--empty' : ''}`}
@@ -16,17 +17,18 @@ function TextRenderer({ object }: ObjectViewProps<TextData>) {
         opacity: object.style.opacity ?? 1,
       }}
       role="group"
-      aria-label={empty ? 'Empty text' : `Text: ${object.data.text}`}
+      aria-label={empty ? 'Empty text' : `Text: ${plainTextOf(object.data.text)}`}
     >
-      {empty ? 'Text' : object.data.text}
+      {empty ? 'Text' : <RichTextView value={object.data.text} />}
     </div>
   )
 }
 
-function TextEditor({ object, onCommit, onCancel }: ObjectEditorProps<TextData>) {
+function TextEditor({ object, zoom, onCommit, onCancel }: ObjectEditorProps<TextData>) {
   return (
-    <InlineTextEditor
+    <RichTextEditor
       initialText={object.data.text}
+      zoom={zoom}
       className="of-text of-text__editor"
       style={{
         color: COLOR_VARS[object.style.color ?? 'gray'],

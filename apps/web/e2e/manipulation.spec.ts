@@ -9,6 +9,14 @@ import { expect, test, type Page } from '@playwright/test'
  */
 
 const CANVAS = '[data-testid="canvas"]'
+/*
+ * Whatever is currently editable in place.
+ *
+ * Body text is a `contenteditable` since rich text (ADR 0012); a frame's title
+ * and an image's alt text are labels and stay plain textareas. A spec should
+ * not have to know which it is about to type into.
+ */
+const EDITOR = 'textarea, [contenteditable="true"]'
 const MOD = process.platform === 'darwin' ? 'Meta' : 'Control'
 
 async function freshBoard(page: Page): Promise<void> {
@@ -36,10 +44,10 @@ async function freshBoard(page: Page): Promise<void> {
 async function create(page: Page, tool: string, x: number, y: number, text = ''): Promise<void> {
   await page.keyboard.press(tool)
   await page.locator(CANVAS).click({ position: { x, y } })
-  await expect(page.locator('textarea')).toBeFocused()
-  if (text !== '') await page.locator('textarea').fill(text)
+  await expect(page.locator(EDITOR)).toBeFocused()
+  if (text !== '') await page.locator(EDITOR).fill(text)
   await page.locator(CANVAS).click({ position: { x: 1100, y: 180 } })
-  await expect(page.locator('textarea')).toHaveCount(0)
+  await expect(page.locator(EDITOR)).toHaveCount(0)
   await page.keyboard.press('v')
 }
 
@@ -233,8 +241,8 @@ test.describe('frames', () => {
   test('creates a frame and renames it', async ({ page }) => {
     await page.keyboard.press('f')
     await page.locator(CANVAS).click({ position: { x: 500, y: 350 } })
-    await expect(page.locator('textarea')).toBeFocused()
-    await page.locator('textarea').fill('Discovery')
+    await expect(page.locator(EDITOR)).toBeFocused()
+    await page.locator(EDITOR).fill('Discovery')
     await page.locator(CANVAS).click({ position: { x: 1150, y: 130 } })
     await page.keyboard.press('v')
 
@@ -441,7 +449,7 @@ test.describe('reported regressions', () => {
   test('a shape label honours the alignment that was picked', async ({ page }) => {
     await page.keyboard.press('u')
     await page.locator(CANVAS).click({ position: AT })
-    await page.locator('textarea').fill('align me')
+    await page.locator(EDITOR).fill('align me')
     await page.locator(CANVAS).click({ position: CLEAR })
     await page.keyboard.press('v')
 
@@ -469,13 +477,13 @@ test.describe('reported regressions', () => {
   test('selecting a frame does not hide what is inside it', async ({ page }) => {
     await page.keyboard.press('s')
     await page.locator(CANVAS).click({ position: AT })
-    await page.locator('textarea').fill('inside')
+    await page.locator(EDITOR).fill('inside')
     await page.locator(CANVAS).click({ position: CLEAR })
     await page.keyboard.press('v')
 
     await page.keyboard.press('f')
     await page.locator(CANVAS).click({ position: AT })
-    await page.locator('textarea').fill('Findings')
+    await page.locator(EDITOR).fill('Findings')
     await page.locator(CANVAS).click({ position: CLEAR })
     await page.keyboard.press('v')
 

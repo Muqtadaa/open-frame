@@ -12,17 +12,25 @@ import { expect, test, type Page } from '@playwright/test'
  */
 
 const CANVAS = '[data-testid="canvas"]'
+/*
+ * Whatever is currently editable in place.
+ *
+ * Body text is a `contenteditable` since rich text (ADR 0012); a frame's title
+ * and an image's alt text are labels and stay plain textareas. A spec should
+ * not have to know which it is about to type into.
+ */
+const EDITOR = 'textarea, [contenteditable="true"]'
 const STICKY = '[data-object-type="sticky"]'
 
 async function createSticky(page: Page, x: number, y: number, text: string): Promise<void> {
   await page.getByTestId('tool-sticky').click()
   await page.locator(CANVAS).click({ position: { x, y } })
-  const editor = page.locator('textarea')
+  const editor = page.locator(EDITOR)
   await expect(editor).toBeFocused()
   await editor.fill(text)
   // Clicking away must COMMIT, not discard — the editor saves on blur.
   await page.locator(CANVAS).click({ position: { x: 700, y: 450 } })
-  await expect(page.locator('textarea')).toHaveCount(0)
+  await expect(page.locator(EDITOR)).toHaveCount(0)
 }
 
 test.beforeEach(async ({ page }) => {

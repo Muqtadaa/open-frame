@@ -1,4 +1,6 @@
+import { plainTextOf } from '../../domain/rich-text.js'
 import { defineObjectType } from '../../domain/registry.js'
+import { textToSpans } from '../shared/text-to-spans.js'
 import { EVIDENCE_VERSION, EvidenceDataSchema, type EvidenceData } from './schema.js'
 
 export const EVIDENCE_TYPE = 'evidence'
@@ -8,11 +10,12 @@ export const evidenceType = defineObjectType<typeof EVIDENCE_TYPE, EvidenceData>
 
   schema: EvidenceDataSchema,
   currentVersion: EVIDENCE_VERSION,
-  migrations: {},
+  // ADR 0012: `text` was a plain string until v2.
+  migrations: { 2: textToSpans },
 
   create: (init) => ({
     data: {
-      text: init?.text ?? '',
+      text: init?.text ?? [{ text: '' }],
       source: init?.source ?? '',
       participant: init?.participant ?? '',
       tags: init?.tags ?? [],
@@ -45,7 +48,8 @@ export const evidenceType = defineObjectType<typeof EVIDENCE_TYPE, EvidenceData>
   ],
 
   describe: (object) => {
-    const { text, source, participant, tags } = object.data
+    const { source, participant, tags } = object.data
+    const text = plainTextOf(object.data.text)
     return {
       // Everything a user might search for, flattened — including the source,
       // which is how "what did we learn in the September study?" is answered

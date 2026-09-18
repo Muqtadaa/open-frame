@@ -9,6 +9,14 @@ import { expect, test, type Page } from '@playwright/test'
  */
 
 const CANVAS = '[data-testid="canvas"]'
+/*
+ * Whatever is currently editable in place.
+ *
+ * Body text is a `contenteditable` since rich text (ADR 0012); a frame's title
+ * and an image's alt text are labels and stay plain textareas. A spec should
+ * not have to know which it is about to type into.
+ */
+const EDITOR = 'textarea, [contenteditable="true"]'
 const MOD = process.platform === 'darwin' ? 'Meta' : 'Control'
 
 async function freshBoard(page: Page): Promise<void> {
@@ -36,10 +44,10 @@ async function freshBoard(page: Page): Promise<void> {
 async function create(page: Page, tool: string, x: number, y: number, text: string): Promise<void> {
   await page.keyboard.press(tool)
   await page.locator(CANVAS).click({ position: { x, y } })
-  await expect(page.locator('textarea')).toBeFocused()
-  await page.locator('textarea').fill(text)
+  await expect(page.locator(EDITOR)).toBeFocused()
+  await page.locator(EDITOR).fill(text)
   await page.locator(CANVAS).click({ position: { x: 1150, y: 160 } })
-  await expect(page.locator('textarea')).toHaveCount(0)
+  await expect(page.locator(EDITOR)).toHaveCount(0)
   await page.keyboard.press('v')
 }
 
