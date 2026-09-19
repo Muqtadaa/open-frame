@@ -1,4 +1,4 @@
-import { useEffect, useRef } from 'react'
+import { useEffect, useLayoutEffect, useRef, useState } from 'react'
 
 import { useCommands } from '../hooks/use-commands.js'
 import { useOpenFrame } from '../runtime/context.js'
@@ -28,6 +28,36 @@ export function ContextMenu() {
   const commands = useCommands()
   const { runtime } = useOpenFrame()
   const ref = useRef<HTMLDivElement>(null)
+
+  /*
+   * Where the menu actually fits, which is not always where you clicked.
+   *
+   * It was placed at the pointer and never clamped, so a right-click near the
+   * bottom of the window put its lower entries off-screen — unreachable, and
+   * silent about it. That was true at every size; making the rows a real
+   * target is simply what made it reachable in a test, which then sat there
+   * timing out for thirty seconds on an item nobody could have clicked either.
+   *
+   * It FLIPS above the pointer rather than sliding up, because sliding puts
+   * the menu over the thing you just right-clicked.
+   */
+  const [placed, setPlaced] = useState<{ readonly left: number; readonly top: number } | null>(null)
+
+  useLayoutEffect(() => {
+    const node = ref.current
+    if (node === null || at === null) {
+      setPlaced(null)
+      return
+    }
+
+    const margin = 8
+    const { width, height } = node.getBoundingClientRect()
+    const left = Math.max(margin, Math.min(at.x, window.innerWidth - width - margin))
+    const fitsBelow = at.y + height + margin <= window.innerHeight
+    const top = fitsBelow ? at.y : Math.max(margin, at.y - height)
+
+    setPlaced({ left, top })
+  }, [at])
 
   useEffect(() => {
     if (at === null) return
@@ -209,7 +239,13 @@ export function ContextMenu() {
       className="of-menu"
       role="menu"
       data-testid="context-menu"
-      style={{ left: `${String(at.x)}px`, top: `${String(at.y)}px` }}
+      style={{
+        left: `${String(placed?.left ?? at.x)}px`,
+        top: `${String(placed?.top ?? at.y)}px`,
+        /* Hidden for the one frame before it has been measured: a menu that
+           appears at the pointer and then jumps reads as a glitch. */
+        visibility: placed === null ? 'hidden' : 'visible',
+      }}
     >
       {/*
        * Empty groups are dropped, not rendered. A group carries a separator

@@ -156,6 +156,9 @@ Already committed in the product: an image's editable field is its **alt text**,
 because a board is a document someone else will read, and images are the content
 most often left meaningless to a screen reader.
 
-Known gaps against this target, recorded rather than claimed fixed: colour
-swatches are below the AA target-size minimum, and default shape fill against
-its stroke has not been contrast-checked.
+Known gaps against this target, recorded rather than claimed fixed: default
+shape fill against its stroke has not been contrast-checked.
+
+Closed on 2026-09-19: colour swatches were below the AA target-size minimum,
+then sat exactly on it at 24px, which is a control standing on the floor. The
+interface scale moved them to 30.

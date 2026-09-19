@@ -50,17 +50,17 @@ typography:
     lineHeight: 1.3
   ui:
     fontFamily: "ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, sans-serif"
-    fontSize: "13px"
+    fontSize: "15px"
     fontWeight: 400
     lineHeight: 1.3
   ui-small:
     fontFamily: "ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, sans-serif"
-    fontSize: "12px"
+    fontSize: "13px"
     fontWeight: 400
     lineHeight: 1
   record:
     fontFamily: "ui-monospace, SFMono-Regular, Menlo, Consolas, Liberation Mono, monospace"
-    fontSize: "11px"
+    fontSize: "12px"
     fontWeight: 400
     lineHeight: 1
     letterSpacing: "0.02em"
@@ -176,10 +176,16 @@ toy. The second refusal is stationery: cream, parchment, serif display,
 handwriting, paper texture and torn edges are the twee rendition of a notebook and
 are banned. This is the pad an engineer computes on, not the diary.
 
-Density is high and quiet. The empty board is almost entirely board; chrome sits
-in the margins and the corners, and the panel that names a selection only exists
-while there is a selection. Nothing decorative is ever loud enough to compete
-with what the user put down.
+Density is measured and quiet. The empty board is almost entirely board; chrome
+sits in the margins and the corners, and the panel that names a selection only
+exists while there is a selection. Nothing decorative is ever loud enough to
+compete with what the user put down.
+
+**It used to say high.** The first build was quiet and genuinely cramped —
+22px controls, 11px readouts, a 28px text field — each defensible alone and
+collectively hard to use. The owner called it on 2026-09-19 and the scale
+moved onto the quadrille (below). Quiet is the commitment; small was never the
+commitment, and the two had been confused.
 
 **Key Characteristics:**
 
@@ -353,17 +359,19 @@ columns rather than as ransom text.
 - **Body** (400, 15px, 1.35): sticky note text.
 - **Shape Label** (400, 14px, 1.3): text inside a shape, centred, inset per shape
   geometry rather than by a shared box.
-- **UI** (400, 13px): menu items, notices, toasts, frame titles, alt-text editor.
-- **UI Small** (400, 12px): flyout items, connector labels, fallback and unknown
+- **UI** (400, 15px): menu items, notices, toasts, frame titles, alt-text editor.
+- **UI Small** (400, 13px): flyout items, connector labels, fallback and unknown
   object bodies.
-- **Record** (400, 11px, mono, 0.02em): the record line, the record panel's
+- **Record** (400, 12px, mono, 0.02em): the record line, the record panel's
   subject and field labels, slider readings, keyboard shortcuts, the wheel-mode
   value. Lowercase, never uppercase-tracked.
 
 ### Named Rules
 
-**The Eleven Pixel Floor.** 11px is the smallest functional text in the system,
-shortcuts and readouts included. Nothing a user must read goes below it.
+**The Twelve Pixel Floor.** 12px is the smallest functional text in the system,
+shortcuts and readouts included. Nothing a user must read goes below it. It was
+eleven until 2026-09-19; a floor is the least you will accept, and this one had
+become the size of nearly everything, which is a different thing.
 
 **The Mono Is A Record Rule.** Mono marks records and measurement — counts, zoom,
 field values, shortcuts — and nothing else. It is never applied to make something
@@ -387,8 +395,28 @@ positioned overlays that are click-through except where they paint.
   preferring the selection's right edge, falling back to its left, then above or
   below, always clamped inside the viewport and clear of the rail (84px).
 
-**Spacing rhythm** runs on even small steps: 2px between sibling controls, 4–6px
-of padding inside apparatus, 8–10px between a label and its value, 12px from the
+**The interface sits on the page's own rule.** `GRID_SIZE` is 10 world units and
+the quadrille draws it, so the chrome measures itself in the same steps — every
+height and offset is a multiple of ten. A control's edge lands where a rule
+does, and the apparatus shares the rhythm of the thing it sits on instead of
+floating at sizes nobody chose.
+
+| Token | Size | What it is |
+| --- | --- | --- |
+| `--of-step` | 10px | the rule, and the gap between things on a line |
+| `--of-hit-sm` | 30px | a secondary control inside apparatus |
+| `--of-hit` | 40px | anything you operate: a field, a button, a record row |
+| `--of-hit-lg` | 50px | a list row, a primary action, and a creation tool |
+| `--of-gutter` | 20px | from the viewport edge |
+
+`--of-hit-lg` clears the 44px AAA target with room over; `--of-hit-sm` is
+comfortably past the 24px AA floor rather than sitting on it. **Board content
+keeps its own sizes** — a sticky is still 15px and a text object still 22px,
+because that is the user's material and changing it would restyle every
+document ever saved.
+
+**Spacing rhythm** runs on even small steps: 2px between sibling controls, 5px
+of padding inside apparatus, 10px between a label and its value, 20px from the
 viewport edge. Tool icons are 21px inside a 40px target; secondary icons are
 16–17px; the disclosure arrow is 12px.
 
@@ -672,8 +700,9 @@ ground must survive every step of the zoom ladder.
   content hue more than 30 sRGB units clear of it.
 - **Do** use mono only for records and measurement — counts, zoom, field values,
   shortcuts.
-- **Do** hold functional text at 11px or above, and pointer targets at 24px or
-  above (40px for tools reached for constantly).
+- **Do** hold functional text at 12px or above, and pointer targets at 30px or
+  above (50px for tools reached for constantly). The floors moved with the
+  scale; 11px and 24px were the old ones.
 - **Do** let new record-panel fields arrive through the registry's
   `capabilities.styleProps`.
 - **Do** give every placed object the one shared slip shadow, so the board sits at

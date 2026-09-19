@@ -42,7 +42,7 @@ const GAP_PX = 14
  * control column, so taking 24px for labels without giving it back here would
  * have wrapped the swatches again.
  */
-const PANEL_WIDTH = 300
+const PANEL_WIDTH = 360
 /** Keeps the panel off the viewport edge when the selection is near one. */
 const MARGIN_PX = 12
 /**

@@ -281,11 +281,29 @@ describe('no colour literals outside the token block', () => {
  * that arithmetic, run on every build.
  */
 describe('the record panel fits what it promises to show', () => {
+  /*
+   * Resolves a token, because these sizes ARE tokens now.
+   *
+   * The interface scale moved onto the quadrille and every height became
+   * `var(--of-hit-sm)` and friends, at which point this arithmetic stopped
+   * being able to read its own inputs. Teaching it the token table is the only
+   * version that survives the next change; matching literal pixels would have
+   * meant un-tokenising the stylesheet to keep a test happy.
+   */
+  const SIZES = new Map<string, number>()
+  for (const [, name = '', value = ''] of CSS.matchAll(/(--of-[\w-]+):\s*(\d+)px;/g)) {
+    SIZES.set(name, Number(value))
+  }
+
   const px = (pattern: RegExp): number => {
     const match = pattern.exec(CSS)
     const value = match?.[1]
     if (value === undefined) throw new Error(`No match for ${String(pattern)}`)
-    return Number(value)
+    const token = SIZES.get(value.replace(/^var\(|\)$/g, ''))
+    if (token !== undefined) return token
+    const literal = Number(value.replace(/px$/, ''))
+    if (Number.isNaN(literal)) throw new Error(`Cannot read a size from "${value}"`)
+    return literal
   }
 
   it('leaves room for seven swatches on one row', () => {
@@ -294,12 +312,15 @@ describe('the record panel fits what it promises to show', () => {
     expect(widthMatch?.[1]).toBeDefined()
     const panelWidth = Number(widthMatch?.[1])
 
-    const labelColumn = px(/\.of-field \{[^}]*grid-template-columns:\s*(\d+)px/)
-    const columnGap = px(/\.of-field \{[^}]*\n\s*gap:\s*(\d+)px/)
-    const swatch = px(/\.of-swatch \{[^}]*\n\s*width:\s*(\d+)px/)
-    const swatchGap = px(/\.of-swatches \{[^}]*gap:\s*(\d+)px/)
-    // `padding: 9px 10px 11px` — the horizontal value, taken from both sides.
-    const sidePadding = px(/\.of-inspector \{[^}]*padding:\s*\d+px (\d+)px/)
+    const size = String.raw`(\d+px|var\(--of-[\w-]+\))`
+    const read = (pattern: string): number =>
+      px(new RegExp(pattern.replace('SIZE', size)))
+
+    const labelColumn = read(String.raw`\.of-field \{[^}]*grid-template-columns:\s*SIZE`)
+    const columnGap = read(String.raw`\.of-field \{[^}]*\n\s*gap:\s*SIZE`)
+    const swatch = read(String.raw`\.of-swatch \{[^}]*\n\s*width:\s*SIZE`)
+    const swatchGap = read(String.raw`\.of-swatches \{[^}]*gap:\s*SIZE`)
+    const sidePadding = read(String.raw`\.of-inspector \{[^}]*\n\s*padding:\s*SIZE`)
     // The panel's own 1px border, both sides.
     const border = 2
 

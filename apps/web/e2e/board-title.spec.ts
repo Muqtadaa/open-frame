@@ -142,3 +142,41 @@ test('nothing covers the zoom controls', async ({ page }) => {
 
   expect(covered).toEqual([])
 })
+
+/**
+ * A right-click near the bottom of the window.
+ *
+ * The context menu was placed at the pointer and never clamped, so its lower
+ * entries fell off-screen — unreachable, and silent about it. That was true at
+ * every size; giving the rows a real target is what finally made it visible,
+ * as two suites timing out for thirty seconds each on an item nobody could
+ * have clicked either.
+ */
+test('the context menu stays on screen near the bottom edge', async ({ page }) => {
+  const canvas = page.locator('[data-testid="canvas"]')
+  const box = await canvas.boundingBox()
+  expect(box).not.toBeNull()
+  if (box === null) return
+
+  /*
+   * Low enough that a menu placed at the pointer runs off the bottom, but
+   * clear of the record line — which sits in the last 60px and would swallow
+   * the right-click before the canvas ever saw it.
+   */
+  await canvas.click({ button: 'right', position: { x: 300, y: box.height - 120 } })
+
+  const menu = page.getByTestId('context-menu')
+  await expect(menu).toBeVisible()
+
+  const fits = await page.evaluate(() => {
+    const node = document.querySelector('[data-testid="context-menu"]')
+    if (node === null) return 'no menu'
+    const rect = node.getBoundingClientRect()
+    if (rect.bottom > window.innerHeight) return `bottom ${String(rect.bottom)} past ${String(window.innerHeight)}`
+    if (rect.right > window.innerWidth) return `right ${String(rect.right)} past ${String(window.innerWidth)}`
+    if (rect.top < 0) return `top ${String(rect.top)}`
+    return 'fits'
+  })
+
+  expect(fits).toBe('fits')
+})
