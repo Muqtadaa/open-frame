@@ -84,6 +84,14 @@ export function CommentPanel() {
               body: text,
               at: { x: composing.x, y: composing.y },
               objectId: composing.objectId,
+              /*
+               * Both coordinates go: the fraction is how the pin rides its
+               * element, and `at` is where it falls back to once that element
+               * is deleted. A fraction of something that is gone is not a
+               * position, and a comment outliving its element is a promise
+               * this product already made.
+               */
+              ...(composing.on === null ? {} : { on: composing.on }),
               mentions: mentioned(text),
             })
 

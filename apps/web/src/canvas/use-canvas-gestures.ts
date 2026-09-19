@@ -22,6 +22,7 @@ import {
 } from 'react'
 
 import { useOpenFrame } from '../runtime/context.js'
+import { pinFraction } from '../scene/comment-pin.js'
 import { useCommands } from '../hooks/use-commands.js'
 import { useInteractionStore } from '../interaction/interaction-store.js'
 import {
@@ -271,9 +272,26 @@ export function useCanvasGestures(containerRef: RefObject<HTMLElement | null>) {
          * nothing touches the document: a comment is not a canvas object, and
          * it does not exist until somebody has actually said something.
          */
-        case 'drop-comment':
-          store.startComment({ x: worldPoint.x, y: worldPoint.y, objectId: intent.on })
+        case 'drop-comment': {
+          /*
+           * The element's bounds come from the registry, never from
+           * `object.frame`: a connector has no meaningful frame, and asking
+           * for one gives a degenerate box at the origin — so a comment
+           * dropped on a connector would anchor to nowhere.
+           */
+          const doc = runtime.store.getDocument()
+          const on = intent.on === null ? null : doc.objects.get(intent.on)
+          store.startComment({
+            x: worldPoint.x,
+            y: worldPoint.y,
+            objectId: intent.on,
+            on:
+              on === undefined || on === null
+                ? null
+                : pinFraction(worldPoint, runtime.registry.boundsOf(on, doc)),
+          })
           return 'none'
+        }
         case 'begin-marquee':
           store.beginMarquee(worldPoint)
           return 'marquee'
@@ -299,7 +317,7 @@ export function useCanvasGestures(containerRef: RefObject<HTMLElement | null>) {
         }
       }
     },
-    [commands],
+    [commands, runtime.registry, runtime.store],
   )
 
   const onPointerDown = useCallback(

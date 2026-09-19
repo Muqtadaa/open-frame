@@ -31,11 +31,25 @@ export interface BoardComment {
   /**
    * What it was dropped on, if anything.
    *
-   * An association, not a location: the pin's own coordinates are what hold
-   * it. So an object that is later deleted leaves the comment exactly where it
-   * was put, and the interface says what it was attached to is gone.
+   * An object that is later deleted leaves the comment exactly where it was
+   * put, and the interface says what it was attached to is gone.
    */
   readonly objectId: ObjectId | null
+  /**
+   * WHERE on that element, as a proportion of its box.
+   *
+   * `0.5, 0.5` is the middle; `1, 0` is the top-right corner. A proportion
+   * rather than an offset so the pin survives a RESIZE as well as a move —
+   * the corner somebody was objecting to stays the corner.
+   *
+   * `null` on a comment that is not on an element, and on every comment
+   * written before this existed. Those keep their own `x` and `y`, which is
+   * also the fallback for an anchored comment whose element has been deleted:
+   * a fraction of something that is gone is not a position, and the pin has to
+   * go somewhere.
+   */
+  readonly fx: number | null
+  readonly fy: number | null
   readonly resolvedAt: number | null
   readonly createdAt: number
 }
@@ -66,6 +80,13 @@ function finite(value: unknown): number | null {
   return typeof value === 'number' && Number.isFinite(value) ? value : null
 }
 
+/** A proportion of an element's box, or `null` for anything that is not one. */
+function fraction(value: unknown): number | null {
+  const found = finite(value)
+  if (found === null) return null
+  return Math.min(1, Math.max(0, found))
+}
+
 function readComment(row: unknown): BoardComment | null {
   if (typeof row !== 'object' || row === null) return null
   const {
@@ -80,6 +101,8 @@ function readComment(row: unknown): BoardComment | null {
     object_id: objectId,
     resolved_at: resolvedAt,
     created_at: createdAt,
+    fx,
+    fy,
   } = row as {
     id?: unknown
     parent_id?: unknown
@@ -92,6 +115,8 @@ function readComment(row: unknown): BoardComment | null {
     object_id?: unknown
     resolved_at?: unknown
     created_at?: unknown
+    fx?: unknown
+    fy?: unknown
   }
 
   if (typeof id !== 'string' || typeof body !== 'string' || typeof authorId !== 'string') {
@@ -110,6 +135,13 @@ function readComment(row: unknown): BoardComment | null {
     objectId: typeof objectId === 'string' ? (objectId as ObjectId) : null,
     resolvedAt: when(resolvedAt),
     createdAt: when(createdAt) ?? 0,
+    // Clamped, not merely checked: a fraction outside the box would put the
+    // pin somewhere that is not on the element it claims to be on. The
+    // database refuses these too — this is the same rule at the other end,
+    // because a reader is a boundary and the database is not the only thing
+    // that has ever been wrong.
+    fx: fraction(fx),
+    fy: fraction(fy),
   }
 }
 
@@ -169,6 +201,12 @@ export interface NewComment {
   /** Set on a thread, absent on a reply. */
   readonly at?: { readonly x: number; readonly y: number }
   readonly objectId?: ObjectId | null
+  /**
+   * Where on that element, as a proportion of its box. Set together with
+   * `objectId` or not at all — a fraction of nothing is not a position, and
+   * the database refuses one.
+   */
+  readonly on?: { readonly fx: number; readonly fy: number }
   readonly mentions?: readonly string[]
 }
 
@@ -192,6 +230,8 @@ export async function postComment(comment: NewComment): Promise<string | null> {
     p_y: comment.at?.y ?? null,
     p_object_id: comment.objectId ?? null,
     p_mentions: comment.mentions ?? [],
+    p_fx: comment.on?.fx ?? null,
+    p_fy: comment.on?.fy ?? null,
   })) as { data: unknown; error: unknown }
 
   return response.error === null && typeof response.data === 'string' ? response.data : null

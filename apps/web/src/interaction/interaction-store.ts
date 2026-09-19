@@ -30,6 +30,15 @@ export interface ComposingComment {
   readonly y: number
   /** What was under the click, if anything. An association, not a location. */
   readonly objectId: ObjectId | null
+  /**
+   * Where on that element the click landed, as a proportion of its box.
+   *
+   * Measured HERE, when the click happens, rather than when the comment is
+   * posted. Between the two the element may have been moved by somebody else
+   * in the room, and a fraction taken from its new box would put the pin
+   * somewhere nobody pointed at.
+   */
+  readonly on: { readonly fx: number; readonly fy: number } | null
 }
 
 /**

@@ -75,6 +75,14 @@ interface CommentRow {
   object_id: string | null
   resolved_at: string | null
   created_at: string
+  /*
+   * The anchor, which the double has to remember for the same reason it
+   * remembers everything else: a stub that dropped it would answer every
+   * comment as if it were anchored the old way, and a pin that does not ride
+   * its element would look exactly like one that does.
+   */
+  fx: number | null
+  fy: number | null
 }
 
 /** Who each stubbed person is. The second exists so two pages can differ. */
@@ -182,6 +190,8 @@ export async function signedIn(
         p_y?: number | null
         p_object_id?: string | null
         p_mentions?: string[]
+        p_fx?: number | null
+        p_fy?: number | null
       }
       const id = `cmt_${String(comments.length + 1)}`
       mentioned.push(...(body.p_mentions ?? []))
@@ -197,6 +207,8 @@ export async function signedIn(
         object_id: body.p_object_id ?? null,
         resolved_at: null,
         created_at: new Date().toISOString(),
+        fx: body.p_fx ?? null,
+        fy: body.p_fy ?? null,
       })
       return json(id)
     }

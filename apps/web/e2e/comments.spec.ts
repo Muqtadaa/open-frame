@@ -195,3 +195,68 @@ test('says nothing when nobody has mentioned you', async ({ page }) => {
   await expect(page.getByText('Shared').first()).toBeVisible()
   await expect(page.getByTestId('mentions-button')).toHaveCount(0)
 })
+
+/**
+ * A pin rides the thing it is about.
+ *
+ * The position is read off the ELEMENT rather than compared to a constant:
+ * where the note lands after a drag is the browser's business, and a test
+ * asserting exact pixels would fail for reasons that have nothing to do with
+ * comments. What must hold is that the pin moved with it.
+ */
+async function pinCentre(page: Page): Promise<{ x: number; y: number }> {
+  const box = await page.locator('[data-testid^="comment-pin-cmt_"]').first().boundingBox()
+  if (box === null) throw new Error('the pin is not on screen')
+  return { x: box.x + box.width / 2, y: box.y + box.height / 2 }
+}
+
+async function noteCentre(page: Page): Promise<{ x: number; y: number }> {
+  const box = await page.locator('[data-object-id]').first().boundingBox()
+  if (box === null) throw new Error('the note is not on screen')
+  return { x: box.x + box.width / 2, y: box.y + box.height / 2 }
+}
+
+test('a pin follows the element it was dropped on', async ({ page }) => {
+  await signedIn(page, [{ id: BOARD, title: 'Shared', role: 'owner' }])
+  await openBoard(page)
+
+  await page.keyboard.press('s')
+  await page.locator('[data-testid="canvas"]').click({ position: { x: 300, y: 240 } })
+  await expect(page.locator('[data-object-id]')).toHaveCount(1)
+  await page.keyboard.press('Escape')
+
+  await page.getByRole('button', { name: /comment/i }).first().click()
+  await page.locator('[data-object-id]').first().click()
+  await page.getByTestId('comment-input').fill('About this note')
+  await page.getByTestId('comment-post').click()
+  await expect(page.locator('[data-testid^="comment-pin-cmt_"]')).toHaveCount(1)
+
+  const pinBefore = await pinCentre(page)
+  const noteBefore = await noteCentre(page)
+
+  // Drag the note a long way, in select mode.
+  await page.keyboard.press('v')
+  await page.mouse.move(noteBefore.x, noteBefore.y)
+  await page.mouse.down()
+  await page.mouse.move(noteBefore.x + 180, noteBefore.y + 120, { steps: 10 })
+
+  /*
+   * MID-GESTURE, before the button comes up. Nothing is written to the
+   * document until a drag commits, so a pin reading the document alone sits
+   * still here and jumps on release. This assertion is the one that fails if
+   * the layer ignores the drag in flight.
+   */
+  const pinMoving = await pinCentre(page)
+  expect(pinMoving.x).toBeGreaterThan(pinBefore.x + 100)
+
+  await page.mouse.up()
+
+  const pinAfter = await pinCentre(page)
+  const noteAfter = await noteCentre(page)
+
+  // The pin travelled the same distance the note did, give or take rounding.
+  expect(pinAfter.x - pinBefore.x).toBeCloseTo(noteAfter.x - noteBefore.x, 0)
+  expect(pinAfter.y - pinBefore.y).toBeCloseTo(noteAfter.y - noteBefore.y, 0)
+  // And it actually went somewhere, so the test cannot pass by nothing moving.
+  expect(Math.abs(noteAfter.x - noteBefore.x)).toBeGreaterThan(100)
+})
