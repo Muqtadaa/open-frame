@@ -235,8 +235,14 @@ first one and passing.
 
 The mark, the wordmark and the synthwave hero are one supplied artwork
 (`src/assets/PROVENANCE.md`). They are the source of the `--of-brand-*` tokens,
-and those tokens paint exactly three things: the boot splash, the browser tab
-icon, and nothing else.
+and those tokens paint exactly two things: the boot splash and the browser tab
+icon.
+
+The **front door carries the mark as artwork** — a third brand surface, taken
+deliberately by the owner on 2026-09-19 rather than reached by drift. An entry
+page is where a product says its own name. It is the mark only, at 32px, beside
+a wordmark set in ordinary type: no brand COLOUR enters the page, so the rule
+that matters is intact. The workspace is still quiet.
 
 That restraint is the point. The identity is loud on purpose and the workspace
 is quiet on purpose, and the boundary between them is where a brand stops being
@@ -519,6 +525,38 @@ pressed-index shadow.
 Panel white, 10px radius, 196px minimum, 13px items at 6px radius with the accent
 wash on hover, shortcuts at 11px in muted ink, groups separated by a hairline
 margin rule.
+
+### The Front Door
+
+`/` is the entry surface — the only page in the product that is not a board,
+and it is still the page. Ruled page stock in both weights, and one sheet of
+apparatus divided by a rule into a board ledger and sign-in.
+
+It was neither of those things when first built: a flat grey ground carrying
+two same-size panels of white side by side, which is the neutral void this
+world refuses meeting the card scaffold it refuses, on the first screen anybody
+sees. Ruling it and collapsing the panels into one sheet is what made it belong.
+
+- **Ledger rows** — title in UI sans, "how long ago" in 11px mono with tabular
+  numerals, divided by the margin rule, taking the accent wash on hover. A time
+  is a measurement, so it is set as one.
+- **Specimen labels** — section names are 11px mono, lowercase, tracked, muted:
+  the same register the record panel uses to name its subject.
+- **Ground** — tiled `linear-gradient` with `background-size`, never
+  `repeating-linear-gradient`, whose stops accumulate in floating point across
+  the box and band into visible plaid at the 10px pitch.
+
+### Sharing
+
+A sheet above the record line, the same shape as the account sheet. Two link
+rows at 44px — above the usual floor because this is the one control in the
+product where hitting the wrong one has a consequence — each naming what it
+gives away in the second line, at the 11px functional floor.
+
+**View-only is a record, not a badge**: 11px mono on page stock with a hairline
+and the apparatus radius, sitting in the record line beside the other readouts.
+A pill would have been the third fully-round thing in a world where round means
+"grab me".
 
 ### Board Objects
 

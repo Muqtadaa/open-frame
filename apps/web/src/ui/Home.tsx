@@ -58,94 +58,96 @@ export function Home({ repository }: { readonly repository: BoardRepository }) {
 
   return (
     <main className="of-home" data-testid="home">
-      <header className="of-home__head">
-        <img className="of-home__mark" src={logoMark} alt="" width={40} height={40} />
-        <div>
-          <h1 className="of-home__title">OpenFrame</h1>
-          <p className="of-home__tagline">
-            A visual workspace where what you put on the canvas keeps its meaning.
-          </p>
-        </div>
-        {identity !== null && (
-          <button
-            type="button"
-            className="of-home__account"
-            data-testid="home-account"
-            title={`Signed in as ${identity.displayName}. Click to sign out.`}
-            onClick={() => {
-              void signOut()
-            }}
-          >
-            <span
-              className="of-home__person"
-              style={{ background: hueVar(identity.hue) }}
-              aria-hidden="true"
-            >
-              {initialOf(identity.displayName)}
-            </span>
-            <span>{identity.displayName}</span>
-          </button>
-        )}
-      </header>
-
-      <div className="of-home__body">
-        <section className="of-home__boards" aria-labelledby="of-home-boards">
-          <h2 className="of-home__heading" id="of-home-boards">
-            Your boards
-          </h2>
-
-          {listing === null ? (
-            <p className="of-home__note">Looking for your boards…</p>
-          ) : listing.boards.length === 0 ? (
-            <p className="of-home__note" data-testid="home-empty">
-              Nothing here yet. Starting a board takes no account and no network — it lives in this
-              browser until you share it.
+      <div className="of-home__column">
+        <header className="of-home__head">
+          <img className="of-home__mark" src={logoMark} alt="" width={32} height={32} />
+          <div>
+            <h1 className="of-home__title">OpenFrame</h1>
+            <p className="of-home__tagline">
+              A visual workspace where what you put on the canvas keeps its meaning.
             </p>
-          ) : (
-            <ul className="of-home__list" data-testid="home-boards">
-              {listing.boards.map((board) => (
-                <li key={board.id}>
-                  <a className="of-home__board" href={boardHref(board.id, false)}>
-                    <span className="of-home__board-title">{board.title}</span>
-                    <span className="of-home__board-when">
-                      {describeWhen(board.updatedAt, listing.readAt)}
-                    </span>
-                  </a>
-                </li>
-              ))}
-            </ul>
-          )}
-
-          <button
-            type="button"
-            className="of-home__start"
-            data-testid="home-start"
-            disabled={starting}
-            onClick={start}
-          >
-            {starting ? 'Starting…' : 'Start a board'}
-          </button>
-          <p className="of-home__small">No account needed.</p>
-        </section>
-
-        {ACCOUNTS_ENABLED && identity === null && (
-          <section className="of-home__signin" aria-labelledby="of-home-signin">
-            <h2 className="of-home__heading" id="of-home-signin">
-              Sign in
-            </h2>
-            <AccountForm
-              onDone={() => {
-                // The board list is about to mean something different.
-                window.location.reload()
+          </div>
+          {identity !== null && (
+            <button
+              type="button"
+              className="of-home__account"
+              data-testid="home-account"
+              title={`Signed in as ${identity.displayName}. Click to sign out.`}
+              onClick={() => {
+                void signOut()
               }}
-              lead={(mode) =>
-                mode === 'in'
-                  ? 'Signing in gives you a board list that follows you between browsers.'
-                  : 'An account is for owning boards and keeping a list of them. It is never needed to open one.'
-              }
-            />
+            >
+              <span
+                className="of-home__person"
+                style={{ background: hueVar(identity.hue) }}
+                aria-hidden="true"
+              >
+                {initialOf(identity.displayName)}
+              </span>
+              <span>{identity.displayName}</span>
+            </button>
+          )}
+        </header>
+
+        <div className="of-home__body">
+          <section className="of-home__boards" aria-labelledby="of-home-boards">
+            <h2 className="of-home__heading" id="of-home-boards">
+              your boards
+            </h2>
+
+            {listing === null ? (
+              <p className="of-home__note">Looking for your boards…</p>
+            ) : listing.boards.length === 0 ? (
+              <p className="of-home__note" data-testid="home-empty">
+                Nothing here yet. Starting a board takes no account and no network — it lives in
+                this browser until you share it.
+              </p>
+            ) : (
+              <ul className="of-home__list" data-testid="home-boards">
+                {listing.boards.map((board) => (
+                  <li key={board.id}>
+                    <a className="of-home__board" href={boardHref(board.id, false)}>
+                      <span className="of-home__board-title">{board.title}</span>
+                      <span className="of-home__board-when">
+                        {describeWhen(board.updatedAt, listing.readAt)}
+                      </span>
+                    </a>
+                  </li>
+                ))}
+              </ul>
+            )}
+
+            <button
+              type="button"
+              className="of-home__start"
+              data-testid="home-start"
+              disabled={starting}
+              onClick={start}
+            >
+              {starting ? 'Starting…' : 'Start a board'}
+            </button>
+            <p className="of-home__small">No account needed.</p>
           </section>
-        )}
+
+          {ACCOUNTS_ENABLED && identity === null && (
+            <section className="of-home__signin" aria-labelledby="of-home-signin">
+              <h2 className="of-home__heading" id="of-home-signin">
+                sign in
+              </h2>
+              <AccountForm
+                onDone={() => {
+                  // The board list is about to mean something different.
+                  window.location.reload()
+                }}
+                lead={(mode) =>
+                  mode === 'in'
+                    ? 'Signing in gives you a board list that follows you between browsers.'
+                    : 'An account is for owning boards and keeping a list of them. It is never needed to open one.'
+                }
+              />
+            </section>
+          )}
+        </div>
       </div>
     </main>
   )

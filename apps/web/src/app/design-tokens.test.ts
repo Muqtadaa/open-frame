@@ -105,6 +105,16 @@ const TEXT: readonly (readonly [string, string])[] = [
   ['ink', 'panel'],
   ['ink-muted', 'panel'],
   ['ink-muted', 'bg'],
+  /*
+   * The front door sets its specimen labels, timestamps and notes in muted ink
+   * on page stock. It was the one surface in the product that was not the
+   * ruled page, and ruling it introduced a pair nothing had measured.
+   */
+  ['ink-muted', 'page'],
+  /* A ledger row's title on the accent wash it takes when hovered. */
+  ['ink', 'accent-soft'],
+  /* Knocked-out text on ink: the tool tip, and the primary action on hover. */
+  ['panel', 'ink'],
   ['accent', 'panel'],
   ['accent', 'accent-soft'],
   ['danger', 'panel'],

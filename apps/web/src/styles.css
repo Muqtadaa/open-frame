@@ -76,12 +76,12 @@
   --of-pressed-shadow: 0 1px 2px rgb(22 32 43 / 12%);
   --of-radius: 6px;
 
-  --of-font: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --of-font: ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
   /*
    * Mono is for records and measurement — counts, zoom, field values — never as
    * a costume for "technical".
    */
-  --of-mono: ui-monospace, SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace;
+  --of-mono: ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace;
 
   --of-c-yellow: #7a5c00;
   --of-c-green: #146045;
@@ -193,8 +193,7 @@
    * which is the same physics the default world gets for free from a white page.
    */
   --of-slip-shadow:
-    inset 0 1px 0 rgb(255 255 255 / 9%), 0 1px 2px rgb(5 2 14 / 65%),
-    0 4px 12px rgb(5 2 14 / 55%);
+    inset 0 1px 0 rgb(255 255 255 / 9%), 0 1px 2px rgb(5 2 14 / 65%), 0 4px 12px rgb(5 2 14 / 55%);
   --of-pressed-shadow: 0 1px 2px rgb(5 2 14 / 50%);
 
   --of-c-yellow: #ffd95e;
@@ -734,10 +733,13 @@ body {
   margin-bottom: 8px;
 }
 
+/* A field label, set the way the record panel sets one. */
 .of-account__field span {
   display: block;
   margin-bottom: 3px;
+  font-family: var(--of-mono);
   font-size: 11px;
+  letter-spacing: 0.02em;
   color: var(--of-ink-muted);
 }
 
@@ -1271,7 +1273,13 @@ body {
   font-size: 12px;
   color: var(--of-ink-muted);
   text-align: center;
-  background: repeating-linear-gradient(45deg, var(--of-page), var(--of-page) 8px, var(--of-bg) 8px, var(--of-bg) 16px);
+  background: repeating-linear-gradient(
+    45deg,
+    var(--of-page),
+    var(--of-page) 8px,
+    var(--of-bg) 8px,
+    var(--of-bg) 16px
+  );
   border: 1px dashed var(--of-panel-border);
   border-radius: 6px;
 }
@@ -1835,7 +1843,7 @@ textarea.of-input {
 }
 
 .of-face--serif {
-  font-family: ui-serif, Georgia, "Times New Roman", serif;
+  font-family: ui-serif, Georgia, 'Times New Roman', serif;
 }
 
 .of-face--mono {
@@ -2323,10 +2331,18 @@ textarea.of-input {
 /* ---------- the front door ---------- */
 
 /*
- * The one surface in this product that is not a canvas, and it is deliberately
- * plain. Principle 3 says the canvas is the product and chrome gives its space
- * back; an entry page that tried to be impressive would be the largest piece of
- * chrome in the application and the first thing anybody saw.
+ * The one surface in this product that is not a board, and it is still the
+ * page.
+ *
+ * It was a flat grey ground, which made it the only place in OpenFrame that
+ * looked like a generic app shell — the neutral void this world exists to
+ * refuse, met before anybody had seen the board. It is ruled now, in the same
+ * two weights at the same 10 and 100 unit rhythm, and it is cut from page
+ * stock rather than desk. Somebody arriving here has already been told what
+ * kind of thing they are about to open.
+ *
+ * The rule stays under the 3:1 non-text ceiling `design-tokens.test.ts`
+ * asserts. Ground you cannot ignore is a cage the content has to fight.
  */
 .of-home {
   box-sizing: border-box;
@@ -2338,47 +2354,79 @@ textarea.of-input {
   padding: 48px 24px;
   font-family: var(--of-font);
   color: var(--of-ink);
-  background: var(--of-bg);
+  background-color: var(--of-page);
+  /*
+   * Decade first, so the heavier line paints over the fine one.
+   *
+   * `linear-gradient` plus `background-size`, not `repeating-linear-gradient`:
+   * the repeating form accumulates its stops in floating point across the
+   * whole box, and at a 10px pitch that drifts into visible plaid banding
+   * instead of a rule. A tiled single line rasterises the same every cell.
+   */
+  background-image:
+    linear-gradient(to right, var(--of-rule-decade) 1px, transparent 1px),
+    linear-gradient(to bottom, var(--of-rule-decade) 1px, transparent 1px),
+    linear-gradient(to right, var(--of-rule) 1px, transparent 1px),
+    linear-gradient(to bottom, var(--of-rule) 1px, transparent 1px);
+  background-size:
+    100px 100px,
+    100px 100px,
+    10px 10px,
+    10px 10px;
 }
 
-.of-home__head,
-.of-home__body {
+/*
+ * The column, centred in the viewport rather than pinned to the top.
+ *
+ * `margin: auto` rather than `justify-content: center`, which clips the top of
+ * a column taller than the viewport instead of letting it scroll — the state
+ * this page reaches on a phone with the sign-in form open.
+ */
+.of-home__column {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
   width: 100%;
-  max-width: 760px;
-  margin: 0 auto;
+  max-width: 560px;
+  margin: auto;
 }
 
 .of-home__head {
   display: flex;
-  gap: 14px;
+  gap: 12px;
   align-items: center;
 }
 
+/*
+ * The third surface the brand paints, after the boot splash and the tab icon —
+ * an extension to the rule in DESIGN.md, taken deliberately rather than by
+ * drift. An entry page is where a product says its own name.
+ */
 .of-home__mark {
-  width: 40px;
-  height: 40px;
+  width: 32px;
+  height: 32px;
 }
 
 .of-home__title {
   margin: 0;
-  font-size: 22px;
-  font-weight: 400;
-  line-height: 1.3;
+  font-size: 15px;
+  font-weight: 600;
+  line-height: 1.35;
 }
 
 .of-home__tagline {
-  margin: 2px 0 0;
+  margin: 1px 0 0;
   font-size: 13px;
-  line-height: 1.4;
+  line-height: 1.3;
   color: var(--of-ink-muted);
 }
 
 .of-home__account {
   display: flex;
-  gap: 8px;
+  gap: 7px;
   align-items: center;
-  /* Pushed to the far edge rather than floated, so the heading block keeps
-     its natural width and the button does not collide with a long name. */
+  /* Pushed to the far edge rather than floated, so a long name cannot collide
+     with the wordmark block. */
   margin-left: auto;
   /* 28px: a control you must be able to hit. */
   height: 28px;
@@ -2386,9 +2434,11 @@ textarea.of-input {
   font-family: var(--of-font);
   font-size: 12px;
   color: var(--of-ink);
-  background: var(--of-panel);
+  background: var(--of-page);
+  /* Apparatus radius. Fully round is reserved for the rotate handle and
+     connector endpoints, where it signals a grab point. */
   border: 1px solid var(--of-panel-border);
-  border-radius: 999px;
+  border-radius: 4px;
   cursor: pointer;
 }
 
@@ -2399,33 +2449,53 @@ textarea.of-input {
 .of-home__person {
   display: grid;
   place-items: center;
-  width: 22px;
-  height: 22px;
+  width: 21px;
+  height: 21px;
   font-size: 11px;
   color: var(--of-panel);
   border-radius: 50%;
 }
 
+/*
+ * ONE sheet of apparatus, divided by a rule.
+ *
+ * This was two same-size panels of white floating side by side — the page
+ * scaffold this world's header names as its first refusal, and the one the
+ * craft floor calls the lazy container. Stacking them fixed the side-by-side
+ * and left two boxes; a notebook page with a ruled divider is the form this
+ * world already has for "two things on one page".
+ *
+ * Page stock, not panel white: panel is for surfaces that OVERLAY the board,
+ * and nothing here overlays anything.
+ */
 .of-home__body {
-  display: grid;
-  gap: 20px;
-  align-items: start;
-  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  background: var(--of-page);
+  border: 1px solid var(--of-panel-border);
+  border-radius: 4px;
+  box-shadow: var(--of-shadow);
 }
 
 .of-home__boards,
 .of-home__signin {
-  padding: 16px;
-  background: var(--of-panel);
-  border: 1px solid var(--of-panel-border);
-  border-radius: var(--of-radius);
+  padding: 12px;
 }
 
+.of-home__signin {
+  border-top: 1px solid var(--of-panel-border);
+}
+
+/*
+ * A specimen label, the way the record panel names its subject: lowercase mono,
+ * tracked, muted. It says what this block IS rather than shouting a heading.
+ */
 .of-home__heading {
-  margin: 0 0 10px;
-  font-size: 13px;
-  font-weight: 600;
+  margin: 0 0 8px;
+  font-family: var(--of-mono);
+  font-size: 11px;
+  font-weight: 400;
+  line-height: 1;
   letter-spacing: 0.02em;
+  color: var(--of-ink-muted);
 }
 
 .of-home__note {
@@ -2435,10 +2505,16 @@ textarea.of-input {
   color: var(--of-ink-muted);
 }
 
+/* A ledger: rows on a page, divided by the margin rule. */
 .of-home__list {
   margin: 0 0 12px;
   padding: 0;
   list-style: none;
+  border-top: 1px solid var(--of-panel-border);
+}
+
+.of-home__list li {
+  border-bottom: 1px solid var(--of-panel-border);
 }
 
 .of-home__board {
@@ -2446,26 +2522,33 @@ textarea.of-input {
   gap: 12px;
   align-items: baseline;
   justify-content: space-between;
-  /* 36px rather than 28: a list row is a large target that costs nothing to
-     make comfortable, and WCAG 2.5.8 is a floor, not a design goal. */
+  /* 36px rather than the 24px AA floor: a list row is a large target that costs
+     nothing to make comfortable. */
   min-height: 36px;
-  padding: 7px 8px;
+  padding: 8px 6px;
   color: inherit;
   text-decoration: none;
-  border-radius: 4px;
 }
 
 .of-home__board:hover {
-  background: var(--of-hover);
+  background: var(--of-accent-soft);
 }
 
 .of-home__board-title {
   font-size: 13px;
 }
 
+/*
+ * A measurement, so it is set as one: mono, tabular, muted. Every readout in
+ * this product that carries numbers reads as a column rather than as ransom
+ * text.
+ */
 .of-home__board-when {
   flex: none;
+  font-family: var(--of-mono);
   font-size: 11px;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0.02em;
   color: var(--of-ink-muted);
 }
 
@@ -2481,6 +2564,11 @@ textarea.of-input {
   cursor: pointer;
 }
 
+.of-home__start:hover:not(:disabled) {
+  background: var(--of-ink);
+  border-color: var(--of-ink);
+}
+
 .of-home__start:disabled {
   opacity: 0.55;
   cursor: default;
@@ -2491,6 +2579,17 @@ textarea.of-input {
   font-size: 11px;
   text-align: center;
   color: var(--of-ink-muted);
+}
+
+/* Below the rail's own breakpoint, the page stops being a margin exercise. */
+@media (width <= 560px) {
+  .of-home {
+    padding: 24px 16px;
+  }
+
+  .of-home__column {
+    gap: 16px;
+  }
 }
 
 /* ---------- sharing ---------- */
@@ -2550,9 +2649,12 @@ textarea.of-input {
 
 .of-share__link-what {
   display: block;
+  margin-top: 1px;
   /* 11px is the functional-text floor, and this line is what stops somebody
-     sending the wrong link — it is not decoration. */
+     sending the wrong link — it is not decoration, so it sits at the floor and
+     not below it. */
   font-size: 11px;
+  line-height: 1.35;
   color: var(--of-ink-muted);
 }
 
@@ -2584,12 +2686,22 @@ textarea.of-input {
   border-radius: var(--of-radius);
 }
 
-/* What you are, when you are not an editor. */
+/*
+ * What you are, when you are not an editor.
+ *
+ * Set as a record rather than as a badge: this is a state readout, and it sits
+ * in the record line beside the other readouts that are mono and muted. A pill
+ * would also have been the third fully-round thing in a world where round
+ * means "grab me".
+ */
 .of-status__watching {
-  padding: 0 8px;
+  padding: 0 7px;
+  font-family: var(--of-mono);
   font-size: 11px;
-  line-height: 20px;
+  line-height: 19px;
+  letter-spacing: 0.02em;
   color: var(--of-ink-muted);
-  background: var(--of-hover);
-  border-radius: 999px;
+  background: var(--of-page);
+  border: 1px solid var(--of-panel-border);
+  border-radius: 4px;
 }
