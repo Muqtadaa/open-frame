@@ -1,7 +1,7 @@
 import { asBoardId } from '@openframe/core'
 import { describe, expect, it } from 'vitest'
 
-import { STORES, openDatabase } from './database.js'
+import { DB_VERSION, STORES, openDatabase } from './database.js'
 import { IndexedDbBoardRepository } from './indexeddb-board-repository.js'
 
 /**
@@ -23,20 +23,32 @@ function createVersion1Database(): Promise<void> {
 }
 
 /**
- * Adding the `assets` store raised the database version, which means every
+ * Every store added since has raised the database version, which means every
  * existing user's browser runs an upgrade on their next visit. An upgrade that
  * throws leaves them unable to open their own boards, so it is checked rather
  * than assumed — and checked against a database that really is at version 1,
  * not against a fresh one where the upgrade path is trivially empty.
+ *
+ * `assets` came with images; `crdt` came with local CRDT persistence on
+ * 2026-09-19. The assertion names EVERY store rather than the newest one, so
+ * the next bump fails here until somebody has looked at it — which is how this
+ * one was caught.
  */
 describe('database upgrade from v1', () => {
-  it('adds the assets store without disturbing an existing boards store', async () => {
+  it('adds every later store without disturbing an existing boards store', async () => {
     await createVersion1Database()
 
     const db = await openDatabase()
 
-    expect(db.version).toBe(2)
-    expect([...db.objectStoreNames].sort()).toEqual([STORES.assets, STORES.boards])
+    expect([...db.objectStoreNames].sort()).toEqual(
+      [STORES.assets, STORES.boards, STORES.crdt].sort(),
+    )
+    /*
+     * The DECLARED version, not one derived from the store count. Those line
+     * up today purely by coincidence — one store added per bump — and tying
+     * them together would invent an invariant the schema never promised.
+     */
+    expect(db.version).toBe(DB_VERSION)
   })
 
   it('leaves a board saved under v1 readable', async () => {

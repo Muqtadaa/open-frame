@@ -253,11 +253,23 @@ this browser", whatever is sitting in IndexedDB under its id.
 
 ### Still open, and named so it is not forgotten
 
-- **The CRDT is not persisted locally**, only the document is. A board publishes
-  into its room once per browser and the `Y.Doc` is rebuilt empty on every
-  reload, so edits made offline AFTER the first session reach IndexedDB and the
-  screen but never the room. Traced rather than reproduced. Fixing it also
-  removes the resurrection hazard that the seed-once rule exists to avoid.
+- ~~**The CRDT is not persisted locally**~~ — fixed 2026-09-19, and the note
+  above it was wrong. Reproducing it corrected the diagnosis: an `add` made
+  from an empty `Y.Doc` is self-contained and always synced fine. A `set` did
+  not. `applyPatchesToDoc` DROPS a `set` against an object the doc does not
+  hold — correct across a network, where it means somebody deleted the object
+  — and in the empty doc that every session after the first started with, that
+  was every object on the board. So MOVING a note, recolouring it or rewriting
+  its text wrote nothing into the CRDT. Online the window closed when the
+  room's state arrived; offline it never did.
+
+  The CRDT is now stored per board through a `CrdtStore` port, IndexedDB
+  behind it. The `openframe:seeded:<board>` flag in localStorage is gone with
+  it: seeding is a question about storage rather than a flag to maintain
+  beside the thing it describes, and a persisted doc carries the deletion
+  history that made the flag necessary. Proved end to end in `test:rooms` —
+  a real browser edits a board with the socket refused, reloads, reconnects,
+  and a second browser reads the move out of the room.
 - **Remote objects are not schema-validated** as they arrive. Until Stage 3
   there was no untrusted peer; with accounts there is a boundary worth the name.
 - ~~**A read-only participant goes deaf**~~ — fixed 2026-09-19. Originating a

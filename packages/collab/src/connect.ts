@@ -42,28 +42,78 @@ export interface BoardConnection {
   destroy(): void
 }
 
+/**
+ * Where this browser keeps the board's CRDT between sessions.
+ *
+ * A port, so `@openframe/collab` still names no storage — the same reason the
+ * socket is injected. It is scoped to one board by whoever supplies it.
+ */
+export interface CrdtStore {
+  /** The stored state, or `null` for a board this browser has never held. */
+  readonly load: () => Promise<Uint8Array | null>
+  /** Fire and forget: a state that could not be written costs the next reload. */
+  readonly save: (state: Uint8Array) => void
+}
+
 export interface ConnectBoardOptions {
   readonly store: DocumentStore
   readonly dispatcher: CommandDispatcher
   readonly connect: () => RoomSocket
   readonly onError: (error: CommandError) => void
   /**
-   * Whether to publish the local board into the room on connect.
-   *
-   * True exactly once, for the person who shared the board. After that the room
-   * is the truth and this must be false, because a fresh `Y.Doc` built from
-   * local storage carries no deletion history: re-seeding it would resurrect
-   * every object anyone else has deleted since. Persisting the CRDT state
-   * locally is what removes the asymmetry, and it is a Stage 3 concern.
+   * Where the CRDT lives between page loads. Omitted, the board still works —
+   * it just works the way it did before this existed, which is the bug below.
    */
-  readonly seed: boolean
+  readonly persistence?: CrdtStore
 }
 
-export function connectBoard(options: ConnectBoardOptions): BoardConnection {
+/**
+ * Puts a board in its room, and remembers its CRDT.
+ *
+ * The persistence is not an optimisation. Without it every session after the
+ * first begins from an EMPTY `Y.Doc` while the board on screen comes from
+ * IndexedDB and is full — and `applyPatchesToDoc` correctly DROPS a `set`
+ * against an object the doc does not hold. In an empty doc that is every
+ * object on the board, so moving a note, recolouring it or rewriting its text
+ * wrote nothing into the CRDT at all. Online the window closed when the room's
+ * state arrived; offline it never did, and an afternoon's work reached the
+ * screen and IndexedDB and was never seen by anyone else.
+ *
+ * `offline.test.ts` holds that as an executable statement, including the half
+ * that always worked: a NEW object carries its whole self, so it synced fine.
+ * That is why the original trace pointed the wrong way.
+ */
+export async function connectBoard(options: ConnectBoardOptions): Promise<BoardConnection> {
   const doc = new Y.Doc()
+
+  const stored = (await options.persistence?.load()) ?? null
+  /*
+   * Applied BEFORE the session joins, so the observer that turns doc changes
+   * into commands is not yet attached: restoring this browser's own state is
+   * not a remote change and must not be dispatched as one.
+   */
+  if (stored !== null) Y.applyUpdate(doc, stored)
+
   const awareness = createAwareness(doc)
 
-  if (options.seed) seedDoc(doc, options.store.getDocument())
+  /*
+   * Seeding is now a QUESTION ABOUT STORAGE rather than a flag somebody has to
+   * remember to clear: this browser publishes the local board only when it has
+   * never held the CRDT for it. Re-seeding a doc rebuilt from IndexedDB would
+   * resurrect everything anyone else had deleted, because such a doc carries
+   * no deletion history — a persisted one does, which is what makes this safe.
+   */
+  if (stored === null) seedDoc(doc, options.store.getDocument())
+
+  if (options.persistence !== undefined) {
+    const persistence = options.persistence
+    // Encoded per update, which is one USER ACTION rather than one keystroke:
+    // rule 4 means nothing is written during a drag. Autosave already writes
+    // the whole document on the same beat.
+    doc.on('update', () => {
+      persistence.save(Y.encodeStateAsUpdate(doc))
+    })
+  }
 
   const session = CollabSession.join({
     doc,

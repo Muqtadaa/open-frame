@@ -13,11 +13,16 @@
  * at any earlier version, including one that does not exist yet.
  */
 const DB_NAME = 'openframe'
-const DB_VERSION = 2
+export const DB_VERSION = 3
 
 export const STORES = {
   boards: 'boards',
   assets: 'assets',
+  /**
+   * The CRDT state per board, so a session after the first does not begin from
+   * an empty `Y.Doc` — see `crdt-store.ts` for what that cost.
+   */
+  crdt: 'crdt',
 } as const
 
 let connection: Promise<IDBDatabase> | undefined

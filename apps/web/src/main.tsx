@@ -70,7 +70,7 @@ if (route.kind === 'home') {
    */
   const collaboration =
     route.shared && COLLAB_ENABLED
-      ? startCollaboration(
+      ? await startCollaboration(
           runtime,
           route.boardId,
           (error) => {

@@ -60,6 +60,7 @@ export {
   connectBoard,
   type BoardConnection,
   type ConnectBoardOptions,
+  type CrdtStore,
   type PeerPresence,
 } from './connect.js'
 export { CollabSession, type CollabSessionDeps } from './session.js'

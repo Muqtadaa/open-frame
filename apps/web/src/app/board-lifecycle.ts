@@ -1,5 +1,6 @@
 import type { BoardId, BoardRepository } from '@openframe/core'
 
+import { forgetCrdt } from '../adapters/indexeddb/crdt-store.js'
 import { forgetLocalPrefs } from './board-prefs.js'
 import { COLLAB_ENABLED, destroyUrl } from './collab-config.js'
 import { deleteRemoteBoard, leaveRemoteBoard, renameRemoteBoard } from './remote-boards.js'
@@ -93,6 +94,9 @@ export async function deleteBoardEverywhere(
     // Nothing to tell the person. The board is gone from everywhere that
     // anybody else could reach it.
   }
+  // The CRDT too, or a deleted board leaves its whole history behind and the
+  // next board to reuse the id would inherit it.
+  await forgetCrdt(board.boardId)
   forgetLocalPrefs(board.boardId)
 
   return { ok: true }
@@ -111,6 +115,7 @@ export async function leaveBoard(
   } catch {
     // As above: a local copy left behind is untidy, not damaging.
   }
+  await forgetCrdt(boardId)
   forgetLocalPrefs(boardId)
   return { ok: true }
 }

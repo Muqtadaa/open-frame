@@ -26,7 +26,9 @@ interface DebugWindow {
         undo(): unknown
       }
       readonly store: {
-        getDocument(): { objects: ReadonlyMap<string, { style: { color?: string } }> }
+        getDocument(): {
+          objects: ReadonlyMap<string, { style: { color?: string }; frame?: { x: number } }>
+        }
       }
     }
   }
@@ -415,4 +417,118 @@ test.describe('two links', () => {
       { timeout: 10_000 },
     )
   })
+})
+
+/**
+ * Work done offline, in a session after the first, reaching everyone else.
+ *
+ * The oldest open item in Phase 4, and the one that only a real browser can
+ * settle: `offline.test.ts` proves the mechanism in-process, but the thing
+ * that was broken spans a page reload, IndexedDB and a socket, and none of
+ * those exist in a unit test.
+ *
+ * The shape that was broken: every session after the first began from an EMPTY
+ * `Y.Doc` while the board on screen came from IndexedDB and was full, and a
+ * `set` against an object the doc does not hold is correctly DROPPED. So
+ * MOVING a note — as opposed to adding one — wrote nothing into the CRDT.
+ * Online the window closed when the room's state arrived. Offline it never
+ * did, and the work was never seen by anyone else, ever.
+ */
+test('an offline edit made after a reload still reaches the room', async ({ browser }) => {
+  const room = newRoomId()
+
+  // One browser, kept for the whole test: IndexedDB is per context, and the
+  // point is what SURVIVES between this context's sessions.
+  const context = await browser.newContext()
+  const first = await context.newPage()
+  await first.goto(`/?room=${room}`)
+  await first.waitForSelector('[data-testid="status-bar"]')
+  await expect(first.locator('[data-testid="room-status"]')).toHaveAttribute(
+    'data-status',
+    'connected',
+    { timeout: 20_000 },
+  )
+
+  await addNote(first, 'before the flight', 'blue')
+  await first.waitForTimeout(500)
+  await first.close()
+
+  /*
+   * Session two, with the ROOM unreachable but the app still servable.
+   *
+   * `context.setOffline(true)` cannot express this: it blocks the dev server
+   * too, so the page never loads, and a real offline visit would be served by
+   * a service worker this app does not have. Blocking the WebSocket alone is
+   * the honest model — the board opens from IndexedDB, and the room is simply
+   * not there.
+   *
+   * It is also the state that was broken, and blocking it is what makes this
+   * test able to fail: loading session two online lets the room's state
+   * populate the `Y.Doc`, after which the edit syncs whether or not anything
+   * was persisted.
+   */
+  const second = await context.newPage()
+  await second.routeWebSocket(/\/room\//, (ws) => {
+    // Refused, not forwarded. `close()` returns a promise the handler does not
+    // await, so it is voided deliberately rather than left floating.
+    void ws.close()
+  })
+  await second.goto(`/?room=${room}`)
+  await second.waitForSelector('[data-testid="status-bar"]')
+  await expect(second.locator('[data-object-id]')).toHaveCount(1)
+
+  // MOVE the existing note. This is the patch that used to vanish.
+  await second.evaluate(() => {
+    const debug = (window as unknown as DebugWindow).__openframe
+    const [object] = [...debug.runtime.store.getDocument().objects.values()]
+    const result = debug.runtime.dispatcher.dispatch({
+      // One command carrying every move, which is why it takes an array:
+      // dragging three objects is one undo entry and one network message.
+      kind: 'MoveObjects',
+      moves: [{ id: (object as unknown as { id: string }).id, dx: 400, dy: 0 }],
+    })
+    if (!result.ok) throw new Error(result.error?.message ?? 'the move was refused')
+  })
+  await second.waitForTimeout(300)
+
+  await second.close()
+
+  /*
+   * Session three: the room is reachable again, and this is a fresh page with
+   * no route blocking it.
+   *
+   * A reload rather than waiting for the provider to reconnect in place. The
+   * retry backoff doubles to a thirty-second cap, so a test that blocks a
+   * socket for a couple of seconds and then waits is timing its own flake.
+   * This is also the stronger claim: the offline edit has to survive being
+   * written to storage and read back, which is the thing that was broken.
+   */
+  const third = await context.newPage()
+  await third.goto(`/?room=${room}`)
+  await third.waitForSelector('[data-testid="status-bar"]')
+  await expect(third.locator('[data-testid="room-status"]')).toHaveAttribute(
+    'data-status',
+    'connected',
+    { timeout: 20_000 },
+  )
+  await third.waitForTimeout(1000)
+
+  // Somebody else, with nothing cached, asks the room what the board is.
+  const other = await browser.newContext()
+  const bob = await other.newPage()
+  await bob.goto(`/?room=${room}`)
+  await bob.waitForSelector('[data-testid="status-bar"]')
+  await expect(bob.locator('[data-object-id]')).toHaveCount(1)
+
+  const x = await bob.evaluate(() => {
+    const debug = (window as unknown as DebugWindow).__openframe
+    const [object] = [...debug.runtime.store.getDocument().objects.values()]
+    return (object as unknown as { frame: { x: number } }).frame.x
+  })
+
+  // 100 was where it was left. 500 means the offline move got there.
+  expect(x).toBe(500)
+
+  await context.close()
+  await other.close()
 })
