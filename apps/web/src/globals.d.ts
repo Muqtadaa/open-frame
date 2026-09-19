@@ -17,4 +17,14 @@ declare const __OPENFRAME_BENCH__: boolean
  */
 interface ImportMetaEnv {
   readonly VITE_COLLAB_URL?: string
+  /**
+   * The identity service, and its PUBLISHABLE key.
+   *
+   * Both ship inside the bundle by design. What protects anything is a
+   * row-level security policy on the database, never a value held here — which
+   * is why the service-role key is absent from this repository and must stay
+   * that way.
+   */
+  readonly VITE_SUPABASE_URL?: string
+  readonly VITE_SUPABASE_PUBLISHABLE_KEY?: string
 }

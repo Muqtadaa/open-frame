@@ -4,7 +4,7 @@
   "private": true,
   "license": "AGPL-3.0-only",
   "type": "module",
-  "description": "OpenFrame web client \u2014 canvas renderer, interaction layer, UI shell and adapters.",
+  "description": "OpenFrame web client — canvas renderer, interaction layer, UI shell and adapters.",
   "scripts": {
     "dev": "vite",
     "typecheck": "tsc -p tsconfig.json --noEmit",
@@ -20,6 +20,7 @@
   "dependencies": {
     "@openframe/collab": "workspace:*",
     "@openframe/core": "workspace:*",
+    "@supabase/supabase-js": "^2.116.0",
     "react": "^19.3.0",
     "react-dom": "^19.3.0",
     "zustand": "^5.0.15"

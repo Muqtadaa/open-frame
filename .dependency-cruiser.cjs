@@ -59,6 +59,17 @@ module.exports = {
       },
     },
     {
+      name: 'supabase-lives-only-in-adapters',
+      severity: 'error',
+      comment:
+        'The identity service exists behind one adapter, for the same reason Yjs and the Durable ' +
+        'Object runtime do: a UI component that imports a database client is a UI component that ' +
+        'cannot be tested without one, and a provider that reaches the canvas is a provider nobody ' +
+        'can replace. Everything else receives a session, never a client.',
+      from: { pathNot: '^apps/web/src/adapters/supabase' },
+      to: { path: '^@supabase($|/)|node_modules/@supabase/' },
+    },
+    {
       name: 'collab-does-not-depend-on-apps',
       severity: 'error',
       comment:
@@ -213,7 +224,15 @@ module.exports = {
     doNotFollow: { path: 'node_modules' },
     tsConfig: { fileName: 'tsconfig.base.json' },
     tsPreCompilationDeps: true,
-    exclude: { path: '(\\.test\\.tsx?$|^apps/web/e2e(-rooms)?/|/dist/|/coverage/)' },
+    /*
+     * `/dist/` here used to be unanchored, and it was quietly disarming the
+     * purity rules: a dependency whose package entry point lives under
+     * `dist/` — which `@supabase/supabase-js` does — was excluded from the
+     * graph entirely, so no rule could match it. The
+     * `supabase-lives-only-in-adapters` rule was written, deliberately broken
+     * to watch it fail, and did not fire. Anchored to OUR build output.
+     */
+    exclude: { path: '(\\.test\\.tsx?$|^apps/web/e2e(-rooms)?/|^(apps|packages)/[^/]+/dist/|^(apps|packages)/[^/]+/coverage/)' },
     enhancedResolveOptions: {
       exportsFields: ['exports'],
       conditionNames: ['import', 'require', 'types'],
