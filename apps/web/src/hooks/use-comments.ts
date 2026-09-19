@@ -2,6 +2,8 @@ import { useCallback, useEffect, useState } from 'react'
 
 import type { BoardId } from '@openframe/core'
 
+import { useInteractionStore } from '../interaction/interaction-store.js'
+
 import {
   boardPeople,
   listComments,
@@ -80,22 +82,34 @@ export function useComments(boardId: BoardId, enabled: boolean): LoadedComments 
     }
   }, [enabled, refresh])
 
+  /*
+   * Both writers do the same two things on success: re-read for this client,
+   * and raise the counter that tells everybody else in the room to do the
+   * same. The nudge goes out only after the database has accepted the change,
+   * so nobody is ever sent to look at something that was not written.
+   */
+  const noteSaid = useInteractionStore((state) => state.noteSaid)
+
   const post = useCallback(
     async (comment: NewComment): Promise<boolean> => {
       const id = await postComment(comment)
-      if (id !== null) refresh()
-      return id !== null
+      if (id === null) return false
+      refresh()
+      noteSaid()
+      return true
     },
-    [refresh],
+    [refresh, noteSaid],
   )
 
   const resolve = useCallback(
     async (id: string, resolved: boolean): Promise<boolean> => {
       const ok = await resolveComment(id, resolved)
-      if (ok) refresh()
-      return ok
+      if (!ok) return false
+      refresh()
+      noteSaid()
+      return true
     },
-    [refresh],
+    [refresh, noteSaid],
   )
 
   return { comments, people, refresh, post, resolve }

@@ -151,15 +151,17 @@ test('shows a mention on the board list, and links to the board it names', async
     page,
     [{ id: BOARD, title: 'Shared', role: 'owner' }],
     'Muqtadaa Miandara',
-    [
-      {
-        commentId: 'cmt_m1',
-        boardId: BOARD,
-        boardTitle: 'Shared',
-        authorName: 'Rowan',
-        body: 'Muqtadaa Miandara what do you think of this?',
-      },
-    ],
+    {
+      mentions: [
+        {
+          commentId: 'cmt_m1',
+          boardId: BOARD,
+          boardTitle: 'Shared',
+          authorName: 'Rowan',
+          body: 'Muqtadaa Miandara what do you think of this?',
+        },
+      ],
+    },
   )
   await page.goto(HOME_URL)
 

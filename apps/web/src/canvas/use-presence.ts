@@ -95,6 +95,12 @@ export function usePresence(containerRef: RefObject<HTMLDivElement | null>): voi
         // they are following, so that nobody follows a follower.
         viewport: state.viewport,
         following: state.following,
+        /*
+         * And whether there is anything new to read. Comments are not in the
+         * CRDT, so they cannot ride the board's own updates; this counter is
+         * how everybody else learns to go and look.
+         */
+        said: state.said,
       })
     }
 
@@ -152,6 +158,15 @@ export function usePresence(containerRef: RefObject<HTMLDivElement | null>): voi
        * a target, which is the loop the flag exists to prevent.
        */
       if (state.following !== previous.following) publish()
+
+      /*
+       * A new comment goes out AT ONCE, and this line is what makes the
+       * feature work at all. Posting changes nothing else about this client —
+       * not the cursor, not the selection, not the viewport — so without it
+       * the counter sits in the store waiting for the next pointer movement,
+       * and a person who posts and then sits still is talking to nobody.
+       */
+      if (state.said !== previous.said) publish()
 
       /*
        * The viewport is throttled instead. A pan is a stream of changes and

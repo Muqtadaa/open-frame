@@ -67,6 +67,21 @@ export interface PresenceState {
    * is never a valid target.
    */
   readonly following: number | null
+  /**
+   * How many times this peer has changed the discussion since they connected.
+   *
+   * A NUDGE, not the comments themselves. Comments are not in the CRDT — a
+   * remark in the document would be in undo, in export, in search and in the
+   * registry — so they cannot ride the board's own updates. This counter rides
+   * presence instead: it says "there is something new to read", and every
+   * other client re-reads from the database, which stays the one source of
+   * truth about what was said.
+   *
+   * A counter rather than a flag because a flag cannot be raised twice. Two
+   * comments in quick succession would set `true` on an already-`true` field
+   * and the second would reach nobody.
+   */
+  readonly said: number
 }
 
 /** How far, in world units. Never a position — always an offset. */
@@ -146,6 +161,7 @@ export function readPresence(raw: unknown): PresenceState | null {
     drag: rawDrag,
     viewport: rawViewport,
     following: rawFollowing,
+    said: rawSaid,
   } = raw as {
     name?: unknown
     hue?: unknown
@@ -155,6 +171,7 @@ export function readPresence(raw: unknown): PresenceState | null {
     drag?: unknown
     viewport?: unknown
     following?: unknown
+    said?: unknown
   }
 
   const name = typeof rawName === 'string' ? rawName.slice(0, MAX_NAME).trim() : ''
@@ -179,6 +196,9 @@ export function readPresence(raw: unknown): PresenceState | null {
     // follower chasing a target that cannot exist would never let go.
     following:
       typeof rawFollowing === 'number' && Number.isInteger(rawFollowing) ? rawFollowing : null,
+    // Only ever compared against its own previous value, so the magnitude
+    // means nothing and a negative or fractional one is simply not a count.
+    said: typeof rawSaid === 'number' && Number.isInteger(rawSaid) && rawSaid >= 0 ? rawSaid : 0,
   }
 }
 
@@ -217,6 +237,25 @@ export function dragsByObject(peers: readonly Peer[]): ReadonlyMap<ObjectId, Dra
     }
   }
   return moved
+}
+
+/**
+ * One value that changes whenever anybody's contribution to the discussion
+ * does — a string, so a consumer may hold it in a Zustand selector.
+ *
+ * A SUM would be wrong. One peer posting while another who had posted leaves
+ * cancels out, and the comment that arrived in that moment reaches nobody. A
+ * signature over who is here and what each of them has said cannot cancel.
+ *
+ * It changes when the room's membership changes too, which costs a re-read
+ * nobody strictly needed — and buys the case that matters: somebody who
+ * commented, closed the tab and came back is carrying a count this client has
+ * never seen.
+ */
+export function discussionSignature(peers: readonly Peer[]): string {
+  let signature = ''
+  for (const peer of peers) signature += `${String(peer.clientId)}:${String(peer.said)},`
+  return signature
 }
 
 /** The palette entry for a peer. A token name, never a colour value. */

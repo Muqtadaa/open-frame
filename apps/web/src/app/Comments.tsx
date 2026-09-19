@@ -1,6 +1,7 @@
 import { useMemo, type ReactNode } from 'react'
 
 import { useComments } from '../hooks/use-comments.js'
+import { useLiveComments } from '../hooks/use-live-comments.js'
 import { useIdentity } from '../hooks/use-identity.js'
 import { CommentPanel } from '../ui/CommentPanel.js'
 import { useInteractionStore } from '../interaction/interaction-store.js'
@@ -20,6 +21,10 @@ export function CommentsProvider({ children }: { readonly children: ReactNode })
   const enabled = collaboration !== null && collaboration !== undefined && identity !== null
 
   const { comments, people, refresh, post, resolve } = useComments(runtime.boardId, enabled)
+
+  // And again whenever somebody else in the room says something, so the
+  // discussion is live rather than something you find on your way back.
+  useLiveComments(enabled, refresh)
 
   const value = useMemo<Discussion>(() => {
     const replyCounts = new Map<string, number>()

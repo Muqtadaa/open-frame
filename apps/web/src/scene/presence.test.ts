@@ -3,6 +3,7 @@ import { describe, expect, it } from 'vitest'
 
 import {
   canFollow,
+  discussionSignature,
   dragsByObject,
   editorsByObject,
   hueVar,
@@ -28,6 +29,9 @@ describe('reading a peer state', () => {
         drag: { dx: 40, dy: -12 },
         viewport: { x: -200, y: 40, zoom: 1.5 },
         following: 7,
+        // Not 0: a zero here would pass against a `readPresence` that dropped
+        // the field on the floor, which is the one failure worth catching.
+        said: 4,
       }),
     ).toEqual({
       name: 'Otter',
@@ -37,6 +41,7 @@ describe('reading a peer state', () => {
       editing: asObjectId('obj_a'),
       drag: { dx: 40, dy: -12 },
       viewport: { x: -200, y: 40, zoom: 1.5 },
+      said: 4,
       following: 7,
     })
   })
@@ -93,6 +98,7 @@ describe('who is editing what', () => {
     name: `p${String(clientId)}`,
     hue: 0,
     cursor: null,
+    said: 0,
     drag: null,
     viewport: null,
     following: null,
@@ -138,6 +144,7 @@ describe('a drag in flight', () => {
     name: `p${String(clientId)}`,
     hue: 0,
     cursor: null,
+    said: 0,
     selection: selection.map(asObjectId),
     editing: null,
     drag,
@@ -202,6 +209,7 @@ describe('following somebody around the board', () => {
     name: 'p',
     hue: 0,
     cursor: null,
+    said: 0,
     selection: [],
     editing: null,
     drag: null,
@@ -253,5 +261,64 @@ describe('following somebody around the board', () => {
 
   it('cannot be followed without a viewport to copy', () => {
     expect(canFollow(peer({ viewport: null }))).toBe(false)
+  })
+})
+
+describe('knowing there is something new to read', () => {
+  const said = (clientId: number, count: number): Peer => ({
+    clientId,
+    name: `p${String(clientId)}`,
+    hue: 0,
+    cursor: null,
+    selection: [],
+    editing: null,
+    drag: null,
+    viewport: null,
+    following: null,
+    said: count,
+  })
+
+  it('changes when somebody says something', () => {
+    const before = discussionSignature([said(1, 0), said(2, 0)])
+    expect(discussionSignature([said(1, 1), said(2, 0)])).not.toBe(before)
+  })
+
+  it('does not change when nothing was said', () => {
+    expect(discussionSignature([said(1, 2), said(2, 5)])).toBe(
+      discussionSignature([said(1, 2), said(2, 5)]),
+    )
+  })
+
+  /**
+   * The reason this is not a sum.
+   *
+   * One person comments while another who had commented closes their tab. The
+   * total is unchanged, so a client watching the total learns nothing — and
+   * the comment that arrived in that moment reaches nobody until something
+   * else happens to disturb the count.
+   *
+   * Written with the arithmetic explicit, because the whole failure is that
+   * the two numbers happen to cancel: a test using different values would
+   * pass against a sum and prove nothing.
+   */
+  it('notices a comment that arrives as a previous commenter leaves', () => {
+    const before = [said(1, 0), said(2, 3)]
+    const after = [said(1, 1)]
+
+    const total = (peers: readonly Peer[]) => peers.reduce((sum, peer) => sum + peer.said, 0)
+    expect(total(after) + 2).toBe(total(before))
+    expect(total(after)).not.toBe(total(before))
+
+    // ...but that is only because 1 !== 3. Make them cancel exactly:
+    const left = [said(1, 0), said(2, 1)]
+    const stayed = [said(1, 1)]
+    expect(total(stayed)).toBe(total(left))
+    expect(discussionSignature(stayed)).not.toBe(discussionSignature(left))
+  })
+
+  it('tells two peers apart from one who has said twice as much', () => {
+    expect(discussionSignature([said(1, 1), said(2, 1)])).not.toBe(
+      discussionSignature([said(1, 2)]),
+    )
   })
 })

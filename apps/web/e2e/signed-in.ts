@@ -33,65 +33,116 @@ export interface StubbedMention {
   readonly body: string
 }
 
+/**
+ * The double's memory, which two pages may SHARE.
+ *
+ * Each `signedIn` call routes one page, so by default two pages get two
+ * independent servers — and a test where one person comments and the other
+ * waits to see it would fail whatever the app did, because the comment was
+ * never written anywhere the second page could read. Passing one of these to
+ * both calls is what makes them the same board on the same server.
+ */
+export interface StubbedServer {
+  readonly rows: BoardRow[]
+  readonly comments: CommentRow[]
+  readonly people: { user_id: string; display_name: string; hue: number }[]
+  readonly mentions: StubbedMention[]
+  readonly mentioned: string[]
+  readonly read: string[]
+}
+
+interface BoardRow {
+  id: string
+  title: string
+  role: string
+  access_key: string
+  view_key: string | null
+  owner_key: string | null
+  updated_at: string
+  pinned: boolean
+  opened_at: string
+}
+
+interface CommentRow {
+  id: string
+  parent_id: string | null
+  author_id: string
+  author_name: string
+  author_hue: number
+  body: string
+  x: number | null
+  y: number | null
+  object_id: string | null
+  resolved_at: string | null
+  created_at: string
+}
+
+/** Who each stubbed person is. The second exists so two pages can differ. */
+export const ALICE = '00000000-0000-4000-8000-000000000001'
+export const BOB = '00000000-0000-4000-8000-000000000002'
+
+export function stubbedServer(
+  boards: readonly StubbedBoard[],
+  displayName = 'Muqtadaa Miandara',
+  mentions: readonly StubbedMention[] = [],
+): StubbedServer {
+  return {
+    rows: boards.map((board) => {
+      const when = new Date(Date.now() - (board.agoMs ?? 3_600_000)).toISOString()
+      return {
+        id: board.id,
+        title: board.title,
+        role: board.role,
+        access_key: 'a'.repeat(32),
+        // Only an owner gets the second key back, exactly as `my_boards()` does.
+        view_key: board.role === 'owner' ? 'b'.repeat(32) : null,
+        // And the third, which is not a link at all.
+        owner_key: board.role === 'owner' ? 'd'.repeat(32) : null,
+        updated_at: when,
+        pinned: board.pinned ?? false,
+        opened_at: when,
+      }
+    }),
+    comments: [],
+    people: [
+      { user_id: ALICE, display_name: displayName, hue: 3 },
+      { user_id: BOB, display_name: 'Rowan', hue: 1 },
+    ],
+    mentions: [...mentions],
+    mentioned: [],
+    read: [],
+  }
+}
+
+export interface SignedInOptions {
+  /** Mentions waiting for this person on the front door. */
+  readonly mentions?: readonly StubbedMention[]
+  /** Which stubbed person this page is. Defaults to `ALICE`. */
+  readonly userId?: string
+  /** An existing server, so this page sees what another page wrote. */
+  readonly server?: StubbedServer
+}
+
 export async function signedIn(
   page: Page,
   boards: readonly StubbedBoard[],
   displayName = 'Muqtadaa Miandara',
-  mentions: readonly StubbedMention[] = [],
+  options: SignedInOptions = {},
 ): Promise<StubbedAccount> {
-  const rows: {
-    id: string
-    title: string
-    role: string
-    access_key: string
-    view_key: string | null
-    owner_key: string | null
-    updated_at: string
-    pinned: boolean
-    opened_at: string
-  }[] = boards.map((board) => {
-    const when = new Date(Date.now() - (board.agoMs ?? 3_600_000)).toISOString()
-    return {
-      id: board.id,
-      title: board.title,
-      role: board.role,
-      access_key: 'a'.repeat(32),
-      // Only an owner gets the second key back, exactly as `my_boards()` does.
-      view_key: board.role === 'owner' ? 'b'.repeat(32) : null,
-      // And the third, which is not a link at all.
-      owner_key: board.role === 'owner' ? 'd'.repeat(32) : null,
-      updated_at: when,
-      pinned: board.pinned ?? false,
-      opened_at: when,
-    }
-  })
-
+  const server = options.server ?? stubbedServer(boards, displayName, options.mentions)
+  const me = options.userId ?? ALICE
+  const myHue = server.people.find((person) => person.user_id === me)?.hue ?? 3
   /*
    * `record_shared_board` WRITES, so the double has to remember it. A stub
    * that answered `my_boards` from a fixed list would report an empty account
    * one line after the app recorded a board into it, and the test would then
    * be asserting against the double rather than against the app.
+   *
+   * All of that memory lives on `server`, which a second page may be handed —
+   * that is what makes two windows the same board rather than two boards that
+   * happen to share an id.
    */
-  /** What has been said on the board, and who is on it to say it. */
-  const comments: {
-    id: string
-    parent_id: string | null
-    author_id: string
-    author_name: string
-    author_hue: number
-    body: string
-    x: number | null
-    y: number | null
-    object_id: string | null
-    resolved_at: string | null
-    created_at: string
-  }[] = []
-  const people = [
-    { user_id: '00000000-0000-4000-8000-000000000001', display_name: displayName, hue: 3 },
-    { user_id: '00000000-0000-4000-8000-000000000002', display_name: 'Rowan', hue: 1 },
-  ]
-  const mentioned: string[] = []
-  const read: string[] = []
+  const { rows, comments, people, mentioned, read } = server
 
   await page.route(`**/${REF}.supabase.co/**`, (route) => {
     const url = route.request().url()
@@ -137,9 +188,9 @@ export async function signedIn(
       comments.push({
         id,
         parent_id: body.p_parent_id ?? null,
-        author_id: '00000000-0000-4000-8000-000000000001',
+        author_id: me,
         author_name: displayName,
-        author_hue: 3,
+        author_hue: myHue,
         body: body.p_body ?? '',
         x: body.p_x ?? null,
         y: body.p_y ?? null,
@@ -184,7 +235,7 @@ export async function signedIn(
 
     if (url.includes('rpc/my_mentions')) {
       return json(
-        mentions.map((mention) => ({
+        server.mentions.map((mention) => ({
           comment_id: mention.commentId,
           board_id: mention.boardId,
           board_title: mention.boardTitle,
@@ -196,13 +247,13 @@ export async function signedIn(
     }
 
     if (url.includes('rpc/my_boards')) return json(rows)
-    if (url.includes('/profiles')) return json({ display_name: displayName, hue: 3 })
+    if (url.includes('/profiles')) return json({ display_name: displayName, hue: myHue })
     return json({})
   })
 
   const expiresAt = Math.floor(Date.now() / 1000) + 3600
   await page.addInitScript(
-    ([ref, name, exp]) => {
+    ([ref, name, exp, uid]) => {
       window.localStorage.setItem('openframe:splash-hold', 'off')
       window.localStorage.setItem(
         `sb-${String(ref)}-auth-token`,
@@ -213,7 +264,7 @@ export async function signedIn(
           expires_in: 3600,
           expires_at: exp,
           user: {
-            id: '00000000-0000-4000-8000-000000000001',
+            id: String(uid),
             email: `${String(name)}@example.test`,
             aud: 'authenticated',
             role: 'authenticated',
@@ -224,12 +275,13 @@ export async function signedIn(
         }),
       )
     },
-    [REF, 'someone', expiresAt] as const,
+    [REF, 'someone', expiresAt, me] as const,
   )
 
   return {
     mentioned,
     read,
+    server,
     people: people.map((person) => person.display_name),
   }
 }
@@ -245,5 +297,7 @@ export interface StubbedAccount {
   readonly mentioned: readonly string[]
   /** Mentions this browser marked read, for the same reason. */
   readonly read: readonly string[]
+  /** Pass to a second `signedIn` so both pages share one server. */
+  readonly server: StubbedServer
   readonly people: readonly string[]
 }

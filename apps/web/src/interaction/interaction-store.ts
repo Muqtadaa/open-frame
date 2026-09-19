@@ -212,6 +212,15 @@ interface InteractionState {
    */
   readonly composing: ComposingComment | null
   readonly openThreadId: string | null
+  /**
+   * How many times this client has changed the discussion.
+   *
+   * Published in presence so everybody else in the room knows to re-read. It
+   * is a count rather than a flag because a flag cannot be raised twice: two
+   * comments in a row would set an already-set boolean and the second would
+   * reach nobody.
+   */
+  readonly said: number
   readonly drag: DragState
   /**
    * Size of the canvas element. Transient view state, but several things
@@ -257,6 +266,8 @@ interface InteractionState {
   setFollowing(clientId: number | null): void
   startComment(at: ComposingComment | null): void
   openThread(id: string | null): void
+  /** Says that this client just changed the discussion. */
+  noteSaid(): void
   setCanvasSize(width: number, height: number): void
   setClipboard(objects: readonly AnyOpenFrameObject[]): void
   openContextMenu(at: Point): void
@@ -300,6 +311,7 @@ export const useInteractionStore = create<InteractionState>((set) => ({
   following: null,
   composing: null,
   openThreadId: null,
+  said: 0,
   drag: { kind: 'idle' },
   canvasSize: { width: 0, height: 0 },
   clipboard: [],
@@ -377,6 +389,9 @@ export const useInteractionStore = create<InteractionState>((set) => ({
   // panels over the same pin is two places to type into.
   startComment: (at) => set({ composing: at, openThreadId: null }),
   openThread: (id) => set({ openThreadId: id, composing: null }),
+  noteSaid: () => {
+    set((state) => ({ said: state.said + 1 }))
+  },
 
   setClipboard: (clipboard) => set({ clipboard: [...clipboard] }),
   openContextMenu: (contextMenu) => set({ contextMenu }),
