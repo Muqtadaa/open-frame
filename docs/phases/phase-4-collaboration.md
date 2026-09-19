@@ -423,6 +423,13 @@ this browser", whatever is sitting in IndexedDB under its id.
 
 ### Still open
 
+- **Two real rooms hold test data.** `brd_abcdefgh12345678` and
+  `brd_aaaaaaaa11111111` are live Durable Objects that the e2e suite joined and
+  wrote into on every CI run, because `apps/web/.env` is committed and points
+  at the deployed worker. The suite is isolated now and a guard fails if that
+  is undone, but the two rooms still hold what was already put there, and
+  emptying them is a deliberate deletion of production data.
+
 - Whether a board can be moved BACK to local. Probably not worth it.
 - What a member sees when an owner deletes a board they are looking at. The
   room closes their socket with 4004 and refuses reconnection with 410; the

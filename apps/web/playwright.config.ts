@@ -71,5 +71,28 @@ export default defineConfig({
     url: 'http://127.0.0.1:5173',
     reuseExistingServer: !isCI,
     timeout: 60_000,
+    /*
+     * THE SUITE MUST NOT REACH THE REAL ROOM SERVER.
+     *
+     * `apps/web/.env` is committed and points `VITE_COLLAB_URL` at the
+     * deployed worker, which is right for `pnpm dev` and catastrophic here:
+     * several specs open `?room=brd_abcdefgh12345678`, and that is a REAL
+     * Durable Object. Every CI run joined it, drew a sticky note into it and
+     * left the note there — so a test asserting one object on the canvas read
+     * five, then six, growing by one per run, and the assertion was really
+     * against the accumulated contents of a production room.
+     *
+     * It passed on any machine that could not reach the worker, which is why
+     * it survived: absent a connection the board is empty and the test is
+     * honest. Pointing at a closed local port reproduces that state
+     * deliberately instead of relying on the network being unavailable.
+     *
+     * Port 9 is discard — nothing listens, so the connection is refused at
+     * once rather than hanging. `COLLAB_ENABLED` stays true, because the specs
+     * that exercise sharing need a build that believes it collaborates; what
+     * they must not have is somewhere real to do it. Rooms are tested for real
+     * in `pnpm test:rooms`, against a local workerd.
+     */
+    env: { VITE_COLLAB_URL: 'ws://127.0.0.1:9' },
   },
 })
