@@ -100,6 +100,21 @@ export function useKeyboardShortcuts(setSpaceHeld: (held: boolean) => void): voi
           commands.selectAll()
           return
         case 'deselect':
+          /*
+           * Escape closes what is OPEN before it clears what is selected, and
+           * the search panel is one of those things.
+           *
+           * The panel has its own Escape handler, but it is on the input and
+           * therefore only works once the input has focus — which arrives in
+           * an effect, after the panel has painted. A key pressed in that
+           * window reached this handler instead, which knew nothing about
+           * search, and the panel stayed open. It showed up as a test failing
+           * one run in three; it is the same gap for anybody who types fast.
+           */
+          if (store.searchOpen) {
+            store.setSearchOpen(false)
+            return
+          }
           store.setEditing(null)
           store.clearSelection()
           store.closeContextMenu()

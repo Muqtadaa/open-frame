@@ -319,3 +319,30 @@ test('stays quiet while a name that is here is still being typed', async ({ page
     await expect(page.getByTestId('comment-stranger'), partial).toHaveCount(0)
   }
 })
+
+/**
+ * The mention hint, once a workspace supplies the names.
+ *
+ * It used to list everybody joined with commas, which was fine when only a
+ * board's own members were offered. A workspace can hold a great many, and a
+ * hint that becomes a paragraph is one nobody reads — including the part that
+ * says what to type.
+ */
+test('names a few people and counts the rest', async ({ page }) => {
+  await signedIn(page, [{ id: BOARD, title: 'Shared', role: 'owner' }])
+  await openBoard(page)
+
+  await page.getByRole('button', { name: /comment/i }).first().click()
+  await page.locator('[data-testid="canvas"]').click({ position: { x: 320, y: 240 } })
+
+  const hint = page.getByTestId('comment-people-hint')
+  await expect(hint).toContainText('and 2 more')
+  // The two it did not name are counted rather than listed.
+  await expect(hint).not.toContainText('Juno')
+  await expect(hint).not.toContainText('Tam')
+
+  // And somebody the hint did not have room for is still mentionable, because
+  // the cap is a display decision and nothing more.
+  await page.getByTestId('comment-input').fill('@Tam can you look at this')
+  await expect(page.getByTestId('comment-stranger')).toHaveCount(0)
+})

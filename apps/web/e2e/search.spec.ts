@@ -56,6 +56,31 @@ test.describe('finding things on a board', () => {
     await expect(page.getByTestId('search-panel')).toHaveCount(0)
   })
 
+  /**
+   * Escape closes the panel wherever the focus is.
+   *
+   * The panel's own Escape handler is on its input, and the input is focused
+   * by an effect that runs after the panel paints. A key pressed in that
+   * window reaches the window handler instead — which knew nothing about
+   * search, so the panel stayed open.
+   *
+   * The test above found that ONCE in about three runs and passed the rest of
+   * the time, which is worse than not finding it: six green runs looked like
+   * a fix. Blurring first turns the same bug into a failure every time.
+   */
+  test('closes on Escape even when the query field does not have focus', async ({ page }) => {
+    await openSearch(page)
+
+    await page.evaluate(() => {
+      const active = document.activeElement
+      if (active instanceof HTMLElement) active.blur()
+    })
+    await expect(page.getByTestId('search-input')).not.toBeFocused()
+
+    await page.keyboard.press('Escape')
+    await expect(page.getByTestId('search-panel')).toHaveCount(0)
+  })
+
   test('finds a note by its text', async ({ page }) => {
     await note(page, AT, 'Customers do not understand pricing')
     await openSearch(page)

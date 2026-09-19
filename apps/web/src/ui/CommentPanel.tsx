@@ -73,12 +73,12 @@ export function CommentPanel() {
   if (composing === null && thread === null) return null
 
   /**
-   * Who this text mentions.
+   * Writes the comment, or the reply, and says so if it could not be written.
    *
-   * Matched against the people actually on the board rather than parsed as
-   * free text: a mention is a notification, and a notification to a name
-   * nobody has is a message that silently goes nowhere. The longest name wins
-   * so that "@Sam" does not shadow "@Samira".
+   * Who it mentions is worked out by `mentionsIn`, which matches on a word
+   * boundary — the description that used to sit here said the longest name
+   * won, which was never what the code did and is not how the problem is
+   * solved.
    */
   const submit = (event: FormEvent): void => {
     event.preventDefault()
@@ -189,9 +189,22 @@ export function CommentPanel() {
           }}
         />
 
+        {/*
+          * A few names and a count, not the whole list.
+          *
+          * This was every name joined with commas, which was fine when the
+          * only people offered were the board's own members. A workspace can
+          * hold a great many, and a hint that turns into a paragraph is one
+          * nobody reads — including the part that says what to type.
+          */}
         {stranger === null && people.length > 1 && (
-          <p className="of-comment-panel__hint">
-            Type @ and a name to notify someone: {people.map((p) => p.displayName).join(', ')}
+          <p className="of-comment-panel__hint" data-testid="comment-people-hint">
+            Type @ and a name to notify someone:{' '}
+            {people
+              .slice(0, 4)
+              .map((person) => person.displayName)
+              .join(', ')}
+            {people.length > 4 && ` and ${String(people.length - 4)} more`}
           </p>
         )}
 

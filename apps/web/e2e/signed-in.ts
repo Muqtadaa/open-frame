@@ -151,9 +151,21 @@ export function stubbedServer(
       },
     ],
     comments: [],
+    /*
+     * Six, because the composer's hint now shows four and counts the rest —
+     * a list that fits cannot tell a capped hint from an uncapped one.
+     *
+     * They are the board's WORKSPACE, not its members: `board_people` widened
+     * to everybody in the workspace, which is the pool a mention always
+     * wanted and the reason the composer no longer has to offer a link first.
+     */
     people: [
       { user_id: ALICE, display_name: displayName, hue: 3 },
       { user_id: BOB, display_name: 'Rowan', hue: 1 },
+      { user_id: '00000000-0000-4000-8000-000000000003', display_name: 'Wren', hue: 2 },
+      { user_id: '00000000-0000-4000-8000-000000000004', display_name: 'Ash', hue: 4 },
+      { user_id: '00000000-0000-4000-8000-000000000005', display_name: 'Juno', hue: 5 },
+      { user_id: '00000000-0000-4000-8000-000000000006', display_name: 'Tam', hue: 0 },
     ],
     mentions: [...mentions],
     mentioned: [],
