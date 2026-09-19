@@ -25,11 +25,31 @@ export interface RoomSocket {
   close(): void
   onOpen(listener: () => void): void
   onMessage(listener: (data: Uint8Array) => void): void
-  onClose(listener: () => void): void
+  /**
+   * The close CODE matters and is not optional. It is the only thing that
+   * separates a board that no longer exists from a connection that blinked,
+   * and the two need opposite responses.
+   */
+  onClose(listener: (code: number) => void): void
   onError(listener: () => void): void
 }
 
-export type ConnectionStatus = 'connecting' | 'connected' | 'offline'
+/**
+ * The room's code for "this board was deleted", sent to everyone on it just
+ * before the room empties itself.
+ *
+ * In the private range, and defined HERE rather than in the Worker so the two
+ * ends cannot drift: the side that sends it and the side that must recognise
+ * it now read the same constant.
+ */
+export const CLOSE_BOARD_DELETED = 4004
+
+/**
+ * `gone` is TERMINAL. Every other status is a stage of trying; this one means
+ * there is nothing left to try, because the room it was trying to reach has
+ * been destroyed. Reconnecting into it yields 410 forever.
+ */
+export type ConnectionStatus = 'connecting' | 'connected' | 'offline' | 'gone'
 
 export interface RoomProviderOptions {
   readonly doc: Y.Doc
@@ -146,7 +166,18 @@ export class RoomProvider {
       if (reply !== null) socket.send(reply)
     })
 
-    socket.onClose(() => {
+    socket.onClose((code) => {
+      /*
+       * The board is gone, so this is not a reconnection problem. Retrying
+       * here is a loop with no exit: the room refuses every attempt with 410,
+       * the refusal closes the socket, and the backoff schedules another —
+       * which is exactly what a member saw after an owner deleted a board
+       * under them, with nothing on screen to say why.
+       */
+      if (code === CLOSE_BOARD_DELETED) {
+        this.#gone()
+        return
+      }
       this.#dropped()
     })
     socket.onError(() => {
@@ -187,6 +218,15 @@ export class RoomProvider {
       // symptom of a connection that has already gone.
       this.#dropped()
     }
+  }
+
+  /** Stops for good. Same shutdown as `destroy`, with a status that explains it. */
+  #gone(): void {
+    this.#stopped = true
+    if (this.#retryHandle !== null) this.#clearTimer(this.#retryHandle)
+    this.#retryHandle = null
+    this.#closeSocket()
+    this.#setStatus('gone')
   }
 
   #dropped(): void {

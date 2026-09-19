@@ -31,7 +31,14 @@ export function browserRoomSocket(url: string): RoomSocket {
       socket.close()
     },
     onOpen: (listener) => socket.addEventListener('open', () => listener()),
-    onClose: (listener) => socket.addEventListener('close', () => listener()),
+    /*
+     * The CODE, not just the fact of a close. 4004 means the board was deleted
+     * and the provider must stop; everything else is a connection to retry.
+     */
+    onClose: (listener) =>
+      socket.addEventListener('close', (event: CloseEvent) => {
+        listener(event.code)
+      }),
     onError: (listener) => socket.addEventListener('error', () => listener()),
     onMessage: (listener) =>
       socket.addEventListener('message', (event: MessageEvent<unknown>) => {

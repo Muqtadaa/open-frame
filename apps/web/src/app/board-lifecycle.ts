@@ -121,6 +121,37 @@ export async function leaveBoard(
 }
 
 /**
+ * Drops every local trace of a board the ROOM says no longer exists.
+ *
+ * Nothing is asked of the server: the board is already gone, and the owner who
+ * deleted it is the one who told it so. What is left is this browser's copy —
+ * the document, the stored CRDT and the local preferences — which would
+ * otherwise stay in IndexedDB for the life of the profile, one more dead board
+ * every time somebody deletes one out from under this machine.
+ *
+ * It is NOT what keeps the board out of the list. `listAllBoards` already
+ * drops room-board ids from the "this browser" section, so the phantom row
+ * cannot arrive this way — a test written to assert that it could passed with
+ * this function deleted, which is the whole reason rule 23 exists.
+ *
+ * Every step is best effort and independent. A board that cannot be dropped
+ * locally is untidy; refusing to tell the user their board is gone because the
+ * tidying failed would be worse.
+ */
+export async function forgetDeletedBoard(
+  repository: BoardRepository,
+  boardId: BoardId,
+): Promise<void> {
+  try {
+    await repository.deleteBoard(boardId)
+  } catch {
+    // As elsewhere: a local copy left behind is untidy, not damaging.
+  }
+  await forgetCrdt(boardId)
+  forgetLocalPrefs(boardId)
+}
+
+/**
  * Renames a board in both places it is named.
  *
  * The title in the list is a COPY — the real one lives in the document, where

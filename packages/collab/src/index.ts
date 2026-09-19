@@ -51,6 +51,7 @@ export {
   type RoomPeer,
 } from './room.js'
 export {
+  CLOSE_BOARD_DELETED,
   RoomProvider,
   type ConnectionStatus,
   type RoomProviderOptions,

@@ -1,4 +1,5 @@
 import { Canvas } from '../canvas/Canvas.js'
+import { BoardGone } from '../ui/BoardGone.js'
 import { ContextMenu } from '../ui/ContextMenu.js'
 import { Inspector } from '../ui/Inspector.js'
 import { NoticeBanner } from '../ui/NoticeBanner.js'
@@ -45,6 +46,9 @@ export function App() {
       <Inspector />
       <ContextMenu />
       <SearchPanel />
+
+      {/* Last, so it covers everything above it when the board is gone. */}
+      <BoardGone />
     </div>
   )
 }

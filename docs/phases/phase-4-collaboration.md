@@ -431,9 +431,25 @@ this browser", whatever is sitting in IndexedDB under its id.
   emptying them is a deliberate deletion of production data.
 
 - Whether a board can be moved BACK to local. Probably not worth it.
-- What a member sees when an owner deletes a board they are looking at. The
-  room closes their socket with 4004 and refuses reconnection with 410; the
-  interface does not yet say why.
+- ~~What a member sees when an owner deletes a board they are looking at.~~
+  Fixed. The provider treated 4004 as a dropped connection, so it reconnected
+  into a room that answers 410, backed off and tried again for as long as the
+  tab stayed open — the board just stopped responding, blaming nobody. The
+  close CODE now decides: 4004 is terminal, everything else retries. The status
+  gains `gone`, a scrim says the board was deleted and offers the way out, and
+  it is deliberately not dismissible, because there is nothing left underneath
+  it that can be saved.
+
+  Autosave is disposed before the local copy is dropped, so nothing writes the
+  document back on the next command or on `pagehide`.
+
+  Rule 23 earned its keep twice here. The first e2e closed the socket on a
+  timer and raced autosave, so it passed with the fix removed; the second
+  asserted no phantom row appeared, which passed with the fix removed too —
+  `listAllBoards` already drops room-board ids from "this browser", so that
+  row could never have appeared. What the forgetting actually prevents is a
+  dead board's document and CRDT sitting in IndexedDB forever, and that is
+  what the test reads now.
 - ~~**An owner cannot recover the view-only link after the moment of sharing.**~~
   Fixed. `my_boards()` returns a second `view_key`, populated for the owner and
   null for everybody else, and the row offers a copy control when it is there.

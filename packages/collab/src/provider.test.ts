@@ -4,7 +4,7 @@ import * as Y from 'yjs'
 
 import { applyPatchesToDoc, objectsFromDoc } from './document-map.js'
 import { createAwareness, type RoomRole } from './protocol.js'
-import { RoomProvider, type RoomSocket } from './provider.js'
+import { CLOSE_BOARD_DELETED, RoomProvider, type RoomSocket } from './provider.js'
 import { BoardRoom, type RoomPeer } from './room.js'
 
 /**
@@ -20,7 +20,7 @@ class Wire {
   #open = false
   #openListeners: (() => void)[] = []
   #messageListeners: ((data: Uint8Array) => void)[] = []
-  #closeListeners: (() => void)[] = []
+  #closeListeners: ((code: number) => void)[] = []
   #room: BoardRoom | null = null
   #peer: RoomPeer | null = null
   /** Messages the client sent while the socket was not up. */
@@ -56,11 +56,16 @@ class Wire {
     room.join(this.#peer)
   }
 
-  drop(): void {
+  /**
+   * `1006` is what a browser reports for a connection that dropped without a
+   * close frame — a lost network, a restarted room — which is the ordinary
+   * case and the one that SHOULD reconnect.
+   */
+  drop(code = 1006): void {
     if (!this.#open) return
     this.#open = false
     if (this.#room !== null && this.#peer !== null) this.#room.leave(this.#peer)
-    for (const listener of this.#closeListeners) listener()
+    for (const listener of this.#closeListeners) listener(code)
   }
 }
 
@@ -235,5 +240,48 @@ describe('a connection that drops', () => {
 
     expect(a.wires.length).toBe(opened)
     expect(a.provider.status).toBe('offline')
+  })
+})
+
+/**
+ * A board deleted under the people looking at it.
+ *
+ * The room puts everyone out with 4004 before it empties itself, and that code
+ * is the only thing separating "your board is gone" from "your wifi blinked".
+ * The provider ignored it and treated both as a dropped connection, so a
+ * member whose board had just been deleted watched it reconnect, be refused
+ * with 410, back off, and try again — for as long as the tab stayed open, with
+ * nothing on screen ever saying what had happened.
+ */
+describe('a board deleted while somebody is on it', () => {
+  it('stops, rather than reconnecting forever into a room that is gone', async () => {
+    const room = new BoardRoom()
+    const member = client(room, 'member')
+    member.provider.start()
+    await settle()
+
+    expect(member.provider.status).toBe('connected')
+    const attempts = member.wires.length
+
+    member.wires[0]?.drop(CLOSE_BOARD_DELETED)
+    await settle()
+
+    expect(member.provider.status).toBe('gone')
+    // The point: no second socket. A retry here is refused with 410 and comes
+    // straight back round, which is a loop rather than a recovery.
+    expect(member.wires.length).toBe(attempts)
+  })
+
+  it('still reconnects when the connection merely dropped', async () => {
+    const room = new BoardRoom()
+    const member = client(room, 'member')
+    member.provider.start()
+    await settle()
+
+    member.wires[0]?.drop()
+    await settle()
+
+    expect(member.provider.status).toBe('connected')
+    expect(member.wires.length).toBe(2)
   })
 })

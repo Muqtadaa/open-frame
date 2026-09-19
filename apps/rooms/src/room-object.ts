@@ -1,4 +1,10 @@
-import { BoardRoom, documentFromSnapshot, type RoomPeer, type RoomRole } from '@openframe/collab'
+import {
+  BoardRoom,
+  CLOSE_BOARD_DELETED,
+  documentFromSnapshot,
+  type RoomPeer,
+  type RoomRole,
+} from '@openframe/collab'
 import { DurableObject } from 'cloudflare:workers'
 
 import {
@@ -213,7 +219,7 @@ export class BoardRoomObject extends DurableObject<Env> {
      * avoid, except this time it is real and it is permanent.
      */
     for (const socket of this.ctx.getWebSockets()) {
-      socket.close(4004, 'This board was deleted')
+      socket.close(CLOSE_BOARD_DELETED, 'This board was deleted')
     }
 
     await this.ctx.storage.deleteAll()

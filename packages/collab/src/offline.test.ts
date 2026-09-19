@@ -36,7 +36,7 @@ class Wire {
   #open = false
   #openListeners: (() => void)[] = []
   #messageListeners: ((data: Uint8Array) => void)[] = []
-  #closeListeners: (() => void)[] = []
+  #closeListeners: ((code: number) => void)[] = []
   #room: BoardRoom | null = null
   #peer: RoomPeer | null = null
 
@@ -70,7 +70,7 @@ class Wire {
     if (!this.#open) return
     this.#open = false
     if (this.#room !== null && this.#peer !== null) this.#room.leave(this.#peer)
-    for (const listener of this.#closeListeners) listener()
+    for (const listener of this.#closeListeners) listener(1006)
   }
 }
 

@@ -6,6 +6,7 @@ import { App } from './app/App.js'
 import { AppErrorBoundary } from './app/AppErrorBoundary.js'
 import { createBoardCapabilities } from './app/board-capabilities.js'
 import { COLLAB_ENABLED } from './app/collab-config.js'
+import { forgetDeletedBoard } from './app/board-lifecycle.js'
 import { startCollaboration } from './app/collaboration.js'
 import { createRuntime } from './app/composition-root.js'
 import { markLocalOpened } from './app/board-prefs.js'
@@ -83,6 +84,34 @@ if (route.kind === 'home') {
   // The room is the authority on this; the browser only mirrors what it said.
   collaboration?.onRole((role) => {
     capabilities.narrowTo(role)
+  })
+
+  /*
+   * The board was deleted by whoever owns it, while this browser had it open.
+   *
+   * Two things have to happen here, and neither belongs in a component.
+   *
+   * AUTOSAVE STOPS FIRST. `dispose` detaches it and removes the `pagehide`
+   * flush with it, so nothing writes this document to disk afterwards — not on
+   * the next command, and not when the tab is closed. Rule 7 is about never
+   * writing back a document we could not fully read; this is the same
+   * principle from the other end, a document we could no longer fully TRUST.
+   *
+   * THEN THE LOCAL COPY GOES — the document, the stored CRDT and the local
+   * preferences. Not for the board LIST's sake: `listAllBoards` already drops
+   * room-board ids from the "this browser" section, so the phantom row cannot
+   * happen by this route, and a test written to assert that passed with this
+   * line deleted. What it actually prevents is a deleted board's document and
+   * CRDT sitting in IndexedDB for the life of the browser profile, growing by
+   * one board every time somebody deletes one out from under this machine.
+   *
+   * Ordered after `dispose` on purpose: forgetting the board while autosave is
+   * still attached invites it to be written straight back.
+   */
+  collaboration?.onStatus((status) => {
+    if (status !== 'gone') return
+    runtime.dispose()
+    void forgetDeletedBoard(runtime.repository, route.boardId)
   })
 
   /*
