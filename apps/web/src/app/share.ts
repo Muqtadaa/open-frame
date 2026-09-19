@@ -54,7 +54,7 @@ async function claimRoom(boardId: BoardId): Promise<{ editor: string; viewer: st
   try {
     response = await fetch(claimUrl(boardId), { method: 'POST' })
   } catch {
-    throw new ShareFailed('The room server could not be reached.')
+    throw new ShareFailed('OpenFrame could not reach the server.')
   }
 
   if (!response.ok) {
@@ -74,7 +74,7 @@ async function claimRoom(boardId: BoardId): Promise<{ editor: string; viewer: st
     typeof (keys as { editor?: unknown }).editor !== 'string' ||
     typeof (keys as { viewer?: unknown }).viewer !== 'string'
   ) {
-    throw new ShareFailed('The room server sent something this version cannot read.')
+    throw new ShareFailed('The server sent something this version of OpenFrame cannot read.')
   }
   return keys as { editor: string; viewer: string }
 }

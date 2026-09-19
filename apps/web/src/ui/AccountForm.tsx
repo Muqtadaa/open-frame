@@ -33,14 +33,14 @@ export function AccountForm({
     void attempt.then((result) => {
       setBusy(false)
       if (result.ok) onDone()
-      else setError(result.message ?? 'That did not work.')
+      else setError(result.message ?? 'That did not work. Check the email and password and try again.')
     })
   }
 
   const defaultLead = (which: 'in' | 'up'): string =>
     which === 'in'
       ? 'Sign in to keep a list of your boards.'
-      : 'An account keeps a list of your boards. It is not needed to use one.'
+      : 'An account keeps a list of your boards. Opening a link somebody sends you never needs one.'
 
   return (
     <form onSubmit={submit}>

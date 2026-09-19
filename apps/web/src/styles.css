@@ -2574,7 +2574,17 @@ textarea.of-input {
   flex-direction: column;
   gap: 20px;
   width: 100%;
-  max-width: 560px;
+  /*
+   * 680, up from 560 on 2026-09-19.
+   *
+   * 560 was right for a ledger of name, tag and time. The ledger has since
+   * grown a pin in its margin and rename/remove at its end, and those two
+   * reserve about 95px on every row whether or not anyone is pointing at it —
+   * so the NAME, the one column that identifies anything, was down to about
+   * fifteen characters and every row read "Pricing co…". Widening is the
+   * honest fix; shortening the names is not one.
+   */
+  max-width: 680px;
   margin: auto;
 }
 
@@ -2903,26 +2913,75 @@ textarea.of-input {
 }
 
 /*
- * The strays: boards made before an account was needed, offered for moving.
+ * The strays: boards that live only in this browser, offered for moving.
  *
- * Set as its own section rather than as a banner over the list, because it is
- * about boards that are NOT in the list above — a notice floating over the
- * ledger would read as being about the rows it covers.
+ * One line under the ledger, not a section beside it. It used to be a heading,
+ * two sentences and a bulleted list of every board — which put the SAME five
+ * rows on screen twice, under two names for one thing, and stood a second
+ * full-width accent button next to the primary one. The rows carry a
+ * `this browser` tag now, so all that is left to say is what the button does.
  */
 .of-home__claim {
-  padding-top: var(--of-gutter);
-  border-top: 1px solid var(--of-panel-border);
+  display: flex;
+  gap: var(--of-step);
+  align-items: center;
+  flex-wrap: wrap;
+  margin: 0 0 16px;
 }
 
-.of-home__claim-list {
-  margin: 0 0 16px;
-  padding: 0 0 0 18px;
+.of-home__claim-what {
+  flex: 1;
+  min-width: 14ch;
+  margin: 0;
   font-size: 13px;
   color: var(--of-ink-muted);
 }
 
-.of-home__claim-list li {
-  padding: 3px 0;
+/*
+ * Secondary, and firmly so. Two accent buttons on one surface means neither is
+ * the primary action, and starting a board is — this is housekeeping offered
+ * once, not the thing the page is for.
+ */
+.of-home__claim-go {
+  flex: none;
+  height: var(--of-hit-sm);
+  padding: 0 14px;
+  font-family: inherit;
+  font-size: 13px;
+  color: var(--of-ink);
+  background: var(--of-page);
+  border: 1px solid var(--of-control-border);
+  border-radius: 4px;
+  cursor: pointer;
+}
+
+.of-home__claim-go:hover:not(:disabled) {
+  color: var(--of-accent);
+  border-color: var(--of-accent);
+  background: var(--of-accent-soft);
+}
+
+.of-home__claim-go:disabled {
+  opacity: 0.55;
+  cursor: default;
+}
+
+.of-home__claim-problem {
+  flex-basis: 100%;
+  margin: 0;
+  font-size: 13px;
+  color: var(--of-danger);
+}
+
+/*
+ * A board nobody else can reach reads as a STATE, not as a label like the
+ * sharing ones — quieter, so the ledger's tag column does not turn into a
+ * column of badges competing with the names beside them.
+ */
+.of-home__board-tag[data-kind='local'] {
+  color: var(--of-ink-muted);
+  background: none;
+  border-color: transparent;
 }
 
 .of-home__row-note,
@@ -2950,7 +3009,25 @@ textarea.of-input {
   /* Centred, not baseline-aligned: at a 50px row the shared baseline puts
      every cell against the top edge and leaves the row looking half empty. */
   align-items: center;
-  grid-template-columns: minmax(0, 1fr) auto auto;
+  /*
+   * FIXED columns, not `auto`.
+   *
+   * Every row is its own grid, so `auto` sizes each one to its own content and
+   * the columns stop being columns: with four different tags on screen the
+   * badges landed at four different x positions, and a name lost width to the
+   * longest tag in its OWN row rather than to the longest on the page. So
+   * "Onboarding drop-off — Q3" truncated while a longer title two rows up did
+   * not. A ledger you cannot read down is not a ledger.
+   *
+   * Sized in px from the real metric, not in `ch`. `ch` resolves against THIS
+   * element's font — the 15px body face — while the text in those columns is
+   * 12px mono, so `15ch` reserved about eighty pixels more than the tag needs
+   * and took every one of them from the name.
+   *
+   * 118px fits the longest tag ("shared with you", 15 mono characters plus its
+   * padding); 96px fits the longest time ("11 months ago").
+   */
+  grid-template-columns: minmax(0, 1fr) 118px 96px;
   /* 36px rather than the 24px AA floor: a list row is a large target that costs
      nothing to make comfortable. */
   min-height: var(--of-hit-lg);
@@ -3023,6 +3100,38 @@ textarea.of-input {
 
   .of-home__column {
     gap: 16px;
+  }
+
+  /*
+   * The row stacks rather than squeezing.
+   *
+   * Three columns across a phone left the NAME with about one character —
+   * "S", "I", "C" — while the tag and the timestamp kept their full width.
+   * That is precisely backwards: the name is the only thing on the row that
+   * identifies the board, and the other two are the same handful of words
+   * repeating down the page. So the name takes its own line and the two
+   * readouts share the one below it.
+   */
+  .of-home__board {
+    grid-template-columns: auto 1fr;
+    grid-template-areas:
+      'title title'
+      'tag when';
+    row-gap: 2px;
+    padding: 10px 8px;
+  }
+
+  .of-home__board-title {
+    grid-area: title;
+  }
+
+  .of-home__board-tag {
+    grid-area: tag;
+  }
+
+  .of-home__board-when {
+    grid-area: when;
+    min-width: 0;
   }
 }
 
@@ -3197,10 +3306,13 @@ textarea.of-input {
  * the thing you read.
  */
 .of-home__board-tag {
+  justify-self: start;
   padding: 3px 8px;
   font-family: var(--of-mono);
   font-size: 12px;
   letter-spacing: 0.02em;
+  /* It is one column of a ledger; wrapping turns the row into two. */
+  white-space: nowrap;
   color: var(--of-ink-muted);
   background: var(--of-bg);
   border-radius: 3px;

@@ -146,11 +146,22 @@ export function BoardRow({
         ) : (
           <a className="of-home__board" href={href} data-testid="board-link">
             <span className="of-home__board-title">{board.title}</span>
-            {board.shared && (
-              <span className="of-home__board-tag">
-                {board.role === 'viewer' ? 'view only' : board.role === 'owner' ? 'shared' : 'shared with you'}
-              </span>
-            )}
+            {/*
+              * What this board IS, in the column the ledger keeps for it.
+              *
+              * A local board is tagged too, which is what let the claim offer
+              * below shrink to one line: the rows say which ones they are, so
+              * the offer does not have to list them a second time.
+              */}
+            <span className="of-home__board-tag" data-kind={board.shared ? 'shared' : 'local'}>
+              {!board.shared
+                ? 'this browser'
+                : board.role === 'viewer'
+                  ? 'view only'
+                  : board.role === 'owner'
+                    ? 'shared'
+                    : 'shared with you'}
+            </span>
             <span className="of-home__board-when">{describeWhen(board.updatedAt, readAt)}</span>
           </a>
         )}
@@ -183,7 +194,7 @@ export function BoardRow({
                 type="button"
                 className="of-home__row-action"
                 data-testid="leave-board"
-                title={`Leave ${board.title}. It stays as it is for everyone else.`}
+                title={`Leave ${board.title}. It carries on without you.`}
                 onClick={() => setMode('confirming')}
               >
                 <LeaveIcon />
@@ -214,7 +225,7 @@ export function BoardRow({
           <span className="of-home__confirm-what">
             {canLeave(board)
               ? 'Leave this board? It carries on without you.'
-              : 'Delete this board for everyone? Its links stop working, and this cannot be undone.'}
+              : 'Delete this board for everyone? Its links stop working and this cannot be undone.'}
           </span>
           <button
             type="button"

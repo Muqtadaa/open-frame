@@ -42,7 +42,7 @@ async function destroyRoom(boardId: BoardId, editorKey: string | null): Promise<
       body: JSON.stringify({ key: editorKey }),
     })
   } catch {
-    return 'The room server could not be reached, so this board was left alone.'
+    return 'OpenFrame could not reach the server, so nothing was deleted.'
   }
 
   // Already gone. Deleting a board twice is not an error, and refusing here
@@ -56,7 +56,7 @@ async function destroyRoom(boardId: BoardId, editorKey: string | null): Promise<
    * outlives it.
    */
   if (response.status === 409) {
-    return 'This board was shared before links had roles, so its room cannot be deleted.'
+    return 'This board was shared before view-only links existed, so it cannot be deleted here.'
   }
 
   if (!response.ok) return 'This board could not be deleted.'
@@ -82,7 +82,7 @@ export async function deleteBoardEverywhere(
      * rather than ignored: the board is unrecoverable and its row is still
      * listed, and the person needs to know the row is the only thing left.
      */
-    return { ok: false, reason: 'The board was removed from its room but not from your list.' }
+    return { ok: false, reason: 'The board was deleted, but it could not be removed from your list.' }
   }
 
   // Last, and never allowed to fail the operation: a local copy that outlives

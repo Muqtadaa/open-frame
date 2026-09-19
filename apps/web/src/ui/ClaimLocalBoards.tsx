@@ -5,17 +5,13 @@ import { claimLocalBoard } from '../app/share.js'
 import type { ListedBoard } from '../app/boards.js'
 
 /**
- * The boards that were here before you signed in.
+ * The offer to move boards that live only in this browser.
  *
- * A board used to be able to belong to nobody, and any that were made that way
- * are still sitting in this browser — invisible from every other machine and
- * lost with the site data. Signing in is the first moment there is somewhere
- * for them to go.
- *
- * OFFERED, listed by name, and never taken silently. Uploading somebody's work
- * to a server without asking is not a migration, it is a surprise — and the
- * list is here so the offer names exactly what it is about to move rather than
- * saying "your boards" and hoping.
+ * ONE LINE, because the boards are already listed three inches above it. The
+ * first version of this had a heading, two sentences and a bulleted list of
+ * every board — which meant the same five rows appeared twice on one screen,
+ * under two different names for the same thing. The rows carry a `this browser`
+ * tag now, so this says only what the tag cannot: what happens if you press it.
  */
 export function ClaimLocalBoards({
   boards,
@@ -39,8 +35,8 @@ export function ClaimLocalBoards({
       const problems: string[] = []
       /*
        * One at a time, and a failure does not stop the rest. Each board is an
-       * independent move — a room that refused to be claimed for one of them
-       * is no reason to leave the other four behind.
+       * independent move — one that could not be written is no reason to leave
+       * the other four behind.
        */
       for (const board of boards) {
         try {
@@ -55,39 +51,29 @@ export function ClaimLocalBoards({
     })()
   }
 
+  const count = boards.length
+
   return (
-    <section className="of-home__claim" data-testid="claim-local" aria-labelledby="of-home-claim">
-      <h2 className="of-home__heading" id="of-home-claim">
-        boards in this browser
-      </h2>
-      <p className="of-home__note">
-        {boards.length === 1 ? 'This board lives' : `These ${String(boards.length)} boards live`} in
-        this browser only. Moving {boards.length === 1 ? 'it' : 'them'} to your account means{' '}
-        {boards.length === 1 ? 'it follows' : 'they follow'} you to any machine you sign in on.
+    <div className="of-home__claim" data-testid="claim-local">
+      <p className="of-home__claim-what">
+        {count === 1 ? 'One board here is' : `${String(count)} boards here are`} only in this
+        browser.
       </p>
-
-      <ul className="of-home__claim-list">
-        {boards.map((board) => (
-          <li key={board.boardId}>{board.title}</li>
-        ))}
-      </ul>
-
       <button
         type="button"
-        className="of-home__start"
+        className="of-home__claim-go"
         data-testid="claim-local-go"
         disabled={moving}
         onClick={move}
       >
-        {moving ? 'Moving…' : `Move to my account`}
+        {moving ? 'Moving…' : 'Move to my account'}
       </button>
 
       {failed.length > 0 && (
-        <p className="of-home__row-problem" role="alert" data-testid="claim-local-failed">
-          {failed.length === 1 ? 'This board' : 'These boards'} could not be moved and{' '}
-          {failed.length === 1 ? 'is' : 'are'} still here: {failed.join(', ')}.
+        <p className="of-home__claim-problem" role="alert" data-testid="claim-local-failed">
+          Still here: {failed.join(', ')}.
         </p>
       )}
-    </section>
+    </div>
   )
 }

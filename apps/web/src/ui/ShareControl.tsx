@@ -55,7 +55,7 @@ export function ShareControl() {
         title={
           runtime.readOnly
             ? 'This board is read-only and cannot be shared'
-            : 'Move this board to a shared link'
+            : 'Give this board a link other people can open'
         }
         onClick={() => {
           setSharing(true)
@@ -141,7 +141,7 @@ export function ShareControl() {
        * not stick. A viewer is not broken — they were given the other link.
        */}
       {role === 'viewer' && (
-        <span className="of-status__watching" data-testid="viewing-only" title="You opened a view-only link. You can watch and be seen, but not change anything.">
+        <span className="of-status__watching" data-testid="viewing-only" title="You can watch, and others can see you here. Changing the board needs the edit link.">
           View only
         </span>
       )}
@@ -202,7 +202,7 @@ function ShareLinks({ links, onOpen }: { readonly links: SharedBoard; readonly o
         * avoid.
         */}
       <p className="of-share__lead">
-        This board has moved, and now has two links. Anyone who has one needs no account.
+        This board has moved. It has two links now, and neither needs an account.
       </p>
 
       <button

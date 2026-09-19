@@ -136,7 +136,7 @@ export function Home({ repository }: { readonly repository: BoardRepository }) {
                  * on your cursor when you are on a board together, so saying so
                  * turns a swatch into a fact about yourself.
                  */
-                title={`Signed in as ${identity.displayName}. This is the colour other people see you as on a board. Click to sign out.`}
+                title={`Signed in as ${identity.displayName}. Click to sign out.`}
                 onClick={() => {
                   void signOut()
                 }}
@@ -171,7 +171,7 @@ export function Home({ repository }: { readonly repository: BoardRepository }) {
             ) : listing.boards.length === 0 ? (
               <p className="of-home__note" data-testid="home-empty">
                 {canStart
-                  ? 'Nothing here yet. Start a board and it is yours, on every machine you sign in on.'
+                  ? 'Nothing here yet.'
                   : 'Sign in to start a board. A link somebody sends you opens without one.'}
               </p>
             ) : (
@@ -189,6 +189,10 @@ export function Home({ repository }: { readonly repository: BoardRepository }) {
               </ul>
             )}
 
+            {strays.length > 0 && (
+              <ClaimLocalBoards boards={strays} repository={repository} onChanged={refresh} />
+            )}
+
             {canStart && (
               <>
                 <button
@@ -202,8 +206,8 @@ export function Home({ repository }: { readonly repository: BoardRepository }) {
                 </button>
                 <p className="of-home__small">
                   {ACCOUNTS_ENABLED
-                    ? 'Yours, and on every machine you sign in on.'
-                    : 'This build has no accounts, so boards stay in this browser.'}
+                    ? 'Your boards follow you to any machine you sign in on.'
+                    : 'This copy of OpenFrame has no accounts, so boards stay in this browser.'}
                 </p>
               </>
             )}
@@ -214,10 +218,6 @@ export function Home({ repository }: { readonly repository: BoardRepository }) {
               </p>
             )}
           </section>
-
-          {strays.length > 0 && (
-            <ClaimLocalBoards boards={strays} repository={repository} onChanged={refresh} />
-          )}
 
           {ACCOUNTS_ENABLED && identity === null && (
             <section className="of-home__signin" aria-labelledby="of-home-signin">
@@ -232,7 +232,7 @@ export function Home({ repository }: { readonly repository: BoardRepository }) {
                 lead={(mode) =>
                   mode === 'in'
                     ? 'Your boards follow you to any machine you sign in on.'
-                    : 'An account is what a board belongs to. A link somebody sends you still opens without one.'
+                    : 'A board belongs to an account. A link somebody sends you still opens without one.'
                 }
               />
             </section>

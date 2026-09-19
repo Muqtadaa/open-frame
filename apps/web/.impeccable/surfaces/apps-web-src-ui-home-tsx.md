@@ -36,9 +36,12 @@ is one nobody has to remember the subject of. Delete and leave are separate
 controls and never one, because a shared "remove" would eventually destroy
 somebody's work for a person tidying their own list.
 
-STRAYS: boards made before an account was needed are still in this browser. A
-signed-in person is offered the move, once, with every board named — the offer
-must say what it is about to upload rather than say "your boards" and hope.
+STRAYS: boards that live only in this browser. Every row already carries a
+`this browser` tag, so the offer is ONE LINE and a secondary button under the
+ledger. It was a heading, two sentences and a bulleted list of every board,
+which put the same five rows on screen twice under two names for one thing and
+stood a second full-width accent button beside the primary one. Two accent
+buttons on a surface means neither is primary, and starting a board is.
 
 FORM: One sheet of page-stock apparatus with a hairline margin rule and the
 contact shadow, divided by a rule into the ledger and sign-in. NOT two cards:
@@ -62,9 +65,27 @@ asserts. Drawn with tiled `linear-gradient` and `background-size`, never
 `repeating-linear-gradient`, whose stops accumulate in floating point across the
 box and band into visible plaid at a 10px pitch.
 
-COLUMN: 560px, centred with `margin: auto` rather than `justify-content`, which
-clips the top of a column taller than the viewport instead of letting it scroll
-— the state this page reaches on a phone with the sign-in form open.
+COLUMN: 680px (was 560 until 2026-09-19), centred with `margin: auto` rather
+than `justify-content`, which clips the top of a column taller than the
+viewport instead of letting it scroll — the state this page reaches on a phone
+with the sign-in form open.
+
+560 was right for a ledger of name, tag and time. The ledger has since grown a
+pin in its margin and rename/remove at its end, and those reserve ~95px on
+every row whether or not anyone is pointing at one — which left the NAME, the
+only column that identifies anything, at about fifteen characters, so every row
+read "Pricing co…". Widening is the honest fix; shortening the names is not.
+
+LEDGER COLUMNS are FIXED, not `auto`. Each row is its own grid, so `auto` sizes
+every row to its own content and the columns stop being columns: with four
+different tags on screen the badges landed at four different x positions and a
+name lost width to the longest tag in ITS OWN row. Sized in px from the real
+metric rather than in `ch` — `ch` resolves against the 15px body face while the
+text in those columns is 12px mono, which over-reserved by about eighty pixels.
+
+Below 560px the row STACKS: name on its own line, tag and time on the one
+below. Three columns across a phone left the name showing a single character
+while the two readouts kept full width, which is exactly backwards.
 
 FINISH: contrast measured against the real stylesheet by `design-tokens.test.ts`
 for every pair this surface introduces, both worlds. End-to-end specs including

@@ -73,7 +73,7 @@ export function BoardMembership() {
       className="of-status__share"
       data-testid="keep-board"
       disabled={state === 'joining'}
-      title="Add this board to your list, so you can find it again without the link"
+      title="Keep this board in your list, so you can find it without the link"
       onClick={() => {
         if (key === null) return
         setState('joining')
