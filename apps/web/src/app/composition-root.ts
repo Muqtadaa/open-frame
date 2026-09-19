@@ -104,15 +104,37 @@ export async function createRuntime(options: CreateRuntimeOptions = {}): Promise
     capabilities: options.capabilities ?? allowAllCapabilities,
   })
 
-  const unsubscribe = readOnly
-    ? // A quarantined board is never written back, so there is nothing to detach.
-      () => undefined
+  const autosave = readOnly
+    ? // A quarantined board is never written back, so there is nothing to
+      // detach and nothing to flush. Both are no-ops rather than absent, so
+      // that no caller has to ask which kind of board it is holding.
+      { flush: () => Promise.resolve(), dispose: () => undefined }
     : subscribeAutosave(
         dispatcher,
         store,
         repository,
         options.autosaveDelayMs ?? DEFAULT_AUTOSAVE_DELAY_MS,
       )
+
+  /*
+   * The same window, reached the other way.
+   *
+   * A deliberate exit awaits `flush`; a reload, a closed tab or a swipe back
+   * cannot be awaited by anybody, so this is best effort and says so. `pagehide`
+   * rather than `beforeunload` because the latter disqualifies the page from
+   * the back-forward cache, and this must not make going back slower in order
+   * to make it safer.
+   */
+  const onPageHide = (): void => void autosave.flush()
+  const hasWindow = typeof window !== 'undefined'
+  if (hasWindow) window.addEventListener('pagehide', onPageHide)
+
+  // Detached with the runtime. A listener outliving the board it saves would
+  // write a disposed document over a live one the next time the page went away.
+  const dispose = (): void => {
+    if (hasWindow) window.removeEventListener('pagehide', onPageHide)
+    autosave.dispose()
+  }
 
   const runtime: OpenFrameRuntime = {
     boardId,
@@ -124,7 +146,8 @@ export async function createRuntime(options: CreateRuntimeOptions = {}): Promise
     assets,
     notices,
     readOnly,
-    dispose: unsubscribe,
+    flush: autosave.flush,
+    dispose,
   }
 
   if (!BENCH_TOOLS_ENABLED) return runtime
@@ -168,22 +191,47 @@ function subscribeAutosave(
   store: DocumentStore,
   repository: BoardRepository,
   delayMs: number,
-): () => void {
+): { readonly flush: () => Promise<void>; readonly dispose: () => void } {
   let timer: ReturnType<typeof setTimeout> | undefined
+  /*
+   * The write in flight, so a flush can WAIT for one rather than start a
+   * second. Without it, leaving the board during a slow save resolves before
+   * the save it is supposed to be waiting for.
+   */
+  let inFlight: Promise<void> = Promise.resolve()
+
+  const save = (): Promise<void> => {
+    inFlight = repository.saveBoard(store.getDocument()).catch((error: unknown) => {
+      console.error('[openframe] failed to save board', error)
+    })
+    return inFlight
+  }
 
   const unsubscribe = dispatcher.subscribe(() => {
     if (timer !== undefined) clearTimeout(timer)
     timer = setTimeout(() => {
       timer = undefined
-      void repository.saveBoard(store.getDocument()).catch((error: unknown) => {
-        console.error('[openframe] failed to save board', error)
-      })
+      void save()
     }, delayMs)
   })
 
-  return () => {
-    if (timer !== undefined) clearTimeout(timer)
-    unsubscribe()
+  const flush = async (): Promise<void> => {
+    if (timer !== undefined) {
+      clearTimeout(timer)
+      timer = undefined
+      await save()
+      return
+    }
+    // Nothing pending, but a save may still be on its way to the disk.
+    await inFlight
+  }
+
+  return {
+    flush,
+    dispose: () => {
+      if (timer !== undefined) clearTimeout(timer)
+      unsubscribe()
+    },
   }
 }
 

@@ -723,6 +723,50 @@ body {
   color: var(--of-ink);
 }
 
+/*
+ * The way out, at the head of the line.
+ *
+ * Sized like the other controls on this line and labelled like none of them,
+ * because it is the only one whose job is to be FOUND. Undo is discovered by
+ * reaching for it; an exit that nobody spots is an exit that does not exist,
+ * and this board had none at all until it did.
+ */
+.of-status__exit {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+  height: var(--of-hit-sm);
+  padding: 0 9px 0 7px;
+  color: var(--of-ink-muted);
+  text-decoration: none;
+  border-radius: 6px;
+}
+
+.of-status__exit svg {
+  width: 16px;
+  height: 16px;
+}
+
+.of-status__exit:hover {
+  color: var(--of-ink);
+  background: var(--of-bg);
+}
+
+/* The arrow leads, so it is the arrow that moves. */
+.of-status__exit:hover svg {
+  transform: translateX(-2px);
+}
+
+/*
+ * Mid-flight: the pending save is being written before the page goes. It is
+ * normally too fast to see, and on a slow disk this is the difference between
+ * "nothing happened" and "it is working".
+ */
+.of-status__exit[aria-busy='true'] {
+  opacity: 0.55;
+  pointer-events: none;
+}
+
 .of-status__history {
   display: flex;
   gap: 2px;
@@ -2009,6 +2053,15 @@ textarea.of-input {
     display: none;
   }
 
+  /*
+   * The exit keeps its arrow and loses its words. It is the one control here
+   * with no other route, so it is never the thing that goes — but at this
+   * width the label is what it can afford to give.
+   */
+  .of-status__exit-label {
+    display: none;
+  }
+
   .of-zoom__slider {
     display: none;
   }
@@ -2974,6 +3027,14 @@ textarea.of-input {
     color var(--of-quick) ease-out;
 }
 
+.of-status__exit,
+.of-status__exit svg {
+  transition:
+    background-color var(--of-quick) ease-out,
+    color var(--of-quick) ease-out,
+    transform var(--of-quick) var(--of-ease);
+}
+
 /*
  * A sheet comes OUT of the line it belongs to. The origin is the bottom-left
  * corner because that is where the control that opened it sits — the sheet is
@@ -3025,6 +3086,15 @@ textarea.of-input {
 
   .of-share__link[data-copied='yes'] {
     animation-duration: 900ms;
+  }
+
+  /*
+   * The exit's arrow stops travelling and the colour change carries the hover
+   * on its own. Reduced motion means fewer and gentler, not none — the control
+   * still answers, it just stops moving to do it.
+   */
+  .of-status__exit:hover svg {
+    transform: none;
   }
 }
 

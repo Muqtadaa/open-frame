@@ -173,3 +173,77 @@ describe('runtime composition', () => {
     expect(runtime.notices.join(' ')).toContain('placeholders')
   })
 })
+
+/**
+ * Leaving a board must not cost the last thing done to it.
+ *
+ * Autosave coalesces a burst of commands into one write, which means there is
+ * always a window — 500ms in the shipped build — where the document on screen
+ * is ahead of the document on disk. Nothing closed that window: `dispose`
+ * CLEARS the pending timer, a reload never ran it, and until there was a way
+ * back to the dashboard the only way to hit it was to close the tab within
+ * half a second of typing.
+ *
+ * Rule 7 is about not writing a document you could not read. This is its other
+ * half: having read one, write what the user did to it.
+ */
+describe('leaving a board', () => {
+  it('writes a pending change instead of dropping it', async () => {
+    const repository = new MemoryBoardRepository()
+    // The real delay, not zero: at zero there is no window and the test
+    // passes whether or not anything flushes.
+    const runtime = await createRuntime({ boardId: BOARD, repository, autosaveDelayMs: 500 })
+
+    runtime.dispatcher.dispatch({
+      kind: 'CreateObjects',
+      objects: [{ type: 'sticky', x: 0, y: 0, data: { text: richFromPlain('unsaved') } }],
+    })
+
+    await runtime.flush()
+
+    const loaded = await repository.getBoard(BOARD)
+    expect(loaded.status).toBe('ok')
+    if (loaded.status !== 'ok') return
+    expect(loaded.document.objects.size).toBe(1)
+
+    runtime.dispose()
+  })
+
+  /**
+   * The window is real, and this is what proves the test above is not passing
+   * on a zero-delay coincidence: the same sequence WITHOUT the flush leaves
+   * disk empty.
+   */
+  it('has a window to lose work in, which is why the flush exists', async () => {
+    const repository = new MemoryBoardRepository()
+    const runtime = await createRuntime({ boardId: BOARD, repository, autosaveDelayMs: 500 })
+
+    runtime.dispatcher.dispatch({ kind: 'CreateObjects', objects: [{ type: 'sticky', x: 0, y: 0 }] })
+
+    expect(await repository.getBoard(BOARD)).toMatchObject({ status: 'not-found' })
+
+    runtime.dispose()
+  })
+
+  /** A quarantined board is never written back — not even by an explicit flush. */
+  it('refuses to flush a board that could not be read', async () => {
+    const repository = new MemoryBoardRepository()
+    repository.seedRaw(BOARD, {
+      format: 'openframe.board',
+      schemaVersion: 1,
+      savedAt: 0,
+      board: { junk: true },
+    })
+
+    const runtime = await createRuntime({ boardId: BOARD, repository, autosaveDelayMs: 500 })
+    expect(runtime.readOnly).toBe(true)
+
+    await runtime.flush()
+
+    // Still the corrupt original, not an empty board written over it.
+    const loaded = await repository.getBoard(BOARD)
+    expect(loaded.status).toBe('quarantined')
+
+    runtime.dispose()
+  })
+})

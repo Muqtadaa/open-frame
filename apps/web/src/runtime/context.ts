@@ -56,6 +56,16 @@ export interface OpenFrameRuntime {
   readonly readOnly: boolean
   /** Present only in development and benchmark builds. */
   readonly devTools?: OpenFrameDevTools
+  /**
+   * Writes anything autosave is still holding, and resolves when it is done.
+   *
+   * Autosave coalesces a burst of commands into one write, so the document on
+   * screen is routinely ahead of the document on disk — by 500ms in the
+   * shipped build. Anything that takes the user off this board awaits this
+   * first. A read-only board resolves immediately having written nothing,
+   * because a document we could not fully read is never written back.
+   */
+  flush(): Promise<void>
   dispose(): void
 }
 

@@ -277,6 +277,21 @@ export function PeopleIcon({ className }: IconProps) {
   )
 }
 
+/**
+ * Back to the board list.
+ *
+ * An arrow rather than a house: this world has no home, it has an index, and
+ * an arrow says "the way you came" without claiming the front door is a
+ * dwelling. Drawn on the same 24x24 grid as everything else here.
+ */
+export function BackIcon({ className }: IconProps) {
+  return (
+    <svg {...base} className={className}>
+      <path d="M19 12H5m0 0l6-6m-6 6l6 6" />
+    </svg>
+  )
+}
+
 export function GridIcon({ className }: IconProps) {
   return (
     <svg {...base} className={className}>
