@@ -6,6 +6,7 @@ import {
   type BoardSummary,
 } from '@openframe/core'
 
+import { localOpenedAt, localPins } from './board-prefs.js'
 import { ACCOUNTS_ENABLED } from './supabase-config.js'
 import { listMyBoards, type RemoteBoard } from './remote-boards.js'
 import { newLocalBoardId } from './route.js'
@@ -80,10 +81,34 @@ export interface ListedBoard {
   readonly role: RemoteBoard['role'] | null
   /** The key that opens it, for a shared board that has one. */
   readonly accessKey: string | null
+  readonly pinned: boolean
+  /** When YOU last opened it. What the list is ordered by. */
+  readonly openedAt: number
 }
 
 /**
- * Everything this person can open, newest first.
+ * Deleting removes the board from everybody; leaving removes you from it.
+ *
+ * Two verbs that look alike in a list and must never be one control. Only an
+ * owner can delete; only somebody who is NOT the owner can leave; a local
+ * board has neither, because there is nobody else involved — it is just gone.
+ */
+export function canDelete(board: ListedBoard): boolean {
+  return !board.shared || board.role === 'owner'
+}
+
+export function canLeave(board: ListedBoard): boolean {
+  return board.shared && board.role !== 'owner'
+}
+
+/**
+ * Everything this person can open: pinned first, then in YOUR order.
+ *
+ * It used to sort on `updatedAt`, which is when a board last CHANGED. On a
+ * shared board that is somebody else's typing, so a collaborator working at
+ * midnight rearranged your list while you slept. "Edited 4 minutes ago" is
+ * still shown, because it is worth knowing; it is just no longer what decides
+ * where a row sits.
  *
  * A board that is BOTH local and shared appears once, as the shared one. This
  * is no longer how sharing behaves — it moves a board now, so there is nothing
@@ -104,6 +129,10 @@ export async function listAllBoards(
   const remote = signedIn && ACCOUNTS_ENABLED ? await listMyBoards() : []
 
   const shared = new Set(remote.map((board) => board.boardId))
+  // A local board keeps its preferences here, because it exists here and
+  // nowhere else. A signed-in person's travel with them, in the database.
+  const pins = localPins()
+  const opened = localOpenedAt()
 
   const listed: ListedBoard[] = [
     ...remote.map((board) => ({
@@ -113,6 +142,8 @@ export async function listAllBoards(
       shared: true,
       role: board.role,
       accessKey: board.accessKey,
+      pinned: board.pinned,
+      openedAt: board.openedAt,
     })),
     ...local
       .filter((board) => !shared.has(board.id))
@@ -123,8 +154,18 @@ export async function listAllBoards(
         shared: false,
         role: null,
         accessKey: null,
+        pinned: pins.has(board.id),
+        // Never opened on this browser falls back to when it last changed, so
+        // a board does not sink out of sight for having been made rather than
+        // revisited.
+        openedAt: opened[board.id] ?? board.updatedAt,
       })),
   ]
 
-  return listed.sort((a, b) => b.updatedAt - a.updatedAt)
+  return listed.sort((a, b) => {
+    // Pinned first, and only then recency — a pin that lost to a fresh edit
+    // would not be a pin.
+    if (a.pinned !== b.pinned) return a.pinned ? -1 : 1
+    return b.openedAt - a.openedAt
+  })
 }

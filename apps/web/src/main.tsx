@@ -8,6 +8,8 @@ import { createBoardCapabilities } from './app/board-capabilities.js'
 import { COLLAB_ENABLED } from './app/collab-config.js'
 import { startCollaboration } from './app/collaboration.js'
 import { createRuntime } from './app/composition-root.js'
+import { markLocalOpened } from './app/board-prefs.js'
+import { touchBoardOpened } from './app/remote-boards.js'
 import { readRoute } from './app/route.js'
 import { dismissSplash, failSplash } from './app/splash.js'
 import { restoreTheme } from './app/theme.js'
@@ -82,6 +84,24 @@ if (route.kind === 'home') {
   collaboration?.onRole((role) => {
     capabilities.narrowTo(role)
   })
+
+  /*
+   * "You opened this", recorded and never waited for.
+   *
+   * It is what the board list is ordered by, and it is deliberately not
+   * `updated_at`: opening is not editing, and a list ordered by what other
+   * people CHANGED rearranges itself while you are looking away.
+   *
+   * Fire and forget on purpose. The board is already open by the time this
+   * runs, and a slow round trip must not hold it up — a failure costs an
+   * ordering, which is the smallest thing here worth failing over.
+   */
+  markLocalOpened(route.boardId)
+  if (route.shared) {
+    void touchBoardOpened(route.boardId).catch(() => {
+      // An ordering that could not be recorded is not worth a console line.
+    })
+  }
 
   // Exposed for the E2E suite to assert on persisted state without reaching into
   // React internals. Debug surface only — never a mutation path.

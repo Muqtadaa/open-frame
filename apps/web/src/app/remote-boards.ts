@@ -6,9 +6,13 @@
  * obeying it painless rather than a nuisance.
  */
 export {
+  deleteRemoteBoard,
   joinBoard,
+  leaveRemoteBoard,
   listMyBoards,
   recordSharedBoard,
   renameRemoteBoard,
+  setBoardPinned,
+  touchBoardOpened,
   type RemoteBoard,
 } from '../adapters/supabase/boards.js'

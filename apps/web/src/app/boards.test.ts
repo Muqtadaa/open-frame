@@ -1,7 +1,15 @@
 import { asBoardId, type BoardId, type BoardRepository, type BoardSummary } from '@openframe/core'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
-import { createLocalBoard, describeWhen, listAllBoards, listLocalBoards } from './boards.js'
+import {
+  canDelete,
+  canLeave,
+  createLocalBoard,
+  describeWhen,
+  listAllBoards,
+  listLocalBoards,
+  type ListedBoard,
+} from './boards.js'
 import { listMyBoards, type RemoteBoard } from './remote-boards.js'
 
 const summary = (id: string, updatedAt: number): BoardSummary => ({
@@ -100,12 +108,23 @@ vi.mock('./remote-boards.js', () => ({
 
 const remote = vi.mocked(listMyBoards)
 
-const sharedBoard = (id: string, title: string, updatedAt: number, role: RemoteBoard['role'] = 'owner'): RemoteBoard => ({
+const sharedBoard = (
+  id: string,
+  title: string,
+  updatedAt: number,
+  role: RemoteBoard['role'] = 'owner',
+  extra: Partial<RemoteBoard> = {},
+): RemoteBoard => ({
   boardId: asBoardId(id),
   title,
   role,
   accessKey: 'a'.repeat(32),
   updatedAt,
+  pinned: false,
+  // Defaults to when it changed, the same fallback the database applies to a
+  // board this account has never opened.
+  openedAt: updatedAt,
+  ...extra,
 })
 
 describe('everything you can open', () => {
@@ -125,7 +144,7 @@ describe('everything you can open', () => {
     expect(listed.map((board) => board.shared)).toEqual([false])
   })
 
-  it('puts local and shared boards in one list, newest first', async () => {
+  it('puts local and shared boards in one list, most recently opened first', async () => {
     const { repository } = fakeRepository([summary('board_local', 1_000)])
     remote.mockResolvedValue([sharedBoard('brd_abcdefgh12345678', 'Shared', 3_000)])
 
@@ -173,5 +192,115 @@ describe('everything you can open', () => {
     const listed = await listAllBoards(repository, true)
 
     expect(listed.map((board) => board.boardId)).toEqual([asBoardId('board_one')])
+  })
+})
+
+/**
+ * The order of the list, which used to be the BOARDS' order rather than yours.
+ *
+ * `updatedAt` is when a board last CHANGED. On a shared board that is somebody
+ * else's typing, so a collaborator working at midnight rearranged your list
+ * while you slept. What a list of boards is for is "what was I doing", and
+ * that is a fact about the reader.
+ */
+describe('the order of a board list', () => {
+  beforeEach(() => {
+    remote.mockReset()
+    remote.mockResolvedValue([])
+  })
+
+  it('puts a pinned board above a more recent unpinned one', async () => {
+    const { repository } = fakeRepository([])
+    remote.mockResolvedValue([
+      sharedBoard('brd_aaaaaaaa11111111', 'Fresh', 9_000),
+      sharedBoard('brd_bbbbbbbb22222222', 'Pinned', 1_000, 'owner', {
+        pinned: true,
+        openedAt: 1_000,
+      }),
+    ])
+
+    const listed = await listAllBoards(repository, true)
+
+    // A pin that loses to a fresh edit is not a pin.
+    expect(listed.map((board) => board.title)).toEqual(['Pinned', 'Fresh'])
+  })
+
+  /**
+   * The one that would pass with the feature deleted if the fixtures agreed.
+   * `openedAt` and `updatedAt` are deliberately in OPPOSITE orders here, so
+   * sorting on the wrong one is visible.
+   */
+  it('orders by when YOU opened it, not by when it last changed', async () => {
+    const { repository } = fakeRepository([])
+    remote.mockResolvedValue([
+      // Changed most recently, opened by you longest ago.
+      sharedBoard('brd_aaaaaaaa11111111', 'Someone else was busy', 9_000, 'editor', {
+        openedAt: 1_000,
+      }),
+      // Barely touched, but it is what you had open.
+      sharedBoard('brd_bbbbbbbb22222222', 'What you were doing', 2_000, 'owner', {
+        openedAt: 8_000,
+      }),
+    ])
+
+    const listed = await listAllBoards(repository, true)
+
+    expect(listed.map((board) => board.title)).toEqual([
+      'What you were doing',
+      'Someone else was busy',
+    ])
+  })
+
+  it('still shows how long ago it was EDITED, which is a different fact', async () => {
+    const { repository } = fakeRepository([])
+    remote.mockResolvedValue([
+      sharedBoard('brd_aaaaaaaa11111111', 'A board', 5_000, 'owner', { openedAt: 1_000 }),
+    ])
+
+    const listed = await listAllBoards(repository, true)
+
+    // Demoted from the sort key, not removed: it is worth knowing.
+    expect(listed[0]?.updatedAt).toBe(5_000)
+    expect(listed[0]?.openedAt).toBe(1_000)
+  })
+})
+
+/**
+ * Two verbs that look alike in a list and must never be one control.
+ */
+describe('what you may do to a board', () => {
+  const listed = (over: Partial<ListedBoard>): ListedBoard => ({
+    boardId: asBoardId('brd_aaaaaaaa11111111'),
+    title: 'A board',
+    updatedAt: 0,
+    shared: true,
+    role: 'owner',
+    accessKey: null,
+    pinned: false,
+    openedAt: 0,
+    ...over,
+  })
+
+  it('lets an owner delete and not leave', () => {
+    const board = listed({ role: 'owner' })
+    expect(canDelete(board)).toBe(true)
+    // There would be nobody left to own it; the board would be unreachable
+    // rather than deleted.
+    expect(canLeave(board)).toBe(false)
+  })
+
+  it('lets a member leave and not delete', () => {
+    for (const role of ['editor', 'viewer'] as const) {
+      const board = listed({ role })
+      expect(canDelete(board)).toBe(false)
+      expect(canLeave(board)).toBe(true)
+    }
+  })
+
+  /** Nobody else is involved, so there is nothing to leave and nothing to warn about. */
+  it('lets a local board be deleted, with nothing to leave', () => {
+    const board = listed({ shared: false, role: null })
+    expect(canDelete(board)).toBe(true)
+    expect(canLeave(board)).toBe(false)
   })
 })

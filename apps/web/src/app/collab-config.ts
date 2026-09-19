@@ -112,3 +112,8 @@ export function roomSocketUrl(boardId: BoardId, key?: string | null): string {
 export function claimUrl(boardId: BoardId): string {
   return `${httpBase()}/room/${boardId}/claim`
 }
+
+/** Where a board's room is destroyed, taking every link to it with it. */
+export function destroyUrl(boardId: BoardId): string {
+  return `${httpBase()}/room/${boardId}/destroy`
+}

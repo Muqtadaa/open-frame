@@ -292,6 +292,41 @@ export function BackIcon({ className }: IconProps) {
   )
 }
 
+/**
+ * A pin, as a drawing pin seen from the side.
+ *
+ * Filled when pressed rather than swapped for a second glyph: a toggle that
+ * changes shape makes the person compare two pictures to read one state.
+ */
+export function PinIcon({ className, pressed }: IconProps & { pressed?: boolean }) {
+  return (
+    <svg {...base} className={className} fill={pressed === true ? 'currentColor' : 'none'}>
+      <path d="M9 3h6l-1 6 3 3v2H7v-2l3-3-1-6z" />
+      <path d="M12 14v7" fill="none" />
+    </svg>
+  )
+}
+
+/** Renaming: a pencil over a line, the same gesture as editing a label. */
+export function RenameIcon({ className }: IconProps) {
+  return (
+    <svg {...base} className={className}>
+      <path d="M4 20h4L19 9a2.1 2.1 0 00-3-3L5 17v3z" />
+      <path d="M14 6l4 4" />
+    </svg>
+  )
+}
+
+/** Leaving somebody else's board: a door with an arrow out of it. */
+export function LeaveIcon({ className }: IconProps) {
+  return (
+    <svg {...base} className={className}>
+      <path d="M14 4h4a1 1 0 011 1v14a1 1 0 01-1 1h-4" />
+      <path d="M10 8l-4 4 4 4M6 12h9" />
+    </svg>
+  )
+}
+
 export function GridIcon({ className }: IconProps) {
   return (
     <svg {...base} className={className}>

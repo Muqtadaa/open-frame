@@ -1,13 +1,13 @@
-import { useEffect, useState, type CSSProperties } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import type { BoardRepository } from '@openframe/core'
 
-import { createLocalBoard, describeWhen, listAllBoards, type ListedBoard } from '../app/boards.js'
+import { createLocalBoard, listAllBoards, type ListedBoard } from '../app/boards.js'
 import { ACCOUNTS_ENABLED, signOut } from '../app/identity.js'
 import { boardHref } from '../app/route.js'
-import { shareLink } from '../app/collab-config.js'
 import { useIdentity } from '../hooks/use-identity.js'
 import { hueVar, initialOf } from '../scene/presence.js'
 import { AccountForm } from './AccountForm.js'
+import { BoardRow } from './BoardRow.js'
 // Imported rather than referenced by path: rule 12 keeps assets out of
 // `public/`, so the bundler is what puts this in the build and fingerprints it.
 import logoMark from '../assets/logo-mark-180.png'
@@ -37,6 +37,14 @@ export function Home({ repository }: { readonly repository: BoardRepository }) {
     readonly readAt: number
   } | null>(null)
   const [starting, setStarting] = useState(false)
+  /*
+   * Bumped by a row that changed something, which re-runs the read below.
+   * A counter rather than each row patching the list it lives in: renaming,
+   * pinning and deleting all reorder it, and a row is the wrong place to hold
+   * an opinion about where it now belongs.
+   */
+  const [revision, setRevision] = useState(0)
+  const refresh = useCallback(() => setRevision((n) => n + 1), [])
 
   /*
    * Re-read when the identity settles, not only on mount: the session is
@@ -51,7 +59,7 @@ export function Home({ repository }: { readonly repository: BoardRepository }) {
     return () => {
       live = false
     }
-  }, [repository, identity])
+  }, [repository, identity, revision])
 
   const start = (): void => {
     setStarting(true)
@@ -120,33 +128,14 @@ export function Home({ repository }: { readonly repository: BoardRepository }) {
             ) : (
               <ul className="of-home__list" data-testid="home-boards">
                 {listing.boards.map((board, index) => (
-                  <li
+                  <BoardRow
                     key={board.boardId}
-                    /* Capped: an eleventh row arriving eleven beats late is a
-                       list that feels slow, which is the opposite of the point. */
-                    style={{ '--of-row': Math.min(index, 5) } as CSSProperties}
-                  >
-                    <a
-                      className="of-home__board"
-                      href={
-                        board.shared
-                          ? // The key travels with the link: a claimed room
-                            // refuses the board id on its own.
-                            shareLink(board.boardId, '', board.accessKey)
-                          : boardHref(board.boardId, false)
-                      }
-                    >
-                      <span className="of-home__board-title">{board.title}</span>
-                      {board.shared && (
-                        <span className="of-home__board-tag">
-                          {board.role === 'viewer' ? 'view only' : 'shared'}
-                        </span>
-                      )}
-                      <span className="of-home__board-when">
-                        {describeWhen(board.updatedAt, listing.readAt)}
-                      </span>
-                    </a>
-                  </li>
+                    board={board}
+                    index={index}
+                    readAt={listing.readAt}
+                    repository={repository}
+                    onChanged={refresh}
+                  />
                 ))}
               </ul>
             )}

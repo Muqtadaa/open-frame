@@ -2718,6 +2718,203 @@ textarea.of-input {
 }
 
 /*
+ * A ledger row: the mark in the margin, the entry, the things you can do to it.
+ *
+ * The link covers the ENTRY and nothing else. A button inside an anchor is
+ * invalid, and the browsers that tolerate it disagree about which one owns the
+ * click — so the pin and the row actions sit beside the anchor rather than
+ * inside it, and the anchor still fills everything between them.
+ */
+.of-home__row-main {
+  display: flex;
+  gap: 4px;
+  align-items: center;
+  padding-right: 6px;
+}
+
+.of-home__row-main .of-home__board {
+  flex: 1;
+  min-width: 0;
+}
+
+/*
+ * The margin mark. Always present rather than revealed on hover: a pinned
+ * board has to READ as pinned when nobody is pointing at it, and a control
+ * that only exists under the cursor cannot be found on a touch screen.
+ */
+.of-home__pin {
+  display: grid;
+  flex: none;
+  place-items: center;
+  width: var(--of-hit-sm);
+  height: var(--of-hit-sm);
+  color: var(--of-ink-muted);
+  background: none;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  opacity: 0.35;
+}
+
+.of-home__pin svg {
+  width: 16px;
+  height: 16px;
+}
+
+.of-home__pin:hover,
+.of-home__pin:focus-visible {
+  opacity: 1;
+  background: var(--of-bg);
+}
+
+/* Pinned reads as pinned without the cursor anywhere near it. */
+.of-home__pin[aria-pressed='true'] {
+  color: var(--of-accent);
+  opacity: 1;
+}
+
+/*
+ * Revealed by hover or focus, and never by hover ALONE — `:focus-within` is
+ * what keeps these reachable by keyboard, and leaving it out is how a control
+ * becomes mouse-only without anybody noticing.
+ */
+.of-home__row-actions {
+  display: flex;
+  flex: none;
+  gap: 2px;
+  opacity: 0;
+}
+
+.of-home__row-main:hover .of-home__row-actions,
+.of-home__row-main:focus-within .of-home__row-actions {
+  opacity: 1;
+}
+
+/* On a touch screen there is no hover to reveal anything, so nothing hides. */
+@media (hover: none) {
+  .of-home__row-actions {
+    opacity: 1;
+  }
+}
+
+.of-home__row-action {
+  display: grid;
+  place-items: center;
+  width: var(--of-hit-sm);
+  height: var(--of-hit-sm);
+  color: var(--of-ink-muted);
+  background: none;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+}
+
+.of-home__row-action svg {
+  width: 16px;
+  height: 16px;
+}
+
+.of-home__row-action:hover {
+  color: var(--of-ink);
+  background: var(--of-bg);
+}
+
+/*
+ * The one correction red this world reserves for destructive meaning, and it
+ * appears on hover rather than at rest: a row of permanently red buttons reads
+ * as a list of warnings rather than a list of boards.
+ */
+.of-home__row-action--destructive:hover {
+  color: var(--of-danger);
+  background: var(--of-danger-wash);
+}
+
+.of-home__rename {
+  flex: 1;
+  min-width: 0;
+  height: var(--of-hit);
+  padding: 0 8px;
+  font-family: inherit;
+  font-size: 15px;
+  color: var(--of-ink);
+  background: var(--of-accent-soft);
+  border: none;
+  border-radius: 3px;
+  outline: 1px solid var(--of-accent);
+}
+
+/*
+ * Confirmation in the row, not in a dialog.
+ *
+ * The craft floor bans a modal for anything needing neither protected focus
+ * nor interruption, and a confirmation that appears beside the board it names
+ * is a better one anyway: nobody has to remember which board the dialog was
+ * about.
+ */
+.of-home__confirm {
+  display: flex;
+  gap: var(--of-step);
+  align-items: center;
+  margin: 0;
+  padding: 8px 8px 12px 40px;
+  font-size: 13px;
+  color: var(--of-ink);
+}
+
+.of-home__confirm-what {
+  flex: 1;
+  min-width: 0;
+}
+
+.of-home__confirm-yes,
+.of-home__confirm-no {
+  flex: none;
+  height: var(--of-hit-sm);
+  padding: 0 14px;
+  font-family: inherit;
+  font-size: 13px;
+  border-radius: 4px;
+  cursor: pointer;
+}
+
+/*
+ * The destructive answer, stated in the one red this world reserves for it.
+ * Set on the page rather than as filled red-on-white: `design-tokens.test.ts`
+ * measures every pair against its floor, and a button invented here with a
+ * hardcoded white would be a colour the test cannot see.
+ */
+.of-home__confirm-yes {
+  color: var(--of-danger);
+  background: var(--of-danger-wash);
+  border: 1px solid var(--of-danger-edge);
+}
+
+.of-home__confirm-yes:hover {
+  background: var(--of-page);
+  border-color: var(--of-danger);
+}
+
+/* Keeping the board is the safe answer, so it is the quiet one — but it is a
+   real button, not a link: both answers are the same kind of act. */
+.of-home__confirm-no {
+  color: var(--of-ink);
+  background: var(--of-page);
+  border: 1px solid var(--of-panel-border);
+}
+
+.of-home__row-note,
+.of-home__row-problem {
+  margin: 0;
+  padding: 4px 8px 10px 40px;
+  font-size: 13px;
+  color: var(--of-ink-muted);
+}
+
+.of-home__row-problem {
+  color: var(--of-danger);
+}
+
+/*
  * A grid, not a flex row with `space-between`.
  *
  * Three rows of different title lengths put their tags at three different

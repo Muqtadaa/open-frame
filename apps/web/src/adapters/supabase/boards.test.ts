@@ -50,7 +50,34 @@ describe('listing the boards behind an account', () => {
       role: 'owner',
       accessKey: 'a'.repeat(32),
       updatedAt: Date.parse('2026-09-19T04:00:00Z'),
+      pinned: false,
+      // A board never opened on this account falls back to when it last
+      // changed, so it does not sink out of sight for not having been revisited.
+      openedAt: Date.parse('2026-09-19T04:00:00Z'),
     })
+  })
+
+  it('reads a pinned board and the time you last opened it', async () => {
+    answering({
+      data: [{ ...goodRow, pinned: true, opened_at: '2026-09-19T06:30:00Z' }],
+    })
+
+    const [board] = await listMyBoards()
+
+    expect(board?.pinned).toBe(true)
+    expect(board?.openedAt).toBe(Date.parse('2026-09-19T06:30:00Z'))
+  })
+
+  /**
+   * A row from a version that does not send the column must not put a board at
+   * the top of somebody's list. Anything but a true is not pinned.
+   */
+  it('treats anything but a true as unpinned', async () => {
+    answering({ data: [{ ...goodRow, pinned: 'yes' }, { ...goodRow, id: 'brd_bbbbbbbb22222222' }] })
+
+    const boards = await listMyBoards()
+
+    expect(boards.map((board) => board.pinned)).toEqual([false, false])
   })
 
   it('drops a row it cannot read rather than rendering it', async () => {

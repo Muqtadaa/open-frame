@@ -24,6 +24,16 @@ export interface RemoteBoard {
   /** The key that opens it for that role. `null` for a board shared before roles. */
   readonly accessKey: string | null
   readonly updatedAt: number
+  /** Whether YOU pinned it. Nobody else's pin is visible, or any of their business. */
+  readonly pinned: boolean
+  /**
+   * When YOU last opened it, which is what the list is ordered by.
+   *
+   * Not `updatedAt`: that is when the board last CHANGED, which on a shared
+   * board is somebody else's typing — so ordering by it let a collaborator
+   * working at midnight rearrange your list while you slept.
+   */
+  readonly openedAt: number
 }
 
 const ROLES = new Set(['owner', 'editor', 'viewer'])
@@ -45,12 +55,22 @@ function readBoard(row: unknown): RemoteBoard | null {
    * the compiler carries them. Every field is `unknown` — that is the point:
    * this is what arrived, not what was promised.
    */
-  const { id, title, role, access_key: key, updated_at: updated } = row as {
+  const {
+    id,
+    title,
+    role,
+    access_key: key,
+    updated_at: updated,
+    pinned,
+    opened_at: opened,
+  } = row as {
     id?: unknown
     title?: unknown
     role?: unknown
     access_key?: unknown
     updated_at?: unknown
+    pinned?: unknown
+    opened_at?: unknown
   }
 
   if (typeof id !== 'string' || !BOARD_ID.test(id)) return null
@@ -58,13 +78,21 @@ function readBoard(row: unknown): RemoteBoard | null {
   if (typeof role !== 'string' || !ROLES.has(role)) return null
 
   const at = typeof updated === 'string' ? Date.parse(updated) : Number.NaN
+  const seen = typeof opened === 'string' ? Date.parse(opened) : Number.NaN
+  const updatedAt = Number.isFinite(at) ? at : 0
 
   return {
     boardId: asBoardId(id),
     title,
     role: role as RemoteBoard['role'],
     accessKey: typeof key === 'string' && ACCESS_KEY.test(key) ? key : null,
-    updatedAt: Number.isFinite(at) ? at : 0,
+    updatedAt,
+    // Anything but a true is not pinned. A row from a version that does not
+    // send the column must not put a board at the top of the list.
+    pinned: pinned === true,
+    // Falls back to when the board last changed, which is what the database
+    // does too — a board you have never opened should not sink out of sight.
+    openedAt: Number.isFinite(seen) ? seen : updatedAt,
   }
 }
 
@@ -150,6 +178,72 @@ export async function joinBoard(
   return typeof response.data === 'string' && ROLES.has(response.data)
     ? (response.data as RemoteBoard['role'])
     : null
+}
+
+/**
+ * Pinning, and the order the list is read in.
+ *
+ * Both are best effort and neither throws. They are preferences about how a
+ * list is arranged; nothing about the board itself depends on them, and a
+ * database that cannot be reached must cost an ordering rather than the front
+ * door.
+ */
+export async function setBoardPinned(boardId: BoardId, pinned: boolean): Promise<boolean> {
+  const client = supabaseClient()
+  if (client === null) return false
+
+  const response = (await client.rpc('set_board_pinned', {
+    p_id: boardId,
+    p_pinned: pinned,
+  })) as { error: unknown }
+  return response.error === null
+}
+
+/**
+ * Records that you opened a board.
+ *
+ * Fired on arrival and never awaited by anything the person is waiting for:
+ * the board is already open by then, and a slow round trip must not hold it up.
+ */
+export async function touchBoardOpened(boardId: BoardId): Promise<void> {
+  const client = supabaseClient()
+  if (client === null) return
+  await client.rpc('touch_board_opened', { p_id: boardId })
+}
+
+/**
+ * Deleting a board, and leaving one: two verbs that look alike and are not.
+ *
+ * Delete removes the board from everybody and only its owner may do it. Leave
+ * removes YOU from a board that stays exactly as it was. An interface that
+ * offered one control for both would eventually destroy somebody's work on
+ * behalf of a person who meant to tidy their own list.
+ *
+ * Neither touches the room. Destroying the Durable Object's storage is a
+ * separate call against the Worker, made with the editor key, because that is
+ * the credential the room understands and this database is not where it is
+ * spent.
+ */
+export async function deleteRemoteBoard(boardId: BoardId): Promise<boolean> {
+  const client = supabaseClient()
+  if (client === null) return false
+
+  const response = (await client.rpc('delete_board', { p_id: boardId })) as {
+    data: unknown
+    error: unknown
+  }
+  return response.error === null && response.data === true
+}
+
+export async function leaveRemoteBoard(boardId: BoardId): Promise<boolean> {
+  const client = supabaseClient()
+  if (client === null) return false
+
+  const response = (await client.rpc('leave_board', { p_id: boardId })) as {
+    data: unknown
+    error: unknown
+  }
+  return response.error === null && response.data === true
 }
 
 /**
