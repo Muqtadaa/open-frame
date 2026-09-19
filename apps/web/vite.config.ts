@@ -60,10 +60,29 @@ function benchFixtures(enabled: boolean): Plugin {
   }
 }
 
+/**
+ * Packages a dependency imports that we resolve from the root instead.
+ *
+ * `@supabase/*` is compiled with `importHelpers`, so every one of its modules
+ * imports `tslib` — a package this repository never mentions. Whether that
+ * import resolves is a property of the INSTALLER, not of the code: pnpm links
+ * it into each dependent's private `node_modules`, and a build that walks up
+ * from the importer finds it there. Vercel's `node_modules` did not have those
+ * links, and the build failed on an import no source file of ours writes.
+ *
+ * Deduping moves the lookup to the project root, where `tslib` is a declared
+ * dependency of this package and therefore present however the host installs.
+ * Both halves are load-bearing and were checked one at a time: with the
+ * dependency but no dedupe the build fails, and with the dedupe but no
+ * dependency it fails identically. `deploy-config.test.ts` keeps them together.
+ */
+const DEDUPE = ['tslib']
+
 const benchEnabled = process.env['OPENFRAME_BENCH'] === '1'
 
 export default defineConfig({
   plugins: [react(), benchFixtures(benchEnabled)],
+  resolve: { dedupe: DEDUPE },
   /*
    * A literal, not an env lookup. `define` is textual replacement, so the guard
    * folds to `false || false` in a production build and the bundler removes the
