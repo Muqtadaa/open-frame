@@ -151,80 +151,89 @@ Comments, mentions, sharing links, workspaces.
 
 ## Pick up here
 
-**Current position: Stages 1 and 2 are built. Nothing is deployed yet.**
+**Current position: Stages 1 and 2 are done and deployed.** Shared boards are
+live. `openframe-rooms.muqdara95.workers.dev` holds one Durable Object per
+board; the web app joins one when it is opened with `?room=<id>`.
 
-Two browser windows on the same link edit the same board, against a real
-Durable Object, proved by `pnpm test:rooms` rather than by hand. Undo reverts
-YOUR change and not the most recent one, a late joiner receives the whole board,
-and a board opened without a link joins no room at all.
-
-Built and on the branch:
+Built, tested and on `main`:
 
 - **`packages/collab`** — patch translation both ways, `CollabSession`, merge
-  repair through the command layer, the wire protocol, `BoardRoom`, and the
-  client `RoomProvider` with backoff and reconnection. 39 tests, none of which
-  opens a socket.
+  repair, the wire protocol, `BoardRoom`, and the client `RoomProvider` with
+  backoff. 39 tests, none of which opens a socket.
 - **`apps/rooms`** — the Worker and the Durable Object. Holds sockets, storage
   and the fact that any of this is Cloudflare; decides nothing.
-- **The web app** — `?room=<id>` opens a shared board, a Share control copies
-  the current board to a new unguessable id, and the status line says whether
-  the room is reachable and who is in it.
+- **The web app** — Share copies the board to a new unguessable id; the record
+  line says whether the room is reachable and shows a face per person.
+- **Presence** — named cursors, dashed outlines for what others have selected,
+  a solid one for what they have OPEN, and an advisory lock on inline editing.
 
-Three rules keep the shape, and each has been broken once to watch it fail:
-`yjs-lives-only-in-collab`, `cloudflare-lives-only-in-rooms`, and the boundary
-that means the web app never names a Yjs type.
+Proved by `pnpm test:rooms`: two windows edit one board, undo reverts YOUR
+change, a late joiner gets everything, and a board without a link joins no room.
 
-**What deploying needs, and it is two settings:**
+---
 
-1. **Merge.** `.github/workflows/deploy-rooms.yml` runs `wrangler deploy` on
-   push to `main`, path-filtered so a stylesheet change cannot restart rooms
-   people are editing in. It can also be run from the Actions tab. Nothing
-   needs creating in Cloudflare first — the Worker is created by its first
-   deploy, and the account already has a `workers.dev` subdomain.
-2. **`VITE_COLLAB_URL` in Vercel**, once the Worker is up:
-   `wss://openframe-rooms.<your-subdomain>.workers.dev`. Without it the build
-   simply does not collaborate — the Share control is absent rather than
-   broken — so the order is safe either way.
+## Stage 3 — identity
 
-Add `CLOUDFLARE_ACCOUNT_ID` as a repository *variable* only if the deploy
-complains that the token can see more than one account.
+**Chosen as the next stage.** An account is for OWNERSHIP and board lists, not
+for getting into a board: guests keep working exactly as they do now, and
+signing in adds a name, a board list and the ability to own something.
 
-**Known and deliberate, in what is built:**
+### The open decision, and it blocks the schema
 
-- **A board is published into its room exactly once per browser.** After that
-  the room is the truth. A `Y.Doc` built fresh from IndexedDB carries no
-  deletion history, so re-publishing local state would resurrect everything
-  anyone else had deleted. Persisting the CRDT itself removes the asymmetry and
-  is the first thing Stage 3 should do.
-- **No presence cursors yet.** The channel is there and carries a guest name
-  and colour; drawing other people's pointers is the next visible step.
-- **Remote objects are not schema-validated** as they arrive, and a read-only
-  participant would stop receiving changes rather than watching. Both were
-  deferred deliberately and both belong with authorization in Stage 3.
-- **Link-only, still.** The per-board password and the guest model are recorded
-  above and not built.
+**Clerk or Supabase Auth.** The database is already Supabase, whose auth is free
+on the same project, shares the user id with every row, and needs no second
+integration. Clerk is the better standalone product and the more portable one.
+The cost of the choice is mostly in the Worker: whichever issues the token is
+the one whose keys the room has to verify.
 
-**Stage 3, in order:** persist the CRDT locally, then presence cursors, then
-identity — Supabase, the per-board password, and server-side authorization
-through the existing `Capabilities` interface.
+### What it involves
 
-**Known traps, from the decisions already taken:**
+1. **A Supabase project** (yours to create; free tier). Schema is small:
+   `profiles`, `boards` (id, owner, title, timestamps), `board_members`
+   (board, user, role). Row-level security from the start — a table without it
+   is readable by anyone holding the anon key.
+2. **Sign in, and staying signed out.** Anonymous use must not regress: the
+   board you have today keeps working with no account and no network, which is
+   PRODUCT.md's fourth principle and the thing a "sign in to continue" wall
+   would quietly repeal.
+3. **A board list.** The first second surface this app has had. Two routes is
+   still below the threshold that earns a router — a query parameter and a
+   conditional, and the deferred-decisions table stays as it is.
+4. **Server-side authorization.** The Worker verifies the token and resolves
+   membership BEFORE the room accepts the socket, which is why the check lives
+   in the Worker rather than the Durable Object. The existing `Capabilities`
+   interface is what it fills in; the client check stays a UX affordance.
+5. **Presence gets real names.** A signed-in person shows their name and avatar;
+   everyone else stays a guest with a creature name. The presence contract does
+   not change — a name has never been an authorization and still is not.
 
-- The sync handshake is symmetric. A client that only ANSWERS the room's step 1
-  sits on an empty board forever; each step 1 asks for one direction of the
-  diff. Written onto `BoardRoom.join`, because two tests failed exactly that way.
-- Yjs updates cannot be concatenated. A snapshot and the updates after it are
-  replayed one at a time — joining them into one buffer silently drops
-  everything after the first, which is a board losing every edit since its last
-  compaction, in production only.
-- The observer must ignore what it wrote ITSELF, never "accept what is tagged
-  remote": a remote change can arrive with any origin at all.
-- A drag writes nothing until it commits, so a live drag is presence, not
-  history. It is also why one storage write is one user action rather than one
-  mouse move, which is what keeps the free tier's 100k writes/day comfortable.
-- Text is a list of spans shaped like a `Y.Text` delta
-  ([ADR 0012](../adr/0012-rich-text-as-spans.md)); a relation is an object and
-  merges as an `add` ([ADR 0011](../adr/0011-relations-as-objects.md)).
+### Folded in, by request
+
+- **Follow-mode.** Viewport into presence, and clicking a face follows that
+  person around the board. The channel already carries everything but the
+  viewport. The trap is feedback: following someone who is following you is a
+  loop, so a follower publishes that it is following and nobody follows a
+  follower.
+- **Live drag deltas.** Another person's note currently jumps when they let go,
+  because nothing is written during a drag (rule 4, and it stays). The in-flight
+  offset is presence, so the note slides without a single write, an undo entry
+  or a storage row. Rendering it is the interesting part: the remote object must
+  be drawn offset without the document moving underneath it.
+
+### Still open, and named so it is not forgotten
+
+- **The CRDT is not persisted locally**, only the document is. A board publishes
+  into its room once per browser and the `Y.Doc` is rebuilt empty on every
+  reload, so edits made offline AFTER the first session reach IndexedDB and the
+  screen but never the room. Traced rather than reproduced. Fixing it also
+  removes the resurrection hazard that the seed-once rule exists to avoid.
+- **Remote objects are not schema-validated** as they arrive. Until Stage 3
+  there was no untrusted peer; with accounts there is a boundary worth the name.
+- **A read-only participant goes deaf** rather than watching: `dispatch` refuses
+  the edit, so merged changes stop being applied. Authorization is where this
+  gets its answer.
+- **Link-only.** The per-board password is specified and unbuilt. It does not
+  need accounts, so it can land before or after them.
 
 ---
 
