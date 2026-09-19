@@ -1,6 +1,7 @@
 import { resolveEndpoints, type ConnectorData } from '@openframe/core'
 
-import { ARROW_SIZE, arrivalAngle, connectorPath, pathMidpoint } from '../scene/connector-path.js'
+import { arrivalAngle, connectorPath, pathMidpoint } from '../scene/connector-path.js'
+import { capPath } from '../scene/connector-caps.js'
 import { COLOR_VARS, dashArray } from '../scene/style-tokens.js'
 import { defineObjectView, type ObjectEditorProps, type ObjectViewProps } from './registry.js'
 import { InlineTextEditor } from './shared-editor.js'
@@ -23,11 +24,12 @@ function ConnectorRenderer({ object, document: doc, zoom }: ObjectViewProps<Conn
   const label = object.data.text
   const mid = pathMidpoint(start, end)
 
-  const arrow = (at: { x: number; y: number }, rotation: number) =>
-    `M ${String(at.x)} ${String(at.y)} ` +
-    `L ${String(at.x - ARROW_SIZE * Math.cos(rotation - 0.4))} ${String(at.y - ARROW_SIZE * Math.sin(rotation - 0.4))} ` +
-    `M ${String(at.x)} ${String(at.y)} ` +
-    `L ${String(at.x - ARROW_SIZE * Math.cos(rotation + 0.4))} ${String(at.y - ARROW_SIZE * Math.sin(rotation + 0.4))}`
+  // Both ends, resolved once. `angle` is the direction of travel as the line
+  // arrives, so the near end is the same angle turned around.
+  const caps = [
+    { key: 'end', cap: capPath(object.data.endArrow, end, angle) },
+    { key: 'start', cap: capPath(object.data.startArrow, start, angle + Math.PI) },
+  ]
 
   return (
     <svg
@@ -49,27 +51,26 @@ function ConnectorRenderer({ object, document: doc, zoom }: ObjectViewProps<Conn
       />
 
       {/*
-       * Arrowheads are NOT dashed. The pattern says something about the
-       * relationship the line represents; a broken-up arrowhead just looks
-       * like a rendering fault.
+       * Caps are NOT dashed. The pattern says something about the relationship
+       * the line represents; a broken-up arrowhead just looks like a rendering
+       * fault.
+       *
+       * A filled cap takes the line's colour as its fill and draws no stroke:
+       * stroking a solid shape as well thickens it by the stroke width, so a
+       * thick connector would end in a blob noticeably bigger than a thin one.
        */}
-      {object.data.endArrow === 'arrow' && (
-        <path
-          d={arrow(end, angle)}
-          fill="none"
-          stroke={stroke}
-          strokeWidth={width}
-          strokeLinecap="round"
-        />
-      )}
-      {object.data.startArrow === 'arrow' && (
-        <path
-          d={arrow(start, angle + Math.PI)}
-          fill="none"
-          stroke={stroke}
-          strokeWidth={width}
-          strokeLinecap="round"
-        />
+      {caps.map(({ key, cap }) =>
+        cap === null ? null : (
+          <path
+            key={key}
+            d={cap.d}
+            fill={cap.filled ? stroke : 'none'}
+            stroke={cap.filled ? 'none' : stroke}
+            strokeWidth={width}
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          />
+        ),
       )}
 
       {label.trim() !== '' && (

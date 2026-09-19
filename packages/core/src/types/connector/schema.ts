@@ -36,7 +36,26 @@ export type ConnectorEndpoint =
 export const ROUTINGS = ['straight', 'orthogonal', 'curved'] as const
 export type Routing = (typeof ROUTINGS)[number]
 
-export const ARROWHEADS = ['none', 'arrow'] as const
+/**
+ * What sits at the end of a line.
+ *
+ * Adding a cap needs no migration, for the same reason adding a shape kind
+ * does not: an existing document's value stays valid and the version is
+ * unchanged. REMOVING one would break every board holding it.
+ *
+ * Direction is not a field. A line that points one way has a cap at one end,
+ * both ways has two, and neither has none — so the two ends already say it,
+ * and a third value saying it again is the copy that goes stale.
+ */
+export const ARROWHEADS = [
+  'none',
+  'arrow',
+  'triangle',
+  'dot',
+  'diamond',
+  'semicircle',
+  'bar',
+] as const
 export type Arrowhead = (typeof ARROWHEADS)[number]
 
 export interface ConnectorData {

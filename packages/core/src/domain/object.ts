@@ -73,6 +73,32 @@ export type RadiusToken = (typeof RADIUS_TOKENS)[number]
 
 export type StyleProp = keyof ObjectStyle
 
+/**
+ * Every style property, at runtime.
+ *
+ * `StyleProp` is `keyof ObjectStyle`, which exists only in the type system —
+ * so anything needing the list at runtime used to write its own copy, and the
+ * copy is what goes stale. `registry-contract.test.ts` held one, and adding a
+ * corner radius broke it: the test was asserting against the properties the
+ * app had when the test was written.
+ *
+ * The record is what makes this honest. `Record<StyleProp, true>` does not
+ * compile until every key is present, so adding a property to `ObjectStyle`
+ * forces it to be added here too — the same discipline capabilities follow.
+ */
+const EVERY_STYLE_PROP: Readonly<Record<StyleProp, true>> = {
+  color: true,
+  fill: true,
+  stroke: true,
+  dash: true,
+  font: true,
+  align: true,
+  opacity: true,
+  radius: true,
+}
+
+export const STYLE_PROPS = Object.keys(EVERY_STYLE_PROP) as readonly StyleProp[]
+
 /** Who or what produced a change. Carried on every command, stored at creation. */
 export const ORIGINS = ['user', 'ai', 'api', 'mcp', 'import', 'remote'] as const
 export type Origin = (typeof ORIGINS)[number]

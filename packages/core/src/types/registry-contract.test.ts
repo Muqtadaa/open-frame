@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest'
 
 import { asObjectId, asOrderKey } from '../domain/ids.js'
 import type { AnyOpenFrameObject } from '../domain/object.js'
-import { COLOR_TOKENS } from '../domain/object.js'
+import { COLOR_TOKENS, STYLE_PROPS } from '../domain/object.js'
 import { createDefaultRegistry } from './index.js'
 
 /**
@@ -171,10 +171,16 @@ describe('object type registry contract', () => {
         expect(definition.validate({ __definitely: 'not valid' }).ok).toBe(false)
       })
 
+      /**
+       * Read from `STYLE_PROPS`, never restated here. A list written out in a
+       * test is a second copy of the thing under test, and it passes against
+       * whatever the app looked like the day it was written — this one did
+       * exactly that, and failed the moment a corner radius was added.
+       */
       it('declares only real style properties', () => {
-        const allowed = new Set(['color', 'fill', 'stroke', 'dash', 'font', 'align', 'opacity'])
+        const allowed = new Set<string>(STYLE_PROPS)
         for (const prop of definition.capabilities.styleProps) {
-          expect(allowed.has(prop)).toBe(true)
+          expect(allowed.has(prop), `${definition.type} declares an unknown "${prop}"`).toBe(true)
         }
       })
 

@@ -2,7 +2,13 @@ import { defineObjectType } from '../../domain/registry.js'
 import { inflate, rectFromPoints } from '../../geometry/rect.js'
 import { distanceToSegment } from '../../geometry/point.js'
 import { endpointDependencies, resolveEndpoints } from './geometry.js'
-import { CONNECTOR_VERSION, ConnectorDataSchema, type ConnectorData } from './schema.js'
+import {
+  ARROWHEADS,
+  CONNECTOR_VERSION,
+  ConnectorDataSchema,
+  ROUTINGS,
+  type ConnectorData,
+} from './schema.js'
 
 export const CONNECTOR_TYPE = 'connector'
 
@@ -41,6 +47,21 @@ export const connectorType = defineObjectType<typeof CONNECTOR_TYPE, ConnectorDa
     connectable: false,
     styleProps: ['color', 'stroke', 'dash', 'opacity'],
   },
+
+  /*
+   * The two ends and the route, declared rather than drawn by a panel.
+   *
+   * DIRECTION IS NOT A FIELD. A line that points one way has a cap at one end,
+   * both ways has two, neither has none — the two ends already say it, and a
+   * third value saying the same thing is the copy that goes stale. It is also
+   * why these are `data` and not `style`: which way a connector points is what
+   * it MEANS, not how it looks.
+   */
+  fields: [
+    { key: 'routing', label: 'Route', kind: 'select', options: ROUTINGS },
+    { key: 'startArrow', label: 'Start', kind: 'select', options: ARROWHEADS },
+    { key: 'endArrow', label: 'End', kind: 'select', options: ARROWHEADS },
+  ],
 
   /**
    * Bounds come from the resolved endpoints, not from `frame`.
@@ -112,6 +133,14 @@ export const connectorType = defineObjectType<typeof CONNECTOR_TYPE, ConnectorDa
   describe: (object) => ({
     searchText: object.data.text,
     summary: object.data.text.trim() === '' ? 'Connector' : `Connector: ${object.data.text}`,
-    fields: { text: object.data.text, routing: object.data.routing },
+    fields: {
+      text: object.data.text,
+      routing: object.data.routing,
+      // Declared, so described. The contract test refuses a field a type
+      // offers but never reports — the guard that stops a declaration being
+      // decoration, as `sticky`'s ignored `fill` was.
+      startArrow: object.data.startArrow,
+      endArrow: object.data.endArrow,
+    },
   }),
 })
