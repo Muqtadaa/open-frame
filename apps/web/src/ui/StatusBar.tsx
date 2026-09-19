@@ -7,6 +7,7 @@ import { useInteractionStore } from '../interaction/interaction-store.js'
 import { BENCH_TOOLS_ENABLED } from '../app/bench-flag.js'
 import { SOURCE_URL } from '../app/source-link.js'
 import { applyTheme, readTheme, type Theme } from '../app/theme.js'
+import { AccountControl } from './AccountControl.js'
 import { DevPanel } from './DevPanel.js'
 import { ShareControl } from './ShareControl.js'
 import { AfterHoursIcon, RedoIcon, UndoIcon } from './icons.js'
@@ -94,6 +95,7 @@ export function StatusBar() {
        * something about the page you are reading.
        */}
       <ShareControl />
+      <AccountControl />
 
       {/*
        * App-level apparatus sits at this end of the line, after the rule — the

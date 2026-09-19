@@ -17,6 +17,9 @@ tools/bench/fixtures/
 .env
 .env.*
 !.env.example
+# Public build configuration, committed deliberately — see the header in the
+# file, and `app/env-file.test.ts`, which fails if a secret is added to it.
+!apps/web/.env
 
 # Claude Code machine-local settings (holds the impeccable design hook).
 .claude/settings.local.json

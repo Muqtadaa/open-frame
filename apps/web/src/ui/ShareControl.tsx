@@ -3,6 +3,7 @@ import { useEffect, useState } from 'react'
 import { COLLAB_ENABLED, shareLink } from '../app/collab-config.js'
 import { guestIdentity } from '../app/guest.js'
 import { shareCurrentBoard } from '../app/share.js'
+import { useIdentity } from '../hooks/use-identity.js'
 import { usePeers } from '../hooks/use-peers.js'
 import { useOpenFrame } from '../runtime/context.js'
 import { hueVar, initialOf } from '../scene/presence.js'
@@ -22,6 +23,9 @@ export function ShareControl() {
   const { runtime, collaboration } = useOpenFrame()
   const [status, setStatus] = useState(collaboration?.status ?? 'offline')
   const peers = usePeers()
+  // With the other hooks, above every early return: a hook called
+  // conditionally changes the order between renders.
+  const identity = useIdentity()
   const [copied, setCopied] = useState(false)
   const [sharing, setSharing] = useState(false)
 
@@ -63,7 +67,8 @@ export function ShareControl() {
 
   // You first, then everyone else in a stable order — a row of faces where the
   // leftmost is always yours is a row you can read without hunting.
-  const you = guestIdentity()
+  const guest = guestIdentity()
+  const you = identity === null ? guest : { name: identity.displayName, hue: identity.hue }
   const here = [{ key: 'you', name: `${you.name} (you)`, hue: you.hue }, ...peers.map((peer) => ({
     key: String(peer.clientId),
     name: peer.name,

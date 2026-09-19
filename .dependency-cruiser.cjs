@@ -199,6 +199,16 @@ module.exports = {
       to: { path: '^apps/web/src/adapters' },
     },
     {
+      name: 'hooks-do-not-touch-adapters',
+      severity: 'error',
+      comment:
+        'A hook is UI. It reads the wired application through runtime/ or the composition root, and ' +
+        'never reaches for an implementation — otherwise "the provider is replaceable" is true of ' +
+        'every layer except the one every component imports.',
+      from: { path: '^apps/web/src/hooks' },
+      to: { path: '^apps/web/src/adapters' },
+    },
+    {
       name: 'no-orphans',
       severity: 'warn',
       comment: 'An unreferenced module is usually a leftover.',

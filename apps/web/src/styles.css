@@ -699,6 +699,114 @@ body {
   color: var(--of-accent);
 }
 
+/* ---------- account ---------- */
+
+/*
+ * A small sheet above the record line, not a modal. Signing in is never
+ * required to use a board, so it must never take the screen — the craft floor
+ * bans a modal for a task that needs neither interruption nor protected focus,
+ * and this is the clearest possible case.
+ */
+.of-account {
+  position: absolute;
+  bottom: calc(100% + 8px);
+  left: 0;
+  z-index: 3;
+  width: 268px;
+  padding: 12px;
+  font-family: var(--of-font);
+  color: var(--of-ink);
+  background: var(--of-panel);
+  border: 1px solid var(--of-panel-border);
+  border-radius: var(--of-radius);
+  box-shadow: var(--of-shadow);
+}
+
+.of-account__lead {
+  margin: 0 0 10px;
+  font-size: 12px;
+  line-height: 1.4;
+  color: var(--of-ink-muted);
+}
+
+.of-account__field {
+  display: block;
+  margin-bottom: 8px;
+}
+
+.of-account__field span {
+  display: block;
+  margin-bottom: 3px;
+  font-size: 11px;
+  color: var(--of-ink-muted);
+}
+
+.of-account__field input {
+  width: 100%;
+  /* 28px: a text field is a control you must be able to hit, and the 11px
+     label above it is at the functional-text floor, not below it. */
+  height: 28px;
+  padding: 0 8px;
+  font-family: var(--of-font);
+  font-size: 13px;
+  color: var(--of-ink);
+  background: var(--of-page);
+  border: 1px solid var(--of-control-border);
+  border-radius: 4px;
+}
+
+.of-account__error {
+  margin: 0 0 8px;
+  font-size: 12px;
+  line-height: 1.4;
+  color: var(--of-danger);
+}
+
+.of-account__actions {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.of-account__switch {
+  padding: 0;
+  font-family: var(--of-font);
+  font-size: 11px;
+  color: var(--of-ink-muted);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+  background: none;
+  border: none;
+  cursor: pointer;
+}
+
+.of-account__switch:hover {
+  color: var(--of-ink);
+}
+
+.of-account__submit {
+  height: 28px;
+  padding: 0 12px;
+  font-family: var(--of-font);
+  font-size: 12px;
+  color: var(--of-panel);
+  background: var(--of-accent);
+  border: 1px solid var(--of-accent);
+  border-radius: 4px;
+  cursor: pointer;
+}
+
+.of-account__submit:disabled {
+  opacity: 0.55;
+  cursor: default;
+}
+
+/* The status line is the dialog's positioning context. */
+.of-status {
+  position: relative;
+}
+
 /* ---------- other people ---------- */
 
 /*

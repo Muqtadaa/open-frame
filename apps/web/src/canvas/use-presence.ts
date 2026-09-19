@@ -6,6 +6,7 @@ import { useLockedByOthers, usePeers } from '../hooks/use-peers.js'
 import { useInteractionStore } from '../interaction/interaction-store.js'
 import { useOpenFrame } from '../runtime/context.js'
 import { guestIdentity } from '../app/guest.js'
+import { useIdentity } from '../hooks/use-identity.js'
 
 /**
  * Publishes where this person is and what they are holding, and keeps the
@@ -29,6 +30,7 @@ const CURSOR_INTERVAL_MS = 50
 
 export function usePresence(containerRef: RefObject<HTMLDivElement | null>): void {
   const { collaboration } = useOpenFrame()
+  const identity = useIdentity()
   const peers = usePeers()
   const locked = useLockedByOthers(peers)
   const setLockedByOthers = useInteractionStore((state) => state.setLockedByOthers)
@@ -41,7 +43,17 @@ export function usePresence(containerRef: RefObject<HTMLDivElement | null>): voi
   useEffect(() => {
     if (collaboration === null || collaboration === undefined) return
 
+    /*
+     * A signed-in person is themselves; everyone else is a guest with an
+     * invented name. Which one it is changes nothing downstream: presence has
+     * never been an authorization, and a real name is no more trusted by the
+     * room than "Curlew" is.
+     */
     const guest = guestIdentity()
+    const me =
+      identity === null
+        ? { name: guest.name, hue: guest.hue }
+        : { name: identity.displayName, hue: identity.hue }
     let cursor: { x: number; y: number } | null = null
     let lastSent = 0
     let pending: ReturnType<typeof setTimeout> | null = null
@@ -51,8 +63,8 @@ export function usePresence(containerRef: RefObject<HTMLDivElement | null>): voi
       pending = null
       const state = useInteractionStore.getState()
       collaboration.setPresence({
-        name: guest.name,
-        hue: guest.hue,
+        name: me.name,
+        hue: me.hue,
         cursor,
         selection: [...state.selection],
         editing: state.editingId,
@@ -107,5 +119,5 @@ export function usePresence(containerRef: RefObject<HTMLDivElement | null>): voi
       if (pending !== null) clearTimeout(pending)
       collaboration.setPresence(null)
     }
-  }, [collaboration, containerRef])
+  }, [collaboration, containerRef, identity])
 }
