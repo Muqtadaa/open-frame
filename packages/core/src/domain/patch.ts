@@ -68,7 +68,7 @@ function getIn(target: unknown, path: readonly (string | number)[]): unknown {
  * identity, which is what lets the renderer compare object references to decide
  * what needs redrawing.
  */
-function setIn<T>(target: T, path: readonly (string | number)[], value: unknown): T {
+export function setIn<T>(target: T, path: readonly (string | number)[], value: unknown): T {
   if (path.length === 0) throw new PatchError('Patch path must not be empty')
 
   const [head, ...rest] = path

@@ -270,8 +270,17 @@ this browser", whatever is sitting in IndexedDB under its id.
   history that made the flag necessary. Proved end to end in `test:rooms` —
   a real browser edits a board with the socket refused, reloads, reconnects,
   and a second browser reads the move out of the room.
-- **Remote objects are not schema-validated** as they arrive. Until Stage 3
-  there was no untrusted peer; with accounts there is a boundary worth the name.
+- ~~**Remote objects are not schema-validated**~~ — fixed 2026-09-19. Anyone
+  holding a board's edit link could write arbitrary JSON into the shared map
+  and it went straight into the document. `ApplyRemotePatches` now reads an
+  arriving object through the registry — envelope, known type, current version,
+  the type's own data schema — and a `set` is checked by APPLYING it and
+  validating the result, because a patch says nothing about itself: only the
+  object it lands on can say whether `frame.width: "wide"` is legal.
+
+  Dropped, never repaired and never thrown. A half-understood object is worse
+  than an absent one, and one bad object from one peer must not take down the
+  sync loop for everybody — a batch keeps its good patches.
 - ~~**A read-only participant goes deaf**~~ — fixed 2026-09-19. Originating a
   change asks `edit`; applying a merged one asks `view`, because those are
   different acts by different actors.

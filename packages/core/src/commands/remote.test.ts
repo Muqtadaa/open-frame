@@ -227,3 +227,157 @@ describe('parentageRepairs', () => {
     expect(parentageRepairs(h.store.getDocument().objects, [id('child')])).toEqual([])
   })
 })
+
+/**
+ * The merge path as a BOUNDARY, which it became the day accounts shipped.
+ *
+ * Rule 8 names where validation belongs, and this was deferred on the grounds
+ * that until there was a transport there was no untrusted peer — a guard built
+ * then would have been one never run against the thing it defends. There is a
+ * peer now: anyone holding a board's edit link can write arbitrary JSON into
+ * the shared map, and until 2026-09-19 it went straight into the document.
+ *
+ * Everything below is DROPPED rather than repaired, and none of it throws. A
+ * single bad object from one peer taking down the sync loop for everybody
+ * would be a worse failure than the object itself.
+ */
+describe('ApplyRemotePatches, against a peer that sends nonsense', () => {
+  const remote = (h: ReturnType<typeof createTestHarness>, patches: Patch[]) =>
+    h.dispatcher.dispatch({ kind: 'ApplyRemotePatches', patches }, { origin: 'remote', skipUndo: true })
+
+  /** A whole object of the wrong shape. The widest door there is. */
+  it('drops an arriving object whose frame is not a frame', () => {
+    const h = harnessWith('one')
+    const result = remote(h, [
+      {
+        op: 'add',
+        id: id('bad'),
+        object: {
+          id: id('bad'),
+          type: 'sticky',
+          dataVersion: 1,
+          frame: { x: 0, y: 0, width: 'wide', height: 120, rotation: 0 },
+          parentId: null,
+          order: 'a0',
+          style: {},
+          locked: false,
+          hidden: false,
+          data: { text: richFromPlain('hello') },
+          meta: { createdAt: 0, createdBy: null, createdVia: 'user' },
+        } as never,
+      },
+    ])
+
+    // The batch succeeds — the peer is not punished, the object is refused.
+    expect(result.ok).toBe(true)
+    expect(h.store.getObject(id('bad'))).toBeUndefined()
+    expect(h.store.getObject(id('one'))).toBeDefined()
+  })
+
+  it('drops an arriving object of a type this build has never heard of', () => {
+    const h = harnessWith('one')
+    const result = remote(h, [
+      {
+        op: 'add',
+        id: id('alien'),
+        object: {
+          id: id('alien'),
+          type: 'hologram',
+          dataVersion: 1,
+          frame: { x: 0, y: 0, width: 10, height: 10, rotation: 0 },
+          parentId: null,
+          order: 'a0',
+          style: {},
+          locked: false,
+          hidden: false,
+          data: {},
+          meta: { createdAt: 0, createdBy: null, createdVia: 'user' },
+        } as never,
+      },
+    ])
+
+    /*
+     * Refused rather than quarantined. Quarantine exists so a person does not
+     * lose their OWN work to a version skew; a peer's object this build cannot
+     * render is not this board's to keep.
+     */
+    expect(result.ok).toBe(true)
+    expect(h.store.getObject(id('alien'))).toBeUndefined()
+  })
+
+  it('drops an arriving object whose data its own type rejects', () => {
+    const h = harnessWith('one')
+    remote(h, [
+      {
+        op: 'add',
+        id: id('wrong'),
+        object: {
+          id: id('wrong'),
+          type: 'sticky',
+          dataVersion: 1,
+          frame: { x: 0, y: 0, width: 180, height: 120, rotation: 0 },
+          parentId: null,
+          order: 'a0',
+          style: {},
+          locked: false,
+          hidden: false,
+          // A sticky's text is rich text, not a bare string.
+          data: { text: 'just a string' },
+          meta: { createdAt: 0, createdBy: null, createdVia: 'user' },
+        } as never,
+      },
+    ])
+
+    expect(h.store.getObject(id('wrong'))).toBeUndefined()
+  })
+
+  /**
+   * A `set` says nothing about itself — the patch is well-formed whatever the
+   * value is. Only the object it lands on can say whether it is legal, so the
+   * check applies it and validates the result.
+   */
+  it('drops a set that would corrupt the object it lands on', () => {
+    const h = harnessWith('one')
+    const before = h.store.getObject(id('one'))?.frame.width
+
+    remote(h, [{ op: 'set', id: id('one'), path: ['frame', 'width'], value: 'wide' }])
+
+    expect(h.store.getObject(id('one'))?.frame.width).toBe(before)
+  })
+
+  it('drops a set that empties a field the type requires', () => {
+    const h = harnessWith('one')
+
+    remote(h, [{ op: 'set', id: id('one'), path: ['data'], value: { text: 42 } }])
+
+    expect(h.store.getObject(id('one'))?.data).toEqual({ text: richFromPlain('one') })
+  })
+
+  /** And the ordinary case still works, or the guard has eaten the feature. */
+  it('still applies a set that is perfectly legal', () => {
+    const h = harnessWith('one')
+
+    remote(h, [{ op: 'set', id: id('one'), path: ['frame', 'x'], value: 640 }])
+
+    expect(h.store.getObject(id('one'))?.frame.x).toBe(640)
+  })
+
+  /**
+   * One bad patch must not cost the good ones beside it. A peer sending a
+   * batch is sending one transaction's worth of work, and dropping all of it
+   * because one object was malformed would lose somebody else's edit.
+   */
+  it('keeps the good patches in a batch that also carries a bad one', () => {
+    const h = harnessWith('one', 'two')
+
+    remote(h, [
+      { op: 'set', id: id('one'), path: ['frame', 'x'], value: 11 },
+      { op: 'set', id: id('two'), path: ['frame', 'width'], value: 'wide' },
+      { op: 'set', id: id('two'), path: ['frame', 'y'], value: 22 },
+    ])
+
+    expect(h.store.getObject(id('one'))?.frame.x).toBe(11)
+    expect(h.store.getObject(id('two'))?.frame.width).toBe(180)
+    expect(h.store.getObject(id('two'))?.frame.y).toBe(22)
+  })
+})
