@@ -32,11 +32,37 @@ const goodRow = {
   role: 'owner',
   access_key: 'a'.repeat(32),
   updated_at: '2026-09-19T04:00:00Z',
+  workspace_id: '00000000-0000-4000-8000-000000000010',
+  workspace_name: 'Muqtadaa Miandara',
 }
 
 describe('listing the boards behind an account', () => {
   beforeEach(() => {
     client.mockReset()
+  })
+
+  /**
+   * A row from a database older than this build has no workspace, and the
+   * board list is grouped by one — so there is nowhere to put it.
+   *
+   * Dropped rather than filed under an invented workspace: a board that is
+   * briefly missing is recoverable by reloading once the database catches up,
+   * and a board in a workspace that does not exist is one nobody can find by
+   * looking in the right place.
+   */
+  it('drops a row from before boards had a workspace', async () => {
+    const { workspace_id: _id, workspace_name: _name, ...older } = goodRow
+    answering({ data: [older] })
+
+    await expect(listMyBoards()).resolves.toEqual([])
+  })
+
+  it('names the workspace a board lives in', async () => {
+    answering({ data: [goodRow] })
+
+    const [board] = await listMyBoards()
+    expect(board?.workspaceId).toBe('00000000-0000-4000-8000-000000000010')
+    expect(board?.workspaceName).toBe('Muqtadaa Miandara')
   })
 
   it('reads a well-formed row', async () => {
@@ -56,6 +82,8 @@ describe('listing the boards behind an account', () => {
       // A board never opened on this account falls back to when it last
       // changed, so it does not sink out of sight for not having been revisited.
       openedAt: Date.parse('2026-09-19T04:00:00Z'),
+      workspaceId: '00000000-0000-4000-8000-000000000010',
+      workspaceName: 'Muqtadaa Miandara',
     })
   })
 
@@ -168,6 +196,10 @@ describe('recording a shared board', () => {
       p_editor_key: 'e'.repeat(32),
       p_viewer_key: 'v'.repeat(32),
       p_owner_key: 'd'.repeat(32),
+      // Null, not absent: the database reads null as "the person's own
+      // workspace", and omitting the argument entirely would resolve against
+      // a different overload.
+      p_workspace_id: null,
     })
   })
 

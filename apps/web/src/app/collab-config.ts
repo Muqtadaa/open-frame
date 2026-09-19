@@ -61,6 +61,34 @@ export const OWNER_PARAM = 'o'
  */
 export const KEY_PARAM = 'k'
 
+/**
+ * A workspace invitation, which opens no board.
+ *
+ * Its own two parameters rather than reusing the board ones: a link carrying
+ * `room` is a board, and overloading that name would make "which of these two
+ * things is this link" a question every reader has to answer.
+ */
+export const WORKSPACE_PARAM = 'workspace'
+export const WORKSPACE_KEY_PARAM = 'wk'
+
+const WORKSPACE_ID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/
+
+/**
+ * The workspace invitation in a URL, or `null`.
+ *
+ * Both halves or neither. An id with no key is not an invitation — the
+ * database would refuse it — and treating it as one would send somebody to a
+ * page that says they were not invited.
+ */
+export function workspaceInvite(search: string): { id: string; key: string } | null {
+  const params = new URLSearchParams(search)
+  const id = params.get(WORKSPACE_PARAM)
+  const key = params.get(WORKSPACE_KEY_PARAM)
+  if (id === null || key === null) return null
+  if (!WORKSPACE_ID.test(id) || !ACCESS_KEY.test(key)) return null
+  return { id, key }
+}
+
 /** As minted by the room: 32 hex characters, 128 bits. */
 const ACCESS_KEY = /^[0-9a-f]{32}$/
 

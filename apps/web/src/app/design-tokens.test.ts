@@ -125,6 +125,15 @@ const TEXT: readonly (readonly [string, string])[] = [
   ['panel', 'accent'],
   /* And a row of that list under the pointer, which is ink on the hover stock. */
   ['ink', 'hover'],
+  /*
+   * The workspace filter: a muted board count inside the selected tab's wash,
+   * and the accent used as TEXT on page stock rather than as a control's
+   * boundary. The accent-on-page pair is asserted below at the 3:1 control
+   * floor as well — the two floors are different questions about the same
+   * pair, and a label you have to read is the stricter one.
+   */
+  ['ink-muted', 'accent-soft'],
+  ['accent', 'page'],
 ]
 
 /** 1.4.11 Non-text Contrast: boundaries you must perceive to operate a control. */

@@ -95,6 +95,7 @@ async function claimRoom(
 async function publishToRoom(
   repository: BoardRepository,
   document: BoardDocument,
+  workspaceId?: string,
 ): Promise<{
   readonly boardId: BoardId
   readonly keys: { editor: string; viewer: string; owner?: string }
@@ -123,6 +124,9 @@ async function publishToRoom(
       editorKey: keys.editor,
       viewerKey: keys.viewer,
       ...(keys.owner === undefined ? {} : { ownerKey: keys.owner }),
+      // Absent means the person's own workspace, which is what the database
+      // falls back to. Naming one is how a board lands somewhere shared.
+      ...(workspaceId === undefined ? {} : { workspaceId }),
     })
   }
 
@@ -144,9 +148,10 @@ async function publishToRoom(
 export async function createOwnedBoard(
   repository: BoardRepository,
   title = 'Untitled board',
+  workspaceId?: string,
 ): Promise<SharedBoard> {
   const document = createEmptyDocument(newSharedBoardId(), title, systemClock.now())
-  const { boardId, keys } = await publishToRoom(repository, document)
+  const { boardId, keys } = await publishToRoom(repository, document, workspaceId)
 
   const origin = window.location.origin
   return {

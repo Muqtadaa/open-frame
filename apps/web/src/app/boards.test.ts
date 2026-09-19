@@ -121,6 +121,9 @@ const sharedBoard = (
   ownerKey: null,
   accessKey: 'a'.repeat(32),
   viewKey: role === 'owner' ? 'b'.repeat(32) : null,
+  // Every board has a workspace, so every fixture states one.
+  workspaceId: '00000000-0000-4000-8000-000000000010',
+  workspaceName: 'Muqtadaa Miandara',
   updatedAt,
   pinned: false,
   // Defaults to when it changed, the same fallback the database applies to a
@@ -275,6 +278,7 @@ describe('what you may do to a board', () => {
     boardId: asBoardId('brd_aaaaaaaa11111111'),
     title: 'A board',
     ownerKey: null,
+    workspaceId: '00000000-0000-4000-8000-000000000010',
     updatedAt: 0,
     shared: true,
     role: 'owner',

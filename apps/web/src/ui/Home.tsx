@@ -8,6 +8,10 @@ import { boardHref } from '../app/route.js'
 import { createOwnedBoard, ShareFailed } from '../app/share.js'
 import { useIdentity } from '../hooks/use-identity.js'
 import { Mentions } from './Mentions.js'
+import { WorkspaceBar } from './WorkspaceBar.js'
+import { useWorkspaces } from '../hooks/use-workspaces.js'
+import { joinWorkspace } from '../app/workspaces.js'
+import { workspaceInvite } from '../app/collab-config.js'
 import { hueVar, initialOf } from '../scene/presence.js'
 import { AccountForm } from './AccountForm.js'
 import { BoardRow } from './BoardRow.js'
@@ -56,6 +60,60 @@ export function Home({ repository }: { readonly repository: BoardRepository }) {
   const refresh = useCallback(() => setRevision((n) => n + 1), [])
 
   /*
+   * Which workspace the list is narrowed to, or null for all of them.
+   *
+   * Not persisted. A filter you did not set and cannot see the edge of is how
+   * a board goes missing — coming back to the front door should show
+   * everything you have, every time.
+   */
+  const [space, setSpace] = useState<string | null>(null)
+  const [invite, setInvite] = useState<string | null>(null)
+  const spaces = useWorkspaces(identity !== null)
+
+  /*
+   * A workspace invitation in the URL, read ONCE.
+   *
+   * Held in state rather than re-read every render: the effect below clears
+   * the URL after redeeming it, and a value re-read from `window.location`
+   * would then become null mid-flight and change the effect's dependencies
+   * while it was still running.
+   */
+  const [invitation] = useState(() => workspaceInvite(window.location.search))
+  const [invited, setInvited] = useState<string | null>(null)
+
+  /*
+   * Redeemed once somebody is signed in, which is why this is here rather than
+   * before the app renders: joining takes an account, and a person following
+   * an invitation may not have one yet. Left in the URL until then, so signing
+   * in on this page accepts it — rather than the link being spent on arrival
+   * and lost.
+   */
+  const refreshSpaces = spaces.refresh
+  useEffect(() => {
+    if (invitation === null || identity === null) return
+    let live = true
+    joinWorkspace(invitation.id, invitation.key)
+      .then((role) => {
+        if (!live || role === null) return
+        setInvited(role)
+        refreshSpaces()
+        /*
+         * The key leaves the address bar as soon as it is spent. A link with a
+         * key in it IS the credential, and one sitting in history is one that
+         * can be re-offered from a browser somebody else picks up.
+         */
+        window.history.replaceState(null, '', '/')
+      })
+      .catch(() => {
+        // Not invited, or a link since superseded. The front door is still
+        // theirs, and an error page for a forwarded link helps nobody.
+      })
+    return () => {
+      live = false
+    }
+  }, [identity, invitation, refreshSpaces])
+
+  /*
    * Re-read when the identity settles, not only on mount: the session is
    * restored from storage asynchronously, so the first pass always runs signed
    * out and would leave a signed-in person looking at their local boards only.
@@ -98,7 +156,12 @@ export function Home({ repository }: { readonly repository: BoardRepository }) {
     setStartError(null)
 
     const created = ACCOUNTS_ENABLED
-      ? createOwnedBoard(repository).then((board) => board.editLink)
+      ? // Into the workspace being shown, so a board lands where you were
+        // looking. `undefined` for "everything" means the person's own, which
+        // is what the database falls back to.
+        createOwnedBoard(repository, undefined, space ?? undefined).then(
+          (board) => board.editLink,
+        )
       : createLocalBoard(repository).then((boardId) => boardHref(boardId, false))
 
     void created.then(
@@ -141,6 +204,16 @@ export function Home({ repository }: { readonly repository: BoardRepository }) {
    * and the door is the form, which is what the door IS for somebody with no
    * account.
    */
+  /*
+   * The boards this workspace holds. A LOCAL board has no workspace — it lives
+   * only in this browser — so narrowing to one hides it, which is right: it is
+   * not in any workspace, and claiming it is what puts it in one.
+   */
+  const shown =
+    space === null
+      ? (listing?.boards ?? [])
+      : (listing?.boards ?? []).filter((board) => board.workspaceId === space)
+
   const showBoards = listing === null || listing.boards.length > 0 || canStart
 
   return (
@@ -184,21 +257,67 @@ export function Home({ repository }: { readonly repository: BoardRepository }) {
         </header>
 
         <div className="of-home__body">
+          {/*
+            * OUTSIDE the board list, deliberately.
+            *
+            * An invitation is not about your boards, and somebody following
+            * one while signed out has none — which collapses the whole boards
+            * section and took this notice with it. The test that caught it
+            * passed in isolation and failed under load: the assertion had been
+            * winning a race against the list finishing loading.
+            */}
+          {invitation !== null && identity === null && (
+            <p className="of-home__note" data-testid="workspace-invited-signedout">
+              You have been invited to a workspace. Sign in and it will be added to your list.
+            </p>
+          )}
+
+          {invited !== null && (
+            <p className="of-home__note" data-testid="workspace-invited">
+              You have been added to a workspace as {invited === 'editor' ? 'an' : 'a'} {invited}.
+            </p>
+          )}
+
           {showBoards && (
           <section className="of-home__boards" aria-labelledby="of-home-boards">
             <h2 className="of-home__heading" id="of-home-boards">
               your boards
             </h2>
 
+            <WorkspaceBar
+              workspaces={spaces.workspaces}
+              selected={space}
+              onSelect={(id) => {
+                setSpace(id)
+                // The last workspace's link has nothing to do with this one.
+                setInvite(null)
+              }}
+              onCreate={(name) => {
+                void spaces.create(name).then((id) => {
+                  if (id !== null) setSpace(id)
+                })
+              }}
+              onShare={(id) => {
+                void spaces.share(id).then((keys) => {
+                  if (keys === null) return
+                  setInvite(
+                    `${window.location.origin}/?workspace=${id}&wk=${keys.editorKey}`,
+                  )
+                })
+              }}
+              invite={invite}
+              busy={starting}
+            />
+
             {listing === null ? (
               <p className="of-home__note">Looking for your boards…</p>
-            ) : listing.boards.length === 0 ? (
+            ) : shown.length === 0 ? (
               <p className="of-home__note" data-testid="home-empty">
                 Nothing here yet.
               </p>
             ) : (
               <ul className="of-home__list" data-testid="home-boards">
-                {listing.boards.map((board, index) => (
+                {shown.map((board, index) => (
                   <BoardRow
                     key={board.boardId}
                     board={board}

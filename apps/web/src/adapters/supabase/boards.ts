@@ -50,6 +50,15 @@ export interface RemoteBoard {
    * working at midnight rearrange your list while you slept.
    */
   readonly openedAt: number
+  /**
+   * The workspace this board lives in. Every board has one.
+   *
+   * Not optional, and that is the point of the migration that introduced it:
+   * a board without a workspace would be a second case in every listing and
+   * every access check, kept alive forever by boards nobody moved.
+   */
+  readonly workspaceId: string
+  readonly workspaceName: string
 }
 
 const ROLES = new Set(['owner', 'editor', 'viewer'])
@@ -81,6 +90,8 @@ function readBoard(row: unknown): RemoteBoard | null {
     opened_at: opened,
     view_key: viewKey,
     owner_key: ownerKey,
+    workspace_id: workspaceId,
+    workspace_name: workspaceName,
   } = row as {
     id?: unknown
     title?: unknown
@@ -91,11 +102,20 @@ function readBoard(row: unknown): RemoteBoard | null {
     opened_at?: unknown
     view_key?: unknown
     owner_key?: unknown
+    workspace_id?: unknown
+    workspace_name?: unknown
   }
 
   if (typeof id !== 'string' || !BOARD_ID.test(id)) return null
   if (typeof title !== 'string') return null
   if (typeof role !== 'string' || !ROLES.has(role)) return null
+  /*
+   * A row without a workspace is from a database older than this build, and
+   * there is nowhere to file it. Dropped rather than guessed at: the list is
+   * grouped by workspace, and a board in a made-up one is worse than a board
+   * that is briefly missing.
+   */
+  if (typeof workspaceId !== 'string' || workspaceId === '') return null
 
   const at = typeof updated === 'string' ? Date.parse(updated) : Number.NaN
   const seen = typeof opened === 'string' ? Date.parse(opened) : Number.NaN
@@ -115,6 +135,10 @@ function readBoard(row: unknown): RemoteBoard | null {
     // Falls back to when the board last changed, which is what the database
     // does too — a board you have never opened should not sink out of sight.
     openedAt: Number.isFinite(seen) ? seen : updatedAt,
+    workspaceId,
+    workspaceName: typeof workspaceName === 'string' && workspaceName !== ''
+      ? workspaceName
+      : 'Workspace',
   }
 }
 
@@ -157,6 +181,14 @@ export async function recordSharedBoard(board: {
   readonly viewerKey: string
   /** Absent only for a board whose room predates owner keys. */
   readonly ownerKey?: string
+  /**
+   * Which workspace to file it in. Absent means the person's own.
+   *
+   * The database refuses a workspace that is not yours rather than quietly
+   * filing the board somewhere else — this function is security definer, so an
+   * unchecked id here would put your board in a stranger's workspace.
+   */
+  readonly workspaceId?: string
 }): Promise<boolean> {
   const client = supabaseClient()
   if (client === null) return false
@@ -167,6 +199,7 @@ export async function recordSharedBoard(board: {
     p_editor_key: board.editorKey,
     p_viewer_key: board.viewerKey,
     p_owner_key: board.ownerKey ?? null,
+    p_workspace_id: board.workspaceId ?? null,
   })) as { error: unknown }
   return response.error === null
 }

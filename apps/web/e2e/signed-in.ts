@@ -22,6 +22,8 @@ export interface StubbedBoard {
   readonly role: 'owner' | 'editor' | 'viewer'
   readonly pinned?: boolean
   readonly agoMs?: number
+  /** Which workspace it sits in. Defaults to the person's own. */
+  readonly workspaceId?: string
 }
 
 /** Something somebody said that named you, waiting on the front door. */
@@ -44,12 +46,27 @@ export interface StubbedMention {
  */
 export interface StubbedServer {
   readonly rows: BoardRow[]
+  readonly workspaces: WorkspaceRow[]
   readonly comments: CommentRow[]
   readonly people: { user_id: string; display_name: string; hue: number }[]
   readonly mentions: StubbedMention[]
   readonly mentioned: string[]
   readonly read: string[]
 }
+
+/** A workspace, with the links only an admin is given. */
+interface WorkspaceRow {
+  id: string
+  name: string
+  personal: boolean
+  role: 'admin' | 'editor' | 'viewer'
+  editor_key: string | null
+  viewer_key: string | null
+  boards: number
+}
+
+export const PERSONAL_WORKSPACE = '00000000-0000-4000-8000-000000000010'
+export const SHARED_WORKSPACE = '00000000-0000-4000-8000-000000000011'
 
 interface BoardRow {
   id: string
@@ -61,6 +78,9 @@ interface BoardRow {
   updated_at: string
   pinned: boolean
   opened_at: string
+  /* Every board has a workspace, so every row the double invents has one. */
+  workspace_id: string
+  workspace_name: string
 }
 
 interface CommentRow {
@@ -109,8 +129,27 @@ export function stubbedServer(
         updated_at: when,
         pinned: board.pinned ?? false,
         opened_at: when,
+        workspace_id: board.workspaceId ?? PERSONAL_WORKSPACE,
+        workspace_name:
+          (board.workspaceId ?? PERSONAL_WORKSPACE) === PERSONAL_WORKSPACE
+            ? displayName
+            : 'Research',
       }
     }),
+    workspaces: [
+      {
+        id: PERSONAL_WORKSPACE,
+        name: displayName,
+        personal: true,
+        role: 'admin',
+        // A personal workspace is never shared, so it has no links even for
+        // its admin — which is what the interface reads to hide Invite.
+        editor_key: null,
+        viewer_key: null,
+        boards: boards.filter((b) => (b.workspaceId ?? PERSONAL_WORKSPACE) === PERSONAL_WORKSPACE)
+          .length,
+      },
+    ],
     comments: [],
     people: [
       { user_id: ALICE, display_name: displayName, hue: 3 },
@@ -158,8 +197,20 @@ export async function signedIn(
       route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(body) })
 
     if (url.includes('rpc/record_shared_board')) {
-      const body = route.request().postDataJSON() as { p_id?: string; p_title?: string }
+      const body = route.request().postDataJSON() as {
+        p_id?: string
+        p_title?: string
+        p_workspace_id?: string | null
+      }
       const when = new Date().toISOString()
+      /*
+       * A recorded board lands in a workspace, because every board does. The
+       * double left this off at first and the app dropped the row on the way
+       * back in — a board that had just been shared vanished from the list,
+       * which is exactly the bug this test exists to catch, arriving from the
+       * wrong direction.
+       */
+      const home = body.p_workspace_id ?? PERSONAL_WORKSPACE
       rows.push({
         id: body.p_id ?? '',
         title: body.p_title ?? '',
@@ -170,6 +221,8 @@ export async function signedIn(
         updated_at: when,
         pinned: false,
         opened_at: when,
+        workspace_id: home,
+        workspace_name: home === PERSONAL_WORKSPACE ? displayName : 'Research',
       })
       return json({})
     }
@@ -256,6 +309,67 @@ export async function signedIn(
           created_at: new Date().toISOString(),
         })),
       )
+    }
+
+    /*
+     * WORKSPACES, remembered like everything else: the app creates one and
+     * immediately re-reads the list, so a fixed fixture would show it missing
+     * one line after it was made.
+     */
+    if (url.includes('rpc/my_workspaces')) return json(server.workspaces)
+
+    if (url.includes('rpc/create_workspace')) {
+      const body = route.request().postDataJSON() as { p_name?: string }
+      server.workspaces.push({
+        id: SHARED_WORKSPACE,
+        name: body.p_name ?? 'Untitled',
+        personal: false,
+        role: 'admin',
+        editor_key: null,
+        viewer_key: null,
+        boards: 0,
+      })
+      return json(SHARED_WORKSPACE)
+    }
+
+    if (url.includes('rpc/share_workspace')) {
+      const body = route.request().postDataJSON() as { p_id?: string }
+      const workspace = server.workspaces.find((w) => w.id === body.p_id)
+      if (workspace === undefined) return json([])
+      // Minted once and then stable, exactly as the database does it: a second
+      // share must not rotate a link already sent to somebody.
+      workspace.editor_key ??= 'e'.repeat(32)
+      workspace.viewer_key ??= 'f'.repeat(32)
+      return json([{ editor_key: workspace.editor_key, viewer_key: workspace.viewer_key }])
+    }
+
+    /*
+     * Joining does NOT require the workspace to be in your list already — the
+     * whole point of an invitation is that it is for one you are not in yet.
+     * The double had that backwards, which made the redeeming test fail for a
+     * reason that had nothing to do with the app.
+     *
+     * On success it appears in the list, which is what really happens.
+     */
+    if (url.includes('rpc/join_workspace')) {
+      const body = route.request().postDataJSON() as { p_id?: string; p_key?: string }
+      const role =
+        body.p_key === 'e'.repeat(32) ? 'editor' : body.p_key === 'f'.repeat(32) ? 'viewer' : null
+      if (role === null || body.p_id === undefined) return json(null)
+
+      const held = server.workspaces.find((w) => w.id === body.p_id)
+      if (held === undefined) {
+        server.workspaces.push({
+          id: body.p_id,
+          name: 'Research',
+          personal: false,
+          role,
+          editor_key: null,
+          viewer_key: null,
+          boards: 0,
+        })
+      }
+      return json(role)
     }
 
     if (url.includes('rpc/my_boards')) return json(rows)

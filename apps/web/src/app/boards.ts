@@ -89,6 +89,15 @@ export interface ListedBoard {
   readonly pinned: boolean
   /** When YOU last opened it. What the list is ordered by. */
   readonly openedAt: number
+  /**
+   * The workspace it lives in, or `null` for a board that lives only in this
+   * browser.
+   *
+   * Null is not a gap to be filled. A local board is in no workspace because
+   * there is nobody else involved; claiming it into an account is what gives
+   * it one.
+   */
+  readonly workspaceId: string | null
 }
 
 /**
@@ -151,6 +160,7 @@ export async function listAllBoards(
       ownerKey: board.ownerKey,
       pinned: board.pinned,
       openedAt: board.openedAt,
+      workspaceId: board.workspaceId,
     })),
     ...local
       /*
@@ -181,6 +191,7 @@ export async function listAllBoards(
         // a board does not sink out of sight for having been made rather than
         // revisited.
         openedAt: opened[board.id] ?? board.updatedAt,
+        workspaceId: null,
       })),
   ]
 

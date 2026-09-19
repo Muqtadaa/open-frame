@@ -713,6 +713,93 @@ body {
   box-shadow: 0 0 0 2px var(--of-page);
 }
 
+/*
+ * WORKSPACES: which shelf the board list is showing.
+ *
+ * A row of filters rather than a dropdown. The count of workspaces somebody
+ * has is small and the whole point is to see at a glance where your boards
+ * are — a control that hides the answer until you open it is the wrong shape
+ * for four items.
+ */
+.of-spaces {
+  display: grid;
+  gap: 6px;
+  margin: 0 0 10px;
+}
+
+.of-spaces__row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  align-items: center;
+}
+
+.of-spaces__tab {
+  display: inline-flex;
+  gap: 5px;
+  align-items: baseline;
+  padding: 3px 9px;
+  font: inherit;
+  font-size: 12px;
+  color: var(--of-ink-muted);
+  cursor: pointer;
+  background: none;
+  /* A transparent border, so selecting one does not move the row by a pixel. */
+  border: 1px solid transparent;
+  border-radius: 999px;
+}
+
+.of-spaces__tab:hover {
+  background: var(--of-hover);
+}
+
+.of-spaces__tab--on {
+  color: var(--of-ink);
+  background: var(--of-accent-soft);
+  border-color: var(--of-control-border);
+}
+
+.of-spaces__count {
+  font-size: 11px;
+  color: var(--of-ink-muted);
+  font-variant-numeric: tabular-nums;
+}
+
+.of-spaces__new {
+  padding: 3px 9px;
+  font: inherit;
+  font-size: 12px;
+  color: var(--of-accent);
+  cursor: pointer;
+  background: none;
+  border: 1px dashed var(--of-control-border);
+  border-radius: 999px;
+}
+
+.of-spaces__naming {
+  display: flex;
+  gap: 6px;
+}
+
+.of-spaces__name,
+.of-spaces__link {
+  flex: 1 1 auto;
+  min-width: 0;
+  padding: 4px 8px;
+  font: inherit;
+  font-size: 12px;
+  color: var(--of-ink);
+  background: var(--of-panel);
+  border: 1px solid var(--of-control-border);
+  border-radius: var(--of-radius);
+}
+
+.of-spaces__share {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+}
+
 /* What somebody wanted you to see, on the front door. */
 .of-mentions {
   position: relative;
