@@ -137,8 +137,14 @@ membership needs somewhere to live. Supabase is the database; whether it is also
 the auth provider is the open question above. Every command re-authorized server-side
 through the existing `Capabilities` interface.
 
-**Stage 4 — the surface.**
-Comments, mentions, sharing links, workspaces.
+**Stage 4 — boards you own. Free tier.**
+An account becomes the way in, sharing MOVES a board rather than copying it,
+and the board list earns the verbs a list of boards needs: rename, delete, pin,
+and an order that is yours. Inserted 2026-09-19, ahead of the surface — see
+below for why.
+
+**Stage 5 — the surface.**
+Comments, mentions, workspaces, follow-mode, live drag deltas.
 
 ## Done when
 
@@ -151,8 +157,8 @@ Comments, mentions, sharing links, workspaces.
 
 ## Pick up here
 
-**Current position: Stages 1 and 2 are done and deployed.** Shared boards are
-live. `openframe-rooms.muqdara95.workers.dev` holds one Durable Object per
+**Current position: Stages 1, 2 and 3 are done and deployed.** Shared boards
+and accounts are live; Stage 4 is planned below and not started. `openframe-rooms.muqdara95.workers.dev` holds one Durable Object per
 board; the web app joins one when it is opened with `?room=<id>`.
 
 Built, tested and on `main`:
@@ -162,8 +168,12 @@ Built, tested and on `main`:
   backoff. 39 tests, none of which opens a socket.
 - **`apps/rooms`** — the Worker and the Durable Object. Holds sockets, storage
   and the fact that any of this is Cloudflare; decides nothing.
-- **The web app** — Share copies the board to a new unguessable id; the record
-  line says whether the room is reachable and shows a face per person.
+- **The web app** — Share copies the board to a new unguessable id (Stage 4
+  changes this to a move); the record line says whether the room is reachable
+  and shows a face per person.
+- **Identity** — email accounts, a board list that follows you between
+  browsers, and links that carry a role: an editor key and a viewer key per
+  board, enforced by the room rather than by the client.
 - **Presence** — named cursors, dashed outlines for what others have selected,
   a solid one for what they have OPEN, and an advisory lock on inline editing.
 
@@ -229,11 +239,107 @@ the one whose keys the room has to verify.
   removes the resurrection hazard that the seed-once rule exists to avoid.
 - **Remote objects are not schema-validated** as they arrive. Until Stage 3
   there was no untrusted peer; with accounts there is a boundary worth the name.
-- **A read-only participant goes deaf** rather than watching: `dispatch` refuses
-  the edit, so merged changes stop being applied. Authorization is where this
-  gets its answer.
+- ~~**A read-only participant goes deaf**~~ — fixed 2026-09-19. Originating a
+  change asks `edit`; applying a merged one asks `view`, because those are
+  different acts by different actors.
 - **Link-only.** The per-board password is specified and unbuilt. It does not
   need accounts, so it can land before or after them.
+
+---
+
+## Stage 4 — boards you own
+
+**Chosen 2026-09-19, ahead of follow-mode and live drag deltas.** Presence
+polish on a surface people cannot navigate away from is the wrong order: the
+dashboard is currently a dead end, and the board list cannot do the three
+things a list of boards exists to do.
+
+### The model changes, and PRODUCT.md changes with it
+
+**An account becomes the way in.** Creating a board requires one; every board
+has an owner; the dashboard has ONE kind of row. Guests keep opening a link
+somebody sends them — that case is what the room's guest support was built for
+and it survives untouched.
+
+This rewrites principle 4. "A board works in one browser with no account and no
+network" becomes **"a board works offline"**: IndexedDB and the CRDT already
+provide that, and a signed-in person with no network keeps working exactly as
+they do today. What is retired is *no account*, not *no network*.
+
+PRODUCT.md is NOT edited yet, on purpose. The principle changes in the commit
+that makes it true, because a document describing a product that does not exist
+is worse than one describing an old one.
+
+The owner took this on 2026-09-19, with the tension stated: principles 4 and 5
+were recorded as live rather than resolved, and this resolves them in 5's
+favour.
+
+### The work, in order
+
+Each step is shippable, and the order is by how broken the thing is.
+
+1. **A way back.** There is no link from a board to the dashboard — none, in
+   any component. You enter a board and the only exit is editing the URL. The
+   board's name in the record line is the natural place for it.
+
+2. **Sharing MOVES a board.** It copies today, leaving a stale duplicate that
+   diverges silently — `share.ts` argues for that ("sharing should never be the
+   act that takes your own board away from you") and the argument stops holding
+   the moment every board has an owner and one row. The local original is
+   removed once the shared one is written.
+
+3. **Membership, so "shared with me" is real.** `board_members` has had RLS
+   policies since the identity migration and **nothing has ever inserted a
+   row**. Opening somebody's link makes you a guest in the ROOM, not a member
+   of the BOARD, so a board shared with you never reaches your list. Opening a
+   link while signed in should offer to add it.
+
+4. **Manage boards from the list.** Rename in place, and delete. `deleteBoard`
+   has been on the repository port and in both adapters since Phase 1 with
+   **nothing calling it** — rule 21's failure mode, shipped. Only the owner may
+   delete; a member removes themselves, which is a different verb.
+
+5. **Delete reaches the room.** Destroying a board destroys the Durable
+   Object's storage, so the links die with it. Needs a new authenticated Worker
+   endpoint that verifies the editor key before destroying anything — the first
+   destructive endpoint the room has, and it gets treated as one.
+
+6. **Pins and recency.** Pinned boards first, then YOUR last-opened order, with
+   "edited 4 minutes ago" shown as information rather than as the sort key.
+   Today the list sorts by when a board last CHANGED, so somebody else's edit
+   reorders your list. Both pins and last-opened follow a signed-in person
+   between browsers, which is the promise sign-in already makes.
+
+7. **Claiming what already exists.** On first sign-in, any board in this
+   browser is offered for upload, once, with a list of what will move. Nothing
+   is taken silently: uploading somebody's work to a server without asking is
+   not a migration, it is a surprise.
+
+### What this breaks, and what has to be re-decided
+
+- **The front door's two handles.** "Start a board without an account" was
+  chosen on 2026-09-19 and is retired by this. The door keeps one handle and
+  the surface brief needs rewriting rather than quietly contradicting.
+- **Guest creature-names** stay for people opening a link, and only for them.
+- **The e2e suite** asserts local-first behaviour in several places — a board
+  opened without a link joining no room, boards created with no account. Those
+  assertions change meaning and must be rewritten deliberately, not deleted to
+  get green.
+- **`listAllBoards` merges two sources.** That merge goes away, which is most
+  of the simplification this buys.
+
+### Still open
+
+- Whether a board can be moved BACK to local. Probably not worth it.
+- What a member sees when an owner deletes a board they are looking at.
+
+---
+
+## Stage 5 — the surface
+
+Comments, mentions, workspaces. Follow-mode and live drag deltas move here too:
+both are real, both were folded in by request, and neither is worth doing while
+the board list cannot rename, delete or order itself.
 
 ---
 
