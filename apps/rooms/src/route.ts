@@ -18,14 +18,47 @@
 const BOARD_ID = /^[A-Za-z0-9_-]{1,64}$/
 
 const ROOM_PATH = /^\/room\/([^/]+)\/?$/
+const CLAIM_PATH = /^\/room\/([^/]+)\/claim\/?$/
+
+/**
+ * The shape of an access key.
+ *
+ * A key is the whole of a link's authority, so the only thing this check does
+ * is keep a malformed one from reaching storage comparison — the LENGTH is
+ * what makes it unguessable, and that is decided where keys are minted.
+ */
+const ACCESS_KEY = /^[A-Za-z0-9_-]{16,64}$/
+
+/** `?k=<key>` — which link this connection arrived on. */
+export const KEY_PARAM = 'k'
 
 export type Route =
   | { readonly kind: 'health' }
-  | { readonly kind: 'room'; readonly boardId: string }
+  | {
+      readonly kind: 'room'
+      readonly boardId: string
+      /** `null` means the link carried no key, which only a legacy room accepts. */
+      readonly key: string | null
+    }
+  /** Minting the two links for a board that does not have them yet. */
+  | { readonly kind: 'claim'; readonly boardId: string }
+  /** A CORS preflight for the above: the web app is on another origin. */
+  | { readonly kind: 'preflight' }
   | { readonly kind: 'refuse'; readonly status: number; readonly reason: string }
 
-export function routeRequest(url: URL, upgradeHeader: string | null): Route {
+export function routeRequest(url: URL, upgradeHeader: string | null, method = 'GET'): Route {
   if (url.pathname === '/health') return { kind: 'health' }
+
+  const claim = CLAIM_PATH.exec(url.pathname)
+  if (claim !== null) {
+    const boardId = claim[1]
+    if (boardId === undefined || !BOARD_ID.test(boardId)) {
+      return { kind: 'refuse', status: 400, reason: 'That is not a board id' }
+    }
+    if (method === 'OPTIONS') return { kind: 'preflight' }
+    if (method !== 'POST') return { kind: 'refuse', status: 405, reason: 'Claim is a POST' }
+    return { kind: 'claim', boardId }
+  }
 
   const match = ROOM_PATH.exec(url.pathname)
   if (match === null) return { kind: 'refuse', status: 404, reason: 'Not found' }
@@ -45,5 +78,14 @@ export function routeRequest(url: URL, upgradeHeader: string | null): Route {
     return { kind: 'refuse', status: 426, reason: 'This endpoint speaks WebSocket' }
   }
 
-  return { kind: 'room', boardId }
+  /*
+   * A malformed key is dropped rather than refused, so it reaches the room as
+   * "no key" and gets the same answer as a link without one. Refusing here
+   * would tell somebody probing the endpoint that the SHAPE of their guess was
+   * wrong, which is a hint they have no business getting.
+   */
+  const rawKey = url.searchParams.get(KEY_PARAM)
+  const key = rawKey !== null && ACCESS_KEY.test(rawKey) ? rawKey : null
+
+  return { kind: 'room', boardId, key }
 }

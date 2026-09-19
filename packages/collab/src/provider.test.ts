@@ -3,7 +3,7 @@ import { describe, expect, it } from 'vitest'
 import * as Y from 'yjs'
 
 import { applyPatchesToDoc, objectsFromDoc } from './document-map.js'
-import { createAwareness } from './protocol.js'
+import { createAwareness, type RoomRole } from './protocol.js'
 import { RoomProvider, type RoomSocket } from './provider.js'
 import { BoardRoom, type RoomPeer } from './room.js'
 
@@ -42,10 +42,11 @@ class Wire {
   }
 
   /** Completes the connection, as a server accepting the upgrade would. */
-  connectTo(room: BoardRoom, id: string): void {
+  connectTo(room: BoardRoom, id: string, role: RoomRole = 'editor'): void {
     this.#room = room
     this.#peer = {
       id,
+      role,
       send: (data) => {
         for (const listener of this.#messageListeners) listener(data)
       },

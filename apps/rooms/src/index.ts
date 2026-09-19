@@ -17,7 +17,11 @@ export { BoardRoomObject } from './room-object.js'
  */
 export default {
   fetch(request: Request, env: Env): Response | Promise<Response> {
-    const route = routeRequest(new URL(request.url), request.headers.get('Upgrade'))
+    const route = routeRequest(
+      new URL(request.url),
+      request.headers.get('Upgrade'),
+      request.method,
+    )
 
     switch (route.kind) {
       case 'health':
@@ -25,6 +29,27 @@ export default {
 
       case 'refuse':
         return new Response(route.reason, { status: route.status })
+
+      /*
+       * The web app is served from another origin, so claiming links is a
+       * cross-origin POST and the browser asks first. Answered here rather than
+       * in the room: a preflight names no board and should not wake one.
+       */
+      case 'preflight':
+        return new Response(null, {
+          status: 204,
+          headers: {
+            'access-control-allow-origin': '*',
+            'access-control-allow-methods': 'POST, OPTIONS',
+            'access-control-allow-headers': 'content-type',
+            'access-control-max-age': '86400',
+          },
+        })
+
+      case 'claim': {
+        const room = env.ROOMS.get(env.ROOMS.idFromName(route.boardId))
+        return room.fetch(request)
+      }
 
       case 'room': {
         /*

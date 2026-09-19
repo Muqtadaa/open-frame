@@ -4,10 +4,12 @@ import {
   createAwareness,
   encodeAllAwareness,
   encodeAwareness,
+  encodeRole,
   encodeSyncStep1,
   readMessage,
   removeAwarenessClients,
   type Awareness,
+  type RoomRole,
 } from './protocol.js'
 
 /**
@@ -28,6 +30,14 @@ import {
 export interface RoomPeer {
   /** Stable for the life of the connection, and unique within the room. */
   readonly id: string
+  /**
+   * What this connection may do, decided before it was ever accepted.
+   *
+   * It is on the PEER rather than passed to `receive` because it is a property
+   * of the connection, not of a message: a socket that arrived on a view-only
+   * link is read-only for its whole life, and nothing it sends can change that.
+   */
+  readonly role: RoomRole
   send(message: Uint8Array): void
 }
 
@@ -112,6 +122,12 @@ export class BoardRoom {
     this.#peers.set(peer.id, peer)
     this.#controlled.set(peer.id, new Set())
 
+    /*
+     * The role first, before any document bytes. A client that learned it was
+     * read-only only after the board arrived would have a window in which its
+     * interface invited an edit it was going to drop.
+     */
+    peer.send(encodeRole(peer.role))
     peer.send(encodeSyncStep1(this.#doc))
     const presence = encodeAllAwareness(this.#awareness)
     if (presence !== null) peer.send(presence)
@@ -119,7 +135,13 @@ export class BoardRoom {
 
   /** Applies a message from a peer and sends whatever it obliges the room to send. */
   receive(peer: RoomPeer, message: Uint8Array): void {
-    const { reply, broadcast } = readMessage(this.#doc, this.#awareness, message, peer.id)
+    const { reply, broadcast } = readMessage(
+      this.#doc,
+      this.#awareness,
+      message,
+      peer.id,
+      peer.role === 'editor',
+    )
     if (reply !== null) peer.send(reply)
     if (broadcast !== null) this.#broadcast(broadcast, peer.id)
   }

@@ -1,11 +1,13 @@
 import type * as Y from 'yjs'
 
 import {
+  decodeRole,
   encodeAwareness,
   encodeSyncStep1,
   encodeUpdate,
   readMessage,
   type Awareness,
+  type RoomRole,
 } from './protocol.js'
 
 /**
@@ -35,6 +37,13 @@ export interface RoomProviderOptions {
   /** Opens a new socket. Called again on every reconnection attempt. */
   readonly connect: () => RoomSocket
   readonly onStatus?: (status: ConnectionStatus) => void
+  /**
+   * What the room decided this connection may do.
+   *
+   * Reported rather than asked for: the client knows which link it opened, but
+   * the room is the only thing that checked it.
+   */
+  readonly onRole?: (role: RoomRole) => void
   /** Injected so tests do not wait in real time. */
   readonly setTimer?: (run: () => void, ms: number) => unknown
   readonly clearTimer?: (handle: unknown) => void
@@ -55,6 +64,7 @@ export class RoomProvider {
   readonly #awareness: Awareness
   readonly #connect: () => RoomSocket
   readonly #onStatus: (status: ConnectionStatus) => void
+  readonly #onRole: (role: RoomRole) => void
   readonly #setTimer: (run: () => void, ms: number) => unknown
   readonly #clearTimer: (handle: unknown) => void
 
@@ -63,12 +73,19 @@ export class RoomProvider {
   #retryMs = FIRST_RETRY_MS
   #retryHandle: unknown = null
   #stopped = false
+  /**
+   * Editor until the room says otherwise, which it does before any document
+   * bytes. The optimistic default is safe here and only here: this value drives
+   * what the interface OFFERS, and the room enforces the truth regardless.
+   */
+  #role: RoomRole = 'editor'
 
   constructor(options: RoomProviderOptions) {
     this.#doc = options.doc
     this.#awareness = options.awareness
     this.#connect = options.connect
     this.#onStatus = options.onStatus ?? noop
+    this.#onRole = options.onRole ?? noop
     this.#setTimer = options.setTimer ?? ((run, ms) => setTimeout(run, ms))
     this.#clearTimer = options.clearTimer ?? ((handle) => {
       clearTimeout(handle as ReturnType<typeof setTimeout>)
@@ -80,6 +97,10 @@ export class RoomProvider {
 
   get status(): ConnectionStatus {
     return this.#status
+  }
+
+  get role(): RoomRole {
+    return this.#role
   }
 
   /** Opens the connection, and keeps reopening it until `destroy` is called. */
@@ -109,7 +130,19 @@ export class RoomProvider {
     })
 
     socket.onMessage((data) => {
-      const { reply } = readMessage(this.#doc, this.#awareness, data, FROM_ROOM)
+      const role = decodeRole(data)
+      if (role !== null) {
+        this.#role = role
+        this.#onRole(role)
+        return
+      }
+
+      /*
+       * `true`, because on this side the peer IS the room. The write guard in
+       * `readMessage` is about what a CLIENT may send to a room; a client that
+       * refused what the room sent it would be refusing the board.
+       */
+      const { reply } = readMessage(this.#doc, this.#awareness, data, FROM_ROOM, true)
       if (reply !== null) socket.send(reply)
     })
 

@@ -9,6 +9,7 @@ import {
   encodeSyncStep1,
   encodeUpdate,
   readMessage,
+  type RoomRole,
 } from './protocol.js'
 import { BoardRoom, documentFromSnapshot, type RoomPeer } from './room.js'
 
@@ -27,7 +28,16 @@ class Client implements RoomPeer {
   readonly received: Uint8Array[] = []
   #room: BoardRoom | null = null
 
-  constructor(readonly id: string) {}
+  /**
+   * Editor unless a test says otherwise, because that is what every test
+   * written before roles existed assumed — and stating it here rather than
+   * defaulting it in `RoomPeer` keeps the production type honest: a peer whose
+   * role nobody set is a bug, not an editor.
+   */
+  constructor(
+    readonly id: string,
+    readonly role: RoomRole = 'editor',
+  ) {}
 
   /** Sends its own document changes on, the way a real provider would. */
   connect(room: BoardRoom): void {
@@ -55,7 +65,9 @@ class Client implements RoomPeer {
     this.received.push(message)
     // Applied with a 'room' origin so the observer above does not send the
     // room's own news back to it.
-    const { reply } = readMessage(this.doc, this.awareness, message, 'room')
+    // `true`: this side's peer is the room, and a client that refused what the
+    // room sent it would be refusing the board.
+    const { reply } = readMessage(this.doc, this.awareness, message, 'room', true)
     if (reply !== null && this.#room !== null) this.#room.receive(this, reply)
   }
 }

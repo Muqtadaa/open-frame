@@ -22,17 +22,21 @@ export {
 export { parentageCandidates, patchesFromEvent } from './remote-patches.js'
 export {
   createAwareness,
+  decodeRole,
   encodeAllAwareness,
   encodeAwareness,
+  encodeRole,
   encodeSyncStep1,
   encodeSyncStep2,
   encodeUpdate,
   readMessage,
   removeAwarenessClients,
   MESSAGE_AWARENESS,
+  MESSAGE_ROLE,
   MESSAGE_SYNC,
   type Awareness,
   type Handled,
+  type RoomRole,
 } from './protocol.js'
 export {
   BoardRoom,

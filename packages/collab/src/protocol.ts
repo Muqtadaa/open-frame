@@ -30,8 +30,55 @@ import type * as Y from 'yjs'
 export const MESSAGE_SYNC = 0
 /** A presence update: cursors, selections, who is here. Never persisted. */
 export const MESSAGE_AWARENESS = 1
+/**
+ * What the room will let this connection do. Server to client, once, on join.
+ *
+ * The client cannot work this out for itself: it knows which link it opened,
+ * but a link is a claim and the room is the only thing that checked it. Sending
+ * the answer means a viewer's interface can say so honestly instead of letting
+ * somebody edit for a second and then watching it not stick.
+ */
+export const MESSAGE_ROLE = 2
+
+/** What a connection may do. Decided by the room, never by the client. */
+export type RoomRole = 'editor' | 'viewer'
 
 export type Awareness = awarenessProtocol.Awareness
+
+/** The room telling a client what it is. */
+export function encodeRole(role: RoomRole): Uint8Array {
+  const encoder = encoding.createEncoder()
+  encoding.writeVarUint(encoder, MESSAGE_ROLE)
+  encoding.writeVarString(encoder, role)
+  return encoding.toUint8Array(encoder)
+}
+
+/**
+ * The role in a message, or `null` if it is not a role message.
+ *
+ * Unknown strings read as `viewer`. The safe direction for a value this side
+ * did not recognise is the one that grants nothing — a future role this client
+ * has never heard of must not fall through to full write access.
+ */
+export function decodeRole(message: Uint8Array): RoomRole | null {
+  const decoder = decoding.createDecoder(message)
+  if (decoding.readVarUint(decoder) !== MESSAGE_ROLE) return null
+  return decoding.readVarString(decoder) === 'editor' ? 'editor' : 'viewer'
+}
+
+/**
+ * Which kind of sync message this is, WITHOUT applying it.
+ *
+ * `readSyncMessage` applies an update as a side effect of reading it, so a room
+ * that meant to refuse a viewer's write would already have accepted it by the
+ * time it could tell what it was. The only way to decide first is to look
+ * first, which costs one varint off a second decoder.
+ */
+function syncKind(message: Uint8Array): number {
+  const decoder = decoding.createDecoder(message)
+  decoding.readVarUint(decoder)
+  return decoding.readVarUint(decoder)
+}
 
 /** Creates the awareness state for a document. Re-exported so `yjs` stays quarantined. */
 export function createAwareness(doc: Y.Doc): Awareness {
@@ -111,12 +158,36 @@ export function readMessage(
   awareness: Awareness,
   message: Uint8Array,
   origin: unknown,
+  /**
+   * Whether this sender may change the document.
+   *
+   * Required rather than defaulted, deliberately: a default of `true` would
+   * leave every call site that forgot it silently granting write access, and
+   * the one that mattered would be the room. A client passes `true` because on
+   * that side the peer IS the room, which is the thing being trusted.
+   */
+  mayWrite: boolean,
 ): Handled {
   const decoder = decoding.createDecoder(message)
   const type = decoding.readVarUint(decoder)
 
   switch (type) {
     case MESSAGE_SYNC: {
+      /*
+       * Refused before it is read, because reading applies it.
+       *
+       * A step-1 is a QUESTION — "what do you have that I do not" — and a
+       * viewer is entitled to ask it; that is how they receive the board at
+       * all. A step-2 or an update is a write, and this is where a view-only
+       * link stops being a suggestion.
+       */
+      if (!mayWrite) {
+        const kind = syncKind(message)
+        const isWrite =
+          kind === syncProtocol.messageYjsSyncStep2 || kind === syncProtocol.messageYjsUpdate
+        if (isWrite) return NOTHING
+      }
+
       const encoder = encoding.createEncoder()
       encoding.writeVarUint(encoder, MESSAGE_SYNC)
       const messageType = syncProtocol.readSyncMessage(decoder, encoder, doc, origin)

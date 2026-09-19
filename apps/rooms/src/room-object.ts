@@ -1,6 +1,13 @@
-import { BoardRoom, documentFromSnapshot, type RoomPeer } from '@openframe/collab'
+import { BoardRoom, documentFromSnapshot, type RoomPeer, type RoomRole } from '@openframe/collab'
 import { DurableObject } from 'cloudflare:workers'
 
+import {
+  claimDecision,
+  mintKeys,
+  roleForKey,
+  roleFromAttachment,
+  type AccessKeys,
+} from './access.js'
 import type { Env } from './env.js'
 
 /**
@@ -28,6 +35,18 @@ const UPDATE_PREFIX = 'u:'
  * compaction rare.
  */
 const COMPACT_AFTER = 64
+
+/**
+ * Where a claimed board's two keys live. Absent means a LEGACY room — one
+ * shared before links had roles — and `access.ts` explains what that grants.
+ */
+const KEYS = 'keys'
+
+const CORS = {
+  'access-control-allow-origin': '*',
+  'access-control-allow-methods': 'POST, OPTIONS',
+  'access-control-allow-headers': 'content-type',
+} as const
 
 export class BoardRoomObject extends DurableObject<Env> {
   #room!: BoardRoom
@@ -60,9 +79,20 @@ export class BoardRoomObject extends DurableObject<Env> {
     })
   }
 
-  override fetch(request: Request): Response {
+  override async fetch(request: Request): Promise<Response> {
+    const url = new URL(request.url)
+
+    if (url.pathname.endsWith('/claim')) return this.#claim()
+
     if (request.headers.get('Upgrade') !== 'websocket') {
       return new Response('This endpoint speaks WebSocket', { status: 426 })
+    }
+
+    const role = await this.#roleFor(url.searchParams.get('k'))
+    if (role === null) {
+      // The same answer for a wrong key and a missing one. Distinguishing them
+      // tells somebody probing which half of the guess to keep.
+      return new Response('That link does not open this board', { status: 403 })
     }
 
     const pair = new WebSocketPair()
@@ -74,7 +104,7 @@ export class BoardRoomObject extends DurableObject<Env> {
      * not survive the next eviction, and the room would then be unable to say
      * whose cursor to remove when this connection closes.
      */
-    server.serializeAttachment({ id: crypto.randomUUID() })
+    server.serializeAttachment({ id: crypto.randomUUID(), role })
     // `acceptWebSocket`, never `server.accept()`: the latter opts out of
     // hibernation and keeps the room in memory for as long as anyone is
     // connected, which is the whole cost this was chosen to avoid.
@@ -101,13 +131,34 @@ export class BoardRoomObject extends DurableObject<Env> {
 
   /** Identity that survives eviction, because it lives on the connection. */
   #peer(socket: WebSocket): RoomPeer {
-    const attached = socket.deserializeAttachment() as { id?: string } | null
+    const attached = socket.deserializeAttachment() as { id?: string; role?: string } | null
     return {
       id: attached?.id ?? 'unknown',
+      role: roleFromAttachment(attached),
       send: (data) => {
         socket.send(data)
       },
     }
+  }
+
+  async #roleFor(key: string | null): Promise<RoomRole | null> {
+    return roleForKey(await this.ctx.storage.get<AccessKeys>(KEYS), key)
+  }
+
+  /** Storage and a response around `claimDecision`, which is where the rule is. */
+  async #claim(): Promise<Response> {
+    const keys = await this.ctx.storage.get<AccessKeys>(KEYS)
+    const snapshot = await this.ctx.storage.get<ArrayBuffer>(SNAPSHOT)
+    const updates = await this.ctx.storage.list<ArrayBuffer>({ prefix: UPDATE_PREFIX, limit: 1 })
+
+    const decision = claimDecision(keys, snapshot !== undefined || updates.size > 0)
+    if (!decision.ok) {
+      return Response.json({ error: decision.error }, { status: decision.status, headers: CORS })
+    }
+
+    const minted = mintKeys()
+    await this.ctx.storage.put(KEYS, minted)
+    return Response.json(minted, { headers: CORS })
   }
 
   async #load(): Promise<Uint8Array[]> {
