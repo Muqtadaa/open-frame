@@ -1,7 +1,14 @@
 import { useEffect, useMemo, useRef, useState, type FormEvent } from 'react'
 
+import { accessKey, shareLink } from '../app/collab-config.js'
+
 import { useDiscussion } from '../app/comments-context.js'
-import { repliesTo, type BoardComment } from '../hooks/use-comments.js'
+import {
+  mentionsIn,
+  repliesTo,
+  unknownMentionIn,
+  type BoardComment,
+} from '../hooks/use-comments.js'
 import { useInteractionStore } from '../interaction/interaction-store.js'
 import { useOpenFrame } from '../runtime/context.js'
 import { hueVar } from '../scene/presence.js'
@@ -34,7 +41,29 @@ export function CommentPanel() {
   const [body, setBody] = useState('')
   const [busy, setBusy] = useState(false)
   const [problem, setProblem] = useState<string | null>(null)
+  const [invited, setInvited] = useState(false)
   const input = useRef<HTMLTextAreaElement>(null)
+
+  /** Somebody named in this draft who is not on the board, if anybody. */
+  const stranger = useMemo(() => unknownMentionIn(body, people), [body, people])
+
+  const copyInvite = (): void => {
+    const link = shareLink(runtime.boardId, window.location.origin, accessKey(window.location.search))
+    /*
+     * The clipboard can REFUSE — a denied permission, an insecure origin, a
+     * browser that only allows it from a trusted gesture it has decided this
+     * is not. An unhandled rejection there is an uncaught error in the
+     * console and a button that silently did nothing.
+     */
+    navigator.clipboard.writeText(link).then(
+      () => {
+        setInvited(true)
+      },
+      () => {
+        setProblem(`The link could not be copied. It is ${link}`)
+      },
+    )
+  }
 
   // A composer that opens without focus is a composer you have to click twice.
   useEffect(() => {
@@ -51,17 +80,6 @@ export function CommentPanel() {
    * nobody has is a message that silently goes nowhere. The longest name wins
    * so that "@Sam" does not shadow "@Samira".
    */
-  const mentioned = (text: string): string[] => {
-    const found: string[] = []
-    const byLongest = [...people].sort((a, b) => b.displayName.length - a.displayName.length)
-    for (const person of byLongest) {
-      if (text.toLowerCase().includes(`@${person.displayName.toLowerCase()}`)) {
-        found.push(person.userId)
-      }
-    }
-    return found
-  }
-
   const submit = (event: FormEvent): void => {
     event.preventDefault()
     const text = body.trim()
@@ -75,7 +93,7 @@ export function CommentPanel() {
             boardId: runtime.boardId,
             body: text,
             parentId: thread.id,
-            mentions: mentioned(text),
+            mentions: mentionsIn(text, people),
           })
         : composing === null
           ? Promise.resolve(false)
@@ -92,7 +110,7 @@ export function CommentPanel() {
                * this product already made.
                */
               ...(composing.on === null ? {} : { on: composing.on }),
-              mentions: mentioned(text),
+              mentions: mentionsIn(text, people),
             })
 
     void write.then((ok) => {
@@ -163,12 +181,48 @@ export function CommentPanel() {
           data-testid="comment-input"
           onChange={(event) => {
             setBody(event.target.value)
+            // Typing a different name makes the last copy stale, and a button
+            // still reading "Link copied" is a button claiming something it
+            // did not do. Reset here rather than in an effect: this is the
+            // event that invalidates it.
+            setInvited(false)
           }}
         />
 
-        {people.length > 1 && (
+        {stranger === null && people.length > 1 && (
           <p className="of-comment-panel__hint">
             Type @ and a name to notify someone: {people.map((p) => p.displayName).join(', ')}
+          </p>
+        )}
+
+        {/*
+          * A name typed at somebody who is not here.
+          *
+          * The way onto a board is its link — that is how sharing already
+          * works, and it is why there is no directory to search: a lookup
+          * across every account would let anybody with a board enumerate the
+          * whole user list, which no amount of row-level security undoes once
+          * the function exists.
+          *
+          * So this offers the link rather than the person. It replaces the
+          * hint rather than joining it: two lines about mentions, one of them
+          * saying the thing you just typed will not work, is a paragraph
+          * nobody reads.
+          */}
+        {stranger !== null && (
+          <p className="of-comment-panel__hint" data-testid="comment-stranger">
+            Nobody here is called {stranger}. Share the board with them and they can be
+            mentioned.{' '}
+            <button
+              type="button"
+              className="of-button of-button--ghost of-comment-panel__invite"
+              data-testid="comment-invite"
+              onClick={() => {
+                copyInvite()
+              }}
+            >
+              {invited ? 'Link copied' : 'Copy invite link'}
+            </button>
           </p>
         )}
 

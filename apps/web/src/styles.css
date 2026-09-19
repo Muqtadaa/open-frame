@@ -892,6 +892,21 @@ body {
   color: var(--of-ink-muted);
 }
 
+/*
+ * The invite sits INSIDE the sentence that explains it, so it reads as part
+ * of the offer rather than as a second control competing with Post. Inline,
+ * and sized to the 11px functional floor like the hint around it.
+ */
+.of-comment-panel__invite {
+  padding: 0;
+  font-size: 11px;
+  color: var(--of-accent);
+  text-decoration: underline;
+  vertical-align: baseline;
+  background: none;
+  border: none;
+}
+
 .of-comment-panel__problem {
   margin: 6px 0 0;
   font-size: 12px;

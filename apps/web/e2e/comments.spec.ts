@@ -260,3 +260,62 @@ test('a pin follows the element it was dropped on', async ({ page }) => {
   // And it actually went somewhere, so the test cannot pass by nothing moving.
   expect(Math.abs(noteAfter.x - noteBefore.x)).toBeGreaterThan(100)
 })
+
+/**
+ * Typing a name at somebody who is not on the board.
+ *
+ * There is no directory to search — a lookup across every account would let
+ * anybody holding a board enumerate the whole user list — so the offer is the
+ * board's own link, which is how somebody gets onto a board in the first place.
+ */
+test('offers the board link when you name somebody who is not here', async ({ page }) => {
+  await signedIn(page, [{ id: BOARD, title: 'Shared', role: 'owner' }])
+  await page.context().grantPermissions(['clipboard-read', 'clipboard-write'])
+  await openBoard(page)
+
+  await page.getByRole('button', { name: /comment/i }).first().click()
+  await page.locator('[data-testid="canvas"]').click({ position: { x: 320, y: 240 } })
+
+  // Somebody who IS here raises nothing.
+  await page.getByTestId('comment-input').fill('@Rowan what do you think')
+  await expect(page.getByTestId('comment-stranger')).toHaveCount(0)
+
+  // Somebody who is not does.
+  await page.getByTestId('comment-input').fill('@Jordan what do you think')
+  await expect(page.getByTestId('comment-stranger')).toContainText('Jordan')
+
+  /*
+   * And the link carries the KEY. A claimed room refuses a bare board id, so
+   * an invite without one is an invitation to a board that will not open —
+   * which looks exactly like a working link until somebody follows it.
+   */
+  await page.getByTestId('comment-invite').click()
+  await expect(page.getByTestId('comment-invite')).toHaveText(/copied/i)
+  const copied = await page.evaluate(() => navigator.clipboard.readText())
+  expect(copied).toContain(`room=${BOARD}`)
+  expect(copied).toContain(`k=${KEY}`)
+
+  // Correcting the name puts the offer away again.
+  await page.getByTestId('comment-input').fill('@Rowan what do you think')
+  await expect(page.getByTestId('comment-stranger')).toHaveCount(0)
+})
+
+/**
+ * Half a name is somebody still typing, not a stranger.
+ *
+ * A warning that flashes on the way to a name that IS on the board is noise
+ * you learn to ignore, which costs the feature the one moment it is useful.
+ */
+test('stays quiet while a name that is here is still being typed', async ({ page }) => {
+  await signedIn(page, [{ id: BOARD, title: 'Shared', role: 'owner' }])
+  await openBoard(page)
+
+  await page.getByRole('button', { name: /comment/i }).first().click()
+  await page.locator('[data-testid="canvas"]').click({ position: { x: 320, y: 240 } })
+
+  const input = page.getByTestId('comment-input')
+  for (const partial of ['@R', '@Ro', '@Row', '@Rowa', '@Rowan']) {
+    await input.fill(partial)
+    await expect(page.getByTestId('comment-stranger'), partial).toHaveCount(0)
+  }
+})
