@@ -1,6 +1,6 @@
 import { resolveEndpoints, type ConnectorData } from '@openframe/core'
 
-import { arrivalAngle, connectorPath, pathMidpoint } from '../scene/connector-path.js'
+import { connectorPath, pathMidpoint, routeAngles } from '../scene/connector-path.js'
 import { capPath } from '../scene/connector-caps.js'
 import { COLOR_VARS, dashArray } from '../scene/style-tokens.js'
 import { defineObjectView, type ObjectEditorProps, type ObjectViewProps } from './registry.js'
@@ -20,15 +20,17 @@ function ConnectorRenderer({ object, document: doc, zoom }: ObjectViewProps<Conn
   const stroke = COLOR_VARS[object.style.color ?? 'gray']
   const width = STROKE_WIDTHS[object.style.stroke ?? 'medium']
   const path = connectorPath(start, end, object.data.routing)
-  const angle = arrivalAngle(start, end, object.data.routing)
+  const { departure, arrival } = routeAngles(start, end, object.data.routing)
   const label = object.data.text
   const mid = pathMidpoint(start, end)
 
   // Both ends, resolved once. `angle` is the direction of travel as the line
   // arrives, so the near end is the same angle turned around.
   const caps = [
-    { key: 'end', cap: capPath(object.data.endArrow, end, angle) },
-    { key: 'start', cap: capPath(object.data.startArrow, start, angle + Math.PI) },
+    { key: 'end', cap: capPath(object.data.endArrow, end, arrival) },
+    // Turned around, so it faces back out of the line exactly as the end cap
+    // faces into it.
+    { key: 'start', cap: capPath(object.data.startArrow, start, departure + Math.PI) },
   ]
 
   return (

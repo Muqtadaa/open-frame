@@ -51,11 +51,75 @@ export function pathMidpoint(start: Point, end: Point): Point {
   return { x: (start.x + end.x) / 2, y: (start.y + end.y) / 2 }
 }
 
-/** Angle the path arrives at `end`, for orienting an arrowhead. */
+/**
+ * Which way the route runs where it MEETS each end.
+ *
+ * Both together, because they are not the same answer and pretending they were
+ * is what made connectors wrong. A cap is oriented by the segment it sits on,
+ * not by the straight line between the two endpoints — on any route that bends
+ * those differ, and the cap ends up rotated off the line it is supposed to
+ * finish.
+ *
+ * `departure` points AWAY from `start`, along the first segment. `arrival`
+ * points INTO `end`, along the last. A start cap is therefore drawn at
+ * `departure + PI`, so that it faces back out of the line exactly as the end
+ * cap faces into it.
+ */
+export interface RouteAngles {
+  readonly departure: number
+  readonly arrival: number
+}
+
+export function routeAngles(start: Point, end: Point, routing: Routing): RouteAngles {
+  const straight = Math.atan2(end.y - start.y, end.x - start.x)
+
+  switch (routing) {
+    case 'straight':
+      return { departure: straight, arrival: straight }
+
+    case 'orthogonal': {
+      /*
+       * THIS WAS INVERTED, and it is worth saying how.
+       *
+       * `connectorPath` turns on the dominant axis FIRST: when the run is
+       * mostly horizontal it goes across, down, and across again — so it
+       * leaves and arrives HORIZONTALLY. The old code read the same
+       * `horizontal` flag and returned a vertical angle for it, and a
+       * horizontal one for the vertical case. Every orthogonal connector has
+       * been finishing with its arrowhead turned ninety degrees off its own
+       * line.
+       *
+       * Both ends lie on the same axis here, because the route has three
+       * segments and the first and last are parallel by construction.
+       */
+      const horizontal = Math.abs(end.x - start.x) >= Math.abs(end.y - start.y)
+      if (horizontal) {
+        const along = end.x >= start.x ? 0 : Math.PI
+        return { departure: along, arrival: along }
+      }
+      const along = end.y >= start.y ? Math.PI / 2 : -Math.PI / 2
+      return { departure: along, arrival: along }
+    }
+
+    case 'curved': {
+      /*
+       * A cubic's direction at each end is the line to its nearest control
+       * point, and both are offset along the dominant axis — so a curve leaves
+       * and arrives along that axis too, not along the diagonal between the
+       * endpoints.
+       */
+      const horizontal = Math.abs(end.x - start.x) >= Math.abs(end.y - start.y)
+      if (horizontal) {
+        const along = end.x >= start.x ? 0 : Math.PI
+        return { departure: along, arrival: along }
+      }
+      const along = end.y >= start.y ? Math.PI / 2 : -Math.PI / 2
+      return { departure: along, arrival: along }
+    }
+  }
+}
+
+/** Angle the path arrives at `end`, for orienting an end cap. */
 export function arrivalAngle(start: Point, end: Point, routing: Routing): number {
-  if (routing !== 'orthogonal') return Math.atan2(end.y - start.y, end.x - start.x)
-  // An orthogonal route always arrives along one axis, so snap to it.
-  const horizontal = Math.abs(end.x - start.x) >= Math.abs(end.y - start.y)
-  if (horizontal) return end.y >= start.y ? Math.PI / 2 : -Math.PI / 2
-  return end.x >= start.x ? 0 : Math.PI
+  return routeAngles(start, end, routing).arrival
 }

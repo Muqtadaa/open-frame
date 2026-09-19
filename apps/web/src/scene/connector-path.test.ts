@@ -1,6 +1,8 @@
 import { describe, expect, it } from 'vitest'
 
-import { arrivalAngle, connectorPath, pathMidpoint } from './connector-path.js'
+import type { Point } from '@openframe/core'
+
+import { arrivalAngle, connectorPath, pathMidpoint, routeAngles } from './connector-path.js'
 
 const start = { x: 0, y: 0 }
 const end = { x: 200, y: 100 }
@@ -45,15 +47,93 @@ describe('pathMidpoint', () => {
   })
 })
 
-describe('arrivalAngle', () => {
+/**
+ * Every coordinate pair in a path, in order. Enough for these routes, which
+ * are made of `M`, `L` and one `C`.
+ */
+function pointsOf(d: string): { x: number; y: number }[] {
+  const numbers = (d.match(/-?\d+(\.\d+)?/g) ?? []).map(Number)
+  const points: { x: number; y: number }[] = []
+  for (let i = 0; i + 1 < numbers.length; i += 2) {
+    points.push({ x: numbers[i] ?? 0, y: numbers[i + 1] ?? 0 })
+  }
+  return points
+}
+
+/** The direction of a path's final segment, from the path itself. */
+function finalDirection(d: string): number {
+  const points = pointsOf(d)
+  const last = points[points.length - 1]
+  const before = points[points.length - 2]
+  if (last === undefined || before === undefined) throw new Error('not enough points')
+  return Math.atan2(last.y - before.y, last.x - before.x)
+}
+
+/** The direction of a path's first segment, from the path itself. */
+function firstDirection(d: string): number {
+  const points = pointsOf(d)
+  const first = points[0]
+  const next = points[1]
+  if (first === undefined || next === undefined) throw new Error('not enough points')
+  return Math.atan2(next.y - first.y, next.x - first.x)
+}
+
+const sameDirection = (a: number, b: number): boolean =>
+  Math.abs(Math.cos(a) - Math.cos(b)) < 1e-6 && Math.abs(Math.sin(a) - Math.sin(b)) < 1e-6
+
+/**
+ * Where the route meets each end.
+ *
+ * THE OLD TEST HERE ENSHRINED A BUG. It asserted that a mostly-HORIZONTAL
+ * orthogonal route arrives at a VERTICAL angle — `|sin| ≈ 1` — which is
+ * exactly backwards: that route goes across, down, and across again, so it
+ * arrives horizontally. It passed for as long as it existed, and every
+ * orthogonal connector on every board finished with its arrowhead turned
+ * ninety degrees off its own line.
+ *
+ * So these assert against the PATH rather than against a remembered number. A
+ * test that derives the expected angle from `connectorPath` cannot enshrine an
+ * inversion, because it would have to invert the path as well.
+ */
+describe('where a route meets its ends', () => {
+  const cases: { readonly name: string; readonly start: Point; readonly end: Point }[] = [
+    { name: 'mostly horizontal, rightwards', start: { x: 0, y: 0 }, end: { x: 400, y: 30 } },
+    { name: 'mostly horizontal, leftwards', start: { x: 400, y: 0 }, end: { x: 0, y: 30 } },
+    { name: 'mostly vertical, downwards', start: { x: 0, y: 0 }, end: { x: 30, y: 400 } },
+    { name: 'mostly vertical, upwards', start: { x: 0, y: 400 }, end: { x: 30, y: 0 } },
+  ]
+
+  for (const { name, start, end } of cases) {
+    it(`arrives along the last segment of an orthogonal route — ${name}`, () => {
+      const { arrival } = routeAngles(start, end, 'orthogonal')
+
+      expect(sameDirection(arrival, finalDirection(connectorPath(start, end, 'orthogonal')))).toBe(
+        true,
+      )
+    })
+
+    it(`leaves along the first segment of an orthogonal route — ${name}`, () => {
+      const { departure } = routeAngles(start, end, 'orthogonal')
+
+      expect(sameDirection(departure, firstDirection(connectorPath(start, end, 'orthogonal')))).toBe(
+        true,
+      )
+    })
+  }
+
   it('points along the line for a straight route', () => {
     expect(arrivalAngle({ x: 0, y: 0 }, { x: 100, y: 0 }, 'straight')).toBeCloseTo(0, 10)
     expect(arrivalAngle({ x: 0, y: 0 }, { x: 0, y: 100 }, 'straight')).toBeCloseTo(Math.PI / 2, 10)
   })
 
-  /** An orthogonal route always arrives along an axis, so the head must too. */
-  it('snaps to an axis for an orthogonal route', () => {
-    const angle = arrivalAngle({ x: 0, y: 0 }, { x: 400, y: 30 }, 'orthogonal')
-    expect(Math.abs(Math.sin(angle))).toBeCloseTo(1, 10)
+  /**
+   * A cubic's direction at an end is the line to its nearest control point,
+   * and both are offset along the dominant axis — so a curve arrives along
+   * that axis, not along the diagonal between the endpoints.
+   */
+  it('arrives along the dominant axis for a curved route', () => {
+    const { arrival } = routeAngles({ x: 0, y: 0 }, { x: 400, y: 30 }, 'curved')
+
+    expect(Math.abs(Math.cos(arrival))).toBeCloseTo(1, 10)
   })
 })
