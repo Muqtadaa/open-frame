@@ -1,5 +1,7 @@
 import { expect, test } from '@playwright/test'
 
+import { BOARD_URL } from './routes.js'
+
 /**
  * The brand surfaces: the boot splash and the two worlds.
  *
@@ -25,7 +27,7 @@ test.describe('the boot splash', () => {
       await route.continue()
     })
 
-    await page.goto('/', { waitUntil: 'commit' })
+    await page.goto(BOARD_URL, { waitUntil: 'commit' })
     await expect(page.locator('#of-splash')).toBeVisible()
     expect(held).toBe(true)
 
@@ -49,7 +51,7 @@ test.describe('the boot splash', () => {
     })
 
     const opened = Date.now()
-    await page.goto('/')
+    await page.goto(BOARD_URL)
     await page.waitForSelector(STATUS_BAR, { timeout: 20_000 })
 
     // The board is ready and the splash is STILL there — that is the point.
@@ -71,7 +73,7 @@ test.describe('the boot splash', () => {
     await page.addInitScript(() => {
       localStorage.removeItem('openframe:splash-hold')
     })
-    await page.goto('/')
+    await page.goto(BOARD_URL)
     await page.waitForSelector(STATUS_BAR, { timeout: 20_000 })
 
     await expect(page.locator('#root')).toHaveAttribute('inert', '')
@@ -90,7 +92,7 @@ test.describe('the boot splash', () => {
       await new Promise((resolve) => setTimeout(resolve, 900))
       await route.continue()
     })
-    await page.goto('/', { waitUntil: 'commit' })
+    await page.goto(BOARD_URL, { waitUntil: 'commit' })
     await expect(page.locator('#of-splash')).toBeVisible()
     await expect(page.getByRole('status')).toHaveCount(0)
   })
@@ -98,7 +100,7 @@ test.describe('the boot splash', () => {
 
 test.describe('after hours', () => {
   test('switches worlds and is still there after a reload', async ({ page }) => {
-    await page.goto('/')
+    await page.goto(BOARD_URL)
     await page.waitForSelector(STATUS_BAR)
 
     const root = page.locator('html')
@@ -116,7 +118,7 @@ test.describe('after hours', () => {
   })
 
   test('switches back, and the default world carries no attribute at all', async ({ page }) => {
-    await page.goto('/')
+    await page.goto(BOARD_URL)
     await page.waitForSelector(STATUS_BAR)
     await page.click(TOGGLE)
     await page.click(TOGGLE)
@@ -133,7 +135,7 @@ test.describe('after hours', () => {
   })
 
   test('repaints the board, not just the chrome', async ({ page }) => {
-    await page.goto('/')
+    await page.goto(BOARD_URL)
     await page.waitForSelector(STATUS_BAR)
 
     const pageColour = async (): Promise<string> =>

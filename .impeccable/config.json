@@ -1,0 +1,14 @@
+{
+  "detector": {
+    "ignoreRules": [],
+    "ignoreFiles": [],
+    "ignoreValues": [
+      {
+        "rule": "design-system-font",
+        "value": "georgia",
+        "createdAt": "2026-09-19T02:06:41.545Z",
+        "reason": "Board CONTENT typography, not the product type system: .of-face--serif is a typeface a person picks for their own text object, and Georgia is a fallback inside a generic ui-serif stack. DESIGN.md documents the interface's fonts; what a user sets on a note is their choice, not a brand addition."
+      }
+    ]
+  }
+}

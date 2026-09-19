@@ -1,5 +1,7 @@
 import { expect, test, type Page } from '@playwright/test'
 
+import { BOARD_URL } from './routes.js'
+
 /**
  * Images: uploading, what gets rejected, and surviving a reload.
  *
@@ -23,7 +25,7 @@ const PNG_2x3_BASE64 =
   '1gX7ttb52gAAAABJRU5ErkJggg=='
 
 async function freshBoard(page: Page): Promise<void> {
-  await page.goto('/')
+  await page.goto(BOARD_URL)
   await page.evaluate(
     async () =>
       new Promise<void>((resolve) => {

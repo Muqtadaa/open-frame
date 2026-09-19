@@ -1,5 +1,7 @@
 import { expect, test, type Page } from '@playwright/test'
 
+import { BOARD_URL } from './routes.js'
+
 /**
  * The record panel.
  *
@@ -21,7 +23,7 @@ const EDITOR = 'textarea, [contenteditable="true"]'
 const EMPTY = { x: 1120, y: 150 }
 
 async function freshBoard(page: Page): Promise<void> {
-  await page.goto('/')
+  await page.goto(BOARD_URL)
   await page.evaluate(
     async () =>
       new Promise<void>((resolve) => {

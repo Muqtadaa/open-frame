@@ -1,5 +1,7 @@
 import { expect, test, type Page } from '@playwright/test'
 
+import { BOARD_URL } from './routes.js'
+
 /**
  * The shape palette, and the label geometry that made the triangle look broken.
  */
@@ -26,7 +28,7 @@ const KINDS = [
 ] as const
 
 async function freshBoard(page: Page): Promise<void> {
-  await page.goto('/')
+  await page.goto(BOARD_URL)
   await page.evaluate(
     async () =>
       new Promise<void>((resolve) => {

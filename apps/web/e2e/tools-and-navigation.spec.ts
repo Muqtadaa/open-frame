@@ -1,5 +1,7 @@
 import { expect, test, type Page } from '@playwright/test'
 
+import { BOARD_URL } from './routes.js'
+
 /**
  * Tools, shortcuts and viewport navigation.
  *
@@ -19,7 +21,7 @@ const CANVAS = '[data-testid="canvas"]'
 const EDITOR = 'textarea, [contenteditable="true"]'
 
 async function freshBoard(page: Page): Promise<void> {
-  await page.goto('/')
+  await page.goto(BOARD_URL)
   await page.evaluate(
     async () =>
       new Promise<void>((resolve) => {

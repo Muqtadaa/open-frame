@@ -1,5 +1,7 @@
 import { expect, test, type Page } from '@playwright/test'
 
+import { BOARD_URL } from './routes.js'
+
 /**
  * Finding things by what they MEAN, walked in a browser.
  *
@@ -15,7 +17,7 @@ const AT = { x: 340, y: 280 }
 const CLEAR = { x: 1120, y: 620 }
 
 async function freshBoard(page: Page): Promise<void> {
-  await page.goto('/')
+  await page.goto(BOARD_URL)
   await page.evaluate(
     async () =>
       new Promise<void>((resolve) => {

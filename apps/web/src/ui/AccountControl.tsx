@@ -1,7 +1,8 @@
-import { useState, type FormEvent } from 'react'
+import { useState } from 'react'
 
-import { ACCOUNTS_ENABLED, signIn, signOut, signUp } from '../app/identity.js'
+import { ACCOUNTS_ENABLED, signOut } from '../app/identity.js'
 import { useIdentity } from '../hooks/use-identity.js'
+import { AccountForm } from './AccountForm.js'
 import { hueVar, initialOf } from '../scene/presence.js'
 
 /**
@@ -59,90 +60,9 @@ export function AccountControl() {
 }
 
 function AccountDialog({ onClose }: { readonly onClose: () => void }) {
-  const [mode, setMode] = useState<'in' | 'up'>('in')
-  const [email, setEmail] = useState('')
-  const [password, setPassword] = useState('')
-  const [displayName, setDisplayName] = useState('')
-  const [error, setError] = useState<string | null>(null)
-  const [busy, setBusy] = useState(false)
-
-  const submit = (event: FormEvent): void => {
-    event.preventDefault()
-    setBusy(true)
-    setError(null)
-    const attempt = mode === 'in' ? signIn(email, password) : signUp(email, password, displayName)
-    void attempt.then((result) => {
-      setBusy(false)
-      if (result.ok) onClose()
-      else setError(result.message ?? 'That did not work.')
-    })
-  }
-
   return (
     <div className="of-account" role="dialog" aria-label="Account" data-testid="account-dialog">
-      <form onSubmit={submit}>
-        <p className="of-account__lead">
-          {mode === 'in'
-            ? 'Sign in to keep a list of your boards.'
-            : 'An account keeps a list of your boards. It is not needed to use one.'}
-        </p>
-
-        {mode === 'up' && (
-          <label className="of-account__field">
-            <span>Name</span>
-            <input
-              type="text"
-              value={displayName}
-              autoComplete="name"
-              placeholder="What people will see on your cursor"
-              onChange={(event) => setDisplayName(event.target.value)}
-            />
-          </label>
-        )}
-
-        <label className="of-account__field">
-          <span>Email</span>
-          <input
-            type="email"
-            required
-            value={email}
-            autoComplete="email"
-            onChange={(event) => setEmail(event.target.value)}
-          />
-        </label>
-
-        <label className="of-account__field">
-          <span>Password</span>
-          <input
-            type="password"
-            required
-            minLength={6}
-            value={password}
-            autoComplete={mode === 'in' ? 'current-password' : 'new-password'}
-            onChange={(event) => setPassword(event.target.value)}
-          />
-        </label>
-
-        {/*
-          `role="alert"` so the failure is announced. A message that only
-          appears visually leaves a screen reader user pressing a button that
-          seems to do nothing.
-        */}
-        {error !== null && (
-          <p className="of-account__error" role="alert">
-            {error}
-          </p>
-        )}
-
-        <div className="of-account__actions">
-          <button type="button" className="of-account__switch" onClick={() => setMode(mode === 'in' ? 'up' : 'in')}>
-            {mode === 'in' ? 'Create an account' : 'I already have one'}
-          </button>
-          <button type="submit" className="of-account__submit" disabled={busy}>
-            {busy ? 'Just a moment…' : mode === 'in' ? 'Sign in' : 'Create account'}
-          </button>
-        </div>
-      </form>
+      <AccountForm onDone={onClose} />
     </div>
   )
 }

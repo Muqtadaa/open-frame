@@ -1,5 +1,7 @@
 import { expect, test, type Page } from '@playwright/test'
 
+import { BOARD_URL } from './routes.js'
+
 /**
  * The one end-to-end journey Phase 1 must support:
  *
@@ -34,7 +36,7 @@ async function createSticky(page: Page, x: number, y: number, text: string): Pro
 }
 
 test.beforeEach(async ({ page }) => {
-  await page.goto('/')
+  await page.goto(BOARD_URL)
   // Each test starts from a clean local database.
   await page.evaluate(async () => {
     await new Promise<void>((resolve) => {

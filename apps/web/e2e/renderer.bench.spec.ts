@@ -1,5 +1,7 @@
 import { expect, test, type Page } from '@playwright/test'
 
+import { BOARD_URL } from './routes.js'
+
 /**
  * The ADR 0002 gate, instrumented.
  *
@@ -83,7 +85,7 @@ async function measurePan(page: Page): Promise<{ p50: number; p95: number }> {
 
 test('renderer scaling probe', async ({ page }) => {
   test.setTimeout(180_000)
-  await page.goto('/')
+  await page.goto(BOARD_URL)
   await expect(page.locator('[data-testid="canvas"]')).toBeVisible()
 
   const results: Measurement[] = []

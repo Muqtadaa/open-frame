@@ -1,5 +1,7 @@
 import { expect, test, type Page } from '@playwright/test'
 
+import { BOARD_URL } from './routes.js'
+
 /**
  * Alignment guides: lining a drag up with its neighbours, and showing why.
  *
@@ -20,7 +22,7 @@ const EDITOR = 'textarea, [contenteditable="true"]'
 const MOD = process.platform === 'darwin' ? 'Meta' : 'Control'
 
 async function freshBoard(page: Page): Promise<void> {
-  await page.goto('/')
+  await page.goto(BOARD_URL)
   await page.evaluate(
     async () =>
       new Promise<void>((resolve) => {
