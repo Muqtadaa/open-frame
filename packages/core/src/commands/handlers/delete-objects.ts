@@ -54,5 +54,8 @@ export function deleteObjects(
 
   const removals: Patch[] = [...doomed].map((id: ObjectId) => ({ op: 'remove', id }))
   // Detach first: a patch against an object that has already been removed throws.
-  return [...detachPatches.filter((patch) => !doomed.has(patch.id)), ...removals]
+  return [
+    ...detachPatches.filter((patch) => patch.op === 'meta' || !doomed.has(patch.id)),
+    ...removals,
+  ]
 }

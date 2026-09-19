@@ -5,6 +5,8 @@ const plural = (count: number, noun: string): string => `${count} ${noun}${count
 /** Human-readable undo labels. The one place command wording lives. */
 export function describeCommand(command: Command): string {
   switch (command.kind) {
+    case 'SetBoardTitle':
+      return 'Rename board'
     case 'CreateObjects':
       return `Create ${plural(command.objects.length, 'object')}`
     case 'DeleteObjects':

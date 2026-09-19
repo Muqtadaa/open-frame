@@ -65,8 +65,31 @@ export function applyRemotePatches(
         if (!present.has(patch.id)) break
         patches.push(patch)
         break
+      /*
+       * The document's own fields, which no object can be missing. There is
+       * nothing to filter: a rename applies whatever happened to the objects.
+       */
+      case 'meta':
+        patches.push(patch)
+        break
+      default:
+        /*
+         * Exhaustive on purpose. A `switch` that merely falls through would
+         * have dropped a whole operation silently, which is exactly what it
+         * did: `meta` arrived, matched nothing, and every remote rename
+         * vanished here with no error anywhere. The next operation added to
+         * `Patch` fails to compile instead.
+         */
+        return assertNever(patch)
     }
   }
 
   return patches
+}
+
+function assertNever(patch: never): never {
+  throw new CommandError(
+    'invalid-input',
+    `A patch operation this version does not know arrived from another client: ${JSON.stringify(patch)}`,
+  )
 }

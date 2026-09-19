@@ -100,6 +100,27 @@ export function patchesFromEvent(event: Y.YMapEvent<AnyOpenFrameObject>): Patch[
 }
 
 /**
+ * A change to the document's own fields, as patches.
+ *
+ * A deleted key reads back as `value: undefined`, which is what core's `meta`
+ * op means by "no such field" — the same convention `set` already uses, so an
+ * inverse derived from a field that was not there before is exact.
+ *
+ * That falls out of `get` returning `undefined` for a key that is gone rather
+ * than from a branch here, and it is worth saying so: an explicit
+ * `action === 'delete'` check was written first and then deleted, because
+ * removing it broke no test. A guard that cannot fail is not a guard, and
+ * leaving it in would have implied one.
+ */
+export function metaPatchesFromEvent(event: Y.YMapEvent<unknown>): Patch[] {
+  const patches: Patch[] = []
+  for (const key of event.changes.keys.keys()) {
+    patches.push({ op: 'meta', path: [key], value: structuredClone(event.target.get(key)) })
+  }
+  return patches
+}
+
+/**
  * The ids whose parentage an incoming batch could have disturbed.
  *
  * Only three patches can: a write to `parentId`, an arrival (which brings a
@@ -111,6 +132,8 @@ export function patchesFromEvent(event: Y.YMapEvent<AnyOpenFrameObject>): Patch[
 export function parentageCandidates(patches: readonly Patch[]): ObjectId[] {
   const ids = new Set<ObjectId>()
   for (const patch of patches) {
+    // A rename cannot orphan anything or make a cycle: it touches no object.
+    if (patch.op === 'meta') continue
     if (patch.op === 'set' && patch.path[0] !== 'parentId') continue
     ids.add(patch.id)
   }

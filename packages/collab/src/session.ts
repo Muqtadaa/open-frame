@@ -7,8 +7,12 @@ import type {
 } from '@openframe/core'
 import type * as Y from 'yjs'
 
-import { applyPatchesToDoc, LOCAL_ORIGIN, objectsOf } from './document-map.js'
-import { parentageCandidates, patchesFromEvent } from './remote-patches.js'
+import { applyPatchesToDoc, LOCAL_ORIGIN, metaOf, objectsOf } from './document-map.js'
+import {
+  metaPatchesFromEvent,
+  parentageCandidates,
+  patchesFromEvent,
+} from './remote-patches.js'
 
 export interface CollabSessionDeps {
   readonly doc: Y.Doc
@@ -78,6 +82,23 @@ export class CollabSession {
     this.#detach.push(() => {
       objects.unobserve(observer)
     })
+
+    /*
+     * The document's own fields, in their own map and their own observer.
+     *
+     * A rename is a change to the board that no object carries, so it arrives
+     * on a channel the objects observer never sees. Without this, somebody
+     * else's rename reaches the CRDT and stops there — the title on screen
+     * stays whatever it was when the tab opened, and only a reload reveals it.
+     */
+    const meta = metaOf(this.#doc)
+    const metaObserver = (event: Y.YMapEvent<unknown>, transaction: Y.Transaction): void => {
+      this.#mergeMeta(event, transaction)
+    }
+    meta.observe(metaObserver)
+    this.#detach.push(() => {
+      meta.unobserve(metaObserver)
+    })
     this.#detach.push(
       this.#dispatcher.subscribe((result) => {
         this.#publish(result)
@@ -94,6 +115,25 @@ export class CollabSession {
   #publish(result: Ok): void {
     if (this.#merging) return
     applyPatchesToDoc(this.#doc, result.patches, LOCAL_ORIGIN)
+  }
+
+  /** `Y.Doc` meta → local change. Parentage cannot be disturbed, so no repair. */
+  #mergeMeta(event: Y.YMapEvent<unknown>, transaction: Y.Transaction): void {
+    if (transaction.origin === LOCAL_ORIGIN) return
+
+    const patches = metaPatchesFromEvent(event)
+    if (patches.length === 0) return
+
+    this.#merging = true
+    try {
+      const merged = this.#dispatcher.dispatch(
+        { kind: 'ApplyRemotePatches', patches },
+        { origin: 'remote', skipUndo: true },
+      )
+      if (!merged.ok) this.#onError(merged.error)
+    } finally {
+      this.#merging = false
+    }
   }
 
   /** `Y.Doc` → local change. */

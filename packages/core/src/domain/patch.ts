@@ -12,6 +12,7 @@ import type { AnyOpenFrameObject } from './object.js'
  *   add     create an object that did not exist
  *   remove  delete an object that did exist
  *   set     replace a value at a path inside an object
+ *   meta    replace a value on the document itself, not on any object
  *
  * This is NOT a CRDT format and NOT JSON Patch. It is small, closed and
  * JSON-serializable, which means the collaboration adapter can translate it
@@ -31,6 +32,19 @@ export type Patch =
       readonly path: readonly (string | number)[]
       readonly value: unknown
     }
+  /**
+   * The document's own fields — today, its title.
+   *
+   * It exists because a board's name IS document state and renaming it is a
+   * persistent mutation, so it has to reach the one mutation path like
+   * everything else. Without it the title could only be changed by writing
+   * straight to the repository, which is the second path rule 3 forbids.
+   *
+   * ONE path segment, enforced. `meta` maps to a flat key-value space on both
+   * sides of the CRDT translation, and a nested path would need a nested map
+   * on the other side — refused here rather than silently mistranslated.
+   */
+  | { readonly op: 'meta'; readonly path: readonly [string]; readonly value: unknown }
 
 export class PatchError extends Error {
   constructor(message: string) {
@@ -85,8 +99,21 @@ function setIn<T>(target: T, path: readonly (string | number)[], value: unknown)
   return copy as T
 }
 
+function metaKey(patch: Extract<Patch, { op: 'meta' }>): string {
+  const [key] = patch.path
+  if (patch.path.length !== 1 || key === undefined || key.length === 0) {
+    throw new PatchError('A meta patch addresses exactly one field of the document')
+  }
+  return key
+}
+
 function applyInto(objects: Map<ObjectId, AnyOpenFrameObject>, patch: Patch): void {
   switch (patch.op) {
+    // Handled by `applyPatches`, which holds the document rather than only its
+    // objects. Reached during inversion, where the objects are all that change.
+    case 'meta':
+      metaKey(patch)
+      return
     case 'add':
       objects.set(patch.id, patch.object)
       return
@@ -110,9 +137,23 @@ function applyInto(objects: Map<ObjectId, AnyOpenFrameObject>, patch: Patch): vo
 /** Applies patches in order, returning a new document. Never mutates the input. */
 export function applyPatches(doc: BoardDocument, patches: readonly Patch[]): BoardDocument {
   if (patches.length === 0) return doc
-  const objects = new Map(doc.objects)
-  for (const patch of patches) applyInto(objects, patch)
-  return { ...doc, objects }
+
+  /*
+   * The objects map is copied only if an object patch is present.
+   *
+   * A rename touches no object, and handing back a fresh Map for it would tell
+   * every reference comparison in the renderer that the whole board changed —
+   * the same trap rule 10 is about, arriving through the back door.
+   */
+  const touchesObjects = patches.some((patch) => patch.op !== 'meta')
+  const objects = touchesObjects ? new Map(doc.objects) : doc.objects
+
+  let meta = doc.meta
+  for (const patch of patches) {
+    if (patch.op === 'meta') meta = setIn(meta, [metaKey(patch)], patch.value)
+    else applyInto(objects as Map<ObjectId, AnyOpenFrameObject>, patch)
+  }
+  return { ...doc, objects, meta }
 }
 
 /**
@@ -161,6 +202,14 @@ export function invertPatches(before: BoardDocument, patches: readonly Patch[]):
         })
         break
       }
+      case 'meta': {
+        const key = metaKey(patch)
+        // Read from `before` rather than from a running copy: meta patches
+        // never change the objects map, so nothing earlier in the batch can
+        // have moved this value.
+        inverse.push({ op: 'meta', path: [key], value: getIn(before.meta, [key]) })
+        break
+      }
     }
     applyInto(objects, patch)
   }
@@ -171,11 +220,15 @@ export function invertPatches(before: BoardDocument, patches: readonly Patch[]):
 /** The ids a patch list touches, for targeted re-render and index updates. */
 export function affectedIds(patches: readonly Patch[]): ObjectId[] {
   const ids = new Set<ObjectId>()
-  for (const patch of patches) ids.add(patch.id)
+  // A meta patch touches the document, not an object, so it names none. A
+  // subscriber given a phantom id would re-render something that is not there.
+  for (const patch of patches) if (patch.op !== 'meta') ids.add(patch.id)
   return [...ids]
 }
 
 /** True when the patch list changes which objects exist, rather than only their contents. */
 export function isStructural(patches: readonly Patch[]): boolean {
-  return patches.some((patch) => patch.op !== 'set')
+  // `meta` is not structural: renaming a board changes no object and moves
+  // nothing, so an index built over the objects does not need rebuilding.
+  return patches.some((patch) => patch.op === 'add' || patch.op === 'remove')
 }

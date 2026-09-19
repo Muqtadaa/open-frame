@@ -15,11 +15,17 @@ export {
   applyPatchesToDoc,
   objectsFromDoc,
   objectsOf,
+  metaOf,
   seedDoc,
   LOCAL_ORIGIN,
+  META,
   OBJECTS,
 } from './document-map.js'
-export { parentageCandidates, patchesFromEvent } from './remote-patches.js'
+export {
+  metaPatchesFromEvent,
+  parentageCandidates,
+  patchesFromEvent,
+} from './remote-patches.js'
 export {
   createAwareness,
   decodeRole,

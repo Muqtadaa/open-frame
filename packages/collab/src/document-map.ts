@@ -30,8 +30,29 @@ import type * as Y from 'yjs'
  */
 export const OBJECTS = 'objects'
 
+/**
+ * The document's own fields, in a second root map.
+ *
+ * Separate from the objects rather than a reserved key inside them, because an
+ * id space that sometimes holds a non-object is one every reader has to know
+ * about — and `objectsFromDoc` would hand the renderer a title to draw.
+ *
+ * Flat, one level deep, which is why a `meta` patch is restricted to a single
+ * path segment in core: the two sides match exactly, and a nested path would
+ * have to be invented on one of them.
+ *
+ * Last write wins, and that is right for a title. Two people renaming a board
+ * at the same moment is not a merge problem worth solving — one of the two
+ * names was going to lose whatever we did, and the loser can see the winner.
+ */
+export const META = 'meta'
+
 export function objectsOf(doc: Y.Doc): Y.Map<AnyOpenFrameObject> {
   return doc.getMap<AnyOpenFrameObject>(OBJECTS)
+}
+
+export function metaOf(doc: Y.Doc): Y.Map<unknown> {
+  return doc.getMap<unknown>(META)
 }
 
 /**
@@ -68,6 +89,15 @@ export function applyPatchesToDoc(doc: Y.Doc, patches: readonly Patch[], origin?
     const objects = objectsOf(doc)
     for (const patch of patches) {
       switch (patch.op) {
+        case 'meta': {
+          const [key] = patch.path
+          if (key === undefined) break
+          // `undefined` is not storable in a Y.Map and means "no such field",
+          // which is a delete on both sides.
+          if (patch.value === undefined) metaOf(doc).delete(key)
+          else metaOf(doc).set(key, plain(patch.value))
+          break
+        }
         case 'add':
           objects.set(patch.id, plain(patch.object))
           break
@@ -146,5 +176,9 @@ export function seedDoc(doc: Y.Doc, board: BoardDocument, origin?: unknown): voi
   doc.transact(() => {
     const objects = objectsOf(doc)
     for (const [id, object] of board.objects) objects.set(id, plain(object))
+    // The title too: a board published into a room and then opened in another
+    // browser would otherwise arrive called whatever an empty document is
+    // called, which looks like the rename having been lost.
+    metaOf(doc).set('title', board.meta.title)
   }, origin)
 }

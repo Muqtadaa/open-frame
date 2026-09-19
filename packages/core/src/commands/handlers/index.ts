@@ -1,4 +1,5 @@
 import type { BoardDocument } from '../../domain/document.js'
+import { setBoardTitle } from './set-board-title.js'
 import type { Patch } from '../../domain/patch.js'
 import type { CommandContext, Command } from '../types.js'
 import { applyRemotePatches } from './apply-remote-patches.js'
@@ -29,6 +30,8 @@ export function handleCommand(
   ctx: CommandContext,
 ): readonly Patch[] {
   switch (command.kind) {
+    case 'SetBoardTitle':
+      return setBoardTitle(doc, command)
     case 'CreateObjects':
       return createObjects(doc, command, ctx)
     case 'DeleteObjects':

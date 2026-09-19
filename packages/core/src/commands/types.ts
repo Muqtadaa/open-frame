@@ -42,6 +42,14 @@ export interface NewObjectSpec {
  */
 export type Command =
   | { readonly kind: 'CreateObjects'; readonly objects: readonly NewObjectSpec[] }
+  /**
+   * Renames the board.
+   *
+   * The only command that changes the document rather than an object, which is
+   * why `Patch` has a `meta` op at all — a board's name is document state, and
+   * renaming it is a persistent mutation that has to reach the one path.
+   */
+  | { readonly kind: 'SetBoardTitle'; readonly title: string }
   | { readonly kind: 'DeleteObjects'; readonly ids: readonly ObjectId[] }
   /**
    * Changes objects' TYPE while keeping their identity — a sticky becoming a

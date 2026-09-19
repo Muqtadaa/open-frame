@@ -1,6 +1,6 @@
 import type { ObjectId, TransactionId, UserId } from '../domain/ids.js'
 import type { AnyOpenFrameObject, Origin } from '../domain/object.js'
-import { affectedIds, invertPatches, type Patch } from '../domain/patch.js'
+import { affectedIds, applyPatches, invertPatches, type Patch } from '../domain/patch.js'
 import type { ObjectTypeRegistry } from '../domain/registry.js'
 import type { BoardAction, Capabilities } from '../ports/capabilities.js'
 import type { Clock } from '../ports/clock.js'
@@ -168,7 +168,11 @@ export class CommandDispatcher {
       for (const command of commands) {
         const produced = handleCommand(working, command, context)
         patches.push(...produced)
-        working = { ...working, objects: applyToMap(working.objects, produced) }
+        // Through `applyPatches` for meta, which the objects map cannot carry:
+        // a later command in the same transaction must see the new title.
+        working = produced.some((patch) => patch.op === 'meta')
+          ? applyPatches(working, produced)
+          : { ...working, objects: applyToMap(working.objects, produced) }
       }
     } catch (error) {
       if (error instanceof CommandError) return { ok: false, error }
@@ -234,6 +238,9 @@ function applyToMap(
 ): Map<ObjectId, AnyOpenFrameObject> {
   const next = new Map(objects)
   for (const patch of patches) {
+    // A meta patch changes the document, not its objects: nothing to sequence
+    // here, and later commands in the same transaction see it through `meta`.
+    if (patch.op === 'meta') continue
     if (patch.op === 'add') next.set(patch.id, patch.object)
     else if (patch.op === 'remove') next.delete(patch.id)
     else {
