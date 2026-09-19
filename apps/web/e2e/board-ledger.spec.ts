@@ -95,3 +95,49 @@ test('stacks the row on a narrow screen instead of crushing the name', async ({ 
   // showing a single character while the readouts kept their full width.
   expect(tagTop).toBeGreaterThan(titleTop)
 })
+
+/**
+ * Opening somebody's board keeps it, without being asked.
+ *
+ * Two defects in one gesture, both reported from production. Reaching a shared
+ * board left NOTHING you could get back to it by — the link in the original
+ * message was the only route — while the local cache of it appeared in the
+ * list as "Untitled board" tagged `this browser`, pointing at a board that was
+ * neither untitled nor yours. So the choice on offer was a nameless row or no
+ * row, and the control that would have fixed it had to be found first.
+ */
+test('keeps a shared board on arrival, and leaves no phantom row', async ({ page }) => {
+  const joined: { id: string | null; key: string | null } = { id: null, key: null }
+
+  await signedIn(page, [])
+  // Watched rather than stubbed blind: the assertion is that the app redeems
+  // the key it arrived on, which a bare "no row appeared" could not tell.
+  await page.route('**/rest/v1/rpc/join_board', async (route) => {
+    const body = route.request().postDataJSON() as { p_id?: string; p_key?: string }
+    joined.id = body.p_id ?? null
+    joined.key = body.p_key ?? null
+    await route.fulfill({ status: 200, contentType: 'application/json', body: '"editor"' })
+  })
+
+  const key = 'e'.repeat(32)
+  await page.goto(`/?room=brd_abcdefgh12345678&k=${key}`)
+  await page.waitForSelector('[data-testid="status-bar"]')
+  await expect.poll(() => joined.id).toBe('brd_abcdefgh12345678')
+  expect(joined.key).toBe(key)
+
+  /*
+   * EDIT IT. This is what writes the local cache — autosave subscribes to the
+   * command stream, so a board merely opened is never persisted. Without this
+   * the test passed with the fix removed, which is worth more than the test
+   * was: the phantom row only exists once something has been saved.
+   */
+  await page.keyboard.press('s')
+  await page.locator('[data-testid="canvas"]').click({ position: { x: 200, y: 200 } })
+  await expect(page.locator('[data-object-id]')).toHaveCount(1)
+  await page.getByTestId('board-exit').click()
+
+  // The board is now the server's to list. What must NOT be here is the local
+  // cache of it wearing a placeholder name.
+  await page.waitForSelector('[data-testid="home"]')
+  await expect(page.getByText('Untitled board')).toHaveCount(0)
+})

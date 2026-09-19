@@ -7,6 +7,7 @@ import {
 } from '@openframe/core'
 
 import { localOpenedAt, localPins } from './board-prefs.js'
+import { isSharedBoardId } from './collab-config.js'
 import { ACCOUNTS_ENABLED } from './supabase-config.js'
 import { listMyBoards, type RemoteBoard } from './remote-boards.js'
 import { newLocalBoardId } from './route.js'
@@ -146,6 +147,19 @@ export async function listAllBoards(
       openedAt: board.openedAt,
     })),
     ...local
+      /*
+       * A board that lives in a room is never "in this browser", whatever is
+       * sitting in IndexedDB under its id.
+       *
+       * Opening somebody's link builds a runtime for that board, and
+       * `createRuntime` writes an empty document the moment it cannot find one
+       * — so a link you merely LOOKED at left a row in your list called
+       * "Untitled board", tagged `this browser`, pointing at a board that is
+       * neither untitled nor yours. It is a cache of a room, and the room
+       * decides whether you have it: if you do, the remote list above carries
+       * it with its real name and its real tag.
+       */
+      .filter((board) => !isSharedBoardId(board.id))
       .filter((board) => !shared.has(board.id))
       .map((board) => ({
         boardId: board.id,

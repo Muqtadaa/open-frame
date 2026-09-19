@@ -9,7 +9,7 @@ import { COLLAB_ENABLED } from './app/collab-config.js'
 import { startCollaboration } from './app/collaboration.js'
 import { createRuntime } from './app/composition-root.js'
 import { markLocalOpened } from './app/board-prefs.js'
-import { touchBoardOpened } from './app/remote-boards.js'
+import { joinBoard, touchBoardOpened } from './app/remote-boards.js'
 import { readRoute } from './app/route.js'
 import { dismissSplash, failSplash } from './app/splash.js'
 import { restoreTheme } from './app/theme.js'
@@ -98,9 +98,37 @@ if (route.kind === 'home') {
    */
   markLocalOpened(route.boardId)
   if (route.shared) {
-    void touchBoardOpened(route.boardId).catch(() => {
-      // An ordering that could not be recorded is not worth a console line.
-    })
+    /*
+     * Opening somebody's board KEEPS it, without being asked.
+     *
+     * It used to be offered as a control in the record line, on the reasoning
+     * that every link you ever clicked accumulating in your list is its own
+     * kind of mess. That reasoning was wrong about which mess is worse: not
+     * pressing it left the board reachable only from the original message, and
+     * the local cache of it then showed up in the list as "Untitled board"
+     * anyway — so the choice was between a named row and a nameless one.
+     *
+     * The join is idempotent and grants nothing: whoever holds the key already
+     * has the access, and this only writes down that they have it.
+     *
+     * Ordered, not fired together. `touch_board_opened` records recency
+     * against a board you are a MEMBER of, so running it before the join lands
+     * silently records nothing.
+     */
+    const key = route.key
+    /*
+     * A link with no key is one shared before links had roles. The room still
+     * admits it, but the database has nothing to match it against, so there is
+     * no membership to redeem — only the recency to record, which does nothing
+     * unless you already are a member.
+     */
+    const kept = key === null ? Promise.resolve(null) : joinBoard(route.boardId, key)
+
+    void kept
+      .then(() => touchBoardOpened(route.boardId))
+      .catch(() => {
+        // A board that could not be kept is still a board you are looking at.
+      })
   }
 
   // Exposed for the E2E suite to assert on persisted state without reaching into

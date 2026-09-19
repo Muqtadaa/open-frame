@@ -304,3 +304,60 @@ describe('what you may do to a board', () => {
     expect(canLeave(board)).toBe(false)
   })
 })
+
+/**
+ * A board that lives in a room is never "in this browser".
+ *
+ * Opening somebody's link builds a runtime for that board, and `createRuntime`
+ * writes an empty document the moment it cannot find one — so a link you had
+ * merely LOOKED at left a row in your list called "Untitled board", tagged
+ * `this browser`, pointing at a board that was neither untitled nor yours.
+ */
+describe('a cached copy of somebody else’s board', () => {
+  beforeEach(() => {
+    remote.mockReset()
+    remote.mockResolvedValue([])
+  })
+
+  it('is not listed as a board in this browser', async () => {
+    // Exactly what opening a shared link leaves behind.
+    const { repository } = fakeRepository([summary('brd_abcdefgh12345678', 1_000)])
+
+    const listed = await listAllBoards(repository, true)
+
+    expect(listed).toEqual([])
+  })
+
+  /** Signed out changes nothing: it is still a room's board, not this browser's. */
+  it('is not listed for a guest either', async () => {
+    const { repository } = fakeRepository([summary('brd_abcdefgh12345678', 1_000)])
+
+    await expect(listAllBoards(repository, false)).resolves.toEqual([])
+  })
+
+  /**
+   * When the server DOES know you have it, it appears once — with the title
+   * the room holds rather than the placeholder the cache was created with.
+   */
+  it('appears once, named, when the server says it is yours', async () => {
+    const { repository } = fakeRepository([summary('brd_abcdefgh12345678', 1_000)])
+    remote.mockResolvedValue([
+      sharedBoard('brd_abcdefgh12345678', 'Checkout research', 3_000, 'editor'),
+    ])
+
+    const listed = await listAllBoards(repository, true)
+
+    expect(listed).toHaveLength(1)
+    expect(listed[0]?.title).toBe('Checkout research')
+    expect(listed[0]?.shared).toBe(true)
+  })
+
+  /** And a real local board is untouched by the filter. */
+  it('still lists a board that really is only in this browser', async () => {
+    const { repository } = fakeRepository([summary('board_mine', 1_000)])
+
+    const listed = await listAllBoards(repository, true)
+
+    expect(listed.map((board) => board.boardId)).toEqual([asBoardId('board_mine')])
+  })
+})

@@ -3,6 +3,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
 import { MemoryBoardRepository } from '../adapters/memory/memory-board-repository.js'
 import { createRuntime } from './composition-root.js'
+import { currentIdentity } from './identity.js'
 import { shareCurrentBoard, ShareFailed } from './share.js'
 
 /**
@@ -19,7 +20,21 @@ import { shareCurrentBoard, ShareFailed } from './share.js'
  * exactly where it was.
  */
 
-vi.mock('./identity.js', () => ({ currentIdentity: vi.fn(() => Promise.resolve(null)) }))
+/*
+ * Signed in by default, because sharing takes an account now. The guest case
+ * is its own test below rather than the ambient condition of every other one.
+ */
+const SOMEBODY = {
+  userId: 'u1',
+  email: 'someone@example.test',
+  displayName: 'Someone',
+  hue: 0,
+  accessToken: 't',
+}
+vi.mock('./identity.js', () => ({
+  ACCOUNTS_ENABLED: true,
+  currentIdentity: vi.fn(() => Promise.resolve(SOMEBODY)),
+}))
 vi.mock('./remote-boards.js', () => ({ recordSharedBoard: vi.fn(() => Promise.resolve(true)) }))
 
 const LOCAL = asBoardId('board_origin')
@@ -35,6 +50,7 @@ const KEYS = { editor: 'e'.repeat(32), viewer: 'v'.repeat(32) }
 
 describe('sharing a board', () => {
   beforeEach(() => {
+    vi.mocked(currentIdentity).mockResolvedValue(SOMEBODY)
     vi.stubGlobal('location', { origin: 'https://example.test' })
   })
 
@@ -118,6 +134,26 @@ describe('sharing a board', () => {
     const { repository, runtime } = await boardWithContent()
 
     await expect(shareCurrentBoard(runtime)).rejects.toBeInstanceOf(ShareFailed)
+    expect((await repository.getBoard(LOCAL)).status).toBe('ok')
+
+    runtime.dispose()
+  })
+
+  /**
+   * A guest sharing a board produced one nobody owned: no row to list it from,
+   * no way to rename or delete it, and a local cache the board list could not
+   * tell apart from the cache of somebody else's link. Refused before the room
+   * is touched, so nothing is claimed and the original is untouched.
+   */
+  it('refuses a guest, without claiming a room', async () => {
+    const fetcher = vi.fn()
+    vi.stubGlobal('fetch', fetcher)
+    vi.mocked(currentIdentity).mockResolvedValue(null)
+    const { repository, runtime } = await boardWithContent()
+
+    await expect(shareCurrentBoard(runtime)).rejects.toBeInstanceOf(ShareFailed)
+
+    expect(fetcher).not.toHaveBeenCalled()
     expect((await repository.getBoard(LOCAL)).status).toBe('ok')
 
     runtime.dispose()

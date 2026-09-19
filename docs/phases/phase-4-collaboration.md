@@ -230,6 +230,27 @@ the one whose keys the room has to verify.
   or a storage row. Rendering it is the interesting part: the remote object must
   be drawn offset without the document moving underneath it.
 
+### Settled after shipping
+
+Two things came back from production on 2026-09-19 and changed the model:
+
+- **Opening a shared board keeps it, automatically.** Membership was OFFERED,
+  on the reasoning that every link you ever clicked accumulating in your list
+  is its own kind of mess. That was wrong about which mess is worse: not
+  pressing the control left the board reachable only from the original message,
+  while the local cache of it appeared in the list as "Untitled board" tagged
+  `this browser` anyway — so the choice was a named row or a nameless one. The
+  join is idempotent and grants nothing the key holder did not already have.
+- **Guests cannot share.** A guest sharing a board produced one nobody owned:
+  no row to list it from, no way to rename or delete it, and a local cache the
+  board list could not tell from the cache of somebody else's link. Sharing now
+  takes an account exactly as creating does, and the Share control is absent
+  rather than refusing — but the room's status, the people on it and the
+  view-only badge stay for everyone, guests included.
+
+A cached copy of a board that lives in a room is never listed as a board "in
+this browser", whatever is sitting in IndexedDB under its id.
+
 ### Still open, and named so it is not forgotten
 
 - **The CRDT is not persisted locally**, only the document is. A board publishes
@@ -357,6 +378,27 @@ Each step is shippable, and the order is by how broken the thing is.
   gone: boards made before this change are still in people's browsers, and a
   build with no identity service has no account to require and keeps making
   local ones.
+
+### Settled after shipping
+
+Two things came back from production on 2026-09-19 and changed the model:
+
+- **Opening a shared board keeps it, automatically.** Membership was OFFERED,
+  on the reasoning that every link you ever clicked accumulating in your list
+  is its own kind of mess. That was wrong about which mess is worse: not
+  pressing the control left the board reachable only from the original message,
+  while the local cache of it appeared in the list as "Untitled board" tagged
+  `this browser` anyway — so the choice was a named row or a nameless one. The
+  join is idempotent and grants nothing the key holder did not already have.
+- **Guests cannot share.** A guest sharing a board produced one nobody owned:
+  no row to list it from, no way to rename or delete it, and a local cache the
+  board list could not tell from the cache of somebody else's link. Sharing now
+  takes an account exactly as creating does, and the Share control is absent
+  rather than refusing — but the room's status, the people on it and the
+  view-only badge stay for everyone, guests included.
+
+A cached copy of a board that lives in a room is never listed as a board "in
+this browser", whatever is sitting in IndexedDB under its id.
 
 ### Still open
 

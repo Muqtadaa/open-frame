@@ -29,7 +29,15 @@ export async function signedIn(
   boards: readonly StubbedBoard[],
   displayName = 'Muqtadaa Miandara',
 ): Promise<void> {
-  const rows = boards.map((board) => {
+  const rows: {
+    id: string
+    title: string
+    role: string
+    access_key: string
+    updated_at: string
+    pinned: boolean
+    opened_at: string
+  }[] = boards.map((board) => {
     const when = new Date(Date.now() - (board.agoMs ?? 3_600_000)).toISOString()
     return {
       id: board.id,
@@ -42,10 +50,31 @@ export async function signedIn(
     }
   })
 
+  /*
+   * `record_shared_board` WRITES, so the double has to remember it. A stub
+   * that answered `my_boards` from a fixed list would report an empty account
+   * one line after the app recorded a board into it, and the test would then
+   * be asserting against the double rather than against the app.
+   */
   await page.route(`**/${REF}.supabase.co/**`, (route) => {
     const url = route.request().url()
     const json = (body: unknown) =>
       route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(body) })
+
+    if (url.includes('rpc/record_shared_board')) {
+      const body = route.request().postDataJSON() as { p_id?: string; p_title?: string }
+      const when = new Date().toISOString()
+      rows.push({
+        id: body.p_id ?? '',
+        title: body.p_title ?? '',
+        role: 'owner',
+        access_key: 'a'.repeat(32),
+        updated_at: when,
+        pinned: false,
+        opened_at: when,
+      })
+      return json({})
+    }
 
     if (url.includes('rpc/my_boards')) return json(rows)
     if (url.includes('/profiles')) return json({ display_name: displayName, hue: 3 })

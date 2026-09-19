@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 
 import { accessKey, COLLAB_ENABLED, shareLink } from '../app/collab-config.js'
+import { ACCOUNTS_ENABLED } from '../app/identity.js'
 import { guestIdentity } from '../app/guest.js'
 import { shareCurrentBoard, ShareFailed, type SharedBoard } from '../app/share.js'
 import { useIdentity } from '../hooks/use-identity.js'
@@ -45,6 +46,18 @@ export function ShareControl() {
   if (!COLLAB_ENABLED) return null
 
   if (collaboration === null || collaboration === undefined) {
+    /*
+     * Sharing takes an account, like creating. A control that invites the
+     * click and then explains is worse than one that is not there, and the
+     * account chip beside it is already the way in.
+     *
+     * Only this branch. The other one — the room's status, who else is here,
+     * the view-only badge — belongs to EVERYONE on a shared board, guests very
+     * much included: the first version of this guard sat above both and took
+     * a guest's connection indicator away with it.
+     */
+    if (ACCOUNTS_ENABLED && identity === null) return null
+
     return (
       <>
       <button

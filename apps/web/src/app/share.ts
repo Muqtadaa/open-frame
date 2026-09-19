@@ -8,7 +8,7 @@ import {
 
 import type { OpenFrameRuntime } from '../runtime/context.js'
 import { claimUrl, newSharedBoardId, shareLink } from './collab-config.js'
-import { currentIdentity } from './identity.js'
+import { ACCOUNTS_ENABLED, currentIdentity } from './identity.js'
 import { recordSharedBoard } from './remote-boards.js'
 
 /**
@@ -104,6 +104,10 @@ async function publishToRoom(
    * Recorded so it appears in the owner's list, and best effort on purpose:
    * the board and both links already exist and work by the time this runs.
    * A failure here costs a row in a list.
+   *
+   * Still guarded, though every caller now requires an account: a build with
+   * no identity service has nobody to record, and this is the one place that
+   * would otherwise ask a client that does not exist.
    */
   if ((await currentIdentity()) !== null) {
     await recordSharedBoard({
@@ -177,6 +181,21 @@ export async function shareCurrentBoard(runtime: OpenFrameRuntime): Promise<Shar
    */
   if (runtime.readOnly) {
     throw new ShareFailed('This board could not be fully read, so it cannot be shared.')
+  }
+
+  /*
+   * Sharing takes an account, exactly as creating does.
+   *
+   * A guest sharing a board produced one nobody owned: no row to list it from,
+   * no way to rename or delete it, and a local cache the board list could not
+   * tell apart from the cache of somebody else's link. It was a board you
+   * could make and then have no handle on, which is the same failure that
+   * retired the ownerless board in the first place.
+   *
+   * Checked here rather than only in the interface, because this is the rule.
+   */
+  if (ACCOUNTS_ENABLED && (await currentIdentity()) === null) {
+    throw new ShareFailed('Sign in to share a board.')
   }
 
   const { boardId, keys } = await publishToRoom(runtime.repository, runtime.store.getDocument())

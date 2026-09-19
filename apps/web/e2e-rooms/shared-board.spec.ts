@@ -1,6 +1,7 @@
 import { expect, test, type Browser, type Page } from '@playwright/test'
 
 import { BOARD_URL, HOME_URL } from '../e2e/routes.js'
+import { signedIn } from '../e2e/signed-in.js'
 
 /**
  * Two people, one board, a real Durable Object.
@@ -156,7 +157,8 @@ test('a board opened without a link does not join a room', async ({ browser }) =
   await page.waitForSelector('[data-testid="status-bar"]')
 
   await expect(page.locator('[data-testid="room-status"]')).toHaveCount(0)
-  await expect(page.locator('[data-testid="share-board"]')).toBeVisible()
+  // Sharing takes an account now, so a guest is not offered it at all.
+  await expect(page.locator('[data-testid="share-board"]')).toHaveCount(0)
 })
 
 /**
@@ -171,6 +173,13 @@ test('a board opened without a link does not join a room', async ({ browser }) =
 test('sharing leaves one board in the list, not two', async ({ browser }) => {
   const context = await browser.newContext()
   const page = await context.newPage()
+  /*
+   * Signed in, because sharing takes an account. This test ran as a guest
+   * until 2026-09-19, when a guest sharing a board was retired: it produced a
+   * board nobody owned, with no row to list it from and no way to rename or
+   * delete it.
+   */
+  await signedIn(page, [])
   await page.goto(BOARD_URL)
   await page.waitForSelector('[data-testid="status-bar"]')
 

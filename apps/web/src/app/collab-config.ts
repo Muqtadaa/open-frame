@@ -66,6 +66,18 @@ export function sharedBoardId(search: string): BoardId | null {
   return asBoardId(raw)
 }
 
+/**
+ * Whether an id names a board that lives in a room.
+ *
+ * The two id shapes are the only way to tell a board's home apart once it is
+ * sitting in IndexedDB: opening somebody's link writes a local COPY under the
+ * shared id, and nothing about that row says it is a cache rather than a board
+ * of yours.
+ */
+export function isSharedBoardId(boardId: string): boolean {
+  return SHARED_ID.test(boardId)
+}
+
 /** A new, unguessable board id. 16 base-36 characters is ~82 bits. */
 export function newSharedBoardId(): BoardId {
   const bytes = new Uint8Array(16)

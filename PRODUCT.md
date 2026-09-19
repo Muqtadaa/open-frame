@@ -141,11 +141,12 @@ no research conducted *with* OpenFrame. Any such claim would be invented.
    the connection is gone.
    *Revised 2026-09-19.* This used to read "with no account and no network".
    The no-network half is unchanged and is what IndexedDB and the CRDT actually
-   provide. The no-account half is retired: creating a board now takes an
-   account, because a board with no owner cannot be listed, renamed, deleted,
-   pinned or shared with anybody — it was a board you could make and then
-   gradually lose. A link still opens a board for anyone, with no account, which
-   is the part guests ever needed.
+   provide. The no-account half is retired: **creating and sharing a board both
+   take an account**, because a board with no owner cannot be listed, renamed,
+   deleted or pinned — it was a board you could make and then gradually lose.
+   A link still opens a board for anyone, with no account, and a guest holding
+   one edits, is seen, and is refused nothing on the board itself. That is the
+   part guests ever needed.
 5. **Multiplayer is identity, not a feature.** The product is for people who do
    not share vocabulary and are not online at the same time. Decisions are taken
    as if several people will touch this board, even where only one can today.
