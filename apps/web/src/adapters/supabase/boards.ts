@@ -32,6 +32,13 @@ export interface RemoteBoard {
    * unrecoverable afterwards.
    */
   readonly viewKey: string | null
+  /**
+   * The OWNER's key, for a board you own and nobody else's.
+   *
+   * Not a link — it is never put in one. It authorizes the board's password
+   * and excuses its owner from being asked for it.
+   */
+  readonly ownerKey: string | null
   readonly updatedAt: number
   /** Whether YOU pinned it. Nobody else's pin is visible, or any of their business. */
   readonly pinned: boolean
@@ -73,6 +80,7 @@ function readBoard(row: unknown): RemoteBoard | null {
     pinned,
     opened_at: opened,
     view_key: viewKey,
+    owner_key: ownerKey,
   } = row as {
     id?: unknown
     title?: unknown
@@ -82,6 +90,7 @@ function readBoard(row: unknown): RemoteBoard | null {
     pinned?: unknown
     opened_at?: unknown
     view_key?: unknown
+    owner_key?: unknown
   }
 
   if (typeof id !== 'string' || !BOARD_ID.test(id)) return null
@@ -98,6 +107,7 @@ function readBoard(row: unknown): RemoteBoard | null {
     role: role as RemoteBoard['role'],
     accessKey: typeof key === 'string' && ACCESS_KEY.test(key) ? key : null,
     viewKey: typeof viewKey === 'string' && ACCESS_KEY.test(viewKey) ? viewKey : null,
+    ownerKey: typeof ownerKey === 'string' && ACCESS_KEY.test(ownerKey) ? ownerKey : null,
     updatedAt,
     // Anything but a true is not pinned. A row from a version that does not
     // send the column must not put a board at the top of the list.
@@ -145,6 +155,8 @@ export async function recordSharedBoard(board: {
   readonly title: string
   readonly editorKey: string
   readonly viewerKey: string
+  /** Absent only for a board whose room predates owner keys. */
+  readonly ownerKey?: string
 }): Promise<boolean> {
   const client = supabaseClient()
   if (client === null) return false
@@ -154,8 +166,29 @@ export async function recordSharedBoard(board: {
     p_title: board.title,
     p_editor_key: board.editorKey,
     p_viewer_key: board.viewerKey,
+    p_owner_key: board.ownerKey ?? null,
   })) as { error: unknown }
   return response.error === null
+}
+
+/**
+ * Records the owner key a board adopted, for a board claimed before they
+ * existed.
+ *
+ * Answers whether it stuck. `record_owner_key` writes only when the row has
+ * none and you own it, so a `false` here means somebody else got there first
+ * or this is not your board — either way the key just minted is worthless and
+ * must not be used as though it were authority.
+ */
+export async function recordOwnerKey(boardId: BoardId, ownerKey: string): Promise<boolean> {
+  const client = supabaseClient()
+  if (client === null) return false
+
+  const response = (await client.rpc('record_owner_key', {
+    p_id: boardId,
+    p_owner_key: ownerKey,
+  })) as { data: unknown; error: unknown }
+  return response.error === null && response.data === true
 }
 
 /**

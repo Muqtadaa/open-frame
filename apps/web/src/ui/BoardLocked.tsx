@@ -1,6 +1,6 @@
 import { useEffect, useState, type FormEvent } from 'react'
 
-import { unlockBoard } from '../app/board-password.js'
+import { recoverOwnerKey, unlockBoard } from '../app/board-password.js'
 import { readRoute } from '../app/route.js'
 import { useOpenFrame } from '../runtime/context.js'
 
@@ -21,6 +21,16 @@ import { useOpenFrame } from '../runtime/context.js'
 export function BoardLocked() {
   const { runtime, collaboration } = useOpenFrame()
   const [locked, setLocked] = useState(collaboration?.status === 'locked')
+  /*
+   * Nothing is shown until the owner question is settled.
+   *
+   * An owner opening a deep link on a machine that has never loaded their
+   * board list holds no owner key, so the room asks them for the password on
+   * their own board — the exact thing this is meant to prevent. Asking
+   * Supabase once answers it, and the prompt must not flash up in the
+   * meantime, because for an owner it is about to be replaced by the board.
+   */
+  const [asking, setAsking] = useState(false)
   const [password, setPassword] = useState('')
   const [problem, setProblem] = useState<string | null>(null)
   const [trying, setTrying] = useState(false)
@@ -32,7 +42,21 @@ export function BoardLocked() {
     })
   }, [collaboration])
 
-  if (!locked) return null
+  useEffect(() => {
+    if (!locked) return
+    let live = true
+    void recoverOwnerKey(runtime.boardId).then((key) => {
+      if (!live) return
+      // Found one: this is the owner, and the board opens without a password.
+      if (key !== null) window.location.reload()
+      else setAsking(true)
+    })
+    return () => {
+      live = false
+    }
+  }, [locked, runtime.boardId])
+
+  if (!locked || !asking) return null
 
   const submit = (event: FormEvent): void => {
     event.preventDefault()

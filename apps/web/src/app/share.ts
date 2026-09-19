@@ -49,7 +49,9 @@ export class ShareFailed extends Error {}
  * somebody else's board. Claiming first is therefore not an optimisation, it
  * is the only order that works.
  */
-async function claimRoom(boardId: BoardId): Promise<{ editor: string; viewer: string }> {
+async function claimRoom(
+  boardId: BoardId,
+): Promise<{ editor: string; viewer: string; owner?: string }> {
   let response: Response
   try {
     response = await fetch(claimUrl(boardId), { method: 'POST' })
@@ -76,7 +78,9 @@ async function claimRoom(boardId: BoardId): Promise<{ editor: string; viewer: st
   ) {
     throw new ShareFailed('The server sent something this version of OpenFrame cannot read.')
   }
-  return keys as { editor: string; viewer: string }
+  // `owner` is absent only from a room running a build older than owner keys,
+  // which cannot happen once this deploys but costs nothing to allow.
+  return keys as { editor: string; viewer: string; owner?: string }
 }
 
 /**
@@ -91,7 +95,10 @@ async function claimRoom(boardId: BoardId): Promise<{ editor: string; viewer: st
 async function publishToRoom(
   repository: BoardRepository,
   document: BoardDocument,
-): Promise<{ readonly boardId: BoardId; readonly keys: { editor: string; viewer: string } }> {
+): Promise<{
+  readonly boardId: BoardId
+  readonly keys: { editor: string; viewer: string; owner?: string }
+}> {
   const boardId = newSharedBoardId()
   // Claimed BEFORE anything is written: the server only lets an empty room be
   // claimed, which is what stops anyone holding a link claiming someone
@@ -115,6 +122,7 @@ async function publishToRoom(
       title: document.meta.title,
       editorKey: keys.editor,
       viewerKey: keys.viewer,
+      ...(keys.owner === undefined ? {} : { ownerKey: keys.owner }),
     })
   }
 

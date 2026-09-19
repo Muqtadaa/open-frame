@@ -51,6 +51,7 @@ describe('listing the boards behind an account', () => {
       accessKey: 'a'.repeat(32),
       updatedAt: Date.parse('2026-09-19T04:00:00Z'),
       viewKey: null,
+      ownerKey: null,
       pinned: false,
       // A board never opened on this account falls back to when it last
       // changed, so it does not sink out of sight for not having been revisited.
@@ -150,7 +151,33 @@ describe('recording a shared board', () => {
     client.mockReset()
   })
 
-  it('sends the id, the title and both keys', async () => {
+  it('sends the id, the title and all three keys', async () => {
+    const rpc = answering({})
+
+    await recordSharedBoard({
+      boardId: asBoardId('brd_abcdefgh12345678'),
+      title: 'Pricing research',
+      editorKey: 'e'.repeat(32),
+      viewerKey: 'v'.repeat(32),
+      ownerKey: 'd'.repeat(32),
+    })
+
+    expect(rpc).toHaveBeenCalledWith('record_shared_board', {
+      p_id: 'brd_abcdefgh12345678',
+      p_title: 'Pricing research',
+      p_editor_key: 'e'.repeat(32),
+      p_viewer_key: 'v'.repeat(32),
+      p_owner_key: 'd'.repeat(32),
+    })
+  })
+
+  /**
+   * A room running a build older than owner keys answers a claim without one.
+   * It cannot happen once this deploys, but sending `undefined` where the
+   * function expects a value would make the whole insert fail rather than the
+   * one column be absent.
+   */
+  it('sends a null third key for a room that minted none', async () => {
     const rpc = answering({})
 
     await recordSharedBoard({
@@ -160,12 +187,10 @@ describe('recording a shared board', () => {
       viewerKey: 'v'.repeat(32),
     })
 
-    expect(rpc).toHaveBeenCalledWith('record_shared_board', {
-      p_id: 'brd_abcdefgh12345678',
-      p_title: 'Pricing research',
-      p_editor_key: 'e'.repeat(32),
-      p_viewer_key: 'v'.repeat(32),
-    })
+    expect(rpc).toHaveBeenCalledWith(
+      'record_shared_board',
+      expect.objectContaining({ p_owner_key: null }),
+    )
   })
 
   /**

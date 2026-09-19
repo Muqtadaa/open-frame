@@ -4,7 +4,7 @@ import type { BoardId, CommandError } from '@openframe/core'
 import { browserRoomSocket } from '../adapters/browser-room-socket.js'
 import { indexedDbCrdtStore } from '../adapters/indexeddb/crdt-store.js'
 import type { OpenFrameRuntime } from '../runtime/context.js'
-import { heldToken } from './board-password.js'
+import { heldOwnerKey, heldToken } from './board-password.js'
 import { roomSocketUrl } from './collab-config.js'
 import { guestIdentity } from './guest.js'
 
@@ -42,7 +42,10 @@ export async function startCollaboration(
      * writes the token and then reconnects, and a closure holding the value
      * from before would reconnect without it forever.
      */
-    connect: () => browserRoomSocket(roomSocketUrl(boardId, key, heldToken(boardId))),
+    connect: () =>
+      browserRoomSocket(
+        roomSocketUrl(boardId, key, heldToken(boardId), heldOwnerKey(boardId)),
+      ),
     onError,
     persistence: indexedDbCrdtStore(boardId),
   })

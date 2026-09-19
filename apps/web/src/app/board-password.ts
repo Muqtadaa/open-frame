@@ -1,6 +1,7 @@
 import type { BoardId } from '@openframe/core'
 
-import { passwordUrl, unlockUrl } from './collab-config.js'
+import { ownerKeyUrl, passwordUrl, unlockUrl } from './collab-config.js'
+import { listMyBoards, recordOwnerKey } from '../adapters/supabase/boards.js'
 
 /**
  * A board's optional password, from the browser's side.
@@ -13,6 +14,95 @@ import { passwordUrl, unlockUrl } from './collab-config.js'
 /** Per board, because a password is per board. */
 function tokenKey(boardId: BoardId): string {
   return `openframe:unlock:${boardId}`
+}
+
+/**
+ * Where this browser keeps the owner key for a board it owns.
+ *
+ * Cached rather than fetched on every board open: the owner reaches their
+ * board from the list, which already holds the key, so the common path costs
+ * nothing. `recoverOwnerKey` covers the other one.
+ */
+function ownerKeyName(boardId: BoardId): string {
+  return `openframe:owner:${boardId}`
+}
+
+export function heldOwnerKey(boardId: BoardId): string | null {
+  try {
+    return localStorage.getItem(ownerKeyName(boardId))
+  } catch {
+    return null
+  }
+}
+
+export function rememberOwnerKey(boardId: BoardId, key: string): void {
+  try {
+    localStorage.setItem(ownerKeyName(boardId), key)
+  } catch {
+    // A browser that will not remember it asks the server again. Slower, not
+    // broken.
+  }
+}
+
+/**
+ * Finds this board's owner key when the browser has none cached.
+ *
+ * The case this exists for: an owner opening a deep link on a machine that has
+ * never loaded their board list. Without it they would be asked for the
+ * password on their own board, which is the thing this whole change is for.
+ *
+ * Answers `null` for anybody who is not the owner, because `my_boards()`
+ * returns the column to nobody else.
+ */
+export async function recoverOwnerKey(boardId: BoardId): Promise<string | null> {
+  const cached = heldOwnerKey(boardId)
+  if (cached !== null) return cached
+
+  let mine: Awaited<ReturnType<typeof listMyBoards>>
+  try {
+    mine = await listMyBoards()
+  } catch {
+    return null
+  }
+
+  // Two absences collapsed into one, because they mean the same thing here:
+  // this account does not own that board, or owns it and has no key yet.
+  const ownerKey = mine.find((row) => row.boardId === boardId)?.ownerKey ?? null
+  if (ownerKey === null) return null
+
+  rememberOwnerKey(boardId, ownerKey)
+  return ownerKey
+}
+
+/**
+ * Gives a board claimed before owner keys existed one, and writes it down.
+ *
+ * Both halves or neither: a key the room minted and Supabase never recorded is
+ * lost the moment this tab closes, and the board would adopt again next time —
+ * except it cannot, because the room only mints once. So the room is asked
+ * only after there is somewhere to put the answer, and a failure to record it
+ * is reported rather than swallowed.
+ */
+async function adoptOwnerKey(boardId: BoardId, editorKey: string): Promise<string | null> {
+  let response: Response
+  try {
+    response = await fetch(ownerKeyUrl(boardId), {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ key: editorKey }),
+    })
+  } catch {
+    return null
+  }
+  if (!response.ok) return null
+
+  const body: unknown = await response.json().catch(() => null)
+  const owner = (body as { owner?: unknown } | null)?.owner
+  if (typeof owner !== 'string') return null
+
+  if (!(await recordOwnerKey(boardId, owner))) return null
+  rememberOwnerKey(boardId, owner)
+  return owner
 }
 
 /**
@@ -103,9 +193,9 @@ export type PasswordOutcome =
 /**
  * Sets, changes or clears a board's password. `null` clears it.
  *
- * Takes the EDITOR key, which is the authority the room checks — the same one
- * that can destroy the board. Whoever holds the edit link can do this; the
- * interface only offers it on a board you own.
+ * Takes the OWNER key, which is the authority the room checks — not the edit
+ * link, which every editor holds. A board claimed before owner keys existed
+ * adopts one here, once, on the edit key that is the strongest thing it has.
  *
  * Any token this browser holds is dropped either way, because the room mints a
  * new one on every change and the old one stops working the moment this
@@ -113,9 +203,14 @@ export type PasswordOutcome =
  */
 export async function setBoardPassword(
   boardId: BoardId,
-  key: string,
+  keys: { readonly owner: string | null; readonly editor: string },
   password: string | null,
 ): Promise<PasswordOutcome> {
+  const key = keys.owner ?? (await adoptOwnerKey(boardId, keys.editor))
+  if (key === null) {
+    return { ok: false, reason: 'This board could not be given an owner key.' }
+  }
+
   let response: Response
   try {
     response = await fetch(passwordUrl(boardId), {

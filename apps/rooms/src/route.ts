@@ -22,6 +22,7 @@ const CLAIM_PATH = /^\/room\/([^/]+)\/claim\/?$/
 const DESTROY_PATH = /^\/room\/([^/]+)\/destroy\/?$/
 const PASSWORD_PATH = /^\/room\/([^/]+)\/password\/?$/
 const UNLOCK_PATH = /^\/room\/([^/]+)\/unlock\/?$/
+const OWNER_PATH = /^\/room\/([^/]+)\/owner\/?$/
 
 /**
  * The shape of an access key.
@@ -59,6 +60,8 @@ export type Route =
   | { readonly kind: 'password'; readonly boardId: string }
   /** Redeem the password for the token that opens the board. Either key. */
   | { readonly kind: 'unlock'; readonly boardId: string }
+  /** Mint this board's owner key, once, for a board claimed before they existed. */
+  | { readonly kind: 'owner'; readonly boardId: string }
   /** A CORS preflight for the above: the web app is on another origin. */
   | { readonly kind: 'preflight' }
   | { readonly kind: 'refuse'; readonly status: number; readonly reason: string }
@@ -69,6 +72,7 @@ const POSTS = [
   [DESTROY_PATH, 'destroy', 'Destroy'],
   [PASSWORD_PATH, 'password', 'Setting a password'],
   [UNLOCK_PATH, 'unlock', 'Unlocking'],
+  [OWNER_PATH, 'owner', 'Adopting an owner key'],
 ] as const satisfies readonly (readonly [RegExp, Route['kind'], string])[]
 
 export function routeRequest(url: URL, upgradeHeader: string | null, method = 'GET'): Route {

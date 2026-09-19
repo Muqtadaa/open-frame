@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from 'react'
 import type { BoardRepository } from '@openframe/core'
 
+import { rememberOwnerKey } from '../app/board-password.js'
 import { createLocalBoard, listAllBoards, type ListedBoard } from '../app/boards.js'
 import { ACCOUNTS_ENABLED, signOut } from '../app/identity.js'
 import { boardHref } from '../app/route.js'
@@ -61,6 +62,18 @@ export function Home({ repository }: { readonly repository: BoardRepository }) {
   useEffect(() => {
     let live = true
     void listAllBoards(repository, identity !== null).then((found) => {
+      /*
+       * The owner keys ride along, cached per board.
+       *
+       * This list is the only place they are handed out, and the board itself
+       * needs one on the socket so its owner is not asked for the password on
+       * their own board. Writing them here means the ordinary route — open a
+       * board from your list — costs no extra round trip; `recoverOwnerKey`
+       * covers arriving by a deep link on a machine that never saw this page.
+       */
+      for (const board of found) {
+        if (board.ownerKey !== null) rememberOwnerKey(board.boardId, board.ownerKey)
+      }
       if (live) setListing({ boards: found, readAt: Date.now() })
     })
     return () => {

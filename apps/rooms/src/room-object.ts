@@ -11,8 +11,10 @@ import { DurableObject } from 'cloudflare:workers'
 import {
   claimDecision,
   destroyDecision,
+  isOwnerKey,
   setPasswordDecision,
   unlockDecision,
+  mintKey,
   mintKeys,
   roleForKey,
   roleFromAttachment,
@@ -137,6 +139,7 @@ export class BoardRoomObject extends DurableObject<Env> {
     if (url.pathname.endsWith('/claim')) return this.#claim()
     if (url.pathname.endsWith('/password')) return this.#setPassword(request)
     if (url.pathname.endsWith('/unlock')) return this.#unlock(request)
+    if (url.pathname.endsWith('/owner')) return this.#adoptOwner(request)
 
     if (request.headers.get('Upgrade') !== 'websocket') {
       return new Response('This endpoint speaks WebSocket', { status: 426 })
@@ -162,7 +165,18 @@ export class BoardRoomObject extends DurableObject<Env> {
      * 4004, which is why that distinction exists at all.
      */
     const verifier = await this.ctx.storage.get<PasswordVerifier>(PASSWORD)
-    if (!tokenAdmits(verifier, url.searchParams.get('t'))) {
+    /*
+     * THE OWNER IS NEVER ASKED. They are the one who set the password, and a
+     * board that locks out the person whose board it is — on a new machine, or
+     * after they have forgotten it — is a board they have lost.
+     *
+     * Read from `o`, never from `k`. The owner key is not a link: it lives in
+     * a column only its owner can read and travels beside the edit link on the
+     * socket. Were it accepted as `k` it would sit in the page URL, and a URL
+     * copied from the address bar would carry the board's password with it.
+     */
+    const owner = isOwnerKey(await this.ctx.storage.get<AccessKeys>(KEYS), url.searchParams.get('o'))
+    if (!owner && !tokenAdmits(verifier, url.searchParams.get('t'))) {
       const refused = new WebSocketPair()
       // `accept()` rather than `acceptWebSocket()` on purpose: this socket is
       // closed in the same breath, so there is no hibernation to preserve and
@@ -341,6 +355,57 @@ export class BoardRoomObject extends DurableObject<Env> {
     // the browser that set it redeems it like everybody else, which is also
     // the only way that path is ever exercised by the person who chose it.
     return Response.json({ password: true }, { headers: CORS })
+  }
+
+  /**
+   * Gives a board claimed before owner keys existed one, once.
+   *
+   * Authorized by the EDIT key, which is the strongest thing such a board has
+   * — there is no owner key yet for anyone to hold, and that key can already
+   * destroy the board outright, so this grants no authority that was not
+   * already there. It is also self-closing: the moment a key exists this stops
+   * minting, and only the holder of that key can read it back.
+   *
+   * Idempotent for the owner, so a client that lost its copy can ask again
+   * rather than being told the board is broken.
+   */
+  async #adoptOwner(request: Request): Promise<Response> {
+    const keys = await this.ctx.storage.get<AccessKeys>(KEYS)
+    const key = await readKey(request)
+    const destroyed = (await this.ctx.storage.get<boolean>(DESTROYED)) === true
+
+    if (destroyed) {
+      return Response.json({ error: 'This board no longer exists' }, { status: 410, headers: CORS })
+    }
+    if (keys === undefined) {
+      return Response.json(
+        { error: 'This board was shared before links had roles' },
+        { status: 409, headers: CORS },
+      )
+    }
+
+    if (keys.owner !== undefined) {
+      // Already adopted. Only the owner gets it back — handing it to an edit
+      // link here would undo the whole distinction one line after making it.
+      if (!isOwnerKey(keys, key)) {
+        return Response.json(
+          { error: 'Only the board’s owner can do that' },
+          { status: 403, headers: CORS },
+        )
+      }
+      return Response.json({ owner: keys.owner }, { headers: CORS })
+    }
+
+    if (key === null || key !== keys.editor) {
+      return Response.json(
+        { error: 'That link does not open this board' },
+        { status: 403, headers: CORS },
+      )
+    }
+
+    const owner = mintKey()
+    await this.ctx.storage.put(KEYS, { ...keys, owner })
+    return Response.json({ owner }, { headers: CORS })
   }
 
   /** Trades the password for the token that opens the board. */

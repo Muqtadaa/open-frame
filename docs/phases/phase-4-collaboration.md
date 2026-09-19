@@ -427,11 +427,29 @@ this browser", whatever is sitting in IndexedDB under its id.
   in the room, not in the board row, so showing it would need a round trip per
   board. The control does not claim to know — but "which of my boards are
   protected?" has no answer in the interface yet.
-- **A password is authorized by the EDITOR KEY, not by ownership.** The room has
-  never heard of Supabase, so any holder of the edit link can set or change one,
-  and an owner arriving on their own link is challenged like anybody else. Both
-  follow from where enforcement lives; neither is hidden, and both are the same
-  authority that can already destroy the board.
+- ~~A password is authorized by the EDITOR KEY, not by ownership.~~ Fixed. The
+  room mints a THIRD key at claim — the owner key — kept in a column only the
+  board's owner can read. Setting or changing the password requires it, and
+  presenting it on the socket excuses its holder from being asked. A board that
+  locks out the person whose board it is, on a new machine or after they have
+  forgotten what they set, is a board they have lost.
+
+  It is deliberately NOT a link. Accepted as `k` it would sit in the page URL,
+  and a URL copied out of the address bar and passed on would carry the board's
+  password with it — the one thing the password exists to prevent. It travels
+  as `o` on the socket, and a test asserts it never reaches the page URL.
+
+  What this is NOT is a verified identity. "Owner" means the holder of a key
+  only the owner is ever handed, enforced by row-level security — the same
+  trust model the other two keys rest on. Verifying a Supabase JWT in the room
+  would be stricter and needs either JWKS or a Worker secret; that is a
+  separate change, not a hidden gap in this one.
+
+  Boards claimed before owner keys existed adopt one once, on the edit key —
+  the strongest thing such a board has, and one that can already destroy it.
+  `record_owner_key` writes only when the row has none and you own it; probed
+  against the real database that a member cannot plant one and a second write
+  is refused.
 
 - **Two real rooms hold test data.** `brd_abcdefgh12345678` and
   `brd_aaaaaaaa11111111` are live Durable Objects that the e2e suite joined and

@@ -35,6 +35,7 @@ export async function signedIn(
     role: string
     access_key: string
     view_key: string | null
+    owner_key: string | null
     updated_at: string
     pinned: boolean
     opened_at: string
@@ -47,6 +48,8 @@ export async function signedIn(
       access_key: 'a'.repeat(32),
       // Only an owner gets the second key back, exactly as `my_boards()` does.
       view_key: board.role === 'owner' ? 'b'.repeat(32) : null,
+      // And the third, which is not a link at all.
+      owner_key: board.role === 'owner' ? 'd'.repeat(32) : null,
       updated_at: when,
       pinned: board.pinned ?? false,
       opened_at: when,
@@ -73,6 +76,7 @@ export async function signedIn(
         role: 'owner',
         access_key: 'a'.repeat(32),
         view_key: 'b'.repeat(32),
+        owner_key: 'd'.repeat(32),
         updated_at: when,
         pinned: false,
         opened_at: when,

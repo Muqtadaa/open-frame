@@ -15,6 +15,20 @@ import type { RoomRole } from '@openframe/collab'
 export interface AccessKeys {
   readonly editor: string
   readonly viewer: string
+  /**
+   * The OWNER's key. Absent on a board claimed before this existed.
+   *
+   * A third key rather than an identity, because the room authorizes by key
+   * and has never heard of Supabase. What makes it mean "owner" is where it is
+   * kept: a column only the board's owner can read, behind the same row-level
+   * security as everything else about that board. So this is the holder of a
+   * key only the owner is ever given — not a verified identity — which is the
+   * trust model the other two keys already rest on.
+   *
+   * It grants two things the edit link does not: setting the password, and not
+   * being asked for it. It is never a link — it travels beside one.
+   */
+  readonly owner?: string
 }
 
 /**
@@ -28,7 +42,7 @@ export function mintKey(random: (bytes: Uint8Array) => void = crypto.getRandomVa
 }
 
 export function mintKeys(random?: (bytes: Uint8Array) => void): AccessKeys {
-  return { editor: mintKey(random), viewer: mintKey(random) }
+  return { editor: mintKey(random), viewer: mintKey(random), owner: mintKey(random) }
 }
 
 /**
@@ -52,7 +66,26 @@ export function roleForKey(keys: AccessKeys | undefined, key: string | null): Ro
    */
   if (key === keys.editor) return 'editor'
   if (key === keys.viewer) return 'viewer'
+  /*
+   * NOT the owner key. It is deliberately not a link: the owner opens their
+   * board on the edit link like anybody else, and carries the owner key beside
+   * it. Accepting it here would put it in the page URL, and a URL copied out
+   * of the address bar and pasted to somebody would hand them the board's
+   * password along with it.
+   */
   return null
+}
+
+/**
+ * Whether this key is the board's owner key.
+ *
+ * Separate from `roleForKey` because the ROLE is the same as an editor's. What
+ * differs is authority over the board's password, and reading that off a role
+ * would mean giving every editor the same.
+ */
+export function isOwnerKey(keys: AccessKeys | undefined, key: string | null): boolean {
+  if (keys?.owner === undefined || key === null) return false
+  return key === keys.owner
 }
 
 export type ClaimDecision =
@@ -153,19 +186,18 @@ export type PasswordDecision =
 /**
  * Whether this board's password may be set, changed or cleared now.
  *
- * THE EDITOR KEY, and only it — the same authority that can destroy the room,
- * for the same reason: a viewer was handed the weaker link precisely so they
- * could not change the board, and locking everyone else out of it is a change.
+ * THE OWNER KEY, and only it. Not the edit link: everybody invited to change
+ * the board holds that one, and deciding who may open the board at all is not
+ * the same authority as changing what is on it.
  *
- * Note what this does NOT check: that you are the board's owner. The room
- * authorizes by key and has never heard of Supabase, so any holder of the edit
- * link can do this. That is already true of deleting the board, which is
- * strictly worse, so it adds no authority that was not there — but "the owner
- * sets the password" is a convention of the interface rather than a rule the
- * room enforces, and it is better said out loud than discovered.
+ * A board claimed BEFORE owner keys existed has none, and for those the edit
+ * key stands in. That is not a loophole left open: such a board has no owner
+ * key for anyone to hold, the alternative is that its password can never be
+ * set by anybody, and the edit key can already destroy the board outright. It
+ * closes the moment the board adopts one, which is once and permanent.
  *
- * A LEGACY room refuses. There are no keys, so there is nobody to trust — the
- * same reasoning `destroyDecision` gives, and the same answer.
+ * A LEGACY UNCLAIMED room still refuses. There are no keys at all, so there is
+ * nobody to trust — the same reasoning `destroyDecision` gives.
  */
 export function setPasswordDecision(
   keys: AccessKeys | undefined,
@@ -182,8 +214,9 @@ export function setPasswordDecision(
       error: 'This board was shared before links had roles, and cannot take a password',
     }
   }
-  if (key === null || key !== keys.editor) {
-    return { ok: false, status: 403, error: 'That link does not open this board' }
+  const required = keys.owner ?? keys.editor
+  if (key === null || key !== required) {
+    return { ok: false, status: 403, error: 'Only the board’s owner can do that' }
   }
   return { ok: true }
 }

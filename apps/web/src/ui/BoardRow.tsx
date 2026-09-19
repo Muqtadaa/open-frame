@@ -97,16 +97,21 @@ export function BoardRow({
   /**
    * Sets or clears the password, then returns the row to rest.
    *
-   * `accessKey` is the EDITOR key for a board you own, which is the authority
-   * the room checks. A row without one cannot offer this, and the control is
-   * gated so that it never appears on such a row.
+   * The OWNER key is the authority the room checks. A board claimed before
+   * owner keys existed has none, and adopts one on its edit key — which is
+   * what `accessKey` is for a board you own, and the strongest thing such a
+   * board has.
    */
   const applyPassword = async (next: string | null): Promise<void> => {
     if (board.accessKey === null) {
       setProblem('This board has no link to protect.')
       return
     }
-    const outcome = await setBoardPassword(board.boardId, board.accessKey, next)
+    const outcome = await setBoardPassword(
+      board.boardId,
+      { owner: board.ownerKey, editor: board.accessKey },
+      next,
+    )
     if (!outcome.ok) {
       setProblem(outcome.reason)
       return

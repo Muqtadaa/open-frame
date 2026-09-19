@@ -3,6 +3,7 @@ import { describe, expect, it } from 'vitest'
 import {
   claimDecision,
   destroyDecision,
+  isOwnerKey,
   setPasswordDecision,
   unlockDecision,
   mintKey,
@@ -241,5 +242,57 @@ describe('attempting a board password', () => {
 
   it('answers gone for a destroyed room', () => {
     expect(unlockDecision(keys, keys.editor, true, true)).toMatchObject({ ok: false, status: 410 })
+  })
+})
+
+describe('the owner key', () => {
+  const keys = { editor: 'a'.repeat(32), viewer: 'b'.repeat(32), owner: 'd'.repeat(32) }
+
+  it('is minted alongside the other two, and differs from both', () => {
+    const minted = mintKeys()
+
+    expect(minted.owner).toMatch(/^[0-9a-f]{32}$/)
+    expect(minted.owner).not.toBe(minted.editor)
+    expect(minted.owner).not.toBe(minted.viewer)
+  })
+
+  /**
+   * NOT a link. The owner opens their board on the edit link and carries this
+   * beside it — accepting it as a link would put it in the page URL, where a
+   * copy-paste out of the address bar hands somebody the board's password.
+   */
+  it('opens nothing on its own', () => {
+    expect(roleForKey(keys, keys.owner)).toBeNull()
+  })
+
+  it('is the only key that sets the password, once a board has one', () => {
+    expect(setPasswordDecision(keys, keys.owner)).toEqual({ ok: true })
+    expect(setPasswordDecision(keys, keys.editor)).toMatchObject({ ok: false, status: 403 })
+    expect(setPasswordDecision(keys, keys.viewer)).toMatchObject({ ok: false, status: 403 })
+  })
+
+  /**
+   * A board claimed before owner keys existed has none, so the edit key stands
+   * in — otherwise its password could never be set by anybody. The edit key
+   * can already destroy such a board outright.
+   */
+  it('falls back to the edit key on a board claimed before it existed', () => {
+    const old = { editor: 'a'.repeat(32), viewer: 'b'.repeat(32) }
+
+    expect(setPasswordDecision(old, old.editor)).toEqual({ ok: true })
+    expect(setPasswordDecision(old, old.viewer)).toMatchObject({ ok: false, status: 403 })
+  })
+
+  it('is recognised as the owner key, and no other key is', () => {
+    expect(isOwnerKey(keys, keys.owner)).toBe(true)
+    expect(isOwnerKey(keys, keys.editor)).toBe(false)
+    expect(isOwnerKey(keys, keys.viewer)).toBe(false)
+    expect(isOwnerKey(keys, null)).toBe(false)
+    // A board with no owner key has no owner to recognise, so the edit key
+    // must not quietly become one.
+    expect(isOwnerKey({ editor: 'a'.repeat(32), viewer: 'b'.repeat(32) }, 'a'.repeat(32))).toBe(
+      false,
+    )
+    expect(isOwnerKey(undefined, 'a'.repeat(32))).toBe(false)
   })
 })

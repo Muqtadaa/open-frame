@@ -19,8 +19,10 @@ async function lockedRoom(page: Page, opens: { with: string }): Promise<string[]
   await page.routeWebSocket(/\/room\//, (ws) => {
     const url = ws.url()
     sockets.push(url)
-    // Anything without the right token is turned away, exactly as the room does.
-    if (!url.includes(`t=${opens.with}`)) {
+    // Turned away without the token OR the owner key, exactly as the room is:
+    // the owner is never challenged on their own board.
+    const owner = url.includes(`o=${'d'.repeat(32)}`)
+    if (!owner && !url.includes(`t=${opens.with}`)) {
       void ws.close({ code: 4003, reason: 'This board needs its password' })
     }
   })
@@ -102,4 +104,55 @@ test('remembers the token and reconnects with it', async ({ page }) => {
 
   await expect.poll(() => sockets.some((url) => url.includes(`t=${TOKEN}`))).toBe(true)
   await expect(page.getByTestId('board-locked')).toHaveCount(0)
+})
+
+/**
+ * The owner is never asked for their own board's password.
+ *
+ * A board that locks out the person whose board it is — on a new machine, or
+ * after they have forgotten what they set — is a board they have lost. The
+ * owner key is what excuses them, and it is not a link: it lives in a column
+ * only its owner can read and travels beside the edit link on the socket.
+ *
+ * This opens the board by DEEP LINK on a browser that has never loaded the
+ * board list, which is the case the cache cannot cover: nothing is stored
+ * locally, so the key has to be recovered from the account before the prompt
+ * would otherwise appear.
+ */
+test('lets the owner straight in, without ever asking', async ({ page }) => {
+  await signedIn(page, [{ id: BOARD, title: 'Mine', role: 'owner' }])
+  const sockets = await lockedRoom(page, { with: TOKEN })
+
+  await page.goto(`/?room=${BOARD}&k=${KEY}`)
+  await page.waitForSelector('[data-testid="status-bar"]')
+
+  // `signed-in.ts` hands an owner 'd' * 32, exactly as `my_boards()` hands
+  // back the column for an owner and null for everybody else.
+  await expect
+    .poll(() => sockets.some((url) => url.includes(`o=${'d'.repeat(32)}`)))
+    .toBe(true)
+
+  // Never asked. Not a prompt that appears and is dismissed — one that is
+  // never shown, because the board opens instead.
+  await expect(page.getByTestId('board-locked')).toHaveCount(0)
+  await expect(page.getByTestId('board-password')).toHaveCount(0)
+})
+
+/**
+ * And the owner key is never put in a link.
+ *
+ * Were it accepted as `k`, it would sit in the page URL — and a URL copied out
+ * of the address bar and passed to somebody would carry the board's password
+ * with it, which is the one thing the password exists to prevent.
+ */
+test('never puts the owner key in the page URL', async ({ page }) => {
+  await signedIn(page, [{ id: BOARD, title: 'Mine', role: 'owner' }])
+  await lockedRoom(page, { with: TOKEN })
+
+  await page.goto(`/?room=${BOARD}&k=${KEY}`)
+  await page.waitForSelector('[data-testid="status-bar"]')
+  await expect(page.getByTestId('board-locked')).toHaveCount(0)
+
+  expect(page.url()).not.toContain('d'.repeat(32))
+  expect(page.url()).toContain(`k=${KEY}`)
 })

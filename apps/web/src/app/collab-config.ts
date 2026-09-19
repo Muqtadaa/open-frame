@@ -42,6 +42,15 @@ export const ROOM_PARAM = 'room'
 export const TOKEN_PARAM = 't'
 
 /**
+ * `?o=<key>` — the owner's key, on the SOCKET only.
+ *
+ * Deliberately not `k`. Were it a link it would sit in the page URL, and a URL
+ * copied out of the address bar and passed on would carry the board's password
+ * with it — which is the one thing the password exists to prevent.
+ */
+export const OWNER_PARAM = 'o'
+
+/**
  * `?k=<key>` — which of a board's two links this is.
  *
  * The key IS the credential. It is in the URL rather than anywhere safer
@@ -135,11 +144,19 @@ export function roomSocketUrl(
   key?: string | null,
   /** The token redeeming this board's password, for a board that has one. */
   token?: string | null,
+  /** The owner's key, for the person whose board it is. */
+  ownerKey?: string | null,
 ): string {
   const url = new URL(`${socketBase()}/room/${boardId}`)
   if (key !== null && key !== undefined) url.searchParams.set(KEY_PARAM, key)
   if (token !== null && token !== undefined) url.searchParams.set(TOKEN_PARAM, token)
+  if (ownerKey !== null && ownerKey !== undefined) url.searchParams.set(OWNER_PARAM, ownerKey)
   return url.toString()
+}
+
+/** Where a board claimed before owner keys existed adopts one. */
+export function ownerKeyUrl(boardId: BoardId): string {
+  return `${httpBase()}/room/${boardId}/owner`
 }
 
 /** Where a board's password is set, changed or cleared. */

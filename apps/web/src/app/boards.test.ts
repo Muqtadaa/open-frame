@@ -118,6 +118,7 @@ const sharedBoard = (
   boardId: asBoardId(id),
   title,
   role,
+  ownerKey: null,
   accessKey: 'a'.repeat(32),
   viewKey: role === 'owner' ? 'b'.repeat(32) : null,
   updatedAt,
@@ -273,6 +274,7 @@ describe('what you may do to a board', () => {
   const listed = (over: Partial<ListedBoard>): ListedBoard => ({
     boardId: asBoardId('brd_aaaaaaaa11111111'),
     title: 'A board',
+    ownerKey: null,
     updatedAt: 0,
     shared: true,
     role: 'owner',
