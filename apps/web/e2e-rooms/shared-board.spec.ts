@@ -1,5 +1,7 @@
 import { expect, test, type Browser, type Page } from '@playwright/test'
 
+import { BOARD_URL } from '../e2e/routes.js'
+
 /**
  * Two people, one board, a real Durable Object.
  *
@@ -145,7 +147,10 @@ test('somebody arriving later gets the whole board', async ({ browser }) => {
 test('a board opened without a link does not join a room', async ({ browser }) => {
   const context = await browser.newContext()
   const page = await context.newPage()
-  await page.goto('/')
+  // A LOCAL board, addressed directly. `/` is the front door now, and a front
+  // door quite correctly joins no room — which would make this pass without
+  // testing anything.
+  await page.goto(BOARD_URL)
   await page.waitForSelector('[data-testid="status-bar"]')
 
   await expect(page.locator('[data-testid="room-status"]')).toHaveCount(0)
