@@ -23,6 +23,11 @@ export type PointerIntent =
   | { readonly kind: 'select'; readonly ids: readonly ObjectId[] }
   | { readonly kind: 'toggle-select'; readonly id: ObjectId }
   | { readonly kind: 'begin-translate'; readonly ids: readonly ObjectId[] }
+  | {
+      readonly kind: 'drop-comment'
+      readonly at: Point
+      readonly on: ObjectId | null
+    }
   | { readonly kind: 'begin-marquee'; readonly at: Point }
   /**
    * Starts drawing a new object to size.
@@ -74,6 +79,15 @@ export function onPointerDown(ctx: PointerDownContext): readonly PointerIntent[]
   if (ctx.tool === 'text') return [{ kind: 'create', objectType: 'text', at: ctx.worldPoint }]
   if (ctx.tool === 'connector') {
     return [{ kind: 'begin-connect', from: ctx.hitId, at: ctx.worldPoint }]
+  }
+  /*
+   * A comment is dropped where you click, and carries WHAT you clicked on if
+   * anything was there. The point is what pins it; the object is an
+   * association, so deleting that object later leaves the comment exactly
+   * where it was put rather than taking the discussion with it.
+   */
+  if (ctx.tool === 'comment') {
+    return [{ kind: 'drop-comment', at: ctx.worldPoint, on: ctx.hitId }]
   }
   /*
    * Frames and shapes are DRAWN, the way they are in every graphics tool: press,

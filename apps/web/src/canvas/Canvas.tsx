@@ -10,6 +10,7 @@ import { DrawPreview } from './DrawPreview.js'
 import { EndpointOverlay } from './EndpointOverlay.js'
 import { MarqueeOverlay } from './MarqueeOverlay.js'
 import { ObjectLayer } from './ObjectLayer.js'
+import { CommentLayer } from './CommentLayer.js'
 import { PresenceLayer } from './PresenceLayer.js'
 import { usePresence } from './use-presence.js'
 import { useFollow } from './use-follow.js'
@@ -102,6 +103,12 @@ export function Canvas() {
           on it — a cursor behind a note is a cursor nobody can follow.
         */}
         <PresenceLayer />
+        {/*
+          Inside the world, so a pin sits exactly where it was dropped under
+          any pan or zoom. The words are outside it, in the panel: text that
+          scales with the board cannot be read at 25%.
+        */}
+        <CommentLayer />
       </div>
     </div>
   )

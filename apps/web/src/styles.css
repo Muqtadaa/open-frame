@@ -713,6 +713,165 @@ body {
   box-shadow: 0 0 0 2px var(--of-page);
 }
 
+/*
+ * COMMENTS: pins on the board, words beside it.
+ *
+ * The layer takes no pointer events and each pin takes its own — an invisible
+ * sheet over the whole board would swallow every click aimed at the canvas.
+ */
+.of-comments {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+
+.of-comments__pin {
+  /*
+   * `transform-origin` at the top left and a counter-scale on the transform
+   * keep a pin the same size on screen at any zoom — the same rule the
+   * presence cursors follow, and for the same reason: one that shrank with the
+   * board would be a dot at 25%.
+   */
+  position: absolute;
+  top: 0;
+  left: 0;
+  display: grid;
+  place-items: center;
+  width: 26px;
+  height: 26px;
+  padding: 0;
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--of-panel);
+  pointer-events: auto;
+  cursor: pointer;
+  background: var(--of-accent);
+  border: 2px solid var(--of-panel);
+  /* A speech-bubble tail: round but for the corner that points at the spot. */
+  border-radius: 50% 50% 50% 2px;
+  box-shadow: var(--of-slip-shadow);
+  transform-origin: top left;
+}
+
+.of-comments__pin--open {
+  background: var(--of-guide);
+}
+
+/* Not yet said, so not yet solid. */
+.of-comments__pin--new {
+  background: var(--of-ink-muted);
+}
+
+.of-comment-panel {
+  position: absolute;
+  top: 56px;
+  right: 12px;
+  z-index: 40;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  width: 300px;
+  max-height: calc(100vh - 120px);
+  padding: 14px;
+  overflow-y: auto;
+  background: var(--of-panel);
+  border: 1px solid var(--of-panel-border);
+  border-radius: 10px;
+  box-shadow: var(--of-shadow);
+}
+
+.of-comment-panel__head {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.of-comment-panel__title {
+  margin: 0;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--of-ink);
+}
+
+.of-comment-panel__gone {
+  margin: 0;
+  font-size: 12px;
+  color: var(--of-danger);
+}
+
+.of-comment-panel__thread {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  max-height: 320px;
+  overflow-y: auto;
+}
+
+.of-comment-panel__input {
+  width: 100%;
+  padding: 8px;
+  font: inherit;
+  font-size: 13px;
+  color: var(--of-ink);
+  resize: vertical;
+  background: var(--of-page);
+  border: 1px solid var(--of-control-border);
+  border-radius: var(--of-radius);
+}
+
+.of-comment-panel__hint {
+  margin: 6px 0 0;
+  font-size: 11px;
+  color: var(--of-ink-muted);
+}
+
+.of-comment-panel__problem {
+  margin: 6px 0 0;
+  font-size: 12px;
+  color: var(--of-danger);
+}
+
+.of-comment-panel__actions {
+  display: flex;
+  gap: 8px;
+  margin-top: 10px;
+}
+
+.of-comment {
+  display: flex;
+  gap: 8px;
+  align-items: flex-start;
+}
+
+.of-comment__who {
+  display: grid;
+  flex: none;
+  place-items: center;
+  width: 22px;
+  height: 22px;
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--of-panel);
+  border-radius: 50%;
+}
+
+.of-comment__name {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--of-ink);
+}
+
+.of-comment__text {
+  /* Somebody else's words, wrapped as written rather than reflowed into one line. */
+  margin: 2px 0 0;
+  font-size: 13px;
+  line-height: 1.4;
+  color: var(--of-ink);
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
 .of-gone {
   position: fixed;
   inset: 0;

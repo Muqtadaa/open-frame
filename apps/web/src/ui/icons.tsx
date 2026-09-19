@@ -342,6 +342,15 @@ export function LeaveIcon({ className }: IconProps) {
   )
 }
 
+/** A speech bubble with a tail, for a comment left on the board. */
+export function CommentIcon({ className }: IconProps) {
+  return (
+    <svg {...base} className={className}>
+      <path d="M20 12a7 7 0 0 1-7 7H9l-4 3v-4.2A7 7 0 0 1 4 12a7 7 0 0 1 7-7h2a7 7 0 0 1 7 7Z" />
+    </svg>
+  )
+}
+
 /** A key, for the password that a board's links ask for. */
 export function KeyIcon({ className }: IconProps) {
   return (

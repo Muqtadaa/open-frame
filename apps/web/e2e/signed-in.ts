@@ -28,7 +28,7 @@ export async function signedIn(
   page: Page,
   boards: readonly StubbedBoard[],
   displayName = 'Muqtadaa Miandara',
-): Promise<void> {
+): Promise<StubbedAccount> {
   const rows: {
     id: string
     title: string
@@ -62,6 +62,26 @@ export async function signedIn(
    * one line after the app recorded a board into it, and the test would then
    * be asserting against the double rather than against the app.
    */
+  /** What has been said on the board, and who is on it to say it. */
+  const comments: {
+    id: string
+    parent_id: string | null
+    author_id: string
+    author_name: string
+    author_hue: number
+    body: string
+    x: number | null
+    y: number | null
+    object_id: string | null
+    resolved_at: string | null
+    created_at: string
+  }[] = []
+  const people = [
+    { user_id: '00000000-0000-4000-8000-000000000001', display_name: displayName, hue: 3 },
+    { user_id: '00000000-0000-4000-8000-000000000002', display_name: 'Rowan', hue: 1 },
+  ]
+  const mentioned: string[] = []
+
   await page.route(`**/${REF}.supabase.co/**`, (route) => {
     const url = route.request().url()
     const json = (body: unknown) =>
@@ -83,6 +103,54 @@ export async function signedIn(
       })
       return json({})
     }
+
+    /*
+     * COMMENTS, remembered for the same reason boards are: the app posts one
+     * and immediately re-reads the list, so a double answering from a fixed
+     * fixture would show an empty board one line after something was written
+     * into it — and the test would be asserting against the double.
+     */
+    if (url.includes('rpc/board_comments_for')) return json(comments)
+
+    if (url.includes('rpc/post_comment')) {
+      const body = route.request().postDataJSON() as {
+        p_body?: string
+        p_parent_id?: string | null
+        p_x?: number | null
+        p_y?: number | null
+        p_object_id?: string | null
+        p_mentions?: string[]
+      }
+      const id = `cmt_${String(comments.length + 1)}`
+      mentioned.push(...(body.p_mentions ?? []))
+      comments.push({
+        id,
+        parent_id: body.p_parent_id ?? null,
+        author_id: '00000000-0000-4000-8000-000000000001',
+        author_name: displayName,
+        author_hue: 3,
+        body: body.p_body ?? '',
+        x: body.p_x ?? null,
+        y: body.p_y ?? null,
+        object_id: body.p_object_id ?? null,
+        resolved_at: null,
+        created_at: new Date().toISOString(),
+      })
+      return json(id)
+    }
+
+    if (url.includes('rpc/resolve_comment')) {
+      const body = route.request().postDataJSON() as { p_id?: string; p_resolved?: boolean }
+      for (const comment of comments) {
+        if (comment.id === body.p_id) {
+          comment.resolved_at = body.p_resolved === true ? new Date().toISOString() : null
+        }
+      }
+      return json(true)
+    }
+
+    if (url.includes('rpc/board_people')) return json(people)
+    if (url.includes('rpc/my_mentions')) return json([])
 
     if (url.includes('rpc/my_boards')) return json(rows)
     if (url.includes('/profiles')) return json({ display_name: displayName, hue: 3 })
@@ -115,4 +183,21 @@ export async function signedIn(
     },
     [REF, 'someone', expiresAt] as const,
   )
+
+  return {
+    mentioned,
+    people: people.map((person) => person.display_name),
+  }
+}
+
+/**
+ * What the double recorded, for a test to assert against.
+ *
+ * `mentioned` in particular: a mention is a notification, and a notification
+ * that was never sent looks exactly like one that was, from the outside. The
+ * only way to tell is to ask what reached the server.
+ */
+export interface StubbedAccount {
+  readonly mentioned: readonly string[]
+  readonly people: readonly string[]
 }

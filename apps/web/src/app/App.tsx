@@ -1,4 +1,5 @@
 import { Canvas } from '../canvas/Canvas.js'
+import { Comments, CommentsProvider } from './Comments.js'
 import { BoardGone } from '../ui/BoardGone.js'
 import { BoardLocked } from '../ui/BoardLocked.js'
 import { ContextMenu } from '../ui/ContextMenu.js'
@@ -24,37 +25,40 @@ import { useOpenFrame } from '../runtime/context.js'
 export function App() {
   const { runtime } = useOpenFrame()
   return (
-    <div className="of-app">
-      <Canvas />
+    <CommentsProvider>
+      <div className="of-app">
+        <Canvas />
 
-      <div className="of-overlay of-overlay--left">
-        <Toolbar />
+        <div className="of-overlay of-overlay--left">
+          <Toolbar />
+        </div>
+
+        <div className="of-overlay of-overlay--top">
+          <NoticeBanner notices={runtime.notices} readOnly={runtime.readOnly} />
+          <Toast />
+        </div>
+
+        <div className="of-overlay of-overlay--bottom-right">
+          <ZoomControl />
+        </div>
+
+        <div className="of-overlay of-overlay--bottom-left">
+          <StatusBar />
+        </div>
+
+        <Inspector />
+        <ContextMenu />
+        <SearchPanel />
+        <Comments />
+
+        {/*
+          Last, so they cover everything above them. Both are terminal states of
+          the connection and only one can ever be showing: the room either
+          destroyed the board or refused to open it.
+        */}
+        <BoardGone />
+        <BoardLocked />
       </div>
-
-      <div className="of-overlay of-overlay--top">
-        <NoticeBanner notices={runtime.notices} readOnly={runtime.readOnly} />
-        <Toast />
-      </div>
-
-      <div className="of-overlay of-overlay--bottom-right">
-        <ZoomControl />
-      </div>
-
-      <div className="of-overlay of-overlay--bottom-left">
-        <StatusBar />
-      </div>
-
-      <Inspector />
-      <ContextMenu />
-      <SearchPanel />
-
-      {/*
-        Last, so they cover everything above them. Both are terminal states of
-        the connection and only one can ever be showing: the room either
-        destroyed the board or refused to open it.
-      */}
-      <BoardGone />
-      <BoardLocked />
-    </div>
+    </CommentsProvider>
   )
 }

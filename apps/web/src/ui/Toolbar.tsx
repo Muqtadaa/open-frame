@@ -5,6 +5,7 @@ import { useImageImport } from '../hooks/use-image-import.js'
 import { useInteractionStore, type Tool } from '../interaction/interaction-store.js'
 import { ALLOWED_IMAGE_TYPES } from '../runtime/asset-validation.js'
 import {
+  CommentIcon,
   ConnectorIcon,
   CursorIcon,
   DisclosureIcon,
@@ -30,6 +31,11 @@ const TOOLS: readonly ToolSpec[] = [
   { id: 'shape', label: 'Shape', shortcut: 'U' },
   { id: 'frame', label: 'Frame', shortcut: 'F' },
   { id: 'connector', label: 'Connect', shortcut: 'C' },
+  // Not a thing you put on the page, but a thing you put ON what is on the
+  // page — and it belongs with the other modes rather than hidden in a menu,
+  // because a comment you cannot find a way to leave is a comment nobody
+  // leaves.
+  { id: 'comment', label: 'Comment', shortcut: 'M' },
 ]
 
 /**
@@ -70,6 +76,8 @@ export function Toolbar() {
         return <FrameIcon />
       case 'connector':
         return <ConnectorIcon />
+      case 'comment':
+        return <CommentIcon />
     }
   }
 

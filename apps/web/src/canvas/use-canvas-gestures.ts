@@ -266,6 +266,14 @@ export function useCanvasGestures(containerRef: RefObject<HTMLElement | null>) {
         case 'begin-translate':
           store.beginTranslate(intent.ids)
           return 'translate'
+        /*
+         * Opens a composer where the pointer is. Nothing is written yet and
+         * nothing touches the document: a comment is not a canvas object, and
+         * it does not exist until somebody has actually said something.
+         */
+        case 'drop-comment':
+          store.startComment({ x: worldPoint.x, y: worldPoint.y, objectId: intent.on })
+          return 'none'
         case 'begin-marquee':
           store.beginMarquee(worldPoint)
           return 'marquee'
@@ -302,6 +310,21 @@ export function useCanvasGestures(containerRef: RefObject<HTMLElement | null>) {
        * caret would be read as a canvas gesture and close the editor.
        */
       if (isTextEntry(event.target)) return
+
+      /*
+       * A comment pin lives inside the world layer, so its events bubble here
+       * too — and in select mode this handler takes pointer capture to start a
+       * marquee, which swallows the pin's own click. The pin was therefore
+       * clickable only while the comment tool happened to be active, which is
+       * the one mode you are least likely to be in when you want to READ a
+       * comment.
+       *
+       * Found by a test that switched tools before clicking the pin. The
+       * earlier ones passed because they never left comment mode.
+       */
+      if (event.target instanceof Element && event.target.closest('.of-comments') !== null) {
+        return
+      }
 
       // Any press dismisses an open menu.
       useInteractionStore.getState().closeContextMenu()

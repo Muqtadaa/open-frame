@@ -14,7 +14,23 @@ import type { AlignmentGuide } from '../scene/alignment.js'
 import type { HandleId } from '../scene/resize.js'
 import { create } from 'zustand'
 
-export type Tool = 'select' | 'pan' | 'sticky' | 'text' | 'shape' | 'frame' | 'connector'
+export type Tool =
+  | 'select'
+  | 'pan'
+  | 'sticky'
+  | 'text'
+  | 'shape'
+  | 'frame'
+  | 'connector'
+  | 'comment'
+
+/** Where a comment is being written, before it exists. */
+export interface ComposingComment {
+  readonly x: number
+  readonly y: number
+  /** What was under the click, if anything. An association, not a location. */
+  readonly objectId: ObjectId | null
+}
 
 /**
  * What a plain (unmodified) wheel gesture does.
@@ -186,6 +202,16 @@ interface InteractionState {
    * follower. What arrives from other people is never read back into it.
    */
   readonly following: number | null
+  /**
+   * A comment being written but not yet posted, and the thread being read.
+   *
+   * Both transient and local, like everything else here. A comment is not a
+   * canvas object and never goes near the document — it belongs to the board
+   * the way a conversation belongs to a room, which is why it lives in its own
+   * table and not in the object registry.
+   */
+  readonly composing: ComposingComment | null
+  readonly openThreadId: string | null
   readonly drag: DragState
   /**
    * Size of the canvas element. Transient view state, but several things
@@ -229,6 +255,8 @@ interface InteractionState {
   setLockedByOthers(ids: ReadonlySet<ObjectId>): void
   setViewport(viewport: Viewport): void
   setFollowing(clientId: number | null): void
+  startComment(at: ComposingComment | null): void
+  openThread(id: string | null): void
   setCanvasSize(width: number, height: number): void
   setClipboard(objects: readonly AnyOpenFrameObject[]): void
   openContextMenu(at: Point): void
@@ -270,6 +298,8 @@ export const useInteractionStore = create<InteractionState>((set) => ({
   lockedByOthers: NO_LOCKS,
   viewport: DEFAULT_VIEWPORT,
   following: null,
+  composing: null,
+  openThreadId: null,
   drag: { kind: 'idle' },
   canvasSize: { width: 0, height: 0 },
   clipboard: [],
@@ -343,6 +373,10 @@ export const useInteractionStore = create<InteractionState>((set) => ({
     }),
   setViewport: (viewport) => set({ viewport }),
   setFollowing: (clientId) => set({ following: clientId }),
+  // Writing a new one closes whatever was being read, and vice versa: two
+  // panels over the same pin is two places to type into.
+  startComment: (at) => set({ composing: at, openThreadId: null }),
+  openThread: (id) => set({ openThreadId: id, composing: null }),
 
   setClipboard: (clipboard) => set({ clipboard: [...clipboard] }),
   openContextMenu: (contextMenu) => set({ contextMenu }),
