@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useState, type CSSProperties } from 'react'
 import type { BoardRepository } from '@openframe/core'
 
 import { createLocalBoard, describeWhen, listAllBoards, type ListedBoard } from '../app/boards.js'
@@ -66,33 +66,42 @@ export function Home({ repository }: { readonly repository: BoardRepository }) {
     <main className="of-home" data-testid="home">
       <div className="of-home__column">
         <header className="of-home__head">
-          <img className="of-home__mark" src={logoMark} alt="" width={32} height={32} />
-          <div>
+          <div className="of-home__lockup">
+            <img className="of-home__mark" src={logoMark} alt="" width={32} height={32} />
             <h1 className="of-home__title">OpenFrame</h1>
-            <p className="of-home__tagline">
-              A visual workspace where what you put on the canvas keeps its meaning.
-            </p>
-          </div>
-          {identity !== null && (
-            <button
-              type="button"
-              className="of-home__account"
-              data-testid="home-account"
-              title={`Signed in as ${identity.displayName}. Click to sign out.`}
-              onClick={() => {
-                void signOut()
-              }}
-            >
-              <span
-                className="of-home__person"
-                style={{ background: hueVar(identity.hue) }}
-                aria-hidden="true"
+
+            {identity !== null && (
+              <button
+                type="button"
+                className="of-home__account"
+                data-testid="home-account"
+                /*
+                 * The colour is not decoration: it is the hue other people see
+                 * on your cursor when you are on a board together, so saying so
+                 * turns a swatch into a fact about yourself.
+                 */
+                title={`Signed in as ${identity.displayName}. This is the colour other people see you as on a board. Click to sign out.`}
+                onClick={() => {
+                  void signOut()
+                }}
               >
-                {initialOf(identity.displayName)}
-              </span>
-              <span>{identity.displayName}</span>
-            </button>
-          )}
+                <span
+                  className="of-home__person"
+                  style={{ background: hueVar(identity.hue) }}
+                  aria-hidden="true"
+                >
+                  {initialOf(identity.displayName)}
+                </span>
+                <span className="of-home__account-name">{identity.displayName}</span>
+              </button>
+            )}
+          </div>
+
+          {/* Its own row, full width: sharing one with the account chip is what
+              made it wrap to three lines on a phone. */}
+          <p className="of-home__tagline">
+            A visual workspace where what you put on the canvas keeps its meaning.
+          </p>
         </header>
 
         <div className="of-home__body">
@@ -110,8 +119,13 @@ export function Home({ repository }: { readonly repository: BoardRepository }) {
               </p>
             ) : (
               <ul className="of-home__list" data-testid="home-boards">
-                {listing.boards.map((board) => (
-                  <li key={board.boardId}>
+                {listing.boards.map((board, index) => (
+                  <li
+                    key={board.boardId}
+                    /* Capped: an eleventh row arriving eleven beats late is a
+                       list that feels slow, which is the opposite of the point. */
+                    style={{ '--of-row': Math.min(index, 5) } as CSSProperties}
+                  >
                     <a
                       className="of-home__board"
                       href={

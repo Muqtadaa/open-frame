@@ -104,21 +104,41 @@ test.describe('the board name', () => {
 })
 
 /**
+ * The zoom controls stay clickable, whatever the record line is carrying.
+ *
  * The record line is bottom-left and the zoom cluster is bottom-right, and the
  * only thing keeping them apart was that the line happened to be short enough.
- * Adding the board's name to it left 31px of clearance and then took it: the
- * dev panel's button ended up over the zoom controls, where it silently
- * swallowed every click aimed at them. Nothing failed except one unrelated
- * test, thirty seconds at a time.
+ * Adding the board's name took the last 31px of clearance: the dev panel's
+ * button came to rest ON TOP of the zoom controls and silently swallowed every
+ * click aimed at them. Nothing failed except one unrelated test about the
+ * scroll-wheel preference, thirty seconds at a time.
+ *
+ * The FIRST guard written for this compared bounding boxes, and it was not
+ * enough twice over. A flex child refuses to shrink below its content and
+ * simply overflows a capped box, so the line measured perfectly inside its
+ * limit while its contents sat 21px past it — and once those contents are
+ * clipped, their rectangles still report the old position anyway.
+ *
+ * So this asks the question that actually broke: is the thing under the
+ * pointer the control you were aiming at?
  */
-test('the record line never grows into the zoom cluster', async ({ page }) => {
+test('nothing covers the zoom controls', async ({ page }) => {
   await rename(page, 'A board name long enough to push this line right across the screen')
 
-  const line = await page.locator('[data-testid="status-bar"]').boundingBox()
-  const zoom = await page.locator('.of-zoom').boundingBox()
+  const covered = await page.evaluate(() => {
+    const zoom = document.querySelector('.of-zoom')
+    if (zoom === null) return ['no zoom cluster']
 
-  expect(line).not.toBeNull()
-  expect(zoom).not.toBeNull()
-  if (line === null || zoom === null) return
-  expect(line.x + line.width).toBeLessThanOrEqual(zoom.x)
+    const blocked: string[] = []
+    for (const control of zoom.querySelectorAll('button, input')) {
+      const box = control.getBoundingClientRect()
+      const at = document.elementFromPoint(box.x + box.width / 2, box.y + box.height / 2)
+      if (at === null || !zoom.contains(at)) {
+        blocked.push(`${control.className} is under ${String(at?.className ?? 'nothing')}`)
+      }
+    }
+    return blocked
+  })
+
+  expect(covered).toEqual([])
 })

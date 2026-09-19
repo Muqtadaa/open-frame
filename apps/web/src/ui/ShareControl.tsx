@@ -196,12 +196,24 @@ function ShareLinks({ links, onOpen }: { readonly links: SharedBoard; readonly o
         This board now has two links. Anyone who has one needs no account.
       </p>
 
-      <button type="button" className="of-share__link" data-testid="copy-edit" onClick={() => copy('edit')}>
+      <button
+        type="button"
+        className="of-share__link"
+        data-testid="copy-edit"
+        data-copied={copied === 'edit' ? 'yes' : 'no'}
+        onClick={() => copy('edit')}
+      >
         <span className="of-share__link-name">{copied === 'edit' ? 'Copied' : 'Copy edit link'}</span>
         <span className="of-share__link-what">They can change the board</span>
       </button>
 
-      <button type="button" className="of-share__link" data-testid="copy-view" onClick={() => copy('view')}>
+      <button
+        type="button"
+        className="of-share__link"
+        data-testid="copy-view"
+        data-copied={copied === 'view' ? 'yes' : 'no'}
+        onClick={() => copy('view')}
+      >
         <span className="of-share__link-name">{copied === 'view' ? 'Copied' : 'Copy view link'}</span>
         <span className="of-share__link-what">They can watch, and be seen watching</span>
       </button>

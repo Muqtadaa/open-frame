@@ -435,6 +435,52 @@ refuse.
 **The One Slip Height Rule.** Every placed object shares the one slip shadow, so
 everything on the board sits at the same height above the rule.
 
+## Motion
+
+**Entries are set down on a page.** This is a computation pad where every mark
+is a record, so the one authored moment belongs to the surface whose whole job
+is "here is what you have written down" — the board ledger on the front door,
+settling in a row at a time as if inked. Nothing else there moves.
+
+Everything else is feedback or continuity, and there is not much of it:
+
+- **A sheet comes out of the line it belongs to.** The account and share sheets
+  rise 4px with `transform-origin: bottom left`, so they read as pulled from
+  the apparatus rather than pasted over the board.
+- **A copied link says so where the click landed.** A 600ms accent wash on the
+  row, not a toast: the acknowledgement belongs where the action was, and this
+  is a control somebody uses twice and never again that session.
+- **Beds transition, they do not snap.** 140ms on hover and active states.
+
+Timing is `--of-quick` (140ms) for feedback and `--of-settle` (240ms) for the
+ledger, on `cubic-bezier(0.16, 1, 0.3, 1)` — a confident arrival. **No bounce:**
+a ledger entry does not overshoot. The stagger is 28ms and capped at six rows,
+because an eleventh row arriving eleven beats late is a list that feels slow,
+which is the opposite of what a stagger is for.
+
+### Named Rules
+
+**The Reduced Motion Rule.** Reduced motion means fewer and gentler, not none.
+Under the preference every moving animation is re-pointed at a fade; the colour
+and opacity that carry FEEDBACK stay. An interface that stops acknowledging a
+copied link under that setting has traded an accessibility preference for a
+loss of information. `motion.test.ts` asserts it against the real stylesheet —
+and reads every `prefers-reduced-motion` block, having first been written to
+read only the first one, which was the tool tip's.
+
+**Nothing loops.** There is no idle animation anywhere in this product.
+
+## Names
+
+A person's name is arbitrary-length content on a fixed-height control, and this
+world has two places that carry one: the account chip on the front door and the
+same chip in the record line. Both cap it, ellipsise it and forbid wrapping,
+because "Muqtadaa Miandara" wrapped to two lines, grew the record line to two
+rows, and starved the board title beside it down to `U…`.
+
+Avatars are `flex: none`. A flex child with no basis becomes an ellipse when
+its row is tight, which is what a long name did to one.
+
 ## Shapes
 
 Corners are small and get smaller the closer a form is to the page. Anything that
