@@ -1,7 +1,13 @@
 import { SHAPE_KINDS, type ShapeKind } from '@openframe/core'
 import { describe, expect, it } from 'vitest'
 
-import { SHAPE_GEOMETRY, containsPoint, labelInset, shapePath } from './shape-geometry.js'
+import {
+  SHAPE_GEOMETRY,
+  containsPoint,
+  labelInset,
+  roundedShapePath,
+  shapePath,
+} from './shape-geometry.js'
 
 /** The four corners of a shape's label box, in the normalised 0–100 box. */
 function labelCorners(kind: ShapeKind) {
@@ -75,5 +81,63 @@ describe('containsPoint', () => {
   it('places the corners of a rectangle inside it', () => {
     expect(containsPoint('rectangle', { x: 50, y: 50 })).toBe(true)
     expect(containsPoint('rectangle', { x: 99.5, y: 99.5 })).toBe(false)
+  })
+})
+
+describe('rounded corners', () => {
+  /**
+   * Drawn in FRAME units, which is the whole reason this function exists
+   * rather than a radius added to the normalised path. The box is stretched to
+   * the frame, so a radius in box units is stretched with it — on a wide
+   * rectangle the corner comes out wider than it is tall, which reads as a
+   * rendering fault rather than as a rounded corner.
+   */
+  it('scales the outline to the frame, not to a 0-100 box', () => {
+    const path = roundedShapePath('rectangle', { width: 400, height: 100 }, 'none')
+
+    expect(path).not.toBeNull()
+    // The far corner sits at the frame's size less the stroke margin, in px.
+    expect(path).toContain('392')
+    expect(path).toContain('98')
+  })
+
+  it('leaves the outline square when there is no radius', () => {
+    const path = roundedShapePath('rectangle', { width: 200, height: 200 }, 'none')
+
+    expect(path).not.toContain('Q')
+  })
+
+  it('cuts every corner once when there is', () => {
+    const path = roundedShapePath('rectangle', { width: 200, height: 200 }, 'medium')
+
+    // One quadratic per vertex, and a rectangle has four.
+    expect(path?.match(/Q/g)).toHaveLength(4)
+  })
+
+  it('rounds a hexagon’s six corners too, not only a rectangle’s four', () => {
+    const path = roundedShapePath('hexagon', { width: 200, height: 200 }, 'medium')
+
+    expect(path?.match(/Q/g)).toHaveLength(6)
+  })
+
+  /** The ellipse has no corners, and is not a polygon to begin with. */
+  it('has no path for the ellipse', () => {
+    expect(roundedShapePath('ellipse', { width: 200, height: 200 }, 'large')).toBeNull()
+  })
+
+  /**
+   * A large radius on a small shape must round as far as it can rather than
+   * turning the outline inside out. The cut is clamped to half an edge, so two
+   * corners sharing a short edge meet in the middle and never cross.
+   */
+  it('never cuts past the middle of an edge', () => {
+    const tiny = roundedShapePath('rectangle', { width: 20, height: 20 }, 'large')
+
+    expect(tiny).not.toBeNull()
+    for (const coordinate of (tiny ?? '').match(/-?\d+(\.\d+)?/g) ?? []) {
+      const value = Number(coordinate)
+      expect(value).toBeGreaterThanOrEqual(0)
+      expect(value).toBeLessThanOrEqual(20)
+    }
   })
 })

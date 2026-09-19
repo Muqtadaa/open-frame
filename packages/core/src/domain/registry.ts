@@ -213,6 +213,21 @@ export interface ObjectTypeDefinition<TType extends string, TData> {
   }
 
   readonly capabilities: ObjectCapabilities
+  /**
+   * Narrows `capabilities.styleProps` for ONE object.
+   *
+   * Absent means no narrowing, which is what every type did before this
+   * existed — and that default is safe in a way a defaulted CAPABILITY is not
+   * (rule 18). A capability that defaults grants behaviour nobody chose; this
+   * only ever takes a control AWAY, and taking none away is the status quo.
+   *
+   * It exists because `shape` is one type with a kind discriminant, and a
+   * corner radius means nothing on an ellipse. Declaring `radius` on the type
+   * and letting the ellipse ignore it is exactly the trap rule 21 records:
+   * `sticky` claimed a `fill` its view ignored, invisible for as long as
+   * nothing else could set it.
+   */
+  readonly stylePropsFor?: (object: ObjectBase<TType, TData>) => readonly StyleProp[]
 
   /**
    * Only for types whose bounds are not their frame.
@@ -353,6 +368,8 @@ export interface ErasedObjectTypeDefinition {
   readonly type: string
   readonly currentVersion: number
   readonly capabilities: ObjectCapabilities
+  /** Erased form of the definition's own narrowing. */
+  readonly stylePropsFor?: (object: AnyOpenFrameObject) => readonly StyleProp[]
   readonly validate: (data: unknown) => ValidationResult
   readonly migrate: (data: unknown, fromVersion: number) => unknown
   readonly create: (init?: Record<string, unknown>) => {
@@ -401,6 +418,17 @@ export function defineObjectType<TType extends string, TData>(
     type: definition.type,
     currentVersion: definition.currentVersion,
     capabilities: definition.capabilities,
+    /*
+     * Carried through with the payload type erased. The cast is the same one
+     * every other member here relies on: a definition is only ever handed
+     * objects of its own type, because the registry looks it up BY that type.
+     */
+    ...(definition.stylePropsFor === undefined
+      ? {}
+      : {
+          stylePropsFor: (object: AnyOpenFrameObject) =>
+            (definition.stylePropsFor as (o: AnyOpenFrameObject) => readonly StyleProp[])(object),
+        }),
 
     validate: (data) => {
       const result = definition.schema.safeParse(data)
@@ -659,6 +687,24 @@ export class ObjectTypeRegistry {
    */
   boundsOf(object: AnyOpenFrameObject, doc: BoardDocument): Rect {
     return this.#boundsOf(object, doc, 0)
+  }
+
+  /**
+   * Which style controls THIS object offers.
+   *
+   * Asked of the registry rather than read off `capabilities.styleProps`
+   * directly, so that a type whose properties vary by discriminant has one
+   * place to say so — and so no panel can quietly disagree with it, which is
+   * the whole of rule 21.
+   *
+   * An unknown type offers nothing, rather than everything: a quarantined
+   * object is a payload this build could not interpret, and offering to
+   * restyle it is offering to write into something we could not read.
+   */
+  stylePropsOf(object: AnyOpenFrameObject): readonly StyleProp[] {
+    const definition = this.#definitions.get(object.type)
+    if (definition === undefined) return []
+    return definition.stylePropsFor?.(object) ?? definition.capabilities.styleProps
   }
 
   /**

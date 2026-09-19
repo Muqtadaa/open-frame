@@ -3,7 +3,7 @@ import type { ObjectBase, ShapeData } from '@openframe/core'
 import { defineObjectView, type ObjectEditorProps, type ObjectViewProps } from './registry.js'
 import { RichTextEditor } from './RichTextEditor.js'
 import { RichTextView } from './RichTextView.js'
-import { ELLIPSE, labelInset, shapePath } from '../scene/shape-geometry.js'
+import { ELLIPSE_MARGIN, labelInset, roundedShapePath } from '../scene/shape-geometry.js'
 import { plainTextOf } from '@openframe/core'
 
 import {
@@ -21,23 +21,37 @@ function ShapeOutline({ object }: { object: ObjectBase<string, ShapeData> }) {
   const fill = filled ? SURFACE_VARS[object.style.color ?? 'gray'] : 'transparent'
   const strokeWidth = { none: 0, thin: 1, medium: 2, thick: 4 }[object.style.stroke ?? 'medium']
 
+  /*
+   * DRAWN IN FRAME UNITS, not in the normalised 0-100 box.
+   *
+   * The box used to be stretched to the frame with
+   * `preserveAspectRatio="none"`, which stretched everything drawn in it. A
+   * corner radius in box units comes out four times wider than it is tall on a
+   * 400x100 rectangle — and the same stretch was already making a stroke
+   * thicker on the vertical edges of a wide shape than on its horizontal ones,
+   * quietly, for every shape on every board.
+   *
+   * With the viewBox matching the frame, the mapping is 1:1 and both are
+   * simply right.
+   */
+  const { width, height } = object.frame
   // Null means the ellipse, which is the one shape that is not a polygon.
-  const path = shapePath(object.data.shape)
+  const path = roundedShapePath(object.data.shape, { width, height }, object.style.radius ?? 'none')
 
   return (
     <svg
       className="of-shape__svg"
-      viewBox="0 0 100 100"
+      viewBox={`0 0 ${String(width)} ${String(height)}`}
       preserveAspectRatio="none"
       aria-hidden="true"
       focusable="false"
     >
       {path === null ? (
         <ellipse
-          cx={ELLIPSE.cx}
-          cy={ELLIPSE.cy}
-          rx={ELLIPSE.rx}
-          ry={ELLIPSE.ry}
+          cx={width / 2}
+          cy={height / 2}
+          rx={Math.max(0, width / 2 - ELLIPSE_MARGIN)}
+          ry={Math.max(0, height / 2 - ELLIPSE_MARGIN)}
           fill={fill}
           stroke={stroke}
           strokeWidth={strokeWidth}

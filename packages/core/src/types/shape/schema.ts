@@ -32,6 +32,28 @@ export const SHAPE_KINDS = [
 ] as const
 export type ShapeKind = (typeof SHAPE_KINDS)[number]
 
+/**
+ * Which kinds have corners, and therefore corners to round.
+ *
+ * A RECORD rather than `kind !== 'ellipse'`, so adding a kind does not compile
+ * until it has stated its answer — the same discipline capabilities follow,
+ * and for the same reason: a default here would let a new kind acquire a
+ * control nobody chose for it, or lose one it should have had.
+ *
+ * The ellipse is the only false, and it is false because a radius means
+ * nothing on it — not because it is awkward to draw.
+ */
+export const CORNERED_KINDS: Readonly<Record<ShapeKind, boolean>> = {
+  rectangle: true,
+  ellipse: false,
+  triangle: true,
+  diamond: true,
+  hexagon: true,
+  trapezoid: true,
+  parallelogram: true,
+  octagon: true,
+}
+
 export interface ShapeData {
   readonly shape: ShapeKind
   /** Shapes carry an optional label; empty is the common case. */

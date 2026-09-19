@@ -2,6 +2,7 @@ import {
   ALIGN_TOKENS,
   COLOR_TOKENS,
   DASH_TOKENS,
+  RADIUS_TOKENS,
   FILL_TOKENS,
   FONT_TOKENS,
   STROKE_TOKENS,
@@ -11,6 +12,7 @@ import {
   type AnyOpenFrameObject,
   type ColorToken,
   type DashToken,
+  type RadiusToken,
   type FieldDefinition,
   type FillToken,
   type FontToken,
@@ -26,7 +28,8 @@ import { useBoardDocument } from '../hooks/use-document-object.js'
 import { useInteractionStore } from '../interaction/interaction-store.js'
 import { useOpenFrame } from '../runtime/context.js'
 import { SURFACE_VARS } from '../scene/style-tokens.js'
-import { AlignIcon, DashIcon, FillIcon, StrokeIcon, TrashIcon } from './icons.js'
+import { AlignIcon, DashIcon,
+  RadiusIcon, FillIcon, StrokeIcon, TrashIcon } from './icons.js'
 import { Provenance } from './Provenance.js'
 import { RecordFields } from './RecordFields.js'
 
@@ -131,9 +134,10 @@ export function Inspector() {
 
   /** Only properties EVERY selected object honours — see the note above. */
   const props = useMemo<ReadonlySet<StyleProp>>(() => {
-    const lists = objects.map(
-      (object) => runtime.registry.get(object.type)?.capabilities.styleProps ?? [],
-    )
+    // Asked of the REGISTRY per object, not read off the type's capabilities:
+    // `shape` offers a corner radius on every kind but the ellipse, and only
+    // the registry knows that.
+    const lists = objects.map((object) => runtime.registry.stylePropsOf(object))
     const [first, ...rest] = lists
     if (first === undefined) return new Set()
     return new Set(first.filter((prop) => rest.every((list) => list.includes(prop))))
@@ -331,6 +335,18 @@ export function Inspector() {
             name="align"
             onPick={(align) => apply({ align })}
             render={(token) => <AlignIcon variant={token} />}
+          />
+        </Field>
+      )}
+
+      {props.has('radius') && (
+        <Field name="corners">
+          <Choice<RadiusToken>
+            options={RADIUS_TOKENS}
+            current={value('radius') ?? 'none'}
+            name="corners"
+            onPick={(radius) => apply({ radius })}
+            render={(token) => <RadiusIcon variant={token} />}
           />
         </Field>
       )}

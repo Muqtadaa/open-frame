@@ -44,6 +44,15 @@ export interface ObjectStyle {
   readonly align?: AlignToken
   /** 0..1 */
   readonly opacity?: number
+  /**
+   * How far a corner is rounded.
+   *
+   * A token rather than a number, like every other style property here: the
+   * board has a visual system, and a free pixel value is how twelve shapes end
+   * up with eleven different corners. Meaningless on a shape with no corners,
+   * which is why the ellipse does not offer it — see `stylePropsFor`.
+   */
+  readonly radius?: RadiusToken
 }
 
 export const COLOR_TOKENS = ['gray', 'yellow', 'green', 'blue', 'red', 'violet', 'orange'] as const
@@ -52,6 +61,7 @@ export const STROKE_TOKENS = ['none', 'thin', 'medium', 'thick'] as const
 export const DASH_TOKENS = ['solid', 'dashed', 'dotted'] as const
 export const FONT_TOKENS = ['sans', 'serif', 'mono'] as const
 export const ALIGN_TOKENS = ['start', 'center', 'end'] as const
+export const RADIUS_TOKENS = ['none', 'small', 'medium', 'large'] as const
 
 export type ColorToken = (typeof COLOR_TOKENS)[number]
 export type FillToken = (typeof FILL_TOKENS)[number]
@@ -59,6 +69,7 @@ export type StrokeToken = (typeof STROKE_TOKENS)[number]
 export type DashToken = (typeof DASH_TOKENS)[number]
 export type FontToken = (typeof FONT_TOKENS)[number]
 export type AlignToken = (typeof ALIGN_TOKENS)[number]
+export type RadiusToken = (typeof RADIUS_TOKENS)[number]
 
 export type StyleProp = keyof ObjectStyle
 

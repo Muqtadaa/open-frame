@@ -216,6 +216,21 @@ export function DashIcon({ className, variant }: IconProps & { variant: string }
   )
 }
 
+/**
+ * A square whose corners show the radius, so the choice is read off the shape
+ * rather than off the word. The values track `RADIUS_PX` loosely — this is a
+ * 24px icon standing for a shape of any size, so it shows the PROGRESSION
+ * rather than the exact measurement.
+ */
+export function RadiusIcon({ className, variant }: IconProps & { variant: string }) {
+  const corner = { none: 0, small: 2, medium: 5, large: 9 }[variant] ?? 0
+  return (
+    <svg {...base} className={className}>
+      <rect x={5} y={5} width={14} height={14} rx={corner} ry={corner} />
+    </svg>
+  )
+}
+
 export function AlignIcon({ className, variant }: IconProps & { variant: string }) {
   // Short lines sit where the text would: ragged edge away from the alignment.
   const rows =
