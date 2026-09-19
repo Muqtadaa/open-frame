@@ -100,6 +100,25 @@
   --of-s-gray: #dfe5ec;
 
   /*
+   * PRESENCE. Six people, told apart from each other.
+   *
+   * A separate family from the content hues on purpose: `--of-c-*` says what
+   * something MEANS, and these say only which person. They are checked by
+   * `design-tokens.test.ts` on three counts — visible on the page at the 3:1
+   * non-text floor, at least 60 sRGB units apart from one another, and clear of
+   * the three hues that carry meaning (accent, guide, danger).
+   *
+   * Blue and red are absent for that last reason, which is most of why this
+   * palette looks the way it does.
+   */
+  --of-p-1: #0f766e;
+  --of-p-2: #8a5a00;
+  --of-p-3: #3730a3;
+  --of-p-4: #7b2d8e;
+  --of-p-5: #1f6b34;
+  --of-p-6: #4b5a6b;
+
+  /*
    * BRAND. Shared by every theme, because the identity does not change when the
    * ground does. Sampled from the supplied artwork (see assets/PROVENANCE.md).
    *
@@ -193,6 +212,14 @@
   --of-s-violet: #301a5e;
   --of-s-orange: #4a2408;
   --of-s-gray: #27314a;
+
+  /* Presence, inverted: light enough to sit on the night page. */
+  --of-p-1: #4fd6c0;
+  --of-p-2: #ffb454;
+  --of-p-3: #7f96ff;
+  --of-p-4: #dc9cf0;
+  --of-p-5: #f0879f;
+  --of-p-6: #b9c4a8;
 }
 
 /*
@@ -672,6 +699,84 @@ body {
   color: var(--of-accent);
 }
 
+/* ---------- other people ---------- */
+
+/*
+ * Presence never takes a click. Every layer here is inert: a cursor belonging
+ * to somebody else sitting on top of a note you are trying to select would make
+ * the board feel broken in a way that is very hard to diagnose.
+ */
+.of-presence,
+.of-presence * {
+  pointer-events: none;
+}
+
+.of-presence__outline {
+  position: absolute;
+  border: 1px dashed currentcolor;
+  border-radius: 2px;
+}
+
+/*
+ * Solid, not dashed, for an object somebody has OPEN. The difference has to
+ * survive being glanced at: a dashed outline says "they have this selected",
+ * and a solid one says "you cannot type in this".
+ */
+.of-presence__outline--editing {
+  border-style: solid;
+}
+
+/*
+ * A label in the peer's own colour, with the page's colour as its text.
+ *
+ * The background reads `--of-presence-hue` rather than `currentcolor`, and that
+ * is not a preference. Setting `color` on this element redefines
+ * `currentcolor` FOR this element, so `background: currentcolor` resolved to
+ * the text colour and every name rendered as a near-white blob on a near-white
+ * page. The custom property is set alongside `color` on the parent and is not
+ * affected by either.
+ */
+.of-presence__tag,
+.of-presence__name {
+  position: absolute;
+  top: 0;
+  left: 0;
+  padding: 2px 5px;
+  font-family: var(--of-font);
+  font-size: 11px;
+  font-weight: 500;
+  line-height: 1.3;
+  color: var(--of-page);
+  white-space: nowrap;
+  background: var(--of-presence-hue);
+  border-radius: 3px;
+  transform-origin: top left;
+}
+
+/* The tag sits ABOVE its object, clear of the content it is describing. */
+.of-presence__tag {
+  top: -4px;
+  translate: 0 -100%;
+}
+
+.of-presence__cursor {
+  position: absolute;
+  top: 0;
+  left: 0;
+  transform-origin: top left;
+}
+
+.of-presence__name {
+  top: 14px;
+  left: 12px;
+}
+
+/*
+ * The name sits inside the tag's own colour, so the text takes the PAGE colour
+ * rather than ink — which is what keeps it readable on all six hues in both
+ * worlds without a second palette for labels.
+ */
+
 /*
  * The room: whether it can be reached, and who is in it.
  *
@@ -711,6 +816,41 @@ body {
 .of-status__share-label {
   font-family: var(--of-font);
   font-size: 11px;
+}
+
+.of-status__room {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+}
+
+.of-status__people {
+  display: flex;
+  /*
+   * Overlapped, so six people take the width of about four. The ring is the
+   * page's own colour rather than a border, which keeps the faces separable
+   * where they touch without adding a line to the world.
+   */
+  gap: -2px;
+}
+
+.of-status__person {
+  display: grid;
+  place-items: center;
+  /* 18px: a label, not a target. Nothing here is clickable. */
+  width: 18px;
+  height: 18px;
+  margin-right: -4px;
+  font-family: var(--of-font);
+  font-size: 10px;
+  font-weight: 600;
+  color: var(--of-page);
+  border: 1.5px solid var(--of-page);
+  border-radius: 50%;
+}
+
+.of-status__person:last-child {
+  margin-right: 0;
 }
 
 /*

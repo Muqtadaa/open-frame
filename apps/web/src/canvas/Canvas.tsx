@@ -10,6 +10,8 @@ import { DrawPreview } from './DrawPreview.js'
 import { EndpointOverlay } from './EndpointOverlay.js'
 import { MarqueeOverlay } from './MarqueeOverlay.js'
 import { ObjectLayer } from './ObjectLayer.js'
+import { PresenceLayer } from './PresenceLayer.js'
+import { usePresence } from './use-presence.js'
 import { SelectionOverlay } from './SelectionOverlay.js'
 import { useCanvasGestures } from './use-canvas-gestures.js'
 import { useImageDrop } from './use-image-drop.js'
@@ -53,6 +55,9 @@ export function Canvas() {
   useWheelGesture(containerRef)
   useKeyboardShortcuts(gestures.setSpaceHeld)
   const imageDrop = useImageDrop(containerRef)
+  // Publishes this person's cursor and claims, and keeps the advisory lock in
+  // step with everybody else's. A no-op on a board that is nobody else's.
+  usePresence(containerRef)
 
   useEffect(() => {
     setCanvasSize(width, height)
@@ -89,6 +94,11 @@ export function Canvas() {
         <AlignmentOverlay />
         <EndpointOverlay />
         <ConnectorPreview />
+        {/*
+          Last, so other people's cursors sit above the board and every overlay
+          on it — a cursor behind a note is a cursor nobody can follow.
+        */}
+        <PresenceLayer />
       </div>
     </div>
   )

@@ -31,6 +31,8 @@ const SNAP_KEY = 'openframe.snapToGrid'
 
 /** One shared instance, so "no guides" never invalidates a selector. */
 const NO_GUIDES: readonly AlignmentGuide[] = []
+/** Shared for the same reason as `NO_GUIDES`: a fresh `Set` fails `Object.is`. */
+const NO_LOCKS: ReadonlySet<ObjectId> = new Set<ObjectId>()
 
 function readSnap(): boolean {
   try {
@@ -159,6 +161,22 @@ interface InteractionState {
   readonly selection: ReadonlySet<ObjectId>
   readonly hoveredId: ObjectId | null
   readonly editingId: ObjectId | null
+  /**
+   * Objects somebody ELSE has open in an inline editor.
+   *
+   * Held here, rather than checked at the double-click that starts editing,
+   * because `setEditing` is reachable from more than one place — a double
+   * click, the keyboard, a promotion — and a guard on one of them is a guard
+   * that the next caller walks straight past. One rule, at the one door.
+   *
+   * It is ADVISORY and that is not a compromise to fix later. Nothing can stop
+   * another client writing: the document is a CRDT and the room arbitrates
+   * nothing. What this prevents is two people typing into the same note at
+   * once, which is the case where a merge genuinely loses words rather than
+   * picking a winner. A hard lock would need a server granting leases, and a
+   * lease whose holder closed their laptop is a note nobody can ever edit.
+   */
+  readonly lockedByOthers: ReadonlySet<ObjectId>
   readonly viewport: Viewport
   readonly drag: DragState
   /**
@@ -200,6 +218,7 @@ interface InteractionState {
   clearSelection(): void
   setHovered(id: ObjectId | null): void
   setEditing(id: ObjectId | null): void
+  setLockedByOthers(ids: ReadonlySet<ObjectId>): void
   setViewport(viewport: Viewport): void
   setCanvasSize(width: number, height: number): void
   setClipboard(objects: readonly AnyOpenFrameObject[]): void
@@ -239,6 +258,7 @@ export const useInteractionStore = create<InteractionState>((set) => ({
   selection: new Set<ObjectId>(),
   hoveredId: null,
   editingId: null,
+  lockedByOthers: NO_LOCKS,
   viewport: DEFAULT_VIEWPORT,
   drag: { kind: 'idle' },
   canvasSize: { width: 0, height: 0 },
@@ -294,7 +314,23 @@ export const useInteractionStore = create<InteractionState>((set) => ({
     }),
   clearSelection: () => set({ selection: new Set<ObjectId>() }),
   setHovered: (hoveredId) => set({ hoveredId }),
-  setEditing: (editingId) => set({ editingId }),
+  setEditing: (editingId) =>
+    set((state) => {
+      // Refused, not queued. Somebody else has the note open, and the right
+      // outcome is that nothing happens and the overlay says who has it.
+      if (editingId !== null && state.lockedByOthers.has(editingId)) return {}
+      return { editingId }
+    }),
+
+  setLockedByOthers: (lockedByOthers) =>
+    set((state) => {
+      // Somebody else got there first while this client was already typing.
+      // They keep it; this editor closes rather than both people writing into
+      // one note and watching each other's words vanish.
+      const editingId =
+        state.editingId !== null && lockedByOthers.has(state.editingId) ? null : state.editingId
+      return { lockedByOthers, editingId }
+    }),
   setViewport: (viewport) => set({ viewport }),
 
   setClipboard: (clipboard) => set({ clipboard: [...clipboard] }),

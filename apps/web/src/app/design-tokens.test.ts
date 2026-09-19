@@ -178,6 +178,53 @@ describe.each(THEMES)('palette contrast — $name', ({ token }) => {
     expect(Math.hypot(cr - dr, cg - dg, cb - db)).toBeGreaterThan(30)
   })
 
+  /**
+   * Presence hues identify PEOPLE, and three things have to be true of them.
+   */
+  describe('the presence palette', () => {
+    const HUES = [1, 2, 3, 4, 5, 6].map((n) => `p-${String(n)}`)
+
+    /** A cursor is a UI component you must perceive to use — 1.4.11's floor. */
+    it.each(HUES)('%s is visible on the page and on a panel', (hue) => {
+      expect(contrast(token(hue), token('page'))).toBeGreaterThanOrEqual(3)
+      expect(contrast(token(hue), token('panel'))).toBeGreaterThanOrEqual(3)
+    })
+
+    /**
+     * Six people are told apart by hue and nothing else, so this is the one
+     * separation with no other signal backing it up.
+     */
+    it('keeps six people distinguishable from one another', () => {
+      for (const [i, a] of HUES.entries()) {
+        for (const b of HUES.slice(i + 1)) {
+          const [ar, ag, ab] = channels(token(a))
+          const [br, bg, bb] = channels(token(b))
+          expect(
+            Math.hypot(ar - br, ag - bg, ab - bb),
+            `${a} and ${b} are too close to tell apart`,
+          ).toBeGreaterThan(60)
+        }
+      }
+    })
+
+    /**
+     * And clear of the three hues that MEAN something. A looser threshold than
+     * above, deliberately: a remote selection is dashed and carries a name tag,
+     * so hue is not the only thing distinguishing it from your own — which is
+     * what lets the palette have six usable members at all.
+     */
+    it.each(['accent', 'guide', 'danger'])('stays clear of %s', (reserved) => {
+      const [rr, rg, rb] = channels(token(reserved))
+      for (const hue of HUES) {
+        const [hr, hg, hb] = channels(token(hue))
+        expect(
+          Math.hypot(hr - rr, hg - rg, hb - rb),
+          `${hue} could be mistaken for ${reserved}`,
+        ).toBeGreaterThan(45)
+      }
+    })
+  })
+
   it('never uses pure black as ink', () => {
     expect(token('ink')).not.toBe('#000000')
     const [r, , b] = channels(token('ink'))
