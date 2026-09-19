@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest'
 
 import {
   claimDecision,
+  destroyDecision,
   mintKey,
   mintKeys,
   roleForKey,
@@ -128,5 +129,63 @@ describe('the role on a socket that outlived its room', () => {
     expect(roleFromAttachment({})).toBe('viewer')
     expect(roleFromAttachment({ role: 'owner' })).toBe('viewer')
     expect(roleFromAttachment({ role: 7 })).toBe('viewer')
+  })
+})
+
+/**
+ * Destroying a room: the first irreversible thing this service can be asked
+ * to do, so each refusal is tested by name.
+ */
+describe('destroying a board', () => {
+  const keys = { editor: 'e'.repeat(32), viewer: 'v'.repeat(32) }
+
+  it('accepts the editor key', () => {
+    expect(destroyDecision(keys, keys.editor)).toEqual({ ok: true })
+  })
+
+  /**
+   * The viewer was handed the weaker link precisely so they could not change
+   * the board. Deleting it is the largest change there is.
+   */
+  it('refuses the viewer key', () => {
+    expect(destroyDecision(keys, keys.viewer)).toMatchObject({ ok: false, status: 403 })
+  })
+
+  it('refuses a wrong key and a missing one identically', () => {
+    const wrong = destroyDecision(keys, 'x'.repeat(32))
+    const missing = destroyDecision(keys, null)
+
+    // Same status AND same words: a different message for "you had no key"
+    // tells somebody probing which half of the guess to keep.
+    expect(wrong).toEqual(missing)
+    expect(wrong).toMatchObject({ ok: false, status: 403 })
+  })
+
+  /**
+   * THE ONE THAT MATTERS MOST.
+   *
+   * A legacy room has no keys, and `roleForKey` answers `editor` to everything
+   * for exactly that case — which is correct for opening a board shared before
+   * roles existed and catastrophic here. If this ever returns ok, any link
+   * anybody ever sent can delete the board it points at.
+   */
+  it('refuses a legacy room outright, whatever key is presented', () => {
+    expect(destroyDecision(undefined, null)).toMatchObject({ ok: false, status: 409 })
+    expect(destroyDecision(undefined, 'e'.repeat(32))).toMatchObject({ ok: false, status: 409 })
+    expect(destroyDecision(undefined, '')).toMatchObject({ ok: false, status: 409 })
+  })
+
+  /** Running it twice is not an error, but it must not read as permission returning. */
+  it('answers gone for a room that is already destroyed', () => {
+    expect(destroyDecision(keys, keys.editor, true)).toMatchObject({ ok: false, status: 410 })
+  })
+
+  /**
+   * The rules disagree ON PURPOSE, and this is the line that says so: an
+   * unkeyed room lets anyone READ and lets nobody DELETE.
+   */
+  it('parts company with roleForKey on a legacy room, deliberately', () => {
+    expect(roleForKey(undefined, null)).toBe('editor')
+    expect(destroyDecision(undefined, null).ok).toBe(false)
   })
 })

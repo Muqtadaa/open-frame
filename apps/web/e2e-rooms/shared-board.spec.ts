@@ -1,6 +1,6 @@
 import { expect, test, type Browser, type Page } from '@playwright/test'
 
-import { BOARD_URL } from '../e2e/routes.js'
+import { BOARD_URL, HOME_URL } from '../e2e/routes.js'
 
 /**
  * Two people, one board, a real Durable Object.
@@ -158,6 +158,40 @@ test('a board opened without a link does not join a room', async ({ browser }) =
 })
 
 /**
+ * Sharing MOVES a board, proved against a real room.
+ *
+ * The unit test drives `shareCurrentBoard` with a stubbed claim; what only
+ * this can answer is whether the whole gesture agrees — the Worker mints two
+ * keys, the board is written under its new id, the original is removed, and
+ * the list the user lands back on has ONE row rather than the two that the old
+ * copy-on-share left behind.
+ */
+test('sharing leaves one board in the list, not two', async ({ browser }) => {
+  const context = await browser.newContext()
+  const page = await context.newPage()
+  await page.goto(BOARD_URL)
+  await page.waitForSelector('[data-testid="status-bar"]')
+
+  // Something to recognise it by, so an empty board passing for a moved one
+  // cannot make this test succeed.
+  await page.locator('[data-testid="board-title"]').click()
+  await page.locator('[data-testid="board-title-input"]').fill('Moved, not copied')
+  await page.locator('[data-testid="board-title-input"]').press('Enter')
+
+  await page.locator('[data-testid="share-board"]').click()
+  await expect(page.locator('[data-testid="share-links"]')).toBeVisible({ timeout: 20_000 })
+
+  await page.goto(HOME_URL)
+  await page.waitForSelector('[data-testid="home"]')
+
+  const rows = page.locator('[data-testid="home-boards"] li')
+  await expect(rows).toHaveCount(1)
+  await expect(rows.first()).toContainText('Moved, not copied')
+
+  await context.close()
+})
+
+/**
  * Presence: where people are, and what they have hold of.
  *
  * All of it rides on awareness rather than the document, so none of it is
@@ -273,7 +307,18 @@ test.describe('other people', () => {
  * and the dispatcher both believe it.
  */
 test.describe('two links', () => {
-  /** Claims a room the way Share does, and returns both links' keys. */
+  /**
+   * Claims a room by writing the URL out, which is a SETUP shortcut and is
+   * only acceptable because something else now drives the real path.
+   *
+   * This helper is how Share stayed broken in production while this suite ran
+   * green: the application builds that URL from `VITE_COLLAB_URL`, a `wss://`
+   * value that `fetch` rejects before a packet moves, and a test that
+   * reconstructs the thing it is checking cannot fail with it. What these
+   * tests are about is the ROLE a key carries, so the shortcut is fine here —
+   * `sharing leaves one board in the list, not two` presses the real button,
+   * and `collab-config.test.ts` holds the scheme itself.
+   */
   async function claim(page: Page, room: string): Promise<{ editor: string; viewer: string }> {
     return page.evaluate(async (id) => {
       const response = await fetch(`http://127.0.0.1:8787/room/${id}/claim`, { method: 'POST' })

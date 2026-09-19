@@ -19,6 +19,7 @@ const BOARD_ID = /^[A-Za-z0-9_-]{1,64}$/
 
 const ROOM_PATH = /^\/room\/([^/]+)\/?$/
 const CLAIM_PATH = /^\/room\/([^/]+)\/claim\/?$/
+const DESTROY_PATH = /^\/room\/([^/]+)\/destroy\/?$/
 
 /**
  * The shape of an access key.
@@ -42,6 +43,16 @@ export type Route =
     }
   /** Minting the two links for a board that does not have them yet. */
   | { readonly kind: 'claim'; readonly boardId: string }
+  /**
+   * Destroying a room and everything in it.
+   *
+   * A POST rather than a DELETE, and the key travels in the BODY rather than
+   * the query string. Both follow from it being destructive: a DELETE would
+   * need its own preflight allowance, and a credential in a URL is a
+   * credential in an access log. The socket already carries its key in the
+   * query because a link is a thing people paste; nothing here is.
+   */
+  | { readonly kind: 'destroy'; readonly boardId: string }
   /** A CORS preflight for the above: the web app is on another origin. */
   | { readonly kind: 'preflight' }
   | { readonly kind: 'refuse'; readonly status: number; readonly reason: string }
@@ -58,6 +69,17 @@ export function routeRequest(url: URL, upgradeHeader: string | null, method = 'G
     if (method === 'OPTIONS') return { kind: 'preflight' }
     if (method !== 'POST') return { kind: 'refuse', status: 405, reason: 'Claim is a POST' }
     return { kind: 'claim', boardId }
+  }
+
+  const destroy = DESTROY_PATH.exec(url.pathname)
+  if (destroy !== null) {
+    const boardId = destroy[1]
+    if (boardId === undefined || !BOARD_ID.test(boardId)) {
+      return { kind: 'refuse', status: 400, reason: 'That is not a board id' }
+    }
+    if (method === 'OPTIONS') return { kind: 'preflight' }
+    if (method !== 'POST') return { kind: 'refuse', status: 405, reason: 'Destroy is a POST' }
+    return { kind: 'destroy', boardId }
   }
 
   const match = ROOM_PATH.exec(url.pathname)

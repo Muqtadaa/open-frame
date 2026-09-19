@@ -88,6 +88,52 @@ export function claimDecision(
   return { ok: true }
 }
 
+export type DestroyDecision =
+  | { readonly ok: true }
+  | { readonly ok: false; readonly status: number; readonly error: string }
+
+/**
+ * Whether this board's room may be destroyed now.
+ *
+ * The first destructive thing the room can be asked to do, so the rules are
+ * stated rather than implied:
+ *
+ * - **The editor key, and only it.** A viewer was given the weaker link
+ *   precisely so they could not change the board; destroying it is the largest
+ *   change there is.
+ * - **A legacy room refuses.** An unclaimed room has no keys, and `roleForKey`
+ *   deliberately lets anyone in — which is right for reading a board shared
+ *   before roles existed and catastrophic for deleting one. There is no key to
+ *   check, so there is no one to trust, so the answer is no. Such a board can
+ *   still be dropped from its owner's list; what survives is the room, which
+ *   holds a copy of a board its owner wanted gone. That is the cost, and it is
+ *   smaller than a link nobody minted being able to destroy somebody's work.
+ * - **A destroyed room stays destroyed.** Re-running this is not an error,
+ *   but it must not read as permission returning.
+ */
+export function destroyDecision(
+  keys: AccessKeys | undefined,
+  key: string | null,
+  destroyed = false,
+): DestroyDecision {
+  if (destroyed) {
+    return { ok: false, status: 410, error: 'This board no longer exists' }
+  }
+  if (keys === undefined) {
+    return {
+      ok: false,
+      status: 409,
+      error: 'This board was shared before links had roles, and cannot be deleted from here',
+    }
+  }
+  // The same answer for a wrong key, a missing one, and the view link. Saying
+  // "that is the viewer key" tells somebody which half of the guess to keep.
+  if (key === null || key !== keys.editor) {
+    return { ok: false, status: 403, error: 'That link does not open this board' }
+  }
+  return { ok: true }
+}
+
 /**
  * The role attached to a socket, re-read after the runtime evicted the room.
  *

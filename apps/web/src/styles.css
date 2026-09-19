@@ -767,6 +767,23 @@ body {
   pointer-events: none;
 }
 
+/*
+ * A board of somebody else's that you have kept.
+ *
+ * A statement, not a control — the same register as "View only", which is the
+ * other thing this line says about a board that is not yours.
+ */
+.of-status__kept {
+  display: flex;
+  align-items: center;
+  height: var(--of-hit-sm);
+  padding: 0 9px;
+  font-size: 12px;
+  color: var(--of-ink-muted);
+  background: var(--of-bg);
+  border-radius: 4px;
+}
+
 .of-status__history {
   display: flex;
   gap: 2px;

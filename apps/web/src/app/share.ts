@@ -8,15 +8,21 @@ import { recordSharedBoard } from './remote-boards.js'
 /**
  * Turns the board you are looking at into one other people can open.
  *
- * It COPIES rather than moves: the local board stays exactly as it was, and the
- * shared one starts as a duplicate under a new, unguessable id. That asymmetry
- * is deliberate — sharing should never be the act that takes your own board
- * away from you.
+ * It MOVES rather than copies. It used to copy, and the argument was written
+ * down here: sharing should never be the act that takes your own board away
+ * from you. That held while a board could belong to nobody — the local one was
+ * the only thing you were certain of. Once every board has an owner and the
+ * list has one kind of row, a copy is not a safety net, it is two boards with
+ * the same name drifting apart, and the one you keep opening is whichever the
+ * list happened to sort first.
+ *
+ * The ORDER is the safety argument now: the shared board is written, and only
+ * then is the local one removed. Every failure path above that line leaves the
+ * original exactly where it was.
  *
  * Written straight through the repository rather than replayed as commands: it
- * is not an edit to the current board, it is a second board coming into
- * existence, and the document being copied has already been through validation
- * on the way in.
+ * is not an edit to the current board, it is a board changing where it lives,
+ * and the document has already been through validation on the way in.
  */
 
 export interface SharedBoard {
@@ -68,6 +74,16 @@ async function claimRoom(boardId: BoardId): Promise<{ editor: string; viewer: st
 }
 
 export async function shareCurrentBoard(runtime: OpenFrameRuntime): Promise<SharedBoard> {
+  /*
+   * A board we could not fully read is never written anywhere, and this is the
+   * one path where getting that wrong destroys everything: it would write a
+   * partial copy and then delete the original it was made from. The button is
+   * disabled for a read-only board, which is an affordance; this is the rule.
+   */
+  if (runtime.readOnly) {
+    throw new ShareFailed('This board could not be fully read, so it cannot be shared.')
+  }
+
   const boardId = newSharedBoardId()
   const keys = await claimRoom(boardId)
 
@@ -91,6 +107,20 @@ export async function shareCurrentBoard(runtime: OpenFrameRuntime): Promise<Shar
       viewerKey: keys.viewer,
     })
   }
+
+  /*
+   * The move, completed — and in this order for two separate reasons.
+   *
+   * Autosave first, because it subscribes to the command stream and writes the
+   * WHOLE document under the runtime's own board id. Deleting while it is
+   * still attached leaves a board that one keystroke puts straight back, which
+   * is the two-rows problem wearing a disguise.
+   *
+   * The board on screen is now a page that no longer exists anywhere; the
+   * share panel says so, and its only way forward is to open the real one.
+   */
+  runtime.dispose()
+  await runtime.repository.deleteBoard(runtime.boardId)
 
   const origin = window.location.origin
   return {

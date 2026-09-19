@@ -9,6 +9,7 @@ import { SOURCE_URL } from '../app/source-link.js'
 import { applyTheme, readTheme, type Theme } from '../app/theme.js'
 import { AccountControl } from './AccountControl.js'
 import { BoardExit } from './BoardExit.js'
+import { BoardMembership } from './BoardMembership.js'
 import { BoardTitle } from './BoardTitle.js'
 import { DevPanel } from './DevPanel.js'
 import { ShareControl } from './ShareControl.js'
@@ -103,6 +104,8 @@ export function StatusBar() {
        * something about the page you are reading.
        */}
       <ShareControl />
+      {/* Only ever present on a board that is somebody else's. */}
+      <BoardMembership />
       <AccountControl />
 
       {/*

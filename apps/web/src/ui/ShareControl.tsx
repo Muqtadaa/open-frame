@@ -55,7 +55,7 @@ export function ShareControl() {
         title={
           runtime.readOnly
             ? 'This board is read-only and cannot be shared'
-            : 'Copy this board to a shared link'
+            : 'Move this board to a shared link'
         }
         onClick={() => {
           setSharing(true)
@@ -192,8 +192,17 @@ function ShareLinks({ links, onOpen }: { readonly links: SharedBoard; readonly o
 
   return (
     <div className="of-share" role="dialog" aria-label="Share this board" data-testid="share-links">
+      {/*
+        * Says it MOVED, not that it gained links.
+        *
+        * The page behind this panel is a board that no longer exists: sharing
+        * wrote it under a new id and removed the local one, so nothing typed
+        * here now is kept. Leaving that unsaid would be an interface quietly
+        * disagreeing with itself, which is the failure this world is built to
+        * avoid.
+        */}
       <p className="of-share__lead">
-        This board now has two links. Anyone who has one needs no account.
+        This board has moved, and now has two links. Anyone who has one needs no account.
       </p>
 
       <button

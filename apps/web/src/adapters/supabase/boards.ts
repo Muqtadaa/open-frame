@@ -119,6 +119,40 @@ export async function recordSharedBoard(board: {
 }
 
 /**
+ * Redeems a link for membership, so a board somebody shared reaches your list.
+ *
+ * Until this existed, "shared with me" was not merely unbuilt, it was
+ * impossible: `board_members` has an insert policy saying only a board's owner
+ * adds members, so a person arriving on a link could not record themselves and
+ * the owner had nothing to record them WITH. Opening a board made you a guest
+ * in the room and nothing in the database.
+ *
+ * This grants nothing. Whoever holds the key can already open the board — the
+ * function writes down that they can, and the database decides which role the
+ * key is worth. A key that opens nothing and a board that does not exist come
+ * back the same way, which is what stops this being a way to ask which board
+ * ids are real.
+ */
+export async function joinBoard(
+  boardId: BoardId,
+  key: string,
+): Promise<RemoteBoard['role'] | null> {
+  const client = supabaseClient()
+  if (client === null) return null
+
+  const response = (await client.rpc('join_board', { p_id: boardId, p_key: key })) as {
+    data: unknown
+    error: unknown
+  }
+  if (response.error !== null) return null
+  // Narrowed like every other row from this service: what came back, not what
+  // was promised.
+  return typeof response.data === 'string' && ROLES.has(response.data)
+    ? (response.data as RemoteBoard['role'])
+    : null
+}
+
+/**
  * Keeps the listed name in step with the board's own.
  *
  * The title in the list is a COPY — the real one lives in the document, where

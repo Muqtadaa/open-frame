@@ -3,6 +3,7 @@ import { DurableObject } from 'cloudflare:workers'
 
 import {
   claimDecision,
+  destroyDecision,
   mintKeys,
   roleForKey,
   roleFromAttachment,
@@ -41,6 +42,20 @@ const COMPACT_AFTER = 64
  * shared before links had roles — and `access.ts` explains what that grants.
  */
 const KEYS = 'keys'
+
+/**
+ * Set once a board has been deleted, and never cleared.
+ *
+ * Without it a destroyed room is indistinguishable from a brand new one: no
+ * keys means `roleForKey` answers `editor` to every link, which is right for a
+ * board shared before roles existed and exactly wrong here. Anyone still
+ * holding a link would open an empty board with write access and be able to
+ * claim it. The links have to DIE with the board, so the room remembers that
+ * it was a board and is not one any more.
+ *
+ * It survives `deleteAll()` by being written after it.
+ */
+const DESTROYED = 'destroyed'
 
 const CORS = {
   'access-control-allow-origin': '*',
@@ -81,6 +96,20 @@ export class BoardRoomObject extends DurableObject<Env> {
 
   override async fetch(request: Request): Promise<Response> {
     const url = new URL(request.url)
+
+    const destroyed = (await this.ctx.storage.get<boolean>(DESTROYED)) === true
+
+    if (url.pathname.endsWith('/destroy')) return this.#destroy(request, destroyed)
+
+    /*
+     * Checked before anything else looks at keys. A destroyed room has none,
+     * and "no keys" means "let everyone in as an editor" everywhere else in
+     * this file — which is the legacy rule, and the last thing that should
+     * apply to a board somebody deleted.
+     */
+    if (destroyed) {
+      return new Response('This board no longer exists', { status: 410, headers: CORS })
+    }
 
     if (url.pathname.endsWith('/claim')) return this.#claim()
 
@@ -161,6 +190,39 @@ export class BoardRoomObject extends DurableObject<Env> {
     return Response.json(minted, { headers: CORS })
   }
 
+  /**
+   * Destroys the room and everything in it. The first irreversible thing here.
+   *
+   * The key is read from the BODY, and a body this cannot parse is treated as
+   * no key at all rather than as an error — the answer for a bad key and a
+   * missing one is already the same, and adding a third shape of failure only
+   * tells somebody probing which part they got wrong.
+   */
+  async #destroy(request: Request, destroyed: boolean): Promise<Response> {
+    const keys = await this.ctx.storage.get<AccessKeys>(KEYS)
+    const decision = destroyDecision(keys, await readKey(request), destroyed)
+    if (!decision.ok) {
+      return Response.json({ error: decision.error }, { status: decision.status, headers: CORS })
+    }
+
+    /*
+     * Everyone is put out before the room is emptied, not after. A socket left
+     * attached would go on talking to a `BoardRoom` whose document is about to
+     * be replaced by nothing, and every peer would watch the board empty
+     * itself — which looks exactly like the bug this whole file is careful to
+     * avoid, except this time it is real and it is permanent.
+     */
+    for (const socket of this.ctx.getWebSockets()) {
+      socket.close(4004, 'This board was deleted')
+    }
+
+    await this.ctx.storage.deleteAll()
+    // After, deliberately: `deleteAll` would take it with everything else.
+    await this.ctx.storage.put(DESTROYED, true)
+
+    return Response.json({ destroyed: true }, { headers: CORS })
+  }
+
   async #load(): Promise<Uint8Array[]> {
     const snapshot = await this.ctx.storage.get<ArrayBuffer>(SNAPSHOT)
     const updates = await this.ctx.storage.list<ArrayBuffer>({ prefix: UPDATE_PREFIX })
@@ -200,6 +262,24 @@ export class BoardRoomObject extends DurableObject<Env> {
     await this.ctx.storage.put(SNAPSHOT, bufferOf(merged))
     await this.ctx.storage.delete([...(await this.ctx.storage.list({ prefix: UPDATE_PREFIX })).keys()])
     this.#sequence = 0
+  }
+}
+
+/**
+ * The key out of a destroy request's body.
+ *
+ * Every failure — no body, not JSON, not an object, no `key`, a `key` that is
+ * not a string — answers `null`, which `destroyDecision` refuses exactly as it
+ * refuses a wrong key. One answer for every way of not having the right one.
+ */
+async function readKey(request: Request): Promise<string | null> {
+  try {
+    const body: unknown = await request.json()
+    if (typeof body !== 'object' || body === null) return null
+    const { key } = body as { key?: unknown }
+    return typeof key === 'string' ? key : null
+  } catch {
+    return null
   }
 }
 

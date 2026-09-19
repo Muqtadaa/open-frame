@@ -1,7 +1,7 @@
 import { asBoardId } from '@openframe/core'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
-import { listMyBoards, recordSharedBoard } from './boards.js'
+import { joinBoard, listMyBoards, recordSharedBoard } from './boards.js'
 import { supabaseClient } from './client.js'
 
 /**
@@ -154,5 +154,55 @@ describe('recording a shared board', () => {
         viewerKey: 'v'.repeat(32),
       }),
     ).resolves.toBe(false)
+  })
+})
+
+/**
+ * Redeeming a link for membership.
+ *
+ * The reason this function exists at all is worth restating where the test
+ * can see it: `board_members` allows ONLY a board's owner to insert, so a
+ * person arriving on a link could never record themselves and the owner had
+ * nothing to record them with. "Shared with me" was not unbuilt, it was
+ * unreachable.
+ */
+describe('keeping a board somebody shared', () => {
+  beforeEach(() => {
+    client.mockReset()
+  })
+
+  it('sends the board and the key it was opened with', async () => {
+    const rpc = answering({ data: 'editor' })
+
+    const role = await joinBoard(asBoardId('brd_abcdefgh12345678'), 'e'.repeat(32))
+
+    expect(rpc).toHaveBeenCalledWith('join_board', {
+      p_id: 'brd_abcdefgh12345678',
+      p_key: 'e'.repeat(32),
+    })
+    expect(role).toBe('editor')
+  })
+
+  /**
+   * A key that opens nothing and a board that does not exist answer the same
+   * way, by design — anything else is a way to ask which board ids are real,
+   * one guess at a time. The client must not turn that into two outcomes.
+   */
+  it('reports nothing when the key does not open the board', async () => {
+    answering({ data: null })
+
+    await expect(joinBoard(asBoardId('brd_abcdefgh12345678'), 'f'.repeat(32))).resolves.toBeNull()
+  })
+
+  it('refuses a role this version does not recognise', async () => {
+    answering({ data: 'administrator' })
+
+    await expect(joinBoard(asBoardId('brd_abcdefgh12345678'), 'e'.repeat(32))).resolves.toBeNull()
+  })
+
+  it('reports nothing when the database errors', async () => {
+    answering({ error: { message: 'down' } })
+
+    await expect(joinBoard(asBoardId('brd_abcdefgh12345678'), 'e'.repeat(32))).resolves.toBeNull()
   })
 })

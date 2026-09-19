@@ -122,3 +122,46 @@ describe('claiming the links for a board', () => {
     )
   })
 })
+
+describe('destroying a room', () => {
+  it('routes a POST to the board it names', () => {
+    expect(routeRequest(new URL('https://r.test/room/brd_abc/destroy'), null, 'POST')).toEqual({
+      kind: 'destroy',
+      boardId: 'brd_abc',
+    })
+  })
+
+  /**
+   * The web app is on another origin and the request carries a JSON body, so
+   * the browser asks first. Without this the destroy never leaves the page.
+   */
+  it('answers the preflight the body forces', () => {
+    expect(routeRequest(new URL('https://r.test/room/brd_abc/destroy'), null, 'OPTIONS')).toEqual({
+      kind: 'preflight',
+    })
+  })
+
+  it('refuses any other method rather than guessing', () => {
+    expect(routeRequest(new URL('https://r.test/room/brd_abc/destroy'), null, 'GET')).toMatchObject({
+      kind: 'refuse',
+      status: 405,
+    })
+  })
+
+  /**
+   * A Durable Object is created by being NAMED, so an unchecked id here is a
+   * way to fill the account with rooms — and `/destroy` must not be the hole
+   * the other two paths do not have.
+   */
+  it('refuses a board id of the wrong shape', () => {
+    expect(
+      routeRequest(new URL('https://r.test/room/not%20a%20board/destroy'), null, 'POST'),
+    ).toMatchObject({ kind: 'refuse', status: 400 })
+  })
+
+  /** The room path must not swallow it: `/room/x/destroy` is not `/room/x`. */
+  it('is not mistaken for the socket path', () => {
+    const route = routeRequest(new URL('https://r.test/room/brd_abc/destroy'), 'websocket', 'POST')
+    expect(route.kind).toBe('destroy')
+  })
+})

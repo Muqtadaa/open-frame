@@ -6,6 +6,7 @@
  * obeying it painless rather than a nuisance.
  */
 export {
+  joinBoard,
   listMyBoards,
   recordSharedBoard,
   renameRemoteBoard,

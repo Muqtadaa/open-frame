@@ -85,9 +85,11 @@ export interface ListedBoard {
 /**
  * Everything this person can open, newest first.
  *
- * A board that is BOTH local and shared appears once, as the shared one: the
- * local copy is the original that sharing duplicated, and showing both would
- * be one board wearing two rows.
+ * A board that is BOTH local and shared appears once, as the shared one. This
+ * is no longer how sharing behaves — it moves a board now, so there is nothing
+ * left to collide with — but boards shared BEFORE that change still have their
+ * originals sitting in this browser, and the fix for those must not be to show
+ * each of them twice.
  */
 export async function listAllBoards(
   repository: BoardRepository,

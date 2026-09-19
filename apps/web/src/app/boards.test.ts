@@ -135,8 +135,9 @@ describe('everything you can open', () => {
   })
 
   /**
-   * Sharing COPIES a board, so the original stays in this browser under its own
-   * id. Both would otherwise appear, which is one board wearing two rows.
+   * Sharing MOVES a board now, so this cannot arise from sharing any more.
+   * It still can from a board shared before that change, whose original is
+   * still sitting in this browser — and those must not each show up twice.
    */
   it('shows a board that is both local and shared exactly once', async () => {
     const { repository } = fakeRepository([summary('brd_abcdefgh12345678', 2_000)])

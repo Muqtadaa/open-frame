@@ -8,6 +8,14 @@ export default defineConfig({
   define: { __OPENFRAME_BENCH__: 'false' },
   test: {
     environment: 'jsdom',
+    /*
+     * `wss://` ON PURPOSE, because that is the value production runs and the
+     * one that broke: a single configured URL is used both to open a socket
+     * and to POST a claim, and `fetch` rejects a websocket scheme outright.
+     * Setting `https://` here would make `collab-config.test.ts` pass against
+     * the one configuration that never had the bug.
+     */
+    env: { VITE_COLLAB_URL: 'wss://rooms.test' },
     include: ['src/**/*.test.ts', 'src/**/*.test.tsx'],
     setupFiles: ['./src/test-setup.ts'],
   },

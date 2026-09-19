@@ -75,14 +75,40 @@ export function shareLink(boardId: BoardId, origin: string, key?: string | null)
   return key === null || key === undefined ? base : `${base}&${KEY_PARAM}=${key}`
 }
 
-export function roomSocketUrl(boardId: BoardId, key?: string | null): string {
+/**
+ * ONE server, addressed two ways, because the platform insists.
+ *
+ * `new WebSocket()` throws on anything but ws/wss, and `fetch()` rejects those
+ * two outright — so a single configured URL cannot be handed to both. It was,
+ * and the consequence shipped: with `VITE_COLLAB_URL=wss://…` every press of
+ * Share called `fetch('wss://…/claim')`, which a browser refuses before it
+ * reaches the network, and the interface reported that the room server could
+ * not be reached.
+ *
+ * Nothing caught it. The room suite claims rooms by writing `http://…` out by
+ * hand instead of asking this module, so the one function with the bug in it
+ * was the one function no test called.
+ *
+ * Converting in both directions also means the deployment cannot be configured
+ * wrongly: either scheme now works, rather than one of the two halves failing
+ * depending on which was chosen.
+ */
+function socketBase(): string {
   if (COLLAB_URL === null) throw new Error('No room server is configured for this build')
-  const base = `${COLLAB_URL}/room/${boardId}`
+  return COLLAB_URL.replace(/^http/, 'ws')
+}
+
+function httpBase(): string {
+  if (COLLAB_URL === null) throw new Error('No room server is configured for this build')
+  return COLLAB_URL.replace(/^ws/, 'http')
+}
+
+export function roomSocketUrl(boardId: BoardId, key?: string | null): string {
+  const base = `${socketBase()}/room/${boardId}`
   return key === null || key === undefined ? base : `${base}?${KEY_PARAM}=${key}`
 }
 
 /** Where a board asks for its two links, once, before it holds anything. */
 export function claimUrl(boardId: BoardId): string {
-  if (COLLAB_URL === null) throw new Error('No room server is configured for this build')
-  return `${COLLAB_URL}/room/${boardId}/claim`
+  return `${httpBase()}/room/${boardId}/claim`
 }
