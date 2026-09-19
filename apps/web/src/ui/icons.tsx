@@ -327,6 +327,16 @@ export function LeaveIcon({ className }: IconProps) {
   )
 }
 
+/** A link, for the one that lets people watch without changing anything. */
+export function LinkIcon({ className }: IconProps) {
+  return (
+    <svg {...base} className={className}>
+      <path d="M10 13a4 4 0 005.7 0l3-3a4 4 0 00-5.7-5.7L11.5 5.8" />
+      <path d="M14 11a4 4 0 00-5.7 0l-3 3a4 4 0 005.7 5.7l1.4-1.4" />
+    </svg>
+  )
+}
+
 export function GridIcon({ className }: IconProps) {
   return (
     <svg {...base} className={className}>

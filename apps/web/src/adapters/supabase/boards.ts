@@ -23,6 +23,15 @@ export interface RemoteBoard {
   readonly role: 'owner' | 'editor' | 'viewer'
   /** The key that opens it for that role. `null` for a board shared before roles. */
   readonly accessKey: string | null
+  /**
+   * The VIEW-ONLY key, for a board you own and nobody else's.
+   *
+   * An owner already holds the editor key, which is strictly more powerful, so
+   * handing them both leaks nothing — and without it the view-only link was
+   * visible once, in the panel that appears when a board is shared, and
+   * unrecoverable afterwards.
+   */
+  readonly viewKey: string | null
   readonly updatedAt: number
   /** Whether YOU pinned it. Nobody else's pin is visible, or any of their business. */
   readonly pinned: boolean
@@ -63,6 +72,7 @@ function readBoard(row: unknown): RemoteBoard | null {
     updated_at: updated,
     pinned,
     opened_at: opened,
+    view_key: viewKey,
   } = row as {
     id?: unknown
     title?: unknown
@@ -71,6 +81,7 @@ function readBoard(row: unknown): RemoteBoard | null {
     updated_at?: unknown
     pinned?: unknown
     opened_at?: unknown
+    view_key?: unknown
   }
 
   if (typeof id !== 'string' || !BOARD_ID.test(id)) return null
@@ -86,6 +97,7 @@ function readBoard(row: unknown): RemoteBoard | null {
     title,
     role: role as RemoteBoard['role'],
     accessKey: typeof key === 'string' && ACCESS_KEY.test(key) ? key : null,
+    viewKey: typeof viewKey === 'string' && ACCESS_KEY.test(viewKey) ? viewKey : null,
     updatedAt,
     // Anything but a true is not pinned. A row from a version that does not
     // send the column must not put a board at the top of the list.

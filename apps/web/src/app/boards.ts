@@ -82,6 +82,8 @@ export interface ListedBoard {
   readonly role: RemoteBoard['role'] | null
   /** The key that opens it, for a shared board that has one. */
   readonly accessKey: string | null
+  /** The view-only key, for a board you own. `null` for anybody else's. */
+  readonly viewKey: string | null
   readonly pinned: boolean
   /** When YOU last opened it. What the list is ordered by. */
   readonly openedAt: number
@@ -143,6 +145,7 @@ export async function listAllBoards(
       shared: true,
       role: board.role,
       accessKey: board.accessKey,
+      viewKey: board.viewKey,
       pinned: board.pinned,
       openedAt: board.openedAt,
     })),
@@ -168,6 +171,7 @@ export async function listAllBoards(
         shared: false,
         role: null,
         accessKey: null,
+        viewKey: null,
         pinned: pins.has(board.id),
         // Never opened on this browser falls back to when it last changed, so
         // a board does not sink out of sight for having been made rather than

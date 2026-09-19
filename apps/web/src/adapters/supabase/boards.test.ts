@@ -50,6 +50,7 @@ describe('listing the boards behind an account', () => {
       role: 'owner',
       accessKey: 'a'.repeat(32),
       updatedAt: Date.parse('2026-09-19T04:00:00Z'),
+      viewKey: null,
       pinned: false,
       // A board never opened on this account falls back to when it last
       // changed, so it does not sink out of sight for not having been revisited.
@@ -232,5 +233,58 @@ describe('keeping a board somebody shared', () => {
     answering({ error: { message: 'down' } })
 
     await expect(joinBoard(asBoardId('brd_abcdefgh12345678'), 'e'.repeat(32))).resolves.toBeNull()
+  })
+})
+
+/**
+ * The view-only key, which only a board's OWNER gets back.
+ *
+ * It was visible exactly once — in the panel that appears the moment a board
+ * is shared — so the only link you could send afterwards was the one that lets
+ * people change the board. Handing an owner both leaks nothing: they already
+ * hold the editor key, which is strictly the more powerful of the two.
+ */
+describe('the second key', () => {
+  beforeEach(() => {
+    client.mockReset()
+  })
+
+  it('is read for a board you own', async () => {
+    answering({ data: [{ ...goodRow, role: 'owner', view_key: 'b'.repeat(32) }] })
+
+    const [board] = await listMyBoards()
+
+    expect(board?.accessKey).toBe('a'.repeat(32))
+    expect(board?.viewKey).toBe('b'.repeat(32))
+  })
+
+  /**
+   * The database withholds it from a member, and the client must not invent
+   * one — an editor has no business handing out view-only links to somebody
+   * else's board.
+   */
+  it('is null for a board that is somebody else’s', async () => {
+    answering({ data: [{ ...goodRow, role: 'editor', view_key: null }] })
+
+    const [board] = await listMyBoards()
+
+    expect(board?.viewKey).toBeNull()
+  })
+
+  it('refuses a second key of the wrong shape rather than putting it in a link', async () => {
+    answering({ data: [{ ...goodRow, role: 'owner', view_key: 'nonsense' }] })
+
+    const [board] = await listMyBoards()
+
+    expect(board?.viewKey).toBeNull()
+  })
+
+  /** A row from a version that does not send the column at all. */
+  it('is null when the column is absent', async () => {
+    answering({ data: [goodRow] })
+
+    const [board] = await listMyBoards()
+
+    expect(board?.viewKey).toBeNull()
   })
 })

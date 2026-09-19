@@ -119,6 +119,7 @@ const sharedBoard = (
   title,
   role,
   accessKey: 'a'.repeat(32),
+  viewKey: role === 'owner' ? 'b'.repeat(32) : null,
   updatedAt,
   pinned: false,
   // Defaults to when it changed, the same fallback the database applies to a
@@ -276,6 +277,7 @@ describe('what you may do to a board', () => {
     shared: true,
     role: 'owner',
     accessKey: null,
+    viewKey: null,
     pinned: false,
     openedAt: 0,
     ...over,

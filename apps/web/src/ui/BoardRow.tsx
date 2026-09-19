@@ -7,10 +7,10 @@ import { deleteBoardEverywhere, leaveBoard, renameBoard } from '../app/board-lif
 import { shareLink } from '../app/collab-config.js'
 import { setBoardPinned } from '../app/remote-boards.js'
 import { boardHref } from '../app/route.js'
-import { LeaveIcon, PinIcon, RenameIcon, TrashIcon } from './icons.js'
+import { LeaveIcon, LinkIcon, PinIcon, RenameIcon, TrashIcon } from './icons.js'
 
 /**
- * One board, and the three things you can do to it without opening it.
+ * One board, and the things you can do to it without opening it.
  *
  * The row is a LINK with controls beside it, not a link wrapped around them: a
  * button inside an anchor is invalid, and the browsers that tolerate it
@@ -42,7 +42,16 @@ export function BoardRow({
   const [draft, setDraft] = useState(board.title)
   const [pinned, setPinned] = useState(board.pinned)
   const [problem, setProblem] = useState<string | null>(null)
+  const [copied, setCopied] = useState(false)
   const input = useRef<HTMLInputElement>(null)
+
+  // The copied note clears itself. A bare `setTimeout` in the handler outlives
+  // the row when the list re-renders under it.
+  useEffect(() => {
+    if (!copied) return
+    const timer = setTimeout(() => setCopied(false), 1600)
+    return () => clearTimeout(timer)
+  }, [copied])
 
   useEffect(() => {
     if (mode === 'renaming') input.current?.select()
@@ -168,6 +177,44 @@ export function BoardRow({
 
         {mode === 'rest' && (
           <span className="of-home__row-actions">
+            {/*
+              * The VIEW-ONLY link, for a board you own.
+              *
+              * Both links used to be visible exactly once — in the panel that
+              * appears the moment a board is shared — and the weaker one was
+              * unrecoverable after that, so the only link you could ever send
+              * again was the one that lets people change the board. The edit
+              * link is not offered here because it is the link you are already
+              * holding: opening the board gives it to you.
+              */}
+            {board.viewKey !== null && (
+              <button
+                type="button"
+                className="of-home__row-action"
+                data-testid="copy-view-link"
+                title={`Copy a view-only link to ${board.title}. They can open it, not change it.`}
+                onClick={() => {
+                  const link = shareLink(board.boardId, window.location.origin, board.viewKey)
+                  void navigator.clipboard.writeText(link).then(
+                    () => {
+                      setProblem(null)
+                      setCopied(true)
+                    },
+                    // A denied clipboard is silent otherwise: the note never
+                    // appears and the row looks like it ignored the click.
+                    () => {
+                      setProblem('Could not copy the link.')
+                    },
+                  )
+                }}
+              >
+                <LinkIcon />
+                <span className="of-visually-hidden">
+                  Copy a view-only link to {board.title}
+                </span>
+              </button>
+            )}
+
             <button
               type="button"
               className="of-home__row-action"
@@ -218,6 +265,11 @@ export function BoardRow({
         )}
 
         {mode === 'working' && <span className="of-home__row-note">Removing…</span>}
+        {copied && (
+          <span className="of-home__row-note" role="status">
+            View-only link copied
+          </span>
+        )}
       </div>
 
       {mode === 'confirming' && (

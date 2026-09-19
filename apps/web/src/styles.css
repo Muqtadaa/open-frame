@@ -2766,6 +2766,15 @@ textarea.of-input {
 .of-home__row-actions {
   display: flex;
   flex: none;
+  /*
+   * A FIXED width, right-aligned, sized for the most actions a row can carry:
+   * the view-only link, rename, and remove. Rows do not all carry the same
+   * number — only a board you own offers its view-only link — so a block that
+   * sized to its own contents made the owner's row one button wider and pulled
+   * its tag out of the column. Three 30px targets and two 2px gaps.
+   */
+  justify-content: flex-end;
+  width: 94px;
   gap: 2px;
   opacity: 0;
 }

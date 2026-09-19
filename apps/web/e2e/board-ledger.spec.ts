@@ -51,6 +51,12 @@ test('keeps the columns in line down the page', async ({ page }) => {
   // Every row is its OWN grid, so `auto` columns size to that row's content and
   // the tags land wherever their own name ends. Four tags at four different x
   // positions is not a column.
+  //
+  // The row actions are the second way to break this, and the reason the roles
+  // above differ: only the OWNER row offers a view-only link, so its action
+  // block is one button wider. Sized to its contents, that shifts its tag and
+  // nothing else's — this asserted exactly two distinct x positions when the
+  // action was added, before the block got a fixed width.
   expect(lefts.length).toBe(3)
   expect(new Set(lefts).size).toBe(1)
 })
@@ -140,4 +146,44 @@ test('keeps a shared board on arrival, and leaves no phantom row', async ({ page
   // cache of it wearing a placeholder name.
   await page.waitForSelector('[data-testid="home"]')
   await expect(page.getByText('Untitled board')).toHaveCount(0)
+})
+
+/**
+ * Getting the view-only link back.
+ *
+ * Both links were visible exactly once, in the panel that appears the moment a
+ * board is shared. After that the weaker one was unreachable — `my_boards()`
+ * returned one key per role and an owner's is the editor key — so the only
+ * link you could ever send again was the one that lets people change the
+ * board. That is half of the feature this was built for.
+ */
+test('offers the view-only link for a board you own, and for nobody else’s', async ({
+  page,
+  context,
+}) => {
+  await context.grantPermissions(['clipboard-read', 'clipboard-write'])
+  await signedIn(page, [
+    { id: 'brd_aaaaaaaa11111111', title: 'Mine', role: 'owner' },
+    { id: 'brd_bbbbbbbb22222222', title: 'Theirs', role: 'editor' },
+  ])
+
+  await page.goto(HOME_URL)
+  const rows = page.getByTestId('home-boards').locator('li')
+  await expect(rows).toHaveCount(2)
+
+  const mine = rows.filter({ hasText: 'Mine' })
+  const theirs = rows.filter({ hasText: 'Theirs' })
+
+  // The database withholds the second key from a member, and the row must not
+  // offer a control for a link it does not have.
+  await expect(theirs.getByTestId('copy-view-link')).toHaveCount(0)
+
+  await mine.getByTestId('copy-view-link').click()
+  await expect(page.getByText('View-only link copied')).toBeVisible()
+
+  const copied = await page.evaluate(() => navigator.clipboard.readText())
+  expect(copied).toContain('?room=brd_aaaaaaaa11111111')
+  // The VIEW key, not the edit key the row also holds.
+  expect(copied).toContain(`k=${'b'.repeat(32)}`)
+  expect(copied).not.toContain('a'.repeat(32))
 })

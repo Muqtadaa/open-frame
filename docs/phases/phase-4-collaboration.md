@@ -427,10 +427,17 @@ this browser", whatever is sitting in IndexedDB under its id.
 - What a member sees when an owner deletes a board they are looking at. The
   room closes their socket with 4004 and refuses reconnection with 410; the
   interface does not yet say why.
-- **An owner cannot recover the view-only link after the moment of sharing.**
-  `my_boards()` hands back one key per role, and an owner's is the editor key.
-  Nothing is lost — the link still works for whoever has it — but it cannot be
-  re-copied from the board list.
+- ~~**An owner cannot recover the view-only link after the moment of sharing.**~~
+  Fixed. `my_boards()` returns a second `view_key`, populated for the owner and
+  null for everybody else, and the row offers a copy control when it is there.
+  Handing an owner both leaks nothing: they already hold the editor key, which
+  is strictly the more powerful. The EDIT link is deliberately not offered in
+  the list — opening the board is how you get it.
+
+  The control is a third button on an owner's row, which made that row one
+  button wider than a member's and pulled its tag out of the column; the
+  actions block now has a fixed width. The alignment test asserted exactly
+  that, two distinct x positions, before the fix.
 - Boards shared before links had roles cannot have their rooms deleted, by
   design. The row goes; the room outlives it.
 
