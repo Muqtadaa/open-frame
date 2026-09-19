@@ -40,11 +40,22 @@ test.describe('arriving with nothing', () => {
     await expect(page.getByTestId('home-start')).toHaveCount(0)
   })
 
-  test('says so when there are no boards yet', async ({ page }) => {
+  /**
+   * The ledger is absent, not empty.
+   *
+   * A guest with no boards has no list to show and no button to press, and the
+   * one line that was left — "sign in to start a board" — was the heading of
+   * the form directly below it, said twice. A section with nothing in it is
+   * not an empty state, it is a gap.
+   */
+  test('shows no board list at all, rather than an empty one', async ({ page }) => {
     await page.goto(HOME_URL)
 
-    await expect(page.getByTestId('home-empty')).toBeVisible()
     await expect(page.getByTestId('home-boards')).toHaveCount(0)
+    await expect(page.getByTestId('home-empty')).toHaveCount(0)
+    await expect(page.getByText('your boards')).toHaveCount(0)
+    // The form is the door for somebody with no account.
+    await expect(page.getByLabel('Email')).toBeVisible()
   })
 })
 

@@ -215,7 +215,7 @@ function ShareLinks({ links, onOpen }: { readonly links: SharedBoard; readonly o
         * avoid.
         */}
       <p className="of-share__lead">
-        This board has moved. It has two links now, and neither needs an account.
+        This board has moved.
       </p>
 
       <button

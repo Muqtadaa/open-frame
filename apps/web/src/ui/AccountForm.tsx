@@ -13,10 +13,8 @@ import { signIn, signUp } from '../app/identity.js'
  */
 export function AccountForm({
   onDone,
-  lead,
 }: {
   readonly onDone: () => void
-  readonly lead?: (mode: 'in' | 'up') => string
 }) {
   const [mode, setMode] = useState<'in' | 'up'>('in')
   const [email, setEmail] = useState('')
@@ -37,14 +35,8 @@ export function AccountForm({
     })
   }
 
-  const defaultLead = (which: 'in' | 'up'): string =>
-    which === 'in'
-      ? 'Sign in to keep a list of your boards.'
-      : 'An account keeps a list of your boards. Opening a link somebody sends you never needs one.'
-
   return (
     <form onSubmit={submit}>
-      <p className="of-account__lead">{(lead ?? defaultLead)(mode)}</p>
 
       {mode === 'up' && (
         <label className="of-account__field">
@@ -102,7 +94,7 @@ export function AccountForm({
           {mode === 'in' ? 'Create an account' : 'I already have one'}
         </button>
         <button type="submit" className="of-account__submit" disabled={busy}>
-          {busy ? 'Just a moment…' : mode === 'in' ? 'Sign in' : 'Create account'}
+          {busy ? (mode === 'in' ? 'Signing in…' : 'Creating…') : mode === 'in' ? 'Sign in' : 'Create account'}
         </button>
       </div>
     </form>

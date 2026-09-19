@@ -56,8 +56,7 @@ export function ClaimLocalBoards({
   return (
     <div className="of-home__claim" data-testid="claim-local">
       <p className="of-home__claim-what">
-        {count === 1 ? 'One board here is' : `${String(count)} boards here are`} only in this
-        browser.
+        {count === 1 ? 'One board is' : `${String(count)} boards are`} only in this browser.
       </p>
       <button
         type="button"

@@ -15,6 +15,20 @@ MODE: Operate. The visitor completes a task — get into a board, or sign in —
 and leaves. Nothing here persuades; the canvas is the product and this is the
 shortest honest path to it.
 
+COPY IS CUT TO WHAT CHANGES A DECISION (2026-09-19). The page carried a
+tagline, a line under the primary button and a lead above the sign-in form,
+and none of the three told anyone anything they could act on: "A visual
+workspace where what you put on the canvas keeps its meaning" is positioning,
+and "Your boards follow you to any machine you sign in on" sat under a button
+labelled Start a board. An email field, a password field and a button marked
+Sign in do not need a sentence explaining that they sign you in.
+
+What survives says something the interface cannot show by itself: that a new
+board needs a connection while the boards you have do not, that deleting one
+takes its links with it, and that the name in a sign-up form is what other
+people see on your cursor. The three CSS rules those cuts orphaned went with
+them.
+
 ONE HANDLE (REVISED 2026-09-19): The door had two — sign in, or start without
 an account — and the second is retired. Creating a board takes an account now;
 PRODUCT.md's fourth principle was rewritten in the same change, from "no account

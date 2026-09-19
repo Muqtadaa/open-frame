@@ -118,6 +118,17 @@ export function Home({ repository }: { readonly repository: BoardRepository }) {
   const strays =
     identity === null ? [] : (listing?.boards ?? []).filter((board) => !board.shared)
 
+  /*
+   * A section with nothing in it is not an empty state, it is a gap.
+   *
+   * Signed out with no boards there is no list to show and no button to press,
+   * and the one line left — "sign in to start a board" — is the heading of the
+   * form directly below it said twice. So the ledger does not render at all
+   * and the door is the form, which is what the door IS for somebody with no
+   * account.
+   */
+  const showBoards = listing === null || listing.boards.length > 0 || canStart
+
   return (
     <main className="of-home" data-testid="home">
       <div className="of-home__column">
@@ -153,14 +164,10 @@ export function Home({ repository }: { readonly repository: BoardRepository }) {
             )}
           </div>
 
-          {/* Its own row, full width: sharing one with the account chip is what
-              made it wrap to three lines on a phone. */}
-          <p className="of-home__tagline">
-            A visual workspace where what you put on the canvas keeps its meaning.
-          </p>
         </header>
 
         <div className="of-home__body">
+          {showBoards && (
           <section className="of-home__boards" aria-labelledby="of-home-boards">
             <h2 className="of-home__heading" id="of-home-boards">
               your boards
@@ -170,9 +177,7 @@ export function Home({ repository }: { readonly repository: BoardRepository }) {
               <p className="of-home__note">Looking for your boards…</p>
             ) : listing.boards.length === 0 ? (
               <p className="of-home__note" data-testid="home-empty">
-                {canStart
-                  ? 'Nothing here yet.'
-                  : 'Sign in to start a board. A link somebody sends you opens without one.'}
+                Nothing here yet.
               </p>
             ) : (
               <ul className="of-home__list" data-testid="home-boards">
@@ -194,22 +199,15 @@ export function Home({ repository }: { readonly repository: BoardRepository }) {
             )}
 
             {canStart && (
-              <>
-                <button
-                  type="button"
-                  className="of-home__start"
-                  data-testid="home-start"
-                  disabled={starting}
-                  onClick={start}
-                >
-                  {starting ? 'Starting…' : 'Start a board'}
-                </button>
-                <p className="of-home__small">
-                  {ACCOUNTS_ENABLED
-                    ? 'Your boards follow you to any machine you sign in on.'
-                    : 'This copy of OpenFrame has no accounts, so boards stay in this browser.'}
-                </p>
-              </>
+              <button
+                type="button"
+                className="of-home__start"
+                data-testid="home-start"
+                disabled={starting}
+                onClick={start}
+              >
+                {starting ? 'Starting…' : 'Start a board'}
+              </button>
             )}
 
             {startError !== null && (
@@ -218,6 +216,7 @@ export function Home({ repository }: { readonly repository: BoardRepository }) {
               </p>
             )}
           </section>
+          )}
 
           {ACCOUNTS_ENABLED && identity === null && (
             <section className="of-home__signin" aria-labelledby="of-home-signin">
@@ -229,11 +228,6 @@ export function Home({ repository }: { readonly repository: BoardRepository }) {
                   // The board list is about to mean something different.
                   window.location.reload()
                 }}
-                lead={(mode) =>
-                  mode === 'in'
-                    ? 'Your boards follow you to any machine you sign in on.'
-                    : 'A board belongs to an account. A link somebody sends you still opens without one.'
-                }
               />
             </section>
           )}
