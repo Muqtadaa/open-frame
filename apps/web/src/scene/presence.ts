@@ -26,6 +26,28 @@ export interface PresenceState {
   readonly selection: readonly ObjectId[]
   /** The object this peer has open in an inline editor, if any. */
   readonly editing: ObjectId | null
+  /**
+   * How far this peer has moved their SELECTION in a drag that has not
+   * committed yet, or `null` when they are not dragging.
+   *
+   * This is the whole of rule 4 honoured rather than bent. Nothing is written
+   * to the document until the gesture commits, so without this another
+   * person's note sits still and then teleports on release. The offset is
+   * presence: it slides with no write, no undo entry and no storage row.
+   *
+   * It applies to `selection`, not to a list of its own, because the two are
+   * always the same set — `pointer-controller` selects the objects it is about
+   * to translate in the same batch, in both of its branches. Publishing the
+   * ids again would be a second copy of a fact already on the wire, and the
+   * copy is what goes stale.
+   */
+  readonly drag: DragDelta | null
+}
+
+/** How far, in world units. Never a position — always an offset. */
+export interface DragDelta {
+  readonly dx: number
+  readonly dy: number
 }
 
 export interface Peer extends PresenceState {
@@ -42,6 +64,23 @@ function finitePoint(value: unknown): Point | null {
   // taking the whole layer's rendering with it on some engines.
   if (!Number.isFinite(x) || !Number.isFinite(y)) return null
   return { x, y }
+}
+
+/**
+ * A drag offset, or `null` for anything that is not two finite numbers.
+ *
+ * The same reasoning as `finitePoint`, and the same consequence: a `NaN` here
+ * becomes a transform the browser drops, taking the layer with it. An offset
+ * is also unbounded by nature — there is no maximum sensible distance to move
+ * something on an infinite canvas — so this clamps nothing and only insists
+ * the values are real.
+ */
+function dragDelta(value: unknown): DragDelta | null {
+  if (typeof value !== 'object' || value === null) return null
+  const { dx, dy } = value as { dx?: unknown; dy?: unknown }
+  if (typeof dx !== 'number' || typeof dy !== 'number') return null
+  if (!Number.isFinite(dx) || !Number.isFinite(dy)) return null
+  return { dx, dy }
 }
 
 function objectIds(value: unknown): ObjectId[] {
@@ -64,12 +103,14 @@ export function readPresence(raw: unknown): PresenceState | null {
     cursor: rawCursor,
     selection: rawSelection,
     editing: rawEditing,
+    drag: rawDrag,
   } = raw as {
     name?: unknown
     hue?: unknown
     cursor?: unknown
     selection?: unknown
     editing?: unknown
+    drag?: unknown
   }
 
   const name = typeof rawName === 'string' ? rawName.slice(0, MAX_NAME).trim() : ''
@@ -88,7 +129,34 @@ export function readPresence(raw: unknown): PresenceState | null {
     cursor: finitePoint(rawCursor),
     selection: objectIds(rawSelection),
     editing,
+    drag: dragDelta(rawDrag),
   }
+}
+
+/**
+ * Where each object is being held right now, by somebody else.
+ *
+ * One pass over the peers rather than a lookup per object: culling already
+ * asks every visible object to draw itself, and having each of them scan the
+ * peer list would be the O(n²) that rule 10 exists to forbid.
+ *
+ * An object dragged by two people at once takes the LOWEST client id, the same
+ * tie-break `editorsByObject` uses and for the same reason — every client
+ * works this out independently and they must all agree.
+ */
+export function dragsByObject(peers: readonly Peer[]): ReadonlyMap<ObjectId, DragDelta> {
+  const moved = new Map<ObjectId, DragDelta>()
+  const claimedBy = new Map<ObjectId, number>()
+  for (const peer of peers) {
+    if (peer.drag === null) continue
+    for (const id of peer.selection) {
+      const held = claimedBy.get(id)
+      if (held !== undefined && held <= peer.clientId) continue
+      claimedBy.set(id, peer.clientId)
+      moved.set(id, peer.drag)
+    }
+  }
+  return moved
 }
 
 /** The palette entry for a peer. A token name, never a colour value. */

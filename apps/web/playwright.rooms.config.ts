@@ -31,6 +31,27 @@ export default defineConfig({
   use: {
     baseURL: 'http://127.0.0.1:5199',
     trace: 'on-first-retry',
+    /*
+     * The splash holds its artwork on screen for two seconds, and it is an
+     * <img> over the whole viewport — so for those two seconds every click in
+     * every test here lands on a picture instead of the board.
+     *
+     * The functional suite has seeded this since it was written; this config
+     * never did, and the result was not a clean failure but a RACE. A test
+     * that spent long enough getting two browsers into a room dragged a real
+     * note; one that got there quickly dragged the splash. It cost an hour to
+     * find, hiding as "the drag delta does not cross the room" — the gesture
+     * had never started.
+     */
+    storageState: {
+      cookies: [],
+      origins: [
+        {
+          origin: 'http://127.0.0.1:5199',
+          localStorage: [{ name: 'openframe:splash-hold', value: 'off' }],
+        },
+      ],
+    },
     ...devices['Desktop Chrome'],
     ...launchOverrides,
   },

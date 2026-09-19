@@ -1,4 +1,4 @@
-import { expect, test, type Browser, type Page } from '@playwright/test'
+import { expect, test, type Browser, type Locator, type Page } from '@playwright/test'
 
 import { BOARD_URL, HOME_URL } from '../e2e/routes.js'
 import { signedIn } from '../e2e/signed-in.js'
@@ -27,7 +27,11 @@ interface DebugWindow {
       }
       readonly store: {
         getDocument(): {
-          objects: ReadonlyMap<string, { style: { color?: string }; frame?: { x: number } }>
+          // `frame` is not optional: every object in the domain has one, a
+          // connector's included. Declaring it optional only moved the
+          // question to every call site, where it became a `?.` that quietly
+          // reads -1 when the real answer is a number.
+          objects: ReadonlyMap<string, { style: { color?: string }; frame: { x: number } }>
         }
       }
     }
@@ -531,4 +535,75 @@ test('an offline edit made after a reload still reaches the room', async ({ brow
 
   await context.close()
   await other.close()
+})
+
+/**
+ * Watching somebody move a note, rather than watching it teleport.
+ *
+ * Rule 4 says nothing is written to the document until a gesture commits, and
+ * that stays — a 500-event drag is still one command, one undo entry, one
+ * save. So the in-flight offset travels as PRESENCE, and the watching browser
+ * draws the object shifted by it while its own document is untouched.
+ *
+ * The assertion is deliberately in two halves. That the note MOVES on screen
+ * for the watcher is the feature; that the watcher's DOCUMENT has not moved is
+ * what proves it was done without breaking rule 4. A version of this that
+ * wrote during the drag would pass the first half and fail the second.
+ */
+test('a note slides while somebody drags it, without the document moving', async ({
+  browser,
+}) => {
+  const room = newRoomId()
+  const alice = await join(browser, room)
+  const bob = await join(browser, room)
+
+  await addNote(alice, 'dragged', 'blue')
+  await expect.poll(() => colours(bob)).toEqual(['blue'])
+
+  const noteFor = (page: Page): Locator => page.locator('[data-object-id]').first()
+  const drawnX = async (page: Page): Promise<number> =>
+    (await noteFor(page).boundingBox())?.x ?? -1
+
+  // Where the DOCUMENT has it, as opposed to where it is drawn. The two part
+  // company for exactly as long as somebody is holding it.
+  const committedX = (page: Page): Promise<number> =>
+    page.evaluate(() => {
+      const objects = (
+        window as unknown as DebugWindow
+      ).__openframe.runtime.store.getDocument().objects
+      for (const object of objects.values()) return object.frame.x
+      return -1
+    })
+
+  const before = await committedX(bob)
+  const startedAt = await drawnX(bob)
+
+  // Alice picks the note up and moves it, WITHOUT letting go.
+  const box = await noteFor(alice).boundingBox()
+  if (box === null) throw new Error('alice cannot see the note')
+  await alice.mouse.move(box.x + box.width / 2, box.y + box.height / 2)
+  await alice.mouse.down()
+  await alice.mouse.move(box.x + box.width / 2 + 220, box.y + box.height / 2 + 90, { steps: 12 })
+
+  /*
+   * ALICE FIRST, and not only for symmetry.
+   *
+   * These are two different failures wearing the same symptom: a gesture that
+   * never became a drag looks exactly like a delta that never crossed the
+   * room, and both show up as "the note did not move". Asserting the local
+   * drag first says which — and it is also what makes the remote assertion
+   * below a wait rather than a race, because alice cannot be mid-drag until
+   * this passes.
+   */
+  await expect.poll(() => drawnX(alice), { timeout: 10_000 }).toBeGreaterThan(startedAt + 100)
+
+  // Now bob, who has been told nothing except where alice's hands are.
+  await expect.poll(() => drawnX(bob), { timeout: 10_000 }).toBeGreaterThan(startedAt + 100)
+
+  // And his document has not been touched, because nothing has been written.
+  expect(await committedX(bob)).toBe(before)
+
+  // Released, the document catches up and the offset goes with it.
+  await alice.mouse.up()
+  await expect.poll(() => committedX(bob), { timeout: 15_000 }).toBeGreaterThan(before)
 })

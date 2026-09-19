@@ -224,11 +224,33 @@ the one whose keys the room has to verify.
   viewport. The trap is feedback: following someone who is following you is a
   loop, so a follower publishes that it is following and nobody follows a
   follower.
-- **Live drag deltas.** Another person's note currently jumps when they let go,
-  because nothing is written during a drag (rule 4, and it stays). The in-flight
-  offset is presence, so the note slides without a single write, an undo entry
-  or a storage row. Rendering it is the interesting part: the remote object must
-  be drawn offset without the document moving underneath it.
+- ~~**Live drag deltas.**~~ Done. The in-flight offset travels as presence, so
+  another person's note slides under their cursor instead of teleporting on
+  release — with no write, no undo entry and no storage row. Rule 4 is
+  untouched: a 500-event drag is still one command.
+
+  The offset applies to the peer's SELECTION rather than to a list of its own,
+  because `pointer-controller` selects the objects it is about to translate in
+  the same batch, in both branches. A second copy of that fact is the copy that
+  goes stale. Two people on one object breaks the tie by lowest client id, as
+  `editorsByObject` already does, so every client agrees without asking.
+
+  The peer's outline moves with it. Bounds come from the document, which has
+  not changed yet, so an outline left there would sit still while the note
+  slid out from under it.
+
+  THE TEST FOUND A FLAKE OLDER THAN THE FEATURE. The first version failed
+  because the pointer landed on an `<img>` — the boot splash, which holds its
+  artwork over the whole viewport for two seconds. `playwright.config.ts` has
+  seeded `splash-hold: off` since it was written; `playwright.rooms.config.ts`
+  never did, so every rooms test has been racing that hold. Not failing —
+  racing: a test slow enough to get two browsers into a room dragged a real
+  note, a quick one dragged the splash. Seeded off, the drag test runs in 2.4s
+  instead of 16s.
+
+  The test asserts the LOCAL drag before the remote one, because "the gesture
+  never started" and "the delta never crossed the room" are different failures
+  with identical symptoms, and telling them apart is what found the splash.
 
 ### Settled after shipping
 

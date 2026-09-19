@@ -3,6 +3,8 @@ import { useEffect, type RefObject } from 'react'
 import { screenToWorld } from '@openframe/core'
 
 import { useLockedByOthers, usePeers } from '../hooks/use-peers.js'
+import { useRemoteDragStore } from '../interaction/remote-drags.js'
+import { dragsByObject } from '../scene/presence.js'
 import { useInteractionStore } from '../interaction/interaction-store.js'
 import { useOpenFrame } from '../runtime/context.js'
 import { guestIdentity } from '../app/guest.js'
@@ -40,6 +42,16 @@ export function usePresence(containerRef: RefObject<HTMLDivElement | null>): voi
     setLockedByOthers(locked)
   }, [locked, setLockedByOthers])
 
+  /*
+   * And what they are holding in mid-air. Computed ONCE per presence update
+   * rather than per object: culling already asks every visible object to draw
+   * itself, and a peer scan inside each of them is the O(n²) rule 10 forbids.
+   */
+  const setDrags = useRemoteDragStore((state) => state.setDrags)
+  useEffect(() => {
+    setDrags(dragsByObject(peers))
+  }, [peers, setDrags])
+
   useEffect(() => {
     if (collaboration === null || collaboration === undefined) return
 
@@ -68,6 +80,17 @@ export function usePresence(containerRef: RefObject<HTMLDivElement | null>): voi
         cursor,
         selection: [...state.selection],
         editing: state.editingId,
+        /*
+         * The in-flight offset, which is what stops another person's note
+         * teleporting when this one lets go of it. Read fresh on every publish
+         * rather than pushed, so it rides the cursor's schedule for free: a
+         * drag moves the pointer, and a pointer that moves is already
+         * publishing.
+         */
+        drag:
+          state.drag.kind === 'translate'
+            ? { dx: state.drag.dx, dy: state.drag.dy }
+            : null,
       })
     }
 
@@ -106,7 +129,17 @@ export function usePresence(containerRef: RefObject<HTMLDivElement | null>): voi
     const unsubscribe = useInteractionStore.subscribe((state, previous) => {
       if (state.selection !== previous.selection || state.editingId !== previous.editingId) {
         publish()
+        return
       }
+      /*
+       * The START and END of a drag, immediately, on the same reasoning.
+       *
+       * The end matters most: on release the document takes the change and the
+       * offset must go with it, in one frame. Left to the cursor's schedule it
+       * lingers up to 50ms, and every watcher sees the note jump the distance
+       * twice — once to the committed position, once back.
+       */
+      if (state.drag.kind !== previous.drag.kind) publish()
     })
 
     publish()

@@ -6,6 +6,7 @@ import { useDependencySubscriptions, useDocumentObject } from '../hooks/use-docu
 import { useCommands } from '../hooks/use-commands.js'
 import { useOpenFrame } from '../runtime/context.js'
 import { useInteractionStore } from '../interaction/interaction-store.js'
+import { useRemoteDrag } from '../interaction/remote-drags.js'
 import { ObjectErrorBoundary } from './ObjectErrorBoundary.js'
 import { FallbackView } from '../views/FallbackView.js'
 import type { ObjectViewRegistry } from '../views/registry.js'
@@ -50,6 +51,12 @@ function ObjectViewInner({ id, views }: Props) {
   )
   // `Map.get` returns a stable reference while the map is unchanged, so this is
   // a safe selector despite looking like it constructs something.
+  /*
+   * Somebody else's hand on this object. Rule 4 means nothing has been written
+   * yet, so without this the object sits still and then teleports when they
+   * let go.
+   */
+  const remoteDrag = useRemoteDrag(id)
   const preview = useInteractionStore((state) =>
     state.drag.kind === 'resize' || state.drag.kind === 'rotate'
       ? state.drag.frames.get(id)
@@ -85,8 +92,18 @@ function ObjectViewInner({ id, views }: Props) {
    */
   const holdsChildren =
     runtime.registry.get(object.type)?.capabilities.canHaveChildren === true
-  const x = frame.x + (isDragging ? dragDx : 0)
-  const y = frame.y + (isDragging ? dragDy : 0)
+  /*
+   * Your own drag wins over somebody else's.
+   *
+   * Both at once means two people have hold of the same object, which the
+   * advisory lock discourages and nothing prevents. Drawing it under YOUR
+   * pointer is the honest choice: the thing you are moving must follow your
+   * hand, and the commit that follows is decided by the document rather than
+   * by what either of you was shown.
+   */
+  const offset = isDragging ? { dx: dragDx, dy: dragDy } : (remoteDrag ?? { dx: 0, dy: 0 })
+  const x = frame.x + offset.dx
+  const y = frame.y + offset.dy
 
   return (
     <div

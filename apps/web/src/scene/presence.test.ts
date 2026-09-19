@@ -1,7 +1,15 @@
 import { asObjectId } from '@openframe/core'
 import { describe, expect, it } from 'vitest'
 
-import { editorsByObject, hueVar, initialOf, readPresence, type Peer } from './presence.js'
+import {
+  dragsByObject,
+  editorsByObject,
+  hueVar,
+  initialOf,
+  readPresence,
+  type DragDelta,
+  type Peer,
+} from './presence.js'
 
 /**
  * Presence arrives from somebody else's browser, so these are boundary tests
@@ -16,6 +24,7 @@ describe('reading a peer state', () => {
         cursor: { x: 12, y: -40 },
         selection: ['obj_a', 'obj_b'],
         editing: 'obj_a',
+        drag: { dx: 40, dy: -12 },
       }),
     ).toEqual({
       name: 'Otter',
@@ -23,6 +32,7 @@ describe('reading a peer state', () => {
       cursor: { x: 12, y: -40 },
       selection: [asObjectId('obj_a'), asObjectId('obj_b')],
       editing: asObjectId('obj_a'),
+      drag: { dx: 40, dy: -12 },
     })
   })
 
@@ -78,6 +88,7 @@ describe('who is editing what', () => {
     name: `p${String(clientId)}`,
     hue: 0,
     cursor: null,
+    drag: null,
     selection: [],
     editing: editing === null ? null : asObjectId(editing),
   })
@@ -111,5 +122,67 @@ describe('presenting a peer', () => {
     expect(initialOf('Otter')).toBe('O')
     expect(initialOf('  badger')).toBe('B')
     expect(initialOf('')).toBe('?')
+  })
+})
+
+describe('a drag in flight', () => {
+  const peer = (clientId: number, selection: string[], drag: DragDelta | null): Peer => ({
+    clientId,
+    name: `p${String(clientId)}`,
+    hue: 0,
+    cursor: null,
+    selection: selection.map(asObjectId),
+    editing: null,
+    drag,
+  })
+
+  it('is absent unless it is two real numbers', () => {
+    expect(readPresence({ drag: { dx: 1, dy: 2 } })?.drag).toEqual({ dx: 1, dy: 2 })
+    expect(readPresence({})?.drag).toBeNull()
+    expect(readPresence({ drag: null })?.drag).toBeNull()
+    expect(readPresence({ drag: { dx: 1 } })?.drag).toBeNull()
+    expect(readPresence({ drag: { dx: '3', dy: 2 } })?.drag).toBeNull()
+    /*
+     * The one that matters: a transform built from NaN is silently dropped by
+     * the browser, and on some engines it takes the whole layer's rendering
+     * with it — every object gone, not just the one being moved.
+     */
+    expect(readPresence({ drag: { dx: Number.NaN, dy: 0 } })?.drag).toBeNull()
+    expect(readPresence({ drag: { dx: 0, dy: Number.POSITIVE_INFINITY } })?.drag).toBeNull()
+  })
+
+  it('moves everything in the selection of whoever is dragging', () => {
+    const drags = dragsByObject([peer(1, ['obj_a', 'obj_b'], { dx: 10, dy: 5 })])
+
+    expect(drags.get(asObjectId('obj_a'))).toEqual({ dx: 10, dy: 5 })
+    expect(drags.get(asObjectId('obj_b'))).toEqual({ dx: 10, dy: 5 })
+  })
+
+  it('leaves alone the selection of somebody who is not dragging', () => {
+    const drags = dragsByObject([peer(1, ['obj_a'], null)])
+
+    expect(drags.size).toBe(0)
+  })
+
+  /**
+   * Two people on one object is what the advisory lock discourages and nothing
+   * prevents. Every client works this out independently from the same
+   * awareness state, so they must all agree — hence lowest id, exactly as
+   * `editorsByObject` breaks the same tie.
+   */
+  it('gives an object held by two people to the lower client id', () => {
+    const drags = dragsByObject([
+      peer(7, ['obj_a'], { dx: 70, dy: 0 }),
+      peer(2, ['obj_a'], { dx: 20, dy: 0 }),
+    ])
+
+    expect(drags.get(asObjectId('obj_a'))).toEqual({ dx: 20, dy: 0 })
+  })
+
+  it('does not depend on the order the peers arrive in', () => {
+    const low = peer(2, ['obj_a'], { dx: 20, dy: 0 })
+    const high = peer(7, ['obj_a'], { dx: 70, dy: 0 })
+
+    expect(dragsByObject([low, high])).toEqual(dragsByObject([high, low]))
   })
 })

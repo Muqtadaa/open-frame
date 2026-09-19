@@ -6,7 +6,7 @@ import { usePeers } from '../hooks/use-peers.js'
 import { useBoardDocument } from '../hooks/use-document-object.js'
 import { useInteractionStore } from '../interaction/interaction-store.js'
 import { useOpenFrame } from '../runtime/context.js'
-import { hueVar, type Peer } from '../scene/presence.js'
+import { hueVar, type DragDelta, type Peer } from '../scene/presence.js'
 
 /**
  * Other people: where they are pointing, what they have hold of.
@@ -19,6 +19,11 @@ import { hueVar, type Peer } from '../scene/presence.js'
  * Nothing here is interactive. `pointer-events: none` throughout, because a
  * cursor belonging to somebody else must never be a thing you can click.
  */
+/** The same rect, moved. Never mutated: these come straight off the registry. */
+function shifted(rect: Rect, by: DragDelta): Rect {
+  return { ...rect, x: rect.x + by.dx, y: rect.y + by.dy }
+}
+
 export function PresenceLayer() {
   const peers = usePeers()
   if (peers.length === 0) return null
@@ -41,7 +46,17 @@ function PresentPeers({ peers }: { readonly peers: readonly Peer[] }) {
       for (const id of peer.selection) {
         const object = document.objects.get(id)
         if (object === undefined) continue
-        const rect = runtime.registry.boundsOf(object, document)
+        /*
+         * Offset by the same delta the object itself is drawn with, when its
+         * owner is mid-drag. The bounds come from the DOCUMENT, which rule 4
+         * says has not moved yet — so an outline left where the document has
+         * it would sit still while the note slides out from under it.
+         */
+        const held = peer.drag
+        const rect =
+          held === null
+            ? runtime.registry.boundsOf(object, document)
+            : shifted(runtime.registry.boundsOf(object, document), held)
         drawn.push({
           key: `${String(peer.clientId)}:${id}`,
           rect,
