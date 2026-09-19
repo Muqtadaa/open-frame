@@ -2,7 +2,7 @@ import { CommandDispatcher } from './commands/dispatcher.js'
 import { createEmptyDocument } from './domain/document.js'
 import { asBoardId } from './domain/ids.js'
 import type { ObjectTypeRegistry } from './domain/registry.js'
-import { allowAllCapabilities } from './ports/capabilities.js'
+import { allowAllCapabilities, type Capabilities } from './ports/capabilities.js'
 import { fixedClock } from './ports/clock.js'
 import { createSequentialIdGenerator, type IdGenerator } from './ports/id-generator.js'
 import {
@@ -35,6 +35,11 @@ export function createTestHarness(
      * being tested is a collision that could never happen in production.
      */
     readonly ids?: IdGenerator
+    /**
+     * Only for a test about authorization. Everything else wants `allowAll`,
+     * which is what single-player local development actually has.
+     */
+    readonly capabilities?: Capabilities
   } = {},
 ): TestHarness {
   const registry = options.registry ?? createDefaultRegistry()
@@ -47,7 +52,7 @@ export function createTestHarness(
     registry,
     clock: fixedClock(1_700_000_000_000),
     ids: options.ids ?? createSequentialIdGenerator(),
-    capabilities: allowAllCapabilities,
+    capabilities: options.capabilities ?? allowAllCapabilities,
   })
   return { store, writer, registry, dispatcher }
 }

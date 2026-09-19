@@ -2,7 +2,7 @@ import type { ObjectId, TransactionId, UserId } from '../domain/ids.js'
 import type { AnyOpenFrameObject, Origin } from '../domain/object.js'
 import { affectedIds, invertPatches, type Patch } from '../domain/patch.js'
 import type { ObjectTypeRegistry } from '../domain/registry.js'
-import type { Capabilities } from '../ports/capabilities.js'
+import type { BoardAction, Capabilities } from '../ports/capabilities.js'
 import type { Clock } from '../ports/clock.js'
 import type { IdGenerator } from '../ports/id-generator.js'
 import type { DocumentStore, DocumentWriter } from '../store/document-store.js'
@@ -119,10 +119,34 @@ export class CommandDispatcher {
     const actor = options.actor ?? this.#deps.defaultActor ?? null
     const before = this.#deps.store.getDocument()
 
-    if (!this.#deps.capabilities.can('edit', before.id)) {
+    /*
+     * Originating a change requires `edit`. APPLYING one that arrived from the
+     * room requires `view`, because those are different acts by different
+     * actors and the capability that governs them is not the same.
+     *
+     * Asking `edit` of a merge asks the wrong actor about the wrong thing: the
+     * change was authorized by whoever made it and accepted by the room, and
+     * the only question left for this client is whether it is allowed to SEE
+     * the board. Getting that wrong made a read-only participant stop applying
+     * merged changes — they sat watching a frozen board, which reads as a
+     * broken app rather than as a permission. A viewer must watch; that is the
+     * entire point of being one.
+     *
+     * Note what this is not: a bypass. Every path still passes a capability
+     * check, and somebody with no access to the board at all still cannot have
+     * changes merged into it. `readOnlyCapabilities` grants `view`; a denied
+     * board grants neither.
+     */
+    const required: BoardAction = origin === 'remote' ? 'view' : 'edit'
+    if (!this.#deps.capabilities.can(required, before.id)) {
       return {
         ok: false,
-        error: new CommandError('unauthorized', 'You do not have permission to edit this board'),
+        error: new CommandError(
+          'unauthorized',
+          required === 'view'
+            ? 'You do not have permission to view this board'
+            : 'You do not have permission to edit this board',
+        ),
       }
     }
 
