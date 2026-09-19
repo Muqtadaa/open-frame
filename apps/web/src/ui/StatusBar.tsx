@@ -8,6 +8,7 @@ import { BENCH_TOOLS_ENABLED } from '../app/bench-flag.js'
 import { SOURCE_URL } from '../app/source-link.js'
 import { applyTheme, readTheme, type Theme } from '../app/theme.js'
 import { DevPanel } from './DevPanel.js'
+import { ShareControl } from './ShareControl.js'
 import { AfterHoursIcon, RedoIcon, UndoIcon } from './icons.js'
 
 const isMac = typeof navigator !== 'undefined' && /Mac|iPhone|iPad/.test(navigator.platform)
@@ -86,6 +87,13 @@ export function StatusBar() {
       >
         Source
       </a>
+
+      {/*
+       * Who else is here, and the way to invite them. Next to the source offer
+       * because it is the same kind of thing: not a record of the page, but
+       * something about the page you are reading.
+       */}
+      <ShareControl />
 
       {/*
        * App-level apparatus sits at this end of the line, after the rule — the

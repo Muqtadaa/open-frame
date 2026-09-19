@@ -74,7 +74,28 @@ module.exports = {
         'An import that cannot be resolved is either a typo or a package a workspace has not declared. ' +
         'Under pnpm the latter is how a boundary violation first shows up.',
       from: {},
-      to: { couldNotResolve: true },
+      to: {
+        couldNotResolve: true,
+        /*
+         * `cloudflare:workers` is supplied by the Workers runtime, the way
+         * `node:fs` is supplied by Node — there is no package to install and
+         * nothing on disk to resolve to. It is exempted here and then confined
+         * by `cloudflare-lives-only-in-rooms` below, so the exemption cannot
+         * quietly become a way for the runtime to leak somewhere else.
+         */
+        pathNot: '^cloudflare:',
+      },
+    },
+    {
+      name: 'cloudflare-lives-only-in-rooms',
+      severity: 'error',
+      comment:
+        'The Durable Object runtime exists in exactly one app. ADR 0013 is reversible — Hocuspocus is a ' +
+        'week away rather than a rewrite — only because everything that DECIDES anything lives in ' +
+        '@openframe/collab, which has never heard of Cloudflare. A `cloudflare:` import outside ' +
+        'apps/rooms is that guarantee being given up.',
+      from: { pathNot: '^apps/rooms' },
+      to: { path: '^cloudflare:' },
     },
     {
       name: 'core-does-not-depend-on-apps',
@@ -175,6 +196,10 @@ module.exports = {
         pathNot: [
           '\\.d\\.ts$',
           '(^|/)(eslint|vite|vitest|playwright)\\.config\\.(js|ts)$',
+          // Listed rather than folded into the pattern above: a regex with a
+          // nested optional group there is flagged as catastrophic, and
+          // dependency-cruiser refuses to run at all rather than risk it.
+          '(^|/)playwright\\.rooms\\.config\\.ts$',
           '^apps/web/src/(main\\.tsx|test-setup\\.ts)$',
           '^packages/core/src/testing\\.ts$',
           '^tools/',
@@ -188,7 +213,7 @@ module.exports = {
     doNotFollow: { path: 'node_modules' },
     tsConfig: { fileName: 'tsconfig.base.json' },
     tsPreCompilationDeps: true,
-    exclude: { path: '(\\.test\\.tsx?$|^apps/web/e2e/|/dist/|/coverage/)' },
+    exclude: { path: '(\\.test\\.tsx?$|^apps/web/e2e(-rooms)?/|/dist/|/coverage/)' },
     enhancedResolveOptions: {
       exportsFields: ['exports'],
       conditionNames: ['import', 'require', 'types'],

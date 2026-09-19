@@ -1,0 +1,14 @@
+{
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": {
+    "rootDir": "src",
+    /*
+     * The Workers runtime, not Node and not the DOM. `WebSocket`, `Response`
+     * and `DurableObject` here are Cloudflare's, and typing them as Node's or
+     * the browser's is how a Worker compiles locally and fails on deploy.
+     */
+    "types": ["@cloudflare/workers-types"],
+    "lib": ["ES2023"]
+  },
+  "include": ["src/**/*.ts"]
+}

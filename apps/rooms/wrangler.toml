@@ -1,0 +1,26 @@
+name = "openframe-rooms"
+main = "src/index.ts"
+# Pinned, not "latest". The runtime's behaviour is versioned by this date, so a
+# deploy six months from now runs the runtime this code was written against.
+compatibility_date = "2026-09-18"
+
+# The Worker's name is its DNS label: <name>.<your-subdomain>.workers.dev.
+workers_dev = true
+
+[observability]
+enabled = true
+
+[[durable_objects.bindings]]
+name = "ROOMS"
+class_name = "BoardRoomObject"
+
+# The declarative form, which replaced the imperative `migrations` array in
+# July 2026. The two are mutually exclusive, and `migrations` is now legacy.
+#
+# `storage = "sqlite"` is not a preference: new key-value backed namespaces can
+# no longer be created at all, and the Workers Free plan has only ever supported
+# the SQLite backend. It is also what makes this free — SQLite storage is not
+# billed on Free.
+[exports.BoardRoomObject]
+type = "durable-object"
+storage = "sqlite"

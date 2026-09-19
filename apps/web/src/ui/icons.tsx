@@ -266,6 +266,17 @@ export function AfterHoursIcon({ className }: IconProps) {
   )
 }
 
+/** Two figures: the room, and the fact that somebody else is in it. */
+export function PeopleIcon({ className }: IconProps) {
+  return (
+    <svg {...base} className={className}>
+      <circle cx="9" cy="8" r="3.2" />
+      <path d="M3.5 19.5a5.5 5.5 0 0111 0" />
+      <path d="M16 5.6a3.2 3.2 0 010 4.8M18.2 19.5a5.6 5.6 0 00-2.4-4.6" />
+    </svg>
+  )
+}
+
 export function GridIcon({ className }: IconProps) {
   return (
     <svg {...base} className={className}>

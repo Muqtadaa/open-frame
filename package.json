@@ -25,7 +25,8 @@
     "bench:smoke": "tsx tools/bench/generate-board.ts 60",
     "bench:cull": "tsx tools/bench/cull-cost.ts",
     "test:bench": "pnpm --filter @openframe/web test:bench",
-    "build:bench": "pnpm bench:fixtures && pnpm --filter @openframe/web build:bench"
+    "build:bench": "pnpm bench:fixtures && pnpm --filter @openframe/web build:bench",
+    "test:rooms": "pnpm --filter @openframe/web test:rooms"
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",

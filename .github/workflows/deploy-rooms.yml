@@ -1,0 +1,64 @@
+name: Deploy rooms
+
+# The room server, deployed when it changes and never otherwise.
+#
+# Path-filtered on purpose: the board room is not the web app, and a change to a
+# stylesheet has no business restarting rooms that people are editing in. It is
+# also deployed only from `main`, so a branch cannot replace production by
+# pushing to itself.
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'apps/rooms/**'
+      - 'packages/collab/**'
+      - 'packages/core/**'
+      - 'pnpm-lock.yaml'
+      - '.github/workflows/deploy-rooms.yml'
+  # So the first deploy — and any re-deploy after a token change — can be run
+  # from the Actions tab without an empty commit.
+  workflow_dispatch:
+
+concurrency:
+  group: deploy-rooms
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    name: Build, test and deploy the Durable Object
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - run: pnpm install --frozen-lockfile
+
+      # A Durable Object migration is atomic and cannot be gradually rolled out,
+      # so a broken deploy is not a percentage of traffic — it is the room. The
+      # protocol and the room logic are tested here before anything is uploaded.
+      - name: Test the room
+        run: pnpm --filter @openframe/collab test
+
+      - name: Typecheck the Worker
+        run: pnpm --filter @openframe/rooms typecheck
+
+      # Builds and validates the bundle and its bindings without uploading, so a
+      # configuration mistake fails before it can touch a live room.
+      - name: Dry run
+        run: pnpm --filter @openframe/rooms exec wrangler deploy --dry-run
+
+      - name: Deploy
+        uses: cloudflare/wrangler-action@v3
+        with:
+          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          workingDirectory: apps/rooms
+          # Only needed when the token can see more than one account, in which
+          # case wrangler cannot guess. Add CLOUDFLARE_ACCOUNT_ID as a
+          # repository variable and this picks it up.
+          accountId: ${{ vars.CLOUDFLARE_ACCOUNT_ID }}
