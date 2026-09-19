@@ -91,6 +91,10 @@ export function usePresence(containerRef: RefObject<HTMLDivElement | null>): voi
           state.drag.kind === 'translate'
             ? { dx: state.drag.dx, dy: state.drag.dy }
             : null,
+        // Where this person is looking, for anybody following them — and who
+        // they are following, so that nobody follows a follower.
+        viewport: state.viewport,
+        following: state.following,
       })
     }
 
@@ -140,6 +144,22 @@ export function usePresence(containerRef: RefObject<HTMLDivElement | null>): voi
        * twice — once to the committed position, once back.
        */
       if (state.drag.kind !== previous.drag.kind) publish()
+
+      /*
+       * Taking up or dropping a follow goes out at once, because it decides
+       * whether anybody may follow THIS client. Left on the cursor's schedule
+       * there is a 50ms window in which two people can each take the other as
+       * a target, which is the loop the flag exists to prevent.
+       */
+      if (state.following !== previous.following) publish()
+
+      /*
+       * The viewport is throttled instead. A pan is a stream of changes and
+       * every one of them is a message to every other client; a follower
+       * twenty frames a second is smooth to watch, and a follower at the
+       * refresh rate is the socket carrying a pan sixty times over.
+       */
+      if (state.viewport !== previous.viewport) schedule()
     })
 
     publish()

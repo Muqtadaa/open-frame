@@ -219,10 +219,26 @@ the one whose keys the room has to verify.
 
 ### Folded in, by request
 
-- **Follow-mode.** Viewport into presence, and clicking a face follows that
-  person around the board. The channel already carries everything but the
-  viewport. The trap is feedback: following someone who is following you is a
-  loop, so a follower publishes that it is following and nobody follows a
+- ~~**Follow-mode.**~~ Done. The viewport joins presence and clicking a face
+  rides it. The board moves with no writes, like the cursor and the drag
+  offset.
+
+  THE LOOP GUARD IS ONE RULE: a follower is never a valid target. That stops A
+  following B while B follows A — a viewport that feeds itself, each copying
+  the other and neither driving — and it stops every longer chain for free,
+  because the second link can never be made. The flag is published
+  immediately rather than on the 50ms cursor schedule, which would leave a
+  window in which two people each take the other.
+
+  Two ways out. Moving the board yourself stops following, or the person you
+  are following fights your scroll wheel; and they leaving, or following
+  somebody themselves, stops it too. Telling "they moved so I moved" from "I
+  moved" needs the hook to remember the viewport it last applied — without
+  that, following ends on its own first frame, because applying their viewport
+  is a local change like any other.
+
+  The zoom of a peer on a build with a wider range is CLAMPED rather than
+  refused: they are still somewhere definite, and refusing would strand their
   follower.
 - ~~**Live drag deltas.**~~ Done. The in-flight offset travels as presence, so
   another person's note slides under their cursor instead of teleporting on

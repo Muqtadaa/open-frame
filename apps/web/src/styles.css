@@ -689,6 +689,30 @@ body {
  * it: the document on screen cannot be saved anywhere, so letting the user go
  * on working into it would be the interface lying. The one control leaves.
  */
+/*
+ * A face you can press, for following somebody around the board.
+ *
+ * The chip already carried a colour and an initial; this only makes the ones
+ * that DO something look pressable, so a row of faces still reads as a row of
+ * faces rather than a toolbar.
+ */
+.of-status__person--follow {
+  padding: 0;
+  font: inherit;
+  cursor: pointer;
+  border: 1px solid transparent;
+}
+
+.of-status__person--follow:hover {
+  border-color: var(--of-ink);
+}
+
+/* Being followed: a ring, so it is legible without relying on the hue. */
+.of-status__person--following {
+  border-color: var(--of-ink);
+  box-shadow: 0 0 0 2px var(--of-page);
+}
+
 .of-gone {
   position: fixed;
   inset: 0;

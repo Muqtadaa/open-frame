@@ -12,6 +12,7 @@ import { MarqueeOverlay } from './MarqueeOverlay.js'
 import { ObjectLayer } from './ObjectLayer.js'
 import { PresenceLayer } from './PresenceLayer.js'
 import { usePresence } from './use-presence.js'
+import { useFollow } from './use-follow.js'
 import { SelectionOverlay } from './SelectionOverlay.js'
 import { useCanvasGestures } from './use-canvas-gestures.js'
 import { useImageDrop } from './use-image-drop.js'
@@ -58,6 +59,8 @@ export function Canvas() {
   // Publishes this person's cursor and claims, and keeps the advisory lock in
   // step with everybody else's. A no-op on a board that is nobody else's.
   usePresence(containerRef)
+  // Rides another person's viewport, when this one has chosen to.
+  useFollow()
 
   useEffect(() => {
     setCanvasSize(width, height)

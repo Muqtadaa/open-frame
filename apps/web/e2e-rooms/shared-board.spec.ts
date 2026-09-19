@@ -607,3 +607,62 @@ test('a note slides while somebody drags it, without the document moving', async
   await alice.mouse.up()
   await expect.poll(() => committedX(bob), { timeout: 15_000 }).toBeGreaterThan(before)
 })
+
+/**
+ * Following somebody around the board.
+ *
+ * Everything needed was already on the presence channel except the viewport.
+ * Clicking a face rides theirs, and the board underneath moves without a
+ * single write — this is presence, like the cursor and the drag offset.
+ */
+test.describe('follow-mode', () => {
+  test('rides the viewport of whoever you follow', async ({ browser }) => {
+    const room = newRoomId()
+    const alice = await join(browser, room)
+    const bob = await join(browser, room)
+
+    await addNote(alice, 'a landmark', 'blue', 400)
+    await expect.poll(() => colours(bob)).toEqual(['blue'])
+
+    const note = (page: Page): Locator => page.locator('[data-object-id]').first()
+    const drawnX = async (page: Page): Promise<number> => (await note(page).boundingBox())?.x ?? -1
+
+    const bobStart = await drawnX(bob)
+
+    // Bob takes alice's seat. Her face is the only one he can press.
+    await bob.locator('[data-testid="room-people"] button').first().click()
+
+    // Alice zooms in. Bob's board should follow, though he touched nothing.
+    await alice.locator('[data-testid="zoom-in"]').click()
+    await alice.locator('[data-testid="zoom-in"]').click()
+
+    await expect.poll(() => drawnX(bob), { timeout: 15_000 }).not.toBe(bobStart)
+  })
+
+  /**
+   * THE LOOP GUARD, which is the whole reason `following` is published.
+   *
+   * A following B while B follows A is a viewport that feeds itself: each
+   * copies the other and neither is driving. A follower is therefore never a
+   * valid target — which also stops every longer chain, because the second
+   * link can never be made.
+   */
+  test('will not let you follow somebody who is already following', async ({ browser }) => {
+    const room = newRoomId()
+    const alice = await join(browser, room)
+    const bob = await join(browser, room)
+
+    const faces = (page: Page): Locator => page.locator('[data-testid="room-people"] button')
+
+    // Both can see one followable face — each other's.
+    await expect(faces(alice)).toHaveCount(1)
+    await expect(faces(bob)).toHaveCount(1)
+
+    await bob.locator('[data-testid="room-people"] button').first().click()
+
+    // Bob is now a follower, so alice is offered nobody to follow at all.
+    await expect(faces(alice)).toHaveCount(0)
+    // And bob still has alice, so he can let go again.
+    await expect(faces(bob)).toHaveCount(1)
+  })
+})

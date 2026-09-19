@@ -1,4 +1,10 @@
-import { asObjectId, type ObjectId, type Point } from '@openframe/core'
+import {
+  asObjectId,
+  clampZoom,
+  type ObjectId,
+  type Point,
+  type Viewport,
+} from '@openframe/core'
 
 /**
  * What one person's presence says, and how much of it to believe.
@@ -42,6 +48,25 @@ export interface PresenceState {
    * copy is what goes stale.
    */
   readonly drag: DragDelta | null
+  /**
+   * Where this peer is looking, for anybody following them.
+   *
+   * `null` from a client too old to send one, which is the only reason it is
+   * nullable — a viewport always exists. A follower with nothing to follow
+   * simply stays where it is rather than jumping to the origin.
+   */
+  readonly viewport: Viewport | null
+  /**
+   * The client id this peer is following, or `null` when they are looking
+   * where they chose to.
+   *
+   * PUBLISHED so that nobody follows a follower. Without it, A following B and
+   * B following A is a viewport that feeds itself: each client copies the
+   * other and neither is driving. Longer chains are the same fault wearing a
+   * bigger hat, and one flag forbids every length of them, because a follower
+   * is never a valid target.
+   */
+  readonly following: number | null
 }
 
 /** How far, in world units. Never a position — always an offset. */
@@ -83,6 +108,21 @@ function dragDelta(value: unknown): DragDelta | null {
   return { dx, dy }
 }
 
+/**
+ * A peer's viewport, or `null` for anything that is not three real numbers.
+ *
+ * The zoom is CLAMPED rather than rejected: a peer running a build with a
+ * wider range is still somewhere definite, and refusing it would strand a
+ * follower. A NaN is refused outright, for the reason `finitePoint` gives.
+ */
+function viewportOf(value: unknown): Viewport | null {
+  if (typeof value !== 'object' || value === null) return null
+  const { x, y, zoom } = value as { x?: unknown; y?: unknown; zoom?: unknown }
+  if (typeof x !== 'number' || typeof y !== 'number' || typeof zoom !== 'number') return null
+  if (!Number.isFinite(x) || !Number.isFinite(y) || !Number.isFinite(zoom)) return null
+  return { x, y, zoom: clampZoom(zoom) }
+}
+
 function objectIds(value: unknown): ObjectId[] {
   if (!Array.isArray(value)) return []
   const ids: ObjectId[] = []
@@ -104,6 +144,8 @@ export function readPresence(raw: unknown): PresenceState | null {
     selection: rawSelection,
     editing: rawEditing,
     drag: rawDrag,
+    viewport: rawViewport,
+    following: rawFollowing,
   } = raw as {
     name?: unknown
     hue?: unknown
@@ -111,6 +153,8 @@ export function readPresence(raw: unknown): PresenceState | null {
     selection?: unknown
     editing?: unknown
     drag?: unknown
+    viewport?: unknown
+    following?: unknown
   }
 
   const name = typeof rawName === 'string' ? rawName.slice(0, MAX_NAME).trim() : ''
@@ -130,7 +174,23 @@ export function readPresence(raw: unknown): PresenceState | null {
     selection: objectIds(rawSelection),
     editing,
     drag: dragDelta(rawDrag),
+    viewport: viewportOf(rawViewport),
+    // A client id is an integer Yjs assigns. Anything else is not one, and a
+    // follower chasing a target that cannot exist would never let go.
+    following:
+      typeof rawFollowing === 'number' && Number.isInteger(rawFollowing) ? rawFollowing : null,
   }
+}
+
+/**
+ * Whether this peer may be followed.
+ *
+ * A follower is never a valid target. That single rule is what stops two
+ * people following each other into a viewport that feeds itself, and it stops
+ * every longer chain for free — the second link can never be made.
+ */
+export function canFollow(peer: Peer): boolean {
+  return peer.following === null && peer.viewport !== null
 }
 
 /**

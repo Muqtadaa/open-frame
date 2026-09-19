@@ -1,7 +1,8 @@
-import { asObjectId } from '@openframe/core'
+import { asObjectId, MAX_ZOOM, MIN_ZOOM } from '@openframe/core'
 import { describe, expect, it } from 'vitest'
 
 import {
+  canFollow,
   dragsByObject,
   editorsByObject,
   hueVar,
@@ -25,6 +26,8 @@ describe('reading a peer state', () => {
         selection: ['obj_a', 'obj_b'],
         editing: 'obj_a',
         drag: { dx: 40, dy: -12 },
+        viewport: { x: -200, y: 40, zoom: 1.5 },
+        following: 7,
       }),
     ).toEqual({
       name: 'Otter',
@@ -33,6 +36,8 @@ describe('reading a peer state', () => {
       selection: [asObjectId('obj_a'), asObjectId('obj_b')],
       editing: asObjectId('obj_a'),
       drag: { dx: 40, dy: -12 },
+      viewport: { x: -200, y: 40, zoom: 1.5 },
+      following: 7,
     })
   })
 
@@ -89,6 +94,8 @@ describe('who is editing what', () => {
     hue: 0,
     cursor: null,
     drag: null,
+    viewport: null,
+    following: null,
     selection: [],
     editing: editing === null ? null : asObjectId(editing),
   })
@@ -134,6 +141,8 @@ describe('a drag in flight', () => {
     selection: selection.map(asObjectId),
     editing: null,
     drag,
+    viewport: null,
+    following: null,
   })
 
   it('is absent unless it is two real numbers', () => {
@@ -184,5 +193,65 @@ describe('a drag in flight', () => {
     const high = peer(7, ['obj_a'], { dx: 70, dy: 0 })
 
     expect(dragsByObject([low, high])).toEqual(dragsByObject([high, low]))
+  })
+})
+
+describe('following somebody around the board', () => {
+  const peer = (over: Partial<Peer> = {}): Peer => ({
+    clientId: 1,
+    name: 'p',
+    hue: 0,
+    cursor: null,
+    selection: [],
+    editing: null,
+    drag: null,
+    viewport: { x: 0, y: 0, zoom: 1 },
+    following: null,
+    ...over,
+  })
+
+  it('reads a viewport, and refuses one that is not three real numbers', () => {
+    expect(readPresence({ viewport: { x: 1, y: 2, zoom: 2 } })?.viewport).toEqual({
+      x: 1,
+      y: 2,
+      zoom: 2,
+    })
+    expect(readPresence({})?.viewport).toBeNull()
+    expect(readPresence({ viewport: { x: 1, y: 2 } })?.viewport).toBeNull()
+    expect(readPresence({ viewport: { x: Number.NaN, y: 0, zoom: 1 } })?.viewport).toBeNull()
+  })
+
+  /**
+   * Clamped rather than refused: a peer on a build with a wider zoom range is
+   * still somewhere definite, and refusing them would strand their follower.
+   */
+  it('clamps a zoom from outside this build’s range', () => {
+    expect(readPresence({ viewport: { x: 0, y: 0, zoom: 9999 } })?.viewport?.zoom).toBe(MAX_ZOOM)
+    expect(readPresence({ viewport: { x: 0, y: 0, zoom: 0.00001 } })?.viewport?.zoom).toBe(MIN_ZOOM)
+  })
+
+  it('reads who they are following, and only an integer counts', () => {
+    expect(readPresence({ following: 12 })?.following).toBe(12)
+    expect(readPresence({})?.following).toBeNull()
+    expect(readPresence({ following: '12' })?.following).toBeNull()
+    expect(readPresence({ following: 1.5 })?.following).toBeNull()
+  })
+
+  it('can be followed when they are looking where they chose to', () => {
+    expect(canFollow(peer())).toBe(true)
+  })
+
+  /**
+   * THE LOOP GUARD. A follows B and B follows A is a viewport that feeds
+   * itself: each copies the other and neither is driving. Forbidding a
+   * follower as a target stops that, and stops every longer chain too,
+   * because the second link can never be made.
+   */
+  it('cannot be followed while following somebody else', () => {
+    expect(canFollow(peer({ following: 2 }))).toBe(false)
+  })
+
+  it('cannot be followed without a viewport to copy', () => {
+    expect(canFollow(peer({ viewport: null }))).toBe(false)
   })
 })

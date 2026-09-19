@@ -178,6 +178,14 @@ interface InteractionState {
    */
   readonly lockedByOthers: ReadonlySet<ObjectId>
   readonly viewport: Viewport
+  /**
+   * The client id whose viewport this browser is mirroring, or `null`.
+   *
+   * Transient and local, like everything else here: it says what THIS tab is
+   * doing, and it is projected onto presence so that nobody follows a
+   * follower. What arrives from other people is never read back into it.
+   */
+  readonly following: number | null
   readonly drag: DragState
   /**
    * Size of the canvas element. Transient view state, but several things
@@ -220,6 +228,7 @@ interface InteractionState {
   setEditing(id: ObjectId | null): void
   setLockedByOthers(ids: ReadonlySet<ObjectId>): void
   setViewport(viewport: Viewport): void
+  setFollowing(clientId: number | null): void
   setCanvasSize(width: number, height: number): void
   setClipboard(objects: readonly AnyOpenFrameObject[]): void
   openContextMenu(at: Point): void
@@ -260,6 +269,7 @@ export const useInteractionStore = create<InteractionState>((set) => ({
   editingId: null,
   lockedByOthers: NO_LOCKS,
   viewport: DEFAULT_VIEWPORT,
+  following: null,
   drag: { kind: 'idle' },
   canvasSize: { width: 0, height: 0 },
   clipboard: [],
@@ -332,6 +342,7 @@ export const useInteractionStore = create<InteractionState>((set) => ({
       return { lockedByOthers, editingId }
     }),
   setViewport: (viewport) => set({ viewport }),
+  setFollowing: (clientId) => set({ following: clientId }),
 
   setClipboard: (clipboard) => set({ clipboard: [...clipboard] }),
   openContextMenu: (contextMenu) => set({ contextMenu }),

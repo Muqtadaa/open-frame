@@ -6,8 +6,9 @@ import { guestIdentity } from '../app/guest.js'
 import { shareCurrentBoard, ShareFailed, type SharedBoard } from '../app/share.js'
 import { useIdentity } from '../hooks/use-identity.js'
 import { usePeers } from '../hooks/use-peers.js'
+import { useInteractionStore } from '../interaction/interaction-store.js'
 import { useOpenFrame } from '../runtime/context.js'
-import { hueVar, initialOf } from '../scene/presence.js'
+import { canFollow, hueVar, initialOf } from '../scene/presence.js'
 
 /**
  * The state of the room, and the way into one.
@@ -24,6 +25,8 @@ export function ShareControl() {
   const { runtime, collaboration } = useOpenFrame()
   const [status, setStatus] = useState(collaboration?.status ?? 'offline')
   const peers = usePeers()
+  const following = useInteractionStore((state) => state.following)
+  const setFollowing = useInteractionStore((state) => state.setFollowing)
   // With the other hooks, above every early return: a hook called
   // conditionally changes the order between renders.
   const identity = useIdentity()
@@ -109,11 +112,22 @@ export function ShareControl() {
   // leftmost is always yours is a row you can read without hunting.
   const guest = guestIdentity()
   const you = identity === null ? guest : { name: identity.displayName, hue: identity.hue }
-  const here = [{ key: 'you', name: `${you.name} (you)`, hue: you.hue }, ...peers.map((peer) => ({
-    key: String(peer.clientId),
-    name: peer.name,
-    hue: peer.hue,
-  }))]
+  const here = [
+    { key: 'you', name: `${you.name} (you)`, hue: you.hue, clientId: null, followable: false },
+    ...peers.map((peer) => ({
+      key: String(peer.clientId),
+      name: peer.name,
+      hue: peer.hue,
+      clientId: peer.clientId,
+      /*
+       * A follower is never a target. That one rule is what stops two people
+       * following each other into a viewport that feeds itself, and it stops
+       * every longer chain for free, because the second link can never be
+       * made.
+       */
+      followable: canFollow(peer),
+    })),
+  ]
 
   return (
     <span className="of-status__room">
@@ -166,18 +180,49 @@ export function ShareControl() {
        * room that appears empty.
        */}
       <span className="of-status__people" data-testid="room-people" data-count={here.length}>
-        {here.map((person) => (
-          <span
-            key={person.key}
-            className="of-status__person"
-            style={{ background: hueVar(person.hue) }}
-            title={person.name}
-            role="img"
-            aria-label={person.name}
-          >
-            {initialOf(person.name)}
-          </span>
-        ))}
+        {here.map((person) => {
+          const isFollowed = person.clientId !== null && person.clientId === following
+          if (person.clientId === null || !person.followable) {
+            /*
+             * Yourself, or somebody there is nothing to follow — a client too
+             * old to send a viewport, or one already following somebody.
+             * Rendered as the chip it always was rather than a dead button: a
+             * control that cannot do anything is worse than no control.
+             */
+            return (
+              <span
+                key={person.key}
+                className="of-status__person"
+                style={{ background: hueVar(person.hue) }}
+                title={person.name}
+                role="img"
+                aria-label={person.name}
+              >
+                {initialOf(person.name)}
+              </span>
+            )
+          }
+          const label = isFollowed ? `Stop following ${person.name}` : `Follow ${person.name}`
+          return (
+            <button
+              key={person.key}
+              type="button"
+              className={`of-status__person of-status__person--follow${
+                isFollowed ? ' of-status__person--following' : ''
+              }`}
+              style={{ background: hueVar(person.hue) }}
+              title={label}
+              aria-label={label}
+              aria-pressed={isFollowed}
+              data-testid={`follow-${person.key}`}
+              onClick={() => {
+                setFollowing(isFollowed ? null : person.clientId)
+              }}
+            >
+              {initialOf(person.name)}
+            </button>
+          )
+        })}
       </span>
     </span>
   )
