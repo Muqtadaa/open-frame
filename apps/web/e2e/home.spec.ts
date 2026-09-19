@@ -1,6 +1,7 @@
 import { expect, test } from '@playwright/test'
 
 import { BOARD_URL, HOME_URL } from './routes.js'
+import { seedLocalBoard } from './seed.js'
 
 /**
  * The front door.
@@ -22,16 +23,21 @@ test.describe('arriving with nothing', () => {
   })
 
   /**
-   * The two handles, asserted as two. A front door that only offered sign-in
-   * would repeal PRODUCT.md's fourth principle, and it would do it silently —
-   * nothing would fail, people would just have to make an account.
+   * ONE handle, since 2026-09-19. This assertion is the exact inverse of the
+   * one it replaces, and that is deliberate rather than a test bent to fit:
+   * the door used to offer "start without an account" as an equal, and
+   * creating a board now takes one. PRODUCT.md's fourth principle was
+   * rewritten in the same change.
+   *
+   * What must NOT have changed is that a link still opens a board for
+   * anybody — covered below, under "links that already exist".
    */
-  test('offers signing in and starting without an account', async ({ page }) => {
+  test('offers signing in, and no way to start a board without doing so', async ({ page }) => {
     await page.goto(HOME_URL)
 
-    await expect(page.getByTestId('home-start')).toBeVisible()
     await expect(page.getByLabel('Email')).toBeVisible()
     await expect(page.getByLabel('Password')).toBeVisible()
+    await expect(page.getByTestId('home-start')).toHaveCount(0)
   })
 
   test('says so when there are no boards yet', async ({ page }) => {
@@ -42,21 +48,18 @@ test.describe('arriving with nothing', () => {
   })
 })
 
-test.describe('starting a board', () => {
-  test('opens a canvas with no account anywhere in the way', async ({ page }) => {
-    await page.goto(HOME_URL)
-    await page.getByTestId('home-start').click()
-
-    await expect(page.locator(CANVAS)).toBeVisible({ timeout: 15_000 })
-    // The board it opened is a real, addressable one — not the old single
-    // board wearing a new URL.
-    expect(new URL(page.url()).searchParams.get('board')).toMatch(/^board_[a-z0-9]{8}$/)
-  })
-
-  test('is listed when you come back', async ({ page }) => {
-    await page.goto(HOME_URL)
-    await page.getByTestId('home-start').click()
-    await expect(page.locator(CANVAS)).toBeVisible({ timeout: 15_000 })
+/**
+ * Boards that were made before an account was needed.
+ *
+ * They are still in this browser, they still open, and they still appear in
+ * the list — which is the compatibility promise the account change had to
+ * keep. It could not be tested by pressing "Start a board", because that
+ * button now needs an account; addressing the board directly is how those
+ * boards are reached anyway.
+ */
+test.describe('boards already in this browser', () => {
+  test('opens by id and is listed when you come back', async ({ page }) => {
+    await seedLocalBoard(page, 'one')
 
     await page.goto(HOME_URL)
 
@@ -65,17 +68,10 @@ test.describe('starting a board', () => {
     await expect(boards.locator('li')).toHaveCount(1)
   })
 
-  test('starts a second board rather than reopening the first', async ({ page }) => {
-    await page.goto(HOME_URL)
-    await page.getByTestId('home-start').click()
-    await expect(page.locator(CANVAS)).toBeVisible({ timeout: 15_000 })
-    const first = new URL(page.url()).searchParams.get('board')
+  test('lists each of them separately', async ({ page }) => {
+    await seedLocalBoard(page, 'one')
+    await seedLocalBoard(page, 'two')
 
-    await page.goto(HOME_URL)
-    await page.getByTestId('home-start').click()
-    await expect(page.locator(CANVAS)).toBeVisible({ timeout: 15_000 })
-
-    expect(new URL(page.url()).searchParams.get('board')).not.toBe(first)
     await page.goto(HOME_URL)
     await expect(page.getByTestId('home-boards').locator('li')).toHaveCount(2)
   })

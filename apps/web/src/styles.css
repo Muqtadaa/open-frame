@@ -2902,6 +2902,29 @@ textarea.of-input {
   border: 1px solid var(--of-panel-border);
 }
 
+/*
+ * The strays: boards made before an account was needed, offered for moving.
+ *
+ * Set as its own section rather than as a banner over the list, because it is
+ * about boards that are NOT in the list above — a notice floating over the
+ * ledger would read as being about the rows it covers.
+ */
+.of-home__claim {
+  padding-top: var(--of-gutter);
+  border-top: 1px solid var(--of-panel-border);
+}
+
+.of-home__claim-list {
+  margin: 0 0 16px;
+  padding: 0 0 0 18px;
+  font-size: 13px;
+  color: var(--of-ink-muted);
+}
+
+.of-home__claim-list li {
+  padding: 3px 0;
+}
+
 .of-home__row-note,
 .of-home__row-problem {
   margin: 0;

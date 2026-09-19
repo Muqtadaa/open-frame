@@ -134,7 +134,8 @@ describe('listing the boards behind an account', () => {
 
   /**
    * A build with no identity service must not construct a client, and must not
-   * fail either: the board still works with no account and no network.
+   * fail either. Such a build has no account to require, so it keeps making
+   * local boards — and every board in it still opens and edits offline.
    */
   it('answers with nothing when this build has no accounts', async () => {
     client.mockReturnValue(null)

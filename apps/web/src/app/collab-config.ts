@@ -3,10 +3,16 @@ import { asBoardId, type BoardId } from '@openframe/core'
 /**
  * Whether this build can put a board in a room, and which board it is opening.
  *
- * Collaboration is OPT IN, per board, and that follows from PRODUCT.md rather
- * than from caution: "a board works in one browser with no account and no
- * network" is principle 4, and making every board a room would quietly make a
- * server the price of starting. A board is shared when somebody shares it.
+ * Every board made since 2026-09-19 is in a room from the moment it exists:
+ * that is what makes the board list one kind of row and what makes a board
+ * follow you between machines — the document lives in the room, so signing in
+ * elsewhere finds the WORK and not just the name.
+ *
+ * Principle 4 is unaffected. It says a board works offline, and it does: the
+ * CRDT and IndexedDB carry it with no connection. What needs the network is
+ * MAKING one, because until the room exists there is nowhere for it to be.
+ *
+ * Boards from before that change have no room and are opened without one.
  */
 
 /**

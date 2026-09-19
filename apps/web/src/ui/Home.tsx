@@ -4,25 +4,32 @@ import type { BoardRepository } from '@openframe/core'
 import { createLocalBoard, listAllBoards, type ListedBoard } from '../app/boards.js'
 import { ACCOUNTS_ENABLED, signOut } from '../app/identity.js'
 import { boardHref } from '../app/route.js'
+import { createOwnedBoard, ShareFailed } from '../app/share.js'
 import { useIdentity } from '../hooks/use-identity.js'
 import { hueVar, initialOf } from '../scene/presence.js'
 import { AccountForm } from './AccountForm.js'
 import { BoardRow } from './BoardRow.js'
+import { ClaimLocalBoards } from './ClaimLocalBoards.js'
 // Imported rather than referenced by path: rule 12 keeps assets out of
 // `public/`, so the bundler is what puts this in the build and fingerprints it.
 import logoMark from '../assets/logo-mark-180.png'
 
 /**
- * The front door.
+ * The front door, which now has ONE handle.
  *
- * It has two handles, and that is the whole design. PRODUCT.md's fourth
- * principle says a board works with no account and no network, so an account
- * cannot be the price of starting — but a product with no entrance also has
- * nowhere to put a board list, which is what an account is actually FOR.
+ * It had two — sign in, or start a board without an account — and that was the
+ * right shape while a board could belong to nobody. It is not any more.
+ * Creating a board takes an account, every board has an owner, and the list
+ * has one kind of row; PRODUCT.md's fourth principle now says a board works
+ * OFFLINE, which is what IndexedDB and the CRDT actually provide, rather than
+ * that it works with no account.
  *
- * So: signing in is offered first and prominently, and "start a board without
- * an account" sits beside it as an equal, not as a link in the small print.
- * Anyone who already has boards in this browser sees them before either.
+ * What has NOT changed, and is the reason the change is affordable: a link
+ * still opens a board for anybody. Guests were never the thing an account was
+ * protecting, and the room's guest support is untouched.
+ *
+ * A build with no identity service keeps the old behaviour, because a build
+ * with no accounts cannot require one — it would have no way in at all.
  */
 export function Home({ repository }: { readonly repository: BoardRepository }) {
   const identity = useIdentity()
@@ -61,14 +68,55 @@ export function Home({ repository }: { readonly repository: BoardRepository }) {
     }
   }, [repository, identity, revision])
 
+  const [startError, setStartError] = useState<string | null>(null)
+
+  /*
+   * Who may start a board, and what kind.
+   *
+   * A build with no identity service has no account to require, so it keeps
+   * making local boards — otherwise the change would leave such a deployment
+   * with no way to create anything at all.
+   */
+  const canStart = !ACCOUNTS_ENABLED || identity !== null
+
   const start = (): void => {
     setStarting(true)
-    void createLocalBoard(repository).then((boardId) => {
-      // A full navigation, because the runtime is wired to one board before
-      // React renders. See `route.ts`.
-      window.location.assign(boardHref(boardId, false))
-    })
+    setStartError(null)
+
+    const created = ACCOUNTS_ENABLED
+      ? createOwnedBoard(repository).then((board) => board.editLink)
+      : createLocalBoard(repository).then((boardId) => boardHref(boardId, false))
+
+    void created.then(
+      (href) => {
+        // A full navigation, because the runtime is wired to one board before
+        // React renders. See `route.ts`.
+        window.location.assign(href)
+      },
+      (error: unknown) => {
+        setStarting(false)
+        /*
+         * Said plainly, because this is the one thing the new model costs and
+         * pretending otherwise would be worse than the cost. Every board you
+         * already have still opens and still edits with no network; there is
+         * simply nowhere yet for a new one to live.
+         */
+        setStartError(
+          error instanceof ShareFailed
+            ? error.message
+            : 'A new board needs a connection. Everything you already have still works offline.',
+        )
+      },
+    )
   }
+
+  /*
+   * Boards that were made before an account was needed, still sitting in this
+   * browser. Offered for moving, once, and only to somebody signed in — there
+   * is nowhere to move them to otherwise.
+   */
+  const strays =
+    identity === null ? [] : (listing?.boards ?? []).filter((board) => !board.shared)
 
   return (
     <main className="of-home" data-testid="home">
@@ -122,8 +170,9 @@ export function Home({ repository }: { readonly repository: BoardRepository }) {
               <p className="of-home__note">Looking for your boards…</p>
             ) : listing.boards.length === 0 ? (
               <p className="of-home__note" data-testid="home-empty">
-                Nothing here yet. Starting a board takes no account and no network — it lives in
-                this browser until you share it.
+                {canStart
+                  ? 'Nothing here yet. Start a board and it is yours, on every machine you sign in on.'
+                  : 'Sign in to start a board. A link somebody sends you opens without one.'}
               </p>
             ) : (
               <ul className="of-home__list" data-testid="home-boards">
@@ -140,17 +189,35 @@ export function Home({ repository }: { readonly repository: BoardRepository }) {
               </ul>
             )}
 
-            <button
-              type="button"
-              className="of-home__start"
-              data-testid="home-start"
-              disabled={starting}
-              onClick={start}
-            >
-              {starting ? 'Starting…' : 'Start a board'}
-            </button>
-            <p className="of-home__small">No account needed.</p>
+            {canStart && (
+              <>
+                <button
+                  type="button"
+                  className="of-home__start"
+                  data-testid="home-start"
+                  disabled={starting}
+                  onClick={start}
+                >
+                  {starting ? 'Starting…' : 'Start a board'}
+                </button>
+                <p className="of-home__small">
+                  {ACCOUNTS_ENABLED
+                    ? 'Yours, and on every machine you sign in on.'
+                    : 'This build has no accounts, so boards stay in this browser.'}
+                </p>
+              </>
+            )}
+
+            {startError !== null && (
+              <p className="of-home__row-problem" role="alert" data-testid="home-start-error">
+                {startError}
+              </p>
+            )}
           </section>
+
+          {strays.length > 0 && (
+            <ClaimLocalBoards boards={strays} repository={repository} onChanged={refresh} />
+          )}
 
           {ACCOUNTS_ENABLED && identity === null && (
             <section className="of-home__signin" aria-labelledby="of-home-signin">
@@ -164,8 +231,8 @@ export function Home({ repository }: { readonly repository: BoardRepository }) {
                 }}
                 lead={(mode) =>
                   mode === 'in'
-                    ? 'Signing in gives you a board list that follows you between browsers.'
-                    : 'An account is for owning boards and keeping a list of them. It is never needed to open one.'
+                    ? 'Your boards follow you to any machine you sign in on.'
+                    : 'An account is what a board belongs to. A link somebody sends you still opens without one.'
                 }
               />
             </section>

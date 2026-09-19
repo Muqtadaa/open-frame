@@ -139,10 +139,12 @@ test('somebody arriving later gets the whole board', async ({ browser }) => {
 })
 
 /**
- * A board with no link in it is nobody else's. PRODUCT.md's fourth principle —
- * "a board works in one browser with no account and no network" — is repealed
- * the moment every board becomes a room, so this is the test that it has not
- * been.
+ * A board with no link in it joins no room.
+ *
+ * This used to be the guard on principle 4's no-account half, and that half is
+ * retired: a board made today IS in a room from the moment it exists. What it
+ * guards now is the boards that came BEFORE that change — they have no room,
+ * they must not acquire one by being opened, and they must still open.
  */
 test('a board opened without a link does not join a room', async ({ browser }) => {
   const context = await browser.newContext()

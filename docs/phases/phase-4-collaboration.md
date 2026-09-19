@@ -249,10 +249,14 @@ the one whose keys the room has to verify.
 
 ## Stage 4 — boards you own
 
-**Chosen 2026-09-19, ahead of follow-mode and live drag deltas.** Presence
-polish on a surface people cannot navigate away from is the wrong order: the
-dashboard is currently a dead end, and the board list cannot do the three
-things a list of boards exists to do.
+**Chosen 2026-09-19, ahead of follow-mode and live drag deltas. BUILT the same
+day.** Presence polish on a surface people cannot navigate away from is the
+wrong order: the dashboard was a dead end, and the board list could not do the
+three things a list of boards exists to do.
+
+All seven steps below shipped. What the plan did not anticipate is recorded
+with them: a data-loss window under step 1, and a production bug under step 2
+that no existing test could have caught.
 
 ### The model changes, and PRODUCT.md changes with it
 
@@ -266,9 +270,18 @@ network" becomes **"a board works offline"**: IndexedDB and the CRDT already
 provide that, and a signed-in person with no network keeps working exactly as
 they do today. What is retired is *no account*, not *no network*.
 
-PRODUCT.md is NOT edited yet, on purpose. The principle changes in the commit
-that makes it true, because a document describing a product that does not exist
-is worse than one describing an old one.
+PRODUCT.md was edited in the commit that made it true, not before — a document
+describing a product that does not exist is worse than one describing an old
+one. Principle 4 now reads "a board works offline", and the note under it says
+what was retired and why.
+
+**A new board is a server board from the moment it exists.** Taken by the owner
+on 2026-09-19, over two alternatives: staying local until shared (cheapest, but
+keeps the two-row distinction) and a row-now-room-on-share hybrid (which would
+list a board on your phone that opens empty). Only this one makes "follows you
+between machines" true of the WORK rather than of the name. The cost is stated
+in the interface rather than hidden: making a new board needs the network,
+while every board you already have still opens and edits without one.
 
 The owner took this on 2026-09-19, with the tension stated: principles 4 and 5
 were recorded as live rather than resolved, and this resolves them in 5's
@@ -278,60 +291,85 @@ favour.
 
 Each step is shippable, and the order is by how broken the thing is.
 
-1. **A way back.** There is no link from a board to the dashboard — none, in
-   any component. You enter a board and the only exit is editing the URL. The
-   board's name in the record line is the natural place for it.
+1. **A way back.** DONE. An `All boards` exit at the head of the record line,
+   as a real anchor so cmd-click still works.
 
-2. **Sharing MOVES a board.** It copies today, leaving a stale duplicate that
-   diverges silently — `share.ts` argues for that ("sharing should never be the
-   act that takes your own board away from you") and the argument stops holding
-   the moment every board has an owner and one row. The local original is
-   removed once the shared one is written.
+   **It uncovered a data-loss window that was already there.** Autosave
+   coalesces commands into one write 500ms later, and nothing ever closed that
+   window: `dispose` CLEARED the pending timer rather than running it, and no
+   unload handler existed. Hitting it used to mean closing the tab within half
+   a second of typing; a one-click exit makes it ordinary. The runtime gained
+   `flush()`, which the exit awaits, plus a best-effort `pagehide` flush for
+   reload and tab-close. Breaking it per rule 23 produced an EMPTY board list,
+   not a stale one — the board's first write had not landed either.
 
-3. **Membership, so "shared with me" is real.** `board_members` has had RLS
-   policies since the identity migration and **nothing has ever inserted a
-   row**. Opening somebody's link makes you a guest in the ROOM, not a member
-   of the BOARD, so a board shared with you never reaches your list. Opening a
-   link while signed in should offer to add it.
+2. **Sharing MOVES a board.** DONE. Written into the room first, original
+   removed second, autosave detached before the delete — it writes the whole
+   document under the runtime's own id, so one keystroke would have put the
+   original straight back.
 
-4. **Manage boards from the list.** Rename in place, and delete. `deleteBoard`
-   has been on the repository port and in both adapters since Phase 1 with
-   **nothing calling it** — rule 21's failure mode, shipped. Only the owner may
-   delete; a member removes themselves, which is a different verb.
+   **And it found a production bug.** `claimUrl` handed `fetch` a `wss://` URL,
+   which browsers reject before a packet moves, so every press of Share in
+   production failed with "the room server could not be reached". One
+   configured value cannot serve both `fetch` and `WebSocket` — each rejects
+   the other's scheme. The room suite never caught it because its claim helper
+   writes the URL out by hand: a test that reconstructs what it is checking
+   cannot fail with it. The first test to press the real button found it
+   immediately.
 
-5. **Delete reaches the room.** Destroying a board destroys the Durable
-   Object's storage, so the links die with it. Needs a new authenticated Worker
-   endpoint that verifies the editor key before destroying anything — the first
-   destructive endpoint the room has, and it gets treated as one.
+3. **Membership, so "shared with me" is real.** DONE, via `join_board()`:
+   the LINK is the invitation, so redeeming it grants nothing its holder did
+   not already have. An unknown board and a wrong key answer identically. An
+   edit link upgrades a viewer; a view link never demotes an editor. Offered
+   in the record line as "Keep this board" rather than taken on arrival.
 
-6. **Pins and recency.** Pinned boards first, then YOUR last-opened order, with
-   "edited 4 minutes ago" shown as information rather than as the sort key.
-   Today the list sorts by when a board last CHANGED, so somebody else's edit
-   reorders your list. Both pins and last-opened follow a signed-in person
-   between browsers, which is the promise sign-in already makes.
+4. **Manage boards from the list.** DONE. Rename writes the DOCUMENT as well
+   as the row, because the listed title is a copy. Delete and leave are
+   separate controls and never one. Confirmation happens in the row.
 
-7. **Claiming what already exists.** On first sign-in, any board in this
-   browser is offered for upload, once, with a list of what will move. Nothing
-   is taken silently: uploading somebody's work to a server without asking is
-   not a migration, it is a surprise.
+5. **Delete reaches the room.** DONE. `POST /room/:id/destroy`, editor key in
+   the BODY rather than the URL. A legacy room refuses outright — it has no key
+   to trust, and `roleForKey` deliberately admits everyone to those. A
+   destroyed room keeps a tombstone, or "no keys" would make it a fresh room
+   every old link opens with write access. Deleting runs in the OPPOSITE order
+   to sharing: furthest thing first, so a failure leaves the board listed and
+   openable rather than orphaned.
 
-### What this breaks, and what has to be re-decided
+6. **Pins and recency.** DONE. `board_prefs` holds two facts per person per
+   board. Every guard was probed against the real database in a rolled-back
+   transaction: a stranger sees nothing and cannot pin, delete or leave; a
+   member can leave but not delete.
 
-- **The front door's two handles.** "Start a board without an account" was
-  chosen on 2026-09-19 and is retired by this. The door keeps one handle and
-  the surface brief needs rewriting rather than quietly contradicting.
+7. **Claiming what already exists.** DONE. Every stray board named in the
+   offer, moved one at a time, a failure on one not stopping the rest.
+
+### What this broke, and how it was handled
+
+- **The front door's two handles.** Retired. The surface brief was rewritten
+  rather than left to contradict the page.
 - **Guest creature-names** stay for people opening a link, and only for them.
-- **The e2e suite** asserts local-first behaviour in several places — a board
-  opened without a link joining no room, boards created with no account. Those
-  assertions change meaning and must be rewritten deliberately, not deleted to
-  get green.
-- **`listAllBoards` merges two sources.** That merge goes away, which is most
-  of the simplification this buys.
+- **The e2e suite** asserted local-first behaviour in several places. Those
+  assertions were rewritten deliberately — "offers signing in and starting
+  without an account" is now its exact inverse, with a note saying so, and the
+  specs that needed rows in the ledger seed local boards directly rather than
+  pressing a button that now needs an account. None was deleted to get green.
+- **`listAllBoards` still merges two sources**, and will until the strays are
+  gone: boards made before this change are still in people's browsers, and a
+  build with no identity service has no account to require and keeps making
+  local ones.
 
 ### Still open
 
 - Whether a board can be moved BACK to local. Probably not worth it.
-- What a member sees when an owner deletes a board they are looking at.
+- What a member sees when an owner deletes a board they are looking at. The
+  room closes their socket with 4004 and refuses reconnection with 410; the
+  interface does not yet say why.
+- **An owner cannot recover the view-only link after the moment of sharing.**
+  `my_boards()` hands back one key per role, and an owner's is the editor key.
+  Nothing is lost — the link still works for whoever has it — but it cannot be
+  re-copied from the board list.
+- Boards shared before links had roles cannot have their rooms deleted, by
+  design. The row goes; the room outlives it.
 
 ---
 

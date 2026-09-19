@@ -10,9 +10,10 @@ import { supabaseClient } from './client.js'
  * provider issued it, which is what makes the provider replaceable and what the
  * `supabase-lives-only-in-adapters` rule enforces mechanically.
  *
- * Signed out is a FIRST-CLASS state, not a failure. A board works in one
- * browser with no account and no network (PRODUCT.md, principle four), so
- * everything here is allowed to answer "nobody" and the app carries on.
+ * Signed out is a FIRST-CLASS state, not a failure. Creating a board takes an
+ * account now, but OPENING one never has: a guest holding a link edits, is
+ * seen by everybody else, and is refused nothing. So everything here is
+ * allowed to answer "nobody" and the app carries on.
  */
 
 export interface Identity {

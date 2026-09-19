@@ -1,4 +1,10 @@
-import type { BoardId } from '@openframe/core'
+import {
+  createEmptyDocument,
+  systemClock,
+  type BoardDocument,
+  type BoardId,
+  type BoardRepository,
+} from '@openframe/core'
 
 import type { OpenFrameRuntime } from '../runtime/context.js'
 import { claimUrl, newSharedBoardId, shareLink } from './collab-config.js'
@@ -73,6 +79,95 @@ async function claimRoom(boardId: BoardId): Promise<{ editor: string; viewer: st
   return keys as { editor: string; viewer: string }
 }
 
+/**
+ * Puts a document in a room and writes it down as somebody's.
+ *
+ * The one implementation behind three gestures — starting a board, sharing
+ * one, and moving a local board into an account — because they differ only in
+ * where the document came from and what happens to the original. Three copies
+ * of this would be three chances to get the order wrong, and the order is the
+ * only thing standing between a failure and a lost board.
+ */
+async function publishToRoom(
+  repository: BoardRepository,
+  document: BoardDocument,
+): Promise<{ readonly boardId: BoardId; readonly keys: { editor: string; viewer: string } }> {
+  const boardId = newSharedBoardId()
+  // Claimed BEFORE anything is written: the server only lets an empty room be
+  // claimed, which is what stops anyone holding a link claiming someone
+  // else's board. This is the only order that works, not an optimisation.
+  const keys = await claimRoom(boardId)
+
+  await repository.saveBoard({ ...document, id: boardId })
+
+  /*
+   * Recorded so it appears in the owner's list, and best effort on purpose:
+   * the board and both links already exist and work by the time this runs.
+   * A failure here costs a row in a list.
+   */
+  if ((await currentIdentity()) !== null) {
+    await recordSharedBoard({
+      boardId,
+      title: document.meta.title,
+      editorKey: keys.editor,
+      viewerKey: keys.viewer,
+    })
+  }
+
+  return { boardId, keys }
+}
+
+/**
+ * Starts a board that belongs to your account from the moment it exists.
+ *
+ * A board is a server board now. That is what makes the list one kind of row
+ * and what makes "follows you between browsers" true of the WORK rather than
+ * only of the name — the document lives in the room, so opening the board on
+ * another machine finds it there.
+ *
+ * The cost is stated rather than hidden: this needs the network. Every board
+ * you already have keeps working offline, which is what principle 4 promises;
+ * making a NEW one does not, because there is nowhere yet for it to be.
+ */
+export async function createOwnedBoard(
+  repository: BoardRepository,
+  title = 'Untitled board',
+): Promise<SharedBoard> {
+  const document = createEmptyDocument(newSharedBoardId(), title, systemClock.now())
+  const { boardId, keys } = await publishToRoom(repository, document)
+
+  const origin = window.location.origin
+  return {
+    boardId,
+    editLink: shareLink(boardId, origin, keys.editor),
+    viewLink: shareLink(boardId, origin, keys.viewer),
+  }
+}
+
+/**
+ * Moves a board that lives only in this browser into your account.
+ *
+ * Offered once, on first sign-in, never taken silently — uploading somebody's
+ * work to a server without asking is not a migration, it is a surprise. Same
+ * order as sharing: written into the room first, original removed only after.
+ */
+export async function claimLocalBoard(
+  repository: BoardRepository,
+  boardId: BoardId,
+): Promise<BoardId> {
+  const loaded = await repository.getBoard(boardId)
+  /*
+   * A board that could not be fully read is never written anywhere, and this
+   * path would write a partial copy and then delete the original it came
+   * from. It stays local, unreadable and intact.
+   */
+  if (loaded.status !== 'ok') throw new ShareFailed('This board could not be read.')
+
+  const published = await publishToRoom(repository, loaded.document)
+  await repository.deleteBoard(boardId)
+  return published.boardId
+}
+
 export async function shareCurrentBoard(runtime: OpenFrameRuntime): Promise<SharedBoard> {
   /*
    * A board we could not fully read is never written anywhere, and this is the
@@ -84,29 +179,7 @@ export async function shareCurrentBoard(runtime: OpenFrameRuntime): Promise<Shar
     throw new ShareFailed('This board could not be fully read, so it cannot be shared.')
   }
 
-  const boardId = newSharedBoardId()
-  const keys = await claimRoom(boardId)
-
-  const document = runtime.store.getDocument()
-  await runtime.repository.saveBoard({ ...document, id: boardId })
-
-  /*
-   * Recorded so it appears in the owner's list, and best effort on purpose:
-   * the board and both links already exist and work. A failure here costs a
-   * row in a list, and refusing to share over it would trade the thing that
-   * works for the thing that is convenient.
-   *
-   * A guest has nobody to own it, so there is nothing to record — which is the
-   * product decision, not a limitation: an account is for ownership.
-   */
-  if ((await currentIdentity()) !== null) {
-    await recordSharedBoard({
-      boardId,
-      title: document.meta.title,
-      editorKey: keys.editor,
-      viewerKey: keys.viewer,
-    })
-  }
+  const { boardId, keys } = await publishToRoom(runtime.repository, runtime.store.getDocument())
 
   /*
    * The move, completed — and in this order for two separate reasons.

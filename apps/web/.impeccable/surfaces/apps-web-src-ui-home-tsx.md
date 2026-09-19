@@ -15,11 +15,30 @@ MODE: Operate. The visitor completes a task — get into a board, or sign in —
 and leaves. Nothing here persuades; the canvas is the product and this is the
 shortest honest path to it.
 
-TWO HANDLES: Signing in and starting without an account are offered as equals,
-because PRODUCT.md's fourth principle says a board works with no account and no
-network, and an entry page that demanded one would repeal a principle in a
-commit about navigation. "No account needed" sits under the primary action, not
-in small print at the bottom.
+ONE HANDLE (REVISED 2026-09-19): The door had two — sign in, or start without
+an account — and the second is retired. Creating a board takes an account now;
+PRODUCT.md's fourth principle was rewritten in the same change, from "no account
+and no network" to "works offline", which is what IndexedDB and the CRDT
+actually provide. The line under the primary action says what signing in BUYS
+("yours, and on every machine you sign in on") rather than what it costs.
+
+A link still opens a board for anybody, and the page never says otherwise: the
+empty state for a signed-out visitor offers signing in and mentions that a link
+somebody sends them needs nothing.
+
+The ledger now carries VERBS. Each row has a pin in its margin, always visible
+because a pinned board must read as pinned with no cursor near it, and rename
+and remove revealed on hover OR focus — `:focus-within`, never hover alone, and
+never hidden at all on a touch screen. Removing is confirmed in the row rather
+than in a dialog: the craft floor bans a modal for anything needing neither
+protected focus nor interruption, and a confirmation beside the board it names
+is one nobody has to remember the subject of. Delete and leave are separate
+controls and never one, because a shared "remove" would eventually destroy
+somebody's work for a person tidying their own list.
+
+STRAYS: boards made before an account was needed are still in this browser. A
+signed-in person is offered the move, once, with every board named — the offer
+must say what it is about to upload rather than say "your boards" and hope.
 
 FORM: One sheet of page-stock apparatus with a hairline margin rule and the
 contact shadow, divided by a rule into the ledger and sign-in. NOT two cards:
@@ -48,5 +67,7 @@ clips the top of a column taller than the viewport instead of letting it scroll
 — the state this page reaches on a phone with the sign-in form open.
 
 FINISH: contrast measured against the real stylesheet by `design-tokens.test.ts`
-for every pair this surface introduces, both worlds. Nine end-to-end specs,
-including that a share link somebody already holds still opens its board.
+for every pair this surface introduces, both worlds. End-to-end specs including
+that a share link somebody already holds still opens its board, and that a pin
+beats recency — the fixture pins the OLDEST board, so a test that pinned the
+newest would pass with the feature deleted.

@@ -14,10 +14,10 @@ import { newLocalBoardId } from './route.js'
 /**
  * The boards this browser holds, for the surface that lists them.
  *
- * Local boards are the ones that need no account and no network — PRODUCT.md's
- * fourth principle, made visible. They are listed beside boards that came from
- * a server rather than replaced by them, because "the board I was working on"
- * does not become less real for having no owner.
+ * There is one kind of board now: yours. Local boards still appear because
+ * some were made before an account was needed and are still sitting in this
+ * browser — the front door offers to move those — and because a build with no
+ * identity service has no account to require and keeps making them.
  */
 
 /** Most recently touched first: a list of boards is a list of what you were doing. */

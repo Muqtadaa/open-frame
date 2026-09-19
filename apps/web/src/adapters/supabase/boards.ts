@@ -10,10 +10,10 @@ import { supabaseClient } from './client.js'
  * revoked at the COLUMN level, so no client can select them. `my_boards()` is
  * the only door, and it hands back the one key your role entitles you to.
  *
- * Every failure is an empty list or a `false`, never a throw. A board list is
- * an additive convenience over a product that works with no account and no
- * network — PRODUCT.md's fourth principle — so a database that cannot be
- * reached must degrade to "no remote boards", never to a broken front door.
+ * Every failure is an empty list or a `false`, never a throw. A board opens
+ * and edits offline — PRODUCT.md's fourth principle — so a database that
+ * cannot be reached must degrade to "no remote boards", never to a broken
+ * front door. What it costs is the LIST, not the boards.
  */
 
 export interface RemoteBoard {

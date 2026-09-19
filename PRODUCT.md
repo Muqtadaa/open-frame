@@ -136,15 +136,25 @@ no research conducted *with* OpenFrame. Any such claim would be invented.
    promote it later. Nothing asks them to classify before they understand.
 3. **The canvas is the product.** Chrome is borrowed space and gives it back.
    Nothing permanently claims a band of the screen.
-4. **Local-first.** A board works in one browser with no account and no network.
-   Anything a server adds is additive; it is never the price of starting.
+4. **Local-first.** A board works offline. Once you have it, no network is
+   needed to open it, read it or change it, and nothing you do is lost while
+   the connection is gone.
+   *Revised 2026-09-19.* This used to read "with no account and no network".
+   The no-network half is unchanged and is what IndexedDB and the CRDT actually
+   provide. The no-account half is retired: creating a board now takes an
+   account, because a board with no owner cannot be listed, renamed, deleted,
+   pinned or shared with anybody — it was a board you could make and then
+   gradually lose. A link still opens a board for anyone, with no account, which
+   is the part guests ever needed.
 5. **Multiplayer is identity, not a feature.** The product is for people who do
    not share vocabulary and are not online at the same time. Decisions are taken
    as if several people will touch this board, even where only one can today.
 
-Principles 4 and 5 pull against each other, deliberately and knowingly: a
-local-first board that is also genuinely collaborative constrains how state is
-modelled. This is recorded as a live tension, not a resolved one.
+Principles 4 and 5 pulled against each other for three phases, and 2026-09-19
+resolved it in 5's favour: the ownerless board was the thing making the tension
+irreducible, and it is gone. What remains is a constraint rather than a
+conflict — a board that works offline and is also genuinely collaborative
+constrains how state is modelled, which is what the CRDT is for.
 
 ## Accessibility & Inclusion
 
