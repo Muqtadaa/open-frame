@@ -118,6 +118,13 @@ const TEXT: readonly (readonly [string, string])[] = [
   ['accent', 'panel'],
   ['accent', 'accent-soft'],
   ['danger', 'panel'],
+  /*
+   * The mentions bell, which is knocked-out text on the accent itself rather
+   * than on the wash — a pair nothing measured until something set it.
+   */
+  ['panel', 'accent'],
+  /* And a row of that list under the pointer, which is ink on the hover stock. */
+  ['ink', 'hover'],
 ]
 
 /** 1.4.11 Non-text Contrast: boundaries you must perceive to operate a control. */

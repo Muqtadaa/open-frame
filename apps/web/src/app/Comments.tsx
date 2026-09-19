@@ -3,6 +3,7 @@ import { useMemo, type ReactNode } from 'react'
 import { useComments } from '../hooks/use-comments.js'
 import { useIdentity } from '../hooks/use-identity.js'
 import { CommentPanel } from '../ui/CommentPanel.js'
+import { useInteractionStore } from '../interaction/interaction-store.js'
 import { useOpenFrame } from '../runtime/context.js'
 import { CommentsContext, useDiscussion, type Discussion } from './comments-context.js'
 
@@ -18,7 +19,7 @@ export function CommentsProvider({ children }: { readonly children: ReactNode })
   const identity = useIdentity()
   const enabled = collaboration !== null && collaboration !== undefined && identity !== null
 
-  const { comments, people, refresh } = useComments(runtime.boardId, enabled)
+  const { comments, people, refresh, post, resolve } = useComments(runtime.boardId, enabled)
 
   const value = useMemo<Discussion>(() => {
     const replyCounts = new Map<string, number>()
@@ -26,15 +27,29 @@ export function CommentsProvider({ children }: { readonly children: ReactNode })
       if (comment.parentId === null) continue
       replyCounts.set(comment.parentId, (replyCounts.get(comment.parentId) ?? 0) + 1)
     }
-    return { comments, people, replyCounts, refresh, enabled }
-  }, [comments, people, refresh, enabled])
+    return { comments, people, replyCounts, refresh, post, resolve, enabled }
+  }, [comments, people, refresh, post, resolve, enabled])
 
   return <CommentsContext.Provider value={value}>{children}</CommentsContext.Provider>
 }
 
-/** The conversation itself, beside the board rather than on it. */
+/**
+ * The conversation itself, beside the board rather than on it.
+ *
+ * KEYED on what is being written into, so React remounts the panel when that
+ * changes. Clearing a half-typed draft is then something the component does by
+ * being new, rather than an effect that reaches back into its own state — the
+ * draft belongs to the thing it was being typed into.
+ */
 export function Comments() {
-  const { comments, people, refresh, enabled } = useDiscussion()
+  const { enabled } = useDiscussion()
+  const composing = useInteractionStore((state) => state.composing)
+  const openThreadId = useInteractionStore((state) => state.openThreadId)
   if (!enabled) return null
-  return <CommentPanel comments={comments} people={people} onChanged={refresh} />
+
+  const target =
+    openThreadId ??
+    (composing === null ? 'none' : `new:${String(composing.x)},${String(composing.y)}`)
+
+  return <CommentPanel key={target} />
 }

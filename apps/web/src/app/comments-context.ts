@@ -1,6 +1,6 @@
 import { createContext, useContext } from 'react'
 
-import type { BoardComment, BoardPerson } from '../adapters/supabase/comments.js'
+import type { BoardComment, BoardPerson, NewComment } from './discussion.js'
 
 /**
  * One copy of the discussion, for the two halves that show it.
@@ -19,6 +19,8 @@ export interface Discussion {
   readonly people: readonly BoardPerson[]
   readonly replyCounts: ReadonlyMap<string, number>
   readonly refresh: () => void
+  readonly post: (comment: NewComment) => Promise<boolean>
+  readonly resolve: (id: string, resolved: boolean) => Promise<boolean>
   /** False for a board that is nobody else's, or for somebody not signed in. */
   readonly enabled: boolean
 }
@@ -28,6 +30,8 @@ const NOTHING: Discussion = {
   people: [],
   replyCounts: new Map(),
   refresh: () => undefined,
+  post: () => Promise.resolve(false),
+  resolve: () => Promise.resolve(false),
   enabled: false,
 }
 

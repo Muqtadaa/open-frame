@@ -5,9 +5,19 @@ import type { BoardId } from '@openframe/core'
 import {
   boardPeople,
   listComments,
+  postComment,
+  resolveComment,
   type BoardComment,
   type BoardPerson,
-} from '../adapters/supabase/comments.js'
+  type NewComment,
+} from '../app/discussion.js'
+
+/*
+ * Re-exported so the interface never imports the adapter itself. `ui` and
+ * `canvas` must not reach persistence directly — they go through commands and
+ * hooks, and this is the hook.
+ */
+export type { BoardComment, BoardPerson, NewComment }
 
 /**
  * The discussion on a board.
@@ -23,13 +33,16 @@ import {
  * which cannot notify anybody who is away. Refreshing on focus covers the case
  * that actually bites — coming back to a board after a conversation happened.
  */
-export interface Discussion {
+export interface LoadedComments {
   readonly comments: readonly BoardComment[]
   readonly people: readonly BoardPerson[]
   readonly refresh: () => void
+  /** Writes a comment and its mentions, then re-reads. */
+  readonly post: (comment: NewComment) => Promise<boolean>
+  readonly resolve: (id: string, resolved: boolean) => Promise<boolean>
 }
 
-export function useComments(boardId: BoardId, enabled: boolean): Discussion {
+export function useComments(boardId: BoardId, enabled: boolean): LoadedComments {
   const [comments, setComments] = useState<readonly BoardComment[]>([])
   const [people, setPeople] = useState<readonly BoardPerson[]>([])
   const [revision, setRevision] = useState(0)
@@ -67,7 +80,25 @@ export function useComments(boardId: BoardId, enabled: boolean): Discussion {
     }
   }, [enabled, refresh])
 
-  return { comments, people, refresh }
+  const post = useCallback(
+    async (comment: NewComment): Promise<boolean> => {
+      const id = await postComment(comment)
+      if (id !== null) refresh()
+      return id !== null
+    },
+    [refresh],
+  )
+
+  const resolve = useCallback(
+    async (id: string, resolved: boolean): Promise<boolean> => {
+      const ok = await resolveComment(id, resolved)
+      if (ok) refresh()
+      return ok
+    },
+    [refresh],
+  )
+
+  return { comments, people, refresh, post, resolve }
 }
 
 /** Threads only — the ones with a pin — newest last, resolved ones excluded. */

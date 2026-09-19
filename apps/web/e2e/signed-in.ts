@@ -24,10 +24,20 @@ export interface StubbedBoard {
   readonly agoMs?: number
 }
 
+/** Something somebody said that named you, waiting on the front door. */
+export interface StubbedMention {
+  readonly commentId: string
+  readonly boardId: string
+  readonly boardTitle: string
+  readonly authorName: string
+  readonly body: string
+}
+
 export async function signedIn(
   page: Page,
   boards: readonly StubbedBoard[],
   displayName = 'Muqtadaa Miandara',
+  mentions: readonly StubbedMention[] = [],
 ): Promise<StubbedAccount> {
   const rows: {
     id: string
@@ -81,6 +91,7 @@ export async function signedIn(
     { user_id: '00000000-0000-4000-8000-000000000002', display_name: 'Rowan', hue: 1 },
   ]
   const mentioned: string[] = []
+  const read: string[] = []
 
   await page.route(`**/${REF}.supabase.co/**`, (route) => {
     const url = route.request().url()
@@ -150,7 +161,39 @@ export async function signedIn(
     }
 
     if (url.includes('rpc/board_people')) return json(people)
-    if (url.includes('rpc/my_mentions')) return json([])
+
+    /*
+     * `markMentionsRead` is a PATCH on the table rather than an RPC, so it
+     * would otherwise fall through to the catch-all and look identical to
+     * never having been sent. Reading a notification is the whole point of
+     * one; a test has to be able to see it happen.
+     */
+    if (url.includes('/comment_mentions')) {
+      const body = route.request().postDataJSON() as { read_at?: string } | null
+      if (route.request().method() === 'PATCH' && typeof body?.read_at === 'string') {
+        // Decoded first: PostgREST sends `in.%28a,b%29`, so a pattern written
+        // against the readable `in.(a,b)` matches nothing and the test then
+        // reports a notification that was never read as one that was.
+        const match = /comment_id=in\.\(([^)]*)\)/.exec(decodeURIComponent(url))
+        for (const id of (match?.[1] ?? '').split(',')) {
+          if (id !== '') read.push(id.replace(/^"|"$/g, ''))
+        }
+      }
+      return json({})
+    }
+
+    if (url.includes('rpc/my_mentions')) {
+      return json(
+        mentions.map((mention) => ({
+          comment_id: mention.commentId,
+          board_id: mention.boardId,
+          board_title: mention.boardTitle,
+          author_name: mention.authorName,
+          body: mention.body,
+          created_at: new Date().toISOString(),
+        })),
+      )
+    }
 
     if (url.includes('rpc/my_boards')) return json(rows)
     if (url.includes('/profiles')) return json({ display_name: displayName, hue: 3 })
@@ -186,6 +229,7 @@ export async function signedIn(
 
   return {
     mentioned,
+    read,
     people: people.map((person) => person.display_name),
   }
 }
@@ -199,5 +243,7 @@ export async function signedIn(
  */
 export interface StubbedAccount {
   readonly mentioned: readonly string[]
+  /** Mentions this browser marked read, for the same reason. */
+  readonly read: readonly string[]
   readonly people: readonly string[]
 }

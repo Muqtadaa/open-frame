@@ -1,12 +1,7 @@
 import { useEffect, useMemo, useRef, useState, type FormEvent } from 'react'
 
-import {
-  postComment,
-  resolveComment,
-  type BoardComment,
-  type BoardPerson,
-} from '../adapters/supabase/comments.js'
-import { repliesTo } from '../hooks/use-comments.js'
+import { useDiscussion } from '../app/comments-context.js'
+import { repliesTo, type BoardComment } from '../hooks/use-comments.js'
 import { useInteractionStore } from '../interaction/interaction-store.js'
 import { useOpenFrame } from '../runtime/context.js'
 import { hueVar } from '../scene/presence.js'
@@ -19,13 +14,8 @@ import { hueVar } from '../scene/presence.js'
  * read at 25%. The pin is on the board because that is WHERE the remark is
  * about; the words are in the margin because that is where words are legible.
  */
-interface Props {
-  readonly comments: readonly BoardComment[]
-  readonly people: readonly BoardPerson[]
-  readonly onChanged: () => void
-}
-
-export function CommentPanel({ comments, people, onChanged }: Props) {
+export function CommentPanel() {
+  const { comments, people, post, resolve } = useDiscussion()
   const { runtime } = useOpenFrame()
   const composing = useInteractionStore((state) => state.composing)
   const openThreadId = useInteractionStore((state) => state.openThreadId)
@@ -50,12 +40,6 @@ export function CommentPanel({ comments, people, onChanged }: Props) {
   useEffect(() => {
     if (composing !== null || thread !== null) input.current?.focus()
   }, [composing, thread])
-
-  // Whatever was half-typed belongs to the thing it was being typed into.
-  useEffect(() => {
-    setBody('')
-    setProblem(null)
-  }, [composing, openThreadId])
 
   if (composing === null && thread === null) return null
 
@@ -87,15 +71,15 @@ export function CommentPanel({ comments, people, onChanged }: Props) {
 
     const write =
       thread !== null
-        ? postComment({
+        ? post({
             boardId: runtime.boardId,
             body: text,
             parentId: thread.id,
             mentions: mentioned(text),
           })
         : composing === null
-          ? Promise.resolve(null)
-          : postComment({
+          ? Promise.resolve(false)
+          : post({
               boardId: runtime.boardId,
               body: text,
               at: { x: composing.x, y: composing.y },
@@ -103,16 +87,15 @@ export function CommentPanel({ comments, people, onChanged }: Props) {
               mentions: mentioned(text),
             })
 
-    void write.then((id) => {
+    void write.then((ok) => {
       setBusy(false)
-      if (id === null) {
+      if (!ok) {
         setProblem('That could not be saved. A board you are a member of takes comments.')
         return
       }
       setBody('')
-      onChanged()
-      // Writing a thread leaves it open to read; replying keeps you where you
-      // are. Either way the composer is done.
+      // Writing a thread is done with the composer; replying keeps you where
+      // you are, reading what you just added to.
       if (thread === null) startComment(null)
     })
   }
@@ -204,13 +187,12 @@ export function CommentPanel({ comments, people, onChanged }: Props) {
               data-testid="comment-resolve"
               onClick={() => {
                 setBusy(true)
-                void resolveComment(thread.id, thread.resolvedAt === null).then((ok) => {
+                void resolve(thread.id, thread.resolvedAt === null).then((ok) => {
                   setBusy(false)
                   if (!ok) {
                     setProblem('That could not be changed.')
                     return
                   }
-                  onChanged()
                   openThread(null)
                 })
               }}

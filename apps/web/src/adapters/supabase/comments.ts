@@ -55,37 +55,61 @@ export interface Mention {
   readonly createdAt: number
 }
 
+/** Milliseconds from a timestamp the database wrote, or `null`. */
+function when(value: unknown): number | null {
+  if (typeof value !== 'string') return null
+  const parsed = Date.parse(value)
+  return Number.isNaN(parsed) ? null : parsed
+}
+
+function finite(value: unknown): number | null {
+  return typeof value === 'number' && Number.isFinite(value) ? value : null
+}
+
 function readComment(row: unknown): BoardComment | null {
   if (typeof row !== 'object' || row === null) return null
-  const r = row as Record<string, unknown>
-  const id = r['id']
-  const body = r['body']
-  const authorId = r['author_id']
+  const {
+    id,
+    parent_id: parentId,
+    author_id: authorId,
+    author_name: authorName,
+    author_hue: authorHue,
+    body,
+    x,
+    y,
+    object_id: objectId,
+    resolved_at: resolvedAt,
+    created_at: createdAt,
+  } = row as {
+    id?: unknown
+    parent_id?: unknown
+    author_id?: unknown
+    author_name?: unknown
+    author_hue?: unknown
+    body?: unknown
+    x?: unknown
+    y?: unknown
+    object_id?: unknown
+    resolved_at?: unknown
+    created_at?: unknown
+  }
+
   if (typeof id !== 'string' || typeof body !== 'string' || typeof authorId !== 'string') {
     return null
   }
-  const at = (key: string): number | null => {
-    const value = r[key]
-    return typeof value === 'number' && Number.isFinite(value) ? value : null
-  }
-  const when = (key: string): number | null => {
-    const value = r[key]
-    if (typeof value !== 'string') return null
-    const parsed = Date.parse(value)
-    return Number.isNaN(parsed) ? null : parsed
-  }
+
   return {
     id,
-    parentId: typeof r['parent_id'] === 'string' ? r['parent_id'] : null,
+    parentId: typeof parentId === 'string' ? parentId : null,
     authorId,
-    authorName: typeof r['author_name'] === 'string' ? r['author_name'] : 'Someone',
-    authorHue: typeof r['author_hue'] === 'number' ? r['author_hue'] : 0,
+    authorName: typeof authorName === 'string' ? authorName : 'Someone',
+    authorHue: typeof authorHue === 'number' ? authorHue : 0,
     body,
-    x: at('x'),
-    y: at('y'),
-    objectId: typeof r['object_id'] === 'string' ? (r['object_id'] as ObjectId) : null,
-    resolvedAt: when('resolved_at'),
-    createdAt: when('created_at') ?? 0,
+    x: finite(x),
+    y: finite(y),
+    objectId: typeof objectId === 'string' ? (objectId as ObjectId) : null,
+    resolvedAt: when(resolvedAt),
+    createdAt: when(createdAt) ?? 0,
   }
 }
 
@@ -122,12 +146,16 @@ export async function boardPeople(boardId: BoardId): Promise<readonly BoardPerso
   const people: BoardPerson[] = []
   for (const row of response.data) {
     if (typeof row !== 'object' || row === null) continue
-    const r = row as Record<string, unknown>
-    if (typeof r['user_id'] !== 'string') continue
+    const { user_id: userId, display_name: displayName, hue } = row as {
+      user_id?: unknown
+      display_name?: unknown
+      hue?: unknown
+    }
+    if (typeof userId !== 'string') continue
     people.push({
-      userId: r['user_id'],
-      displayName: typeof r['display_name'] === 'string' ? r['display_name'] : 'Someone',
-      hue: typeof r['hue'] === 'number' ? r['hue'] : 0,
+      userId,
+      displayName: typeof displayName === 'string' ? displayName : 'Someone',
+      hue: typeof hue === 'number' ? hue : 0,
     })
   }
   return people
@@ -193,18 +221,29 @@ export async function myMentions(): Promise<readonly Mention[]> {
   const mentions: Mention[] = []
   for (const row of response.data) {
     if (typeof row !== 'object' || row === null) continue
-    const r = row as Record<string, unknown>
-    const commentId = r['comment_id']
-    const boardId = r['board_id']
+    const {
+      comment_id: commentId,
+      board_id: boardId,
+      board_title: boardTitle,
+      author_name: authorName,
+      body,
+      created_at: createdAt,
+    } = row as {
+      comment_id?: unknown
+      board_id?: unknown
+      board_title?: unknown
+      author_name?: unknown
+      body?: unknown
+      created_at?: unknown
+    }
     if (typeof commentId !== 'string' || typeof boardId !== 'string') continue
-    const created = typeof r['created_at'] === 'string' ? Date.parse(r['created_at']) : Number.NaN
     mentions.push({
       commentId,
       boardId: boardId as BoardId,
-      boardTitle: typeof r['board_title'] === 'string' ? r['board_title'] : 'A board',
-      authorName: typeof r['author_name'] === 'string' ? r['author_name'] : 'Someone',
-      body: typeof r['body'] === 'string' ? r['body'] : '',
-      createdAt: Number.isNaN(created) ? 0 : created,
+      boardTitle: typeof boardTitle === 'string' ? boardTitle : 'A board',
+      authorName: typeof authorName === 'string' ? authorName : 'Someone',
+      body: typeof body === 'string' ? body : '',
+      createdAt: when(createdAt) ?? 0,
     })
   }
   return mentions

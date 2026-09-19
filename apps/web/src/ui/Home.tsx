@@ -7,6 +7,7 @@ import { ACCOUNTS_ENABLED, signOut } from '../app/identity.js'
 import { boardHref } from '../app/route.js'
 import { createOwnedBoard, ShareFailed } from '../app/share.js'
 import { useIdentity } from '../hooks/use-identity.js'
+import { Mentions } from './Mentions.js'
 import { hueVar, initialOf } from '../scene/presence.js'
 import { AccountForm } from './AccountForm.js'
 import { BoardRow } from './BoardRow.js'
@@ -175,6 +176,9 @@ export function Home({ repository }: { readonly repository: BoardRepository }) {
                 <span className="of-home__account-name">{identity.displayName}</span>
               </button>
             )}
+
+            {/* Only worth showing to somebody who has an account to be told. */}
+            {identity !== null && <Mentions />}
           </div>
 
         </header>

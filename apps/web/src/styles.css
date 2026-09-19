@@ -713,6 +713,72 @@ body {
   box-shadow: 0 0 0 2px var(--of-page);
 }
 
+/* What somebody wanted you to see, on the front door. */
+.of-mentions {
+  position: relative;
+}
+
+.of-mentions__bell {
+  padding: 4px 10px;
+  font: inherit;
+  font-size: 12px;
+  color: var(--of-panel);
+  cursor: pointer;
+  background: var(--of-accent);
+  border: 1px solid transparent;
+  border-radius: 999px;
+}
+
+.of-mentions__list {
+  position: absolute;
+  top: calc(100% + 6px);
+  right: 0;
+  z-index: 30;
+  width: 280px;
+  max-height: 320px;
+  padding: 4px;
+  margin: 0;
+  overflow-y: auto;
+  list-style: none;
+  background: var(--of-panel);
+  border: 1px solid var(--of-panel-border);
+  border-radius: 10px;
+  box-shadow: var(--of-shadow);
+}
+
+.of-mentions__item {
+  display: grid;
+  gap: 1px;
+  padding: 8px;
+  color: inherit;
+  text-decoration: none;
+  border-radius: var(--of-radius);
+}
+
+.of-mentions__item:hover {
+  background: var(--of-hover);
+}
+
+.of-mentions__who {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--of-ink);
+}
+
+.of-mentions__where {
+  font-size: 11px;
+  color: var(--of-ink-muted);
+}
+
+.of-mentions__what {
+  font-size: 12px;
+  color: var(--of-ink);
+  /* Somebody's words, clipped to a line rather than reflowing the whole list. */
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 /*
  * COMMENTS: pins on the board, words beside it.
  *
