@@ -41,6 +41,8 @@ export interface BoardCommands {
   cutSelection(): void
   paste(at?: Point): void
   selectAll(): void
+  /** Renames the board. Returns false when the name was refused. */
+  setBoardTitle(title: string): boolean
   moveObjects(moves: readonly { id: ObjectId; dx: number; dy: number }[]): void
   /** Commits a drag that also changes frame membership, as ONE undoable action. */
   moveAndReparent(
@@ -470,6 +472,15 @@ export function useCommands(): BoardCommands {
           .filter((object) => !object.hidden && !object.locked)
           .map((object) => object.id)
         useInteractionStore.getState().setSelection(ids)
+      },
+
+      setBoardTitle(title) {
+        const result = dispatcher.dispatch({ kind: 'SetBoardTitle', title })
+        // Reported to the caller rather than only to the toast: the input has
+        // to decide whether to keep the text somebody typed or put the old
+        // name back, and it cannot learn that from a notice.
+        report(result)
+        return result.ok
       },
 
       moveObjects(moves) {

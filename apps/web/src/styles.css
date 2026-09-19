@@ -646,6 +646,21 @@ body {
   display: flex;
   gap: 10px;
   align-items: center;
+  /*
+   * The line yields rather than growing into the zoom cluster.
+   *
+   * It is bottom-left and the zoom cluster is bottom-right, so the only thing
+   * keeping them apart was that the line happened to be short enough. Adding
+   * the board's name to it left 31px of clearance in a bench build, and then
+   * took it: the dev panel's button ended up over the zoom controls, where it
+   * silently swallowed the clicks aimed at them.
+   *
+   * 400px reserves the widest the zoom cluster gets, plus its margin. The
+   * title is the part that absorbs the difference, because it is the only
+   * thing here that can be shortened without losing information the canvas
+   * does not otherwise show.
+   */
+  max-width: calc(100vw - 72px - 400px);
   padding: 4px 10px 4px 5px;
   font-family: var(--of-mono);
   font-size: 11px;
@@ -2704,4 +2719,51 @@ textarea.of-input {
   background: var(--of-page);
   border: 1px solid var(--of-panel-border);
   border-radius: 4px;
+}
+
+/* ---------- the board's name ---------- */
+
+/*
+ * A specimen label at the head of the record line, the way the record panel
+ * heads itself with the subject it is describing. Mono because it labels a
+ * record, not to look technical.
+ */
+.of-status__title {
+  /* Shrinks first, down to a stub, before anything else on the line gives. */
+  flex: 0 1 auto;
+  min-width: 4ch;
+  max-width: 22ch;
+  overflow: hidden;
+  padding: 0 4px;
+  font-family: var(--of-mono);
+  font-size: 11px;
+  letter-spacing: 0.02em;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: var(--of-ink);
+  background: none;
+  border: none;
+  border-radius: 3px;
+  cursor: text;
+}
+
+.of-status__title:hover {
+  background: var(--of-hover);
+}
+
+/* A board that could not be fully read is never written back, so it is named. */
+.of-status__title--fixed {
+  color: var(--of-ink-muted);
+  cursor: default;
+}
+
+/*
+ * The same turn-a-readout-into-an-input the zoom percentage does: an
+ * accent-soft bed under a 1px accent outline, so the line has one way of doing
+ * this rather than two.
+ */
+.of-status__title--editing {
+  width: 22ch;
+  background: var(--of-accent-soft);
+  outline: 1px solid var(--of-accent);
 }

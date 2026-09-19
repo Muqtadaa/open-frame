@@ -8,6 +8,7 @@ import { BENCH_TOOLS_ENABLED } from '../app/bench-flag.js'
 import { SOURCE_URL } from '../app/source-link.js'
 import { applyTheme, readTheme, type Theme } from '../app/theme.js'
 import { AccountControl } from './AccountControl.js'
+import { BoardTitle } from './BoardTitle.js'
 import { DevPanel } from './DevPanel.js'
 import { ShareControl } from './ShareControl.js'
 import { AfterHoursIcon, RedoIcon, UndoIcon } from './icons.js'
@@ -38,6 +39,9 @@ export function StatusBar() {
 
   return (
     <div className="of-status" data-testid="status-bar">
+      {/* The board names itself before it accounts for itself. */}
+      <BoardTitle title={document.meta.title} />
+      <span className="of-status__rule" aria-hidden="true" />
       <div className="of-status__history">
         <button
           type="button"
