@@ -262,3 +262,101 @@ test.describe('other people', () => {
     await expect(bob.locator(EDITOR)).toHaveCount(1)
   })
 })
+
+/**
+ * View-only links, through a real Worker.
+ *
+ * The room's refusal is unit-tested in `packages/collab` and the key check in
+ * `apps/rooms`. What only a browser and a real Durable Object can answer is
+ * whether the whole chain agrees: a link is claimed over HTTP, its key rides
+ * the socket URL, the role comes back as a wire message, and the interface
+ * and the dispatcher both believe it.
+ */
+test.describe('two links', () => {
+  /** Claims a room the way Share does, and returns both links' keys. */
+  async function claim(page: Page, room: string): Promise<{ editor: string; viewer: string }> {
+    return page.evaluate(async (id) => {
+      const response = await fetch(`http://127.0.0.1:8787/room/${id}/claim`, { method: 'POST' })
+      if (!response.ok) throw new Error(`claim failed: ${response.status}`)
+      return (await response.json()) as { editor: string; viewer: string }
+    }, room)
+  }
+
+  async function open(browser: Browser, room: string, key: string): Promise<Page> {
+    const context = await browser.newContext()
+    const page = await context.newPage()
+    await page.goto(`/?room=${room}&k=${key}`)
+    await page.waitForSelector('[data-testid="status-bar"]')
+    await expect(page.locator('[data-testid="room-status"]')).toHaveAttribute(
+      'data-status',
+      'connected',
+      { timeout: 20_000 },
+    )
+    return page
+  }
+
+  test('the view link watches and the edit link writes', async ({ browser }) => {
+    const room = newRoomId()
+    const opener = await browser.newContext().then((c) => c.newPage())
+    await opener.goto(BOARD_URL)
+    const keys = await claim(opener, room)
+
+    const editor = await open(browser, room, keys.editor)
+    const viewer = await open(browser, room, keys.viewer)
+
+    await expect(viewer.locator('[data-testid="viewing-only"]')).toBeVisible()
+    // The positive control: the editor was told nothing of the sort, so the
+    // badge is about the ROLE rather than about being in a room.
+    await expect(editor.locator('[data-testid="viewing-only"]')).toHaveCount(0)
+
+    await addNote(editor, 'from the editor', 'blue')
+    await expect.poll(() => colours(viewer)).toEqual(['blue'])
+  })
+
+  test('a viewer’s edit reaches nobody, not even itself', async ({ browser }) => {
+    const room = newRoomId()
+    const opener = await browser.newContext().then((c) => c.newPage())
+    await opener.goto(BOARD_URL)
+    const keys = await claim(opener, room)
+
+    const editor = await open(browser, room, keys.editor)
+    const viewer = await open(browser, room, keys.viewer)
+
+    // Straight at the dispatcher, past any disabled button — which is the only
+    // version of this test worth running, because the interface is not the
+    // thing being trusted.
+    const refused = await viewer.evaluate(() => {
+      const result = (window as unknown as DebugWindow).__openframe.runtime.dispatcher.dispatch({
+        kind: 'CreateObjects',
+        objects: [{ type: 'sticky', x: 300, y: 100, data: { text: [{ text: 'nope' }] }, style: { color: 'red' } }],
+      })
+      return result.ok
+    })
+
+    expect(refused).toBe(false)
+    await expect.poll(() => colours(editor)).toEqual([])
+  })
+
+  /**
+   * A claimed room stops answering to the board id alone. This is the whole
+   * difference between a view-only link and a suggestion.
+   */
+  test('the board id alone no longer opens a claimed board', async ({ browser }) => {
+    const room = newRoomId()
+    const opener = await browser.newContext().then((c) => c.newPage())
+    await opener.goto(BOARD_URL)
+    await claim(opener, room)
+
+    const context = await browser.newContext()
+    const page = await context.newPage()
+    await page.goto(`/?room=${room}`)
+    await page.waitForSelector('[data-testid="status-bar"]')
+
+    // Refused at the upgrade, so the provider never reaches `connected`.
+    await expect(page.locator('[data-testid="room-status"]')).not.toHaveAttribute(
+      'data-status',
+      'connected',
+      { timeout: 10_000 },
+    )
+  })
+})

@@ -4,6 +4,7 @@ import { createRoot } from 'react-dom/client'
 import { IndexedDbBoardRepository } from './adapters/indexeddb/indexeddb-board-repository.js'
 import { App } from './app/App.js'
 import { AppErrorBoundary } from './app/AppErrorBoundary.js'
+import { createBoardCapabilities } from './app/board-capabilities.js'
 import { COLLAB_ENABLED } from './app/collab-config.js'
 import { startCollaboration } from './app/collaboration.js'
 import { createRuntime } from './app/composition-root.js'
@@ -41,9 +42,16 @@ if (route.kind === 'home') {
     </StrictMode>,
   )
 } else {
+  /*
+   * Built before the socket, because the dispatcher is. The room narrows this
+   * to read-only the moment it says `viewer`, which is before it sends any of
+   * the board — see `board-capabilities.ts` for why it starts open.
+   */
+  const capabilities = createBoardCapabilities()
+
   let runtime: Awaited<ReturnType<typeof createRuntime>>
   try {
-    runtime = await createRuntime({ boardId: route.boardId })
+    runtime = await createRuntime({ boardId: route.boardId, capabilities })
   } catch (error) {
     // The splash is still up and still claiming to be opening a board. Say what
     // actually happened rather than leaving a cheerful lie on screen.
@@ -60,10 +68,20 @@ if (route.kind === 'home') {
    */
   const collaboration =
     route.shared && COLLAB_ENABLED
-      ? startCollaboration(runtime, route.boardId, (error) => {
-          console.error('A change from the room could not be applied', error)
-        })
+      ? startCollaboration(
+          runtime,
+          route.boardId,
+          (error) => {
+            console.error('A change from the room could not be applied', error)
+          },
+          route.key,
+        )
       : null
+
+  // The room is the authority on this; the browser only mirrors what it said.
+  collaboration?.onRole((role) => {
+    capabilities.narrowTo(role)
+  })
 
   // Exposed for the E2E suite to assert on persisted state without reaching into
   // React internals. Debug surface only — never a mutation path.

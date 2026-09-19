@@ -27,6 +27,25 @@ export const COLLAB_ENABLED = COLLAB_URL !== null
 export const ROOM_PARAM = 'room'
 
 /**
+ * `?k=<key>` — which of a board's two links this is.
+ *
+ * The key IS the credential. It is in the URL rather than anywhere safer
+ * because the whole point is that it can be pasted into a message: a link
+ * somebody can send is the product requirement, and a link that carries a
+ * secret is what that means. It never reaches storage and never reaches the
+ * document.
+ */
+export const KEY_PARAM = 'k'
+
+/** As minted by the room: 32 hex characters, 128 bits. */
+const ACCESS_KEY = /^[0-9a-f]{32}$/
+
+export function accessKey(search: string): string | null {
+  const raw = new URLSearchParams(search).get(KEY_PARAM)
+  return raw !== null && ACCESS_KEY.test(raw) ? raw : null
+}
+
+/**
  * The shape a shared board id must have, checked here as well as in the Worker.
  *
  * The server's check is the one that matters — this one stops a malformed link
@@ -51,11 +70,19 @@ export function newSharedBoardId(): BoardId {
   return asBoardId(`brd_${suffix}`)
 }
 
-export function shareLink(boardId: BoardId, origin: string): string {
-  return `${origin}/?${ROOM_PARAM}=${boardId}`
+export function shareLink(boardId: BoardId, origin: string, key?: string | null): string {
+  const base = `${origin}/?${ROOM_PARAM}=${boardId}`
+  return key === null || key === undefined ? base : `${base}&${KEY_PARAM}=${key}`
 }
 
-export function roomSocketUrl(boardId: BoardId): string {
+export function roomSocketUrl(boardId: BoardId, key?: string | null): string {
   if (COLLAB_URL === null) throw new Error('No room server is configured for this build')
-  return `${COLLAB_URL}/room/${boardId}`
+  const base = `${COLLAB_URL}/room/${boardId}`
+  return key === null || key === undefined ? base : `${base}?${KEY_PARAM}=${key}`
+}
+
+/** Where a board asks for its two links, once, before it holds anything. */
+export function claimUrl(boardId: BoardId): string {
+  if (COLLAB_URL === null) throw new Error('No room server is configured for this build')
+  return `${COLLAB_URL}/room/${boardId}/claim`
 }

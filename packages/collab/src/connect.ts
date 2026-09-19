@@ -2,7 +2,7 @@ import type { CommandDispatcher, CommandError, DocumentStore } from '@openframe/
 import * as Y from 'yjs'
 
 import { seedDoc } from './document-map.js'
-import { createAwareness } from './protocol.js'
+import { createAwareness, type RoomRole } from './protocol.js'
 import { RoomProvider, type ConnectionStatus, type RoomSocket } from './provider.js'
 import { CollabSession } from './session.js'
 
@@ -24,11 +24,21 @@ export interface PeerPresence {
 
 export interface BoardConnection {
   readonly status: ConnectionStatus
+  /**
+   * What the room will let this connection do.
+   *
+   * `editor` until the room says otherwise, which it does before sending any
+   * of the board. The optimistic default is safe because this value only
+   * drives what the interface OFFERS — the room enforces the truth whatever a
+   * client believes.
+   */
+  readonly role: RoomRole
   /** This client's presence. Replaces the previous state wholesale. */
   setPresence(state: Record<string, unknown> | null): void
   /** Everyone else in the room, whenever that changes. Returns an unsubscribe. */
   onPeers(listener: (peers: readonly PeerPresence[]) => void): () => void
   onStatus(listener: (status: ConnectionStatus) => void): () => void
+  onRole(listener: (role: RoomRole) => void): () => void
   destroy(): void
 }
 
@@ -62,6 +72,7 @@ export function connectBoard(options: ConnectBoardOptions): BoardConnection {
   })
 
   const statusListeners = new Set<(status: ConnectionStatus) => void>()
+  const roleListeners = new Set<(role: RoomRole) => void>()
   const peerListeners = new Set<(peers: readonly PeerPresence[]) => void>()
 
   const provider = new RoomProvider({
@@ -70,6 +81,9 @@ export function connectBoard(options: ConnectBoardOptions): BoardConnection {
     connect: options.connect,
     onStatus: (status) => {
       for (const listener of [...statusListeners]) listener(status)
+    },
+    onRole: (role) => {
+      for (const listener of [...roleListeners]) listener(role)
     },
   })
 
@@ -99,6 +113,9 @@ export function connectBoard(options: ConnectBoardOptions): BoardConnection {
     get status() {
       return provider.status
     },
+    get role() {
+      return provider.role
+    },
     setPresence(state) {
       awareness.setLocalState(state)
     },
@@ -112,10 +129,19 @@ export function connectBoard(options: ConnectBoardOptions): BoardConnection {
       listener(provider.status)
       return () => statusListeners.delete(listener)
     },
+    onRole(listener) {
+      roleListeners.add(listener)
+      // Immediately, like `onStatus`: a subscriber that mounted after the room
+      // already answered would otherwise wait forever for a message that has
+      // been and gone.
+      listener(provider.role)
+      return () => roleListeners.delete(listener)
+    },
     destroy() {
       awareness.off('change', onAwareness)
       peerListeners.clear()
       statusListeners.clear()
+      roleListeners.clear()
       provider.destroy()
       session.stop()
       awareness.destroy()

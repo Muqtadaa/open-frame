@@ -40,6 +40,8 @@ export function startCollaboration(
   runtime: OpenFrameRuntime,
   boardId: BoardId,
   onError: (error: CommandError) => void,
+  /** Which of the board's two links this browser arrived on. */
+  key: string | null = null,
 ): BoardConnection {
   /*
    * Seeded exactly once per browser per board: the first connection publishes
@@ -56,7 +58,7 @@ export function startCollaboration(
   const connection = connectBoard({
     store: runtime.store,
     dispatcher: runtime.dispatcher,
-    connect: () => browserRoomSocket(roomSocketUrl(boardId)),
+    connect: () => browserRoomSocket(roomSocketUrl(boardId, key)),
     onError,
     seed,
   })

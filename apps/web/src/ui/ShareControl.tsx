@@ -1,8 +1,8 @@
 import { useEffect, useState } from 'react'
 
-import { COLLAB_ENABLED, shareLink } from '../app/collab-config.js'
+import { accessKey, COLLAB_ENABLED, shareLink } from '../app/collab-config.js'
 import { guestIdentity } from '../app/guest.js'
-import { shareCurrentBoard } from '../app/share.js'
+import { shareCurrentBoard, ShareFailed, type SharedBoard } from '../app/share.js'
 import { useIdentity } from '../hooks/use-identity.js'
 import { usePeers } from '../hooks/use-peers.js'
 import { useOpenFrame } from '../runtime/context.js'
@@ -26,18 +26,27 @@ export function ShareControl() {
   // With the other hooks, above every early return: a hook called
   // conditionally changes the order between renders.
   const identity = useIdentity()
-  const [copied, setCopied] = useState(false)
+  const [copied, setCopied] = useState<'edit' | 'view' | null>(null)
   const [sharing, setSharing] = useState(false)
+  const [shareError, setShareError] = useState<string | null>(null)
+  const [links, setLinks] = useState<SharedBoard | null>(null)
+  const [role, setRole] = useState(collaboration?.role ?? 'editor')
 
   useEffect(() => {
     if (collaboration === null || collaboration === undefined) return
     return collaboration.onStatus(setStatus)
   }, [collaboration])
 
+  useEffect(() => {
+    if (collaboration === null || collaboration === undefined) return
+    return collaboration.onRole(setRole)
+  }, [collaboration])
+
   if (!COLLAB_ENABLED) return null
 
   if (collaboration === null || collaboration === undefined) {
     return (
+      <>
       <button
         type="button"
         className="of-status__share"
@@ -50,18 +59,36 @@ export function ShareControl() {
         }
         onClick={() => {
           setSharing(true)
+          setShareError(null)
           void shareCurrentBoard(runtime).then(
             (shared) => {
-              // A full navigation, not a router push: the runtime is built
-              // once, at boot, against one board.
-              window.location.assign(shared.link)
+              /*
+               * The links are SHOWN before navigating, not copied silently.
+               * There are two of them now, and which one somebody sends is the
+               * decision this feature exists to give them — taking them
+               * straight to the board would make that choice for them.
+               */
+              setSharing(false)
+              setLinks(shared)
             },
-            () => setSharing(false),
+            (error: unknown) => {
+              setSharing(false)
+              setShareError(
+                error instanceof ShareFailed ? error.message : 'This board could not be shared.',
+              )
+            },
           )
         }}
       >
         {sharing ? 'Sharing…' : 'Share'}
       </button>
+      {shareError !== null && (
+        <p className="of-share__error" role="alert" data-testid="share-error">
+          {shareError}
+        </p>
+      )}
+      {links !== null && <ShareLinks links={links} onOpen={() => window.location.assign(links.editLink)} />}
+      </>
     )
   }
 
@@ -88,17 +115,36 @@ export function ShareControl() {
             : `Here now: ${here.map((person) => person.name).join(', ')}. Click to copy the link.`
         }
         onClick={() => {
+          /*
+           * The link you arrived on, key and all. Copying a bare board id
+           * would hand somebody a URL that a claimed room refuses — the share
+           * button producing a dead link is the worst possible bug here.
+           */
           void navigator.clipboard
-            .writeText(shareLink(runtime.boardId, window.location.origin))
+            .writeText(
+              shareLink(runtime.boardId, window.location.origin, accessKey(window.location.search)),
+            )
             .then(() => {
-              setCopied(true)
-              setTimeout(() => setCopied(false), 1600)
+              setCopied('edit')
+              setTimeout(() => setCopied(null), 1600)
             })
         }}
       >
         <span className={`of-status__dot of-status__dot--${status}`} aria-hidden="true" />
-        <span className="of-status__share-label">{copied ? 'Link copied' : roomLabel(status)}</span>
+        <span className="of-status__share-label">
+          {copied !== null ? 'Link copied' : roomLabel(status)}
+        </span>
       </button>
+
+      {/*
+       * Said plainly rather than left to be discovered by an edit that does
+       * not stick. A viewer is not broken — they were given the other link.
+       */}
+      {role === 'viewer' && (
+        <span className="of-status__watching" data-testid="viewing-only" title="You opened a view-only link. You can watch and be seen, but not change anything.">
+          View only
+        </span>
+      )}
 
       {/*
        * A face per person. Named in the accessible label rather than only in a
@@ -121,6 +167,49 @@ export function ShareControl() {
         ))}
       </span>
     </span>
+  )
+}
+
+/**
+ * The two links, side by side, with what each one gives away.
+ *
+ * Shown together and described in the same words a person would use, because
+ * the entire risk of this feature is sending the wrong one — and a chooser
+ * that says "edit" and "view" without saying what that MEANS is a chooser
+ * somebody gets wrong once and then stops trusting.
+ */
+function ShareLinks({ links, onOpen }: { readonly links: SharedBoard; readonly onOpen: () => void }) {
+  const [copied, setCopied] = useState<'edit' | 'view' | null>(null)
+
+  const copy = (which: 'edit' | 'view'): void => {
+    void navigator.clipboard
+      .writeText(which === 'edit' ? links.editLink : links.viewLink)
+      .then(() => {
+        setCopied(which)
+        setTimeout(() => setCopied(null), 1600)
+      })
+  }
+
+  return (
+    <div className="of-share" role="dialog" aria-label="Share this board" data-testid="share-links">
+      <p className="of-share__lead">
+        This board now has two links. Anyone who has one needs no account.
+      </p>
+
+      <button type="button" className="of-share__link" data-testid="copy-edit" onClick={() => copy('edit')}>
+        <span className="of-share__link-name">{copied === 'edit' ? 'Copied' : 'Copy edit link'}</span>
+        <span className="of-share__link-what">They can change the board</span>
+      </button>
+
+      <button type="button" className="of-share__link" data-testid="copy-view" onClick={() => copy('view')}>
+        <span className="of-share__link-name">{copied === 'view' ? 'Copied' : 'Copy view link'}</span>
+        <span className="of-share__link-what">They can watch, and be seen watching</span>
+      </button>
+
+      <button type="button" className="of-share__open" data-testid="open-shared" onClick={onOpen}>
+        Open the shared board
+      </button>
+    </div>
   )
 }
 

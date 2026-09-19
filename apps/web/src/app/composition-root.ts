@@ -11,6 +11,7 @@ import {
   systemClock,
   type BoardId,
   type BoardRepository,
+  type Capabilities,
   type AssetStore,
   type DocumentStore,
 } from '@openframe/core'
@@ -39,6 +40,12 @@ export type { OpenFrameRuntime } from '../runtime/context.js'
 
 export interface CreateRuntimeOptions {
   readonly boardId?: BoardId
+  /**
+   * What this client may do. Omitted for a local board, where the only actor
+   * is the person at the keyboard; supplied for a shared one, where the room
+   * decides and may narrow it once the socket answers.
+   */
+  readonly capabilities?: Capabilities
   readonly repository?: BoardRepository
   readonly assetStore?: AssetStore
   readonly autosaveDelayMs?: number
@@ -89,9 +96,12 @@ export async function createRuntime(options: CreateRuntimeOptions = {}): Promise
     registry,
     clock: systemClock,
     ids,
-    // Phase 1 is single-player and local. When a server exists, every command
-    // is re-authorized there; this check is a UX affordance, never a control.
-    capabilities: allowAllCapabilities,
+    /*
+     * A local board has one actor and grants everything. A shared board is
+     * handed capabilities the room can narrow — and either way this check is a
+     * UX affordance, never a control: the room re-authorizes every write.
+     */
+    capabilities: options.capabilities ?? allowAllCapabilities,
   })
 
   const unsubscribe = readOnly

@@ -16,7 +16,7 @@ describe('reading a route', () => {
     expect(readRoute('?room=brd_abcdefgh12345678')).toEqual({
       kind: 'board',
       boardId: asBoardId('brd_abcdefgh12345678'),
-      shared: true,
+      shared: true, key: null,
     })
   })
 
@@ -24,7 +24,7 @@ describe('reading a route', () => {
     expect(readRoute('?board=board_local')).toEqual({
       kind: 'board',
       boardId: asBoardId('board_local'),
-      shared: false,
+      shared: false, key: null,
     })
   })
 
@@ -49,7 +49,7 @@ describe('reading a route', () => {
     expect(route).toEqual({
       kind: 'board',
       boardId: asBoardId('brd_abcdefgh12345678'),
-      shared: true,
+      shared: true, key: null,
     })
   })
 })
@@ -60,7 +60,7 @@ describe('writing a route', () => {
     expect(readRoute(boardHref(id, false).slice(1))).toEqual({
       kind: 'board',
       boardId: id,
-      shared: false,
+      shared: false, key: null,
     })
   })
 
@@ -70,12 +70,52 @@ describe('writing a route', () => {
     expect(readRoute(href.slice(1))).toEqual({
       kind: 'board',
       boardId: asBoardId('brd_abcdefgh12345678'),
-      shared: true,
+      shared: true, key: null,
     })
   })
 
   it('mints local ids that do not collide', () => {
     const ids = new Set(Array.from({ length: 500 }, () => newLocalBoardId()))
     expect(ids.size).toBe(500)
+  })
+})
+
+describe('the key on a shared link', () => {
+  it('is carried, because it is what the room checks', () => {
+    const key = 'a1b2c3d4e5f60718293a4b5c6d7e8f90'
+    expect(readRoute(`?room=brd_abcdefgh12345678&k=${key}`)).toEqual({
+      kind: 'board',
+      boardId: asBoardId('brd_abcdefgh12345678'),
+      shared: true,
+      key,
+    })
+  })
+
+  /**
+   * A board shared before links had roles. The room still admits it, so the
+   * client must still open it — dropping the board because the URL lacks a
+   * key would break every link already in circulation.
+   */
+  it('is absent on a link that predates roles, and the board still opens', () => {
+    const route = readRoute('?room=brd_abcdefgh12345678')
+    expect(route).toEqual({
+      kind: 'board',
+      boardId: asBoardId('brd_abcdefgh12345678'),
+      shared: true,
+      key: null,
+    })
+  })
+
+  it('is dropped when it is the wrong shape, rather than sent on', () => {
+    for (const bad of ['short', 'NOTHEX' + 'a'.repeat(26), 'a'.repeat(64)]) {
+      expect(readRoute(`?room=brd_abcdefgh12345678&k=${bad}`)).toMatchObject({ key: null })
+    }
+  })
+
+  it('is never attached to a local board', () => {
+    expect(readRoute('?board=board_local&k=a1b2c3d4e5f60718293a4b5c6d7e8f90')).toMatchObject({
+      shared: false,
+      key: null,
+    })
   })
 })

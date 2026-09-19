@@ -1,6 +1,6 @@
 import { asBoardId, type BoardId } from '@openframe/core'
 
-import { ROOM_PARAM, sharedBoardId } from './collab-config.js'
+import { accessKey, ROOM_PARAM, sharedBoardId } from './collab-config.js'
 
 /**
  * The whole of this application's routing, still in a query string.
@@ -33,15 +33,28 @@ const LOCAL_ID = /^board_[A-Za-z0-9-]{1,48}$/
 export type Route =
   /** The entry surface: sign in, or pick up a board, or start one. */
   | { readonly kind: 'home' }
-  | { readonly kind: 'board'; readonly boardId: BoardId; readonly shared: boolean }
+  | {
+      readonly kind: 'board'
+      readonly boardId: BoardId
+      readonly shared: boolean
+      /**
+       * Which of the board's two links this is, for a shared board.
+       *
+       * `null` on a link with no key — either a local board, or one shared
+       * before links had roles, which the room still admits as an editor.
+       */
+      readonly key: string | null
+    }
 
 export function readRoute(search: string): Route {
   const shared = sharedBoardId(search)
-  if (shared !== null) return { kind: 'board', boardId: shared, shared: true }
+  if (shared !== null) {
+    return { kind: 'board', boardId: shared, shared: true, key: accessKey(search) }
+  }
 
   const raw = new URLSearchParams(search).get(BOARD_PARAM)
   if (raw !== null && LOCAL_ID.test(raw)) {
-    return { kind: 'board', boardId: asBoardId(raw), shared: false }
+    return { kind: 'board', boardId: asBoardId(raw), shared: false, key: null }
   }
 
   /*
