@@ -31,7 +31,7 @@
         display: grid;
         place-items: center;
         background-color: #150a2e;
-        background-image: url('data:image/webp;base64,UklGRooAAABXRUJQVlA4IH4AAAAwBQCdASoYABIAPu1gqE2ppSOiMBgMATAdiWoAsR7T9tAgF7XeqWqC2Me0+fdjovXJzAD+5ZlELRh+q8gR17+r34uyjGpIPPhf1FvWFcOJjnsds0wkVxz6raHpkG+0EqiIa8DfxfCoDiAdiLhYwtDYlH6RA67qhClq+KvxiAA=');
+        background-image: url('data:image/webp;base64,UklGRo4AAABXRUJQVlA4IIIAAAAwBQCdASoYABIAPu1kqE2ppaOiMBgMATAdiWoAnTLdfKghXssFItj6UHAZumzur+O/gAD+5ZBLROkoLMV5aN0H4uyjF99t/C/sWl2sp1YHh2Gazof1flbww1S/yfDhNrGkednUzoyev4lTPfHoN+21k02H6RCI+iB/zwaKH3IqEAAA');
         background-size: cover;
         background-position: center;
         transition: opacity 220ms ease-out;
@@ -104,8 +104,21 @@
       be opened.
     -->
     <div id="of-splash">
+      <!--
+        Two widths, because this image is `object-fit: cover` over the WHOLE
+        viewport: 1448px covers a 1x laptop and is visibly soft on anything
+        retina, which is what it looked like. `sizes="100vw"` is the honest
+        declaration — the browser then picks by device pixel ratio, so a 1x
+        screen still pays 67KB and only a 2x screen pays 164KB.
+
+        Vite rewrites `srcset` in HTML the same way it rewrites `src`, so both
+        files are hashed and bundled; `brand-splash.test.ts` asserts every path
+        named in EITHER attribute exists.
+      -->
       <img
         src="/src/assets/splash-hero.webp"
+        srcset="/src/assets/splash-hero.webp 1448w, /src/assets/splash-hero-2x.webp 2896w"
+        sizes="100vw"
         alt=""
         decoding="async"
         fetchpriority="high"

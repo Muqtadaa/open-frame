@@ -70,8 +70,24 @@ describe('the boot splash', () => {
    * ones survive.
    */
   it('references assets that exist, and none of them from public/', () => {
-    const referenced = [...HTML.matchAll(/(?:src|href)="(\/src\/assets\/[^"]+)"/g)].map((m) => m[1])
-    expect(referenced.length).toBeGreaterThanOrEqual(3)
+    /*
+     * `srcset` as well as `src`. The splash ships two widths now, and a reader
+     * that only knew about `src` would have let the 2x file be renamed, moved
+     * or deleted without a word — an unchecked reference is the whole failure
+     * mode this test exists for.
+     */
+    const single = [...HTML.matchAll(/(?:src|href)="(\/src\/assets\/[^"]+)"/g)].map((m) => m[1])
+    const sets = [...HTML.matchAll(/srcset="([^"]+)"/g)].flatMap((m) =>
+      (m[1] ?? '')
+        .split(',')
+        .map((candidate) => candidate.trim().split(/\s+/)[0])
+        .filter((path): path is string => path?.startsWith('/src/assets/') === true),
+    )
+
+    const referenced = [...new Set([...single, ...sets])]
+    expect(referenced.length).toBeGreaterThanOrEqual(4)
+    // The guard above is only worth anything if a srcset was actually read.
+    expect(sets.length).toBeGreaterThan(0)
 
     for (const path of referenced) {
       expect(path).not.toContain('/public/')
