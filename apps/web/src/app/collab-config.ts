@@ -33,6 +33,15 @@ export const COLLAB_ENABLED = COLLAB_URL !== null
 export const ROOM_PARAM = 'room'
 
 /**
+ * `?t=<token>` — proof that this browser knows the board's password.
+ *
+ * On the SOCKET only, never in a link anybody sends. A shareable URL carrying
+ * the token would undo the whole feature: the password exists so that passing
+ * the link on is not enough by itself.
+ */
+export const TOKEN_PARAM = 't'
+
+/**
  * `?k=<key>` — which of a board's two links this is.
  *
  * The key IS the credential. It is in the URL rather than anywhere safer
@@ -121,9 +130,26 @@ function httpBase(): string {
   return COLLAB_URL.replace(/^ws/, 'http')
 }
 
-export function roomSocketUrl(boardId: BoardId, key?: string | null): string {
-  const base = `${socketBase()}/room/${boardId}`
-  return key === null || key === undefined ? base : `${base}?${KEY_PARAM}=${key}`
+export function roomSocketUrl(
+  boardId: BoardId,
+  key?: string | null,
+  /** The token redeeming this board's password, for a board that has one. */
+  token?: string | null,
+): string {
+  const url = new URL(`${socketBase()}/room/${boardId}`)
+  if (key !== null && key !== undefined) url.searchParams.set(KEY_PARAM, key)
+  if (token !== null && token !== undefined) url.searchParams.set(TOKEN_PARAM, token)
+  return url.toString()
+}
+
+/** Where a board's password is set, changed or cleared. */
+export function passwordUrl(boardId: BoardId): string {
+  return `${httpBase()}/room/${boardId}/password`
+}
+
+/** Where a password is traded for the token that opens the board. */
+export function unlockUrl(boardId: BoardId): string {
+  return `${httpBase()}/room/${boardId}/unlock`
 }
 
 /** Where a board asks for its two links, once, before it holds anything. */

@@ -187,3 +187,44 @@ test('offers the view-only link for a board you own, and for nobody else’s', a
   expect(copied).toContain(`k=${'b'.repeat(32)}`)
   expect(copied).not.toContain('a'.repeat(32))
 })
+
+/**
+ * The row's actions must fit the box reserved for them.
+ *
+ * The block is right-aligned with a fixed width, so actions too wide for it do
+ * not clip — they spill LEFTWARD, over the column beside them. A row you own
+ * carries four of them and a member's carries two, so the reserved width is
+ * sized for four, and adding a fifth without widening it would put a button on
+ * top of the board's tag.
+ *
+ * Asserted separately from the column alignment because the two are different
+ * properties, and a comment here once claimed they were the same one: the
+ * alignment test passes at any fixed width, including one far too small.
+ */
+test('keeps a row’s actions inside the space reserved for them', async ({ page }) => {
+  await signedIn(page, [
+    // An owner's row, which carries the most: view link, password, rename,
+    // delete.
+    { id: 'brd_aaaaaaaa11111111', title: 'Mine', role: 'owner' },
+  ])
+
+  await page.goto(HOME_URL)
+  await expect(page.getByTestId('home-boards').locator('li')).toHaveCount(1)
+
+  const overflow = await page.evaluate(() => {
+    const box = document.querySelector('.of-home__row-actions')
+    if (box === null) return 'no actions block'
+    const bounds = box.getBoundingClientRect()
+    const spilling = [...box.children]
+      .map((child) => ({
+        name: child.getAttribute('data-testid') ?? 'unnamed',
+        rect: child.getBoundingClientRect(),
+      }))
+      // A half-pixel of rounding is not a spill.
+      .filter(({ rect }) => rect.left < bounds.left - 0.5 || rect.right > bounds.right + 0.5)
+      .map(({ name }) => name)
+    return spilling.length === 0 ? null : `spilling: ${spilling.join(', ')}`
+  })
+
+  expect(overflow).toBeNull()
+})

@@ -52,6 +52,7 @@ export {
 } from './room.js'
 export {
   CLOSE_BOARD_DELETED,
+  CLOSE_PASSWORD_REQUIRED,
   RoomProvider,
   type ConnectionStatus,
   type RoomProviderOptions,

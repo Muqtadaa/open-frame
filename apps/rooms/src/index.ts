@@ -47,8 +47,10 @@ export default {
         })
 
       case 'claim':
-      case 'destroy': {
-        // Both name a board and are answered inside it, because both turn on
+      case 'destroy':
+      case 'password':
+      case 'unlock': {
+        // Each names a board and is answered inside it, because each turns on
         // what that room already holds. The Worker decides nothing here.
         const room = env.ROOMS.get(env.ROOMS.idFromName(route.boardId))
         return room.fetch(request)

@@ -327,6 +327,17 @@ export function LeaveIcon({ className }: IconProps) {
   )
 }
 
+/** A key, for the password that a board's links ask for. */
+export function KeyIcon({ className }: IconProps) {
+  return (
+    <svg {...base} className={className}>
+      <circle cx="8" cy="15" r="4" />
+      <path d="M10.8 12.2 20 3" />
+      <path d="M17 6l2.5 2.5" />
+    </svg>
+  )
+}
+
 /** A link, for the one that lets people watch without changing anything. */
 export function LinkIcon({ className }: IconProps) {
   return (

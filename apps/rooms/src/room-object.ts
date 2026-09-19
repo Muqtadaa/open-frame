@@ -1,6 +1,7 @@
 import {
   BoardRoom,
   CLOSE_BOARD_DELETED,
+  CLOSE_PASSWORD_REQUIRED,
   documentFromSnapshot,
   type RoomPeer,
   type RoomRole,
@@ -10,11 +11,19 @@ import { DurableObject } from 'cloudflare:workers'
 import {
   claimDecision,
   destroyDecision,
+  setPasswordDecision,
+  unlockDecision,
   mintKeys,
   roleForKey,
   roleFromAttachment,
   type AccessKeys,
 } from './access.js'
+import {
+  isPassword,
+  newVerifier,
+  tokenAdmits,
+  type PasswordVerifier,
+} from './password.js'
 import type { Env } from './env.js'
 
 /**
@@ -62,6 +71,14 @@ const KEYS = 'keys'
  * It survives `deleteAll()` by being written after it.
  */
 const DESTROYED = 'destroyed'
+/**
+ * The board's password verifier, or absent for a board without one.
+ *
+ * Absent is the overwhelmingly common case and means "the link is enough",
+ * which is what every board did before this existed and what they go on doing
+ * unless somebody asks otherwise.
+ */
+const PASSWORD = 'password'
 
 const CORS = {
   'access-control-allow-origin': '*',
@@ -118,6 +135,8 @@ export class BoardRoomObject extends DurableObject<Env> {
     }
 
     if (url.pathname.endsWith('/claim')) return this.#claim()
+    if (url.pathname.endsWith('/password')) return this.#setPassword(request)
+    if (url.pathname.endsWith('/unlock')) return this.#unlock(request)
 
     if (request.headers.get('Upgrade') !== 'websocket') {
       return new Response('This endpoint speaks WebSocket', { status: 426 })
@@ -128,6 +147,29 @@ export class BoardRoomObject extends DurableObject<Env> {
       // The same answer for a wrong key and a missing one. Distinguishing them
       // tells somebody probing which half of the guess to keep.
       return new Response('That link does not open this board', { status: 403 })
+    }
+
+    /*
+     * THE SECOND FACTOR, if this board has one. Checked after the link, so a
+     * request without a valid key learns nothing about whether the board is
+     * protected — it gets the same 403 either way.
+     *
+     * Refused by ACCEPTING the socket and closing it with a code, rather than
+     * by refusing the upgrade. A failed upgrade reaches the browser as a
+     * generic error and close code 1006, which is indistinguishable from a
+     * network that dropped — and "your wifi blinked" is exactly the wrong
+     * thing to tell somebody who needs to type a password. The same lesson as
+     * 4004, which is why that distinction exists at all.
+     */
+    const verifier = await this.ctx.storage.get<PasswordVerifier>(PASSWORD)
+    if (!tokenAdmits(verifier, url.searchParams.get('t'))) {
+      const refused = new WebSocketPair()
+      // `accept()` rather than `acceptWebSocket()` on purpose: this socket is
+      // closed in the same breath, so there is no hibernation to preserve and
+      // nothing to register against the room.
+      refused[1].accept()
+      refused[1].close(CLOSE_PASSWORD_REQUIRED, 'This board needs its password')
+      return new Response(null, { status: 101, webSocket: refused[0] })
     }
 
     const pair = new WebSocketPair()
@@ -256,6 +298,71 @@ export class BoardRoomObject extends DurableObject<Env> {
    * the document during a drag, so one write here is one USER ACTION, not one
    * mouse move. A 500-event drag is a single update and a single row.
    */
+  /**
+   * Sets, changes or clears the board's password.
+   *
+   * Clearing and setting are the same request with a different body, because
+   * they are the same decision — who may change how this board is reached —
+   * and splitting them would mean authorizing the same thing twice in two
+   * places. A null password removes the verifier and with it the token, so
+   * clearing also shuts out every browser that had unlocked it.
+   */
+  async #setPassword(request: Request): Promise<Response> {
+    const keys = await this.ctx.storage.get<AccessKeys>(KEYS)
+    const body = await readBody(request)
+    const destroyed = (await this.ctx.storage.get<boolean>(DESTROYED)) === true
+
+    const decision = setPasswordDecision(keys, body.key, destroyed)
+    if (!decision.ok) {
+      return Response.json({ error: decision.error }, { status: decision.status, headers: CORS })
+    }
+
+    if (body.password === null) {
+      await this.ctx.storage.delete(PASSWORD)
+      return Response.json({ password: false }, { headers: CORS })
+    }
+
+    /*
+     * A password nobody could type is not protection. The floor is deliberately
+     * low — this is a second factor on a link that is already a 128-bit secret,
+     * not a credential standing alone — but empty and whitespace must not pass,
+     * because both look to the person setting them like they did something.
+     */
+    if (body.password.trim().length < 4) {
+      return Response.json(
+        { error: 'A password needs at least four characters' },
+        { status: 400, headers: CORS },
+      )
+    }
+
+    const verifier = await newVerifier(body.password)
+    await this.ctx.storage.put(PASSWORD, verifier)
+    // The token is NOT returned here. Setting a password is not unlocking one:
+    // the browser that set it redeems it like everybody else, which is also
+    // the only way that path is ever exercised by the person who chose it.
+    return Response.json({ password: true }, { headers: CORS })
+  }
+
+  /** Trades the password for the token that opens the board. */
+  async #unlock(request: Request): Promise<Response> {
+    const keys = await this.ctx.storage.get<AccessKeys>(KEYS)
+    const verifier = await this.ctx.storage.get<PasswordVerifier>(PASSWORD)
+    const body = await readBody(request)
+    const destroyed = (await this.ctx.storage.get<boolean>(DESTROYED)) === true
+
+    const decision = unlockDecision(keys, body.key, verifier !== undefined, destroyed)
+    if (!decision.ok) {
+      return Response.json({ error: decision.error }, { status: decision.status, headers: CORS })
+    }
+    if (verifier === undefined || body.password === null) {
+      return Response.json({ error: 'That is not the password' }, { status: 403, headers: CORS })
+    }
+    if (!(await isPassword(verifier, body.password))) {
+      return Response.json({ error: 'That is not the password' }, { status: 403, headers: CORS })
+    }
+    return Response.json({ token: verifier.token }, { headers: CORS })
+  }
+
   async #persist(update: Uint8Array): Promise<void> {
     const key = `${UPDATE_PREFIX}${String(this.#sequence++).padStart(8, '0')}`
     await this.ctx.storage.put(key, bufferOf(update))
@@ -278,6 +385,31 @@ export class BoardRoomObject extends DurableObject<Env> {
  * not a string — answers `null`, which `destroyDecision` refuses exactly as it
  * refuses a wrong key. One answer for every way of not having the right one.
  */
+/**
+ * The `key` and `password` out of a request body.
+ *
+ * Same principle as `readKey`: every way of not having a value — no body, not
+ * JSON, not an object, wrong type — answers `null`, so there is one answer for
+ * every shape of "not that". A `password` of `null` is also what CLEARING one
+ * looks like, which is why the two are read the same way.
+ */
+async function readBody(request: Request): Promise<{
+  readonly key: string | null
+  readonly password: string | null
+}> {
+  try {
+    const body: unknown = await request.json()
+    if (typeof body !== 'object' || body === null) return { key: null, password: null }
+    const { key, password } = body as { key?: unknown; password?: unknown }
+    return {
+      key: typeof key === 'string' ? key : null,
+      password: typeof password === 'string' ? password : null,
+    }
+  } catch {
+    return { key: null, password: null }
+  }
+}
+
 async function readKey(request: Request): Promise<string | null> {
   try {
     const body: unknown = await request.json()

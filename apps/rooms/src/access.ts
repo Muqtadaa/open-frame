@@ -145,3 +145,76 @@ export function destroyDecision(
 export function roleFromAttachment(attached: { readonly role?: unknown } | null): RoomRole {
   return attached?.role === 'editor' ? 'editor' : 'viewer'
 }
+
+export type PasswordDecision =
+  | { readonly ok: true }
+  | { readonly ok: false; readonly status: number; readonly error: string }
+
+/**
+ * Whether this board's password may be set, changed or cleared now.
+ *
+ * THE EDITOR KEY, and only it — the same authority that can destroy the room,
+ * for the same reason: a viewer was handed the weaker link precisely so they
+ * could not change the board, and locking everyone else out of it is a change.
+ *
+ * Note what this does NOT check: that you are the board's owner. The room
+ * authorizes by key and has never heard of Supabase, so any holder of the edit
+ * link can do this. That is already true of deleting the board, which is
+ * strictly worse, so it adds no authority that was not there — but "the owner
+ * sets the password" is a convention of the interface rather than a rule the
+ * room enforces, and it is better said out loud than discovered.
+ *
+ * A LEGACY room refuses. There are no keys, so there is nobody to trust — the
+ * same reasoning `destroyDecision` gives, and the same answer.
+ */
+export function setPasswordDecision(
+  keys: AccessKeys | undefined,
+  key: string | null,
+  destroyed = false,
+): PasswordDecision {
+  if (destroyed) {
+    return { ok: false, status: 410, error: 'This board no longer exists' }
+  }
+  if (keys === undefined) {
+    return {
+      ok: false,
+      status: 409,
+      error: 'This board was shared before links had roles, and cannot take a password',
+    }
+  }
+  if (key === null || key !== keys.editor) {
+    return { ok: false, status: 403, error: 'That link does not open this board' }
+  }
+  return { ok: true }
+}
+
+/**
+ * Whether a password may even be attempted on this board.
+ *
+ * BOTH factors, in this order. The link is checked first because it is free
+ * and because a password attempt against a board whose link you do not hold
+ * should tell you nothing at all — including whether that board has a
+ * password. Either link will do: the password protects the board, not a role,
+ * so a viewer redeems it exactly as an editor does and is still a viewer
+ * afterwards.
+ *
+ * The password itself is checked by the caller, which is where the hashing
+ * lives. This is only the part that can be decided without awaiting anything.
+ */
+export function unlockDecision(
+  keys: AccessKeys | undefined,
+  key: string | null,
+  hasPassword: boolean,
+  destroyed = false,
+): PasswordDecision {
+  if (destroyed) {
+    return { ok: false, status: 410, error: 'This board no longer exists' }
+  }
+  if (roleForKey(keys, key) === null) {
+    return { ok: false, status: 403, error: 'That link does not open this board' }
+  }
+  if (!hasPassword) {
+    return { ok: false, status: 409, error: 'This board has no password' }
+  }
+  return { ok: true }
+}

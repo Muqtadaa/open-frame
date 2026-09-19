@@ -20,6 +20,8 @@ const BOARD_ID = /^[A-Za-z0-9_-]{1,64}$/
 const ROOM_PATH = /^\/room\/([^/]+)\/?$/
 const CLAIM_PATH = /^\/room\/([^/]+)\/claim\/?$/
 const DESTROY_PATH = /^\/room\/([^/]+)\/destroy\/?$/
+const PASSWORD_PATH = /^\/room\/([^/]+)\/password\/?$/
+const UNLOCK_PATH = /^\/room\/([^/]+)\/unlock\/?$/
 
 /**
  * The shape of an access key.
@@ -53,33 +55,41 @@ export type Route =
    * query because a link is a thing people paste; nothing here is.
    */
   | { readonly kind: 'destroy'; readonly boardId: string }
+  /** Set, change or clear this board's password. The editor key only. */
+  | { readonly kind: 'password'; readonly boardId: string }
+  /** Redeem the password for the token that opens the board. Either key. */
+  | { readonly kind: 'unlock'; readonly boardId: string }
   /** A CORS preflight for the above: the web app is on another origin. */
   | { readonly kind: 'preflight' }
   | { readonly kind: 'refuse'; readonly status: number; readonly reason: string }
 
+/** Path, route kind and the name used in "X is a POST". */
+const POSTS = [
+  [CLAIM_PATH, 'claim', 'Claim'],
+  [DESTROY_PATH, 'destroy', 'Destroy'],
+  [PASSWORD_PATH, 'password', 'Setting a password'],
+  [UNLOCK_PATH, 'unlock', 'Unlocking'],
+] as const satisfies readonly (readonly [RegExp, Route['kind'], string])[]
+
 export function routeRequest(url: URL, upgradeHeader: string | null, method = 'GET'): Route {
   if (url.pathname === '/health') return { kind: 'health' }
 
-  const claim = CLAIM_PATH.exec(url.pathname)
-  if (claim !== null) {
-    const boardId = claim[1]
+  /*
+   * The POST endpoints, which differ only in their path and their name. There
+   * were two of these written out longhand; five would have been four copies
+   * of the same board-id check, and the fifth is where one of them quietly
+   * stops matching the others.
+   */
+  for (const [pattern, kind, name] of POSTS) {
+    const match = pattern.exec(url.pathname)
+    if (match === null) continue
+    const boardId = match[1]
     if (boardId === undefined || !BOARD_ID.test(boardId)) {
       return { kind: 'refuse', status: 400, reason: 'That is not a board id' }
     }
     if (method === 'OPTIONS') return { kind: 'preflight' }
-    if (method !== 'POST') return { kind: 'refuse', status: 405, reason: 'Claim is a POST' }
-    return { kind: 'claim', boardId }
-  }
-
-  const destroy = DESTROY_PATH.exec(url.pathname)
-  if (destroy !== null) {
-    const boardId = destroy[1]
-    if (boardId === undefined || !BOARD_ID.test(boardId)) {
-      return { kind: 'refuse', status: 400, reason: 'That is not a board id' }
-    }
-    if (method === 'OPTIONS') return { kind: 'preflight' }
-    if (method !== 'POST') return { kind: 'refuse', status: 405, reason: 'Destroy is a POST' }
-    return { kind: 'destroy', boardId }
+    if (method !== 'POST') return { kind: 'refuse', status: 405, reason: `${name} is a POST` }
+    return { kind, boardId }
   }
 
   const match = ROOM_PATH.exec(url.pathname)

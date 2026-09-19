@@ -1,5 +1,6 @@
 import { Canvas } from '../canvas/Canvas.js'
 import { BoardGone } from '../ui/BoardGone.js'
+import { BoardLocked } from '../ui/BoardLocked.js'
 import { ContextMenu } from '../ui/ContextMenu.js'
 import { Inspector } from '../ui/Inspector.js'
 import { NoticeBanner } from '../ui/NoticeBanner.js'
@@ -47,8 +48,13 @@ export function App() {
       <ContextMenu />
       <SearchPanel />
 
-      {/* Last, so it covers everything above it when the board is gone. */}
+      {/*
+        Last, so they cover everything above them. Both are terminal states of
+        the connection and only one can ever be showing: the room either
+        destroyed the board or refused to open it.
+      */}
       <BoardGone />
+      <BoardLocked />
     </div>
   )
 }

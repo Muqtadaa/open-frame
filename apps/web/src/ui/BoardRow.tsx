@@ -5,9 +5,10 @@ import { canDelete, canLeave, describeWhen, type ListedBoard } from '../app/boar
 import { setLocalPin } from '../app/board-prefs.js'
 import { deleteBoardEverywhere, leaveBoard, renameBoard } from '../app/board-lifecycle.js'
 import { shareLink } from '../app/collab-config.js'
+import { setBoardPassword } from '../app/board-password.js'
 import { setBoardPinned } from '../app/remote-boards.js'
 import { boardHref } from '../app/route.js'
-import { LeaveIcon, LinkIcon, PinIcon, RenameIcon, TrashIcon } from './icons.js'
+import { KeyIcon, LeaveIcon, LinkIcon, PinIcon, RenameIcon, TrashIcon } from './icons.js'
 
 /**
  * One board, and the things you can do to it without opening it.
@@ -23,7 +24,7 @@ import { LeaveIcon, LinkIcon, PinIcon, RenameIcon, TrashIcon } from './icons.js'
  * destroyed is named is a better confirmation anyway — nobody has to remember
  * which board the dialog is about.
  */
-type Mode = 'rest' | 'renaming' | 'confirming' | 'working'
+type Mode = 'rest' | 'renaming' | 'confirming' | 'working' | 'password'
 
 export function BoardRow({
   board,
@@ -43,6 +44,7 @@ export function BoardRow({
   const [pinned, setPinned] = useState(board.pinned)
   const [problem, setProblem] = useState<string | null>(null)
   const [copied, setCopied] = useState(false)
+  const [secret, setSecret] = useState('')
   const input = useRef<HTMLInputElement>(null)
 
   // The copied note clears itself. A bare `setTimeout` in the handler outlives
@@ -90,6 +92,28 @@ export function BoardRow({
       }
       onChanged()
     })
+  }
+
+  /**
+   * Sets or clears the password, then returns the row to rest.
+   *
+   * `accessKey` is the EDITOR key for a board you own, which is the authority
+   * the room checks. A row without one cannot offer this, and the control is
+   * gated so that it never appears on such a row.
+   */
+  const applyPassword = async (next: string | null): Promise<void> => {
+    if (board.accessKey === null) {
+      setProblem('This board has no link to protect.')
+      return
+    }
+    const outcome = await setBoardPassword(board.boardId, board.accessKey, next)
+    if (!outcome.ok) {
+      setProblem(outcome.reason)
+      return
+    }
+    setProblem(null)
+    setSecret('')
+    setMode('rest')
   }
 
   const remove = (): void => {
@@ -215,6 +239,30 @@ export function BoardRow({
               </button>
             )}
 
+            {/*
+              * A PASSWORD on the links, for a board you own.
+              *
+              * Gated on the same signal as the view-only link — a board whose
+              * second key came back is one you own — because the room takes
+              * the EDITOR key for this, and that is the key an owner holds.
+              */}
+            {board.viewKey !== null && (
+              <button
+                type="button"
+                className="of-home__row-action"
+                data-testid="set-password"
+                title={`Require a password for ${board.title}. Both links ask for it.`}
+                onClick={() => {
+                  setSecret('')
+                  setProblem(null)
+                  setMode('password')
+                }}
+              >
+                <KeyIcon />
+                <span className="of-visually-hidden">Require a password for {board.title}</span>
+              </button>
+            )}
+
             <button
               type="button"
               className="of-home__row-action"
@@ -271,6 +319,51 @@ export function BoardRow({
           </span>
         )}
       </div>
+
+      {mode === 'password' && (
+        <form
+          className="of-home__confirm"
+          data-testid="password-form"
+          onSubmit={(event) => {
+            event.preventDefault()
+            void applyPassword(secret)
+          }}
+        >
+          <span className="of-home__confirm-what">
+            Both links will ask for this. Anyone who has already opened the board is signed out
+            of it.
+          </span>
+          <input
+            className="of-input of-home__password"
+            type="password"
+            autoComplete="off"
+            aria-label={`A password for ${board.title}`}
+            data-testid="password-input"
+            value={secret}
+            onChange={(event) => {
+              setSecret(event.target.value)
+            }}
+          />
+          <button type="submit" className="of-home__confirm-yes" data-testid="password-save">
+            Set
+          </button>
+          {/*
+            * Clearing is the same authority and the same request with a null
+            * body, so it lives here rather than behind a second control that
+            * would have to be enabled by state this row does not have.
+            */}
+          <button
+            type="button"
+            className="of-home__confirm-no"
+            data-testid="password-clear"
+            onClick={() => {
+              void applyPassword(null)
+            }}
+          >
+            No password
+          </button>
+        </form>
+      )}
 
       {mode === 'confirming' && (
         <p className="of-home__confirm" data-testid="confirm-remove" role="alert">

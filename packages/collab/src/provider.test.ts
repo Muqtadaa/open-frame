@@ -4,7 +4,12 @@ import * as Y from 'yjs'
 
 import { applyPatchesToDoc, objectsFromDoc } from './document-map.js'
 import { createAwareness, type RoomRole } from './protocol.js'
-import { CLOSE_BOARD_DELETED, RoomProvider, type RoomSocket } from './provider.js'
+import {
+  CLOSE_BOARD_DELETED,
+  CLOSE_PASSWORD_REQUIRED,
+  RoomProvider,
+  type RoomSocket,
+} from './provider.js'
 import { BoardRoom, type RoomPeer } from './room.js'
 
 /**
@@ -283,5 +288,29 @@ describe('a board deleted while somebody is on it', () => {
 
     expect(member.provider.status).toBe('connected')
     expect(member.wires.length).toBe(2)
+  })
+})
+
+/**
+ * A board behind a password, opened without the token.
+ *
+ * The room closes with 4003 instead of sending any of the board. Retrying is
+ * pointless in the same way as a deleted board — every attempt is refused
+ * identically — but the remedy is different: somebody types the password and
+ * the board is reopened. What the provider must not do is spin.
+ */
+describe('a board that wants its password', () => {
+  it('stops and says it is locked, rather than retrying without it', async () => {
+    const room = new BoardRoom()
+    const visitor = client(room, 'visitor')
+    visitor.provider.start()
+    await settle()
+
+    const attempts = visitor.wires.length
+    visitor.wires[0]?.drop(CLOSE_PASSWORD_REQUIRED)
+    await settle()
+
+    expect(visitor.provider.status).toBe('locked')
+    expect(visitor.wires.length).toBe(attempts)
   })
 })

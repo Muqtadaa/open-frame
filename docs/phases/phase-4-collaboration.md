@@ -423,6 +423,16 @@ this browser", whatever is sitting in IndexedDB under its id.
 
 ### Still open
 
+- **A board's list row cannot say whether it has a password.** That state lives
+  in the room, not in the board row, so showing it would need a round trip per
+  board. The control does not claim to know — but "which of my boards are
+  protected?" has no answer in the interface yet.
+- **A password is authorized by the EDITOR KEY, not by ownership.** The room has
+  never heard of Supabase, so any holder of the edit link can set or change one,
+  and an owner arriving on their own link is challenged like anybody else. Both
+  follow from where enforcement lives; neither is hidden, and both are the same
+  authority that can already destroy the board.
+
 - **Two real rooms hold test data.** `brd_abcdefgh12345678` and
   `brd_aaaaaaaa11111111` are live Durable Objects that the e2e suite joined and
   wrote into on every CI run, because `apps/web/.env` is committed and points
@@ -431,6 +441,22 @@ this browser", whatever is sitting in IndexedDB under its id.
   emptying them is a deliberate deletion of production data.
 
 - Whether a board can be moved BACK to local. Probably not worth it.
+- ~~Per-board password on a shared link.~~ Done. Enforced in the ROOM — a gate
+  drawn in the browser is theatre, because the link key alone opens the socket.
+  PBKDF2-SHA-256 at 100,000 iterations, chosen for a Durable Object rather than
+  for an account credential: this is a second factor on a link that is already
+  a 128-bit secret.
+
+  One token per password rather than one per person, which is not a shortcut —
+  a shared password cannot tell the people who know it apart, so per-person
+  tokens would be per-person only in appearance. What it buys is the property
+  that matters: changing or clearing the password mints a new token and every
+  browser holding the old one is shut out at once, which is the entire reason
+  to add a password to a link that has already gone somewhere it should not.
+
+  Refused with close code 4003 rather than by refusing the upgrade, because a
+  failed handshake reaches the browser as a generic 1006 and "your wifi
+  blinked" is the wrong thing to tell somebody who needs to type a password.
 - ~~What a member sees when an owner deletes a board they are looking at.~~
   Fixed. The provider treated 4004 as a dropped connection, so it reconnected
   into a room that answers 410, backed off and tried again for as long as the

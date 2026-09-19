@@ -45,11 +45,23 @@ export interface RoomSocket {
 export const CLOSE_BOARD_DELETED = 4004
 
 /**
- * `gone` is TERMINAL. Every other status is a stage of trying; this one means
- * there is nothing left to try, because the room it was trying to reach has
- * been destroyed. Reconnecting into it yields 410 forever.
+ * The room's code for "this board has a password and you have not redeemed
+ * it", sent instead of any board data.
+ *
+ * A separate code rather than a refused upgrade: a failed handshake reaches
+ * the browser as a generic error and close code 1006, which is
+ * indistinguishable from a dropped connection — and "your wifi blinked" is the
+ * wrong thing to tell somebody who needs to type a password.
  */
-export type ConnectionStatus = 'connecting' | 'connected' | 'offline' | 'gone'
+export const CLOSE_PASSWORD_REQUIRED = 4003
+
+/**
+ * `gone` and `locked` are TERMINAL. The others are stages of trying; these two
+ * mean there is nothing left to try without something changing outside the
+ * connection — a room that has been destroyed, or a password nobody has
+ * entered yet. Retrying either is a loop with no exit.
+ */
+export type ConnectionStatus = 'connecting' | 'connected' | 'offline' | 'gone' | 'locked'
 
 export interface RoomProviderOptions {
   readonly doc: Y.Doc
@@ -175,7 +187,17 @@ export class RoomProvider {
        * under them, with nothing on screen to say why.
        */
       if (code === CLOSE_BOARD_DELETED) {
-        this.#gone()
+        this.#stop('gone')
+        return
+      }
+      /*
+       * Also terminal, but recoverable by a person rather than by waiting:
+       * reconnecting without the token is refused identically every time, so
+       * the retry loop would spin until somebody types the password. The
+       * interface asks, and the board is reopened with the token.
+       */
+      if (code === CLOSE_PASSWORD_REQUIRED) {
+        this.#stop('locked')
         return
       }
       this.#dropped()
@@ -221,12 +243,12 @@ export class RoomProvider {
   }
 
   /** Stops for good. Same shutdown as `destroy`, with a status that explains it. */
-  #gone(): void {
+  #stop(status: ConnectionStatus): void {
     this.#stopped = true
     if (this.#retryHandle !== null) this.#clearTimer(this.#retryHandle)
     this.#retryHandle = null
     this.#closeSocket()
-    this.#setStatus('gone')
+    this.#setStatus(status)
   }
 
   #dropped(): void {

@@ -3,6 +3,8 @@ import { describe, expect, it } from 'vitest'
 import {
   claimDecision,
   destroyDecision,
+  setPasswordDecision,
+  unlockDecision,
   mintKey,
   mintKeys,
   roleForKey,
@@ -187,5 +189,57 @@ describe('destroying a board', () => {
   it('parts company with roleForKey on a legacy room, deliberately', () => {
     expect(roleForKey(undefined, null)).toBe('editor')
     expect(destroyDecision(undefined, null).ok).toBe(false)
+  })
+})
+
+describe('giving a board a password', () => {
+  const keys = { editor: 'a'.repeat(32), viewer: 'b'.repeat(32) }
+
+  it('takes the editor key, and only it', () => {
+    expect(setPasswordDecision(keys, keys.editor)).toEqual({ ok: true })
+    expect(setPasswordDecision(keys, keys.viewer)).toMatchObject({ ok: false, status: 403 })
+    expect(setPasswordDecision(keys, null)).toMatchObject({ ok: false, status: 403 })
+    expect(setPasswordDecision(keys, 'c'.repeat(32))).toMatchObject({ ok: false, status: 403 })
+  })
+
+  it('refuses a board shared before links had roles', () => {
+    expect(setPasswordDecision(undefined, null)).toMatchObject({ ok: false, status: 409 })
+    expect(setPasswordDecision(undefined, 'a'.repeat(32))).toMatchObject({ ok: false, status: 409 })
+  })
+
+  it('answers gone for a destroyed room', () => {
+    expect(setPasswordDecision(keys, keys.editor, true)).toMatchObject({ ok: false, status: 410 })
+  })
+})
+
+describe('attempting a board password', () => {
+  const keys = { editor: 'a'.repeat(32), viewer: 'b'.repeat(32) }
+
+  /**
+   * EITHER link. The password protects the board rather than a role, so a
+   * viewer redeems it exactly as an editor does — and is still a viewer.
+   */
+  it('takes either link', () => {
+    expect(unlockDecision(keys, keys.editor, true)).toEqual({ ok: true })
+    expect(unlockDecision(keys, keys.viewer, true)).toEqual({ ok: true })
+  })
+
+  /**
+   * The link is checked BEFORE the password exists, so somebody without the
+   * link cannot learn whether a board is protected — the answer is the same
+   * either way.
+   */
+  it('refuses a link it does not know, protected or not', () => {
+    expect(unlockDecision(keys, 'c'.repeat(32), true)).toMatchObject({ ok: false, status: 403 })
+    expect(unlockDecision(keys, 'c'.repeat(32), false)).toMatchObject({ ok: false, status: 403 })
+    expect(unlockDecision(keys, null, true)).toMatchObject({ ok: false, status: 403 })
+  })
+
+  it('has nothing to attempt when the board has no password', () => {
+    expect(unlockDecision(keys, keys.editor, false)).toMatchObject({ ok: false, status: 409 })
+  })
+
+  it('answers gone for a destroyed room', () => {
+    expect(unlockDecision(keys, keys.editor, true, true)).toMatchObject({ ok: false, status: 410 })
   })
 })
