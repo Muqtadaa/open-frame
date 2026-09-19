@@ -1,0 +1,137 @@
+import { asBoardId, type BoardId } from '@openframe/core'
+
+import { supabaseClient } from './client.js'
+
+/**
+ * Boards that follow you between browsers.
+ *
+ * Everything here goes through a database function rather than a table read,
+ * and that is not indirection for its own sake: a board's access keys are
+ * revoked at the COLUMN level, so no client can select them. `my_boards()` is
+ * the only door, and it hands back the one key your role entitles you to.
+ *
+ * Every failure is an empty list or a `false`, never a throw. A board list is
+ * an additive convenience over a product that works with no account and no
+ * network — PRODUCT.md's fourth principle — so a database that cannot be
+ * reached must degrade to "no remote boards", never to a broken front door.
+ */
+
+export interface RemoteBoard {
+  readonly boardId: BoardId
+  readonly title: string
+  /** What this person may do with it, as the database computed it. */
+  readonly role: 'owner' | 'editor' | 'viewer'
+  /** The key that opens it for that role. `null` for a board shared before roles. */
+  readonly accessKey: string | null
+  readonly updatedAt: number
+}
+
+const ROLES = new Set(['owner', 'editor', 'viewer'])
+const BOARD_ID = /^brd_[A-Za-z0-9]{8,48}$/
+const ACCESS_KEY = /^[0-9a-f]{32}$/
+
+/**
+ * Narrowed at the boundary, because this is one.
+ *
+ * The rows come from a service over the network. A row whose shape this
+ * version does not recognise is dropped rather than rendered — a board list is
+ * not worth a blank screen, and `undefined.title` in a map callback is exactly
+ * how one happens.
+ */
+function readBoard(row: unknown): RemoteBoard | null {
+  if (typeof row !== 'object' || row === null) return null
+  /*
+   * Named as a shape rather than indexed, so the column names appear once and
+   * the compiler carries them. Every field is `unknown` — that is the point:
+   * this is what arrived, not what was promised.
+   */
+  const { id, title, role, access_key: key, updated_at: updated } = row as {
+    id?: unknown
+    title?: unknown
+    role?: unknown
+    access_key?: unknown
+    updated_at?: unknown
+  }
+
+  if (typeof id !== 'string' || !BOARD_ID.test(id)) return null
+  if (typeof title !== 'string') return null
+  if (typeof role !== 'string' || !ROLES.has(role)) return null
+
+  const at = typeof updated === 'string' ? Date.parse(updated) : Number.NaN
+
+  return {
+    boardId: asBoardId(id),
+    title,
+    role: role as RemoteBoard['role'],
+    accessKey: typeof key === 'string' && ACCESS_KEY.test(key) ? key : null,
+    updatedAt: Number.isFinite(at) ? at : 0,
+  }
+}
+
+export async function listMyBoards(): Promise<readonly RemoteBoard[]> {
+  const client = supabaseClient()
+  if (client === null) return []
+
+  /*
+   * Typed as `unknown` at the call, not by trusting a generated row type. The
+   * client's own signature for an arbitrary RPC is `any`, and `any` here would
+   * let every check below be optimised away by a reader's confidence rather
+   * than by the compiler.
+   */
+  const response = (await client.rpc('my_boards')) as {
+    data: unknown
+    error: unknown
+  }
+  if (response.error !== null || !Array.isArray(response.data)) return []
+
+  const boards: RemoteBoard[] = []
+  for (const row of response.data as readonly unknown[]) {
+    const board = readBoard(row)
+    if (board !== null) boards.push(board)
+  }
+  return boards
+}
+
+/**
+ * Records a board somebody has just shared, so it appears in their list.
+ *
+ * Best effort, and deliberately so: the board and its links already exist and
+ * work the moment the room is claimed. Failing here costs a row in a list, and
+ * refusing to share over it would trade the thing that works for the thing
+ * that is convenient.
+ */
+export async function recordSharedBoard(board: {
+  readonly boardId: BoardId
+  readonly title: string
+  readonly editorKey: string
+  readonly viewerKey: string
+}): Promise<boolean> {
+  const client = supabaseClient()
+  if (client === null) return false
+
+  const response = (await client.rpc('record_shared_board', {
+    p_id: board.boardId,
+    p_title: board.title,
+    p_editor_key: board.editorKey,
+    p_viewer_key: board.viewerKey,
+  })) as { error: unknown }
+  return response.error === null
+}
+
+/**
+ * Keeps the listed name in step with the board's own.
+ *
+ * The title in the list is a COPY — the real one lives in the document, where
+ * only the room and a browser holding it can see it. So a rename has to say so
+ * here too, and the database refuses it from anyone but the owner.
+ */
+export async function renameRemoteBoard(boardId: BoardId, title: string): Promise<boolean> {
+  const client = supabaseClient()
+  if (client === null) return false
+
+  const response = (await client.rpc('rename_board', {
+    p_id: boardId,
+    p_title: title,
+  })) as { error: unknown }
+  return response.error === null
+}

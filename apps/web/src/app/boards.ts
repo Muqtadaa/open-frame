@@ -6,6 +6,8 @@ import {
   type BoardSummary,
 } from '@openframe/core'
 
+import { ACCOUNTS_ENABLED } from './supabase-config.js'
+import { listMyBoards, type RemoteBoard } from './remote-boards.js'
 import { newLocalBoardId } from './route.js'
 
 /**
@@ -59,4 +61,68 @@ export function describeWhen(updatedAt: number, now: number): string {
   if (days < 30) return days === 1 ? 'yesterday' : `${days} days ago`
   const months = Math.round(days / 30)
   return months === 1 ? 'last month' : `${months} months ago`
+}
+
+/**
+ * A board as the front door lists it, from either place it can live.
+ *
+ * The two are shown together rather than in separate sections, because "the
+ * board I was working on" is one idea and the person does not care which
+ * storage it happens to be in. What they do care about is whether other people
+ * can see it, which is what `shared` says.
+ */
+export interface ListedBoard {
+  readonly boardId: BoardId
+  readonly title: string
+  readonly updatedAt: number
+  readonly shared: boolean
+  /** Only meaningful for a shared board; `null` for one with no account behind it. */
+  readonly role: RemoteBoard['role'] | null
+  /** The key that opens it, for a shared board that has one. */
+  readonly accessKey: string | null
+}
+
+/**
+ * Everything this person can open, newest first.
+ *
+ * A board that is BOTH local and shared appears once, as the shared one: the
+ * local copy is the original that sharing duplicated, and showing both would
+ * be one board wearing two rows.
+ */
+export async function listAllBoards(
+  repository: BoardRepository,
+  signedIn: boolean,
+): Promise<readonly ListedBoard[]> {
+  const local = await listLocalBoards(repository)
+  /*
+   * Asked for only when there is somebody to ask about. A signed-out visitor
+   * making an RPC that can only ever return nothing is a round trip spent on
+   * the front door of a local-first product.
+   */
+  const remote = signedIn && ACCOUNTS_ENABLED ? await listMyBoards() : []
+
+  const shared = new Set(remote.map((board) => board.boardId))
+
+  const listed: ListedBoard[] = [
+    ...remote.map((board) => ({
+      boardId: board.boardId,
+      title: board.title,
+      updatedAt: board.updatedAt,
+      shared: true,
+      role: board.role,
+      accessKey: board.accessKey,
+    })),
+    ...local
+      .filter((board) => !shared.has(board.id))
+      .map((board) => ({
+        boardId: board.id,
+        title: board.title,
+        updatedAt: board.updatedAt,
+        shared: false,
+        role: null,
+        accessKey: null,
+      })),
+  ]
+
+  return listed.sort((a, b) => b.updatedAt - a.updatedAt)
 }

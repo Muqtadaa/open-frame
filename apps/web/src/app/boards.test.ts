@@ -1,7 +1,8 @@
 import { asBoardId, type BoardId, type BoardRepository, type BoardSummary } from '@openframe/core'
-import { describe, expect, it } from 'vitest'
+import { beforeEach, describe, expect, it, vi } from 'vitest'
 
-import { createLocalBoard, describeWhen, listLocalBoards } from './boards.js'
+import { createLocalBoard, describeWhen, listAllBoards, listLocalBoards } from './boards.js'
+import { listMyBoards, type RemoteBoard } from './remote-boards.js'
 
 const summary = (id: string, updatedAt: number): BoardSummary => ({
   id: asBoardId(id),
@@ -83,5 +84,93 @@ describe('how long ago', () => {
    */
   it('does not go backwards when a timestamp is in the future', () => {
     expect(describeWhen(now + 60_000, now)).toBe('just now')
+  })
+})
+
+/**
+ * The two places a board can live, in one list.
+ *
+ * `listMyBoards` is mocked because the real one is a network call to a service
+ * this test has no business reaching. What is NOT mocked is the merging, which
+ * is where the decisions are.
+ */
+vi.mock('./remote-boards.js', () => ({
+  listMyBoards: vi.fn(),
+}))
+
+const remote = vi.mocked(listMyBoards)
+
+const sharedBoard = (id: string, title: string, updatedAt: number, role: RemoteBoard['role'] = 'owner'): RemoteBoard => ({
+  boardId: asBoardId(id),
+  title,
+  role,
+  accessKey: 'a'.repeat(32),
+  updatedAt,
+})
+
+describe('everything you can open', () => {
+  beforeEach(() => {
+    remote.mockReset()
+    remote.mockResolvedValue([])
+  })
+
+  it('does not ask the database when nobody is signed in', async () => {
+    const { repository } = fakeRepository([summary('board_one', 1_000)])
+
+    const listed = await listAllBoards(repository, false)
+
+    // A round trip that can only ever return nothing, on the front door of a
+    // local-first product.
+    expect(remote).not.toHaveBeenCalled()
+    expect(listed.map((board) => board.shared)).toEqual([false])
+  })
+
+  it('puts local and shared boards in one list, newest first', async () => {
+    const { repository } = fakeRepository([summary('board_local', 1_000)])
+    remote.mockResolvedValue([sharedBoard('brd_abcdefgh12345678', 'Shared', 3_000)])
+
+    const listed = await listAllBoards(repository, true)
+
+    expect(listed.map((board) => board.title)).toEqual(['Shared', 'board_local'])
+  })
+
+  /**
+   * Sharing COPIES a board, so the original stays in this browser under its own
+   * id. Both would otherwise appear, which is one board wearing two rows.
+   */
+  it('shows a board that is both local and shared exactly once', async () => {
+    const { repository } = fakeRepository([summary('brd_abcdefgh12345678', 2_000)])
+    remote.mockResolvedValue([sharedBoard('brd_abcdefgh12345678', 'Shared', 3_000)])
+
+    const listed = await listAllBoards(repository, true)
+
+    expect(listed).toHaveLength(1)
+    expect(listed[0]?.shared).toBe(true)
+  })
+
+  it('carries the key that opens a shared board', async () => {
+    const { repository } = fakeRepository([])
+    remote.mockResolvedValue([sharedBoard('brd_abcdefgh12345678', 'Shared', 3_000, 'viewer')])
+
+    const listed = await listAllBoards(repository, true)
+
+    // Without it the row links to a board the room refuses, which is the whole
+    // reason the key is stored beside the title.
+    expect(listed[0]?.accessKey).toBe('a'.repeat(32))
+    expect(listed[0]?.role).toBe('viewer')
+  })
+
+  /**
+   * A board list is additive over a product that works with no account and no
+   * network. A database that cannot be reached must cost the remote rows and
+   * nothing else.
+   */
+  it('still lists local boards when the database answers with nothing', async () => {
+    const { repository } = fakeRepository([summary('board_one', 1_000)])
+    remote.mockResolvedValue([])
+
+    const listed = await listAllBoards(repository, true)
+
+    expect(listed.map((board) => board.boardId)).toEqual([asBoardId('board_one')])
   })
 })

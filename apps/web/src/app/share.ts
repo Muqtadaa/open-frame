@@ -2,6 +2,8 @@ import type { BoardId } from '@openframe/core'
 
 import type { OpenFrameRuntime } from '../runtime/context.js'
 import { claimUrl, newSharedBoardId, shareLink } from './collab-config.js'
+import { currentIdentity } from './identity.js'
+import { recordSharedBoard } from './remote-boards.js'
 
 /**
  * Turns the board you are looking at into one other people can open.
@@ -71,6 +73,24 @@ export async function shareCurrentBoard(runtime: OpenFrameRuntime): Promise<Shar
 
   const document = runtime.store.getDocument()
   await runtime.repository.saveBoard({ ...document, id: boardId })
+
+  /*
+   * Recorded so it appears in the owner's list, and best effort on purpose:
+   * the board and both links already exist and work. A failure here costs a
+   * row in a list, and refusing to share over it would trade the thing that
+   * works for the thing that is convenient.
+   *
+   * A guest has nobody to own it, so there is nothing to record — which is the
+   * product decision, not a limitation: an account is for ownership.
+   */
+  if ((await currentIdentity()) !== null) {
+    await recordSharedBoard({
+      boardId,
+      title: document.meta.title,
+      editorKey: keys.editor,
+      viewerKey: keys.viewer,
+    })
+  }
 
   const origin = window.location.origin
   return {

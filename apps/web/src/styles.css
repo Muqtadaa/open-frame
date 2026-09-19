@@ -2550,7 +2550,10 @@ textarea.of-input {
 }
 
 .of-home__board-title {
+  overflow: hidden;
   font-size: 13px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 /*
@@ -2766,4 +2769,20 @@ textarea.of-input {
   width: 22ch;
   background: var(--of-accent-soft);
   outline: 1px solid var(--of-accent);
+}
+
+/*
+ * Whether a board is only yours. A record, like everything else in a ledger
+ * row that is not the name — mono, muted, and quiet enough that the name stays
+ * the thing you read.
+ */
+.of-home__board-tag {
+  flex: none;
+  padding: 1px 6px;
+  font-family: var(--of-mono);
+  font-size: 11px;
+  letter-spacing: 0.02em;
+  color: var(--of-ink-muted);
+  background: var(--of-bg);
+  border-radius: 3px;
 }

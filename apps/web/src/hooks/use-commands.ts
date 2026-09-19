@@ -13,6 +13,7 @@ import type {
 import { childrenOf, unionAll } from '@openframe/core'
 import { useMemo } from 'react'
 
+import { renameRemoteBoard } from '../app/remote-boards.js'
 import { useOpenFrame } from '../runtime/context.js'
 import { useInteractionStore } from '../interaction/interaction-store.js'
 import { objectsInMarquee } from '../scene/hit-testing.js'
@@ -480,7 +481,16 @@ export function useCommands(): BoardCommands {
         // to decide whether to keep the text somebody typed or put the old
         // name back, and it cannot learn that from a notice.
         report(result)
-        return result.ok
+        if (!result.ok) return false
+
+        /*
+         * And in the board list, which reads a COPY of this name from the
+         * database. Fire and forget: the document is renamed either way, the
+         * database refuses anyone but the owner, and a board list showing a
+         * stale name is not worth failing a rename over.
+         */
+        void renameRemoteBoard(runtime.boardId, runtime.store.getDocument().meta.title)
+        return true
       },
 
       moveObjects(moves) {

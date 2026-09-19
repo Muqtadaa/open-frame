@@ -1,9 +1,10 @@
 import { useEffect, useState } from 'react'
-import type { BoardRepository, BoardSummary } from '@openframe/core'
+import type { BoardRepository } from '@openframe/core'
 
-import { createLocalBoard, describeWhen, listLocalBoards } from '../app/boards.js'
+import { createLocalBoard, describeWhen, listAllBoards, type ListedBoard } from '../app/boards.js'
 import { ACCOUNTS_ENABLED, signOut } from '../app/identity.js'
 import { boardHref } from '../app/route.js'
+import { shareLink } from '../app/collab-config.js'
 import { useIdentity } from '../hooks/use-identity.js'
 import { hueVar, initialOf } from '../scene/presence.js'
 import { AccountForm } from './AccountForm.js'
@@ -32,20 +33,25 @@ export function Home({ repository }: { readonly repository: BoardRepository }) {
    * re-render.
    */
   const [listing, setListing] = useState<{
-    readonly boards: readonly BoardSummary[]
+    readonly boards: readonly ListedBoard[]
     readonly readAt: number
   } | null>(null)
   const [starting, setStarting] = useState(false)
 
+  /*
+   * Re-read when the identity settles, not only on mount: the session is
+   * restored from storage asynchronously, so the first pass always runs signed
+   * out and would leave a signed-in person looking at their local boards only.
+   */
   useEffect(() => {
     let live = true
-    void listLocalBoards(repository).then((found) => {
+    void listAllBoards(repository, identity !== null).then((found) => {
       if (live) setListing({ boards: found, readAt: Date.now() })
     })
     return () => {
       live = false
     }
-  }, [repository])
+  }, [repository, identity])
 
   const start = (): void => {
     setStarting(true)
@@ -105,9 +111,23 @@ export function Home({ repository }: { readonly repository: BoardRepository }) {
             ) : (
               <ul className="of-home__list" data-testid="home-boards">
                 {listing.boards.map((board) => (
-                  <li key={board.id}>
-                    <a className="of-home__board" href={boardHref(board.id, false)}>
+                  <li key={board.boardId}>
+                    <a
+                      className="of-home__board"
+                      href={
+                        board.shared
+                          ? // The key travels with the link: a claimed room
+                            // refuses the board id on its own.
+                            shareLink(board.boardId, '', board.accessKey)
+                          : boardHref(board.boardId, false)
+                      }
+                    >
                       <span className="of-home__board-title">{board.title}</span>
+                      {board.shared && (
+                        <span className="of-home__board-tag">
+                          {board.role === 'viewer' ? 'view only' : 'shared'}
+                        </span>
+                      )}
                       <span className="of-home__board-when">
                         {describeWhen(board.updatedAt, listing.readAt)}
                       </span>
