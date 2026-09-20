@@ -9,7 +9,9 @@ import { plainTextOf } from '@openframe/core'
 import { fontFamily, inkColor, readableInkOn, dashArray, justifyAlign, textAlign, inkOf, surfaceOf } from '../scene/style-tokens.js'
 
 function ShapeOutline({ object }: { object: ObjectBase<string, ShapeData> }) {
-  const stroke = inkOf(object.style.color)
+  // `strokeColor` when it is set, the object's own colour otherwise — which
+  // is what every shape drawn before the property existed still gets.
+  const stroke = inkOf(object.style.strokeColor ?? object.style.color)
   const filled = (object.style.fill ?? 'tint') !== 'none'
   const fill = filled ? surfaceOf(object.style.color, 'gray') : 'transparent'
   const strokeWidth = { none: 0, thin: 1, medium: 2, thick: 4 }[object.style.stroke ?? 'medium']

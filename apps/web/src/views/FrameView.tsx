@@ -14,6 +14,19 @@ function FrameRenderer({ object, zoom }: ObjectViewProps<FrameData>) {
       className="of-frame"
       style={{
         background: filled ? surfaceOf(object.style.color, 'gray') : 'transparent',
+        borderColor: inkColor(object.style.strokeColor),
+        /*
+         * A HAIRLINE at every zoom, and a 2px corner at every zoom.
+         *
+         * The box is drawn in world space, so a 1px border is 4px of ink at
+         * 400% and the 2px corner becomes an 8px curve — at which point a
+         * frame stops reading as a ruled boundary and starts reading as a
+         * rounded card, which is the shape this world refuses. Dividing by the
+         * zoom is the same counter-scale the title gets, expressed in the two
+         * properties a transform cannot reach without scaling the contents.
+         */
+        borderWidth: `${String(1 / zoom)}px`,
+        borderRadius: `${String(2 / zoom)}px`,
         opacity: object.style.opacity ?? 1,
       }}
       role="group"
@@ -68,6 +81,19 @@ function FrameEditor({ object, zoom, onCommit, onCancel }: ObjectEditorProps<Fra
       className="of-frame"
       style={{
         background: filled ? surfaceOf(object.style.color, 'gray') : 'transparent',
+        borderColor: inkColor(object.style.strokeColor),
+        /*
+         * A HAIRLINE at every zoom, and a 2px corner at every zoom.
+         *
+         * The box is drawn in world space, so a 1px border is 4px of ink at
+         * 400% and the 2px corner becomes an 8px curve — at which point a
+         * frame stops reading as a ruled boundary and starts reading as a
+         * rounded card, which is the shape this world refuses. Dividing by the
+         * zoom is the same counter-scale the title gets, expressed in the two
+         * properties a transform cannot reach without scaling the contents.
+         */
+        borderWidth: `${String(1 / zoom)}px`,
+        borderRadius: `${String(2 / zoom)}px`,
         opacity: object.style.opacity ?? 1,
       }}
     >

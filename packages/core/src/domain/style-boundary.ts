@@ -7,9 +7,10 @@ import { isColorValue, type ObjectStyle } from './object.js'
  * is one: a colour property added to `ObjectStyle` and forgotten here would be
  * a value going unchecked at the one place that checks.
  */
-const COLOUR_KEYS: Readonly<Record<'color' | 'textColor', true>> = {
+const COLOUR_KEYS: Readonly<Record<'color' | 'textColor' | 'strokeColor', true>> = {
   color: true,
   textColor: true,
+  strokeColor: true,
 }
 
 /**

@@ -204,6 +204,47 @@ test.describe('zoom', () => {
     expect(await heightAt('400')).toBeCloseTo(at100, 1)
   })
 
+  /**
+   * A table's colour bar is CHROME, so it is the same size on screen at 25% as
+   * at 400%.
+   *
+   * It renders inside the object's editor, which lives in world space — so
+   * without a counter-scale everything in it is multiplied by the zoom, and it
+   * was the size of a dialog at 400% and a stamp at 25%. Measured at three
+   * zooms rather than two: one comparison passes against a bar that is merely
+   * wrong by a constant.
+   */
+  test('keeps a table colour bar the same size at every zoom', async ({ page }) => {
+    await page.getByTestId('tool-table').click()
+    await page.locator(CANVAS).click({ position: { x: 420, y: 320 } })
+    await page.keyboard.press('Escape')
+    await page.keyboard.press('v')
+
+    const sizeAt = async (percent: string): Promise<{ w: number; h: number }> => {
+      await page.getByTestId('zoom-percent').click()
+      await page.getByTestId('zoom-input').fill(percent)
+      await page.getByTestId('zoom-input').press('Enter')
+      await expect(zoomPercent(page)).resolves.toBe(Number(percent))
+      await page.locator('[data-object-id]').first().dblclick()
+      // The bar arrives on an animation that carries its own transform, so a
+      // box read on the same tick is the animation's, not the layout's.
+      await expect(page.getByTestId('table-cell-style')).toBeVisible()
+      await page.waitForTimeout(250)
+      const box = await page.getByTestId('table-cell-style').boundingBox()
+      if (box === null) throw new Error(`no colour bar at ${percent}%`)
+      await page.keyboard.press('Escape')
+      return { w: box.width, h: box.height }
+    }
+
+    const at100 = await sizeAt('100')
+    expect(at100.h).toBeGreaterThan(40)
+    for (const percent of ['50', '400']) {
+      const other = await sizeAt(percent)
+      expect(other.w).toBeCloseTo(at100.w, 0)
+      expect(other.h).toBeCloseTo(at100.h, 0)
+    }
+  })
+
   test('zoom to fit frames the content', async ({ page }) => {
     await page.keyboard.press('s')
     await page.locator(CANVAS).click({ position: { x: 300, y: 250 } })

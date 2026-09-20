@@ -90,6 +90,8 @@ function TableRenderer({ object }: ObjectViewProps<TableData>) {
         // On the table, not on each cell: one declaration the cells inherit,
         // rather than a style object rebuilt per cell on every render.
         color: inkColor(object.style.textColor),
+        // On the table; the cells read it through `currentcolor` on their rules.
+        borderColor: inkColor(object.style.strokeColor),
         opacity: object.style.opacity ?? 1,
       }}
       role="table"
@@ -132,7 +134,7 @@ function TableRenderer({ object }: ObjectViewProps<TableData>) {
  * the editor every time: adding three columns would mean re-opening it three
  * times.
  */
-function TableEditor({ object, at, onCommit, onCancel }: ObjectEditorProps<TableData>) {
+function TableEditor({ object, at, zoom, onCommit, onCancel }: ObjectEditorProps<TableData>) {
   /*
    * The whole table as a draft, not just its text. `resizeGrid` moves the
    * weights and the cells together, which is the only way the two cannot
@@ -251,7 +253,18 @@ function TableEditor({ object, at, onCommit, onCancel }: ObjectEditorProps<Table
             )}`}
             data-testid={`table-cell-${String(index)}`}
             data-selected={inRange.has(index) ? 'true' : undefined}
-            style={cellPaint(cell)}
+            /*
+             * The ring is 2px ON SCREEN, so it is divided by the zoom like
+             * every other piece of chrome here — at 400% a 2px inset ring is
+             * 8px of accent and reads as a filled border rather than as a
+             * selection.
+             */
+            style={{
+              ...cellPaint(cell),
+              ...(inRange.has(index)
+                ? { boxShadow: `inset 0 0 0 ${String(2 / zoom)}px var(--of-accent)` }
+                : {}),
+            }}
             onPointerDown={(event) => {
               /*
                * Shift EXTENDS from the anchor; a plain press starts a new
@@ -322,7 +335,22 @@ function TableEditor({ object, at, onCommit, onCancel }: ObjectEditorProps<Table
         * table" would put type-specific knowledge in the one component that
         * exists to have none — rule 21.
         */}
-      <div className="of-cellbar" data-testid="table-cell-style">
+      {/*
+        * COUNTER-SCALED, like a frame's title.
+        *
+        * This editor renders in WORLD space, so everything in it is multiplied
+        * by the board's zoom — the bar was the size of a dialog at 400% and a
+        * stamp at 25%. Chrome is chrome: it is the same size on screen at every
+        * zoom, which is the whole reason a frame's title is counter-scaled too.
+        *
+        * The origin is the bottom-left corner it is pinned to, so it grows away
+        * from the table rather than drifting off it.
+        */}
+      <div
+        className="of-cellbar"
+        data-testid="table-cell-style"
+        style={{ transform: `scale(${String(1 / zoom)})`, transformOrigin: 'bottom left' }}
+      >
         <div className="of-cellbar__head">
           <span className="of-cellbar__count">
             {selected.length === 1 ? '1 cell' : `${String(selected.length)} cells`}
@@ -386,7 +414,12 @@ function TableEditor({ object, at, onCommit, onCancel }: ObjectEditorProps<Table
         * right, rows underneath. A row of four identical buttons in a corner
         * would make you read every label to find the one you want.
         */}
-      <div className="of-table-edit__columns" role="group" aria-label="Columns">
+      <div
+        className="of-table-edit__columns"
+        role="group"
+        aria-label="Columns"
+        style={{ transform: `scale(${String(1 / zoom)})`, transformOrigin: 'top left' }}
+      >
         <button
           type="button"
           className="of-table-edit__step"
@@ -414,7 +447,12 @@ function TableEditor({ object, at, onCommit, onCancel }: ObjectEditorProps<Table
         </button>
       </div>
 
-      <div className="of-table-edit__rows" role="group" aria-label="Rows">
+      <div
+        className="of-table-edit__rows"
+        role="group"
+        aria-label="Rows"
+        style={{ transform: `scale(${String(1 / zoom)})`, transformOrigin: 'top left' }}
+      >
         <button
           type="button"
           className="of-table-edit__step"

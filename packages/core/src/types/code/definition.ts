@@ -38,7 +38,7 @@ export const codeType = defineObjectType<typeof CODE_TYPE, CodeData>({
      * would be a control that either does nothing or breaks the thing it is
      * applied to. Rule 21: only what the view honours is declared.
      */
-    styleProps: ['opacity', 'stroke'],
+    styleProps: ['opacity', 'stroke', 'strokeColor'],
   },
 
   describe: (object) => {

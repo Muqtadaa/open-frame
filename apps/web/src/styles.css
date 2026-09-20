@@ -1196,9 +1196,7 @@ body {
   transition: box-shadow var(--of-quick) var(--of-ease);
 }
 
-.of-table__input[data-selected='true'] {
-  box-shadow: inset 0 0 0 2px var(--of-accent);
-}
+/* The ring itself is set inline, in screen pixels: see `TableView`. */
 
 .of-table-edit__columns,
 .of-table-edit__rows {
@@ -3216,6 +3214,20 @@ textarea.of-input {
   border: none;
   border-radius: 5px;
   cursor: pointer;
+}
+
+/*
+ * A segmented control carrying WORDS rather than icons.
+ *
+ * The item is a 28px square because every one of these held a drawn glyph.
+ * Given text it clipped, and two labels beside each other overlapped into
+ * `surfatext` — legible as nothing at all. Text items size to their content
+ * and keep the square as a floor.
+ */
+.of-choice--text .of-choice__item {
+  width: auto;
+  min-width: 28px;
+  padding: 0 9px;
 }
 
 .of-choice__item svg {

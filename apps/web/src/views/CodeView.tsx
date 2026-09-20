@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react'
 
 import { CODE_LANGUAGES, MAX_CODE, type CodeData } from '@openframe/core'
 
+import { inkColor } from '../scene/style-tokens.js'
 import { defineObjectView, type ObjectEditorProps, type ObjectViewProps } from './registry.js'
 import { highlight } from './code-highlight.js'
 
@@ -52,7 +53,7 @@ function CodeRenderer({ object }: ObjectViewProps<CodeData>) {
   return (
     <div
       className="of-code"
-      style={{ opacity: object.style.opacity ?? 1 }}
+      style={{ borderColor: inkColor(object.style.strokeColor), opacity: object.style.opacity ?? 1 }}
       role="group"
       aria-label={`Code block, ${language}`}
     >

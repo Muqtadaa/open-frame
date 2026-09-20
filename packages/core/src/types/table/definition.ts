@@ -74,7 +74,7 @@ export const tableType = defineObjectType<typeof TABLE_TYPE, TableData>({
      * lines that make it a table. Declared properties that the view ignores
      * are what rule 21 forbids, so only what is honoured is listed.
      */
-    styleProps: ['color', 'textColor', 'font', 'align', 'opacity', 'stroke'],
+    styleProps: ['color', 'textColor', 'strokeColor', 'font', 'align', 'opacity', 'stroke'],
   },
 
   /**

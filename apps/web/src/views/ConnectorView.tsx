@@ -17,7 +17,7 @@ const STROKE_WIDTHS = { none: 0, thin: 1, medium: 2, thick: 4 }
  */
 function ConnectorRenderer({ object, document: doc, zoom }: ObjectViewProps<ConnectorData>) {
   const { start, end } = resolveEndpoints(doc, object.data.from, object.data.to)
-  const stroke = inkOf(object.style.color)
+  const stroke = inkOf(object.style.strokeColor ?? object.style.color)
   const width = STROKE_WIDTHS[object.style.stroke ?? 'medium']
   const path = connectorPath(start, end, object.data.routing)
   const { departure, arrival } = routeAngles(start, end, object.data.routing)

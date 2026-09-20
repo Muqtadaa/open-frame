@@ -55,6 +55,20 @@ export interface ObjectStyle {
    * the note's paper and the text's ink at once.
    */
   readonly textColor?: ColorValue
+  /**
+   * The colour of this object's own line: a shape's outline, a connector, a
+   * frame's edge, a table's rules.
+   *
+   * SEPARATE from `stroke`, which is the line's WEIGHT — the same split `dash`
+   * already makes for its pattern. Three properties rather than one, because
+   * they are chosen for different reasons and combine freely.
+   *
+   * Absent means the object's own `color`, which is what every stroke took
+   * before this existed — so nothing drawn before it changes, and a shape
+   * whose outline and fill were always one decision stays one decision until
+   * somebody separates them.
+   */
+  readonly strokeColor?: ColorValue
   readonly fill?: FillToken
   readonly stroke?: StrokeToken
   /**
@@ -193,6 +207,7 @@ export type StyleProp = keyof ObjectStyle
 const EVERY_STYLE_PROP: Readonly<Record<StyleProp, true>> = {
   color: true,
   textColor: true,
+  strokeColor: true,
   fill: true,
   stroke: true,
   dash: true,

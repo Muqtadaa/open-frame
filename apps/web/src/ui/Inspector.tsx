@@ -81,10 +81,20 @@ const PANEL_HEIGHT_PX = 420
  * reader, where "surface" and "text" alone would be two identically announced
  * groups.
  */
-const PAINTABLE: readonly { prop: 'color' | 'textColor'; label: string; name: string }[] = [
-  { prop: 'color', label: 'surface', name: 'Colour' },
+type PaintProp = 'color' | 'textColor' | 'strokeColor'
+
+const PAINTABLE: readonly { prop: PaintProp; label: string; name: string }[] = [
+  { prop: 'color', label: 'fill', name: 'Colour' },
   { prop: 'textColor', label: 'text', name: 'Text colour' },
+  { prop: 'strokeColor', label: 'line', name: 'Line colour' },
 ]
+
+/** Stable test handles, so a renamed label never renames a selector. */
+const PAINT_PREFIX: Readonly<Record<PaintProp, string>> = {
+  color: 'swatch',
+  textColor: 'ink',
+  strokeColor: 'line',
+}
 
 export function Inspector() {
   const { runtime } = useOpenFrame()
@@ -156,7 +166,7 @@ export function Inspector() {
    * one thing React cannot survive. It took the whole app down on every
    * selection.
    */
-  const [paint, setPaint] = useState<'color' | 'textColor'>('color')
+  const [paint, setPaint] = useState<PaintProp>('color')
 
   const props = useMemo<ReadonlySet<StyleProp>>(() => {
     // Asked of the REGISTRY per object, not read off the type's capabilities:
@@ -310,7 +320,11 @@ export function Inspector() {
         <Field name="colour">
           <div className="of-paint">
             {paintTargets.length > 1 && (
-              <div className="of-choice of-paint__target" role="group" aria-label="What to colour">
+              <div
+                className="of-choice of-choice--text of-paint__target"
+                role="group"
+                aria-label="What to colour"
+              >
                 {paintTargets.map((option) => (
                   <button
                     key={option.prop}
@@ -328,9 +342,14 @@ export function Inspector() {
               </div>
             )}
             <Swatches
-              kind={painting.prop === 'textColor' ? 'ink' : 'surface'}
+              /*
+               * A fill is a slip; text and a line are both ink. That is the
+               * pair model, not three cases — `surfaceOf` and `inkOf` are the
+               * only two answers a token has.
+               */
+              kind={painting.prop === 'color' ? 'surface' : 'ink'}
               label={painting.name}
-              testPrefix={painting.prop === 'textColor' ? 'ink' : 'swatch'}
+              testPrefix={PAINT_PREFIX[painting.prop]}
               current={value(painting.prop)}
               /*
                * An ink is read against what it will sit on: the object's own
