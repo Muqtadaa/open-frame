@@ -162,6 +162,18 @@ module.exports = {
       to: { path: '^apps/web/src/(canvas|interaction|ui|app|adapters|hooks|runtime)' },
     },
     {
+      name: 'controls-are-a-leaf',
+      severity: 'error',
+      comment:
+        'controls/ holds presentational controls that BOTH ui/ and views/ use — a colour ' +
+        'swatch row is the same control wherever a colour is chosen. It exists because ' +
+        'views/ is a leaf and may not import ui/, and the alternative was a second colour ' +
+        'picker that drifts. It may read core and scene/ and nothing else; the moment it ' +
+        'reaches for interaction state or the document it has stopped being presentational.',
+      from: { path: '^apps/web/src/controls' },
+      to: { path: '^apps/web/src/(canvas|interaction|ui|app|adapters|hooks|runtime|views)' },
+    },
+    {
       name: 'runtime-context-is-shared',
       severity: 'error',
       comment:

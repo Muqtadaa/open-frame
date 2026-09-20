@@ -166,6 +166,44 @@ test.describe('zoom', () => {
     await expect(zoomPercent(page)).resolves.toBe(before)
   })
 
+  /**
+   * A frame's NAME at every zoom.
+   *
+   * It is drawn above the frame and counter-scaled to stay a constant size on
+   * screen, which is two transforms that have to cancel exactly. They did not:
+   * the band was ALSO divided by the zoom, applying the counter-scale twice, so
+   * it halved with every doubling — 18px at 100%, 9 at 200%, 4.5 at 400% — and
+   * the 15px name inside it was clipped away entirely. Zooming in made the name
+   * disappear.
+   *
+   * Measured rather than eyeballed, and at three zooms rather than two: a
+   * single comparison passes against a band that is merely wrong by a constant.
+   */
+  test('keeps a frame name the same size at every zoom', async ({ page }) => {
+    await page.getByTestId('tool-frame').click()
+    await page.locator(CANVAS).click({ position: { x: 400, y: 300 } })
+    await page.keyboard.press('Escape')
+    await page.keyboard.press('v')
+
+    const title = page.locator('.of-frame__title')
+    const heightAt = async (percent: string): Promise<number> => {
+      await page.getByTestId('zoom-percent').click()
+      await page.getByTestId('zoom-input').fill(percent)
+      await page.getByTestId('zoom-input').press('Enter')
+      await expect(zoomPercent(page)).resolves.toBe(Number(percent))
+      const box = await title.boundingBox()
+      if (box === null) throw new Error(`the frame name is not on screen at ${percent}%`)
+      return box.height
+    }
+
+    const at100 = await heightAt('100')
+    // Tall enough to hold the type it is set in, or it is clipped whatever the
+    // arithmetic says.
+    expect(at100).toBeGreaterThan(15)
+    expect(await heightAt('200')).toBeCloseTo(at100, 1)
+    expect(await heightAt('400')).toBeCloseTo(at100, 1)
+  })
+
   test('zoom to fit frames the content', async ({ page }) => {
     await page.keyboard.press('s')
     await page.locator(CANVAS).click({ position: { x: 300, y: 250 } })

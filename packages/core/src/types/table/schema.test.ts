@@ -5,11 +5,14 @@ import {
   TableDataSchema,
   cellIndex,
   emptyCells,
+  cellRange,
   dividerPositions,
+  styleCells,
   moveDividerAt,
   resizeGrid,
   type TableData,
 } from './schema.js'
+import { plainTextOf } from '../../domain/rich-text.js'
 
 /**
  * The grid's shape lives in one place — the lengths of `columns` and `rows` —
@@ -249,5 +252,101 @@ describe('the divisions inside a table', () => {
   it('puts the boundary where it was dragged', () => {
     const moved = moveDividerAt([1, 1, 1], 1, 0.8)
     expect(dividerPositions(moved)[1]).toBeCloseTo(0.8, 10)
+  })
+})
+
+describe('cellRange', () => {
+  const three = grid(3, 3) as TableData
+
+  it('takes one cell when both corners are the same', () => {
+    expect(cellRange(three, 4, 4)).toEqual([4])
+  })
+
+  /**
+   * A rectangle, not a run. Indices 1 to 7 on a 3x3 is the middle COLUMN plus
+   * its neighbours, not "every cell between them in reading order" — the
+   * difference is what makes this a spreadsheet selection rather than a text
+   * one, and a flat-list implementation gets it wrong by default.
+   */
+  it('covers the rectangle between two corners, not the run', () => {
+    expect(cellRange(three, 1, 7)).toEqual([1, 4, 7])
+    expect(cellRange(three, 0, 4)).toEqual([0, 1, 3, 4])
+  })
+
+  /** Half of all drags go up or left. */
+  it('normalises corners given in any order', () => {
+    expect(cellRange(three, 8, 0)).toEqual(cellRange(three, 0, 8))
+    expect(cellRange(three, 2, 6)).toEqual(cellRange(three, 6, 2))
+    expect(cellRange(three, 2, 6)).toEqual([0, 1, 2, 3, 4, 5, 6, 7, 8])
+  })
+
+  /** On a non-square grid, so a row/column mix-up cannot pass. */
+  it('reads width from the columns, not from a square assumption', () => {
+    const wide = grid(4, 2) as TableData
+    expect(cellRange(wide, 0, 5)).toEqual([0, 1, 4, 5])
+  })
+
+  it('takes nothing when a corner is not on the grid', () => {
+    expect(cellRange(three, 0, 99)).toEqual([])
+    expect(cellRange(three, -1, 0)).toEqual([])
+  })
+})
+
+describe('styleCells', () => {
+  const three = grid(3, 3) as TableData
+
+  it('dresses only the cells named', () => {
+    const styled = styleCells(three, [1, 2], { fill: 'blue' })
+    expect(styled.cells[1]?.fill).toBe('blue')
+    expect(styled.cells[2]?.fill).toBe('blue')
+    expect(styled.cells[0]?.fill).toBeUndefined()
+  })
+
+  it('leaves the colours it was not asked about', () => {
+    const first = styleCells(three, [0], { fill: 'blue', textColor: 'red' })
+    const second = styleCells(first, [0], { border: '#123456' })
+    expect(second.cells[0]).toEqual({
+      text: [{ text: '' }],
+      fill: 'blue',
+      textColor: 'red',
+      border: '#123456',
+    })
+  })
+
+  /**
+   * `null` CLEARS, `undefined` means "not mentioned". Without two spellings,
+   * putting a cell back to the table's own colour is unreachable — there is no
+   * token for "the default" and setting one would stop the cell following the
+   * table.
+   */
+  it('clears a colour with null and leaves it alone with undefined', () => {
+    const blue = styleCells(three, [0], { fill: 'blue', textColor: 'red' })
+    const cleared = styleCells(blue, [0], { fill: null })
+    expect('fill' in (cleared.cells[0] ?? {})).toBe(false)
+    expect(cleared.cells[0]?.textColor).toBe('red')
+  })
+
+  it('never touches the text', () => {
+    const typed: TableData = {
+      ...three,
+      cells: three.cells.map((cell, index) => ({ ...cell, text: [{ text: `c${String(index)}` }] })),
+    }
+    const styled = styleCells(typed, [0, 4, 8], { fill: 'green' })
+    expect(styled.cells.map((cell) => plainTextOf(cell.text))).toEqual(
+      typed.cells.map((cell) => plainTextOf(cell.text)),
+    )
+  })
+
+  it('is a no-op for an empty selection, returning the same table', () => {
+    expect(styleCells(three, [], { fill: 'blue' })).toBe(three)
+  })
+
+  /** What it produces has to be a table the document will accept. */
+  it('produces data the schema accepts, and refuses a colour that is not one', () => {
+    const styled = styleCells(three, [0], { fill: '#abcdef' })
+    expect(TableDataSchema.safeParse(styled).success).toBe(true)
+    expect(
+      TableDataSchema.safeParse(styleCells(three, [0], { fill: 'chartreuse' as never })).success,
+    ).toBe(false)
   })
 })

@@ -22,12 +22,26 @@ function FrameRenderer({ object, zoom }: ObjectViewProps<FrameData>) {
       <div
         className="of-frame__title"
         style={{
-          // Counter-scaling keeps the title legible at 25% and unobtrusive at
-          // 400%, the way frame labels behave in every tool users come from.
+          /*
+           * Counter-scaling keeps the title legible at 25% and unobtrusive at
+           * 400%, the way frame labels behave in every tool users come from.
+           *
+           * The height and offset are PLAIN, not divided by the zoom. The
+           * world is already scaled by `zoom` and this element by `1 / zoom`,
+           * so the two cancel and a CSS pixel here is a screen pixel — a
+           * second division applied it twice, and the band the title is drawn
+           * in halved with every doubling: 18px at 100%, 9 at 200%, 4.5 at
+           * 400%, clipping 15px text to nothing. Zooming IN made the name
+           * disappear.
+           *
+           * `top` is the negative of the height so the band's bottom edge
+           * lands on the frame's top edge, which is where `transformOrigin`
+           * pins it.
+           */
           transform: `scale(${String(1 / zoom)})`,
           transformOrigin: '0 100%',
-          top: `${String(-TITLE_PX / zoom)}px`,
-          height: `${String(TITLE_PX / zoom)}px`,
+          top: `${String(-TITLE_PX)}px`,
+          height: `${String(TITLE_PX)}px`,
           color: inkColor(object.style.textColor),
         }}
       >
@@ -63,8 +77,8 @@ function FrameEditor({ object, zoom, onCommit, onCancel }: ObjectEditorProps<Fra
         style={{
           transform: `scale(${String(1 / zoom)})`,
           transformOrigin: '0 100%',
-          top: `${String(-TITLE_PX / zoom)}px`,
-          height: `${String(TITLE_PX / zoom)}px`,
+          top: `${String(-TITLE_PX)}px`,
+          height: `${String(TITLE_PX)}px`,
           color: inkColor(object.style.textColor),
         }}
         ariaLabel="Rename frame"

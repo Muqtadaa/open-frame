@@ -1,5 +1,6 @@
 import { type ZodType, z } from 'zod'
 
+import { isColorValue, type ColorValue } from '../../domain/object.js'
 import { RichTextSchema, type RichText } from '../../domain/rich-text.js'
 
 /**
@@ -16,9 +17,49 @@ import { RichTextSchema, type RichText } from '../../domain/rich-text.js'
  * the table. Anything that wants to point AT a cell points at the table.
  */
 
-/** One cell's contents. Rich text, like every other text this product holds. */
+/**
+ * One cell's contents, and what it is dressed in.
+ *
+ * The three colours are OPTIONAL and absent means "the table's own" — the same
+ * sparse convention `ObjectStyle` uses, for the same reason: a cell that
+ * recorded the table's current colour would stop following it the moment the
+ * table changed, and a grid of 400 cells each carrying three tokens is a lot
+ * of document to say nothing.
+ *
+ * Deliberately NOT an `ObjectStyle`. A cell is not an object: it has no font
+ * of its own (a table's type is the table's), no opacity, no alignment, and
+ * giving it a style record would invite every one of those to be honoured
+ * here — a capability declared and ignored, which is what rule 21 is about.
+ * Three colours are what a cell can wear, and the type says so.
+ */
 export interface TableCell {
   readonly text: RichText
+  /** What the cell stands on. */
+  readonly fill?: ColorValue
+  /** The ink of this cell's text, overriding the table's. */
+  readonly textColor?: ColorValue
+  /** The colour of this cell's rules. */
+  readonly border?: ColorValue
+}
+
+/** The colours a cell may carry, as a patch. Absent keys are left alone. */
+export interface CellStyle {
+  readonly fill?: ColorValue
+  readonly textColor?: ColorValue
+  readonly border?: ColorValue
+}
+
+/**
+ * The colour keys, at runtime.
+ *
+ * A `Record<keyof CellStyle, true>` for the reason `EVERY_STYLE_PROP` is one:
+ * it does not compile until every key is present, so a fourth colour added to
+ * `CellStyle` cannot be forgotten by the code that clears or copies them.
+ */
+export const CELL_STYLE_KEYS: Readonly<Record<keyof CellStyle, true>> = {
+  fill: true,
+  textColor: true,
+  border: true,
 }
 
 export interface TableData {
@@ -66,9 +107,33 @@ export const MAX_ROWS = 200
  */
 const WeightSchema = z.number().finite().min(0.01).max(1000)
 
-const TableCellSchema: ZodType<TableCell> = z.object({
-  text: RichTextSchema,
+/**
+ * A colour, validated. The SAME question `sanitizeStyle` asks of an object's
+ * style, asked here because a cell's colours are type data and go through the
+ * type's own schema rather than that gate.
+ *
+ * A bad one is refused rather than dropped, because unlike a whole board's
+ * style this is inside `data`: `validate` is all-or-nothing per object, and a
+ * table whose colours were silently edited on the way in would be a document
+ * that changed itself.
+ */
+const ColorValueSchema = z.custom<ColorValue>(isColorValue, {
+  message: 'A colour is a palette token or six hex digits',
 })
+
+/*
+ * Cast for the same reason `ImageDataSchema` is: under
+ * `exactOptionalPropertyTypes`, `fill?: ColorValue` cannot hold `undefined`,
+ * while Zod's `.optional()` produces exactly `ColorValue | undefined`. The
+ * two describe the same runtime values and disagree about a type that never
+ * exists — a parsed cell either has the key or does not.
+ */
+const TableCellSchema = z.object({
+  text: RichTextSchema,
+  fill: ColorValueSchema.optional(),
+  textColor: ColorValueSchema.optional(),
+  border: ColorValueSchema.optional(),
+}) as unknown as ZodType<TableCell>
 
 export const TableDataSchema: ZodType<TableData> = z
   .object({
@@ -230,4 +295,69 @@ export function moveDividerAt(
   next[index] = (landed - start) * total
   next[index + 1] = before + after - next[index]
   return next
+}
+
+/**
+ * The cells a rectangular selection covers, as flat indices in reading order.
+ *
+ * Takes two corners in either order and normalises them, because a selection
+ * is made by dragging and half of all drags go up or left. Returning indices
+ * rather than a rect is what lets the caller stay ignorant of the grid's shape
+ * — and what makes "style these cells" one operation over a list.
+ */
+export function cellRange(
+  data: TableData,
+  anchor: number,
+  focus: number,
+): readonly number[] {
+  const width = data.columns.length
+  const count = width * data.rows.length
+  if (width === 0 || anchor < 0 || focus < 0 || anchor >= count || focus >= count) return []
+
+  const [left, right] = [anchor % width, focus % width].sort((a, b) => a - b) as [number, number]
+  const [top, bottom] = [Math.floor(anchor / width), Math.floor(focus / width)].sort(
+    (a, b) => a - b,
+  ) as [number, number]
+
+  const indices: number[] = []
+  for (let row = top; row <= bottom; row += 1) {
+    for (let column = left; column <= right; column += 1) indices.push(row * width + column)
+  }
+  return indices
+}
+
+/**
+ * The same cells with a colour patch applied, as new data.
+ *
+ * Pure, and it returns the WHOLE table: the caller dispatches one
+ * `UpdateObjectData`, so styling nine cells is one command and one undo entry
+ * exactly like styling one.
+ *
+ * A key set to `null` CLEARS it, which is not the same as leaving it out. "Put
+ * these cells back to the table's own colour" is a thing people want and there
+ * is no token for it — `undefined` already means "not mentioned", so the two
+ * need different spellings or one of them is unreachable.
+ */
+export function styleCells(
+  data: TableData,
+  indices: readonly number[],
+  patch: Readonly<Partial<Record<keyof CellStyle, ColorValue | null>>>,
+): TableData {
+  const touched = new Set(indices)
+  if (touched.size === 0) return data
+
+  return {
+    ...data,
+    cells: data.cells.map((cell, index) => {
+      if (!touched.has(index)) return cell
+      const next: { -readonly [K in keyof TableCell]: TableCell[K] } = { ...cell }
+      for (const key of Object.keys(CELL_STYLE_KEYS) as (keyof CellStyle)[]) {
+        const value = patch[key]
+        if (value === undefined) continue
+        if (value === null) delete next[key]
+        else next[key] = value
+      }
+      return next
+    }),
+  }
 }

@@ -321,3 +321,77 @@ test('stops at the narrowest a column may be, rather than losing the drag', asyn
   expect(isFirst).toBeLessThan(wasFirst / 2)
   expect(isSecond).toBeGreaterThan(wasSecond + 60)
 })
+
+/**
+ * Dressing a range of cells.
+ *
+ * The colours live on the CELL, so this reads them back off the rendered cell
+ * rather than off the control — a bar that reported a colour the table never
+ * painted is the failure rule 21 exists for.
+ */
+test('colours a range of cells, in one undo entry', async ({ page }) => {
+  await board(page)
+  await place(page, 'table', { x: 340, y: 240 })
+  await page.locator('[data-object-id]').first().dblclick()
+  await expect(page.getByTestId('table-editor')).toBeVisible()
+
+  // A 3x3: the top-left cell to the middle one is a 2x2 block.
+  await page.getByTestId('table-cell-0').click()
+  await page.getByTestId('table-cell-4').click({ modifiers: ['Shift'] })
+  await expect(page.getByTestId('table-cell-style')).toContainText('4 cells')
+
+  await page.getByTestId('cell-fill-green').click()
+  await page.getByTestId('cell-ink-red').click()
+
+  /*
+   * Committed by leaving, NOT by Escape — Escape cancels, and a first draft of
+   * this test pressed it and then asserted against a table that had correctly
+   * thrown the colours away.
+   */
+  await page.locator(CANVAS).click({ position: { x: 900, y: 600 } })
+  await page.locator('[data-object-id]').first().click()
+
+  const cells = page.locator('[role="table"] > div')
+  await expect(cells.nth(0)).toHaveCSS('background-color', 'rgb(191, 240, 212)')
+  await expect(cells.nth(1)).toHaveCSS('background-color', 'rgb(191, 240, 212)')
+  await expect(cells.nth(4)).toHaveCSS('color', 'rgb(138, 64, 56)')
+
+  /*
+   * A cell OUTSIDE the block is untouched. Without this the test passes just
+   * as well against a version that coloured the whole table — which is what a
+   * range implemented as "every index between the two" would do.
+   */
+  await expect(cells.nth(2)).not.toHaveCSS('background-color', 'rgb(191, 240, 212)')
+  await expect(cells.nth(8)).not.toHaveCSS('background-color', 'rgb(191, 240, 212)')
+})
+
+test('puts a cell back to the colour the table gives it', async ({ page }) => {
+  await board(page)
+  await place(page, 'table', { x: 340, y: 240 })
+  await page.locator('[data-object-id]').first().dblclick()
+
+  /*
+   * A BODY cell, not cell 0. The first row is a header and carries its own
+   * ground, so "cleared" there means the header's grey — which is correct and
+   * is not what this test is asking about. A first draft asserted transparency
+   * on cell 0 and failed for exactly that reason.
+   */
+  await page.getByTestId('table-cell-4').click()
+  await page.getByTestId('cell-fill-blue').click()
+  await page.getByTestId('cell-clear').click()
+
+  await page.locator(CANVAS).click({ position: { x: 900, y: 600 } })
+  await page.locator('[data-object-id]').first().click()
+
+  const cleared = page.locator('[role="table"] > div').nth(4)
+  /*
+   * Transparent, not "the blue put back as a literal" — the cell follows the
+   * table again.
+   *
+   * That the key is REMOVED rather than set to `undefined` is the sharper
+   * claim, and this test cannot see the difference: an undefined background
+   * renders the same as no background. `schema.test.ts` asserts the removal
+   * directly, and fails when the delete becomes an assignment.
+   */
+  await expect(cleared).toHaveCSS('background-color', 'rgba(0, 0, 0, 0)')
+})
