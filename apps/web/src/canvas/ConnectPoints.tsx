@@ -3,10 +3,15 @@ import type { Anchor } from '@openframe/core'
 import { useOpenFrame } from '../runtime/context.js'
 import { useBoardDocument } from '../hooks/use-document-object.js'
 import { useInteractionStore } from '../interaction/interaction-store.js'
+import {
+  CONNECT_OUTSET_PX,
+  CONNECT_TARGET_PX,
+  SIDES,
+  connectPointAt,
+} from '../scene/connect-points.js'
 
 /** Drawn small; the hit area around it is much larger — see `.of-connect-point`. */
 const POINT_PX = 8
-const SIDES = ['top', 'right', 'bottom', 'left'] as const
 
 /**
  * The four places a connector can be started from, on a selected object.
@@ -47,11 +52,18 @@ export function ConnectPoints() {
 
   const bounds = runtime.registry.boundsOf(object, document)
   const size = POINT_PX / zoom
+  /*
+   * Pushed clear of the edge, because the `n`, `e`, `s` and `w` resize handles
+   * are centred on exactly these four points. Drawn on the edge, the two
+   * fought over every press — resizing an object horizontally grabbed a
+   * connector instead.
+   */
+  const outset = CONNECT_OUTSET_PX / zoom
 
   return (
     <>
       {SIDES.map((side) => {
-        const at = pointOn(bounds, side)
+        const at = connectPointAt(bounds, side, outset)
         return (
           <div
             key={side}
@@ -76,7 +88,7 @@ export function ConnectPoints() {
             <span
               className="of-connect-point__target"
               aria-hidden="true"
-              style={{ inset: `${String(-(24 - POINT_PX) / 2 / zoom)}px` }}
+              style={{ inset: `${String(-(CONNECT_TARGET_PX - POINT_PX) / 2 / zoom)}px` }}
             />
           </div>
         )
@@ -91,14 +103,3 @@ export function anchorForSide(side: string): Anchor {
     : { kind: 'auto' }
 }
 
-function pointOn(
-  bounds: { x: number; y: number; width: number; height: number },
-  side: (typeof SIDES)[number],
-): { x: number; y: number } {
-  const midX = bounds.x + bounds.width / 2
-  const midY = bounds.y + bounds.height / 2
-  if (side === 'top') return { x: midX, y: bounds.y }
-  if (side === 'bottom') return { x: midX, y: bounds.y + bounds.height }
-  if (side === 'left') return { x: bounds.x, y: midY }
-  return { x: bounds.x + bounds.width, y: midY }
-}

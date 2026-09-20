@@ -211,6 +211,15 @@ test.describe('drawing to size', () => {
     await drag(page, { x: 200, y: 200 }, { x: 400, y: 320 })
     await expect(page.getByTestId('tool-select')).toHaveAttribute('aria-pressed', 'true')
 
+    /*
+     * Deselected first, so the inspector is not floating over the spot this
+     * clicks. What is being tested is that the SHAPE TOOL disarmed — a fixed
+     * point that happens to be clear today is a test that fails the next time
+     * a panel moves, for a reason that has nothing to do with tools.
+     */
+    await page.keyboard.press('Escape')
+    await expect(page.getByTestId('inspector')).toHaveCount(0)
+
     await page.locator(CANVAS).click({ position: { x: 800, y: 500 } })
     await expect(page.locator('[data-object-id]')).toHaveCount(1)
   })

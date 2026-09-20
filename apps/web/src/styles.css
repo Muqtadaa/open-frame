@@ -1249,6 +1249,47 @@ body {
  * of the offer rather than as a second control competing with Post. Inline,
  * and sized to the 11px functional floor like the hint around it.
  */
+/*
+ * BROWSING: the board's open threads, when the panel is showing but nothing
+ * in particular is chosen.
+ */
+.of-comment-panel__list {
+  display: grid;
+  gap: 2px;
+  max-height: 320px;
+  overflow-y: auto;
+}
+
+.of-comment-panel__entry {
+  display: grid;
+  gap: 1px;
+  padding: 6px 8px;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+  background: none;
+  border: none;
+  border-radius: var(--of-radius);
+}
+
+.of-comment-panel__entry:hover {
+  background: var(--of-hover);
+}
+
+.of-comment-panel__who {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--of-ink);
+}
+
+.of-comment-panel__said {
+  overflow: hidden;
+  font-size: 12px;
+  color: var(--of-ink-muted);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 .of-comment-panel__invite {
   padding: 0;
   font-size: 11px;
@@ -1867,6 +1908,18 @@ body {
   position: absolute;
   inset: 0;
   transform-origin: 0 0;
+}
+
+/*
+ * Promoted only WHILE the board moves.
+ *
+ * `will-change: transform` keeps the layer in its own texture so a pan moves
+ * one compositor layer instead of repositioning every element — and left on
+ * permanently, it is also how a browser ends up scaling that cached texture
+ * rather than re-rasterising at the new zoom. MDN says plainly not to leave it
+ * applied; a gesture is exactly the window it was designed for.
+ */
+.of-world--moving {
   will-change: transform;
 }
 

@@ -3,28 +3,18 @@ import { useMemo } from 'react'
 import { useOpenFrame } from '../runtime/context.js'
 import { useBoardDocument } from '../hooks/use-document-object.js'
 import { useInteractionStore } from '../interaction/interaction-store.js'
-import { HANDLES, HANDLE_CURSORS, handleAnchor } from '../scene/resize.js'
+import {
+  HANDLES,
+  HANDLE_CURSORS,
+  HANDLE_HIT_PX,
+  ROTATE_OFFSET_PX,
+  handleAnchor,
+} from '../scene/resize.js'
 import { unionAll, type Rect } from '@openframe/core'
 
 /** Handles stay this many SCREEN pixels across, whatever the zoom. */
 /** The drawn handle: small on purpose, so it marks a corner without claiming it. */
 const HANDLE_PX = 9
-/**
- * The GRABBABLE handle, which is much bigger than the drawn one.
- *
- * A 9px square centred on a corner leaves about four pixels of target outside
- * the object, and the rest sits under it — so half of every attempt to resize
- * landed on the object and started a drag instead. WCAG 2.5.8 puts the floor at
- * 24px for a pointer target, and a resize handle is the clearest possible case
- * of a control you must be able to hit.
- *
- * The hit area is an invisible pad around the handle rather than a bigger
- * handle, because the drawn size is a design decision and the target size is an
- * accessibility one; they are allowed to differ, and conflating them would make
- * a selection look like it had grown corner blocks.
- */
-const HANDLE_HIT_PX = 24
-const ROTATE_OFFSET_PX = 26
 
 /**
  * The selection box, resize handles and rotate grip.

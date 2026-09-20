@@ -214,3 +214,25 @@ test('will not remove the last column', async ({ page }) => {
   await expect(page.getByTestId('table-remove-column')).toBeDisabled()
   await expect(page.getByTestId('table-remove-row')).toBeDisabled()
 })
+
+/**
+ * The language menu opens instead of closing the editor.
+ *
+ * This is the third control to hit the same bug: pressing it read as a canvas
+ * gesture, so the editor committed and unmounted and the press landed on
+ * nothing. The guard now marks the whole editor rather than each control.
+ */
+test('opens the language menu without dismissing the editor', async ({ page }) => {
+  await board(page)
+  await page.getByTestId('tool-code').click()
+  await page.locator(CANVAS).click({ position: { x: 340, y: 240 } })
+  await expect(page.getByTestId('code-editor')).toBeVisible()
+
+  await page.getByTestId('code-language').click()
+  await expect(page.getByTestId('code-editor')).toBeVisible()
+
+  // And it actually changes the language.
+  await page.getByTestId('code-language').selectOption('python')
+  await expect(page.getByTestId('code-language')).toHaveValue('python')
+  await expect(page.getByTestId('code-editor')).toBeVisible()
+})

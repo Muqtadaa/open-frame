@@ -19,6 +19,7 @@ import { useCanvasGestures } from './use-canvas-gestures.js'
 import { useImageDrop } from './use-image-drop.js'
 import { useWheelGesture } from './use-wheel-gesture.js'
 import { useCanvasSize } from './use-canvas-size.js'
+import { useMoving } from './use-moving.js'
 
 /**
  * The canvas surface.
@@ -52,6 +53,8 @@ export function Canvas() {
   const viewport = useInteractionStore((state) => state.viewport)
   const tool = useInteractionStore((state) => state.tool)
   const gestures = useCanvasGestures(containerRef)
+  // Promotes the world layer only while it is actually moving — see use-moving.
+  const moving = useMoving()
   // Wheel is handled by a native non-passive listener rather than an onWheel
   // prop — see use-wheel-gesture.ts for why that is not optional.
   useWheelGesture(containerRef)
@@ -85,7 +88,7 @@ export function Canvas() {
       onDrop={imageDrop.onDrop}
     >
       <div
-        className="of-world"
+        className={`of-world${moving ? ' of-world--moving' : ''}`}
         style={{
           transform: `scale(${String(viewport.zoom)}) translate(${String(-viewport.x)}px, ${String(-viewport.y)}px)`,
         }}

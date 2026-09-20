@@ -106,7 +106,7 @@ function TableEditor({ object, at, onCommit, onCancel }: ObjectEditorProps<Table
 
   return (
     <div
-      className="of-table-edit"
+      className="of-table-edit of-editor-chrome"
       data-testid="table-editor"
       onBlur={(event) => {
         /*
@@ -185,7 +185,7 @@ function TableEditor({ object, at, onCommit, onCancel }: ObjectEditorProps<Table
         * right, rows underneath. A row of four identical buttons in a corner
         * would make you read every label to find the one you want.
         */}
-      <div className="of-table-edit__columns of-editor-chrome" role="group" aria-label="Columns">
+      <div className="of-table-edit__columns" role="group" aria-label="Columns">
         <button
           type="button"
           className="of-table-edit__step"
@@ -213,7 +213,7 @@ function TableEditor({ object, at, onCommit, onCancel }: ObjectEditorProps<Table
         </button>
       </div>
 
-      <div className="of-table-edit__rows of-editor-chrome" role="group" aria-label="Rows">
+      <div className="of-table-edit__rows" role="group" aria-label="Rows">
         <button
           type="button"
           className="of-table-edit__step"

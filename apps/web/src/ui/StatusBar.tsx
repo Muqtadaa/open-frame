@@ -37,6 +37,33 @@ export function StatusBar() {
    */
   const [theme, setTheme] = useState<Theme>(readTheme)
   const afterHours = theme === 'after-hours'
+  const editingId = useInteractionStore((state) => state.editingId)
+
+  /**
+   * Undo and redo, meaning whatever they mean where the caret is.
+   *
+   * With a text editor open these drive the FIELD's own history, exactly as
+   * Ctrl+Z already did — typing into a note and pressing the button used to
+   * blur the field, commit what was typed, and then undo something else
+   * entirely. Two controls bound to one shortcut have to agree.
+   *
+   * `execCommand` is deprecated and is still the only way to drive a native
+   * field's undo stack. There is no replacement; browsers keep it working
+   * because editors depend on it.
+   */
+  const history = (step: 'undo' | 'redo'): void => {
+    if (editingId !== null && window.document.execCommand(step)) return
+    if (step === 'undo') commands.undo()
+    else commands.redo()
+  }
+
+  /*
+   * And the buttons must not TAKE focus, or the field blurs and commits
+   * before the click is handled — which is the bug, not a detail of it.
+   */
+  const keepFocus = (event: { preventDefault: () => void }): void => {
+    event.preventDefault()
+  }
 
   return (
     <div className="of-status" data-testid="status-bar">
@@ -50,22 +77,30 @@ export function StatusBar() {
         <button
           type="button"
           className="of-status__action"
-          disabled={!canUndo}
+          // Never disabled while editing: the field has its own history, and
+          // the board's emptiness says nothing about whether it does.
+          disabled={!canUndo && editingId === null}
           aria-label={undoLabel === null ? 'Undo' : `Undo ${undoLabel}`}
           title={undoLabel === null ? `Undo (${mod}Z)` : `Undo ${undoLabel} (${mod}Z)`}
           data-testid="undo"
-          onClick={() => commands.undo()}
+          onMouseDown={keepFocus}
+          onClick={() => {
+            history('undo')
+          }}
         >
           <UndoIcon />
         </button>
         <button
           type="button"
           className="of-status__action"
-          disabled={!canRedo}
+          disabled={!canRedo && editingId === null}
           aria-label="Redo"
           title={`Redo (${mod}⇧Z)`}
           data-testid="redo"
-          onClick={() => commands.redo()}
+          onMouseDown={keepFocus}
+          onClick={() => {
+            history('redo')
+          }}
         >
           <RedoIcon />
         </button>

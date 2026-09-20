@@ -248,6 +248,16 @@ interface InteractionState {
   readonly composing: ComposingComment | null
   readonly openThreadId: string | null
   /**
+   * Whether the comments panel is showing, independently of whether a thread
+   * is open.
+   *
+   * Choosing the comment tool is saying you are about to read or write one, so
+   * it opens. Closing it is a decision that sticks until the tool is chosen
+   * again — a panel that reappeared every time the mode changed would be one
+   * you cannot put away.
+   */
+  readonly commentsOpen: boolean
+  /**
    * How many times this client has changed the discussion.
    *
    * Published in presence so everybody else in the room knows to re-read. It
@@ -300,6 +310,7 @@ interface InteractionState {
   setViewport(viewport: Viewport): void
   setFollowing(clientId: number | null): void
   setTableSize(size: TableSize): void
+  setCommentsOpen(open: boolean): void
   startComment(at: ComposingComment | null): void
   openThread(id: string | null): void
   /** Says that this client just changed the discussion. */
@@ -347,6 +358,7 @@ export const useInteractionStore = create<InteractionState>((set) => ({
   viewport: DEFAULT_VIEWPORT,
   following: null,
   tableSize: { columns: 3, rows: 3 },
+  commentsOpen: false,
   composing: null,
   openThreadId: null,
   said: 0,
@@ -356,7 +368,15 @@ export const useInteractionStore = create<InteractionState>((set) => ({
   contextMenu: null,
   searchOpen: false,
 
-  setTool: (tool) => set({ tool, editingId: null }),
+  setTool: (tool) =>
+    set((state) => ({
+      tool,
+      editingId: null,
+      // Choosing the comment tool opens the panel. Leaving the tool does NOT
+      // close it: a thread you are reading should survive picking up select
+      // to move something out of the way.
+      commentsOpen: tool === 'comment' ? true : state.commentsOpen,
+    })),
 
   cycleShape: () =>
     set((state) => {
@@ -428,6 +448,7 @@ export const useInteractionStore = create<InteractionState>((set) => ({
   // Writing a new one closes whatever was being read, and vice versa: two
   // panels over the same pin is two places to type into.
   setTableSize: (tableSize) => set({ tableSize, tool: 'table' }),
+  setCommentsOpen: (commentsOpen) => set({ commentsOpen }),
   startComment: (at) => set({ composing: at, openThreadId: null }),
   openThread: (id) => set({ openThreadId: id, composing: null }),
   noteSaid: () => {

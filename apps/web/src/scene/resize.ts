@@ -1,3 +1,5 @@
+import { CONNECT_REACH_PX } from './connect-points.js'
+
 import type { AnyOpenFrameObject, ObjectFrame, ObjectId, Point, Rect } from '@openframe/core'
 
 /** Handle positions, named by compass point. */
@@ -23,6 +25,32 @@ const GRIPS: Record<HandleId, { readonly x: number; readonly y: number }> = {
 export function handleAnchor(handle: HandleId): { readonly x: number; readonly y: number } {
   return GRIPS[handle]
 }
+
+/**
+ * The GRABBABLE handle, which is much bigger than the drawn one.
+ *
+ * A 9px square centred on a corner leaves about four pixels of target outside
+ * the object, and the rest sits under it — so half of every attempt to resize
+ * landed on the object and started a drag instead. WCAG 2.5.8 puts the floor at
+ * 24px for a pointer target, and a resize handle is the clearest possible case
+ * of a control you must be able to hit.
+ *
+ * The hit area is an invisible pad around the handle rather than a bigger
+ * handle, because the drawn size is a design decision and the target size is an
+ * accessibility one; they are allowed to differ, and conflating them would make
+ * a selection look like it had grown corner blocks.
+ */
+export const HANDLE_HIT_PX = 24
+
+/**
+ * How far above the object the rotate grip sits, in SCREEN pixels.
+ *
+ * BEYOND the connection point, which itself sits outside the edge — three
+ * pieces of chrome share the top edge and each has a 24px target, so their
+ * distances are a relationship rather than three independent choices.
+ * `connect-points.test.ts` asserts they stay clear of one another.
+ */
+export const ROTATE_OFFSET_PX = CONNECT_REACH_PX + HANDLE_HIT_PX / 2 + 2
 
 export const HANDLE_CURSORS: Record<HandleId, string> = {
   nw: 'nwse-resize',

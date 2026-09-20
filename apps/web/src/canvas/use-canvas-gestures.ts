@@ -74,13 +74,15 @@ type GestureMode =
  * Chrome that belongs to an OPEN EDITOR, marked with one class rather than
  * listed here by name.
  *
- * The format bar was the first of these and was named directly. A table's
- * editor then grew its own controls — add a column, remove a row — and
- * reproduced the bug exactly: pressing one read as a canvas gesture, the
- * editor committed and unmounted, and the click landed on nothing.
+ * The same bug has now been found three times: the format bar, a table's add
+ * and remove buttons, and a code block's language menu. Each time, pressing
+ * the control read as a canvas gesture — the handler below ends the edit, the
+ * editor commits and unmounts, and the press lands on nothing. The symptom is
+ * a control that silently does nothing.
  *
- * A marker means the next editor to grow a control gets this for free, which
- * is the difference between a rule and a list of the places it was remembered.
+ * The marker goes on the EDITOR, not on each control, so the next thing added
+ * inside one is covered without anybody remembering to do it. That is the
+ * difference between a rule and a list of the places it was applied.
  */
 const EDITOR_CHROME = '.of-editor-chrome'
 

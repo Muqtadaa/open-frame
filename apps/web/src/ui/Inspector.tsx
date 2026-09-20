@@ -26,6 +26,7 @@ import { useMemo } from 'react'
 import { useCommands } from '../hooks/use-commands.js'
 import { useBoardDocument } from '../hooks/use-document-object.js'
 import { useInteractionStore } from '../interaction/interaction-store.js'
+import { PANEL_CLEARANCE_PX } from '../scene/connect-points.js'
 import { useOpenFrame } from '../runtime/context.js'
 import { SURFACE_VARS } from '../scene/style-tokens.js'
 import { AlignIcon, DashIcon,
@@ -34,7 +35,7 @@ import { Provenance } from './Provenance.js'
 import { RecordFields } from './RecordFields.js'
 
 /** Clearance between the selection and the panel, in screen pixels. */
-const GAP_PX = 14
+const GAP_PX = PANEL_CLEARANCE_PX
 /*
  * Wide enough for all seven colours on ONE row. At 248 the row wrapped 5 + 2,
  * which reads as an accident rather than a grid — and a wrapped swatch row is

@@ -90,7 +90,27 @@ function CodeEditor({ object, onCommit, onCancel }: ObjectEditorProps<CodeData>)
   const area = useRef<HTMLTextAreaElement>(null)
 
   return (
-    <div className="of-code of-code--editing" data-testid="code-editor">
+    <div
+      className="of-code of-code--editing of-editor-chrome"
+      data-testid="code-editor"
+      onBlur={(event) => {
+        /*
+         * Committed only when focus leaves the WHOLE editor.
+         *
+         * The textarea used to commit on any blur at all, so reaching for the
+         * language menu beside it ended the edit and unmounted the editor —
+         * and the press then landed on nothing. Moving between the field and
+         * its own controls is still one edit.
+         */
+        if (
+          event.relatedTarget instanceof Node &&
+          event.currentTarget.contains(event.relatedTarget)
+        ) {
+          return
+        }
+        onCommit({ code, language })
+      }}
+    >
       <select
         className="of-code__picker"
         value={CODE_LANGUAGES.includes(language as (typeof CODE_LANGUAGES)[number]) ? language : 'plain'}
@@ -141,9 +161,6 @@ function CodeEditor({ object, onCommit, onCancel }: ObjectEditorProps<CodeData>)
               field.selectionEnd = from + 1
             })
           }
-        }}
-        onBlur={() => {
-          onCommit({ code, language })
         }}
       />
     </div>

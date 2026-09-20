@@ -28,6 +28,8 @@ export function CommentPanel() {
   const openThreadId = useInteractionStore((state) => state.openThreadId)
   const startComment = useInteractionStore((state) => state.startComment)
   const openThread = useInteractionStore((state) => state.openThread)
+  const commentsOpen = useInteractionStore((state) => state.commentsOpen)
+  const setCommentsOpen = useInteractionStore((state) => state.setCommentsOpen)
 
   const thread = useMemo(
     () => comments.find((comment) => comment.id === openThreadId) ?? null,
@@ -70,7 +72,25 @@ export function CommentPanel() {
     if (composing !== null || thread !== null) input.current?.focus()
   }, [composing, thread])
 
-  if (composing === null && thread === null) return null
+  /*
+   * Open with nothing chosen yet: the panel lists what is already on the
+   * board, which is what somebody who has just picked the comment tool wants
+   * to see. Without this the tool did nothing visible until you clicked the
+   * canvas, so there was no way to tell it was active.
+   */
+  const browsing = composing === null && thread === null
+  if (browsing && !commentsOpen) return null
+
+  const close = (): void => {
+    startComment(null)
+    openThread(null)
+    // Closing is a decision that sticks until the tool is chosen again.
+    setCommentsOpen(false)
+  }
+
+  const threads = comments.filter(
+    (comment) => comment.parentId === null && comment.resolvedAt === null,
+  )
 
   /**
    * Writes the comment, or the reply, and says so if it could not be written.
@@ -133,15 +153,14 @@ export function CommentPanel() {
   return (
     <aside className="of-comment-panel" aria-label="Comments" data-testid="comment-panel">
       <header className="of-comment-panel__head">
-        <h2 className="of-comment-panel__title">{thread === null ? 'New comment' : 'Comment'}</h2>
+        <h2 className="of-comment-panel__title">
+          {browsing ? 'Comments' : thread === null ? 'New comment' : 'Comment'}
+        </h2>
         <button
           type="button"
           className="of-button of-button--ghost"
           data-testid="comment-close"
-          onClick={() => {
-            startComment(null)
-            openThread(null)
-          }}
+          onClick={close}
         >
           Close
         </button>
@@ -159,6 +178,36 @@ export function CommentPanel() {
         </p>
       )}
 
+      {/*
+        * BROWSING: what is already on the board, so picking the comment tool
+        * shows you the conversation rather than an empty panel waiting for a
+        * click. Clicking one opens it, which is the same thing its pin does.
+        */}
+      {browsing && (
+        <div className="of-comment-panel__list" data-testid="comment-list">
+          {threads.length === 0 ? (
+            <p className="of-comment-panel__hint" data-testid="comment-list-empty">
+              Nothing has been said on this board yet. Click anywhere to start.
+            </p>
+          ) : (
+            threads.map((open) => (
+              <button
+                key={open.id}
+                type="button"
+                className="of-comment-panel__entry"
+                data-testid={`comment-entry-${open.id}`}
+                onClick={() => {
+                  openThread(open.id)
+                }}
+              >
+                <span className="of-comment-panel__who">{open.authorName}</span>
+                <span className="of-comment-panel__said">{open.body.slice(0, 90)}</span>
+              </button>
+            ))
+          )}
+        </div>
+      )}
+
       {thread !== null && (
         <div className="of-comment-panel__thread">
           <Remark comment={thread} />
@@ -168,6 +217,12 @@ export function CommentPanel() {
         </div>
       )}
 
+      {/*
+        * No composer while browsing: a comment is dropped somewhere, so there
+        * is nothing to write INTO until a spot or a thread is chosen. A box
+        * that posted to nowhere would be the worst of the three states.
+        */}
+      {!browsing && (
       <form onSubmit={submit}>
         <textarea
           ref={input}
@@ -186,6 +241,28 @@ export function CommentPanel() {
             // did not do. Reset here rather than in an effect: this is the
             // event that invalidates it.
             setInvited(false)
+          }}
+          onKeyDown={(event) => {
+            /*
+             * Cmd or Ctrl + Enter posts; Escape closes without posting.
+             *
+             * Plain Enter is a new LINE here, unlike a table cell — a comment
+             * is prose and often several sentences, and a composer that
+             * submitted on Enter would cut people off mid-thought. That is
+             * why the commit takes a modifier and the table's does not.
+             */
+            if (event.key === 'Escape') {
+              event.preventDefault()
+              // Escape DISMISSES, panel and all. Dropping back to the list
+              // would leave you pressing it twice to get rid of something you
+              // have already said you do not want.
+              close()
+              return
+            }
+            if (event.key === 'Enter' && (event.metaKey || event.ctrlKey)) {
+              event.preventDefault()
+              submit(event)
+            }
           }}
         />
 
@@ -277,6 +354,7 @@ export function CommentPanel() {
           )}
         </div>
       </form>
+      )}
     </aside>
   )
 }
