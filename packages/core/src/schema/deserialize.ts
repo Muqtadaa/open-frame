@@ -5,10 +5,10 @@ import { repairDocument, type Repair } from '../domain/invariants.js'
 import {
   ORIGINS,
   type AnyOpenFrameObject,
-  type ObjectStyle,
   type Origin,
 } from '../domain/object.js'
 import type { ObjectTypeRegistry } from '../domain/registry.js'
+import { sanitizeStyle } from '../domain/style-boundary.js'
 import { UNKNOWN_TYPE } from '../types/unknown/definition.js'
 import {
   PersistedBoardPayloadSchema,
@@ -55,14 +55,7 @@ function toOrigin(value: string): Origin {
   return (ORIGINS as readonly string[]).includes(value) ? (value as Origin) : 'import'
 }
 
-function toStyle(json: Record<string, unknown>): ObjectStyle {
-  const style: Record<string, unknown> = {}
-  for (const [key, value] of Object.entries(json)) {
-    if (value !== undefined) style[key] = value
-  }
-  // Style tokens are validated per-type; unrecognised keys are inert, not fatal.
-  return style
-}
+const toStyle = sanitizeStyle
 
 function quarantineObject(
   persisted: PersistedObject,

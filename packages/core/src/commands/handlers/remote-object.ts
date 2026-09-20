@@ -2,6 +2,7 @@ import { PersistedObjectSchema } from '../../schema/envelope.js'
 import { asObjectId, asOrderKey, asUserId } from '../../domain/ids.js'
 import type { AnyOpenFrameObject } from '../../domain/object.js'
 import type { ObjectTypeRegistry } from '../../domain/registry.js'
+import { sanitizeStyle } from '../../domain/style-boundary.js'
 
 /**
  * An object arriving from another client, checked before it is believed.
@@ -53,7 +54,8 @@ export function readRemoteObject(
     frame: { ...persisted.frame },
     parentId: persisted.parentId === null ? null : asObjectId(persisted.parentId),
     order: asOrderKey(persisted.order),
-    style: persisted.style,
+    // Same gate the load path uses: a peer is no more trusted than a file.
+    style: sanitizeStyle(persisted.style),
     locked: persisted.locked,
     hidden: persisted.hidden,
     data: validated.data,

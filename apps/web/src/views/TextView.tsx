@@ -1,6 +1,6 @@
-import { isEmptyText, plainTextOf, type ColorToken, type TextData } from '@openframe/core'
+import { isEmptyText, plainTextOf, type ColorValue, type TextData } from '@openframe/core'
 
-import { COLOR_VARS, fontFamily, textAlign } from '../scene/style-tokens.js'
+import { fontFamily, textAlign, inkOf } from '../scene/style-tokens.js'
 import { defineObjectView, type ObjectEditorProps, type ObjectViewProps } from './registry.js'
 import { RichTextEditor } from './RichTextEditor.js'
 import { RichTextView } from './RichTextView.js'
@@ -14,8 +14,8 @@ import { RichTextView } from './RichTextView.js'
  * through, and keep the colour they were given, without a migration that
  * would have to decide the same question for every other type.
  */
-function ink(style: { readonly textColor?: ColorToken; readonly color?: ColorToken }): string {
-  return COLOR_VARS[style.textColor ?? style.color ?? 'gray']
+function ink(style: { readonly textColor?: ColorValue; readonly color?: ColorValue }): string {
+  return inkOf(style.textColor ?? style.color)
 }
 
 function TextRenderer({ object }: ObjectViewProps<TextData>) {

@@ -6,20 +6,12 @@ import { RichTextView } from './RichTextView.js'
 import { ELLIPSE_MARGIN, labelInset, roundedShapePath } from '../scene/shape-geometry.js'
 import { plainTextOf } from '@openframe/core'
 
-import {
-  COLOR_VARS,
-  SURFACE_VARS,
-  fontFamily,
-  inkColor,
-  dashArray,
-  justifyAlign,
-  textAlign,
-} from '../scene/style-tokens.js'
+import { fontFamily, inkColor, dashArray, justifyAlign, textAlign, inkOf, surfaceOf } from '../scene/style-tokens.js'
 
 function ShapeOutline({ object }: { object: ObjectBase<string, ShapeData> }) {
-  const stroke = COLOR_VARS[object.style.color ?? 'gray']
+  const stroke = inkOf(object.style.color)
   const filled = (object.style.fill ?? 'tint') !== 'none'
-  const fill = filled ? SURFACE_VARS[object.style.color ?? 'gray'] : 'transparent'
+  const fill = filled ? surfaceOf(object.style.color, 'gray') : 'transparent'
   const strokeWidth = { none: 0, thin: 1, medium: 2, thick: 4 }[object.style.stroke ?? 'medium']
 
   /*

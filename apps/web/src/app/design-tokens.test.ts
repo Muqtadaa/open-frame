@@ -333,14 +333,51 @@ describe.each(THEMES)('palette contrast — $name', ({ token }) => {
 describe('no colour literals outside the token block', () => {
   /** `.of-dev__*` is development instrumentation, stripped from production. */
   const DEV_ONLY = /\.of-dev__[^{]*\{[^}]*\}/g
+  /**
+   * The colour PICKER, which paints the colour space rather than the scheme.
+   *
+   * Its hue ramp is the spectrum and the two washes over its area are the
+   * definition of saturation and value. A token there would mean showing
+   * somebody a different colour from the one they are pointing at, so these
+   * rules are exempt — and narrowly: `.of-picker__area`, `__hue` and
+   * `__pointer` only, with their pseudo-elements. The picker's own chrome,
+   * its panel, border, text and the low-contrast warning, is tokenised like
+   * everything else and is NOT covered by this.
+   */
+  const COLOUR_SPACE = /\.of-picker__(area|hue|pointer)(::(before|after))?[^{]*\{[^}]*\}/g
 
   it('defines every colour as a token', () => {
     const withoutRoot = CSS.replace(/:root[^{]*\{[^}]*\}/g, '')
       .replace(/\/\*[\s\S]*?\*\//g, '')
       .replace(DEV_ONLY, '')
+      .replace(COLOUR_SPACE, '')
 
     const literals = withoutRoot.match(/#[0-9a-fA-F]{3,8}\b|rgba?\([^)]*\)/g) ?? []
     expect(literals).toEqual([])
+  })
+
+  /**
+   * And the exemption cannot be used as a door.
+   *
+   * A rule that excludes part of the file is a rule somebody can widen by
+   * putting a literal in an excluded selector. This asserts the exclusion
+   * covers what it says: three selectors, and the picker's own chrome is
+   * still measured — verified by putting `color: #ff0000` on
+   * `.of-picker__contrast` and watching the test above fail.
+   */
+  it('exempts only the three selectors that paint the spectrum', () => {
+    const exempted = [...CSS.matchAll(COLOUR_SPACE)].map((match) =>
+      /\.of-picker__\w+(::\w+)?/.exec(match[0])?.[0],
+    )
+    expect(new Set(exempted)).toEqual(
+      new Set([
+        '.of-picker__area',
+        '.of-picker__area::before',
+        '.of-picker__area::after',
+        '.of-picker__pointer',
+        '.of-picker__hue',
+      ]),
+    )
   })
 })
 

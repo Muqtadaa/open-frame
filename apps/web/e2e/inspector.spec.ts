@@ -163,6 +163,68 @@ test.describe('inspector', () => {
   })
 
   /**
+   * A colour that is not in the palette.
+   *
+   * The wheel writes a LITERAL, which the document model now allows beside a
+   * token — and the whole point is that what lands on the board is the exact
+   * value picked, so this reads it back off the element rather than trusting
+   * the field.
+   */
+  test('paints a colour typed into the picker', async ({ page }) => {
+    await place(page, 's', 340, 260, 'Note')
+    await page.locator(CANVAS).click({ position: { x: 340, y: 260 } })
+
+    await page.getByTestId('ink-custom').click()
+    await expect(page.getByTestId('color-picker')).toBeVisible()
+
+    await page.getByTestId('picker-hex').fill('#3a7bd5')
+    await expect(page.locator('.of-sticky')).toHaveCSS('color', 'rgb(58, 123, 213)')
+
+    /*
+     * The custom swatch now shows what it holds, so the row still answers
+     * "what is this set to" when the answer is not in the palette.
+     */
+    await expect(page.getByTestId('ink-custom')).toHaveCSS(
+      'background-color',
+      'rgb(58, 123, 213)',
+    )
+  })
+
+  /**
+   * Three digits are what people write, and a half-typed colour is not one.
+   */
+  test('takes a short hex and ignores an unfinished one', async ({ page }) => {
+    await place(page, 's', 340, 260, 'Note')
+    await page.locator(CANVAS).click({ position: { x: 340, y: 260 } })
+    await page.getByTestId('ink-custom').click()
+
+    await page.getByTestId('picker-hex').fill('#0a0')
+    await expect(page.locator('.of-sticky')).toHaveCSS('color', 'rgb(0, 170, 0)')
+
+    // `#0a` is on the way to somewhere; the board must not flicker through it.
+    await page.getByTestId('picker-hex').fill('#0a')
+    await expect(page.locator('.of-sticky')).toHaveCSS('color', 'rgb(0, 170, 0)')
+  })
+
+  /**
+   * The contrast is SAID, not enforced. A warning that blocked the choice
+   * would be the panel overruling somebody matching a brand colour.
+   */
+  test('warns when a colour will be hard to read, without refusing it', async ({ page }) => {
+    await place(page, 's', 340, 260, 'Note')
+    await page.locator(CANVAS).click({ position: { x: 340, y: 260 } })
+    await page.getByTestId('ink-custom').click()
+
+    // Pale yellow ink on the default yellow slip.
+    await page.getByTestId('picker-hex').fill('#ffe9a3')
+    await expect(page.getByTestId('picker-contrast')).toContainText('Hard to read')
+    await expect(page.locator('.of-sticky')).toHaveCSS('color', 'rgb(255, 233, 163)')
+
+    await page.getByTestId('picker-hex').fill('#7a5c00')
+    await expect(page.getByTestId('picker-contrast')).toContainText('Readable')
+  })
+
+  /**
    * One control must mean one thing, so a mixed selection offers only what every
    * member honours. A shape has `stroke`; a sticky does not.
    */

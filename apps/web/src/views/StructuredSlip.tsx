@@ -1,9 +1,14 @@
-import { isEmptyText, plainTextOf, type ColorToken, type RichText } from '@openframe/core'
+import {
+  isEmptyText,
+  plainTextOf,
+  type ColorToken,
+  type RichText,
+} from '@openframe/core'
 
 import { RichTextEditor } from './RichTextEditor.js'
 import { RichTextView } from './RichTextView.js'
 import type { ObjectEditorProps, ObjectViewProps } from './registry.js'
-import { SURFACE_VARS, fontFamily, textAlign, inkColor } from '../scene/style-tokens.js'
+import { fontFamily, textAlign, inkColor, surfaceOf } from '../scene/style-tokens.js'
 
 /**
  * The card every structured type is drawn as.
@@ -39,6 +44,11 @@ export function StructuredSlip<TData extends { readonly text: RichText }>({
    * form this product refuses to make anyone fill in.
    */
   readonly record: readonly string[]
+  /*
+   * A TOKEN, not a colour value. What a type falls back to is a design
+   * decision that has to follow the theme; only a colour somebody picked is
+   * allowed to be literal.
+   */
   readonly defaultColor: ColorToken
   readonly className?: string
 }) {
@@ -48,7 +58,7 @@ export function StructuredSlip<TData extends { readonly text: RichText }>({
     <div
       className={`of-slip${className === undefined ? '' : ` ${className}`}`}
       style={{
-        background: SURFACE_VARS[object.style.color ?? defaultColor],
+        background: surfaceOf(object.style.color, defaultColor),
         color: inkColor(object.style.textColor),
         opacity: object.style.opacity ?? 1,
       }}
@@ -99,6 +109,11 @@ export function StructuredEditor<TData extends { readonly text: RichText }>({
 }: ObjectEditorProps<TData> & {
   readonly text: RichText
   readonly label: string
+  /*
+   * A TOKEN, not a colour value. What a type falls back to is a design
+   * decision that has to follow the theme; only a colour somebody picked is
+   * allowed to be literal.
+   */
   readonly defaultColor: ColorToken
   readonly className?: string
 }) {
@@ -108,7 +123,7 @@ export function StructuredEditor<TData extends { readonly text: RichText }>({
       zoom={zoom}
       className={`of-slip of-slip__editor${className === undefined ? '' : ` ${className}`}`}
       style={{
-        background: SURFACE_VARS[object.style.color ?? defaultColor],
+        background: surfaceOf(object.style.color, defaultColor),
         color: inkColor(object.style.textColor),
         fontFamily: fontFamily(object.style.font),
         textAlign: textAlign(object.style.align),

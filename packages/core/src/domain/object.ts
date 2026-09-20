@@ -16,11 +16,21 @@ export interface ObjectFrame {
 }
 
 /**
- * Style is expressed in DESIGN TOKENS, never raw colours.
+ * Style is expressed in DESIGN TOKENS, and a colour may also be literal.
  *
  * Tokens keep theming possible, keep documents small, keep "make this red"
  * expressible by an AI command, and stop the document from encoding one
- * particular visual design forever.
+ * particular visual design forever. They remain what every control offers
+ * first and what every default is.
+ *
+ * A COLOUR may also be a `#rrggbb` the user picked off a wheel or an
+ * eyedropper, because "the exact colour of that logo" is a real thing to want
+ * and no fixed palette can answer it. What a literal costs is stated rather
+ * than hidden: it does not follow a theme — a colour chosen on the light page
+ * is that same colour in After Hours — and its contrast cannot be proven by a
+ * build-time test the way a token pair is, so the picker warns while you are
+ * choosing instead. Only colours may be literal; weights, dashes, fonts and
+ * radii stay tokens, where a free value buys nothing and costs the same.
  *
  * The record is sparse: an absent key means "this type's default", not a value.
  * Each object type declares which of these it honours via `capabilities.styleProps`,
@@ -28,7 +38,7 @@ export interface ObjectFrame {
  * switching on the object's type.
  */
 export interface ObjectStyle {
-  readonly color?: ColorToken
+  readonly color?: ColorValue
   /**
    * The ink of whatever text this object holds.
    *
@@ -44,7 +54,7 @@ export interface ObjectStyle {
    * text together intersected on `color`, and the single "colour" swatch set
    * the note's paper and the text's ink at once.
    */
-  readonly textColor?: ColorToken
+  readonly textColor?: ColorValue
   readonly fill?: FillToken
   readonly stroke?: StrokeToken
   /**
@@ -80,6 +90,55 @@ export const ALIGN_TOKENS = ['start', 'center', 'end'] as const
 export const RADIUS_TOKENS = ['none', 'small', 'medium', 'large'] as const
 
 export type ColorToken = (typeof COLOR_TOKENS)[number]
+
+/**
+ * A literal colour, as six hex digits.
+ *
+ * Six and not three, and no `rgb()` or named colour: one spelling means a
+ * value can be compared, stored and shown back in the field it was typed into
+ * without a normalising step that every reader would have to remember. The
+ * picker writes this form and `parseHexColor` is the one place anything else
+ * becomes it.
+ */
+export type HexColor = `#${string}`
+
+const HEX_COLOR = /^#[0-9a-f]{6}$/i
+
+/** A colour anywhere in a style: a token, or the literal the user picked. */
+export type ColorValue = ColorToken | HexColor
+
+export function isColorToken(value: unknown): value is ColorToken {
+  return typeof value === 'string' && (COLOR_TOKENS as readonly string[]).includes(value)
+}
+
+export function isHexColor(value: unknown): value is HexColor {
+  return typeof value === 'string' && HEX_COLOR.test(value)
+}
+
+export function isColorValue(value: unknown): value is ColorValue {
+  return isColorToken(value) || isHexColor(value)
+}
+
+/**
+ * Anything a person might type into a colour field, as a `HexColor` — or
+ * `null`, which is what an unfinished `#3a7` must be while they are still
+ * typing it.
+ *
+ * Three digits expand rather than being refused, because `#f00` is what people
+ * write and refusing it would be pedantry the field pays for. Case is
+ * normalised DOWN so two spellings of the same colour are one value: without
+ * that, `#FF0000` and `#ff0000` are different strings, and the swatch showing
+ * "this one is selected" compares strings.
+ */
+export function parseHexColor(input: string): HexColor | null {
+  const text = input.trim().toLowerCase()
+  const body = text.startsWith('#') ? text.slice(1) : text
+  if (/^[0-9a-f]{3}$/.test(body)) {
+    const [r, g, b] = body
+    return `#${String(r)}${String(r)}${String(g)}${String(g)}${String(b)}${String(b)}` as HexColor
+  }
+  return /^[0-9a-f]{6}$/.test(body) ? `#${body}` : null
+}
 export type FillToken = (typeof FILL_TOKENS)[number]
 export type StrokeToken = (typeof STROKE_TOKENS)[number]
 export type DashToken = (typeof DASH_TOKENS)[number]

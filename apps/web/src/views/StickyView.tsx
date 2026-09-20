@@ -1,12 +1,12 @@
-import { isEmptyText, plainTextOf, type ColorToken, type StickyData } from '@openframe/core'
+import { isEmptyText, plainTextOf, type ColorValue, type StickyData } from '@openframe/core'
 
 import { defineObjectView, type ObjectEditorProps, type ObjectViewProps } from './registry.js'
 import { RichTextEditor } from './RichTextEditor.js'
 import { RichTextView } from './RichTextView.js'
-import { SURFACE_VARS, fontFamily, textAlign, inkColor } from '../scene/style-tokens.js'
+import { fontFamily, textAlign, inkColor, surfaceOf } from '../scene/style-tokens.js'
 
-function background(color: ColorToken | undefined): string {
-  return SURFACE_VARS[color ?? 'yellow']
+function background(color: ColorValue | undefined): string {
+  return surfaceOf(color, 'yellow')
 }
 
 function StickyRenderer({ object }: ObjectViewProps<StickyData>) {

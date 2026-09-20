@@ -1,4 +1,4 @@
-import type { AlignToken, ColorToken, DashToken, FontToken } from '@openframe/core'
+import { isColorToken, type AlignToken, type ColorToken, type ColorValue, type DashToken, type FontToken } from '@openframe/core'
 
 /**
  * The one place design tokens become CSS values.
@@ -28,6 +28,30 @@ export const SURFACE_VARS: Record<ColorToken, string> = {
 }
 
 /**
+ * A colour, as CSS.
+ *
+ * A TOKEN goes through the map above, so it follows the theme. A LITERAL is
+ * handed over as written, which is the whole point of picking one — and is
+ * also why a literal does not follow a theme: there is no second value to
+ * switch to. `ObjectStyle` says so, the picker warns about contrast while you
+ * are choosing, and nothing here quietly adjusts what somebody picked.
+ *
+ * Two resolvers rather than one, because a token means two different colours
+ * depending on the job: `blue` is a deep ink to write with and a pale wash to
+ * stand on. A literal is the same colour in both, since the user picked it in
+ * the control that does the job they wanted.
+ */
+export function inkOf(value: ColorValue | undefined, fallback: ColorToken = 'gray'): string {
+  if (value === undefined) return COLOR_VARS[fallback]
+  return isColorToken(value) ? COLOR_VARS[value] : value
+}
+
+export function surfaceOf(value: ColorValue | undefined, fallback: ColorToken): string {
+  if (value === undefined) return SURFACE_VARS[fallback]
+  return isColorToken(value) ? SURFACE_VARS[value] : value
+}
+
+/**
  * The ink of an object's text, or `undefined` to inherit the board's own.
  *
  * `undefined` rather than a default token on purpose: a note whose text nobody
@@ -35,8 +59,8 @@ export const SURFACE_VARS: Record<ColorToken, string> = {
  * would freeze today's ink into every object the moment a theme changed it —
  * `inherit` is not a value CSS can be handed, so the property goes unset.
  */
-export function inkColor(token: ColorToken | undefined): string | undefined {
-  return token === undefined ? undefined : COLOR_VARS[token]
+export function inkColor(value: ColorValue | undefined): string | undefined {
+  return value === undefined ? undefined : inkOf(value)
 }
 
 export function fontFamily(token: FontToken | undefined): string {

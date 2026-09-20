@@ -565,6 +565,134 @@ body {
   background: var(--of-panel);
 }
 
+/*
+ * The way out of the palette.
+ *
+ * Deliberately not another colour square: the palette is what the product
+ * recommends and what `design-tokens.test.ts` can prove, and a literal is
+ * available rather than equal. It shows the literal it holds once there is
+ * one, because a row of swatches has to be able to answer "what is this set
+ * to" even when the answer is not in it.
+ */
+.of-swatch--custom {
+  font-size: 15px;
+  line-height: 1;
+  color: var(--of-ink-muted);
+  background: var(--of-panel);
+  border-style: dashed;
+}
+
+/* ---------- colour picker ---------- */
+
+/*
+ * THE ONE PLACE LITERAL COLOURS BELONG.
+ *
+ * Everything else in this file must come from a token, because a literal
+ * answers to nothing and a theme cannot move it — `design-tokens.test.ts`
+ * enforces that and has caught two real drifts. Three rules below are the
+ * exception it names, and only three: they do not paint the product's colour
+ * SCHEME, they paint the colour SPACE. The hue ramp is the spectrum, and the
+ * two washes over the area are the definition of saturation and value.
+ * Theming them would mean showing somebody a different colour from the one
+ * they are pointing at. The picker's own chrome is tokenised like everything
+ * else.
+ */
+
+.of-picker {
+  position: absolute;
+  top: calc(100% + 6px);
+  right: 0;
+  z-index: 1;
+  display: grid;
+  gap: 8px;
+  width: 212px;
+  padding: 10px;
+  background: var(--of-panel);
+  border: 1px solid var(--of-control-border);
+  border-radius: var(--of-radius);
+  box-shadow: var(--of-shadow);
+}
+
+/*
+ * Saturation across, value up, over the pure hue underneath. Two gradients
+ * rather than a canvas: the area is a continuous function of two coordinates,
+ * so the compositor draws it once and a drag costs nothing, while a canvas
+ * would be repainted on every pointer move.
+ */
+.of-picker__area {
+  position: relative;
+  height: 128px;
+  cursor: crosshair;
+  border-radius: var(--of-radius);
+}
+
+.of-picker__area::before {
+  position: absolute;
+  inset: 0;
+  content: '';
+  background: linear-gradient(to right, #fff, rgb(255 255 255 / 0%));
+  border-radius: inherit;
+}
+
+.of-picker__area::after {
+  position: absolute;
+  inset: 0;
+  content: '';
+  background: linear-gradient(to top, #000, rgb(0 0 0 / 0%));
+  border-radius: inherit;
+}
+
+.of-picker__pointer {
+  position: absolute;
+  z-index: 1;
+  width: 12px;
+  height: 12px;
+  /* Centred on the value it marks, not hanging below and right of it. */
+  margin: -6px 0 0 -6px;
+  pointer-events: none;
+  border: 2px solid #fff;
+  border-radius: 50%;
+  box-shadow: 0 0 0 1px rgb(0 0 0 / 45%);
+}
+
+.of-picker__hue {
+  width: 100%;
+  height: var(--of-hit-sm);
+  background: linear-gradient(
+    to right,
+    #f00 0%,
+    #ff0 17%,
+    #0f0 33%,
+    #0ff 50%,
+    #00f 67%,
+    #f0f 83%,
+    #f00 100%
+  );
+  border-radius: var(--of-radius);
+}
+
+.of-picker__row {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+}
+
+.of-picker__hex {
+  width: 88px;
+  font-family: var(--of-mono);
+}
+
+/* 11px is the functional-text floor: this is a readout, not smallprint. */
+.of-picker__contrast {
+  margin: 0;
+  font-size: 11px;
+  color: var(--of-ink-muted);
+}
+
+.of-picker__contrast--low {
+  color: var(--of-danger);
+}
+
 .of-swatch:hover:not(:disabled) {
   border-color: var(--of-ink);
 }
@@ -2781,6 +2909,8 @@ textarea.of-input {
 .of-swatches {
   display: flex;
   gap: 4px;
+  /* The custom picker hangs off this row, so it is the containing block. */
+  position: relative;
 }
 
 .of-choice {

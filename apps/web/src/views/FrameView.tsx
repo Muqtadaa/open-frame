@@ -2,7 +2,7 @@ import type { FrameData } from '@openframe/core'
 
 import { defineObjectView, type ObjectEditorProps, type ObjectViewProps } from './registry.js'
 import { InlineTextEditor } from './shared-editor.js'
-import { SURFACE_VARS, inkColor } from '../scene/style-tokens.js'
+import { inkColor, surfaceOf } from '../scene/style-tokens.js'
 
 /** Title height in SCREEN pixels, counter-scaled so it never shrinks with the board. */
 const TITLE_PX = 18
@@ -13,7 +13,7 @@ function FrameRenderer({ object, zoom }: ObjectViewProps<FrameData>) {
     <div
       className="of-frame"
       style={{
-        background: filled ? SURFACE_VARS[object.style.color ?? 'gray'] : 'transparent',
+        background: filled ? surfaceOf(object.style.color, 'gray') : 'transparent',
         opacity: object.style.opacity ?? 1,
       }}
       role="group"
@@ -53,7 +53,7 @@ function FrameEditor({ object, zoom, onCommit, onCancel }: ObjectEditorProps<Fra
     <div
       className="of-frame"
       style={{
-        background: filled ? SURFACE_VARS[object.style.color ?? 'gray'] : 'transparent',
+        background: filled ? surfaceOf(object.style.color, 'gray') : 'transparent',
         opacity: object.style.opacity ?? 1,
       }}
     >
