@@ -157,6 +157,21 @@ export type DragState =
       readonly frames: ReadonlyMap<ObjectId, ObjectFrame>
     }
   | { readonly kind: 'rotate'; readonly frames: ReadonlyMap<ObjectId, ObjectFrame> }
+  /**
+   * Dragging a division INSIDE an object — a table's column or row boundary.
+   *
+   * Carries a previewed DATA patch rather than a frame, because that is what
+   * moving one changes. Same rule as every other transform: nothing reaches
+   * the document until the pointer comes up, so widening a column across
+   * forty frames is one undo entry.
+   */
+  | {
+      readonly kind: 'divider'
+      readonly objectId: ObjectId
+      readonly dividerId: string
+      /** What the object's data would become. Null until the pointer moves. */
+      readonly data: Readonly<Record<string, unknown>> | null
+    }
   /** Drawing a connector: one end fixed, the other following the pointer. */
   | {
       readonly kind: 'connect'
@@ -309,6 +324,8 @@ interface InteractionState {
   setLockedByOthers(ids: ReadonlySet<ObjectId>): void
   setViewport(viewport: Viewport): void
   setFollowing(clientId: number | null): void
+  beginDivider(objectId: ObjectId, dividerId: string): void
+  previewDivider(data: Readonly<Record<string, unknown>>): void
   setTableSize(size: TableSize): void
   setCommentsOpen(open: boolean): void
   startComment(at: ComposingComment | null): void
@@ -447,6 +464,14 @@ export const useInteractionStore = create<InteractionState>((set) => ({
   setFollowing: (clientId) => set({ following: clientId }),
   // Writing a new one closes whatever was being read, and vice versa: two
   // panels over the same pin is two places to type into.
+  beginDivider: (objectId, dividerId) =>
+    set({ drag: { kind: 'divider', objectId, dividerId, data: null } }),
+  previewDivider: (data) =>
+    set((state) =>
+      // Guarded: a preview arriving after the gesture ended would resurrect a
+      // drag state nothing is going to commit.
+      state.drag.kind === 'divider' ? { drag: { ...state.drag, data } } : {},
+    ),
   setTableSize: (tableSize) => set({ tableSize, tool: 'table' }),
   setCommentsOpen: (commentsOpen) => set({ commentsOpen }),
   startComment: (at) => set({ composing: at, openThreadId: null }),

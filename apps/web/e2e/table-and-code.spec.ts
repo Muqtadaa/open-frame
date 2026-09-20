@@ -236,3 +236,88 @@ test('opens the language menu without dismissing the editor', async ({ page }) =
   await expect(page.getByTestId('code-language')).toHaveValue('python')
   await expect(page.getByTestId('code-editor')).toBeVisible()
 })
+
+/**
+ * Dragging a column boundary.
+ *
+ * The handles come from the REGISTRY, not from the canvas knowing what a table
+ * is — so this also covers the mechanism a later type with internal divisions
+ * would use.
+ */
+test('widens a column by dragging its boundary, in one undo entry', async ({ page }) => {
+  await board(page)
+  await place(page, 'table', { x: 340, y: 240 })
+  await page.locator('[data-object-id]').first().click()
+
+  // Two boundaries on a 3x3, and two more for the rows.
+  const boundary = page.getByTestId('divider-c0')
+  await expect(boundary).toHaveCount(1)
+
+  const widthOf = async () => {
+    const box = await page.locator('[role="table"] [role="columnheader"]').first().boundingBox()
+    return box?.width ?? 0
+  }
+  const before = await widthOf()
+
+  const grip = await boundary.boundingBox()
+  if (grip === null) throw new Error('the boundary is not on screen')
+  await page.mouse.move(grip.x + grip.width / 2, grip.y + grip.height / 2)
+  await page.mouse.down()
+  await page.mouse.move(grip.x + grip.width / 2 + 60, grip.y + grip.height / 2, { steps: 8 })
+
+  /*
+   * MID-DRAG the table already shows the new width, from the preview — and the
+   * document has not been touched. Rule 4: one command on release, however
+   * many frames the drag took.
+   */
+  expect(await widthOf()).toBeGreaterThan(before + 30)
+
+  await page.mouse.up()
+  const after = await widthOf()
+  expect(after).toBeGreaterThan(before + 30)
+
+  // ONE undo entry for the whole drag.
+  await page.keyboard.press('ControlOrMeta+z')
+  await expect.poll(widthOf).toBeCloseTo(before, 0)
+})
+
+test('stops at the narrowest a column may be, rather than losing the drag', async ({ page }) => {
+  await board(page)
+  await place(page, 'table', { x: 340, y: 240 })
+  await page.locator('[data-object-id]').first().click()
+
+  const widths = async (): Promise<number[]> =>
+    page
+      .locator('[role="table"] [role="columnheader"]')
+      .evaluateAll((cells) => cells.map((cell) => cell.getBoundingClientRect().width))
+  const before = await widths()
+
+  const grip = await page.getByTestId('divider-c0').boundingBox()
+  if (grip === null) throw new Error('the boundary is not on screen')
+
+  // Dragged far past the table's own left edge.
+  await page.mouse.move(grip.x + grip.width / 2, grip.y + grip.height / 2)
+  await page.mouse.down()
+  await page.mouse.move(grip.x - 400, grip.y + grip.height / 2, { steps: 10 })
+  await page.mouse.up()
+
+  const [wasFirst, wasSecond] = before
+  const [isFirst, isSecond] = await widths()
+  if (wasFirst === undefined || wasSecond === undefined) throw new Error('no columns were drawn')
+  if (isFirst === undefined || isSecond === undefined) throw new Error('no columns were drawn')
+
+  /*
+   * Two things, and the second is the one worth having.
+   *
+   * A column of no width is one nothing can be typed into and nothing can be
+   * grabbed to drag back — so the drag stops short of it. But the WEIGHT is
+   * also refused at the boundary by `TableDataSchema`, which means an
+   * unclamped drag does not produce a thin column: it produces a patch that is
+   * thrown away, and the table does not move at all. Asserting only that the
+   * column is still visible would therefore pass with the clamp deleted, for
+   * the wrong reason. The drag has to be shown to have LANDED.
+   */
+  expect(isFirst).toBeGreaterThan(4)
+  expect(isFirst).toBeLessThan(wasFirst / 2)
+  expect(isSecond).toBeGreaterThan(wasSecond + 60)
+})

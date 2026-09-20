@@ -63,6 +63,25 @@ export interface BoundsContext {
  * passed straight back to `retargetEndpoint`, so the generic layer never has to
  * know what ends a type has.
  */
+/**
+ * A movable division INSIDE an object — a table's column and row boundaries.
+ *
+ * The same idea as `DraggableEndpoint` and for the same reason: an overlay that
+ * asked `object.type === 'table'` would be the type switch rule 5 forbids, and
+ * it would have to be extended for every later type with internal divisions.
+ *
+ * `at` is a FRACTION of the object's extent along `axis`, not a coordinate.
+ * The overlay draws it against whatever bounds the object currently has, so a
+ * type never has to know where on the board it is, and the same number is
+ * meaningful before and after a resize.
+ */
+export interface DraggableDivider {
+  readonly id: string
+  readonly axis: 'x' | 'y'
+  /** Where along that axis, as 0..1 of the object's extent. */
+  readonly at: number
+}
+
 export interface DraggableEndpoint {
   readonly id: string
   readonly at: Point
@@ -295,6 +314,28 @@ export interface ObjectTypeDefinition<TType extends string, TData> {
   ) => Partial<TData>
 
   /**
+   * The movable divisions inside this object, if it has any.
+   *
+   * Empty for almost everything, which is what lets the overlay ask every
+   * selected object without caring what it is.
+   */
+  readonly dividers?: (object: ObjectBase<TType, TData>) => readonly DraggableDivider[]
+
+  /**
+   * Where a dragged divider ends up, as a data patch.
+   *
+   * `to` is a fraction of the object's extent, exactly as `at` was. The TYPE
+   * decides what moving one means — a table converts it back into column
+   * weights and refuses to make a column narrower than something can be typed
+   * into — so the gesture only reports where the pointer got to.
+   */
+  readonly moveDivider?: (
+    object: ObjectBase<TType, TData>,
+    dividerId: string,
+    to: number,
+  ) => Partial<TData>
+
+  /**
    * The link this object represents, if it represents one.
    *
    * ADR 0011: a relation is an object, so adding one is an `add` patch that
@@ -389,6 +430,12 @@ export interface ErasedObjectTypeDefinition {
   readonly promotions?: readonly string[]
   readonly derivations?: readonly Derivation[]
   readonly endpoints?: (object: AnyOpenFrameObject, doc: BoardDocument) => readonly DraggableEndpoint[]
+  readonly dividers?: (object: AnyOpenFrameObject) => readonly DraggableDivider[]
+  readonly moveDivider?: (
+    object: AnyOpenFrameObject,
+    dividerId: string,
+    to: number,
+  ) => Record<string, unknown>
   readonly retargetEndpoint?: (
     object: AnyOpenFrameObject,
     endpointId: string,
@@ -461,8 +508,19 @@ export function defineObjectType<TType extends string, TData>(
     describe: (object) => definition.describe(object as ObjectBase<TType, TData>),
   }
 
-  const { getBounds, hitTest, dependencies, endpoints, retargetEndpoint, relation, fields, promotions, derivations } =
-    definition
+  const {
+    getBounds,
+    hitTest,
+    dependencies,
+    endpoints,
+    retargetEndpoint,
+    dividers,
+    moveDivider,
+    relation,
+    fields,
+    promotions,
+    derivations,
+  } = definition
   return {
     ...erased,
     /*
@@ -495,6 +553,15 @@ export function defineObjectType<TType extends string, TData>(
     ...(relation === undefined
       ? {}
       : { relation: (object) => relation(object as ObjectBase<TType, TData>) }),
+    ...(dividers === undefined
+      ? {}
+      : { dividers: (object) => dividers(object as ObjectBase<TType, TData>) }),
+    ...(moveDivider === undefined
+      ? {}
+      : {
+          moveDivider: (object, dividerId, to) =>
+            moveDivider(object as ObjectBase<TType, TData>, dividerId, to),
+        }),
     ...(endpoints === undefined
       ? {}
       : { endpoints: (object, doc) => endpoints(object as ObjectBase<TType, TData>, doc) }),
@@ -594,6 +661,27 @@ export class ObjectTypeRegistry {
    */
   endpointsOf(object: AnyOpenFrameObject, doc: BoardDocument): readonly DraggableEndpoint[] {
     return this.#definitions.get(object.type)?.endpoints?.(object, doc) ?? []
+  }
+
+  /**
+   * The movable divisions inside an object. Empty for almost everything.
+   */
+  dividersOf(object: AnyOpenFrameObject): readonly DraggableDivider[] {
+    return this.#definitions.get(object.type)?.dividers?.(object) ?? []
+  }
+
+  /**
+   * The data patch that moves one divider, or `null` if the type does not have
+   * any. Null rather than an empty patch, so a caller can tell "nothing to do"
+   * from "this type cannot".
+   */
+  moveDivider(
+    object: AnyOpenFrameObject,
+    dividerId: string,
+    to: number,
+  ): Record<string, unknown> | null {
+    const move = this.#definitions.get(object.type)?.moveDivider
+    return move === undefined ? null : move(object, dividerId, to)
   }
 
   /**

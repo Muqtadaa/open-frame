@@ -4,6 +4,8 @@ import {
   TABLE_VERSION,
   TableDataSchema,
   emptyCells,
+  dividerPositions,
+  moveDividerAt,
   type TableData,
 } from './schema.js'
 
@@ -73,6 +75,46 @@ export const tableType = defineObjectType<typeof TABLE_TYPE, TableData>({
      * are what rule 21 forbids, so only what is honoured is listed.
      */
     styleProps: ['color', 'font', 'align', 'opacity', 'stroke'],
+  },
+
+  /**
+   * The column and row boundaries, as fractions of the table's extent.
+   *
+   * Declared here rather than detected by the overlay, for exactly the reason
+   * `endpoints` is: `object.type === 'table'` in a caller is the type switch
+   * rule 5 forbids, and it would have to grow a case for every later type with
+   * internal divisions.
+   *
+   * The outer edges are NOT dividers. Those are the object's own bounds and are
+   * moved by resizing it; offering them twice would be two controls doing
+   * different things in the same place.
+   */
+  dividers: (object) => [
+    ...dividerPositions(object.data.columns).map((at, index) => ({
+      id: `c${String(index)}`,
+      axis: 'x' as const,
+      at,
+    })),
+    ...dividerPositions(object.data.rows).map((at, index) => ({
+      id: `r${String(index)}`,
+      axis: 'y' as const,
+      at,
+    })),
+  ],
+
+  moveDivider: (object, dividerId, to) => {
+    const index = Number.parseInt(dividerId.slice(1), 10)
+    if (!Number.isInteger(index) || index < 0) return {}
+
+    // Only the two tracks either side move, so the rest of the table stays
+    // exactly where it was — see `moveDividerAt`.
+    if (dividerId.startsWith('c')) {
+      return { columns: moveDividerAt(object.data.columns, index, to) }
+    }
+    if (dividerId.startsWith('r')) {
+      return { rows: moveDividerAt(object.data.rows, index, to) }
+    }
+    return {}
   },
 
   describe: (object) => {

@@ -58,6 +58,8 @@ type GestureMode =
   | 'connect'
   /** Dragging one END of an already-existing object, rather than drawing a new one. */
   | 'endpoint'
+  /** Dragging a division INSIDE one — a table's column or row boundary. */
+  | 'divider'
   | 'none'
 
 /**
@@ -98,6 +100,8 @@ function isTextEntry(target: EventTarget | null): boolean {
 interface Gesture {
   readonly pointerId: number
   readonly mode: GestureMode
+  /** Which internal division is being dragged, for a `divider` gesture. */
+  readonly dividerId?: string
   readonly startWorld: Point
   readonly startClient: Point
   readonly startViewport: Viewport
@@ -114,7 +118,7 @@ interface Gesture {
 }
 
 /**
- * How close, in SCREEN pixels, a drag must come before a guide captures it.
+ * How close, in SCREEN pixels, a drag must come before a divider captures it.
  *
  * Screen pixels rather than world units, divided by the zoom at use: a fixed
  * world tolerance would grab from across the board when zoomed out and be
@@ -156,6 +160,47 @@ function resolveDragDelta(
 function handleUnderPointer(target: EventTarget | null): string | null {
   if (!(target instanceof HTMLElement)) return null
   return target.closest<HTMLElement>('[data-handle]')?.dataset.handle ?? null
+}
+
+/**
+ * Grabbing a division inside an object, which the REGISTRY named.
+ *
+ * Nothing type-specific here: the handle carries its own id, the registry
+ * turns a position into a data patch, and this only has to know that both
+ * exist. The same handshake the endpoint handles use.
+ */
+function beginDividerDrag(
+  event: ReactPointerEvent<HTMLElement>,
+  store: ReturnType<typeof useInteractionStore.getState>,
+  runtime: { store: { getDocument: () => BoardDocument }; registry: ObjectTypeRegistry },
+  toWorld: (clientX: number, clientY: number) => Point,
+): Gesture | null {
+  const element = event.target instanceof HTMLElement ? event.target : null
+  const dividerId = element?.closest<HTMLElement>('[data-divider-id]')?.dataset.dividerId
+  if (dividerId === undefined) return null
+
+  const [selectedId] = [...store.selection]
+  const doc = runtime.store.getDocument()
+  const object = selectedId === undefined ? undefined : doc.objects.get(selectedId)
+  if (object === undefined || selectedId === undefined) return null
+
+  store.beginDivider(selectedId, dividerId)
+
+  return {
+    pointerId: event.pointerId,
+    mode: 'divider',
+    startWorld: toWorld(event.clientX, event.clientY),
+    startClient: { x: event.clientX, y: event.clientY },
+    startViewport: store.viewport,
+    subjects: [object],
+    startBounds: runtime.registry.boundsOf(object, doc),
+    alignTargets: [],
+    handle: null,
+    endpointId: null,
+    dividerId,
+    startAngle: 0,
+    moved: false,
+  }
 }
 
 /**
@@ -391,6 +436,15 @@ export function useCanvasGestures(containerRef: RefObject<HTMLElement | null>) {
 
       const grabbed = handleUnderPointer(event.target)
 
+      if (grabbed === 'divider') {
+        const started = beginDividerDrag(event, store, runtime, toWorld)
+        if (started !== null) {
+          event.currentTarget.setPointerCapture(event.pointerId)
+          gesture.current = started
+          return
+        }
+      }
+
       if (grabbed === 'endpoint') {
         const started = beginEndpointDrag(event, store, runtime, toWorld)
         if (started !== null) {
@@ -438,7 +492,12 @@ export function useCanvasGestures(containerRef: RefObject<HTMLElement | null>) {
         }
       }
 
-      if (grabbed !== null && grabbed !== 'endpoint' && grabbed !== 'connect') {
+      if (
+        grabbed !== null &&
+        grabbed !== 'endpoint' &&
+        grabbed !== 'connect' &&
+        grabbed !== 'divider'
+      ) {
         const document = runtime.store.getDocument()
         /*
          * Only the objects a transform can actually act on.
@@ -574,6 +633,32 @@ export function useCanvasGestures(containerRef: RefObject<HTMLElement | null>) {
             event.clientY - active.startClient.y,
           ),
         )
+        return
+      }
+
+      if (active.mode === 'divider') {
+        const bounds = active.startBounds
+        const [subject] = active.subjects
+        if (bounds === null || subject === undefined || active.dividerId === undefined) return
+
+        /*
+         * The pointer as a FRACTION of the object, which is the only unit the
+         * type understands. Bounds are the ones taken at gesture start: rule
+         * 17's reasoning, and here also because nothing has moved — the
+         * document is untouched until the pointer comes up.
+         */
+        const along =
+          bounds.width === 0 || bounds.height === 0
+            ? 0
+            : active.dividerId.startsWith('c')
+              ? (worldPoint.x - bounds.x) / bounds.width
+              : (worldPoint.y - bounds.y) / bounds.height
+
+        const patch = runtime.registry.moveDivider(subject, active.dividerId, along)
+        if (patch !== null) {
+          active.moved = true
+          store.previewDivider(patch)
+        }
         return
       }
 
@@ -723,6 +808,22 @@ export function useCanvasGestures(containerRef: RefObject<HTMLElement | null>) {
 
         if (membershipChanged) commands.moveAndReparent(moves, target)
         else commands.moveObjects(moves)
+      }
+
+      /*
+       * THE COMMIT for a divider: one command carrying the whole drag.
+       *
+       * Read from the live drag state rather than recomputed here, so what is
+       * written is exactly what was on screen — and `moved` gates it, because
+       * a press that never moved is a click on a handle, not a resize, and
+       * must not put an entry in the undo stack.
+       */
+      if (active.mode === 'divider') {
+        const drag = store.drag
+        if (drag.kind === 'divider' && drag.data !== null && active.moved) {
+          commands.updateData(drag.objectId, drag.data)
+        }
+        store.endDrag()
       }
 
       if (

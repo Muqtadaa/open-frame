@@ -161,3 +161,73 @@ export function resizeGrid(
 
   return { ...data, columns, rows, cells }
 }
+
+/**
+ * The smallest share of a table a column or row may be reduced to.
+ *
+ * Not zero. A column dragged to nothing is one nothing can be typed into and
+ * nothing can be grabbed to drag back — it would be a column that exists in
+ * the data and not on the board, which is the same reason a weight of zero is
+ * refused outright.
+ */
+export const MIN_SHARE = 0.04
+
+/**
+ * Where a table's internal divisions fall, as fractions of its extent.
+ *
+ * The boundaries BETWEEN tracks, so a three-column table has two — the outer
+ * edges are the object's own and are moved by resizing it, not by dragging a
+ * divider.
+ */
+export function dividerPositions(weights: readonly number[]): number[] {
+  const total = weights.reduce((sum, weight) => sum + weight, 0)
+  if (total <= 0) return []
+
+  const found: number[] = []
+  let running = 0
+  for (const weight of weights.slice(0, -1)) {
+    running += weight
+    found.push(running / total)
+  }
+  return found
+}
+
+/**
+ * The weights after dragging the boundary at `index` to `to`.
+ *
+ * Only the two tracks either side of that boundary change, and their SUM is
+ * preserved — so widening one column narrows its neighbour and everything
+ * further along stays exactly where it was. Spreading the difference across
+ * the whole table instead would make every column shift when you adjusted one,
+ * which reads as the table fighting you.
+ */
+export function moveDividerAt(
+  weights: readonly number[],
+  index: number,
+  to: number,
+): readonly number[] {
+  const before = weights[index]
+  const after = weights[index + 1]
+  if (before === undefined || after === undefined) return weights
+
+  const total = weights.reduce((sum, weight) => sum + weight, 0)
+  if (total <= 0) return weights
+
+  // Where the boundary sits now, and where the pair begins, as fractions.
+  const start = weights.slice(0, index).reduce((sum, weight) => sum + weight, 0) / total
+  const pair = (before + after) / total
+
+  /*
+   * Clamped so NEITHER of the two can be squeezed out of existence. The drag
+   * simply stops rather than being refused: a handle that ignored you past a
+   * limit would feel broken, and one that let you erase a column would be.
+   */
+  const lowest = start + pair * MIN_SHARE
+  const highest = start + pair * (1 - MIN_SHARE)
+  const landed = Math.min(highest, Math.max(lowest, to))
+
+  const next = [...weights]
+  next[index] = (landed - start) * total
+  next[index + 1] = before + after - next[index]
+  return next
+}

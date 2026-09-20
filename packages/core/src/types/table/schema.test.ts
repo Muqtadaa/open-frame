@@ -5,6 +5,8 @@ import {
   TableDataSchema,
   cellIndex,
   emptyCells,
+  dividerPositions,
+  moveDividerAt,
   resizeGrid,
   type TableData,
 } from './schema.js'
@@ -179,5 +181,73 @@ describe('changing a table’s shape', () => {
       data = resizeGrid(data, step[0], step[1])
       expect(TableDataSchema.safeParse(data).success, `${step[0]} ${String(step[1])}`).toBe(true)
     }
+  })
+})
+
+describe('the divisions inside a table', () => {
+  it('sits between the tracks, not at the outer edges', () => {
+    // Three columns have two boundaries: the object's own edges are not dividers.
+    expect(dividerPositions([1, 1, 1])).toEqual([1 / 3, 2 / 3])
+    expect(dividerPositions([1])).toEqual([])
+  })
+
+  it('reads uneven weights, not just even ones', () => {
+    expect(dividerPositions([3, 1])).toEqual([0.75])
+  })
+
+  /**
+   * The property that makes a table feel like a table: dragging one boundary
+   * moves ONLY the two tracks either side of it. Anything further along stays
+   * exactly where it was.
+   *
+   * Asserted on four columns, because on three the "rest of the table" is a
+   * single track and a change that spread across everything would be hard to
+   * tell from one that did not.
+   */
+  it('moves only the two tracks it sits between', () => {
+    const before = [1, 1, 1, 1]
+    const after = moveDividerAt(before, 1, 0.6)
+
+    expect(after[0]).toBe(1)
+    expect(after[3]).toBe(1)
+    // And the pair it does move keeps their combined width.
+    expect((after[1] ?? 0) + (after[2] ?? 0)).toBeCloseTo(2, 10)
+  })
+
+  it('widens one track by exactly what it takes from its neighbour', () => {
+    const after = moveDividerAt([1, 1], 0, 0.75)
+    expect(after[0]).toBeCloseTo(1.5, 10)
+    expect(after[1]).toBeCloseTo(0.5, 10)
+  })
+
+  /**
+   * A column dragged to nothing is one nothing can be typed into and nothing
+   * can be grabbed to drag back. The drag STOPS at the limit rather than being
+   * refused, because a handle that ignores you past a point feels broken and
+   * one that lets you erase a column is broken.
+   */
+  it('will not squeeze a track out of existence in either direction', () => {
+    const squashed = moveDividerAt([1, 1], 0, 0)
+    expect(squashed[0]).toBeGreaterThan(0)
+    expect(TableDataSchema.safeParse(grid(2, 1, { columns: squashed })).success).toBe(true)
+
+    const stretched = moveDividerAt([1, 1], 0, 1)
+    expect(stretched[1]).toBeGreaterThan(0)
+    expect(TableDataSchema.safeParse(grid(2, 1, { columns: stretched })).success).toBe(true)
+  })
+
+  it('leaves the weights alone when the boundary does not exist', () => {
+    const weights = [1, 1]
+    expect(moveDividerAt(weights, 5, 0.5)).toBe(weights)
+  })
+
+  /**
+   * Round trip: after moving a boundary, asking where the boundaries are gives
+   * back where it was put. Without this the handle would drift away from the
+   * pointer on every drag.
+   */
+  it('puts the boundary where it was dragged', () => {
+    const moved = moveDividerAt([1, 1, 1], 1, 0.8)
+    expect(dividerPositions(moved)[1]).toBeCloseTo(0.8, 10)
   })
 })

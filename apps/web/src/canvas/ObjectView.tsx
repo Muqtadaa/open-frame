@@ -70,6 +70,18 @@ function ObjectViewInner({ id, views }: Props) {
       ? state.drag.frames.get(id)
       : undefined,
   )
+  /*
+   * A divider being dragged previews as DATA rather than as a frame — moving a
+   * table's column boundary changes its weights, not its box. Nothing is
+   * written to the document until the pointer comes up, so this is the only
+   * thing that makes the drag visible.
+   *
+   * A stable reference from the store, so it is safe in a selector: the state
+   * holds the same object between updates.
+   */
+  const dividerPreview = useInteractionStore((state) =>
+    state.drag.kind === 'divider' && state.drag.objectId === id ? state.drag.data : null,
+  )
   const commands = useCommands()
   const { runtime } = useOpenFrame()
   // Resolved before the early return so hook order never varies. Only views
@@ -146,7 +158,16 @@ function ObjectViewInner({ id, views }: Props) {
           />
         ) : (
           <Renderer
-            object={object}
+            /*
+             * Merged, not mutated: the document still holds the committed
+             * data, and this is what the object WOULD become if the pointer
+             * came up now. Rule 4 in one expression.
+             */
+            object={
+              dividerPreview === null
+                ? object
+                : { ...object, data: { ...(object.data as object), ...dividerPreview } }
+            }
             selected={selected}
             zoom={zoom}
             document={runtime.store.getDocument()}

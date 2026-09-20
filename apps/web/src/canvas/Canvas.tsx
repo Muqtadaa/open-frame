@@ -8,6 +8,7 @@ import { ConnectorPreview } from './ConnectorPreview.js'
 import { ConnectPoints } from './ConnectPoints.js'
 import { DrawPreview } from './DrawPreview.js'
 import { EndpointOverlay } from './EndpointOverlay.js'
+import { DividerOverlay } from './DividerOverlay.js'
 import { MarqueeOverlay } from './MarqueeOverlay.js'
 import { ObjectLayer } from './ObjectLayer.js'
 import { CommentLayer } from './CommentLayer.js'
@@ -100,6 +101,7 @@ export function Canvas() {
         <MarqueeOverlay />
         <AlignmentOverlay />
         <EndpointOverlay />
+        <DividerOverlay />
         <ConnectorPreview />
         {/*
           Last, so other people's cursors sit above the board and every overlay

@@ -767,6 +767,69 @@ body {
 }
 
 /*
+ * A division INSIDE an object, grabbed to move it.
+ *
+ * Invisible until hovered: a table with four boundaries drawn permanently
+ * would be a table wearing its own scaffolding. The grab area is wide enough
+ * to aim at (WCAG 2.5.8) while what is drawn on hover is a single rule.
+ *
+ * DIVIDER, not guide. `.of-guide` is the alignment feedback further down this
+ * file, and it sets `pointer-events: none` because a guide is something you
+ * look at. Written as `.of-guide`, these handles inherited that rule by cascade
+ * order and could not be pressed at all — two different ideas sharing one name,
+ * where the later one silently won.
+ */
+.of-divider {
+  position: absolute;
+  top: 0;
+  left: 0;
+  /*
+   * Above the object it divides. A selected object raises itself to `z-index:
+   * 1`, and these handles sit ENTIRELY inside it — unlike the resize handles,
+   * which hang half outside the edge and can be caught there. Left on `auto`
+   * the cell under the boundary took every press.
+   */
+  z-index: 3;
+  background: transparent;
+  pointer-events: auto;
+}
+
+.of-divider--x {
+  cursor: col-resize;
+}
+
+.of-divider--y {
+  cursor: row-resize;
+}
+
+.of-divider::after {
+  position: absolute;
+  content: '';
+  background: var(--of-accent);
+  opacity: 0;
+}
+
+.of-divider--x::after {
+  top: 0;
+  bottom: 0;
+  left: 50%;
+  width: 2px;
+  transform: translateX(-50%);
+}
+
+.of-divider--y::after {
+  top: 50%;
+  right: 0;
+  left: 0;
+  height: 2px;
+  transform: translateY(-50%);
+}
+
+.of-divider:hover::after {
+  opacity: 1;
+}
+
+/*
  * The editor's wrapper, which holds the grid AND the controls that change its
  * shape. Relative, so the two button pairs sit against the edge each of them
  * affects.
