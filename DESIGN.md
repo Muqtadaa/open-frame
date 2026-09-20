@@ -25,6 +25,10 @@ colors:
   c-violet: "#5b3ba8"
   c-orange: "#8c4715"
   c-gray: "#3f5163"
+  c-pink: "#8f2a67"
+  c-brown: "#6a4a2a"
+  c-black: "#16202b"
+  c-white: "#ffffff"
   s-yellow: "#ffe9a3"
   s-green: "#bff0d4"
   s-blue: "#cfe2ff"
@@ -32,6 +36,10 @@ colors:
   s-violet: "#e3daff"
   s-orange: "#ffddb8"
   s-gray: "#dfe5ec"
+  s-pink: "#ffd4ef"
+  s-brown: "#e8dcc6"
+  s-black: "#16202b"
+  s-white: "#ffffff"
 typography:
   display:
     fontFamily: "ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, sans-serif"
@@ -124,7 +132,8 @@ components:
     width: "52px"
   swatch:
     rounded: "{rounded.slip}"
-    size: "24px"
+    size: "30px"
+    layout: "6-column grid"
   choice-item:
     backgroundColor: "transparent"
     textColor: "{colors.ink-muted}"
@@ -314,9 +323,35 @@ the only insistent hues in the whole system belong to the user's material.
 
 ### Content Colours
 
-Seven pairs, each an ink (`c-*`) and its paper (`s-*`): yellow, green, blue, red,
-violet, orange, gray. The ink is only ever used on its own surface — a sticky's
-text on its body, a shape's stroke on its fill — and every pair is tested at 4.5:1.
+Eleven, laid out neutrals first and then the spectrum: black, gray, white, red,
+pink, orange, yellow, green, blue, violet, brown. `violet` IS the purple and
+keeps its name, because documents store token names and a rename is a migration
+that can only lose.
+
+**Nine are pairs**, an ink (`c-*`) and its paper (`s-*`). That pairing is what
+makes a coloured note a slip laid on the page rather than a block of paint, and
+every ink is tested against every paper at 4.5:1 — 81 combinations per world,
+because a text colour is the user's choice and any ink can land on any slip.
+
+**Two are not.** Black and white mean themselves rather than naming a hue: a
+black fill has to be black and white text is only white, so their ink and paper
+are one value and the hue grid cannot hold them. What is guaranteed instead is
+that one of the two always reads on any slip, in either world, and
+`readableInkOn` returns it without being asked — which is why a black sticky
+comes out legible rather than needing to be fixed.
+
+The values were searched rather than picked. Brown's paper is the
+best-separated tan that all eleven inks still read on; constrained only by
+contrast, the search returned a pale olive, which separates beautifully and is
+not brown. Pink is a deep raspberry because a lighter one sits on top of the
+guide magenta.
+
+**A literal colour** may also be set, from the wheel or the eyedropper. It does
+not follow a theme — there is no second value to switch to — and its contrast
+cannot be proven at build time, so the picker states the ratio against the
+ground the colour will actually sit on and says when it falls below 4.5:1. A
+warning, never a refusal: somebody matching a brand colour is making a choice
+the panel is not entitled to overrule.
 
 ### Named Rules
 
@@ -478,7 +513,13 @@ Everything else is feedback or continuity, and there is not much of it:
 - **A copied link says so where the click landed.** A 600ms accent wash on the
   row, not a toast: the acknowledgement belongs where the action was, and this
   is a control somebody uses twice and never again that session.
-- **Beds transition, they do not snap.** 140ms on hover and active states.
+- **Beds transition, they do not snap.** 140ms on hover and active states, and
+  the same for a swatch's selected ring and a selected table cell's — the ring
+  arrives rather than appearing.
+- **A surface comes out of the thing that opened it.** The colour picker is
+  pulled from the swatch grid, the table's colour bar from the table's top
+  edge. Both use the sheet's raise-and-fade, because a surface that simply
+  appears beside a control leaves you to work out the relationship yourself.
 
 Timing is `--of-quick` (140ms) for feedback and `--of-settle` (240ms) for the
 ledger, on `cubic-bezier(0.16, 1, 0.3, 1)` — a confident arrival. **No bounce:**
@@ -587,10 +628,28 @@ no change to the panel.
 
 ### Swatches and Segmented Controls
 
-Colour swatches are 24px squares at 2px radius with a `control-border` hairline,
+Colour swatches are 30px squares at 2px radius with a `control-border` hairline,
 selected by an ink border plus a 2px inset panel ring. They are index-slip stock,
-not paint dots: seven saturated circles read as a paint app, and the page already
-speaks the language of rectangles. Segmented choices sit on a recessed desk-grey
+not paint dots: saturated circles read as a paint app, and the page already
+speaks the language of rectangles.
+
+Eleven colours and the way out of them no longer fit a line, so they are a
+**6x2 grid** — a block you read as a palette. The objection was always to the
+accidental 5 + 2, not to two rows.
+
+An **ink swatch is a specimen**: the letter in that ink, on that ink's own slip,
+which is the pair the palette tests. The two neutrals take the other neutral,
+because their ink and paper are one value and `white` on `white` is an empty
+square — which is what the first build of this grid shipped.
+
+**One palette, and a target.** Where more than one property can take a colour,
+the control names what it paints rather than repeating the grid: the record
+panel for surface and text, a table's bar for fill, text and rule. Three grids
+of eleven is thirty-three swatches you have to count columns to navigate, and
+in the record panel it also made a floating panel 68px taller — which covers
+board, and covered an object somebody then could not pick up. The targets come
+from the registry's `styleProps`, so a type declaring one colour gets no
+selector: a choice of one is not a choice. Segmented choices sit on a recessed desk-grey
 bed at 7px radius; the selected item is panel white with accent ink and the
 pressed-index shadow.
 
@@ -631,6 +690,11 @@ gives away in the second line, at the 11px functional floor.
 and the apparatus radius, sitting in the record line beside the other readouts.
 A pill would have been the third fully-round thing in a world where round means
 "grab me".
+
+That refusal was written down and then broken anyway: the workspace filters
+shipped as fully-round pills, and the action beside them as a fourth. Both are
+segmented-choice shapes now. A rule recorded in this file is not a rule the
+next surface inherits automatically — it has to be applied.
 
 ### Board Objects
 
