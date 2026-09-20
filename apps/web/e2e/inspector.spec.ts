@@ -110,6 +110,59 @@ test.describe('inspector', () => {
   })
 
   /**
+   * TEXT COLOUR, on the thing it colours.
+   *
+   * The ink is set on the note and inherited by the words, so this reads the
+   * computed colour off the element the text is actually in — a capability
+   * nothing in the UI consumes is untested, and one the UI sets without the
+   * view honouring it is worse, because the panel then lies.
+   */
+  test('inks a note without touching its paper', async ({ page }) => {
+    await place(page, 's', 340, 260, 'Note')
+    await page.locator(CANVAS).click({ position: { x: 340, y: 260 } })
+
+    const paper = await page.locator('.of-sticky').evaluate(
+      (note) => getComputedStyle(note).backgroundColor,
+    )
+
+    await page.getByTestId('ink-red').click()
+    await expect(page.locator('.of-sticky')).toHaveCSS('color', 'rgb(138, 64, 56)')
+    // The note is still the colour it was: two controls, two properties.
+    await expect(page.locator('.of-sticky')).toHaveCSS('background-color', paper)
+  })
+
+  /**
+   * A text object's colour IS its ink, so it offers `textColor` and NOT
+   * `color` — otherwise selecting it alongside a sticky intersects on `color`
+   * and one swatch sets paper on one and ink on the other.
+   */
+  test('a text object offers ink and no paper', async ({ page }) => {
+    await place(page, 't', 340, 260, 'Words')
+    await page.locator(CANVAS).click({ position: { x: 340, y: 260 } })
+
+    await expect(page.getByTestId('ink-blue')).toBeVisible()
+    await expect(page.getByTestId('swatch-blue')).toHaveCount(0)
+
+    await page.getByTestId('ink-blue').click()
+    await expect(page.locator('.of-text')).toHaveCSS('color', 'rgb(23, 82, 158)')
+  })
+
+  /**
+   * And the point of the split: a sticky and a text together now share ONE
+   * meaning for the ink swatch, where before they shared a swatch and not a
+   * meaning.
+   */
+  test('inks a sticky and a text together', async ({ page }) => {
+    await place(page, 's', 340, 260, 'Note')
+    await place(page, 't', 640, 260, 'Words')
+    await page.keyboard.press('Control+a')
+
+    await page.getByTestId('ink-green').click()
+    await expect(page.locator('.of-sticky')).toHaveCSS('color', 'rgb(20, 96, 69)')
+    await expect(page.locator('.of-text')).toHaveCSS('color', 'rgb(20, 96, 69)')
+  })
+
+  /**
    * One control must mean one thing, so a mixed selection offers only what every
    * member honours. A shape has `stroke`; a sticky does not.
    */

@@ -28,7 +28,7 @@ import { useBoardDocument } from '../hooks/use-document-object.js'
 import { useInteractionStore } from '../interaction/interaction-store.js'
 import { PANEL_CLEARANCE_PX } from '../scene/connect-points.js'
 import { useOpenFrame } from '../runtime/context.js'
-import { SURFACE_VARS } from '../scene/style-tokens.js'
+import { COLOR_VARS, SURFACE_VARS } from '../scene/style-tokens.js'
 import { AlignIcon, DashIcon,
   RadiusIcon, FillIcon, StrokeIcon, TrashIcon } from './icons.js'
 import { Provenance } from './Provenance.js'
@@ -275,6 +275,39 @@ export function Inspector() {
                 data-testid={`swatch-${token}`}
                 onClick={() => apply({ color: token })}
               />
+            ))}
+          </div>
+        </Field>
+      )}
+
+      {/*
+        * The INK, drawn as a letter rather than as a filled square.
+        *
+        * A second row of identical swatches under the first is two controls
+        * that look like one control twice. What a text colour does is colour
+        * letters, so the swatch shows a letter in it — and the swatch's own
+        * ground stays the panel, because an ink token on a coloured square is
+        * being judged against a surface the user is not about to use.
+        */}
+      {props.has('textColor') && (
+        <Field name="text">
+          <div className="of-swatches" role="group" aria-label="Text colour">
+            {COLOR_TOKENS.map((token: ColorToken) => (
+              <button
+                key={token}
+                type="button"
+                className={`of-swatch of-swatch--ink${
+                  value('textColor') === token ? ' of-swatch--on' : ''
+                }`}
+                style={{ color: COLOR_VARS[token] }}
+                aria-label={token}
+                aria-pressed={value('textColor') === token}
+                title={token}
+                data-testid={`ink-${token}`}
+                onClick={() => apply({ textColor: token })}
+              >
+                A
+              </button>
             ))}
           </div>
         </Field>

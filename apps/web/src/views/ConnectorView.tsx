@@ -2,7 +2,7 @@ import { resolveEndpoints, type ConnectorData } from '@openframe/core'
 
 import { connectorPath, pathMidpoint, routeAngles } from '../scene/connector-path.js'
 import { capPath } from '../scene/connector-caps.js'
-import { COLOR_VARS, dashArray } from '../scene/style-tokens.js'
+import { COLOR_VARS, dashArray, inkColor } from '../scene/style-tokens.js'
 import { defineObjectView, type ObjectEditorProps, type ObjectViewProps } from './registry.js'
 import { InlineTextEditor } from './shared-editor.js'
 
@@ -77,7 +77,13 @@ function ConnectorRenderer({ object, document: doc, zoom }: ObjectViewProps<Conn
 
       {label.trim() !== '' && (
         <g transform={`translate(${String(mid.x)} ${String(mid.y)}) scale(${String(1 / zoom)})`}>
-          <text className="of-connector__label" textAnchor="middle" dominantBaseline="middle">
+          <text
+            className="of-connector__label"
+            textAnchor="middle"
+            dominantBaseline="middle"
+            // `fill`, not `color`: an SVG glyph is painted, not inked.
+            fill={inkColor(object.style.textColor)}
+          >
             {label}
           </text>
         </g>

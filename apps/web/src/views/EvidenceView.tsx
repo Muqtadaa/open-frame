@@ -3,7 +3,7 @@ import { isEmptyText, plainTextOf, type ColorToken, type EvidenceData } from '@o
 import { defineObjectView, type ObjectEditorProps, type ObjectViewProps } from './registry.js'
 import { RichTextEditor } from './RichTextEditor.js'
 import { RichTextView } from './RichTextView.js'
-import { SURFACE_VARS, fontFamily, textAlign } from '../scene/style-tokens.js'
+import { SURFACE_VARS, fontFamily, textAlign, inkColor } from '../scene/style-tokens.js'
 
 function background(color: ColorToken | undefined): string {
   return SURFACE_VARS[color ?? 'gray']
@@ -29,6 +29,7 @@ function EvidenceRenderer({ object }: ObjectViewProps<EvidenceData>) {
       className="of-slip of-evidence"
       style={{
         background: background(object.style.color),
+        color: inkColor(object.style.textColor),
         opacity: object.style.opacity ?? 1,
       }}
       role="group"
@@ -81,6 +82,7 @@ function EvidenceEditor({ object, zoom, onCommit, onCancel }: ObjectEditorProps<
       className="of-slip of-evidence of-slip__editor"
       style={{
         background: background(object.style.color),
+        color: inkColor(object.style.textColor),
         fontFamily: fontFamily(object.style.font),
         textAlign: textAlign(object.style.align),
       }}

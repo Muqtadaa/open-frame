@@ -3,7 +3,7 @@ import { isEmptyText, plainTextOf, type ColorToken, type InsightData } from '@op
 import { defineObjectView, type ObjectEditorProps, type ObjectViewProps } from './registry.js'
 import { RichTextEditor } from './RichTextEditor.js'
 import { RichTextView } from './RichTextView.js'
-import { SURFACE_VARS, fontFamily, textAlign } from '../scene/style-tokens.js'
+import { SURFACE_VARS, fontFamily, textAlign, inkColor } from '../scene/style-tokens.js'
 
 function background(color: ColorToken | undefined): string {
   return SURFACE_VARS[color ?? 'blue']
@@ -17,6 +17,7 @@ function InsightRenderer({ object }: ObjectViewProps<InsightData>) {
       className="of-slip of-insight"
       style={{
         background: background(object.style.color),
+        color: inkColor(object.style.textColor),
         opacity: object.style.opacity ?? 1,
       }}
       role="group"
@@ -59,6 +60,7 @@ function InsightEditor({ object, zoom, onCommit, onCancel }: ObjectEditorProps<I
       className="of-slip of-insight of-insight__claim of-slip__editor"
       style={{
         background: background(object.style.color),
+        color: inkColor(object.style.textColor),
         fontFamily: fontFamily(object.style.font),
         textAlign: textAlign(object.style.align),
       }}

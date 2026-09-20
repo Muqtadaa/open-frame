@@ -3,7 +3,7 @@ import { isEmptyText, plainTextOf, type ColorToken, type RichText } from '@openf
 import { RichTextEditor } from './RichTextEditor.js'
 import { RichTextView } from './RichTextView.js'
 import type { ObjectEditorProps, ObjectViewProps } from './registry.js'
-import { SURFACE_VARS, fontFamily, textAlign } from '../scene/style-tokens.js'
+import { SURFACE_VARS, fontFamily, textAlign, inkColor } from '../scene/style-tokens.js'
 
 /**
  * The card every structured type is drawn as.
@@ -49,6 +49,7 @@ export function StructuredSlip<TData extends { readonly text: RichText }>({
       className={`of-slip${className === undefined ? '' : ` ${className}`}`}
       style={{
         background: SURFACE_VARS[object.style.color ?? defaultColor],
+        color: inkColor(object.style.textColor),
         opacity: object.style.opacity ?? 1,
       }}
       role="group"
@@ -108,6 +109,7 @@ export function StructuredEditor<TData extends { readonly text: RichText }>({
       className={`of-slip of-slip__editor${className === undefined ? '' : ` ${className}`}`}
       style={{
         background: SURFACE_VARS[object.style.color ?? defaultColor],
+        color: inkColor(object.style.textColor),
         fontFamily: fontFamily(object.style.font),
         textAlign: textAlign(object.style.align),
       }}

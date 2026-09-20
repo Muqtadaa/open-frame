@@ -33,7 +33,7 @@ export const decisionType = defineObjectType<typeof DECISION_TYPE, DecisionData>
     canHaveChildren: false,
     selectsAsUnit: false,
     connectable: true,
-    styleProps: ['color', 'font', 'align', 'opacity'],
+    styleProps: ['color', 'textColor', 'font', 'align', 'opacity'],
   },
 
   fields: [

@@ -550,6 +550,21 @@ body {
   cursor: pointer;
 }
 
+/*
+ * The text-colour swatch: an ink specimen, not a paper one.
+ *
+ * It carries a letter in the token's ink on the panel's own ground, because
+ * that is the pair the user is actually going to read. A filled square in the
+ * same row as the surface swatches would be two rows of the same control
+ * differing only in which one you happened to press.
+ */
+.of-swatch--ink {
+  font-size: 13px;
+  font-weight: 600;
+  line-height: 1;
+  background: var(--of-panel);
+}
+
 .of-swatch:hover:not(:disabled) {
   border-color: var(--of-ink);
 }
@@ -736,7 +751,13 @@ body {
   padding: 4px 6px;
   overflow: hidden;
   font-size: 12px;
-  color: var(--of-ink);
+  /*
+   * INHERITED, not set. `color: var(--of-ink)` here won every text colour the
+   * table was given, because the ink is applied to the table as a whole and a
+   * property set on the child beats one inherited into it. `body` is the ink,
+   * so inheriting lands on exactly the same colour when nothing overrides it.
+   */
+  color: inherit;
   /*
    * One rule per cell on two sides only, so adjacent cells share a line
    * rather than drawing two against each other — which reads as a heavier
@@ -754,7 +775,10 @@ body {
 .of-table__input {
   font: inherit;
   font-size: 12px;
-  color: var(--of-ink);
+  /* Inherited for the same reason as the cell — and a textarea does not
+   * inherit colour on its own, so this is what carries the ink into the one
+   * cell being typed in. */
+  color: inherit;
   resize: none;
   background: transparent;
   border-top: none;

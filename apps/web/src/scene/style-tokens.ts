@@ -27,6 +27,18 @@ export const SURFACE_VARS: Record<ColorToken, string> = {
   gray: 'var(--of-s-gray)',
 }
 
+/**
+ * The ink of an object's text, or `undefined` to inherit the board's own.
+ *
+ * `undefined` rather than a default token on purpose: a note whose text nobody
+ * has coloured should read as the board reads, and pinning it to `gray` here
+ * would freeze today's ink into every object the moment a theme changed it —
+ * `inherit` is not a value CSS can be handed, so the property goes unset.
+ */
+export function inkColor(token: ColorToken | undefined): string | undefined {
+  return token === undefined ? undefined : COLOR_VARS[token]
+}
+
 export function fontFamily(token: FontToken | undefined): string {
   switch (token) {
     case 'serif':

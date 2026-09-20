@@ -2,7 +2,7 @@ import type { FrameData } from '@openframe/core'
 
 import { defineObjectView, type ObjectEditorProps, type ObjectViewProps } from './registry.js'
 import { InlineTextEditor } from './shared-editor.js'
-import { SURFACE_VARS } from '../scene/style-tokens.js'
+import { SURFACE_VARS, inkColor } from '../scene/style-tokens.js'
 
 /** Title height in SCREEN pixels, counter-scaled so it never shrinks with the board. */
 const TITLE_PX = 18
@@ -28,6 +28,7 @@ function FrameRenderer({ object, zoom }: ObjectViewProps<FrameData>) {
           transformOrigin: '0 100%',
           top: `${String(-TITLE_PX / zoom)}px`,
           height: `${String(TITLE_PX / zoom)}px`,
+          color: inkColor(object.style.textColor),
         }}
       >
         {object.data.name}
@@ -64,6 +65,7 @@ function FrameEditor({ object, zoom, onCommit, onCancel }: ObjectEditorProps<Fra
           transformOrigin: '0 100%',
           top: `${String(-TITLE_PX / zoom)}px`,
           height: `${String(TITLE_PX / zoom)}px`,
+          color: inkColor(object.style.textColor),
         }}
         ariaLabel="Rename frame"
         onCommit={(name) => onCommit({ name })}

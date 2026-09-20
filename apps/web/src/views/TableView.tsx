@@ -5,7 +5,7 @@ import { plainTextOf, resizeGrid, type TableData } from '@openframe/core'
 import { defineObjectView, type ObjectEditorProps, type ObjectViewProps } from './registry.js'
 import { RichTextView } from './RichTextView.js'
 import { cellAt, tracks } from '../scene/table-grid.js'
-import { fontFamily, textAlign } from '../scene/style-tokens.js'
+import { fontFamily, textAlign, inkColor } from '../scene/style-tokens.js'
 
 /**
  * A table: one object holding a grid.
@@ -25,6 +25,9 @@ function TableRenderer({ object }: ObjectViewProps<TableData>) {
         gridTemplateRows: tracks(rows),
         fontFamily: fontFamily(object.style.font),
         textAlign: textAlign(object.style.align),
+        // On the table, not on each cell: one declaration the cells inherit,
+        // rather than a style object rebuilt per cell on every render.
+        color: inkColor(object.style.textColor),
         opacity: object.style.opacity ?? 1,
       }}
       role="table"
@@ -129,6 +132,7 @@ function TableEditor({ object, at, onCommit, onCancel }: ObjectEditorProps<Table
           gridTemplateColumns: tracks(draft.columns),
           gridTemplateRows: tracks(draft.rows),
           fontFamily: fontFamily(object.style.font),
+          color: inkColor(object.style.textColor),
         }}
       >
         {draft.cells.map((cell, index) => (

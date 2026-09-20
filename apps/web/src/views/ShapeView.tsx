@@ -10,6 +10,7 @@ import {
   COLOR_VARS,
   SURFACE_VARS,
   fontFamily,
+  inkColor,
   dashArray,
   justifyAlign,
   textAlign,
@@ -97,6 +98,7 @@ function ShapeRenderer({ object }: ObjectViewProps<ShapeData>) {
             // centred no matter what the panel says.
             justifyContent: justifyAlign(object.style.align),
             textAlign: textAlign(object.style.align),
+            color: inkColor(object.style.textColor),
           }}
         >
           {/*
@@ -123,7 +125,11 @@ function ShapeEditor({ object, zoom, onCommit, onCancel }: ObjectEditorProps<Sha
         initialText={object.data.text}
         zoom={zoom}
         className="of-shape__label of-shape__editor"
-        style={{ inset: labelInset(object.data.shape), fontFamily: fontFamily(object.style.font) }}
+        style={{
+          inset: labelInset(object.data.shape),
+          fontFamily: fontFamily(object.style.font),
+          color: inkColor(object.style.textColor),
+        }}
         ariaLabel="Edit shape label"
         onCommit={(text) => onCommit({ text })}
         onCancel={onCancel}

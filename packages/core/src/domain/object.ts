@@ -29,6 +29,22 @@ export interface ObjectFrame {
  */
 export interface ObjectStyle {
   readonly color?: ColorToken
+  /**
+   * The ink of whatever text this object holds.
+   *
+   * SEPARATE from `color`, because on most types `color` is the object's
+   * surface — a sticky's paper, a shape's fill, a frame's ground — and the
+   * words on it are a different decision. Absent means the type's default
+   * ink, which is the board's own, so a note keeps reading as a note until
+   * somebody says otherwise.
+   *
+   * The two are not redundant even on a type where `color` IS the ink. A text
+   * object declares `textColor` and not `color` for exactly that reason: one
+   * control meaning one thing (rule 21). Before this, selecting a sticky and a
+   * text together intersected on `color`, and the single "colour" swatch set
+   * the note's paper and the text's ink at once.
+   */
+  readonly textColor?: ColorToken
   readonly fill?: FillToken
   readonly stroke?: StrokeToken
   /**
@@ -88,6 +104,7 @@ export type StyleProp = keyof ObjectStyle
  */
 const EVERY_STYLE_PROP: Readonly<Record<StyleProp, true>> = {
   color: true,
+  textColor: true,
   fill: true,
   stroke: true,
   dash: true,

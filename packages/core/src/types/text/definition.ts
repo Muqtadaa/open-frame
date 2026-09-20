@@ -30,9 +30,18 @@ export const textType = defineObjectType<typeof TEXT_TYPE, TextData>({
     canHaveChildren: false,
     selectsAsUnit: false,
     connectable: true,
-    // No fill: text has no surface to fill. The registry is what stops the
-    // toolbar offering a fill control for it.
-    styleProps: ['color', 'font', 'align', 'opacity'],
+    /*
+     * No fill: text has no surface to fill. The registry is what stops the
+     * toolbar offering a fill control for it.
+     *
+     * `textColor` rather than `color`, even though a text object's colour IS
+     * its ink. On every other type `color` is a surface, so a selection
+     * holding a sticky and a text used to intersect on `color` and one swatch
+     * set the note's paper and the words' ink at once — one control meaning
+     * two things (rule 21). The view still READS `color` so boards written
+     * before this keep the colour they were given.
+     */
+    styleProps: ['textColor', 'font', 'align', 'opacity'],
   },
 
   describe: (object) => {

@@ -18,6 +18,7 @@ export const SHAPE_TYPE = 'shape'
  */
 const WITH_CORNERS = Object.freeze([
   'color',
+  'textColor',
   'fill',
   'stroke',
   'dash',

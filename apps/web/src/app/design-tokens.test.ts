@@ -189,6 +189,44 @@ describe.each(THEMES)('palette contrast — $name', ({ token }) => {
   )
 
   /**
+   * EVERY ink on EVERY surface, because a text colour can be picked freely.
+   *
+   * The two suites above measure the pairs the app CHOOSES: a shape's own ink
+   * on its own fill, a sticky's default ink on its slip. A text colour is the
+   * user's choice, so any of the seven inks can land on any of the seven
+   * slips, and 49 pairs ship the moment the control does. Measuring only the
+   * matched pair would leave 42 combinations the product offers and nothing
+   * checks.
+   *
+   * These all pass today — the inks were drawn to read on a light page and the
+   * slips are pale tints of the same family — which is exactly why the control
+   * could be offered whole rather than with some combinations withheld. It is
+   * also why this has to be a test: nothing about the palette FORCES it, and a
+   * later ink chosen for its own sake would break it silently.
+   */
+  it.each(
+    ['yellow', 'green', 'blue', 'red', 'violet', 'orange', 'gray'].flatMap((ink) =>
+      ['yellow', 'green', 'blue', 'red', 'violet', 'orange', 'gray'].map(
+        (surface) => [ink, surface] as const,
+      ),
+    ),
+  )('%s text on a %s slip meets AA for text', (ink, surface) => {
+    expect(contrast(token(`c-${ink}`), token(`s-${surface}`))).toBeGreaterThanOrEqual(4.5)
+  })
+
+  /**
+   * And on the two grounds text can sit on without a slip under it: a frame's
+   * title hangs above the frame on the page, and a connector's label rides
+   * the line over the board itself.
+   */
+  it.each(['yellow', 'green', 'blue', 'red', 'violet', 'orange', 'gray'])(
+    '%s text on the board meets AA for text',
+    (ink) => {
+      expect(contrast(token(`c-${ink}`), token('bg'))).toBeGreaterThanOrEqual(4.5)
+    },
+  )
+
+  /**
    * SYNTAX HIGHLIGHTING, measured like any other text.
    *
    * The highlighter ships themes of hard-coded hex values; using one would put
