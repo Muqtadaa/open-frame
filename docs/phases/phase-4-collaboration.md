@@ -1,6 +1,6 @@
 # Phase 4 · Collaboration
 
-**Status: In progress** · ← [Roadmap](README.md) · Design: [Collaboration](../architecture/09-collaboration.md)
+**Status: Done** · ← [Roadmap](README.md) · Design: [Collaboration](../architecture/09-collaboration.md)
 
 ---
 
@@ -157,9 +157,18 @@ Comments, mentions, workspaces, follow-mode, live drag deltas.
 
 ## Pick up here
 
-**Current position: Stages 1, 2 and 3 are done and deployed.** Shared boards
-and accounts are live; Stage 4 is planned below and not started. `openframe-rooms.muqdara95.workers.dev` holds one Durable Object per
-board; the web app joins one when it is opened with `?room=<id>`.
+**Current position: all five stages are done and deployed.**
+`openframe-rooms.muqdara95.workers.dev` holds one Durable Object per board; the
+web app joins one when it is opened with `?room=<id>`.
+
+The auth question this phase opened is CLOSED by what shipped: Supabase Auth,
+on the project the database already needed. Clerk was never integrated — one
+less token issuer for the Worker to verify was worth more than the better
+standalone product, exactly as Stage 3 framed it.
+
+What remains open is listed per stage below and none of it blocks Phase 5. The
+sharpest item is the two live rooms holding test data, which is a deliberate
+deletion of production data rather than a task anybody has been avoiding.
 
 Built, tested and on `main`:
 

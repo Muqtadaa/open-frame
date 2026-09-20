@@ -331,7 +331,15 @@ describe.each(THEMES)('palette contrast — $name', ({ token }) => {
  * the app.
  */
 describe('no colour literals outside the token block', () => {
-  /** `.of-dev__*` is development instrumentation, stripped from production. */
+  /**
+   * `.of-dev__*` is the bench panel's instrumentation.
+   *
+   * Its COMPONENT is stripped from a production build by the compile-time
+   * `define` (rule 12) — verified by grepping a clean `pnpm build` for
+   * `DevPanel`, which finds nothing. Its rules still ship in the stylesheet,
+   * inert, because CSS has no equivalent of that branch. The comment here used
+   * to claim both were stripped, which was half true and the misleading half.
+   */
   const DEV_ONLY = /\.of-dev__[^{]*\{[^}]*\}/g
   /**
    * The colour PICKER, which paints the colour space rather than the scheme.
