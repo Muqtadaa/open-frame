@@ -113,6 +113,24 @@
    */
   --of-mono: ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace;
 
+  /*
+   * The content palette: eleven, each an ink and its paper.
+   *
+   * NEUTRALS ARE THE EXCEPTION, and deliberately so. Every hue is a deep ink
+   * over a pale slip — that is what makes a coloured note a slip laid on the
+   * page rather than a block of paint. Black and white cannot work that way: a
+   * black fill has to be black, and white text is only white. For those two
+   * the ink and the paper are the same value, and `inkFor` picks the readable
+   * one from the fill rather than a test pretending white-on-white passes.
+   *
+   * `black` is the notebook's own ink, not `#000000`. The world has never used
+   * pure black and does not start here.
+   */
+  --of-c-black: #16202b;
+  --of-s-black: #16202b;
+  --of-c-white: #ffffff;
+  --of-s-white: #ffffff;
+
   --of-c-yellow: #7a5c00;
   --of-c-green: #146045;
   --of-c-blue: #17529e;
@@ -120,6 +138,9 @@
   --of-c-violet: #5b3ba8;
   --of-c-orange: #8c4715;
   --of-c-gray: #3f5163;
+  /* Raspberry, not rose: a lighter pink sits on top of the guide magenta. */
+  --of-c-pink: #8f2a67;
+  --of-c-brown: #6a4a2a;
 
   --of-s-yellow: #ffe9a3;
   --of-s-green: #bff0d4;
@@ -128,6 +149,15 @@
   --of-s-violet: #e3daff;
   --of-s-orange: #ffddb8;
   --of-s-gray: #dfe5ec;
+  --of-s-pink: #ffd4ef;
+  /*
+   * A real tan. A pale tint of brown sits between the yellow and orange slips
+   * by nature, so this was searched for rather than picked: the best-separated
+   * paper that every one of the eleven inks still reads on at 4.5:1. An
+   * unconstrained search returned a pale olive, which separates beautifully
+   * and is not brown.
+   */
+  --of-s-brown: #e8dcc6;
 
   /*
    * PRESENCE. Six people, told apart from each other.
@@ -228,6 +258,17 @@
     inset 0 1px 0 rgb(255 255 255 / 9%), 0 1px 2px rgb(5 2 14 / 65%), 0 4px 12px rgb(5 2 14 / 55%);
   --of-pressed-shadow: 0 1px 2px rgb(5 2 14 / 50%);
 
+  /*
+   * Black and white do not invert. A black fill is black in both worlds and a
+   * white fill is white — they are the two colours that mean themselves.
+   * Black is pushed below the night page so a black slip reads as laid ON it
+   * rather than as a hole cut in it.
+   */
+  --of-c-black: #07030f;
+  --of-s-black: #07030f;
+  --of-c-white: #ffffff;
+  --of-s-white: #ffffff;
+
   --of-c-yellow: #ffd95e;
   --of-c-green: #5eeaba;
   --of-c-blue: #8cc8ff;
@@ -235,6 +276,8 @@
   --of-c-violet: #cbaaff;
   --of-c-orange: #ffb478;
   --of-c-gray: #bcc8de;
+  --of-c-pink: #ff9fd6;
+  --of-c-brown: #e6bd92;
 
   --of-s-yellow: #463400;
   --of-s-green: #053626;
@@ -243,6 +286,8 @@
   --of-s-violet: #301a5e;
   --of-s-orange: #4a2408;
   --of-s-gray: #27314a;
+  --of-s-pink: #4a1338;
+  --of-s-brown: #3a2614;
 
   /* Presence, inverted: light enough to sit on the night page. */
   --of-p-1: #4fd6c0;
@@ -562,7 +607,6 @@ body {
   font-size: 13px;
   font-weight: 600;
   line-height: 1;
-  background: var(--of-panel);
 }
 
 /*
@@ -574,12 +618,18 @@ body {
  * one, because a row of swatches has to be able to answer "what is this set
  * to" even when the answer is not in it.
  */
+/*
+ * The way out of the palette.
+ *
+ * It was a dashed box holding a typed `+`, which read as a control that had
+ * failed to load rather than as an invitation. It is an ordinary swatch now,
+ * carrying a drawn mark — and once a literal is set it simply shows it, so the
+ * grid can always answer "what is this set to".
+ */
 .of-swatch--custom {
-  font-size: 15px;
-  line-height: 1;
-  color: var(--of-ink-muted);
+  display: grid;
+  place-items: center;
   background: var(--of-panel);
-  border-style: dashed;
 }
 
 /* ---------- colour picker ---------- */
@@ -598,11 +648,20 @@ body {
  * else.
  */
 
+/*
+ * BESIDE the panel, on the side away from the board.
+ *
+ * Two placements were wrong before this one. Under the swatch grid it covered
+ * the face, align and opacity rows of the panel it belongs to — you could not
+ * see what you were changing while you changed it. Moved to the panel's left
+ * it covered the OBJECT instead, because the record panel is placed beside the
+ * selection and its left edge is always the side the object is on.
+ */
 .of-picker {
   position: absolute;
-  top: calc(100% + 6px);
-  right: 0;
-  z-index: 1;
+  top: -6px;
+  left: calc(100% + 14px);
+  z-index: 3;
   display: grid;
   gap: 8px;
   width: 212px;
@@ -655,9 +714,24 @@ body {
   box-shadow: 0 0 0 1px rgb(0 0 0 / 45%);
 }
 
+/*
+ * The hue, as an INSTRUMENT.
+ *
+ * The stock range input ships a saturated filled track and a large round knob,
+ * which DESIGN.md bans by name — it is the loudest toy tell in the system and
+ * this shipped one straight into the panel. The track is the spectrum because
+ * here the track IS the data, and the index is the same 4x14 ink mark the
+ * measurement sliders use: a position on a scale, not a volume control.
+ */
 .of-picker__hue {
   width: 100%;
   height: var(--of-hit-sm);
+  appearance: none;
+  background: transparent;
+}
+
+.of-picker__hue::-webkit-slider-runnable-track {
+  height: 10px;
   background: linear-gradient(
     to right,
     #f00 0%,
@@ -668,7 +742,42 @@ body {
     #f0f 83%,
     #f00 100%
   );
-  border-radius: var(--of-radius);
+  border: 1px solid var(--of-control-border);
+  border-radius: 1px;
+}
+
+.of-picker__hue::-moz-range-track {
+  height: 10px;
+  background: linear-gradient(
+    to right,
+    #f00 0%,
+    #ff0 17%,
+    #0f0 33%,
+    #0ff 50%,
+    #00f 67%,
+    #f0f 83%,
+    #f00 100%
+  );
+  border: 1px solid var(--of-control-border);
+  border-radius: 1px;
+}
+
+.of-picker__hue::-webkit-slider-thumb {
+  width: 4px;
+  height: 18px;
+  margin-top: -5px;
+  appearance: none;
+  background: var(--of-ink);
+  border: 1px solid var(--of-panel);
+  border-radius: 0;
+}
+
+.of-picker__hue::-moz-range-thumb {
+  width: 4px;
+  height: 18px;
+  background: var(--of-ink);
+  border: 1px solid var(--of-panel);
+  border-radius: 0;
 }
 
 .of-picker__row {
@@ -678,8 +787,34 @@ body {
 }
 
 .of-picker__hex {
-  width: 88px;
+  flex: 1;
+  min-width: 0;
   font-family: var(--of-mono);
+  font-size: 12px;
+  letter-spacing: 0.02em;
+}
+
+/*
+ * The eyedropper is an ICON. As a labelled button it wrapped "Pick from
+ * screen" onto three lines beside the hex field and was the ugliest thing in
+ * the panel; the label lives in its title and accessible name instead.
+ */
+.of-picker__dropper {
+  display: grid;
+  flex: none;
+  place-items: center;
+  width: var(--of-hit-sm);
+  height: var(--of-hit-sm);
+  padding: 0;
+  color: var(--of-ink-muted);
+  background: var(--of-panel);
+  border: 1px solid var(--of-control-border);
+  border-radius: var(--of-radius);
+}
+
+.of-picker__dropper:hover {
+  color: var(--of-ink);
+  background: var(--of-hover);
 }
 
 /* 11px is the functional-text floor: this is a readout, not smallprint. */
@@ -691,6 +826,17 @@ body {
 
 .of-picker__contrast--low {
   color: var(--of-danger);
+}
+
+/*
+ * Picking a colour should be acknowledged, and the acknowledgement is the ring
+ * arriving rather than snapping. Colour and shadow only: under reduced motion
+ * these still run, because they are the feedback, not the movement.
+ */
+.of-swatch {
+  transition:
+    border-color var(--of-quick) var(--of-ease),
+    box-shadow var(--of-quick) var(--of-ease);
 }
 
 .of-swatch:hover:not(:disabled) {
@@ -1000,33 +1146,56 @@ body {
  * It reads the range's own colours, so it also answers "what are these cells
  * set to" without a separate inspector.
  */
-.of-table-edit__cells {
+.of-cellbar {
   position: absolute;
   bottom: 100%;
   left: 0;
-  display: flex;
-  gap: 8px;
-  align-items: center;
-  padding: 5px 7px;
-  margin-bottom: 4px;
-  white-space: nowrap;
-  background: var(--of-panel);
-  border: 1px solid var(--of-control-border);
-  border-radius: var(--of-radius);
+  display: grid;
+  gap: 7px;
+  padding: 7px;
+  margin-bottom: 6px;
+  background: var(--of-page);
+  border: 1px solid var(--of-panel-border);
+  /* Apparatus radius: this bar is margin chrome, like the rail. */
+  border-radius: 4px;
   box-shadow: var(--of-shadow);
 }
 
-/* 11px is the functional-text floor: a readout, not smallprint. */
-.of-table-edit__count {
+.of-cellbar__head {
+  display: flex;
+  gap: var(--of-step);
+  align-items: center;
+}
+
+/* A count is a measurement, so it is set as one. */
+.of-cellbar__count {
   font-family: var(--of-mono);
-  font-size: 11px;
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0.02em;
   color: var(--of-ink-muted);
+  white-space: nowrap;
+}
+
+.of-cellbar__target {
+  font-family: var(--of-mono);
+  font-size: 12px;
+  letter-spacing: 0.02em;
+}
+
+/* Pushed to the far end: it undoes rather than chooses. */
+.of-cellbar__clear {
+  margin-left: auto;
 }
 
 /*
  * The cells in the range. A ring INSIDE the cell rather than an outline, so it
  * cannot be clipped by the neighbour it shares a rule with.
  */
+.of-table__input {
+  transition: box-shadow var(--of-quick) var(--of-ease);
+}
+
 .of-table__input[data-selected='true'] {
   box-shadow: inset 0 0 0 2px var(--of-accent);
 }
@@ -1246,53 +1415,106 @@ body {
   margin: 0 0 10px;
 }
 
+/*
+ * A SEGMENTED CHOICE, not a row of pills.
+ *
+ * Both the filters and the action were fully-round capsules, which this world
+ * reserves for the two things that mean "grab me" — the rotate handle and a
+ * connector endpoint. DESIGN.md records refusing a pill for the view-only
+ * badge for exactly this reason, and then a pill shipped here anyway.
+ *
+ * What this is, is the same choice the record panel makes between three fills:
+ * one of a small set, mutually exclusive. So it takes that component's shape —
+ * a recessed desk bed, the selected index lifted onto panel stock with the
+ * pressed-index shadow — and reads as a filter rather than as three unrelated
+ * buttons that happen to be beside each other.
+ */
 .of-spaces__row {
   display: flex;
-  flex-wrap: wrap;
-  gap: 4px;
+  gap: var(--of-step);
   align-items: center;
+}
+
+.of-spaces__tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 2px;
+  padding: 2px;
+  background: var(--of-bg);
+  border-radius: 7px;
 }
 
 .of-spaces__tab {
   display: inline-flex;
-  gap: 5px;
+  gap: 6px;
   align-items: baseline;
+  min-height: 26px;
   padding: 3px 9px;
   font: inherit;
   font-size: 12px;
   color: var(--of-ink-muted);
   cursor: pointer;
   background: none;
-  /* A transparent border, so selecting one does not move the row by a pixel. */
   border: 1px solid transparent;
-  border-radius: 999px;
+  border-radius: 5px;
+  transition:
+    background var(--of-quick) var(--of-ease),
+    color var(--of-quick) var(--of-ease);
 }
 
-.of-spaces__tab:hover {
+.of-spaces__tab:hover:not(.of-spaces__tab--on) {
+  color: var(--of-ink);
   background: var(--of-hover);
 }
 
 .of-spaces__tab--on {
-  color: var(--of-ink);
-  background: var(--of-accent-soft);
-  border-color: var(--of-control-border);
+  color: var(--of-accent);
+  background: var(--of-panel);
+  box-shadow: var(--of-pressed-shadow);
 }
 
+/*
+ * The count is a MEASUREMENT, so it is set as one and separated from the name.
+ * Run together in the same face, "Muqtadaa Miandara 2" read as a workspace
+ * with a number in its name.
+ */
 .of-spaces__count {
+  font-family: var(--of-mono);
   font-size: 11px;
-  color: var(--of-ink-muted);
   font-variant-numeric: tabular-nums;
+  color: var(--of-ink-muted);
 }
 
+.of-spaces__tab--on .of-spaces__count {
+  color: var(--of-accent);
+}
+
+/*
+ * Making one is an ACTION, so it does not wear a filter's clothes. It sits
+ * after the bed rather than inside it, and carries a drawn mark.
+ */
 .of-spaces__new {
-  padding: 3px 9px;
+  display: inline-flex;
+  flex: none;
+  gap: 5px;
+  align-items: center;
+  min-height: 26px;
+  padding: 3px 9px 3px 7px;
   font: inherit;
   font-size: 12px;
-  color: var(--of-accent);
+  color: var(--of-ink-muted);
   cursor: pointer;
   background: none;
-  border: 1px dashed var(--of-control-border);
-  border-radius: 999px;
+  border: 1px solid transparent;
+  border-radius: 5px;
+  transition:
+    background var(--of-quick) var(--of-ease),
+    color var(--of-quick) var(--of-ease);
+}
+
+.of-spaces__new:hover {
+  color: var(--of-ink);
+  background: var(--of-hover);
 }
 
 .of-spaces__naming {
@@ -2945,11 +3167,35 @@ textarea.of-input {
   border-top: 1px solid var(--of-panel-border);
 }
 
+/*
+ * The colour field: what to paint, then the palette.
+ */
+.of-paint {
+  display: grid;
+  gap: 6px;
+  justify-items: start;
+}
+
+.of-paint__target {
+  font-family: var(--of-mono);
+  font-size: 12px;
+  letter-spacing: 0.02em;
+}
+
+/*
+ * A GRID, six across, not a row that happens to wrap.
+ *
+ * Seven colours fitted one line; eleven and the custom swatch do not, and
+ * DESIGN.md's objection was always to the accidental 5 + 2 rather than to two
+ * rows. Six and six is a block you read as a palette, and it closes on the way
+ * out of the palette.
+ */
 .of-swatches {
-  display: flex;
-  gap: 4px;
-  /* The custom picker hangs off this row, so it is the containing block. */
   position: relative;
+  display: grid;
+  grid-template-columns: repeat(6, var(--of-hit-sm));
+  gap: 4px;
+  justify-content: start;
 }
 
 .of-choice {
@@ -4387,6 +4633,25 @@ textarea.of-input {
 }
 
 /*
+ * The same idiom, for the two surfaces that come out of something.
+ *
+ * The picker is pulled from the swatch grid that opened it, so it grows from
+ * the edge nearest that grid rather than appearing whole in the margin. The
+ * cell bar is pulled from the table's top edge, which is the thing it is
+ * about. Both are continuity, not decoration: a surface that simply APPEARS
+ * beside a control leaves you finding the relationship yourself.
+ */
+.of-picker {
+  animation: of-raise var(--of-quick) var(--of-ease) backwards;
+  transform-origin: top left;
+}
+
+.of-cellbar {
+  animation: of-raise var(--of-quick) var(--of-ease) backwards;
+  transform-origin: bottom left;
+}
+
+/*
  * The copy landed. A 600ms wash on the row that was clicked, rather than a
  * toast: the acknowledgement belongs where the click did, and this is a
  * control somebody uses twice and then never again in that session.
@@ -4412,7 +4677,9 @@ textarea.of-input {
   .of-home__list li,
   .of-account,
   .of-share,
-  .of-share__error {
+  .of-share__error,
+  .of-picker,
+  .of-cellbar {
     animation-name: of-fade;
   }
 

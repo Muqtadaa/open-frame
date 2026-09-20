@@ -125,6 +125,7 @@ test.describe('inspector', () => {
       (note) => getComputedStyle(note).backgroundColor,
     )
 
+    await page.getByTestId('paint-textColor').click()
     await page.getByTestId('ink-red').click()
     await expect(page.locator('.of-sticky')).toHaveCSS('color', 'rgb(138, 64, 56)')
     // The note is still the colour it was: two controls, two properties.
@@ -140,8 +141,14 @@ test.describe('inspector', () => {
     await place(page, 't', 340, 260, 'Words')
     await page.locator(CANVAS).click({ position: { x: 340, y: 260 } })
 
+    /*
+     * A text object declares only `textColor`, so there is no target selector
+     * at all — one paintable property is not a choice — and the palette IS the
+     * ink. That is the registry deciding what the panel offers, which is the
+     * whole point of the control being built this way.
+     */
+    await expect(page.getByTestId('paint-color')).toHaveCount(0)
     await expect(page.getByTestId('ink-blue')).toBeVisible()
-    await expect(page.getByTestId('swatch-blue')).toHaveCount(0)
 
     await page.getByTestId('ink-blue').click()
     await expect(page.locator('.of-text')).toHaveCSS('color', 'rgb(23, 82, 158)')
@@ -157,6 +164,13 @@ test.describe('inspector', () => {
     await place(page, 't', 640, 260, 'Words')
     await page.keyboard.press('Control+a')
 
+    /*
+     * No target selector here, and that is the intersection doing its job: a
+     * sticky offers surface and text, a text object offers only text, so the
+     * one property they share is the only one the panel can offer — and a
+     * choice of one is not a choice.
+     */
+    await expect(page.getByTestId('paint-color')).toHaveCount(0)
     await page.getByTestId('ink-green').click()
     await expect(page.locator('.of-sticky')).toHaveCSS('color', 'rgb(20, 96, 69)')
     await expect(page.locator('.of-text')).toHaveCSS('color', 'rgb(20, 96, 69)')
@@ -174,6 +188,7 @@ test.describe('inspector', () => {
     await place(page, 's', 340, 260, 'Note')
     await page.locator(CANVAS).click({ position: { x: 340, y: 260 } })
 
+    await page.getByTestId('paint-textColor').click()
     await page.getByTestId('ink-custom').click()
     await expect(page.getByTestId('color-picker')).toBeVisible()
 
@@ -196,6 +211,7 @@ test.describe('inspector', () => {
   test('takes a short hex and ignores an unfinished one', async ({ page }) => {
     await place(page, 's', 340, 260, 'Note')
     await page.locator(CANVAS).click({ position: { x: 340, y: 260 } })
+    await page.getByTestId('paint-textColor').click()
     await page.getByTestId('ink-custom').click()
 
     await page.getByTestId('picker-hex').fill('#0a0')
@@ -213,6 +229,7 @@ test.describe('inspector', () => {
   test('warns when a colour will be hard to read, without refusing it', async ({ page }) => {
     await place(page, 's', 340, 260, 'Note')
     await page.locator(CANVAS).click({ position: { x: 340, y: 260 } })
+    await page.getByTestId('paint-textColor').click()
     await page.getByTestId('ink-custom').click()
 
     // Pale yellow ink on the default yellow slip.

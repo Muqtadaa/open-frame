@@ -57,6 +57,44 @@ export function groundOf(surface: ColorValue | undefined): HexColor | null {
  * what the product recommends and what it can prove; a literal is available,
  * not equal.
  */
+/**
+ * The mark on the custom swatch: a wheel, quartered.
+ *
+ * Four arcs rather than a conic gradient, because the gradient would be the
+ * only place in the product painting a colour that is not a token, and an icon
+ * is drawn here like every other icon.
+ */
+function SpectrumMark() {
+  return (
+    <svg viewBox="0 0 24 24" width="15" height="15" aria-hidden="true" focusable="false">
+      <g fill="none" strokeWidth="3.2" strokeLinecap="butt">
+        <path d="M12 4.5a7.5 7.5 0 0 1 7.5 7.5" stroke="var(--of-c-red)" />
+        <path d="M19.5 12a7.5 7.5 0 0 1-7.5 7.5" stroke="var(--of-c-yellow)" />
+        <path d="M12 19.5A7.5 7.5 0 0 1 4.5 12" stroke="var(--of-c-green)" />
+        <path d="M4.5 12A7.5 7.5 0 0 1 12 4.5" stroke="var(--of-c-blue)" />
+      </g>
+    </svg>
+  )
+}
+
+/**
+ * What an ink swatch draws its letter ON.
+ *
+ * A hue sits on its own slip, which is the pair the palette tests at 4.5:1 —
+ * so every swatch is legible by the same guarantee the board is.
+ *
+ * The two neutrals cannot: their ink and their paper are one value, so `white`
+ * on `white` is an empty square, which is exactly what shipped in the first
+ * version of this grid. They take the OTHER neutral, which is also the pair
+ * the board will actually produce for them through `readableInkOn` — the
+ * swatch shows the real outcome rather than a colour on nothing.
+ */
+function inkSpecimenGround(token: ColorToken): string {
+  if (token === 'white') return SURFACE_VARS.black
+  if (token === 'black') return SURFACE_VARS.white
+  return SURFACE_VARS[token]
+}
+
 export function Swatches({
   kind,
   label,
@@ -84,7 +122,18 @@ export function Swatches({
           className={`of-swatch${kind === 'ink' ? ' of-swatch--ink' : ''}${
             current === token ? ' of-swatch--on' : ''
           }`}
-          style={kind === 'ink' ? { color: COLOR_VARS[token] } : { background: SURFACE_VARS[token] }}
+          /*
+           * An ink swatch is a SPECIMEN: the letter in that ink, on that ink's
+           * own slip. Drawn on the panel instead, `white` was white on white
+           * and invisible — and the paper ground is the pair the palette
+           * actually tests at 4.5:1, so every swatch is legible by the same
+           * guarantee the board is.
+           */
+          style={
+            kind === 'ink'
+              ? { color: COLOR_VARS[token], background: inkSpecimenGround(token) }
+              : { background: SURFACE_VARS[token] }
+          }
           aria-label={token}
           aria-pressed={current === token}
           title={token}
@@ -101,7 +150,7 @@ export function Swatches({
       <button
         type="button"
         className={`of-swatch of-swatch--custom${custom === null ? '' : ' of-swatch--on'}`}
-        // Shows the literal it currently holds, so the row still answers "what
+        // Shows the literal it currently holds, so the grid still answers "what
         // is this set to" when the answer is not in the palette.
         style={custom === null ? undefined : { background: custom }}
         aria-label="Custom colour"
@@ -112,7 +161,12 @@ export function Swatches({
           setPicking((open) => !open)
         }}
       >
-        {custom === null ? '+' : null}
+        {/*
+          * A DRAWN mark, not a `+` glyph. Icons in this world are authored SVG
+          * on the 24x24 grid at 1.6 — a typed plus in a dashed box read as a
+          * placeholder that had failed to load, which is what it looked like.
+          */}
+        {custom === null ? <SpectrumMark /> : null}
       </button>
 
       {picking && (

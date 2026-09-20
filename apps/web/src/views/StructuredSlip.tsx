@@ -8,7 +8,7 @@ import {
 import { RichTextEditor } from './RichTextEditor.js'
 import { RichTextView } from './RichTextView.js'
 import type { ObjectEditorProps, ObjectViewProps } from './registry.js'
-import { fontFamily, textAlign, inkColor, surfaceOf } from '../scene/style-tokens.js'
+import { fontFamily, textAlign, inkColor, readableInkOn, surfaceOf } from '../scene/style-tokens.js'
 
 /**
  * The card every structured type is drawn as.
@@ -59,7 +59,7 @@ export function StructuredSlip<TData extends { readonly text: RichText }>({
       className={`of-slip${className === undefined ? '' : ` ${className}`}`}
       style={{
         background: surfaceOf(object.style.color, defaultColor),
-        color: inkColor(object.style.textColor),
+        color: inkColor(object.style.textColor) ?? readableInkOn(object.style.color),
         opacity: object.style.opacity ?? 1,
       }}
       role="group"
@@ -124,7 +124,7 @@ export function StructuredEditor<TData extends { readonly text: RichText }>({
       className={`of-slip of-slip__editor${className === undefined ? '' : ` ${className}`}`}
       style={{
         background: surfaceOf(object.style.color, defaultColor),
-        color: inkColor(object.style.textColor),
+        color: inkColor(object.style.textColor) ?? readableInkOn(object.style.color),
         fontFamily: fontFamily(object.style.font),
         textAlign: textAlign(object.style.align),
       }}

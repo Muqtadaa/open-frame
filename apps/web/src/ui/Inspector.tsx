@@ -19,7 +19,7 @@ import {
   type StrokeToken,
   type StyleProp,
 } from '@openframe/core'
-import { useMemo } from 'react'
+import { useMemo, useState } from 'react'
 
 import { useCommands } from '../hooks/use-commands.js'
 import { useBoardDocument } from '../hooks/use-document-object.js'
@@ -74,6 +74,18 @@ const PANEL_HEIGHT_PX = 420
  * A mixed selection shows the intersection of what every member honours, which
  * is the only set where one control means one thing.
  */
+/**
+ * The colour properties a type can declare, in the order they are offered.
+ *
+ * `label` is what the selector shows; `name` names the grid for a screen
+ * reader, where "surface" and "text" alone would be two identically announced
+ * groups.
+ */
+const PAINTABLE: readonly { prop: 'color' | 'textColor'; label: string; name: string }[] = [
+  { prop: 'color', label: 'surface', name: 'Colour' },
+  { prop: 'textColor', label: 'text', name: 'Text colour' },
+]
+
 export function Inspector() {
   const { runtime } = useOpenFrame()
   const document = useBoardDocument()
@@ -132,6 +144,20 @@ export function Inspector() {
   )
 
   /** Only properties EVERY selected object honours — see the note above. */
+  /*
+   * Which colour the palette is painting. Panel state, not document state: it
+   * is where you are looking, and storing it would make a saved board carry
+   * which tab somebody last used.
+   *
+   * UP HERE with the other hooks, and that is not a style preference. This
+   * panel returns `null` four times before it renders anything — no selection,
+   * mid-gesture, a locked object, nothing to show — so a `useState` placed
+   * beside the value it feeds ran on some renders and not others, which is the
+   * one thing React cannot survive. It took the whole app down on every
+   * selection.
+   */
+  const [paint, setPaint] = useState<'color' | 'textColor'>('color')
+
   const props = useMemo<ReadonlySet<StyleProp>>(() => {
     // Asked of the REGISTRY per object, not read off the type's capabilities:
     // `shape` offers a corner radius on every kind but the ellipse, and only
@@ -200,6 +226,14 @@ export function Inspector() {
     )
   }
 
+  /*
+   * Which colours this selection can be given, from the registry. `fill` is
+   * not here: it is a separate field with its own control, because "none,
+   * tint, solid" is a different question from "which colour".
+   */
+  const paintTargets = PAINTABLE.filter((option) => props.has(option.prop))
+  const painting = paintTargets.find((option) => option.prop === paint) ?? paintTargets[0]
+
   const label =
     objects.length === 1 ? (objects[0]?.type ?? '') : `${String(objects.length)} objects`
 
@@ -258,44 +292,54 @@ export function Inspector() {
         <hr className="of-inspector__rule" />
       )}
 
-      {props.has('color') && (
-        <Field name="colour">
-          <Swatches
-            kind="surface"
-            label="Colour"
-            testPrefix="swatch"
-            current={value('color')}
-            against={null}
-            onPick={(color) => apply({ color })}
-          />
-        </Field>
-      )}
-
       {/*
-        * The INK, drawn as a letter rather than as a filled square.
+        * ONE palette, and what it paints.
         *
-        * A second row of identical swatches under the first is two controls
-        * that look like one control twice. What a text colour does is colour
-        * letters, so the swatch shows a letter in it — and the swatch's own
-        * ground stays the panel, because an ink token on a coloured square is
-        * being judged against a surface the user is not about to use.
+        * Two grids of eleven made this panel 68px taller, and a floating panel
+        * that grows covers more board — measured, not guessed: the opacity
+        * slider ended up over an object 350px away, which is a thing you can
+        * no longer pick up. The alignment suite caught it before a person did.
+        *
+        * Still driven by the registry. The targets ARE `styleProps`: a type
+        * that declares only `color` gets the palette with no selector, and one
+        * that declares both gets the choice. This is a presentation of the
+        * same declaration, not a second source of truth about it — and it is
+        * the control a table's cells already use, so the two agree.
         */}
-      {props.has('textColor') && (
-        <Field name="text">
-          <Swatches
-            kind="ink"
-            label="Text colour"
-            testPrefix="ink"
-            current={value('textColor')}
-            /*
-             * What the ink will actually sit on: the object's own surface when
-             * the selection agrees on one, the board otherwise. Passing the
-             * panel's colour here instead would have the picker report a
-             * contrast nobody is ever going to see.
-             */
-            against={groundOf(value('color'))}
-            onPick={(textColor) => apply({ textColor })}
-          />
+      {painting !== undefined && (
+        <Field name="colour">
+          <div className="of-paint">
+            {paintTargets.length > 1 && (
+              <div className="of-choice of-paint__target" role="group" aria-label="What to colour">
+                {paintTargets.map((option) => (
+                  <button
+                    key={option.prop}
+                    type="button"
+                    className={`of-choice__item${paint === option.prop ? ' of-choice__item--on' : ''}`}
+                    aria-pressed={paint === option.prop}
+                    data-testid={`paint-${option.prop}`}
+                    onClick={() => {
+                      setPaint(option.prop)
+                    }}
+                  >
+                    {option.label}
+                  </button>
+                ))}
+              </div>
+            )}
+            <Swatches
+              kind={painting.prop === 'textColor' ? 'ink' : 'surface'}
+              label={painting.name}
+              testPrefix={painting.prop === 'textColor' ? 'ink' : 'swatch'}
+              current={value(painting.prop)}
+              /*
+               * An ink is read against what it will sit on: the object's own
+               * surface when the selection agrees on one, the board otherwise.
+               */
+              against={painting.prop === 'textColor' ? groundOf(value('color')) : null}
+              onPick={(colour) => apply({ [painting.prop]: colour })}
+            />
+          </div>
         </Field>
       )}
 

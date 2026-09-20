@@ -341,7 +341,9 @@ test('colours a range of cells, in one undo entry', async ({ page }) => {
   await expect(page.getByTestId('table-cell-style')).toContainText('4 cells')
 
   await page.getByTestId('cell-fill-green').click()
-  await page.getByTestId('cell-ink-red').click()
+  // One palette, so the target says what it paints next.
+  await page.getByTestId('cell-target-text').click()
+  await page.getByTestId('cell-text-red').click()
 
   /*
    * Committed by leaving, NOT by Escape — Escape cancels, and a first draft of

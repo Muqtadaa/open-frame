@@ -14,8 +14,36 @@ import {
 import { defineObjectView, type ObjectEditorProps, type ObjectViewProps } from './registry.js'
 import { RichTextView } from './RichTextView.js'
 import { cellAt, tracks } from '../scene/table-grid.js'
-import { fontFamily, textAlign, inkColor, inkOf, surfaceOf } from '../scene/style-tokens.js'
+import {
+  fontFamily,
+  textAlign,
+  inkColor,
+  inkOf,
+  readableInkOn,
+  surfaceOf,
+} from '../scene/style-tokens.js'
 import { Swatches, groundOf } from '../controls/Swatches.js'
+
+/**
+ * What a colour lands on, named in the order somebody reaches for them.
+ *
+ * `label` is what the control shows and `name` is what the swatch grid is
+ * called for a screen reader — "fill" alone would be three identically named
+ * groups to anyone not looking at which tab is pressed.
+ */
+type CellTarget = 'fill' | 'text' | 'rule'
+
+const CELL_TARGETS: readonly { key: CellTarget; label: string; name: string }[] = [
+  { key: 'fill', label: 'fill', name: 'Cell background' },
+  { key: 'text', label: 'text', name: 'Cell text colour' },
+  { key: 'rule', label: 'rule', name: 'Cell rule colour' },
+]
+
+const CELL_KEY: Readonly<Record<CellTarget, keyof CellStyle>> = {
+  fill: 'fill',
+  text: 'textColor',
+  rule: 'border',
+}
 
 /**
  * One cell's own colours, as a style object, or `undefined` for none.
@@ -28,9 +56,15 @@ function cellPaint(cell: TableCell): CSSProperties | undefined {
   if (cell.fill === undefined && cell.textColor === undefined && cell.border === undefined) {
     return undefined
   }
+  /*
+   * The ink flips on the CELL's own fill, not the table's. A black cell in a
+   * plain table is the case: the table says nothing about ink, so without this
+   * the cell takes the board's and disappears into itself.
+   */
+  const ink = cell.textColor === undefined ? readableInkOn(cell.fill) : inkOf(cell.textColor)
   return {
     ...(cell.fill === undefined ? {} : { background: surfaceOf(cell.fill, 'gray') }),
-    ...(cell.textColor === undefined ? {} : { color: inkOf(cell.textColor) }),
+    ...(ink === undefined ? {} : { color: ink }),
     ...(cell.border === undefined ? {} : { borderColor: inkOf(cell.border) }),
   }
 }
@@ -130,6 +164,7 @@ function TableEditor({ object, at, onCommit, onCancel }: ObjectEditorProps<Table
    * says otherwise, which is a bigger rework of typing than this feature
    * earns. Shift-click is what a spreadsheet already teaches.
    */
+  const [target, setTarget] = useState<CellTarget>('fill')
   const [anchor, setAnchor] = useState(started)
   const [focus, setFocus] = useState(started)
   const selected = cellRange(draft, anchor, focus)
@@ -273,69 +308,77 @@ function TableEditor({ object, at, onCommit, onCancel }: ObjectEditorProps<Table
       {/*
         * CELL COLOURS, acting on the selected range.
         *
-        * Here rather than in the record panel, and that is deliberate. The
-        * panel's controls come from the registry's `styleProps` and apply to
-        * whole OBJECTS; a cell is not an object and has no entry there. Giving
-        * the panel a notion of "the selected cells of the selected table"
-        * would be type-specific knowledge in the one component that exists to
-        * have none — rule 21. The table's own editor is where a table's parts
-        * are edited, next to the column and row controls already there.
+        * ONE palette and a target, not three palettes. Eleven colours times
+        * three properties is thirty-three swatches in a bar wider than the
+        * table it belongs to, with the two ink grids indistinguishable from
+        * each other — you had to count columns to know which one you were
+        * about to press. Naming the target first is how every paint tool has
+        * solved this, and it costs one press that you were making anyway by
+        * aiming.
+        *
+        * Here rather than in the record panel: the panel's fields come from
+        * the registry's `styleProps` and apply to whole OBJECTS. A cell is not
+        * one, and teaching the panel about "the selected cells of the selected
+        * table" would put type-specific knowledge in the one component that
+        * exists to have none — rule 21.
         */}
-      <div className="of-table-edit__cells" data-testid="table-cell-style">
-        <span className="of-table-edit__count">
-          {selected.length === 1
-            ? '1 cell'
-            : `${String(selected.length)} cells`}
-        </span>
+      <div className="of-cellbar" data-testid="table-cell-style">
+        <div className="of-cellbar__head">
+          <span className="of-cellbar__count">
+            {selected.length === 1 ? '1 cell' : `${String(selected.length)} cells`}
+          </span>
+          <div className="of-choice of-cellbar__target" role="group" aria-label="What to colour">
+            {CELL_TARGETS.map((option) => (
+              <button
+                key={option.key}
+                type="button"
+                className={`of-choice__item${target === option.key ? ' of-choice__item--on' : ''}`}
+                aria-pressed={target === option.key}
+                data-testid={`cell-target-${option.key}`}
+                onMouseDown={keepFocus}
+                onClick={() => {
+                  setTarget(option.key)
+                }}
+              >
+                {option.label}
+              </button>
+            ))}
+          </div>
+          <button
+            type="button"
+            className="of-button of-button--ghost of-cellbar__clear"
+            // Says what it puts back, not just that it removes something.
+            title="Use the table's own colours"
+            data-testid="cell-clear"
+            onMouseDown={keepFocus}
+            onClick={() => {
+              /*
+               * Back to the table's own colours, which no token can express:
+               * every colour in the palette is A colour, and "whatever the
+               * table is" is the absence of one.
+               */
+              dress({ fill: null, textColor: null, border: null })
+            }}
+          >
+            Reset
+          </button>
+        </div>
+
         <Swatches
-          kind="surface"
-          label="Cell background"
-          testPrefix="cell-fill"
-          current={agreed('fill')}
-          against={null}
-          onPick={(fill) => {
-            dress({ fill })
+          kind={target === 'fill' ? 'surface' : 'ink'}
+          label={CELL_TARGETS.find((option) => option.key === target)?.name ?? 'Colour'}
+          testPrefix={`cell-${target}`}
+          current={agreed(CELL_KEY[target])}
+          /*
+           * Read against what the cell actually stands on: its own fill when
+           * the range agrees on one, the board otherwise. The table's own
+           * colour is not it — a table has no surface.
+           */
+          against={target === 'fill' ? null : groundOf(agreed('fill'))}
+          onPick={(colour) => {
+            dress({ [CELL_KEY[target]]: colour })
           }}
         />
-        <Swatches
-          kind="ink"
-          label="Cell text colour"
-          testPrefix="cell-ink"
-          current={agreed('textColor')}
-          // Against what the cell actually stands on: its own fill when it has
-          // one, the board otherwise. The table's `color` is not it — a table
-          // has no surface of its own.
-          against={groundOf(agreed('fill'))}
-          onPick={(textColor) => {
-            dress({ textColor })
-          }}
-        />
-        <Swatches
-          kind="ink"
-          label="Cell rule colour"
-          testPrefix="cell-rule"
-          current={agreed('border')}
-          against={groundOf(agreed('fill'))}
-          onPick={(border) => {
-            dress({ border })
-          }}
-        />
-        <button
-          type="button"
-          className="of-button of-button--ghost"
-          data-testid="cell-clear"
-          onMouseDown={keepFocus}
-          onClick={() => {
-            /*
-             * Back to the table's own colours, which no token can express:
-             * every colour in the palette is A colour, and "whatever the
-             * table is" is the absence of one.
-             */
-            dress({ fill: null, textColor: null, border: null })
-          }}
-        >
-          Clear
-        </button>
       </div>
 
       {/*

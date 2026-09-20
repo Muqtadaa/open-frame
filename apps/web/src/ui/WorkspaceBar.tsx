@@ -48,7 +48,8 @@ export function WorkspaceBar({
 
   return (
     <div className="of-spaces" data-testid="workspace-bar">
-      <div className="of-spaces__row" role="group" aria-label="Workspaces">
+      <div className="of-spaces__row">
+        <div className="of-spaces__tabs" role="group" aria-label="Workspaces">
         <button
           type="button"
           className={`of-spaces__tab${selected === null ? ' of-spaces__tab--on' : ''}`}
@@ -76,15 +77,31 @@ export function WorkspaceBar({
             <span className="of-spaces__count">{workspace.boards}</span>
           </button>
         ))}
+        </div>
 
         <button
           type="button"
           className="of-spaces__new"
+          aria-expanded={naming}
           data-testid="workspace-new"
           onClick={() => {
             setNaming((was) => !was)
           }}
         >
+          {/* Drawn on the 24x24 grid at 1.6, like every icon in this product. */}
+          <svg
+            viewBox="0 0 24 24"
+            width="14"
+            height="14"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="1.8"
+            strokeLinecap="round"
+            aria-hidden="true"
+            focusable="false"
+          >
+            <path d="M12 5v14M5 12h14" />
+          </svg>
           New workspace
         </button>
       </div>

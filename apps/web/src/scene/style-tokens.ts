@@ -8,6 +8,10 @@ import { isColorToken, type AlignToken, type ColorToken, type ColorValue, type D
  * from here rather than hard-coding a hex value.
  */
 export const COLOR_VARS: Record<ColorToken, string> = {
+  black: 'var(--of-c-black)',
+  white: 'var(--of-c-white)',
+  pink: 'var(--of-c-pink)',
+  brown: 'var(--of-c-brown)',
   yellow: 'var(--of-c-yellow)',
   green: 'var(--of-c-green)',
   blue: 'var(--of-c-blue)',
@@ -18,6 +22,10 @@ export const COLOR_VARS: Record<ColorToken, string> = {
 }
 
 export const SURFACE_VARS: Record<ColorToken, string> = {
+  black: 'var(--of-s-black)',
+  white: 'var(--of-s-white)',
+  pink: 'var(--of-s-pink)',
+  brown: 'var(--of-s-brown)',
   yellow: 'var(--of-s-yellow)',
   green: 'var(--of-s-green)',
   blue: 'var(--of-s-blue)',
@@ -61,6 +69,44 @@ export function surfaceOf(value: ColorValue | undefined, fallback: ColorToken): 
  */
 export function inkColor(value: ColorValue | undefined): string | undefined {
   return value === undefined ? undefined : inkOf(value)
+}
+
+/**
+ * Ink that can be read on a given fill, when nobody has chosen one.
+ *
+ * Only two tokens need it, and they are the two that mean themselves rather
+ * than naming a hue: a `black` fill needs light text and a `white` fill needs
+ * dark text, in BOTH worlds. Every other token is a pale slip in the day and a
+ * deep one at night, and in both cases the board's own ink is already the
+ * right colour — so the answer is `undefined` and the text simply inherits.
+ *
+ * A LITERAL is arithmetic on six hex digits, which is cheap enough to do while
+ * rendering. What this never does is ask for a computed style: resolving
+ * `var(--of-s-black)` against the document is a layout read, and this is
+ * called once per object per frame.
+ */
+export function readableInkOn(fill: ColorValue | undefined): string | undefined {
+  if (fill === undefined) return undefined
+  if (fill === 'black') return COLOR_VARS.white
+  if (fill === 'white') return COLOR_VARS.black
+  if (isColorToken(fill)) return undefined
+  return relativeLuminance(fill) < 0.4 ? COLOR_VARS.white : COLOR_VARS.black
+}
+
+/**
+ * WCAG relative luminance, for a literal.
+ *
+ * The threshold above is 0.4 rather than the midpoint: sRGB luminance is
+ * perceptual, and a colour has to be quite light before dark text beats light
+ * text on it. At 0.5 a mid blue took black text and was worse for it.
+ */
+function relativeLuminance(hex: string): number {
+  const n = Number.parseInt(hex.slice(1), 16)
+  const channels = [(n >> 16) & 255, (n >> 8) & 255, n & 255].map((c) => {
+    const v = c / 255
+    return v <= 0.03928 ? v / 12.92 : ((v + 0.055) / 1.055) ** 2.4
+  }) as [number, number, number]
+  return 0.2126 * channels[0] + 0.7152 * channels[1] + 0.0722 * channels[2]
 }
 
 export function fontFamily(token: FontToken | undefined): string {

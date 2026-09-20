@@ -81,7 +81,36 @@ export interface ObjectStyle {
   readonly radius?: RadiusToken
 }
 
-export const COLOR_TOKENS = ['gray', 'yellow', 'green', 'blue', 'red', 'violet', 'orange'] as const
+/**
+ * The content palette, in the order the swatches are laid out.
+ *
+ * NEUTRALS FIRST, then the spectrum. Black, gray and white lead because they
+ * are the ones somebody reaches for without thinking about hue at all, and a
+ * palette that opens on yellow makes you hunt for them.
+ *
+ * `violet` IS the purple. It is not renamed, because documents store token
+ * NAMES — every board ever saved holding `violet` would need a migration to
+ * say `purple`, and a migration that only changes a spelling is a migration
+ * that can only lose.
+ *
+ * Eleven, which no longer fits one row of the record panel. The swatches are a
+ * deliberate 6x2 GRID rather than a row that happens to wrap; DESIGN.md's
+ * objection was to the accidental 5+2, and a block that is obviously a block
+ * reads as a palette.
+ */
+export const COLOR_TOKENS = [
+  'black',
+  'gray',
+  'white',
+  'red',
+  'pink',
+  'orange',
+  'yellow',
+  'green',
+  'blue',
+  'violet',
+  'brown',
+] as const
 export const FILL_TOKENS = ['none', 'tint', 'solid'] as const
 export const STROKE_TOKENS = ['none', 'thin', 'medium', 'thick'] as const
 export const DASH_TOKENS = ['solid', 'dashed', 'dotted'] as const

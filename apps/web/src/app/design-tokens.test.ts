@@ -1,5 +1,6 @@
 import { readFileSync } from 'node:fs'
 import { resolve } from 'node:path'
+import { COLOR_TOKENS } from '@openframe/core'
 import { describe, expect, it } from 'vitest'
 
 /**
@@ -75,6 +76,26 @@ function readThemes(): Theme[] {
 }
 
 const THEMES = readThemes()
+
+/**
+ * The content hues, FROM THE PALETTE — never a list written out here.
+ *
+ * Five suites below carried their own copy of seven names. The palette grew to
+ * eleven and every one of them went on measuring the original seven and
+ * passing, which is the exact failure `readThemes` was rewritten to fix one
+ * level up: a test that quietly stops covering what it claims to cover is
+ * worse than no test, because it is trusted.
+ *
+ * Black and white are held out and asserted separately. They are the two
+ * tokens that mean themselves rather than naming a hue — ink and paper are one
+ * value — so "the ink reads on the paper" is 1:1 for them by construction, and
+ * folding them in would mean either a failing suite or a weakened floor.
+ */
+const NEUTRAL = ['black', 'white'] as const
+const HUES = COLOR_TOKENS.filter(
+  (token): token is Exclude<(typeof COLOR_TOKENS)[number], 'black' | 'white'> =>
+    !(NEUTRAL as readonly string[]).includes(token),
+)
 
 /** Every theme must define a palette; a typo in the selector would silently skip one. */
 if (THEMES.length < 2) throw new Error(`expected the default world and After Hours, got ${String(THEMES.length)}`)
@@ -164,7 +185,7 @@ describe.each(THEMES)('palette contrast — $name', ({ token }) => {
   /**
    * A shape's stroke and label on its own fill.
    */
-  it.each(['yellow', 'green', 'blue', 'red', 'violet', 'orange', 'gray'])(
+  it.each(HUES)(
     '%s ink on its own surface meets AA for text',
     (name) => {
       expect(contrast(token(`c-${name}`), token(`s-${name}`))).toBeGreaterThanOrEqual(4.5)
@@ -181,7 +202,7 @@ describe.each(THEMES)('palette contrast — $name', ({ token }) => {
    * and stayed invisible. On a dark page it is the pair that can actually fail,
    * because `s-*` and `ink` are now both moving.
    */
-  it.each(['yellow', 'green', 'blue', 'red', 'violet', 'orange', 'gray'])(
+  it.each(HUES)(
     'sticky text on a %s slip meets AA for text',
     (name) => {
       expect(contrast(token('ink'), token(`s-${name}`))).toBeGreaterThanOrEqual(4.5)
@@ -205,11 +226,7 @@ describe.each(THEMES)('palette contrast — $name', ({ token }) => {
    * later ink chosen for its own sake would break it silently.
    */
   it.each(
-    ['yellow', 'green', 'blue', 'red', 'violet', 'orange', 'gray'].flatMap((ink) =>
-      ['yellow', 'green', 'blue', 'red', 'violet', 'orange', 'gray'].map(
-        (surface) => [ink, surface] as const,
-      ),
-    ),
+    HUES.flatMap((ink) => HUES.map((surface) => [ink, surface] as const)),
   )('%s text on a %s slip meets AA for text', (ink, surface) => {
     expect(contrast(token(`c-${ink}`), token(`s-${surface}`))).toBeGreaterThanOrEqual(4.5)
   })
@@ -219,12 +236,62 @@ describe.each(THEMES)('palette contrast — $name', ({ token }) => {
    * title hangs above the frame on the page, and a connector's label rides
    * the line over the board itself.
    */
-  it.each(['yellow', 'green', 'blue', 'red', 'violet', 'orange', 'gray'])(
+  it.each(HUES)(
     '%s text on the board meets AA for text',
     (ink) => {
       expect(contrast(token(`c-${ink}`), token('bg'))).toBeGreaterThanOrEqual(4.5)
     },
   )
+
+  /**
+   * THE TWO THAT MEAN THEMSELVES.
+   *
+   * Black and white have one value for ink and paper, so the hue grid cannot
+   * hold them: white ink on white paper is 1:1 and always will be. What has to
+   * be true instead is that the pairs the interface can actually PRODUCE are
+   * readable — and it only ever produces them through `readableInkOn`, which
+   * answers white for a black fill and black for a white fill.
+   *
+   * Asserted here rather than trusted, because the two values live in the
+   * stylesheet and could drift apart from the function that pairs them.
+   */
+  it('reads white ink on the black slip and black ink on the white one', () => {
+    expect(contrast(token('c-white'), token('s-black'))).toBeGreaterThanOrEqual(4.5)
+    expect(contrast(token('c-black'), token('s-white'))).toBeGreaterThanOrEqual(4.5)
+  })
+
+  /**
+   * One of the two neutrals reads on every slip, in every world.
+   *
+   * NOT "black reads on every slip", which was the first version of this and
+   * failed honestly: After Hours slips are dark, so black ink on a night-green
+   * slip is genuinely unreadable and asserting otherwise would have meant
+   * weakening the floor to make a false claim pass.
+   *
+   * What is true, and is the whole guarantee behind offering black and white at
+   * all, is that whichever world you are in there is always a neutral that
+   * works — which is what `readableInkOn` returns without being asked. An
+   * explicit choice can still be a poor one; that is the swatch row's warning
+   * to give, not this suite's to prevent.
+   */
+  it.each(HUES)('leaves a readable neutral for the %s slip', (hue) => {
+    const slip = token(`s-${hue}`)
+    const best = Math.max(contrast(token('c-black'), slip), contrast(token('c-white'), slip))
+    expect(best).toBeGreaterThanOrEqual(4.5)
+  })
+
+  /**
+   * And the black slip is not the page.
+   *
+   * In After Hours the ground is already dark, so a black slip that matched it
+   * would be a hole in the page rather than something laid on it — the exact
+   * failure the night world's lit top edge exists to prevent.
+   */
+  it('keeps the black slip clear of the ground it sits on', () => {
+    const [sr, sg, sb] = channels(token('s-black'))
+    const [br, bg, bb] = channels(token('bg'))
+    expect(Math.hypot(sr - br, sg - bg, sb - bb)).toBeGreaterThan(20)
+  })
 
   /**
    * SYNTAX HIGHLIGHTING, measured like any other text.

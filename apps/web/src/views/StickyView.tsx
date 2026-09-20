@@ -3,7 +3,7 @@ import { isEmptyText, plainTextOf, type ColorValue, type StickyData } from '@ope
 import { defineObjectView, type ObjectEditorProps, type ObjectViewProps } from './registry.js'
 import { RichTextEditor } from './RichTextEditor.js'
 import { RichTextView } from './RichTextView.js'
-import { fontFamily, textAlign, inkColor, surfaceOf } from '../scene/style-tokens.js'
+import { fontFamily, textAlign, inkColor, readableInkOn, surfaceOf } from '../scene/style-tokens.js'
 
 function background(color: ColorValue | undefined): string {
   return surfaceOf(color, 'yellow')
@@ -15,7 +15,7 @@ function StickyRenderer({ object }: ObjectViewProps<StickyData>) {
       className="of-sticky"
       style={{
         background: background(object.style.color),
-        color: inkColor(object.style.textColor),
+        color: inkColor(object.style.textColor) ?? readableInkOn(object.style.color),
         fontFamily: fontFamily(object.style.font),
         textAlign: textAlign(object.style.align),
         opacity: object.style.opacity ?? 1,
@@ -45,7 +45,7 @@ function StickyEditor({ object, zoom, onCommit, onCancel }: ObjectEditorProps<St
       className="of-sticky of-sticky__editor"
       style={{
         background: background(object.style.color),
-        color: inkColor(object.style.textColor),
+        color: inkColor(object.style.textColor) ?? readableInkOn(object.style.color),
         fontFamily: fontFamily(object.style.font),
         textAlign: textAlign(object.style.align),
       }}

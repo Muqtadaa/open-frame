@@ -6,7 +6,7 @@ import { RichTextView } from './RichTextView.js'
 import { ELLIPSE_MARGIN, labelInset, roundedShapePath } from '../scene/shape-geometry.js'
 import { plainTextOf } from '@openframe/core'
 
-import { fontFamily, inkColor, dashArray, justifyAlign, textAlign, inkOf, surfaceOf } from '../scene/style-tokens.js'
+import { fontFamily, inkColor, readableInkOn, dashArray, justifyAlign, textAlign, inkOf, surfaceOf } from '../scene/style-tokens.js'
 
 function ShapeOutline({ object }: { object: ObjectBase<string, ShapeData> }) {
   const stroke = inkOf(object.style.color)
@@ -90,7 +90,7 @@ function ShapeRenderer({ object }: ObjectViewProps<ShapeData>) {
             // centred no matter what the panel says.
             justifyContent: justifyAlign(object.style.align),
             textAlign: textAlign(object.style.align),
-            color: inkColor(object.style.textColor),
+            color: inkColor(object.style.textColor) ?? readableInkOn(object.style.color),
           }}
         >
           {/*
@@ -120,7 +120,7 @@ function ShapeEditor({ object, zoom, onCommit, onCancel }: ObjectEditorProps<Sha
         style={{
           inset: labelInset(object.data.shape),
           fontFamily: fontFamily(object.style.font),
-          color: inkColor(object.style.textColor),
+          color: inkColor(object.style.textColor) ?? readableInkOn(object.style.color),
         }}
         ariaLabel="Edit shape label"
         onCommit={(text) => onCommit({ text })}

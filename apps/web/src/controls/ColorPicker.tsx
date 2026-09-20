@@ -21,6 +21,26 @@ function eyeDropper(): EyeDropperApi | null {
   return ctor === undefined ? null : new ctor()
 }
 
+/** Drawn on the 24x24 grid at 1.6, like every icon in this product. */
+function DropperMark() {
+  return (
+    <svg
+      viewBox="0 0 24 24"
+      width="17"
+      height="17"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.6"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden="true"
+      focusable="false"
+    >
+      <path d="M17.5 3.5a2.6 2.6 0 0 1 3 3l-2.4 2.4 1 1-2 2-1-1-6.6 6.6-3.4.9.9-3.4 6.6-6.6-1-1 2-2 1 1Z" />
+    </svg>
+  )
+}
+
 /** AA for text. A ratio below this is the one worth saying out loud. */
 const AA_TEXT = 4.5
 
@@ -171,7 +191,11 @@ export function ColorPicker({ current, against, onPick, onClose }: ColorPickerPr
         {dropper !== null && (
           <button
             type="button"
-            className="of-button of-button--ghost"
+            className="of-picker__dropper"
+            // The label lives here rather than in the button: as text it wrapped
+            // onto three lines beside the field and dominated the panel.
+            title="Pick a colour from the screen"
+            aria-label="Pick a colour from the screen"
             data-testid="picker-eyedropper"
             onClick={() => {
               /*
@@ -193,7 +217,7 @@ export function ColorPicker({ current, against, onPick, onClose }: ColorPickerPr
               )
             }}
           >
-            Pick from screen
+            <DropperMark />
           </button>
         )}
       </div>
