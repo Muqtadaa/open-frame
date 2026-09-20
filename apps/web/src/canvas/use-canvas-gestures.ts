@@ -303,7 +303,9 @@ export function useCanvasGestures(containerRef: RefObject<HTMLElement | null>) {
           // MEMBER, and leaving the group selected while editing a note inside
           // it would show a selection box around the wrong thing.
           store.setSelection([intent.id])
-          store.setEditing(intent.id)
+          // The point comes along so a type whose editor has more than one
+          // place to put a caret can put it where the pointer was.
+          store.setEditing(intent.id, worldPoint)
           return 'none'
         case 'begin-connect': {
           // Attaching by `auto` rather than a fixed side, so the connector picks

@@ -77,6 +77,8 @@ export function onPointerDown(ctx: PointerDownContext): readonly PointerIntent[]
    */
   if (ctx.tool === 'sticky') return [{ kind: 'create', objectType: 'sticky', at: ctx.worldPoint }]
   if (ctx.tool === 'text') return [{ kind: 'create', objectType: 'text', at: ctx.worldPoint }]
+  if (ctx.tool === 'table') return [{ kind: 'create', objectType: 'table', at: ctx.worldPoint }]
+  if (ctx.tool === 'code') return [{ kind: 'create', objectType: 'code', at: ctx.worldPoint }]
   if (ctx.tool === 'connector') {
     return [{ kind: 'begin-connect', from: ctx.hitId, at: ctx.worldPoint }]
   }

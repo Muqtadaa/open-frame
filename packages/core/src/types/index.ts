@@ -1,4 +1,5 @@
 import { ObjectTypeRegistry } from '../domain/registry.js'
+import { codeType } from './code/definition.js'
 import { connectorType } from './connector/definition.js'
 import { evidenceType } from './evidence/definition.js'
 import { frameType } from './frame/definition.js'
@@ -14,8 +15,28 @@ import { requirementType } from './requirement/definition.js'
 import { relationType } from './relation/definition.js'
 import { shapeType } from './shape/definition.js'
 import { stickyType } from './sticky/definition.js'
+import { tableType } from './table/definition.js'
 import { textType } from './text/definition.js'
 import { unknownType } from './unknown/definition.js'
+
+export { CODE_TYPE, codeType } from './code/definition.js'
+export {
+  CODE_LANGUAGES,
+  CodeDataSchema,
+  MAX_CODE,
+  type CodeData,
+} from './code/schema.js'
+
+export { TABLE_TYPE, tableType } from './table/definition.js'
+export {
+  MAX_COLUMNS,
+  MAX_ROWS,
+  TableDataSchema,
+  cellIndex,
+  emptyCells,
+  type TableCell,
+  type TableData,
+} from './table/schema.js'
 
 export { CONNECTOR_TYPE, connectorType } from './connector/definition.js'
 export {
@@ -82,6 +103,8 @@ export function createDefaultRegistry(): ObjectTypeRegistry {
     frameType,
     connectorType,
     imageType,
+    tableType,
+    codeType,
     groupType,
     evidenceType,
     insightType,

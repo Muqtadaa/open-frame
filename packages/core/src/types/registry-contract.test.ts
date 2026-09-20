@@ -22,6 +22,7 @@ describe('object type registry contract', () => {
     // Asserted explicitly rather than loosely: a type appearing or vanishing
     // unnoticed is how the app and the persisted format quietly diverge.
     expect(definitions.map((d) => d.type).sort()).toEqual([
+      'code',
       'connector',
       'decision',
       'evidence',
@@ -36,6 +37,7 @@ describe('object type registry contract', () => {
       'requirement',
       'shape',
       'sticky',
+      'table',
       'task',
       'text',
       'unknown',

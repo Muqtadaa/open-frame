@@ -134,6 +134,14 @@ const TEXT: readonly (readonly [string, string])[] = [
    */
   ['ink-muted', 'accent-soft'],
   ['accent', 'page'],
+  /*
+   * A CODE BLOCK's ground, and the language label on it.
+   *
+   * The block sits on `s-gray` rather than the panel, so `ink` and `ink-muted`
+   * on that surface are two more pairs nothing had measured.
+   */
+  ['ink', 's-gray'],
+  ['ink-muted', 's-gray'],
 ]
 
 /** 1.4.11 Non-text Contrast: boundaries you must perceive to operate a control. */
@@ -177,6 +185,22 @@ describe.each(THEMES)('palette contrast — $name', ({ token }) => {
     'sticky text on a %s slip meets AA for text',
     (name) => {
       expect(contrast(token('ink'), token(`s-${name}`))).toBeGreaterThanOrEqual(4.5)
+    },
+  )
+
+  /**
+   * SYNTAX HIGHLIGHTING, measured like any other text.
+   *
+   * The highlighter ships themes of hard-coded hex values; using one would put
+   * six more colours outside the token system, invisible to this test and
+   * wrong in one of the two palettes. Its classes are mapped to this product's
+   * content colours instead, and every one of them is read against the code
+   * block's surface — including in After Hours, where they move.
+   */
+  it.each(['violet', 'green', 'orange', 'blue', 'gray', 'red'])(
+    'code highlighted in %s is readable on the code surface',
+    (name) => {
+      expect(contrast(token(`c-${name}`), token('s-gray'))).toBeGreaterThanOrEqual(4.5)
     },
   )
 

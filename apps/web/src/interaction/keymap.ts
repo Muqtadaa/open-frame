@@ -57,6 +57,10 @@ const TOOL_KEYS: Readonly<Record<string, Tool>> = {
   t: 'text',
   f: 'frame',
   c: 'connector',
+  // A table is a grid; a code block is code. Neither initial collides with
+  // one already bound, which is the only reason these two are what they are.
+  g: 'table',
+  k: 'code',
 }
 
 const NUDGE_KEYS: Readonly<Record<string, { dx: number; dy: number }>> = {

@@ -153,6 +153,30 @@ export function ConnectorIcon({ className }: IconProps) {
   )
 }
 
+export function TableIcon({ className }: IconProps) {
+  return (
+    <svg {...base} className={className}>
+      <rect x="3" y="4.5" width="18" height="15" rx="2" />
+      {/* The header rule is heavier in meaning than the rest: it is what
+          makes a grid a table rather than graph paper. */}
+      <path d="M3 9.5h18" />
+      <path d="M3 14.5h18" />
+      <path d="M9.5 9.5v10" />
+      <path d="M15.5 9.5v10" />
+    </svg>
+  )
+}
+
+export function CodeIcon({ className }: IconProps) {
+  return (
+    <svg {...base} className={className}>
+      <path d="m8.5 8.5-4 3.5 4 3.5" />
+      <path d="m15.5 8.5 4 3.5-4 3.5" />
+      <path d="M13.5 5.5 10.5 18.5" />
+    </svg>
+  )
+}
+
 export function ImageIcon({ className }: IconProps) {
   return (
     <svg {...base} className={className}>

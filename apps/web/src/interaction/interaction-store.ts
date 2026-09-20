@@ -22,6 +22,8 @@ export type Tool =
   | 'shape'
   | 'frame'
   | 'connector'
+  | 'table'
+  | 'code'
   | 'comment'
 
 /** Where a comment is being written, before it exists. */
@@ -187,6 +189,16 @@ interface InteractionState {
   readonly hoveredId: ObjectId | null
   readonly editingId: ObjectId | null
   /**
+   * Where the pointer was when editing began, in world units, or `null` when
+   * editing was started some other way — a keypress, or a command.
+   *
+   * INFORMATION, not behaviour. Most types ignore it entirely; a table uses it
+   * to put the caret in the cell that was double-clicked rather than in the
+   * first one, which is the difference between an editor that works and one
+   * that looks broken the moment a grid has more than one cell.
+   */
+  readonly editingAt: Point | null
+  /**
    * Objects somebody ELSE has open in an inline editor.
    *
    * Held here, rather than checked at the double-click that starts editing,
@@ -269,7 +281,7 @@ interface InteractionState {
   toggleSelection(id: ObjectId): void
   clearSelection(): void
   setHovered(id: ObjectId | null): void
-  setEditing(id: ObjectId | null): void
+  setEditing(id: ObjectId | null, at?: Point): void
   setLockedByOthers(ids: ReadonlySet<ObjectId>): void
   setViewport(viewport: Viewport): void
   setFollowing(clientId: number | null): void
@@ -315,6 +327,7 @@ export const useInteractionStore = create<InteractionState>((set) => ({
   selection: new Set<ObjectId>(),
   hoveredId: null,
   editingId: null,
+  editingAt: null,
   lockedByOthers: NO_LOCKS,
   viewport: DEFAULT_VIEWPORT,
   following: null,
@@ -375,12 +388,14 @@ export const useInteractionStore = create<InteractionState>((set) => ({
     }),
   clearSelection: () => set({ selection: new Set<ObjectId>() }),
   setHovered: (hoveredId) => set({ hoveredId }),
-  setEditing: (editingId) =>
+  setEditing: (editingId, at) =>
     set((state) => {
       // Refused, not queued. Somebody else has the note open, and the right
       // outcome is that nothing happens and the overlay says who has it.
       if (editingId !== null && state.lockedByOthers.has(editingId)) return {}
-      return { editingId }
+      // Cleared whenever editing ends or starts without a point, so a stale
+      // one from the last edit cannot decide where this one begins.
+      return { editingId, editingAt: editingId === null ? null : (at ?? null) }
     }),
 
   setLockedByOthers: (lockedByOthers) =>

@@ -12,7 +12,9 @@ import { taskView } from './TaskView.js'
 import { journeyStageView } from './JourneyStageView.js'
 import { requirementView } from './RequirementView.js'
 import { shapeView } from './ShapeView.js'
+import { codeView } from './CodeView.js'
 import { stickyView } from './StickyView.js'
+import { tableView } from './TableView.js'
 import { textView } from './TextView.js'
 import { unknownView } from './UnknownView.js'
 
@@ -28,6 +30,8 @@ export * from './registry.js'
 export function createDefaultViewRegistry(): ObjectViewRegistry {
   return new ObjectViewRegistry([
     stickyView,
+    tableView,
+    codeView,
     textView,
     shapeView,
     frameView,

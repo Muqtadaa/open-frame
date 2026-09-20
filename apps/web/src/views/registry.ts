@@ -1,6 +1,12 @@
 import type { ComponentType } from 'react'
 
-import type { AnyOpenFrameObject, AssetRef, BoardDocument, ObjectBase } from '@openframe/core'
+import type {
+  AnyOpenFrameObject,
+  AssetRef,
+  BoardDocument,
+  ObjectBase,
+  Point,
+} from '@openframe/core'
 
 /**
  * The REACT half of the object type system.
@@ -60,6 +66,16 @@ export interface ObjectEditorProps<TData = unknown> {
   readonly object: ObjectBase<string, TData>
   readonly zoom: number
   readonly document: BoardDocument
+  /**
+   * Where the pointer was when editing began, in WORLD units, or `null` when
+   * it began some other way — a keypress, or a command.
+   *
+   * Optional information rather than a capability: a type that has one place
+   * to put a caret ignores it, and almost all of them do. A table has as many
+   * places as it has cells, and without this the caret lands in the first one
+   * however carefully you aimed.
+   */
+  readonly at: Point | null
   readonly onCommit: (patch: Partial<TData>) => void
   readonly onCancel: () => void
 }

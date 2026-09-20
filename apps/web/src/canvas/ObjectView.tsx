@@ -32,6 +32,14 @@ function ObjectViewInner({ id, views }: Props) {
   // subscriptions would leave dependent objects stale.
   useDependencySubscriptions(id)
   const editing = useInteractionStore((state) => state.editingId === id)
+  /*
+   * Two primitive selectors rather than one returning the point: a fresh
+   * `{ x, y }` never compares equal under `Object.is`, and every object on the
+   * board subscribes to this. Rule 9, which crashed the app once.
+   */
+  const editingX = useInteractionStore((state) => state.editingAt?.x ?? null)
+  const editingY = useInteractionStore((state) => state.editingAt?.y ?? null)
+  const editingAt = editingX === null || editingY === null ? null : { x: editingX, y: editingY }
   const setEditing = useInteractionStore((state) => state.setEditing)
   /*
    * Three PRIMITIVE selectors, not one that builds an object.
@@ -127,6 +135,7 @@ function ObjectViewInner({ id, views }: Props) {
             object={object}
             zoom={zoom}
             document={runtime.store.getDocument()}
+            at={editingAt}
             onCommit={(patch) => {
               // Types name their editable field differently (`text`, `name`),
               // so the patch is passed through rather than picked apart here.
