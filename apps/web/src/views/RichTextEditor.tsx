@@ -307,7 +307,7 @@ function FormatBar({
 
   return (
     <div
-      className="of-format-bar"
+      className="of-format-bar of-editor-chrome"
       data-testid="format-bar"
       role="toolbar"
       aria-label="Text formatting"

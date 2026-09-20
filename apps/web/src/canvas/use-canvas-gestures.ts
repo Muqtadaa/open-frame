@@ -70,12 +70,26 @@ type GestureMode =
  * is then applied to a selection that no longer exists. The symptom is a button
  * that silently does nothing while the same action from the keyboard works.
  */
+/**
+ * Chrome that belongs to an OPEN EDITOR, marked with one class rather than
+ * listed here by name.
+ *
+ * The format bar was the first of these and was named directly. A table's
+ * editor then grew its own controls — add a column, remove a row — and
+ * reproduced the bug exactly: pressing one read as a canvas gesture, the
+ * editor committed and unmounted, and the click landed on nothing.
+ *
+ * A marker means the next editor to grow a control gets this for free, which
+ * is the difference between a rule and a list of the places it was remembered.
+ */
+const EDITOR_CHROME = '.of-editor-chrome'
+
 function isTextEntry(target: EventTarget | null): boolean {
   return (
     target instanceof HTMLTextAreaElement ||
     target instanceof HTMLInputElement ||
     (target instanceof HTMLElement &&
-      (target.isContentEditable || target.closest('.of-format-bar') !== null))
+      (target.isContentEditable || target.closest(EDITOR_CHROME) !== null))
   )
 }
 
@@ -482,6 +496,7 @@ export function useCanvasGestures(containerRef: RefObject<HTMLElement | null>) {
         button: event.button,
         spaceHeld: spaceHeld.current,
         shapeKind: store.shapeKind,
+        tableSize: store.tableSize,
       })
 
       let mode: GestureMode = 'none'

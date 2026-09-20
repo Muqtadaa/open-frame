@@ -767,6 +767,107 @@ body {
 }
 
 /*
+ * The editor's wrapper, which holds the grid AND the controls that change its
+ * shape. Relative, so the two button pairs sit against the edge each of them
+ * affects.
+ */
+.of-table-edit {
+  position: relative;
+  width: 100%;
+  height: 100%;
+}
+
+.of-table-edit__columns,
+.of-table-edit__rows {
+  position: absolute;
+  display: flex;
+  gap: 2px;
+}
+
+/* Beside the axis it changes: columns to the right, rows underneath. */
+.of-table-edit__columns {
+  top: 0;
+  left: 100%;
+  flex-direction: column;
+  margin-left: 4px;
+}
+
+.of-table-edit__rows {
+  top: 100%;
+  left: 0;
+  margin-top: 4px;
+}
+
+.of-table-edit__step {
+  width: 24px;
+  height: 24px;
+  font: inherit;
+  font-size: 14px;
+  line-height: 1;
+  color: var(--of-ink);
+  cursor: pointer;
+  background: var(--of-panel);
+  border: 1px solid var(--of-control-border);
+  border-radius: var(--of-radius);
+}
+
+.of-table-edit__step:disabled {
+  color: var(--of-ink-muted);
+  cursor: default;
+  opacity: 0.5;
+}
+
+.of-table-edit__step:hover:not(:disabled) {
+  background: var(--of-hover);
+}
+
+/*
+ * CHOOSING A TABLE'S SIZE by pointing at it.
+ *
+ * The grid is the control: you see the shape you are about to get rather than
+ * reading two numbers and imagining it.
+ */
+.of-grid-pick {
+  padding: 6px;
+}
+
+.of-grid-pick__row {
+  display: flex;
+  gap: 2px;
+}
+
+.of-grid-pick__row + .of-grid-pick__row {
+  margin-top: 2px;
+}
+
+.of-grid-pick__cell {
+  width: 16px;
+  height: 16px;
+  padding: 0;
+  cursor: pointer;
+  background: var(--of-panel);
+  border: 1px solid var(--of-control-border);
+  border-radius: 2px;
+}
+
+.of-grid-pick__cell--on {
+  background: var(--of-accent);
+  border-color: var(--of-accent);
+}
+
+.of-grid-pick__readout {
+  margin: 6px 0 0;
+  font-size: 11px;
+  color: var(--of-ink-muted);
+  text-align: center;
+  font-variant-numeric: tabular-nums;
+}
+
+.of-flyout--wide {
+  width: auto;
+}
+
+/*
  * A CODE BLOCK: whitespace is the content.
  *
  * It never wraps. A wrapped line of code is a line whose indentation lies

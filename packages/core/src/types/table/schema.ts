@@ -96,3 +96,68 @@ export function cellIndex(data: TableData, column: number, row: number): number 
 export function emptyCells(count: number): TableCell[] {
   return Array.from({ length: count }, () => ({ text: [{ text: '' }] }))
 }
+
+/**
+ * A table with a column or row added or removed, cells and weights together.
+ *
+ * ONE function for all four operations, because they are one operation with a
+ * sign and an axis — and because the cell list and the weights must change in
+ * the same breath. Two functions that each moved half of it is how a table
+ * ends up disagreeing with its own shape.
+ *
+ * Returns the table unchanged when the change is not allowed: past the
+ * maximum, or below the last column or row. A table with no columns is not a
+ * smaller table, it is not a table.
+ */
+export function resizeGrid(
+  data: TableData,
+  axis: 'column' | 'row',
+  delta: 1 | -1,
+): TableData {
+  const columns = [...data.columns]
+  const rows = [...data.rows]
+  const width = columns.length
+  const height = rows.length
+
+  if (axis === 'column') {
+    if (delta === 1 && width >= MAX_COLUMNS) return data
+    if (delta === -1 && width <= 1) return data
+  } else {
+    if (delta === 1 && height >= MAX_ROWS) return data
+    if (delta === -1 && height <= 1) return data
+  }
+
+  /*
+   * A new column takes the AVERAGE of the existing weights rather than 1.
+   * On a table whose columns have been resized, a weight of 1 beside weights
+   * of 40 is a column too thin to see — technically added, practically not.
+   */
+  const average = (weights: readonly number[]): number =>
+    weights.reduce((sum, weight) => sum + weight, 0) / weights.length
+
+  if (axis === 'column') {
+    if (delta === 1) columns.push(average(columns))
+    else columns.pop()
+  } else if (delta === 1) {
+    rows.push(average(rows))
+  } else {
+    rows.pop()
+  }
+
+  /*
+   * The cells are rebuilt by READING the old grid at each new position, which
+   * is what keeps existing content where it was. Slicing the flat list would
+   * be right for a row — rows are contiguous — and wrong for a column, where
+   * removing one means dropping every width-th entry. Doing both the same way
+   * removes the chance of getting the second one wrong.
+   */
+  const cells: TableCell[] = []
+  for (let row = 0; row < rows.length; row++) {
+    for (let column = 0; column < columns.length; column++) {
+      const old = row < height && column < width ? data.cells[row * width + column] : undefined
+      cells.push(old ?? { text: [{ text: '' }] })
+    }
+  }
+
+  return { ...data, columns, rows, cells }
+}

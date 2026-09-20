@@ -139,3 +139,78 @@ test('leaves an unknown language as plain text', async ({ page }) => {
   // `plain` is not a grammar, so nothing is marked up and React escapes it.
   await expect(block.locator('.hljs-keyword')).toHaveCount(0)
 })
+
+/**
+ * Choosing the size before placing it.
+ *
+ * The size is the first thing anybody knows about a table they are about to
+ * make, so it is chosen by pointing at a grid rather than corrected afterwards.
+ */
+test('drops a table at the size picked from the grid', async ({ page }) => {
+  await board(page)
+
+  await page.getByTestId('tool-table').click()
+  await page.getByTestId('table-menu').click()
+
+  // Hovering PREVIEWS: the readout says what clicking would give you.
+  await page.getByTestId('table-size-5x2').hover()
+  await expect(page.getByTestId('table-size-readout')).toHaveText('5 × 2')
+
+  await page.getByTestId('table-size-5x2').click()
+  await page.locator(CANVAS).click({ position: { x: 340, y: 260 } })
+  await page.keyboard.press('Escape')
+  await page.keyboard.press('v')
+
+  /*
+   * Ten cells, in a five-by-two grid. A NON-SQUARE size on purpose: a 3x3
+   * would pass against a picker whose choice was ignored entirely, because
+   * three by three is already the default.
+   */
+  const table = page.locator('[role="table"]')
+  await expect(table).toHaveAttribute('aria-label', /5 columns by 2 rows/)
+  await expect(table.locator('[role="cell"], [role="columnheader"]')).toHaveCount(10)
+})
+
+/**
+ * Changing the shape afterwards, without losing what is in it.
+ *
+ * Adding a column is a change to the DRAFT, so it lands with whatever was
+ * typed as one command — rather than closing the editor and making you
+ * re-open it for every column.
+ */
+test('adds and removes columns and rows, keeping the cells that stay', async ({ page }) => {
+  await board(page)
+  await place(page, 'table', { x: 340, y: 240 })
+
+  await page.locator('[data-object-id]').first().dblclick()
+  await expect(page.getByTestId('table-editor')).toBeVisible()
+
+  await page.getByTestId('table-cell-0').fill('keep me')
+
+  await page.getByTestId('table-add-column').click()
+  await page.getByTestId('table-add-row').click()
+  // 4x4 now, so the last cell is index 15 and only exists if both landed.
+  await expect(page.getByTestId('table-cell-15')).toBeVisible()
+
+  await page.getByTestId('table-remove-column').click()
+  await expect(page.getByTestId('table-cell-15')).toHaveCount(0)
+
+  // Commit, and what was typed before the reshaping is still there.
+  await page.locator(CANVAS).click({ position: { x: 900, y: 560 } })
+  const table = page.locator('[role="table"]')
+  await expect(table).toHaveAttribute('aria-label', /3 columns by 4 rows/)
+  await expect(table).toContainText('keep me')
+})
+
+test('will not remove the last column', async ({ page }) => {
+  await board(page)
+
+  await page.getByTestId('tool-table').click()
+  await page.getByTestId('table-menu').click()
+  await page.getByTestId('table-size-1x1').click()
+  await page.locator(CANVAS).click({ position: { x: 340, y: 260 } })
+
+  // A table with no columns is not a smaller table; it is not a table.
+  await expect(page.getByTestId('table-remove-column')).toBeDisabled()
+  await expect(page.getByTestId('table-remove-row')).toBeDisabled()
+})

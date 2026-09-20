@@ -26,6 +26,18 @@ export type Tool =
   | 'code'
   | 'comment'
 
+/**
+ * The grid a new table will be dropped with.
+ *
+ * Chosen before placing rather than adjusted after, because the size is the
+ * first thing anybody knows about a table they are about to make — and a 3x3
+ * that always has to be corrected is a default nobody wanted twice.
+ */
+export interface TableSize {
+  readonly columns: number
+  readonly rows: number
+}
+
 /** Where a comment is being written, before it exists. */
 export interface ComposingComment {
   readonly x: number
@@ -231,6 +243,8 @@ interface InteractionState {
    * the way a conversation belongs to a room, which is why it lives in its own
    * table and not in the object registry.
    */
+  /** The size the table tool will place. */
+  readonly tableSize: TableSize
   readonly composing: ComposingComment | null
   readonly openThreadId: string | null
   /**
@@ -285,6 +299,7 @@ interface InteractionState {
   setLockedByOthers(ids: ReadonlySet<ObjectId>): void
   setViewport(viewport: Viewport): void
   setFollowing(clientId: number | null): void
+  setTableSize(size: TableSize): void
   startComment(at: ComposingComment | null): void
   openThread(id: string | null): void
   /** Says that this client just changed the discussion. */
@@ -331,6 +346,7 @@ export const useInteractionStore = create<InteractionState>((set) => ({
   lockedByOthers: NO_LOCKS,
   viewport: DEFAULT_VIEWPORT,
   following: null,
+  tableSize: { columns: 3, rows: 3 },
   composing: null,
   openThreadId: null,
   said: 0,
@@ -411,6 +427,7 @@ export const useInteractionStore = create<InteractionState>((set) => ({
   setFollowing: (clientId) => set({ following: clientId }),
   // Writing a new one closes whatever was being read, and vice versa: two
   // panels over the same pin is two places to type into.
+  setTableSize: (tableSize) => set({ tableSize, tool: 'table' }),
   startComment: (at) => set({ composing: at, openThreadId: null }),
   openThread: (id) => set({ openThreadId: id, composing: null }),
   noteSaid: () => {

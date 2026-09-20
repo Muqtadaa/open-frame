@@ -17,6 +17,7 @@ function ctx(overrides: Partial<PointerDownContext> = {}): PointerDownContext {
     worldPoint: { x: 10, y: 10 },
     hitId: null,
     selection: new Set<ObjectId>(),
+    tableSize: { columns: 3, rows: 3 },
     shiftKey: false,
     button: 0,
     spaceHeld: false,
@@ -160,5 +161,26 @@ describe('drag threshold', () => {
     // Two world units is below threshold at 1x but above it at 4x.
     expect(exceedsDragThreshold({ x: 0, y: 0 }, { x: 2, y: 0 }, 1)).toBe(false)
     expect(exceedsDragThreshold({ x: 0, y: 0 }, { x: 2, y: 0 }, 4)).toBe(true)
+  })
+})
+
+/**
+ * The table tool places the size that was CHOSEN, not a fixed one.
+ *
+ * Asserted with a non-square grid: a 3x3 is what the store already holds, so
+ * a square would pass against a controller that ignored the choice entirely.
+ */
+describe('placing a table', () => {
+  it('creates the grid the tool is set to', () => {
+    const [intent] = onPointerDown(
+      ctx({ tool: 'table', tableSize: { columns: 5, rows: 2 } }),
+    )
+
+    expect(intent).toEqual({
+      kind: 'create',
+      objectType: 'table',
+      at: { x: 10, y: 10 },
+      data: { columns: [1, 1, 1, 1, 1], rows: [1, 1] },
+    })
   })
 })

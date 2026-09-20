@@ -2,6 +2,7 @@ import { SHAPE_KINDS, screenToWorld, type ShapeKind } from '@openframe/core'
 import { useRef, useState } from 'react'
 
 import { useImageImport } from '../hooks/use-image-import.js'
+import { TableSizePicker } from './TableSizePicker.js'
 import { useInteractionStore, type Tool } from '../interaction/interaction-store.js'
 import { ALLOWED_IMAGE_TYPES } from '../runtime/asset-validation.js'
 import {
@@ -61,6 +62,9 @@ export function Toolbar() {
   const setTool = useInteractionStore((state) => state.setTool)
   const cycleShape = useInteractionStore((state) => state.cycleShape)
   const [shapesOpen, setShapesOpen] = useState(false)
+  const [sizeOpen, setSizeOpen] = useState(false)
+  const tableSize = useInteractionStore((state) => state.tableSize)
+  const setTableSize = useInteractionStore((state) => state.setTableSize)
   const importImages = useImageImport()
   const fileInput = useRef<HTMLInputElement>(null)
 
@@ -102,6 +106,13 @@ export function Toolbar() {
             data-testid={`tool-${spec.id}`}
             onClick={() => {
               if (spec.id === 'shape' && tool === 'shape') cycleShape()
+              /*
+               * Pressing Table again opens the size chooser. The size is the
+               * first thing you know about a table you are making, so the
+               * second press is far more likely to mean "a different shape"
+               * than "the same one again".
+               */
+              else if (spec.id === 'table' && tool === 'table') setSizeOpen((open) => !open)
               else setTool(spec.id)
             }}
             onContextMenu={(event) => {
@@ -128,6 +139,33 @@ export function Toolbar() {
             >
               <DisclosureIcon />
             </button>
+          )}
+
+          {spec.id === 'table' && (
+            <button
+              type="button"
+              className="of-rail__more"
+              aria-label="Choose table size"
+              aria-expanded={sizeOpen}
+              data-testid="table-menu"
+              onClick={() => setSizeOpen((open) => !open)}
+            >
+              <DisclosureIcon />
+            </button>
+          )}
+
+          {spec.id === 'table' && sizeOpen && (
+            <div className="of-flyout of-flyout--wide">
+              <TableSizePicker
+                size={tableSize}
+                onChoose={(size) => {
+                  // Selecting the tool as well as the size: choosing 4x6 is
+                  // saying you are about to place one.
+                  setTableSize(size)
+                  setSizeOpen(false)
+                }}
+              />
+            </div>
           )}
 
           {spec.id === 'shape' && shapesOpen && (

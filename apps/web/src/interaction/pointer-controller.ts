@@ -59,6 +59,8 @@ export interface PointerDownContext {
   readonly spaceHeld: boolean
   /** Which variant the shape tool is currently set to. */
   readonly shapeKind: ShapeKind
+  /** The grid the table tool will place. */
+  readonly tableSize: { readonly columns: number; readonly rows: number }
 }
 
 const MIDDLE_BUTTON = 1
@@ -77,7 +79,24 @@ export function onPointerDown(ctx: PointerDownContext): readonly PointerIntent[]
    */
   if (ctx.tool === 'sticky') return [{ kind: 'create', objectType: 'sticky', at: ctx.worldPoint }]
   if (ctx.tool === 'text') return [{ kind: 'create', objectType: 'text', at: ctx.worldPoint }]
-  if (ctx.tool === 'table') return [{ kind: 'create', objectType: 'table', at: ctx.worldPoint }]
+  if (ctx.tool === 'table') {
+    /*
+     * Equal WEIGHTS, one per column and row. The registry builds the cells to
+     * match, so the count lives in exactly one place — the length of these
+     * two arrays — and nothing downstream has to be told the shape twice.
+     */
+    return [
+      {
+        kind: 'create',
+        objectType: 'table',
+        at: ctx.worldPoint,
+        data: {
+          columns: Array.from({ length: ctx.tableSize.columns }, () => 1),
+          rows: Array.from({ length: ctx.tableSize.rows }, () => 1),
+        },
+      },
+    ]
+  }
   if (ctx.tool === 'code') return [{ kind: 'create', objectType: 'code', at: ctx.worldPoint }]
   if (ctx.tool === 'connector') {
     return [{ kind: 'begin-connect', from: ctx.hitId, at: ctx.worldPoint }]

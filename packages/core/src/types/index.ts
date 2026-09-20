@@ -34,6 +34,7 @@ export {
   TableDataSchema,
   cellIndex,
   emptyCells,
+  resizeGrid,
   type TableCell,
   type TableData,
 } from './table/schema.js'

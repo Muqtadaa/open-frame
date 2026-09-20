@@ -1,6 +1,13 @@
 import { describe, expect, it } from 'vitest'
 
-import { TableDataSchema, cellIndex, emptyCells, type TableData } from './schema.js'
+import {
+  MAX_COLUMNS,
+  TableDataSchema,
+  cellIndex,
+  emptyCells,
+  resizeGrid,
+  type TableData,
+} from './schema.js'
 
 /**
  * The grid's shape lives in one place — the lengths of `columns` and `rows` —
@@ -71,5 +78,106 @@ describe('finding a cell', () => {
     const wide = grid(4, 2) as TableData
     expect(cellIndex(wide, 1, 1)).toBe(5)
     expect(cellIndex(wide, 1, 1)).not.toBe(1 * 2 + 1)
+  })
+})
+
+/**
+ * Adding and removing columns and rows.
+ *
+ * The trap this suite exists for: a ROW is contiguous in the flat cell list
+ * and a COLUMN is not. Anything that treats them the same way works for one
+ * and silently scrambles the other, and a 2x2 cannot tell them apart.
+ */
+const filled = (columns: number, rows: number): TableData => ({
+  columns: Array.from({ length: columns }, () => 1),
+  rows: Array.from({ length: rows }, () => 1),
+  // Each cell labelled by where it is, so a scramble is visible rather than
+  // merely possible.
+  cells: Array.from({ length: columns * rows }, (_unused, index) => ({
+    text: [{ text: `c${String(index % columns)}r${String(Math.floor(index / columns))}` }],
+  })),
+  headerRow: true,
+})
+
+const at = (data: TableData, column: number, row: number): string =>
+  data.cells[cellIndex(data, column, row)]?.text[0]?.text ?? ''
+
+describe('changing a table’s shape', () => {
+  it('adds a column and keeps every cell where it was', () => {
+    const before = filled(3, 2)
+    const after = resizeGrid(before, 'column', 1)
+
+    expect(after.columns).toHaveLength(4)
+    expect(after.cells).toHaveLength(8)
+    // Every original cell still reads its own name at its own coordinates.
+    for (let row = 0; row < 2; row++) {
+      for (let column = 0; column < 3; column++) {
+        expect(at(after, column, row)).toBe(`c${String(column)}r${String(row)}`)
+      }
+    }
+    // And the new column is empty.
+    expect(at(after, 3, 0)).toBe('')
+  })
+
+  it('adds a row and keeps every cell where it was', () => {
+    const after = resizeGrid(filled(3, 2), 'row', 1)
+
+    expect(after.rows).toHaveLength(3)
+    expect(after.cells).toHaveLength(9)
+    expect(at(after, 2, 1)).toBe('c2r1')
+    expect(at(after, 0, 2)).toBe('')
+  })
+
+  /**
+   * The one that a slice would get wrong. Removing the last COLUMN of a 3x2
+   * means dropping entries 2 and 5, not the last two.
+   */
+  it('removes a column without scrambling the rest', () => {
+    const after = resizeGrid(filled(3, 2), 'column', -1)
+
+    expect(after.columns).toHaveLength(2)
+    expect(after.cells).toHaveLength(4)
+    expect(at(after, 0, 0)).toBe('c0r0')
+    expect(at(after, 1, 0)).toBe('c1r0')
+    expect(at(after, 0, 1)).toBe('c0r1')
+    expect(at(after, 1, 1)).toBe('c1r1')
+  })
+
+  it('removes a row', () => {
+    const after = resizeGrid(filled(3, 2), 'row', -1)
+
+    expect(after.rows).toHaveLength(1)
+    expect(after.cells).toHaveLength(3)
+    expect(at(after, 2, 0)).toBe('c2r0')
+  })
+
+  it('refuses to remove the last column or row', () => {
+    const one = filled(1, 1)
+    expect(resizeGrid(one, 'column', -1)).toBe(one)
+    expect(resizeGrid(one, 'row', -1)).toBe(one)
+  })
+
+  it('refuses to grow past the maximum', () => {
+    const wide = filled(MAX_COLUMNS, 1)
+    expect(resizeGrid(wide, 'column', 1)).toBe(wide)
+  })
+
+  /**
+   * A new column takes the AVERAGE of the existing weights. On a table whose
+   * columns have been resized, a weight of 1 beside weights of 40 is a column
+   * too thin to see — added in the data and not on the board.
+   */
+  it('gives a new column a width somebody can see', () => {
+    const uneven: TableData = { ...filled(2, 1), columns: [40, 20] }
+    const after = resizeGrid(uneven, 'column', 1)
+    expect(after.columns[2]).toBe(30)
+  })
+
+  it('always produces a table its own schema accepts', () => {
+    let data = filled(3, 2)
+    for (const step of [['column', 1], ['row', 1], ['column', -1], ['row', -1]] as const) {
+      data = resizeGrid(data, step[0], step[1])
+      expect(TableDataSchema.safeParse(data).success, `${step[0]} ${String(step[1])}`).toBe(true)
+    }
   })
 })
