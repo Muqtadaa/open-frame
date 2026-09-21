@@ -61,6 +61,16 @@ export interface PointerDownContext {
   readonly shapeKind: ShapeKind
   /** The grid the table tool will place. */
   readonly tableSize: { readonly columns: number; readonly rows: number }
+  /**
+   * Which objects are locked, so a press on one does not become a drag.
+   *
+   * Decided HERE rather than left to the command to refuse. The command does
+   * refuse it — `requireUnlocked` has always been there — but by then the
+   * gesture has run: the object follows the pointer across the board and snaps
+   * back on release, which reads as the app dropping the change rather than as
+   * the object being held in place. A lock should feel like a lock.
+   */
+  readonly locked: ReadonlySet<ObjectId>
 }
 
 const MIDDLE_BUTTON = 1
@@ -144,12 +154,25 @@ export function onPointerDown(ctx: PointerDownContext): readonly PointerIntent[]
   // unselected one selects it first. Anything else makes multi-object drag
   // impossible without a modifier.
   const ids = ctx.selection.has(ctx.hitId) ? [...ctx.selection] : [ctx.hitId]
-  return ctx.selection.has(ctx.hitId)
-    ? [{ kind: 'begin-translate', ids }]
-    : [
+  /*
+   * A locked object still SELECTS — you have to be able to reach one to
+   * unlock it — it just never starts a drag. With a mixed selection the
+   * unlocked members move and the locked ones stay, which is the only
+   * behaviour that can be described in one sentence.
+   */
+  const movable = ids.filter((id) => !ctx.locked.has(id))
+  const selectFirst = !ctx.selection.has(ctx.hitId)
+
+  if (movable.length === 0) {
+    return selectFirst ? [{ kind: 'select', ids }] : []
+  }
+
+  return selectFirst
+    ? [
         { kind: 'select', ids },
-        { kind: 'begin-translate', ids },
+        { kind: 'begin-translate', ids: movable },
       ]
+    : [{ kind: 'begin-translate', ids: movable }]
 }
 
 export function onDoubleClick(hitId: ObjectId | null): readonly PointerIntent[] {

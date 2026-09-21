@@ -1,5 +1,7 @@
 import { expect, test, type Page } from '@playwright/test'
 
+import { deflateSync } from 'node:zlib'
+
 import { BOARD_URL } from './routes.js'
 
 /**
@@ -51,6 +53,51 @@ async function upload(page: Page, name: string, mimeType: string, body: Buffer):
 }
 
 const png = (): Buffer => Buffer.from(PNG_2x3_BASE64, 'base64')
+
+/**
+ * A real PNG of a given size.
+ *
+ * The 2x3 fixture above is perfect for "does an upload work" and useless for
+ * anything involving a gesture: the object is two world units across, so its
+ * eight grips land on top of each other and a drag cannot address one. Two
+ * hundred pixels is enough to aim at.
+ */
+function pngOf(width: number, height: number): Buffer {
+  const crcTable = Array.from({ length: 256 }, (_, n) => {
+    let c = n
+    for (let k = 0; k < 8; k += 1) c = c & 1 ? 0xed_b8_83_20 ^ (c >>> 1) : c >>> 1
+    return c >>> 0
+  })
+  const crc = (buffer: Buffer): number => {
+    let c = 0xff_ff_ff_ff
+    for (const byte of buffer) c = crcTable[(c ^ byte) & 0xff]! ^ (c >>> 8)
+    return (c ^ 0xff_ff_ff_ff) >>> 0
+  }
+  const chunk = (type: string, body: Buffer): Buffer => {
+    const length = Buffer.alloc(4)
+    length.writeUInt32BE(body.length)
+    const typed = Buffer.concat([Buffer.from(type, 'ascii'), body])
+    const checksum = Buffer.alloc(4)
+    checksum.writeUInt32BE(crc(typed))
+    return Buffer.concat([length, typed, checksum])
+  }
+
+  const header = Buffer.alloc(13)
+  header.writeUInt32BE(width, 0)
+  header.writeUInt32BE(height, 4)
+  header[8] = 8 // bit depth
+  header[9] = 2 // truecolour
+  // A filter byte of zero on each scanline, then three bytes a pixel.
+  const raw = Buffer.alloc(height * (1 + width * 3))
+  for (let row = 0; row < height; row += 1) raw[row * (1 + width * 3)] = 0
+
+  return Buffer.concat([
+    Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]),
+    chunk('IHDR', header),
+    chunk('IDAT', deflateSync(raw)),
+    chunk('IEND', Buffer.alloc(0)),
+  ])
+}
 
 test.describe('images', () => {
   test.beforeEach(async ({ page }) => {
@@ -110,16 +157,133 @@ test.describe('images', () => {
     await expect(page.locator('[data-object-type="image"]')).toHaveCount(0)
   })
 
-  test('double-click edits the alt text rather than a caption', async ({ page }) => {
+  /**
+   * ALT TEXT IS A NAMED FIELD NOW, not what double-click edits.
+   *
+   * It used to be the inline editor, on the argument that describing an image
+   * should sit on the path of least resistance rather than in a panel nobody
+   * opens. Double-click crops instead, so the argument is honoured a different
+   * way — and a labelled field arguably teaches what the box is for better
+   * than an unlabelled caret over a photograph did.
+   */
+  test('describes an image through a named field in the panel', async ({ page }) => {
     await upload(page, 'chart.png', 'image/png', png())
     const image = page.locator('[data-object-type="image"]')
+    await image.click()
 
-    await image.dblclick()
-    const editor = page.getByLabel('Describe this image')
-    await expect(editor).toBeFocused()
-    await editor.fill('Quarterly revenue by region')
-    await page.locator(CANVAS).click({ position: { x: 1150, y: 600 } })
+    const field = page.getByTestId('field-alt')
+    await expect(field).toBeVisible()
+    await field.fill('Quarterly revenue by region')
+    await field.blur()
 
     await expect(image.locator('img')).toHaveAttribute('alt', 'Quarterly revenue by region')
+  })
+})
+
+/**
+ * Cropping: double-click an image and trim it.
+ *
+ * The property worth testing is not that the numbers change — the arithmetic
+ * is covered exhaustively in core — but that the SURVIVING PIXELS DO NOT MOVE.
+ * Get that wrong and cropping feels like stretching a rubber sheet, which is
+ * obvious in use and invisible in a screenshot.
+ */
+test.describe('cropping', () => {
+  test.beforeEach(async ({ page }) => {
+    await freshBoard(page)
+    // Big enough that its eight grips are eight distinct places to aim at.
+    await upload(page, 'holiday.png', 'image/png', pngOf(200, 150))
+    await expect(page.locator('[data-object-type="image"]')).toHaveCount(1)
+  })
+
+  test('double-click opens crop handles, and escape is not needed to leave', async ({ page }) => {
+    await expect(page.getByTestId('crop-overlay')).toHaveCount(0)
+    await page.locator('[data-object-type="image"]').dblclick()
+    await expect(page.getByTestId('crop-overlay')).toBeVisible()
+    await expect(page.getByTestId('crop-e')).toBeVisible()
+  })
+
+  test('trims the right edge without moving what is left', async ({ page }) => {
+    const image = page.locator('[data-object-type="image"]')
+    await image.dblclick()
+
+    const before = await image.boundingBox()
+    const picture = await page.locator('.of-image').boundingBox()
+    if (before === null || picture === null) throw new Error('no image')
+
+    const grip = await page.getByTestId('crop-e').boundingBox()
+    if (grip === null) throw new Error('no handle')
+    const trim = Math.round(before.width / 4)
+    await page.mouse.move(grip.x + grip.width / 2, grip.y + grip.height / 2)
+    await page.mouse.down()
+    await page.mouse.move(grip.x + grip.width / 2 - trim, grip.y + grip.height / 2, { steps: 8 })
+    await page.mouse.up()
+
+    const after = await image.boundingBox()
+    const shown = await page.locator('.of-image').boundingBox()
+    if (after === null || shown === null) throw new Error('no image')
+
+    // The box is narrower by what was dragged off.
+    expect(after.width).toBeCloseTo(before.width - trim, 0)
+    // The left edge has not moved, because the right handle was dragged.
+    expect(after.x).toBeCloseTo(before.x, 0)
+    /*
+     * And the PICTURE is still the same size and in the same place — the
+     * window moved over it, it did not shrink to fit. This is the assertion
+     * the feature exists for.
+     */
+    expect(shown.width).toBeCloseTo(picture.width, 0)
+    expect(shown.x).toBeCloseTo(picture.x, 0)
+  })
+
+  test('trimming the left edge moves the box, not the picture', async ({ page }) => {
+    const image = page.locator('[data-object-type="image"]')
+    await image.dblclick()
+
+    const before = await image.boundingBox()
+    const picture = await page.locator('.of-image').boundingBox()
+    if (before === null || picture === null) throw new Error('no image')
+
+    const grip = await page.getByTestId('crop-w').boundingBox()
+    if (grip === null) throw new Error('no handle')
+    const trim = Math.round(before.width / 4)
+    await page.mouse.move(grip.x + grip.width / 2, grip.y + grip.height / 2)
+    await page.mouse.down()
+    await page.mouse.move(grip.x + grip.width / 2 + trim, grip.y + grip.height / 2, { steps: 8 })
+    await page.mouse.up()
+
+    const after = await image.boundingBox()
+    const shown = await page.locator('.of-image').boundingBox()
+    if (after === null || shown === null) throw new Error('no image')
+
+    /*
+     * An object's position IS its top-left corner, so a left-edge crop that
+     * left `x` alone would slide the whole picture sideways as you dragged.
+     */
+    expect(after.x).toBeCloseTo(before.x + trim, 0)
+    expect(after.width).toBeCloseTo(before.width - trim, 0)
+    expect(shown.x).toBeCloseTo(picture.x, 0)
+  })
+
+  test('is one undoable action, and reset puts the whole picture back', async ({ page }) => {
+    const image = page.locator('[data-object-type="image"]')
+    await image.dblclick()
+    const before = await image.boundingBox()
+    if (before === null) throw new Error('no image')
+
+    const grip = await page.getByTestId('crop-e').boundingBox()
+    if (grip === null) throw new Error('no handle')
+    await page.mouse.move(grip.x + grip.width / 2, grip.y + grip.height / 2)
+    await page.mouse.down()
+    await page.mouse.move(grip.x + grip.width / 2 - 40, grip.y + grip.height / 2, { steps: 6 })
+    await page.mouse.up()
+    await expect.poll(async () => (await image.boundingBox())?.width ?? 0).toBeLessThan(before.width)
+
+    /*
+     * ONE step. The window and the box are two commands — data and geometry —
+     * but one action, and undoing a drag has to put both back.
+     */
+    await page.keyboard.press('ControlOrMeta+z')
+    await expect.poll(async () => (await image.boundingBox())?.width ?? 0).toBeCloseTo(before.width, 0)
   })
 })

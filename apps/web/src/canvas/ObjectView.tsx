@@ -117,6 +117,30 @@ function ObjectViewInner({ id, views }: Props) {
   const growHeight = useInteractionStore((state) =>
     state.drag.kind === 'divider' && state.drag.objectId === id ? state.drag.grow.height : 0,
   )
+  /*
+   * A crop previews as DATA and a FRAME together — the window shrinks and the
+   * box shrinks with it, which is what keeps the surviving pixels still under
+   * the pointer. Primitives, not the frame object: rule 9.
+   */
+  const cropPreview = useInteractionStore((state) =>
+    state.drag.kind === 'crop' && state.drag.objectId === id ? state.drag.crop : null,
+  )
+  const cropX = useInteractionStore((state) =>
+    state.drag.kind === 'crop' && state.drag.objectId === id ? (state.drag.frame?.x ?? null) : null,
+  )
+  const cropY = useInteractionStore((state) =>
+    state.drag.kind === 'crop' && state.drag.objectId === id ? (state.drag.frame?.y ?? null) : null,
+  )
+  const cropWidth = useInteractionStore((state) =>
+    state.drag.kind === 'crop' && state.drag.objectId === id
+      ? (state.drag.frame?.width ?? null)
+      : null,
+  )
+  const cropHeight = useInteractionStore((state) =>
+    state.drag.kind === 'crop' && state.drag.objectId === id
+      ? (state.drag.frame?.height ?? null)
+      : null,
+  )
   const commands = useCommands()
   const { runtime } = useOpenFrame()
   // Resolved before the early return so hook order never varies. Only views
@@ -137,7 +161,11 @@ function ObjectViewInner({ id, views }: Props) {
    * thing, and the wrapper has to carry the growth or the cells redistribute
    * inside a box that never changes size.
    */
-  const shown = preview ?? object.frame
+  const cropped =
+    cropX === null || cropY === null || cropWidth === null || cropHeight === null
+      ? null
+      : { x: cropX, y: cropY, width: cropWidth, height: cropHeight }
+  const shown = cropped === null ? (preview ?? object.frame) : { ...object.frame, ...cropped }
   const frame =
     growWidth === 0 && growHeight === 0
       ? shown
@@ -174,7 +202,7 @@ function ObjectViewInner({ id, views }: Props) {
     <div
       className={`of-object${selected && !holdsChildren ? ' of-object--selected' : ''}${
         selfPositioned ? ' of-object--self-positioned' : ''
-      }`}
+      }${object.locked ? ' of-object--locked' : ''}`}
       data-object-id={id}
       data-object-type={object.type}
       data-testid={`object-${id}`}
@@ -210,7 +238,9 @@ function ObjectViewInner({ id, views }: Props) {
              * came up now. Rule 4 in one expression.
              */
             object={
-              dividerPreview === null
+              cropPreview !== null
+                ? { ...object, data: { ...(object.data as object), crop: cropPreview }, frame }
+                : dividerPreview === null
                 ? object
                 : {
                     ...object,

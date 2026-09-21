@@ -88,6 +88,14 @@ export interface DividerMove<TData> {
   readonly grow: { readonly width: number; readonly height: number }
 }
 
+/** What fraction of a type's content is on show. */
+export interface CropWindow {
+  readonly x: number
+  readonly y: number
+  readonly width: number
+  readonly height: number
+}
+
 export interface DraggableEndpoint {
   readonly id: string
   readonly at: Point
@@ -348,6 +356,19 @@ export interface ObjectTypeDefinition<TType extends string, TData> {
   readonly dividers?: (object: ObjectBase<TType, TData>) => readonly DraggableDivider[]
 
   /**
+   * The part of this object's content currently shown, for types that hold
+   * more than they display.
+   *
+   * An OPTIONAL MEMBER rather than a capability, for the same reason
+   * `dividers` and `endpoints` are: a capability is a question every type must
+   * answer (rule 18), and "can you be cropped" is not a question a connector
+   * or a sticky note has an interesting answer to. Declaring this is what
+   * gives a type crop handles; declaring nothing is what makes the overlay
+   * skip it without knowing why.
+   */
+  readonly cropWindow?: (object: ObjectBase<TType, TData>) => CropWindow
+
+  /**
    * Where a dragged divider ends up: a data patch, and how much bigger the
    * object has to be to hold it.
    *
@@ -474,6 +495,7 @@ export interface ErasedObjectTypeDefinition {
     endpointId: string,
     target: EndpointTarget,
   ) => Record<string, unknown>
+  readonly cropWindow?: (object: AnyOpenFrameObject) => CropWindow
 }
 
 export class ObjectTypeError extends Error {
@@ -549,6 +571,7 @@ export function defineObjectType<TType extends string, TData>(
     retargetEndpoint,
     dividers,
     moveDivider,
+    cropWindow,
     relation,
     fields,
     promotions,
@@ -586,6 +609,9 @@ export function defineObjectType<TType extends string, TData>(
     ...(relation === undefined
       ? {}
       : { relation: (object) => relation(object as ObjectBase<TType, TData>) }),
+    ...(cropWindow === undefined
+      ? {}
+      : { cropWindow: (object) => cropWindow(object as ObjectBase<TType, TData>) }),
     ...(dividers === undefined
       ? {}
       : { dividers: (object) => dividers(object as ObjectBase<TType, TData>) }),
@@ -701,6 +727,18 @@ export class ObjectTypeRegistry {
    */
   dividersOf(object: AnyOpenFrameObject): readonly DraggableDivider[] {
     return this.#definitions.get(object.type)?.dividers?.(object) ?? []
+  }
+
+  /**
+   * What fraction of this object's content is on show, or `null` for a type
+   * that shows all of whatever it holds.
+   *
+   * `null` rather than a full window, so a caller can tell "this type does not
+   * crop" from "this one does and nothing is trimmed" — the first has no crop
+   * handles, the second has handles that are simply all the way out.
+   */
+  cropWindowOf(object: AnyOpenFrameObject): CropWindow | null {
+    return this.#definitions.get(object.type)?.cropWindow?.(object) ?? null
   }
 
   /**

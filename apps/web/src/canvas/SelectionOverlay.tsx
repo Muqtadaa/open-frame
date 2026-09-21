@@ -11,7 +11,7 @@ import {
   handleAnchor,
 } from '../scene/resize.js'
 import { unionAll, type Rect } from '@openframe/core'
-import { RotateIcon } from '../ui/icons.js'
+import { LockIcon, RotateIcon } from '../ui/icons.js'
 import { fitToText } from '../scene/fit-text.js'
 import { useCommands } from '../hooks/use-commands.js'
 
@@ -20,6 +20,8 @@ import { useCommands } from '../hooks/use-commands.js'
 const HANDLE_PX = 9
 /** The rotate grip, which carries a drawn glyph rather than being a mark. */
 const ROTATE_PX = 15
+/** The lock badge on a selection that cannot be moved. */
+const LOCK_PX = 18
 /** How close two presses must be to count as one gesture. Matches the divider. */
 const DOUBLE_PRESS_MS = 400
 /**
@@ -112,6 +114,13 @@ export function SelectionOverlay() {
    * all. The gesture transforms only the resizable members; a connector follows
    * its endpoints without being touched.
    */
+  /*
+   * Every member held in place. A lock is the reason the handles are gone, and
+   * without saying so the selection just looks broken — the box is there, the
+   * grips are not, and nothing explains why.
+   */
+  const locked = objects.length > 0 && objects.every((object) => object.locked)
+
   const resizable =
     objects.length > 0 &&
     objects.every((object) => !object.locked) &&
@@ -167,6 +176,28 @@ export function SelectionOverlay() {
         outlineWidth: `${String(1.5 / zoom)}px`,
       }}
     >
+      {locked && (
+        /*
+         * Outside the box, above its top-left corner, and counter-scaled like
+         * every other piece of chrome — a badge that grew with the board would
+         * swallow a small object at 400%.
+         */
+        <div
+          className="of-lock"
+          data-testid="selection-lock"
+          aria-label="Locked"
+          title="Locked — unlock it to move or resize it"
+          style={{
+            left: `${String(-LOCK_PX / zoom)}px`,
+            top: `${String(-LOCK_PX / zoom)}px`,
+            width: `${String(LOCK_PX / zoom)}px`,
+            height: `${String(LOCK_PX / zoom)}px`,
+          }}
+        >
+          <LockIcon className="of-lock__glyph" />
+        </div>
+      )}
+
       {resizable &&
         HANDLES.map((handle) => {
           const anchor = handleAnchor(handle)

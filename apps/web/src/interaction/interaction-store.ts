@@ -3,6 +3,7 @@ import {
   SHAPE_KINDS,
   type AnyOpenFrameObject,
   type ConnectorEndpoint,
+  type ImageCrop,
   type ObjectFrame,
   type ObjectId,
   type Point,
@@ -165,6 +166,20 @@ export type DragState =
    * the document until the pointer comes up, so widening a column across
    * forty frames is one undo entry.
    */
+  /**
+   * Trimming an image. Previews BOTH the frame and the window, because the two
+   * move together by construction — the visible fraction shrinks by exactly
+   * the proportion the frame does, which is what keeps the surviving pixels
+   * still under the pointer.
+   */
+  | {
+      readonly kind: 'crop'
+      readonly objectId: ObjectId
+      readonly handle: string
+      /** Null until the pointer moves, like every other preview here. */
+      readonly frame: ObjectFrame | null
+      readonly crop: ImageCrop | null
+    }
   | {
       readonly kind: 'divider'
       readonly objectId: ObjectId
@@ -224,6 +239,15 @@ interface InteractionState {
   readonly selection: ReadonlySet<ObjectId>
   readonly hoveredId: ObjectId | null
   readonly editingId: ObjectId | null
+  /**
+   * The image being cropped, if any.
+   *
+   * Separate from `editingId` because they are different modes that happen to
+   * share a gesture: one puts a caret in some text, the other puts handles on
+   * a picture, and an object that did both at once would have two overlays
+   * fighting over the same box.
+   */
+  readonly croppingId: ObjectId | null
   /**
    * Where the pointer was when editing began, in world units, or `null` when
    * editing was started some other way — a keypress, or a command.
@@ -330,6 +354,9 @@ interface InteractionState {
   clearSelection(): void
   setHovered(id: ObjectId | null): void
   setEditing(id: ObjectId | null, at?: Point): void
+  setCropping(id: ObjectId | null): void
+  beginCrop(objectId: ObjectId, handle: string): void
+  previewCrop(frame: ObjectFrame, crop: ImageCrop): void
   setLockedByOthers(ids: ReadonlySet<ObjectId>): void
   setViewport(viewport: Viewport): void
   setFollowing(clientId: number | null): void
@@ -382,6 +409,7 @@ export const useInteractionStore = create<InteractionState>((set) => ({
   selection: new Set<ObjectId>(),
   hoveredId: null,
   editingId: null,
+  croppingId: null,
   editingAt: null,
   lockedByOthers: NO_LOCKS,
   viewport: DEFAULT_VIEWPORT,
@@ -478,6 +506,13 @@ export const useInteractionStore = create<InteractionState>((set) => ({
   // panels over the same pin is two places to type into.
   beginDivider: (objectId, dividerId) =>
     set({ drag: { kind: 'divider', objectId, dividerId, data: null, grow: { width: 0, height: 0 } } }),
+  setCropping: (croppingId) =>
+    // Cropping and editing are exclusive: entering one leaves the other.
+    set({ croppingId, ...(croppingId === null ? {} : { editingId: null }) }),
+  beginCrop: (objectId, handle) =>
+    set({ drag: { kind: 'crop', objectId, handle, frame: null, crop: null } }),
+  previewCrop: (frame, crop) =>
+    set((state) => (state.drag.kind === 'crop' ? { drag: { ...state.drag, frame, crop } } : {})),
   previewDivider: (data, grow) =>
     set((state) =>
       // Guarded: a preview arriving after the gesture ended would resurrect a

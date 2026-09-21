@@ -2,11 +2,10 @@ import { resolveEndpoints, type ConnectorData } from '@openframe/core'
 
 import { connectorPath, pathMidpoint, routeAngles } from '../scene/connector-path.js'
 import { capPath } from '../scene/connector-caps.js'
-import { dashArray, inkColor, inkOf } from '../scene/style-tokens.js'
+import { dashArray, inkColor, inkOf, strokeWidth } from '../scene/style-tokens.js'
 import { defineObjectView, type ObjectEditorProps, type ObjectViewProps } from './registry.js'
 import { InlineTextEditor } from './shared-editor.js'
 
-const STROKE_WIDTHS = { none: 0, thin: 1, medium: 2, thick: 4 }
 
 /**
  * A connector draws itself in ABSOLUTE world coordinates.
@@ -18,7 +17,7 @@ const STROKE_WIDTHS = { none: 0, thin: 1, medium: 2, thick: 4 }
 function ConnectorRenderer({ object, document: doc, zoom }: ObjectViewProps<ConnectorData>) {
   const { start, end } = resolveEndpoints(doc, object.data.from, object.data.to)
   const stroke = inkOf(object.style.strokeColor ?? object.style.color)
-  const width = STROKE_WIDTHS[object.style.stroke ?? 'medium']
+  const width = strokeWidth(object.style.stroke, 'medium')
   const path = connectorPath(start, end, object.data.routing, object.data.bend ?? null)
   const { departure, arrival } = routeAngles(start, end, object.data.routing, object.data.bend ?? null)
   const label = object.data.text

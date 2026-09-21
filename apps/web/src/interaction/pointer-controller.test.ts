@@ -17,6 +17,7 @@ function ctx(overrides: Partial<PointerDownContext> = {}): PointerDownContext {
     worldPoint: { x: 10, y: 10 },
     hitId: null,
     selection: new Set<ObjectId>(),
+    locked: new Set<ObjectId>(),
     tableSize: { columns: 3, rows: 3 },
     shiftKey: false,
     button: 0,
@@ -182,5 +183,45 @@ describe('placing a table', () => {
       at: { x: 10, y: 10 },
       data: { columns: [1, 1, 1, 1, 1], rows: [1, 1] },
     })
+  })
+})
+
+/**
+ * A lock that feels like a lock.
+ *
+ * `requireUnlocked` in the command handler has always refused the move — but
+ * by then the gesture has run, so the object followed the pointer across the
+ * board and snapped back on release. That reads as the app dropping a change
+ * rather than as the object being held.
+ */
+describe('pressing a locked object', () => {
+  it('selects it without starting a drag', () => {
+    const intents = onPointerDown(ctx({ hitId: A, locked: new Set([A]) }))
+    expect(intents.map((intent) => intent.kind)).toEqual(['select'])
+  })
+
+  it('does not start one when it is already selected either', () => {
+    const intents = onPointerDown(
+      ctx({ hitId: A, selection: new Set([A]), locked: new Set([A]) }),
+    )
+    expect(intents).toEqual([])
+  })
+
+  /*
+   * You have to be able to reach a locked object to unlock it, so the press
+   * must still select. A lock is not invisibility.
+   */
+  it('still reaches it, because that is how you unlock it', () => {
+    const intents = onPointerDown(ctx({ hitId: A, locked: new Set([A]) }))
+    const select = intents.find((intent) => intent.kind === 'select')
+    expect(select?.kind === 'select' && select.ids).toEqual([A])
+  })
+
+  it('moves the unlocked members of a mixed selection and leaves the locked one', () => {
+    const intents = onPointerDown(
+      ctx({ hitId: A, selection: new Set([A, B]), locked: new Set([B]) }),
+    )
+    const translate = intents.find((intent) => intent.kind === 'begin-translate')
+    expect(translate?.kind === 'begin-translate' && translate.ids).toEqual([A])
   })
 })

@@ -16,6 +16,7 @@ import {
   surfaceOf,
   textAlign,
   verticalAlign,
+  strokeWidth,
 } from '../scene/style-tokens.js'
 
 function ShapeOutline({ object }: { object: ObjectBase<string, ShapeData> }) {
@@ -24,7 +25,7 @@ function ShapeOutline({ object }: { object: ObjectBase<string, ShapeData> }) {
   const stroke = inkOf(object.style.strokeColor ?? object.style.color)
   const filled = (object.style.fill ?? 'tint') !== 'none'
   const fill = filled ? surfaceOf(object.style.color, 'gray') : 'transparent'
-  const strokeWidth = { none: 0, thin: 1, medium: 2, thick: 4 }[object.style.stroke ?? 'medium']
+  const lineWidth = strokeWidth(object.style.stroke, 'medium')
 
   /*
    * DRAWN IN FRAME UNITS, not in the normalised 0-100 box.
@@ -59,15 +60,15 @@ function ShapeOutline({ object }: { object: ObjectBase<string, ShapeData> }) {
           ry={Math.max(0, height / 2 - ELLIPSE_MARGIN)}
           fill={fill}
           stroke={stroke}
-          strokeWidth={strokeWidth}
-          strokeDasharray={dashArray(object.style.dash, strokeWidth)}
+          strokeWidth={lineWidth}
+          strokeDasharray={dashArray(object.style.dash, lineWidth)}
         />
       ) : (
         <path
           d={path}
           fill={fill}
           stroke={stroke}
-          strokeWidth={strokeWidth}
+          strokeWidth={lineWidth}
           strokeLinejoin="round"
         />
       )}

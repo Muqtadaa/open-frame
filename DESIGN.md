@@ -761,6 +761,42 @@ apex moves freely and the curve passes exactly under the handle, because a line
 that only follows part of the way slides out from under the pointer and reads as
 broken.
 
+### Cursors on an Object
+
+An object shows the ARROW at rest and `move` once selected. It never shows a
+caret unless a caret is what you will get: there was no cursor rule at all, so
+it fell through to `auto`, and `auto` over selectable text is an I-beam — every
+note and label promised typing on hover and gave a selection on click. The
+caret now appears only inside an editor, where it is the truth.
+
+### Locked Objects
+
+A lock stops the gesture, not just the command. Pressing a locked object
+selects it and starts nothing: it used to follow the pointer across the board
+and snap back on release, because the handler refused the move only after the
+drag had run — which reads as the app dropping a change rather than as the
+object being held.
+
+A selected locked object carries a **padlock badge** above its top-left corner,
+counter-scaled like every other piece of chrome. It answers the question the
+missing handles raise; a selection with no grips and no explanation reads as a
+bug.
+
+### Cropping an Image
+
+Double-click an image to trim it. The handles shrink the visible window and the
+frame shrinks with it, so what you see is the object's size — and the pixels
+that survive do not move, which is the whole point: a crop that rescales what
+is left feels like stretching a rubber sheet rather than using scissors.
+
+A trimmed image offers **reset**, which grows the frame back as it restores the
+window. Restoring one without the other would squeeze the whole picture into
+the cropped box.
+
+Images also take a stroke, defaulting to `none` — a shape and a connector are
+lines by nature and default to `medium`, but giving every image already on a
+board a border nobody asked for is a change to somebody's work.
+
 ### The Rotate Grip
 
 A **glyph**, not a dot: a 15px curved arrow on a soft-radius chip above the top

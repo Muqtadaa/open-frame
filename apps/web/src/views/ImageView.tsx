@@ -1,7 +1,7 @@
-import type { ImageData } from '@openframe/core'
+import { FULL_CROP, type ImageData } from '@openframe/core'
 
-import { defineObjectView, type ObjectEditorProps, type ObjectViewProps } from './registry.js'
-import { InlineTextEditor } from './shared-editor.js'
+import { defineObjectView, type ObjectViewProps } from './registry.js'
+import { inkColor, strokeWidth } from '../scene/style-tokens.js'
 
 function ImageRenderer({ object, assetUrl }: ObjectViewProps<ImageData>) {
   const state = assetUrl(object.data.asset)
@@ -23,40 +23,51 @@ function ImageRenderer({ object, assetUrl }: ObjectViewProps<ImageData>) {
     )
   }
 
-  return (
-    <img
-      className="of-image"
-      src={state.url}
-      alt={object.data.alt}
-      /*
-       * The object's frame is the size, and the aspect ratio is the user's to
-       * break by resizing. `object-fit: fill` is therefore correct here where it
-       * is usually wrong: letterboxing would leave dead space inside the
-       * selection box that still counts as part of the object.
-       */
-      style={{ opacity: object.style.opacity ?? 1 }}
-      draggable={false}
-    />
-  )
-}
+  const crop = object.data.crop ?? FULL_CROP
 
-/**
- * The inline editor edits ALT TEXT, not a caption.
- *
- * Images are the content most likely to be meaningless to a screen reader, and
- * a board is a document someone else will read. Putting alt text behind the
- * ordinary double-click-to-edit gesture is what makes describing an image the
- * path of least resistance rather than a settings panel nobody opens.
- */
-function ImageAltEditor({ object, onCommit, onCancel }: ObjectEditorProps<ImageData>) {
   return (
-    <InlineTextEditor
-      initialText={object.data.alt}
-      className="of-image__alt-editor"
-      ariaLabel="Describe this image"
-      onCommit={(alt) => onCommit({ alt })}
-      onCancel={onCancel}
-    />
+    /*
+     * A WINDOW and a picture, rather than one element.
+     *
+     * A crop cannot be expressed with `object-fit` — that chooses how a whole
+     * picture sits in a box, not which part of it survives. So the frame
+     * clips, and the picture inside is blown up by the reciprocal of the
+     * visible fraction and slid back by where that fraction starts. At the
+     * full window both come out as 100% and 0, which is the uncropped case
+     * falling out of the same arithmetic rather than being special-cased.
+     */
+    <div
+      className="of-image-frame"
+      style={{
+        opacity: object.style.opacity ?? 1,
+        // Asked of the style, so the inspector's stroke controls reach it —
+        // declaring `strokeColor` and never honouring it is the exact fault
+        // rule 21 is written about.
+        ...(object.style.strokeColor === undefined
+          ? {}
+          : { borderColor: inkColor(object.style.strokeColor) }),
+        /*
+         * `none` by DEFAULT, unlike a shape or a connector. Those are lines by
+         * nature; an image is not, and giving every image already on a board a
+         * border nobody asked for is a change to somebody's work rather than a
+         * new feature.
+         */
+        borderWidth: `${String(strokeWidth(object.style.stroke, 'none'))}px`,
+      }}
+    >
+      <img
+        className="of-image"
+        src={state.url}
+        alt={object.data.alt}
+        style={{
+          width: `${String(100 / crop.width)}%`,
+          height: `${String(100 / crop.height)}%`,
+          left: `${String((-crop.x / crop.width) * 100)}%`,
+          top: `${String((-crop.y / crop.height) * 100)}%`,
+        }}
+        draggable={false}
+      />
+    </div>
   )
 }
 
@@ -64,5 +75,9 @@ export const imageView = defineObjectView<ImageData>({
   type: 'image',
   usesAssets: true,
   Renderer: ImageRenderer,
-  InlineEditor: ImageAltEditor,
+  /*
+   * NO INLINE EDITOR. Double-click on an image crops it, and alt text is a
+   * named field in the options panel — where "alt text" said out loud teaches
+   * what the box is for, which an unlabelled caret over a photograph did not.
+   */
 })

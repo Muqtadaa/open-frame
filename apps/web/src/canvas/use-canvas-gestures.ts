@@ -1,4 +1,5 @@
 import {
+  FULL_CROP,
   panViewport,
   rectFromPoints,
   screenToWorld,
@@ -12,6 +13,7 @@ import {
   type Point,
   type Rect,
   type Viewport,
+  type ImageCrop,
 } from '@openframe/core'
 import {
   useCallback,
@@ -32,6 +34,7 @@ import {
   type PointerIntent,
 } from '../interaction/pointer-controller.js'
 import { anchorForSide } from './ConnectPoints.js'
+import { croppedBy } from './CropOverlay.js'
 import { committedRect, constrainToAxis } from '../scene/draw.js'
 import { containerAt, hitTest, hitTestRaw, objectsInMarquee } from '../scene/hit-testing.js'
 import { alignToNeighbours, alignmentTargets, type AlignmentGuide } from '../scene/alignment.js'
@@ -60,6 +63,7 @@ type GestureMode =
   | 'endpoint'
   /** Dragging a division INSIDE one — a table's column or row boundary. */
   | 'divider'
+  | 'crop'
   | 'none'
 
 /**
@@ -87,6 +91,25 @@ type GestureMode =
  * difference between a rule and a list of the places it was applied.
  */
 const EDITOR_CHROME = '.of-editor-chrome'
+
+/**
+ * Which of these are locked, asked of the document once.
+ *
+ * Takes the candidates rather than scanning: a press only ever concerns the
+ * object under the pointer and the current selection, and asking about the
+ * whole board would put an O(n) walk on every pointerdown.
+ */
+function lockedAmong(
+  doc: BoardDocument,
+  candidates: readonly (ObjectId | null)[],
+): ReadonlySet<ObjectId> {
+  const locked = new Set<ObjectId>()
+  for (const id of candidates) {
+    if (id === null) continue
+    if (doc.objects.get(id)?.locked === true) locked.add(id)
+  }
+  return locked
+}
 
 function isTextEntry(target: EventTarget | null): boolean {
   if (target instanceof HTMLTextAreaElement || target instanceof HTMLInputElement) return true
@@ -194,6 +217,46 @@ function handleAt(clientX: number, clientY: number): string | null {
  * turns a position into a data patch, and this only has to know that both
  * exist. The same handshake the endpoint handles use.
  */
+/**
+ * Grabbing one of an image's crop grips.
+ *
+ * The subject is the object being CROPPED rather than the selection, because
+ * crop mode is about one object by definition — and the two can disagree for
+ * an instant while a click lands.
+ */
+function beginCropDrag(
+  event: ReactPointerEvent<HTMLElement>,
+  store: ReturnType<typeof useInteractionStore.getState>,
+  runtime: { store: { getDocument: () => BoardDocument }; registry: ObjectTypeRegistry },
+  toWorld: (clientX: number, clientY: number) => Point,
+): Gesture | null {
+  const element = event.target instanceof HTMLElement ? event.target : null
+  const handle = element?.closest<HTMLElement>('[data-crop-handle]')?.dataset.cropHandle
+  if (handle === undefined || store.croppingId === null) return null
+
+  const doc = runtime.store.getDocument()
+  const object = doc.objects.get(store.croppingId)
+  if (object === undefined || object.locked) return null
+
+  store.beginCrop(object.id, handle)
+
+  return {
+    pointerId: event.pointerId,
+    mode: 'crop',
+    startWorld: toWorld(event.clientX, event.clientY),
+    startClient: { x: event.clientX, y: event.clientY },
+    startViewport: store.viewport,
+    subjects: [object],
+    startBounds: runtime.registry.boundsOf(object, doc),
+    alignTargets: [],
+    handle: null,
+    endpointId: null,
+    dividerId: handle,
+    startAngle: 0,
+    moved: false,
+  }
+}
+
 function beginDividerDrag(
   event: ReactPointerEvent<HTMLElement>,
   store: ReturnType<typeof useInteractionStore.getState>,
@@ -474,6 +537,15 @@ export function useCanvasGestures(containerRef: RefObject<HTMLElement | null>) {
        */
       pressedHandle.current = grabbed !== null
 
+      if (grabbed === 'crop') {
+        const started = beginCropDrag(event, store, runtime, toWorld)
+        if (started !== null) {
+          event.currentTarget.setPointerCapture(event.pointerId)
+          gesture.current = started
+          return
+        }
+      }
+
       if (grabbed === 'divider') {
         const started = beginDividerDrag(event, store, runtime, toWorld)
         if (started !== null) {
@@ -534,7 +606,10 @@ export function useCanvasGestures(containerRef: RefObject<HTMLElement | null>) {
         grabbed !== null &&
         grabbed !== 'endpoint' &&
         grabbed !== 'connect' &&
-        grabbed !== 'divider'
+        grabbed !== 'divider' &&
+        // A crop grip has already been handled above; falling through would
+        // start a resize on the same press and the two would fight.
+        grabbed !== 'crop'
       ) {
         const document = runtime.store.getDocument()
         /*
@@ -583,8 +658,9 @@ export function useCanvasGestures(containerRef: RefObject<HTMLElement | null>) {
       }
 
       const worldPoint = toWorld(event.clientX, event.clientY)
+      const document = runtime.store.getDocument()
       const hitId =
-        hitTest(runtime.store.getDocument(), runtime.registry, worldPoint) ??
+        hitTest(document, runtime.registry, worldPoint) ??
         objectChromeUnderPointer(event.target)
       const intents = decidePointerDown({
         tool: store.tool,
@@ -596,6 +672,13 @@ export function useCanvasGestures(containerRef: RefObject<HTMLElement | null>) {
         spaceHeld: spaceHeld.current,
         shapeKind: store.shapeKind,
         tableSize: store.tableSize,
+        /*
+         * Only what a press could actually move: the object under the pointer
+         * and whatever is already selected. Walking the whole document to
+         * build this would be an O(n) scan on every press, which rule 10
+         * forbids for exactly this kind of convenience.
+         */
+        locked: lockedAmong(document, [hitId, ...store.selection]),
       })
 
       let mode: GestureMode = 'none'
@@ -671,6 +754,34 @@ export function useCanvasGestures(containerRef: RefObject<HTMLElement | null>) {
             event.clientY - active.startClient.y,
           ),
         )
+        return
+      }
+
+      if (active.mode === 'crop') {
+        const subject = active.subjects[0]
+        if (subject === undefined || active.dividerId === undefined) return
+        const world = toWorld(event.clientX, event.clientY)
+        const result = croppedBy(
+          subject.frame,
+          (subject.data as { crop?: ImageCrop | null }).crop ?? FULL_CROP,
+          active.dividerId,
+          world.x - active.startWorld.x,
+          world.y - active.startWorld.y,
+        )
+        if (result !== null) {
+          /*
+           * `moved` is set PER MODE, and a gesture that never sets it commits
+           * nothing on release — the guard exists so a press with a tremor
+           * does not fill the undo stack with actions nobody took. Marked on
+           * the frame actually changing rather than on the pointer twitching,
+           * which is the same distinction the divider drag makes.
+           */
+          if (result.frame.width !== subject.frame.width ||
+              result.frame.height !== subject.frame.height) {
+            active.moved = true
+          }
+          store.previewCrop(result.frame, result.crop)
+        }
         return
       }
 
@@ -862,6 +973,17 @@ export function useCanvasGestures(containerRef: RefObject<HTMLElement | null>) {
        * a press that never moved is a click on a handle, not a resize, and
        * must not put an entry in the undo stack.
        */
+      if (active.mode === 'crop') {
+        const drag = store.drag
+        if (drag.kind === 'crop' && drag.frame !== null && drag.crop !== null && active.moved) {
+          // One transaction: the window shown and the box showing it are two
+          // kinds of change that only mean anything together.
+          commands.cropImage(drag.objectId, drag.crop, drag.frame)
+        }
+        store.endDrag()
+        return
+      }
+
       if (active.mode === 'divider') {
         const drag = store.drag
         const subject = active.subjects[0]
@@ -1012,6 +1134,24 @@ export function useCanvasGestures(containerRef: RefObject<HTMLElement | null>) {
       const hitId =
         hitTestRaw(runtime.store.getDocument(), runtime.registry, worldPoint) ??
         objectChromeUnderPointer(event.target)
+
+      /*
+       * A type that shows LESS than it holds is cropped by this gesture rather
+       * than edited by it, asked of the registry rather than compared against
+       * 'image'. Nothing else in the product declares a crop window, so
+       * nothing else changes — and the next type that does gets the gesture by
+       * saying so.
+       */
+      if (hitId !== null) {
+        const object = runtime.store.getDocument().objects.get(hitId)
+        if (object !== undefined && !object.locked && runtime.registry.cropWindowOf(object) !== null) {
+          const store = useInteractionStore.getState()
+          store.setSelection([hitId])
+          store.setCropping(hitId)
+          return
+        }
+      }
+
       for (const intent of decideDoubleClick(hitId)) applyIntent(intent, worldPoint)
     },
     [applyIntent, runtime.registry, runtime.store, toWorld],

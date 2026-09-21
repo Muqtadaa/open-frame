@@ -103,7 +103,16 @@ export {
   type Confidence,
   type InsightData,
 } from './insight/schema.js'
-export { ImageDataSchema, type ImageData } from './image/schema.js'
+export { ImageDataSchema, type ImageCrop, type ImageData } from './image/schema.js'
+export {
+  cropByHandle,
+  isCropped,
+  uncrop,
+  FULL_CROP,
+  type CropBox,
+  type CropHandle,
+  type CropResult,
+} from './image/crop.js'
 export { FrameDataSchema, type FrameData } from './frame/schema.js'
 export { SHAPE_TYPE, shapeType } from './shape/definition.js'
 export { SHAPE_KINDS, ShapeDataSchema, type ShapeData, type ShapeKind } from './shape/schema.js'

@@ -31,6 +31,27 @@ export interface ImageData {
   readonly naturalHeight: number
   /** Alternative text. Empty is allowed; absent is not. */
   readonly alt: string
+  /**
+   * Which part of the picture is shown, as FRACTIONS of the natural image.
+   *
+   * Absent means all of it, which is why this is optional as well as
+   * nullable: every image saved before cropping existed still parses, and an
+   * absent value and a full-frame value mean the same thing. That is the only
+   * shape of change that can be added to a shipped type without a migration.
+   *
+   * Fractions rather than pixels so a crop survives the asset being replaced
+   * by a different resolution of the same picture, and so nothing here has to
+   * be recomputed when the object is resized.
+   */
+  readonly crop?: ImageCrop | null
+}
+
+/** A window onto the natural image, in fractions of its width and height. */
+export interface ImageCrop {
+  readonly x: number
+  readonly y: number
+  readonly width: number
+  readonly height: number
 }
 
 export const IMAGE_VERSION = 1
@@ -49,4 +70,13 @@ export const ImageDataSchema: ZodType<ImageData> = z.object({
   naturalWidth: z.number().positive(),
   naturalHeight: z.number().positive(),
   alt: z.string(),
+  crop: z
+    .object({
+      x: z.number().finite(),
+      y: z.number().finite(),
+      width: z.number().finite().positive(),
+      height: z.number().finite().positive(),
+    })
+    .nullable()
+    .optional(),
 }) as unknown as ZodType<ImageData>

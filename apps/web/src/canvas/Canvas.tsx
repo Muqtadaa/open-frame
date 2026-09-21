@@ -9,6 +9,7 @@ import { ConnectPoints } from './ConnectPoints.js'
 import { DrawPreview } from './DrawPreview.js'
 import { EndpointOverlay } from './EndpointOverlay.js'
 import { ArrangeBar } from './ArrangeBar.js'
+import { CropOverlay } from './CropOverlay.js'
 import { DividerOverlay } from './DividerOverlay.js'
 import { MarqueeOverlay } from './MarqueeOverlay.js'
 import { ObjectLayer } from './ObjectLayer.js'
@@ -103,6 +104,7 @@ export function Canvas() {
         <AlignmentOverlay />
         <EndpointOverlay />
         <DividerOverlay />
+        <CropOverlay />
         <ConnectorPreview />
         {/*
           Rendered here but PORTALED out, like every other piece of apparatus:

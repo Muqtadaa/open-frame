@@ -14,9 +14,11 @@ import {
   alignOffsets,
   childrenOf,
   distributeOffsets,
+  uncrop,
   unionAll,
   type AlignEdge,
   type DistributeAxis,
+  type ImageCrop,
 } from '@openframe/core'
 import { useMemo } from 'react'
 
@@ -74,6 +76,10 @@ export interface BoardCommands {
   group(): void
   /** Dissolves any groups in the selection, keeping their members. */
   ungroup(): void
+  /** A new crop window and the frame that shows it, as one undoable action. */
+  cropImage(id: ObjectId, crop: ImageCrop, frame: ObjectFrame): void
+  /** Puts the whole picture back, growing the frame to match. */
+  uncropImage(id: ObjectId): void
   /**
    * Lines the selection up on one edge of its own bounding box.
    *
@@ -659,6 +665,47 @@ export function useCommands(): BoardCommands {
           dispatcher.transact('Resize track', [
             { kind: 'UpdateObjectData', id, patch },
             { kind: 'ResizeObjects', resizes: [{ id, frame }] },
+          ]),
+        )
+      },
+
+      /**
+       * A crop: the window that is shown AND the box showing it, as one
+       * undoable action.
+       *
+       * The same shape as a divider drag and for the same reason — they are
+       * two different kinds of change, data and geometry, that only mean
+       * something together. `transact` is what makes the pair one step to
+       * undo, which rule 4 is about: one ACTION per gesture, not one command.
+       */
+      cropImage(id, crop, frame) {
+        report(
+          dispatcher.transact('Crop image', [
+            { kind: 'UpdateObjectData', id, patch: { crop } },
+            { kind: 'ResizeObjects', resizes: [{ id, frame }] },
+          ]),
+        )
+      },
+
+      uncropImage(id) {
+        const object = runtime.store.getDocument().objects.get(id)
+        if (object === undefined) return
+        const window = runtime.registry.cropWindowOf(object)
+        if (window === null) return
+
+        /*
+         * The frame grows BACK. Restoring the window alone would squeeze the
+         * whole picture into the cropped box, which looks like the image was
+         * rescaled rather than uncropped.
+         */
+        const restored = uncrop(object.frame, window)
+        report(
+          dispatcher.transact('Reset crop', [
+            { kind: 'UpdateObjectData', id, patch: { crop: null } },
+            {
+              kind: 'ResizeObjects',
+              resizes: [{ id, frame: { ...object.frame, ...restored.frame } }],
+            },
           ]),
         )
       },

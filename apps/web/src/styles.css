@@ -2456,6 +2456,39 @@ body {
   /* Centre origin so rotate() turns the object about itself. Translation is
      unaffected by transform-origin, so top-left positioning still holds. */
   transform-origin: 50% 50%;
+  /*
+   * AN OBJECT, not a passage of text.
+   *
+   * There was no cursor rule here at all, so it fell through to `auto` — and
+   * `auto` over selectable text is an I-beam. Every note, label and text box
+   * therefore promised typing on hover and gave you a selection on click,
+   * which is the wrong promise: the first click selects the OBJECT, and the
+   * caret only appears once you have asked for it with a second.
+   *
+   * `user-select: none` for the same reason twice over: it is what produces
+   * the I-beam, and dragging an object across the board would otherwise
+   * sweep-select its text on the way.
+   */
+  cursor: default;
+  user-select: none;
+}
+
+/*
+ * Locked: no move cursor, because there is no move. The badge on the selection
+ * says why, and a cursor promising a drag that cannot happen is the same lie
+ * the I-beam was telling.
+ */
+.of-object--locked,
+.of-object--locked.of-object--selected {
+  cursor: default;
+}
+
+/* Editing IS typing, so here the I-beam is the truth. */
+.of-object [contenteditable='true'],
+.of-object textarea,
+.of-object input {
+  cursor: text;
+  user-select: text;
 }
 
 /*
@@ -2468,6 +2501,8 @@ body {
  */
 .of-object--selected {
   z-index: 1;
+  /* Selected and draggable, so the cursor says what the next press does. */
+  cursor: move;
 }
 
 .of-selection {
@@ -4955,4 +4990,96 @@ textarea.of-input {
 .of-endpoint--control {
   background: var(--of-panel);
   border-radius: 2px;
+}
+
+/*
+ * The badge on a selection that is locked.
+ *
+ * It answers the question the missing handles raise. A selected object with no
+ * grips and no explanation reads as a bug; the same object with a padlock on
+ * its corner reads as a decision somebody made.
+ */
+.of-lock {
+  position: absolute;
+  display: grid;
+  place-items: center;
+  color: var(--of-panel);
+  background: var(--of-ink-muted);
+  border-radius: 25%;
+  pointer-events: none;
+}
+
+.of-lock__glyph {
+  width: 72%;
+  height: 72%;
+}
+
+/*
+ * An image is a WINDOW onto a picture, not the picture.
+ *
+ * A crop cannot be expressed with `object-fit` — that chooses how a whole
+ * picture sits in a box, not which part of it survives — so the frame clips
+ * and the picture inside is blown up and slid back by the arithmetic in
+ * `types/image/crop.ts`.
+ */
+.of-image-frame {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  border-style: solid;
+  border-color: transparent;
+  border-radius: 4px;
+}
+
+.of-image-frame .of-image {
+  position: absolute;
+  max-width: none;
+  object-fit: fill;
+}
+
+/* Trimming an image: the same grips as a resize, on a box that says it is a
+   different gesture. */
+.of-crop {
+  position: absolute;
+  top: 0;
+  left: 0;
+  /*
+   * ABOVE the object it is cropping.
+   *
+   * A selected object is lifted to `z-index: 1` so a selection is never
+   * half-covered, and the grips sit ON its edges — so without this the picture
+   * paints over them and the west and north handles cannot be pressed at all.
+   * The divider handles learned this the same way.
+   */
+  z-index: 3;
+  outline: dashed var(--of-accent);
+  outline-offset: 0;
+  pointer-events: none;
+}
+
+.of-crop__grip {
+  position: absolute;
+  background: var(--of-accent);
+  border: solid var(--of-panel);
+  border-radius: 1px;
+  pointer-events: auto;
+}
+
+.of-crop__reset {
+  position: absolute;
+  left: 0;
+  padding: 3px 9px;
+  font-size: 11px;
+  color: var(--of-ink-muted);
+  background: var(--of-panel);
+  border: none;
+  border-radius: 7px;
+  cursor: pointer;
+  transform-origin: 0 0;
+  pointer-events: auto;
+}
+
+.of-crop__reset:hover {
+  color: var(--of-ink);
 }

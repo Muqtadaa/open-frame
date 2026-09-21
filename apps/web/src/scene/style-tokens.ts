@@ -1,5 +1,6 @@
 import { isColorToken, type AlignToken, type ColorToken, type ColorValue, type DashToken, type FontToken,
   type VAlignToken,
+  type StrokeToken,
 } from '@openframe/core'
 
 /**
@@ -69,6 +70,33 @@ export function surfaceOf(value: ColorValue | undefined, fallback: ColorToken): 
  * would freeze today's ink into every object the moment a theme changed it —
  * `inherit` is not a value CSS can be handed, so the property goes unset.
  */
+/**
+ * What each stroke token is worth, in world units.
+ *
+ * ONE table. It was written out twice — a const in `ConnectorView` and an
+ * inline object literal in `ShapeView` — and a third copy was about to go into
+ * `ImageView`. Three transcriptions of four numbers is three chances for a
+ * thick line to mean something different depending on what it is drawn on.
+ */
+export const STROKE_WIDTHS: Readonly<Record<StrokeToken, number>> = {
+  none: 0,
+  thin: 1,
+  medium: 2,
+  thick: 4,
+}
+
+/**
+ * The width a stroke token draws at, with the caller's own default.
+ *
+ * The default is the caller's because it differs and should: a shape and a
+ * connector are lines by nature and default to `medium`, while an image is not
+ * and must default to `none` — giving every image already on a board a border
+ * nobody asked for is not a new feature, it is a change to their work.
+ */
+export function strokeWidth(token: StrokeToken | undefined, fallback: StrokeToken): number {
+  return STROKE_WIDTHS[token ?? fallback]
+}
+
 export function inkColor(value: ColorValue | undefined): string | undefined {
   return value === undefined ? undefined : inkOf(value)
 }
