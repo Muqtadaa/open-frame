@@ -95,7 +95,14 @@ function TableRenderer({ object }: ObjectViewProps<TableData>) {
         gridTemplateRows: tracks(rows),
         fontFamily: fontFamily(object.style.font),
         textAlign: textAlign(object.style.align),
-        justifyContent: verticalAlign(object.style.verticalAlign),
+        /*
+         * A CUSTOM PROPERTY, because those inherit and `justify-content` does
+         * not. This element is a grid, where `justify-content` distributes
+         * tracks along the inline axis — so setting it here moved nothing at
+         * all, and vertical alignment in a table did nothing until this line
+         * changed. The cells read it in `.of-table__cell`.
+         */
+        ['--of-valign' as string]: verticalAlign(object.style.verticalAlign),
         // On the table, not on each cell: one declaration the cells inherit,
         // rather than a style object rebuilt per cell on every render.
         color: inkColor(object.style.textColor),
@@ -123,7 +130,9 @@ function TableRenderer({ object }: ObjectViewProps<TableData>) {
              */
             style={cellPaint(cell)}
           >
-            <RichTextView value={cell.text} />
+            <div className="of-table__cell-text">
+              <RichTextView value={cell.text} />
+            </div>
           </div>
         )
       })}

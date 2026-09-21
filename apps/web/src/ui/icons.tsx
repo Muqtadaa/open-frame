@@ -426,3 +426,23 @@ export function GridIcon({ className }: IconProps) {
     </svg>
   )
 }
+
+/**
+ * The rotate grip on the selection box.
+ *
+ * A GLYPH rather than the dot it used to be. A plain circle above the top edge
+ * was the same visual vocabulary as `.of-connect-point` — panel fill, accent
+ * ring, perfectly round — sitting a few pixels from it, so the two read as the
+ * same control and the only way to tell them apart was to drag one and find
+ * out. An arrow that curves says what this one does.
+ */
+export function RotateIcon({ className }: IconProps) {
+  return (
+    <svg {...base} className={className}>
+      {/* Open at the top right, where the head goes: a closed ring would be a
+          dot again at the size this renders. */}
+      <path d="M19.4 9.2A8 8 0 1 0 20 13" />
+      <path d="M14.3 9.2h5.1V4.1" />
+    </svg>
+  )
+}

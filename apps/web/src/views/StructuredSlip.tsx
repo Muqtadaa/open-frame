@@ -81,7 +81,12 @@ export function StructuredSlip<TData extends { readonly text: RichText }>({
         justifyContent: verticalAlign(object.style.verticalAlign),
         }}
       >
-        <RichTextView value={text} />
+        {/* Its own element, so the clamp that marks hidden text has something
+            to sit on: `100cqh` measures against the nearest container
+            ANCESTOR, and an element cannot query itself. */}
+        <div className="of-slip__text" data-fit-text>
+          <RichTextView value={text} />
+        </div>
       </div>
 
       {parts.length > 0 && (

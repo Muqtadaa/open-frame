@@ -31,7 +31,7 @@ function StickyRenderer({ object }: ObjectViewProps<StickyData>) {
           : `Sticky note: ${plainTextOf(object.data.text)}`
       }
     >
-      <div className="of-sticky__text">
+      <div className="of-sticky__text" data-fit-text>
         <RichTextView value={object.data.text} />
       </div>
     </div>

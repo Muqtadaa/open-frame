@@ -709,6 +709,33 @@ next surface inherits automatically — it has to be applied.
 - **Image** — 4px radius, `object-fit: fill`, with dashed hatched placeholders for
   loading and correction-red ones for missing.
 
+### Text That Does Not Fit
+
+Every object that holds text clips it at its own edge and marks the cut with an
+ellipsis. Shape labels used to spill instead — the one type that did — which is
+not just an inconsistency: an object whose text runs outside its bounds
+disagrees with culling, hit testing and marquee selection, all of which ask the
+registry for the extent and get the shape.
+
+The mark is a real line clamp, and the number of lines is derived **in CSS**:
+`round(down, 100cqh / 1lh, 1)` against a `container-type: size` parent. The box
+knows its own height and the text knows its own line height, so nothing is
+measured in JavaScript and no copy of the padding or the font size exists to
+drift when this file's numbers change.
+
+The fix for a clipped object is the gesture, not the panel: **double-click the
+bottom handle to fit the height to the text, the right handle to fit the
+width**. The side handle for the axis being fitted, matching the table
+divider's double-click exactly — one vocabulary for "make this the size of what
+is in it."
+
+### The Rotate Grip
+
+A **glyph**, not a dot: a 15px curved arrow on a soft-radius chip above the top
+edge. It was a circle with an accent ring, which is precisely what a connect
+point is, sitting a few pixels away on the same edge — silhouette alone now
+separates them before the glyph is even resolved.
+
 ### One Contextual Surface
 
 Everything that floats over the board attached to something shares one shell:

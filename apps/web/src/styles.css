@@ -1037,6 +1037,37 @@ body {
   border-bottom: 1px solid var(--of-rule);
 }
 
+/*
+ * A cell aligns its own text up and down.
+ *
+ * The table used to set `justify-content` on itself, which is a GRID — there
+ * the property distributes tracks along the inline axis, so it moved nothing
+ * and the cells stayed `display: block` with `align-items: normal`. Vertical
+ * alignment in a table did nothing from the day it shipped.
+ *
+ * The value still arrives as ONE declaration on the table, as a custom
+ * property: those inherit, and `justify-content` does not. Setting it per cell
+ * would rebuild a style object four hundred times on a twenty-by-twenty grid.
+ *
+ * Not the textarea: `display: flex` on a form control is meaningless, and
+ * size containment would stop it scrolling with what is typed.
+ */
+.of-table__cell:not(.of-table__input) {
+  display: flex;
+  flex-direction: column;
+  justify-content: var(--of-valign, flex-start);
+  container-type: size;
+}
+
+.of-table__cell-text {
+  --of-clamp-lines: round(down, 100cqh / 1lh, 1);
+
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: var(--of-clamp-lines);
+  overflow: hidden;
+}
+
 .of-table__cell--head {
   font-weight: 600;
   background: var(--of-hover);
@@ -2471,9 +2502,29 @@ body {
   background: transparent;
 }
 
+/*
+ * The rotate grip: a glyph, not a dot.
+ *
+ * It used to be a circle with an accent ring — indistinguishable from
+ * `.of-connect-point`, which is a circle with an accent ring, sitting a few
+ * pixels below it on the same edge. Nothing about either said which was which.
+ * The surround stays (the glyph has to read against whatever the object is
+ * painted) but the shape is now square-ish with a soft radius, so silhouette
+ * alone separates the two before the glyph is even resolved.
+ */
 .of-handle--rotate {
-  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  border: none;
+  border-radius: 25%;
   cursor: grab;
+  box-shadow: 0 0 0 1px var(--of-accent);
+}
+
+.of-handle__glyph {
+  width: 78%;
+  height: 78%;
+  color: var(--of-accent);
 }
 
 .of-marquee {
@@ -2501,9 +2552,42 @@ body {
   box-shadow: var(--of-slip-shadow);
 }
 
+/*
+ * A COLUMN, which it was not.
+ *
+ * The view has always set `justify-content` from the vertical-alignment
+ * control, and this element computed `display: block`, where that property
+ * does nothing at all. Vertical alignment on a sticky note was inert from the
+ * day it shipped and no test noticed, because every test asserted the style
+ * was WRITTEN rather than that the text moved.
+ *
+ * `container-type` is what lets the clamp below count lines: `100cqh` is this
+ * element's content height, so the text knows how many lines fit without any
+ * measurement and without a copy of the padding or the font size in JS.
+ *
+ * Not the editor. A contenteditable turned into a flex container wraps each
+ * run of text in an anonymous flex item, and size containment stops it growing
+ * with what is typed.
+ */
+.of-sticky:not(.of-sticky__editor) {
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-start;
+  container-type: size;
+}
+
 .of-sticky__text {
   overflow-wrap: anywhere;
   white-space: pre-wrap;
+}
+
+.of-sticky:not(.of-sticky__editor) .of-sticky__text {
+  --of-clamp-lines: round(down, 100cqh / 1lh, 1);
+
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: var(--of-clamp-lines);
+  overflow: hidden;
 }
 
 /*
@@ -2535,6 +2619,27 @@ body {
   line-height: 1.35;
   overflow-wrap: anywhere;
   white-space: pre-wrap;
+}
+
+/*
+ * A COLUMN, for the same reason the sticky is one: the view sets
+ * `justify-content` here from the vertical-alignment control, and a block box
+ * does nothing with it. Eight types share this element, so vertical alignment
+ * did nothing on eight of them.
+ */
+.of-slip:not(.of-slip__editor) .of-slip__body {
+  display: flex;
+  flex-direction: column;
+  container-type: size;
+}
+
+.of-slip__text {
+  --of-clamp-lines: round(down, 100cqh / 1lh, 1);
+
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: var(--of-clamp-lines);
+  overflow: hidden;
 }
 
 /*
@@ -2617,6 +2722,22 @@ body {
   outline-offset: 3px;
 }
 
+/* Same as the sticky, for the same two reasons. */
+.of-text:not(.of-text__editor) {
+  display: flex;
+  flex-direction: column;
+  container-type: size;
+}
+
+.of-text__body {
+  --of-clamp-lines: round(down, 100cqh / 1lh, 1);
+
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: var(--of-clamp-lines);
+  overflow: hidden;
+}
+
 .of-shape {
   position: relative;
   width: 100%;
@@ -2627,6 +2748,45 @@ body {
   display: block;
   width: 100%;
   height: 100%;
+  overflow: visible;
+}
+
+/*
+ * The label CLIPS, which it did not.
+ *
+ * Shape text ran straight out of the shape and over whatever was next to it,
+ * while a sticky and a text box both cut theirs off — an inconsistency nobody
+ * chose. Worse than the inconsistency: an object whose text escapes its bounds
+ * disagrees with culling, hit testing and marquee selection, all of which ask
+ * the registry for the extent and get the shape.
+ */
+.of-shape__label:not(.of-shape__editor) {
+  /*
+   * A BACKSTOP, not the mechanism: the line clamp below is what keeps the text
+   * inside, and this suite passes with this line deleted. It stays for what a
+   * clamp counted in lines cannot cover — anything inline that is wider than
+   * the box and will not break, such as a run set in `pre`.
+   */
+  overflow: hidden;
+  container-type: size;
+}
+
+.of-shape__label-text {
+  --of-clamp-lines: round(down, 100cqh / 1lh, 1);
+
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: var(--of-clamp-lines);
+  /* A flex item sizes to its content, so without this a long word pushes the
+     label wider than the box it is meant to be clipped by. */
+  min-width: 0;
+  max-width: 100%;
+  overflow: hidden;
+}
+
+.of-shape__editor .of-shape__label-text {
+  /* While typing you see everything you type. */
+  display: block;
   overflow: visible;
 }
 

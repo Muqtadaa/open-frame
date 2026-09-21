@@ -36,7 +36,11 @@ function InsightRenderer({ object }: ObjectViewProps<InsightData>) {
         justifyContent: verticalAlign(object.style.verticalAlign),
         }}
       >
-        <RichTextView value={text} />
+        {/* Its own element, so the clamp that marks hidden text has something
+            to sit on — `100cqh` measures against a container ANCESTOR. */}
+        <div className="of-slip__text" data-fit-text>
+          <RichTextView value={text} />
+        </div>
       </div>
 
       {/*

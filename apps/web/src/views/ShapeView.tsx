@@ -119,7 +119,7 @@ function ShapeRenderer({ object }: ObjectViewProps<ShapeData>) {
            * of why "shape labels are permanently centred" reached a deployed
            * build. Layout is unchanged: one flex item either way.
            */}
-          <span className="of-shape__label-text">
+          <span className="of-shape__label-text" data-fit-text>
             <RichTextView value={label} />
           </span>
         </span>
