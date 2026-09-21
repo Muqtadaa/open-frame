@@ -52,11 +52,11 @@ function InsightRenderer({ object }: ObjectViewProps<InsightData>) {
   )
 }
 
-function InsightEditor({ object, zoom, onCommit, onCancel }: ObjectEditorProps<InsightData>) {
+function InsightEditor({ object, Chrome, onCommit, onCancel }: ObjectEditorProps<InsightData>) {
   return (
     <RichTextEditor
       initialText={object.data.text}
-      zoom={zoom}
+      Chrome={Chrome}
       className="of-slip of-insight of-insight__claim of-slip__editor"
       style={{
         background: background(object.style.color),

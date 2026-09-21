@@ -37,11 +37,11 @@ function TextRenderer({ object }: ObjectViewProps<TextData>) {
   )
 }
 
-function TextEditor({ object, zoom, onCommit, onCancel }: ObjectEditorProps<TextData>) {
+function TextEditor({ object, Chrome, onCommit, onCancel }: ObjectEditorProps<TextData>) {
   return (
     <RichTextEditor
       initialText={object.data.text}
-      zoom={zoom}
+      Chrome={Chrome}
       className="of-text of-text__editor"
       style={{
         color: ink(object.style),

@@ -85,7 +85,7 @@ function CodeRenderer({ object }: ObjectViewProps<CodeData>) {
  * means indentation, and a browser's default would make the one character
  * that matters most impossible to type.
  */
-function CodeEditor({ object, onCommit, onCancel }: ObjectEditorProps<CodeData>) {
+function CodeEditor({ object, Chrome, onCommit, onCancel }: ObjectEditorProps<CodeData>) {
   const [code, setCode] = useState(object.data.code)
   const [language, setLanguage] = useState(object.data.language)
   const area = useRef<HTMLTextAreaElement>(null)
@@ -109,11 +109,26 @@ function CodeEditor({ object, onCommit, onCancel }: ObjectEditorProps<CodeData>)
         ) {
           return
         }
+        // The menu is PORTALED out of this element, so `contains` says a press
+        // on it left the editor. The layer is the editor, for focus.
+        if (
+          event.relatedTarget instanceof Element &&
+          event.relatedTarget.closest('[data-chrome-layer]') !== null
+        ) {
+          return
+        }
         onCommit({ code, language })
       }}
     >
+      {/*
+        * The language menu is APPARATUS, so it goes where all of it goes: a
+        * screen-space layer that places and clamps it. Inside the editor it
+        * was in world space, which made it grow with the zoom and put it
+        * off-window on a code block bigger than the viewport.
+        */}
+      <Chrome anchor={{ x: 0, y: 0, width: 1, height: 0 }} prefer={['above', 'below']}>
       <select
-        className="of-code__picker"
+        className="of-code__picker of-surface"
         value={CODE_LANGUAGES.includes(language as (typeof CODE_LANGUAGES)[number]) ? language : 'plain'}
         aria-label="Language"
         data-testid="code-language"
@@ -130,6 +145,7 @@ function CodeEditor({ object, onCommit, onCancel }: ObjectEditorProps<CodeData>)
           </option>
         ))}
       </select>
+      </Chrome>
 
       <textarea
         ref={area}

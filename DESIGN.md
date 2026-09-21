@@ -555,8 +555,7 @@ its row is tight, which is what a long name did to one.
 Corners are small and get smaller the closer a form is to the page. Anything that
 reads as *stock laid on the page* — sticky notes, frames, colour swatches — is cut
 at **2px**, essentially square. Apparatus that lives in the margins — rail, record
-line, zoom cluster — is **4px**. The record panel is **6px** (`--of-radius`), the
-system's nominal radius. Interactive beds inside a panel are **5–8px**, and
+line, zoom cluster — is **4px**. Interactive beds inside a panel are **5–8px**, and
 overlays that appear over the board without belonging to it — menus, flyouts,
 notices, toasts — are **10px**. Only two things are fully round: the rotate handle
 and connector endpoints, where roundness signals a grab point.
@@ -709,6 +708,40 @@ next surface inherits automatically — it has to be applied.
   ground with a 4px desk-coloured paint-order stroke.
 - **Image** — 4px radius, `object-fit: fill`, with dashed hatched placeholders for
   loading and correction-red ones for missing.
+
+### One Contextual Surface
+
+Everything that floats over the board attached to something shares one shell:
+panel white, a 1px margin rule, **10px**, and the contact shadow. The record
+panel, a context menu, a colour picker, a text format bar, a table's colour bar
+and its row and column controls, and a code block's language menu are all that
+one class.
+
+They were six pieces of stock with four radii and two grounds, because each was
+written where it was needed rather than from one place. The record panel was
+6px as the system's nominal radius, and being the signature component turned
+out not to be a reason to be the one surface that does not match the others.
+
+**Placement is one function too.** `scene/anchoring.ts` takes what a surface
+belongs beside, a list of sides to try and the window, and returns a position
+clamped on both axes and clear of the rail. It is pure, so where a surface goes
+is decided against numbers rather than screenshots — including the case that
+used to be impossible to express: an anchor that is itself off the window.
+
+**Apparatus belonging to an object lives in a screen-space LAYER**, never inside
+the object. Inside, it is in world space: it multiplies by the zoom and is
+pinned to an edge that leaves the window as soon as you zoom in, which is how a
+colour bar came to be the size of a dialog at 400%. A view receives the layer as
+a prop and says only what its apparatus belongs beside, as a fraction of its own
+extent — the unit a divider and a comment pin already use. A view is a leaf and
+never learns that a viewport exists.
+
+Anything in that layer carries `.of-editor-chrome`, and this is load-bearing:
+the canvas blurs whatever is being typed into on any press it reads as a board
+gesture, and the marker is what says otherwise. It has been missed four times —
+the format bar, the table's buttons, the code menu, and the layer itself — every
+time presenting as a control that was visible and could not be used.
+`chrome-contract.test.ts` reads it off the source now.
 
 ### Editors and Focus
 

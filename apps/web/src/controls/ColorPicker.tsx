@@ -118,7 +118,7 @@ export function ColorPicker({ current, against, onPick, onClose }: ColorPickerPr
   }
 
   return (
-    <div className="of-picker" data-testid="color-picker" role="group" aria-label="Custom colour">
+    <div className="of-picker of-surface" data-testid="color-picker" role="group" aria-label="Custom colour">
       {/*
         * Saturation across, value up. Two gradients over the pure hue: white
         * to transparent left-to-right, then black to transparent bottom-to-top

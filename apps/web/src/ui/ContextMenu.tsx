@@ -236,7 +236,7 @@ export function ContextMenu() {
   return (
     <div
       ref={ref}
-      className="of-menu"
+      className="of-menu of-surface"
       role="menu"
       data-testid="context-menu"
       style={{

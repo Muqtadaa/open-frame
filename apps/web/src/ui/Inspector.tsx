@@ -261,7 +261,7 @@ export function Inspector() {
 
   return (
     <div
-      className="of-inspector"
+      className="of-inspector of-surface"
       data-testid="inspector"
       role="group"
       aria-label="Selected object properties"

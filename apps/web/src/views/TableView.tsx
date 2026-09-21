@@ -363,7 +363,7 @@ function TableEditor({ object, at, zoom, Chrome, onCommit, onCancel }: ObjectEdi
         * at the selection, which is not what it changes.
         */}
       <Chrome anchor={cellRegion(draft, selected)} prefer={['above', 'below']}>
-      <div className="of-cellbar" data-testid="table-cell-style">
+      <div className="of-cellbar of-surface" data-testid="table-cell-style">
         <div className="of-cellbar__head">
           <span className="of-cellbar__count">
             {selected.length === 1 ? '1 cell' : `${String(selected.length)} cells`}
@@ -429,7 +429,7 @@ function TableEditor({ object, at, zoom, Chrome, onCommit, onCancel }: ObjectEdi
         * would make you read every label to find the one you want.
         */}
       <Chrome anchor={{ x: 1, y: 0, width: 0, height: 1 }} prefer={['right', 'left']}>
-      <div className="of-table-edit__columns" role="group" aria-label="Columns">
+      <div className="of-table-edit__columns of-surface" role="group" aria-label="Columns">
         <button
           type="button"
           className="of-table-edit__step"
@@ -460,7 +460,7 @@ function TableEditor({ object, at, zoom, Chrome, onCommit, onCancel }: ObjectEdi
       </Chrome>
 
       <Chrome anchor={{ x: 0, y: 1, width: 1, height: 0 }} prefer={['below', 'above']}>
-      <div className="of-table-edit__rows" role="group" aria-label="Rows">
+      <div className="of-table-edit__rows of-surface" role="group" aria-label="Rows">
         <button
           type="button"
           className="of-table-edit__step"

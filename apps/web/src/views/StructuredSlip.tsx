@@ -99,7 +99,7 @@ export function StructuredSlip<TData extends { readonly text: RichText }>({
 /** The in-place editor for a structured card. Edits the BODY; fields are in the panel. */
 export function StructuredEditor<TData extends { readonly text: RichText }>({
   object,
-  zoom,
+  Chrome,
   text,
   label,
   defaultColor,
@@ -120,7 +120,7 @@ export function StructuredEditor<TData extends { readonly text: RichText }>({
   return (
     <RichTextEditor
       initialText={text}
-      zoom={zoom}
+      Chrome={Chrome}
       className={`of-slip of-slip__editor${className === undefined ? '' : ` ${className}`}`}
       style={{
         background: surfaceOf(object.style.color, defaultColor),

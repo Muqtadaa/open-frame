@@ -37,11 +37,11 @@ function StickyRenderer({ object }: ObjectViewProps<StickyData>) {
   )
 }
 
-function StickyEditor({ object, zoom, onCommit, onCancel }: ObjectEditorProps<StickyData>) {
+function StickyEditor({ object, Chrome, onCommit, onCancel }: ObjectEditorProps<StickyData>) {
   return (
     <RichTextEditor
       initialText={object.data.text}
-      zoom={zoom}
+      Chrome={Chrome}
       className="of-sticky of-sticky__editor"
       style={{
         background: background(object.style.color),

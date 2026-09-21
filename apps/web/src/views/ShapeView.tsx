@@ -111,13 +111,13 @@ function ShapeRenderer({ object }: ObjectViewProps<ShapeData>) {
   )
 }
 
-function ShapeEditor({ object, zoom, onCommit, onCancel }: ObjectEditorProps<ShapeData>) {
+function ShapeEditor({ object, Chrome, onCommit, onCancel }: ObjectEditorProps<ShapeData>) {
   return (
     <div className="of-shape" style={{ opacity: object.style.opacity ?? 1 }}>
       <ShapeOutline object={object} />
       <RichTextEditor
         initialText={object.data.text}
-        zoom={zoom}
+        Chrome={Chrome}
         className="of-shape__label of-shape__editor"
         style={{
           inset: labelInset(object.data.shape),

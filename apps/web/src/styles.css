@@ -666,10 +666,6 @@ body {
   gap: 8px;
   width: 212px;
   padding: 10px;
-  background: var(--of-panel);
-  border: 1px solid var(--of-control-border);
-  border-radius: var(--of-radius);
-  box-shadow: var(--of-shadow);
 }
 
 /*
@@ -1154,11 +1150,25 @@ body {
 /*
  * THE SHELL every contextual surface shares.
  *
- * A record panel, a colour bar, a language menu and a picker were four
- * different pieces of stock with four radii and three shadows, because each
- * was written where it was needed rather than from one place. One shell means
- * a fifth surface inherits the world instead of guessing at it.
+ * A record panel, a colour bar, a language menu, a format bar, a context menu
+ * and a colour picker were six pieces of stock with four radii and two
+ * grounds, because each was written where it was needed rather than from one
+ * place. One class means a seventh inherits the world instead of guessing at
+ * it — which is the whole of "unfragment the experience".
+ *
+ * Panel white and 10px, which is what DESIGN.md already gave flyouts: these
+ * overlay the board rather than sitting in its margins. The record panel moves
+ * onto it too. It was 6px as the system's nominal radius, and being the
+ * signature component is not a reason to be the one surface that does not
+ * match the others.
  */
+.of-surface {
+  background: var(--of-panel);
+  border: 1px solid var(--of-panel-border);
+  border-radius: 10px;
+  box-shadow: var(--of-shadow);
+}
+
 .of-chrome {
   position: absolute;
   top: 0;
@@ -1178,11 +1188,6 @@ body {
   display: grid;
   gap: 7px;
   padding: 7px;
-  background: var(--of-page);
-  border: 1px solid var(--of-panel-border);
-  /* Apparatus radius: this bar is margin chrome, like the rail. */
-  border-radius: 4px;
-  box-shadow: var(--of-shadow);
 }
 
 .of-cellbar__head {
@@ -1231,6 +1236,7 @@ body {
 .of-table-edit__rows {
   display: flex;
   gap: 2px;
+  padding: 3px;
 }
 
 .of-table-edit__columns {
@@ -1363,17 +1369,12 @@ body {
   outline-offset: -2px;
 }
 
+/* Placement and shell are shared; this only says how the control looks. */
 .of-code__picker {
-  position: absolute;
-  top: 2px;
-  right: 6px;
-  z-index: 1;
+  padding: 4px 6px;
   font: inherit;
-  font-size: 11px;
+  font-size: 12px;
   color: var(--of-ink-muted);
-  background: var(--of-panel);
-  border: 1px solid var(--of-control-border);
-  border-radius: var(--of-radius);
 }
 
 /*
@@ -2751,10 +2752,6 @@ body {
   z-index: 50;
   min-width: 196px;
   padding: 5px;
-  background: var(--of-panel);
-  border: 1px solid var(--of-panel-border);
-  border-radius: 10px;
-  box-shadow: var(--of-shadow);
 }
 
 .of-menu__group + .of-menu__group {
@@ -3030,10 +3027,6 @@ body {
   flex-direction: column;
   gap: 2px;
   padding: 10px;
-  background: var(--of-panel);
-  border: 1px solid var(--of-panel-border);
-  border-radius: var(--of-radius);
-  box-shadow: var(--of-shadow);
 }
 
 .of-inspector__head {
@@ -3581,20 +3574,12 @@ textarea.of-input {
  * caret is in the text. Page apparatus, like every other piece of chrome — the
  * page's own stock, a hairline and a contact shadow, never a floating capsule.
  */
+/* Placement and shell are shared; this only says how the controls sit. */
 .of-format-bar {
-  position: absolute;
-  bottom: 100%;
-  left: 0;
-  z-index: 7;
   display: flex;
   gap: 2px;
   align-items: center;
   padding: 3px;
-  margin-bottom: 6px;
-  background: var(--of-panel);
-  border: 1px solid var(--of-panel-border);
-  border-radius: var(--of-radius);
-  box-shadow: var(--of-shadow);
 }
 
 .of-format-bar__button {

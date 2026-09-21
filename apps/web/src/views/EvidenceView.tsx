@@ -74,11 +74,11 @@ function EvidenceRenderer({ object }: ObjectViewProps<EvidenceData>) {
  * The other three fields are in the record panel, and `text` deliberately is
  * not — one string with two editors is how an edit gets lost.
  */
-function EvidenceEditor({ object, zoom, onCommit, onCancel }: ObjectEditorProps<EvidenceData>) {
+function EvidenceEditor({ object, Chrome, onCommit, onCancel }: ObjectEditorProps<EvidenceData>) {
   return (
     <RichTextEditor
       initialText={object.data.text}
-      zoom={zoom}
+      Chrome={Chrome}
       className="of-slip of-evidence of-slip__editor"
       style={{
         background: background(object.style.color),

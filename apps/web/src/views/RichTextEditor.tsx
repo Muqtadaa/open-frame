@@ -9,6 +9,7 @@ import {
   type RichText,
   type SizeToken,
 } from '@openframe/core'
+import type { ObjectEditorProps } from './registry.js'
 import { useEffect, useLayoutEffect, useRef, useState } from 'react'
 
 import {
@@ -23,8 +24,15 @@ interface Props {
   readonly className: string
   readonly style?: React.CSSProperties
   readonly ariaLabel: string
-  /** Counter-scales the format bar so it is the same size at any zoom. */
-  readonly zoom: number
+  /**
+   * Where the format bar goes.
+   *
+   * Handed down from the canvas by the view that owns this editor. The bar
+   * used to counter-scale itself inside the object, which kept it the right
+   * SIZE and left it anchored to an edge that leaves the window — the same
+   * fault a table's colour bar had.
+   */
+  readonly Chrome: ObjectEditorProps['Chrome']
   readonly onCommit: (text: RichText) => void
   readonly onCancel: () => void
 }
@@ -57,7 +65,7 @@ export function RichTextEditor({
   className,
   style,
   ariaLabel,
-  zoom,
+  Chrome,
   onCommit,
   onCancel,
 }: Props) {
@@ -159,8 +167,8 @@ export function RichTextEditor({
 
   return (
     <>
+      <Chrome prefer={['above', 'below']}>
       <FormatBar
-        zoom={zoom}
         active={active}
         onToggle={(mark) =>
           apply((text, from, to) =>
@@ -176,6 +184,7 @@ export function RichTextEditor({
           })
         }}
       />
+      </Chrome>
       <div
         ref={ref}
         className={className}
@@ -286,12 +295,10 @@ function stepSize(current: SizeToken, by: 1 | -1): SizeToken {
  * would be unusable at the zoom where someone is reading a note closely.
  */
 function FormatBar({
-  zoom,
   active,
   onToggle,
   onResize,
 }: {
-  readonly zoom: number
   readonly active: readonly Mark[]
   readonly onToggle: (mark: Mark) => void
   readonly onResize: (by: 1 | -1) => void
@@ -307,11 +314,10 @@ function FormatBar({
 
   return (
     <div
-      className="of-format-bar of-editor-chrome"
+      className="of-format-bar of-surface"
       data-testid="format-bar"
       role="toolbar"
       aria-label="Text formatting"
-      style={{ transform: `scale(${String(1 / zoom)})`, transformOrigin: '0 100%' }}
       onMouseDown={keepFocus}
     >
       {MARK_BUTTONS.map(({ mark, label, glyph }) => (
