@@ -61,11 +61,21 @@ export {
   ROUTINGS,
   type Anchor,
   type Arrowhead,
+  type Bend,
   type ConnectorData,
   type ConnectorEndpoint,
   type Routing,
 } from './connector/schema.js'
 export { endpointDependencies, resolveEndpoints } from './connector/geometry.js'
+export {
+  bendAnchor,
+  bendFrom,
+  connectorRoute,
+  flattenRoute,
+  routeVertices,
+  NO_BEND,
+  type Route,
+} from './connector/route.js'
 export { EVIDENCE_TYPE, evidenceType } from './evidence/definition.js'
 export { EvidenceDataSchema, type EvidenceData } from './evidence/schema.js'
 export { FRAME_TYPE, frameType } from './frame/definition.js'

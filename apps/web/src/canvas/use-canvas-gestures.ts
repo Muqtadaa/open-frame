@@ -891,7 +891,15 @@ export function useCanvasGestures(containerRef: RefObject<HTMLElement | null>) {
           commands.retargetEndpoint(
             subject.id,
             active.endpointId,
-            over === null ? { kind: 'point', x: to.x, y: to.y } : { kind: 'object', objectId: over },
+            /*
+             * The drop POINT travels either way. A type that attaches cares
+             * only what was under the pointer; a dragged point that attaches
+             * to nothing — a connector's bend — needs where the pointer
+             * actually was, and objects cover most of a working board.
+             */
+            over === null
+              ? { kind: 'point', x: to.x, y: to.y }
+              : { kind: 'object', objectId: over, x: to.x, y: to.y },
           )
         }
       }

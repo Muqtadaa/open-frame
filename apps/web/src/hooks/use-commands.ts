@@ -678,7 +678,12 @@ export function useCommands(): BoardCommands {
          * gesture reports only what was under the pointer; which anchor to use,
          * and whether the drop is allowed at all, are the type's business.
          */
-        const patch = runtime.registry.retargetEndpoint(object, endpointId, target)
+        const patch = runtime.registry.retargetEndpoint(
+          object,
+          runtime.store.getDocument(),
+          endpointId,
+          target,
+        )
         if (patch === null || Object.keys(patch).length === 0) return
 
         report(dispatcher.dispatch({ kind: 'UpdateObjectData', id, patch }))

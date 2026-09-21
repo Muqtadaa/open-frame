@@ -93,6 +93,14 @@ export interface DraggableEndpoint {
   readonly at: Point
   /** The object this end is currently attached to, if any. */
   readonly attachedTo?: ObjectId
+  /**
+   * What kind of point this is, so the overlay can draw it differently.
+   *
+   * An `end` decides where the shape STARTS or STOPS; a `control` only shapes
+   * what runs between them. Drawn identically they read as three ends, and a
+   * user drags the middle one expecting the line to detach there.
+   */
+  readonly role?: 'end' | 'control'
 }
 
 /**
@@ -102,8 +110,19 @@ export interface DraggableEndpoint {
  * attachment lands is the TYPE's decision, not the gesture's.
  */
 export type EndpointTarget =
+  /**
+   * The point is on BOTH, which is not redundant. A type that attaches cares
+   * only which object was under the pointer; a type whose dragged point
+   * attaches to nothing — a bend, a control point — needs where the pointer
+   * actually was, and objects cover most of a working board.
+   */
   | { readonly kind: 'point'; readonly x: number; readonly y: number }
-  | { readonly kind: 'object'; readonly objectId: ObjectId }
+  | {
+      readonly kind: 'object'
+      readonly objectId: ObjectId
+      readonly x: number
+      readonly y: number
+    }
 
 /**
  * What an object type can do. The application asks the registry rather than
@@ -315,6 +334,7 @@ export interface ObjectTypeDefinition<TType extends string, TData> {
    */
   readonly retargetEndpoint?: (
     object: ObjectBase<TType, TData>,
+    doc: BoardDocument,
     endpointId: string,
     target: EndpointTarget,
   ) => Partial<TData>
@@ -450,6 +470,7 @@ export interface ErasedObjectTypeDefinition {
   ) => DividerMove<Record<string, unknown>> | null
   readonly retargetEndpoint?: (
     object: AnyOpenFrameObject,
+    doc: BoardDocument,
     endpointId: string,
     target: EndpointTarget,
   ) => Record<string, unknown>
@@ -580,8 +601,8 @@ export function defineObjectType<TType extends string, TData>(
     ...(retargetEndpoint === undefined
       ? {}
       : {
-          retargetEndpoint: (object, endpointId, target) =>
-            retargetEndpoint(object as ObjectBase<TType, TData>, endpointId, target),
+          retargetEndpoint: (object, doc, endpointId, target) =>
+            retargetEndpoint(object as ObjectBase<TType, TData>, doc, endpointId, target),
         }),
   }
 }
@@ -703,11 +724,12 @@ export class ObjectTypeRegistry {
    */
   retargetEndpoint(
     object: AnyOpenFrameObject,
+    doc: BoardDocument,
     endpointId: string,
     target: EndpointTarget,
   ): Record<string, unknown> | null {
     const retarget = this.#definitions.get(object.type)?.retargetEndpoint
-    return retarget === undefined ? null : retarget(object, endpointId, target)
+    return retarget === undefined ? null : retarget(object, doc, endpointId, target)
   }
 
   /**

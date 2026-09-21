@@ -41,7 +41,16 @@ export function EndpointOverlay() {
       {endpoints.map((endpoint) => (
         <div
           key={endpoint.id}
-          className={`of-endpoint${endpoint.attachedTo === undefined ? '' : ' of-endpoint--attached'}`}
+          /*
+           * A CONTROL is drawn differently from an END, because they do
+           * different things: an end decides where the line stops, a control
+           * only shapes what runs between them. Identical, the middle one
+           * reads as a third end and gets dragged onto an object in the
+           * expectation that the line will attach there.
+           */
+          className={`of-endpoint${endpoint.attachedTo === undefined ? '' : ' of-endpoint--attached'}${
+            endpoint.role === 'control' ? ' of-endpoint--control' : ''
+          }`}
           // Read back by the gesture, which does not otherwise know what was grabbed.
           data-handle="endpoint"
           data-endpoint-id={endpoint.id}

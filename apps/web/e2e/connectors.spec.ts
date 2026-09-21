@@ -384,3 +384,95 @@ test.describe('connection points', () => {
     await expect(page.getByTestId('connect-right')).toHaveCount(0)
   })
 })
+
+/**
+ * Bending a connector.
+ *
+ * A route that turns at the exact middle of its run is rarely where a diagram
+ * wants it. The bend is a draggable point like the two ends — declared by the
+ * type, drawn by the same overlay, undone by the same command — which is what
+ * the endpoint capability's own description anticipated when it named "a curve
+ * with control points, a route with stops".
+ */
+test.describe('bending a route', () => {
+  async function bendableConnector(page: Page, routing: 'orthogonal' | 'curved'): Promise<void> {
+    await connectedPair(page)
+    await page.locator('.of-connector__line').click({ force: true })
+    await expect(page.getByTestId('endpoint-from')).toBeVisible()
+    await page.getByTestId('field-routing').selectOption(routing)
+  }
+
+  test('offers a bend handle on a bendable route and none on a straight one', async ({ page }) => {
+    await connectedPair(page)
+    await page.locator('.of-connector__line').click({ force: true })
+    await expect(page.getByTestId('endpoint-from')).toBeVisible()
+
+    /*
+     * Nothing to bend on a straight line, and a control that appears and does
+     * nothing is worse than one that is absent.
+     */
+    await expect(page.getByTestId('endpoint-bend')).toHaveCount(0)
+
+    await page.getByTestId('field-routing').selectOption('orthogonal')
+    await expect(page.getByTestId('endpoint-bend')).toBeVisible()
+    // Drawn as a control rather than an end, so it does not read as a third
+    // point the line could detach to.
+    await expect(page.getByTestId('endpoint-bend')).toHaveClass(/of-endpoint--control/)
+  })
+
+  test('drags the elbow of an orthogonal route', async ({ page }) => {
+    await bendableConnector(page, 'orthogonal')
+
+    const before = await page.getByTestId('endpoint-bend').boundingBox()
+    if (before === null) throw new Error('no bend handle')
+
+    await drag(
+      page,
+      { x: before.x + before.width / 2, y: before.y + before.height / 2 },
+      { x: before.x + before.width / 2 - 90, y: before.y + before.height / 2 },
+    )
+
+    const after = await page.getByTestId('endpoint-bend').boundingBox()
+    if (after === null) throw new Error('no bend handle')
+    // The elbow followed the pointer along the run.
+    expect(after.x).toBeLessThan(before.x - 60)
+
+    /*
+     * And the LINE moved with it, not just the handle. A handle that slides
+     * without the route following is the shape this bug would take.
+     */
+    const corner = { x: after.x + after.width / 2, y: before.y - 40 }
+    const onTheLine = await page.locator('.of-connector__line').evaluate(
+      (line, at: { x: number; y: number }) => {
+        const box = line.getBoundingClientRect()
+        return at.x >= box.x - 2 && at.x <= box.x + box.width + 2
+      },
+      corner,
+    )
+    expect(onTheLine).toBe(true)
+  })
+
+  test('drags the apex of a curve, and one undo puts it back', async ({ page }) => {
+    await bendableConnector(page, 'curved')
+
+    const before = await page.getByTestId('endpoint-bend').boundingBox()
+    if (before === null) throw new Error('no bend handle')
+    const from = { x: before.x + before.width / 2, y: before.y + before.height / 2 }
+
+    await drag(page, from, { x: from.x, y: from.y - 120 })
+
+    const after = await page.getByTestId('endpoint-bend').boundingBox()
+    if (after === null) throw new Error('no bend handle')
+    /*
+     * The handle ends up under the POINTER, which is the whole test: a curve
+     * whose midpoint only moves part of the way slides out from under your
+     * hand as you drag it, and reads as broken even though it is responding.
+     */
+    expect(after.y + after.height / 2).toBeCloseTo(from.y - 120, -1)
+
+    await page.keyboard.press('ControlOrMeta+z')
+    await expect
+      .poll(async () => (await page.getByTestId('endpoint-bend').boundingBox())?.y ?? 0)
+      .toBeCloseTo(before.y, -1)
+  })
+})

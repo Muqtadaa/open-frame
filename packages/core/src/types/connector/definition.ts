@@ -1,7 +1,14 @@
 import { defineObjectType } from '../../domain/registry.js'
-import { inflate, rectFromPoints } from '../../geometry/rect.js'
+import { boundsOfPoints, inflate, rectFromPoints } from '../../geometry/rect.js'
 import { distanceToSegment } from '../../geometry/point.js'
 import { endpointDependencies, resolveEndpoints } from './geometry.js'
+import {
+  bendAnchor,
+  bendFrom,
+  connectorRoute,
+  flattenRoute,
+  routeVertices,
+} from './route.js'
 import {
   ARROWHEADS,
   CONNECTOR_VERSION,
@@ -27,6 +34,9 @@ export const connectorType = defineObjectType<typeof CONNECTOR_TYPE, ConnectorDa
       from: init?.from ?? { kind: 'point', x: 0, y: 0 },
       to: init?.to ?? { kind: 'point', x: 100, y: 0 },
       routing: init?.routing ?? 'straight',
+      // A new connector takes whatever route its type decides, which is what
+      // `null` means here — not "no bend allowed".
+      bend: init?.bend ?? null,
       startArrow: init?.startArrow ?? 'none',
       endArrow: init?.endArrow ?? 'arrow',
       text: init?.text ?? '',
@@ -72,7 +82,17 @@ export const connectorType = defineObjectType<typeof CONNECTOR_TYPE, ConnectorDa
    */
   getBounds: (object, doc) => {
     const { start, end } = resolveEndpoints(doc, object.data.from, object.data.to)
-    return inflate(rectFromPoints(start, end), HIT_PADDING)
+    /*
+     * Over the ROUTE, not the straight line. A bent connector leaves the
+     * rectangle its two ends describe, and an object whose bounds do not
+     * contain it is culled while still on screen and missed by a marquee
+     * dragged over it.
+     */
+    const route = connectorRoute(start, end, object.data.routing, object.data.bend ?? null)
+    // A route always has at least its two ends, so the fallback is for a
+    // shape that cannot occur rather than one that might.
+    const box = boundsOfPoints(routeVertices(route)) ?? rectFromPoints(start, end)
+    return inflate(box, HIT_PADDING)
   },
 
   /**
@@ -82,7 +102,23 @@ export const connectorType = defineObjectType<typeof CONNECTOR_TYPE, ConnectorDa
    */
   hitTest: (object, doc, point) => {
     const { start, end } = resolveEndpoints(doc, object.data.from, object.data.to)
-    return distanceToSegment(point, start, end) <= HIT_PADDING * 2
+    /*
+     * Against the DRAWN route. This used to measure to the straight line
+     * between the ends, which for anything but `straight` routing is nowhere
+     * the connector goes — the corner of an orthogonal route sits half the
+     * run away from the diagonal, so clicking the line you can see selected
+     * nothing at all.
+     */
+    const points = flattenRoute(
+      connectorRoute(start, end, object.data.routing, object.data.bend ?? null),
+    )
+    for (let index = 1; index < points.length; index += 1) {
+      const a = points[index - 1]
+      const b = points[index]
+      if (a === undefined || b === undefined) continue
+      if (distanceToSegment(point, a, b) <= HIT_PADDING * 2) return true
+    }
+    return false
   },
 
   /** Redraw when either end moves. */
@@ -102,6 +138,24 @@ export const connectorType = defineObjectType<typeof CONNECTOR_TYPE, ConnectorDa
         at: end,
         ...(object.data.to.kind === 'object' ? { attachedTo: object.data.to.objectId } : {}),
       },
+      /*
+       * And the BEND, which is a draggable point like any other — declared
+       * here rather than detected by the overlay, exactly as this capability's
+       * own description anticipated: "a curve with control points, a route
+       * with stops".
+       *
+       * Not for a straight route, which has nothing to bend: a control that
+       * appears and does nothing is worse than one that is absent.
+       */
+      ...(object.data.routing === 'straight'
+        ? []
+        : [
+            {
+              id: 'bend',
+              at: bendAnchor(start, end, object.data.routing, object.data.bend ?? null),
+              role: 'control' as const,
+            },
+          ]),
     ]
   },
 
@@ -118,7 +172,19 @@ export const connectorType = defineObjectType<typeof CONNECTOR_TYPE, ConnectorDa
    * Attaching a connector to ITSELF is refused, since resolving that endpoint
    * would need the bounds it is currently computing.
    */
-  retargetEndpoint: (object, endpointId, target) => {
+  retargetEndpoint: (object, doc, endpointId, target) => {
+    /*
+     * The bend takes the drop POINT and nothing else — what it landed on is
+     * irrelevant, because a bend attaches to nothing. It is stored as a
+     * fraction along the run and an offset across it, so it survives both ends
+     * moving; storing the point itself would leave the route doubling back
+     * through where the bend used to be.
+     */
+    if (endpointId === 'bend') {
+      if (object.data.routing === 'straight') return {}
+      const { start, end } = resolveEndpoints(doc, object.data.from, object.data.to)
+      return { bend: bendFrom(start, end, object.data.routing, { x: target.x, y: target.y }) }
+    }
     if (endpointId !== 'from' && endpointId !== 'to') return {}
     if (target.kind === 'object' && target.objectId === object.id) return {}
 

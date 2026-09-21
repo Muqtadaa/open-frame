@@ -19,10 +19,10 @@ function ConnectorRenderer({ object, document: doc, zoom }: ObjectViewProps<Conn
   const { start, end } = resolveEndpoints(doc, object.data.from, object.data.to)
   const stroke = inkOf(object.style.strokeColor ?? object.style.color)
   const width = STROKE_WIDTHS[object.style.stroke ?? 'medium']
-  const path = connectorPath(start, end, object.data.routing)
-  const { departure, arrival } = routeAngles(start, end, object.data.routing)
+  const path = connectorPath(start, end, object.data.routing, object.data.bend ?? null)
+  const { departure, arrival } = routeAngles(start, end, object.data.routing, object.data.bend ?? null)
   const label = object.data.text
-  const mid = pathMidpoint(start, end)
+  const mid = pathMidpoint(start, end, object.data.routing, object.data.bend ?? null)
 
   // Both ends, resolved once. `angle` is the direction of travel as the line
   // arrives, so the near end is the same angle turned around.
@@ -99,7 +99,7 @@ function ConnectorEditor({
   onCancel,
 }: ObjectEditorProps<ConnectorData>) {
   const { start, end } = resolveEndpoints(doc, object.data.from, object.data.to)
-  const mid = pathMidpoint(start, end)
+  const mid = pathMidpoint(start, end, object.data.routing, object.data.bend ?? null)
   return (
     <div
       className="of-connector__editor-wrap"

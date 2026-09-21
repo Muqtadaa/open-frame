@@ -28,6 +28,30 @@ export function rectFromPoints(a: Point, b: Point): Rect {
 export const right = (r: Rect): number => r.x + r.width
 export const bottom = (r: Rect): number => r.y + r.height
 
+/**
+ * The smallest rectangle containing every point.
+ *
+ * `null` for nothing, like `unionAll` — a caller with no points has no extent
+ * to report, and a zero rect at the origin is a lie that draws a selection box
+ * in the corner of the board.
+ */
+export function boundsOfPoints(points: readonly Point[]): Rect | null {
+  const first = points[0]
+  if (first === undefined) return null
+
+  let minX = first.x
+  let minY = first.y
+  let maxX = first.x
+  let maxY = first.y
+  for (const point of points) {
+    if (point.x < minX) minX = point.x
+    if (point.x > maxX) maxX = point.x
+    if (point.y < minY) minY = point.y
+    if (point.y > maxY) maxY = point.y
+  }
+  return { x: minX, y: minY, width: maxX - minX, height: maxY - minY }
+}
+
 export function center(r: Rect): Point {
   return { x: r.x + r.width / 2, y: r.y + r.height / 2 }
 }

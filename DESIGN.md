@@ -748,6 +748,19 @@ surfaces placed by separate arithmetic will eventually want the same space, and
 on a selection too wide for the panel to sit beside, the panel takes the whole
 band above — which is where a bar anchored to that selection wants to be.
 
+### Connector Bends
+
+An orthogonal or curved connector carries a third draggable point at the middle
+of its route: a hollow, squared handle rather than the filled dot an end gets,
+because it shapes the line between the ends and is not one of them. A straight
+route has none — there is nothing to bend.
+
+The elbow of an orthogonal route slides ALONG the run only; its middle segment
+is perpendicular to the run, so there is no second axis to move it in. A curve's
+apex moves freely and the curve passes exactly under the handle, because a line
+that only follows part of the way slides out from under the pointer and reads as
+broken.
+
 ### The Rotate Grip
 
 A **glyph**, not a dot: a 15px curved arrow on a soft-radius chip above the top

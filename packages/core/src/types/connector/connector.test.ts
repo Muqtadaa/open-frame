@@ -283,7 +283,7 @@ describe('draggable endpoints', () => {
   })
 
   it('re-attaches an end to a different object', () => {
-    const patch = h.registry.retargetEndpoint(object(), 'to', { kind: 'object', objectId: c })
+    const patch = h.registry.retargetEndpoint(object(), h.store.getDocument(), 'to', { kind: 'object', objectId: c, x: 0, y: 0 })
     expect(patch).not.toBeNull()
     if (patch === null) return
 
@@ -297,7 +297,7 @@ describe('draggable endpoints', () => {
   })
 
   it('detaches an end dropped on empty space', () => {
-    const patch = h.registry.retargetEndpoint(object(), 'from', { kind: 'point', x: -40, y: -60 })
+    const patch = h.registry.retargetEndpoint(object(), h.store.getDocument(), 'from', { kind: 'point', x: -40, y: -60 })
     if (patch === null) throw new Error('expected a patch')
 
     h.dispatcher.dispatch({ kind: 'UpdateObjectData', id: connector, patch })
@@ -305,7 +305,7 @@ describe('draggable endpoints', () => {
   })
 
   it('leaves the other end untouched', () => {
-    const patch = h.registry.retargetEndpoint(object(), 'from', { kind: 'point', x: 5, y: 5 })
+    const patch = h.registry.retargetEndpoint(object(), h.store.getDocument(), 'from', { kind: 'point', x: 5, y: 5 })
     if (patch === null) throw new Error('expected a patch')
 
     h.dispatcher.dispatch({ kind: 'UpdateObjectData', id: connector, patch })
@@ -318,21 +318,23 @@ describe('draggable endpoints', () => {
 
   /** Resolving that endpoint would need the bounds it is in the middle of computing. */
   it('refuses to attach a connector to itself', () => {
-    const patch = h.registry.retargetEndpoint(object(), 'to', {
+    const patch = h.registry.retargetEndpoint(object(), h.store.getDocument(), 'to', {
       kind: 'object',
       objectId: connector,
+      x: 0,
+      y: 0,
     })
     expect(patch).toEqual({})
   })
 
   it('ignores an endpoint id it does not have', () => {
-    expect(h.registry.retargetEndpoint(object(), 'middle', { kind: 'point', x: 0, y: 0 })).toEqual(
+    expect(h.registry.retargetEndpoint(object(), h.store.getDocument(), 'middle', { kind: 'point', x: 0, y: 0 })).toEqual(
       {},
     )
   })
 
   it('re-attaching is undoable like any other edit', () => {
-    const patch = h.registry.retargetEndpoint(object(), 'to', { kind: 'object', objectId: c })
+    const patch = h.registry.retargetEndpoint(object(), h.store.getDocument(), 'to', { kind: 'object', objectId: c, x: 0, y: 0 })
     if (patch === null) throw new Error('expected a patch')
     h.dispatcher.dispatch({ kind: 'UpdateObjectData', id: connector, patch })
 
@@ -349,6 +351,121 @@ describe('draggable endpoints', () => {
     const sticky = h.store.getObject(a)
     if (sticky === undefined) throw new Error('missing')
     expect(h.registry.endpointsOf(sticky, h.store.getDocument())).toEqual([])
-    expect(h.registry.retargetEndpoint(sticky, 'from', { kind: 'point', x: 0, y: 0 })).toBeNull()
+    expect(
+      h.registry.retargetEndpoint(sticky, h.store.getDocument(), 'from', {
+        kind: 'point',
+        x: 0,
+        y: 0,
+      }),
+    ).toBeNull()
+  })
+})
+
+/**
+ * Clicking the line you can SEE.
+ *
+ * Hit testing measured the distance to the straight line between the two ends,
+ * which for anything but `straight` routing is nowhere the connector goes. An
+ * orthogonal route's corner sits half the run away from that diagonal, so the
+ * part of the line most obviously there to click on selected nothing at all.
+ */
+describe('hit testing follows the drawn route', () => {
+  const routed = (routing: 'straight' | 'orthogonal' | 'curved') => {
+    const h = createTestHarness()
+    const connector = create(h, 'connector', 0, 0, {
+      from: { kind: 'point', x: 0, y: 0 },
+      to: { kind: 'point', x: 400, y: 200 },
+      routing,
+    })
+    const object = h.store.getObject(connector)
+    if (object === undefined) throw new Error('missing connector')
+    return { h, object }
+  }
+
+  it('hits the corner of an orthogonal route', () => {
+    const { h, object } = routed('orthogonal')
+    // The route runs (0,0) → (200,0) → (200,200) → (400,200). The corner at
+    // (200,0) is 89 units from the diagonal, which the old test would miss.
+    expect(h.registry.hitTestObject(object, h.store.getDocument(), { x: 200, y: 2 })).toBe(true)
+  })
+
+  it('does NOT hit the diagonal an orthogonal route never travels', () => {
+    const { h, object } = routed('orthogonal')
+    // Dead centre of the bounding box, and nowhere near the drawn line — this
+    // is the space between the two runs, which must stay clickable-through.
+    expect(h.registry.hitTestObject(object, h.store.getDocument(), { x: 100, y: 100 })).toBe(false)
+  })
+
+  it('still hits a straight route along its line', () => {
+    const { h, object } = routed('straight')
+    expect(h.registry.hitTestObject(object, h.store.getDocument(), { x: 200, y: 100 })).toBe(true)
+  })
+
+  it('hits a curve where the curve actually is', () => {
+    const { h, object } = routed('curved')
+    // A curve leaves horizontally, so just past the start it is still near
+    // y = 0 rather than on the diagonal's y = 25.
+    expect(h.registry.hitTestObject(object, h.store.getDocument(), { x: 50, y: 4 })).toBe(true)
+  })
+})
+
+describe('a bend', () => {
+  const bent = (bend: { along: number; across: number } | null) => {
+    const h = createTestHarness()
+    const connector = create(h, 'connector', 0, 0, {
+      from: { kind: 'point', x: 0, y: 0 },
+      to: { kind: 'point', x: 400, y: 200 },
+      routing: 'orthogonal',
+      ...(bend === null ? {} : { bend }),
+    })
+    const object = h.store.getObject(connector)
+    if (object === undefined) throw new Error('missing connector')
+    return { h, object }
+  }
+
+  it('offers a handle on a route that can bend, and none on one that cannot', () => {
+    const { h, object } = bent(null)
+    const ids = h.registry.endpointsOf(object, h.store.getDocument()).map((point) => point.id)
+    expect(ids).toEqual(['from', 'to', 'bend'])
+
+    const straight = createTestHarness()
+    const id = create(straight, 'connector', 0, 0, {
+      from: { kind: 'point', x: 0, y: 0 },
+      to: { kind: 'point', x: 100, y: 0 },
+      routing: 'straight',
+    })
+    const line = straight.store.getObject(id)
+    if (line === undefined) throw new Error('missing')
+    expect(
+      straight.registry.endpointsOf(line, straight.store.getDocument()).map((p) => p.id),
+    ).toEqual(['from', 'to'])
+  })
+
+  it('moves the drawn line, and the bounds with it', () => {
+    const { h, object } = bent({ along: 0.1, across: 0 })
+    const bounds = h.registry.boundsOf(object, h.store.getDocument())
+    // The elbow is now at x = 40, and the route still spans both ends.
+    expect(h.registry.hitTestObject(object, h.store.getDocument(), { x: 40, y: 100 })).toBe(true)
+    expect(h.registry.hitTestObject(object, h.store.getDocument(), { x: 200, y: 100 })).toBe(false)
+    expect(bounds.width).toBeGreaterThanOrEqual(400)
+  })
+
+  /*
+   * A bend that leaves the rectangle the two ends describe. Bounds taken from
+   * the endpoints alone would cull this while it was still on screen, and a
+   * marquee dragged over the visible line would miss it.
+   */
+  it('grows the bounds past the endpoints when bent outside them', () => {
+    const h = createTestHarness()
+    const id = create(h, 'connector', 0, 0, {
+      from: { kind: 'point', x: 0, y: 0 },
+      to: { kind: 'point', x: 400, y: 0 },
+      routing: 'curved',
+      bend: { along: 0.5, across: 300 },
+    })
+    const object = h.store.getObject(id)
+    if (object === undefined) throw new Error('missing')
+    const bounds = h.registry.boundsOf(object, h.store.getDocument())
+    expect(bounds.height).toBeGreaterThan(100)
   })
 })

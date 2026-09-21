@@ -49,7 +49,7 @@ export interface AnchorRequest {
    * A selection wide enough to push a panel off both sides used to clamp it to
    * the left margin, which parked it on top of the rail.
    */
-  readonly keepClearLeft?: number
+  readonly keepClearLeft?: number | undefined
   /**
    * A rectangle the surface must not land on, when any preferred side avoids
    * it — the options panel, which is the one other thing that floats beside a

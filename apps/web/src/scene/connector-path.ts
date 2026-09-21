@@ -1,4 +1,4 @@
-import type { Point, Routing } from '@openframe/core'
+import { bendAnchor, connectorRoute, type Bend, type Point, type Routing } from '@openframe/core'
 
 /** Arrowhead size in world units at 100% zoom. */
 export const ARROW_SIZE = 9
@@ -10,45 +10,39 @@ export const ARROW_SIZE = 9
  * the domain, because it depends on the document. Keeping the two apart means
  * routing can change without touching anything that knows about objects.
  */
-export function connectorPath(start: Point, end: Point, routing: Routing): string {
-  const from = `M ${String(start.x)} ${String(start.y)}`
+export function connectorPath(
+  start: Point,
+  end: Point,
+  routing: Routing,
+  bend: Bend | null = null,
+): string {
+  const route = connectorRoute(start, end, routing, bend)
+  const [first, ...rest] = route.points
+  if (first === undefined) return ''
+  const from = `M ${String(first.x)} ${String(first.y)}`
 
-  switch (routing) {
-    case 'straight':
-      return `${from} L ${String(end.x)} ${String(end.y)}`
-
-    case 'orthogonal': {
-      // Turn on the dominant axis first, which reads as a deliberate route
-      // rather than a diagonal approximated with steps.
-      const horizontal = Math.abs(end.x - start.x) >= Math.abs(end.y - start.y)
-      const mid = horizontal
-        ? [
-            { x: (start.x + end.x) / 2, y: start.y },
-            { x: (start.x + end.x) / 2, y: end.y },
-          ]
-        : [
-            { x: start.x, y: (start.y + end.y) / 2 },
-            { x: end.x, y: (start.y + end.y) / 2 },
-          ]
-      return `${from} L ${String(mid[0]?.x ?? 0)} ${String(mid[0]?.y ?? 0)} L ${String(mid[1]?.x ?? 0)} ${String(mid[1]?.y ?? 0)} L ${String(end.x)} ${String(end.y)}`
-    }
-
-    case 'curved': {
-      // Control points offset along the dominant axis give a smooth S-curve
-      // that leaves and arrives roughly perpendicular to the nearest edge.
-      const dx = (end.x - start.x) * 0.5
-      const dy = (end.y - start.y) * 0.5
-      const horizontal = Math.abs(end.x - start.x) >= Math.abs(end.y - start.y)
-      const c1 = horizontal ? { x: start.x + dx, y: start.y } : { x: start.x, y: start.y + dy }
-      const c2 = horizontal ? { x: end.x - dx, y: end.y } : { x: end.x, y: end.y - dy }
-      return `${from} C ${String(c1.x)} ${String(c1.y)}, ${String(c2.x)} ${String(c2.y)}, ${String(end.x)} ${String(end.y)}`
-    }
+  if (route.kind === 'cubic') {
+    const [c1, c2, last] = rest as [Point, Point, Point]
+    return `${from} C ${String(c1.x)} ${String(c1.y)}, ${String(c2.x)} ${String(c2.y)}, ${String(last.x)} ${String(last.y)}`
   }
+
+  return rest.reduce((path, point) => `${path} L ${String(point.x)} ${String(point.y)}`, from)
 }
 
-/** Midpoint of the path, for placing a label. */
-export function pathMidpoint(start: Point, end: Point): Point {
-  return { x: (start.x + end.x) / 2, y: (start.y + end.y) / 2 }
+/**
+ * The middle of the DRAWN route, for placing a label.
+ *
+ * `bendAnchor` is the same point the bend handle sits on, which is not an
+ * accident worth losing: the label and the handle both mean "the middle of
+ * this line", and computing them separately is how they drift apart.
+ */
+export function pathMidpoint(
+  start: Point,
+  end: Point,
+  routing: Routing = 'straight',
+  bend: Bend | null = null,
+): Point {
+  return bendAnchor(start, end, routing, bend)
 }
 
 /**
@@ -70,56 +64,62 @@ export interface RouteAngles {
   readonly arrival: number
 }
 
-export function routeAngles(start: Point, end: Point, routing: Routing): RouteAngles {
+/**
+ * The first point along the route that is actually somewhere else.
+ *
+ * A route can start with a zero-length segment — an elbow dragged all the way
+ * onto one of the ends — and `atan2(0, 0)` is zero, which points a cap due
+ * east regardless of where the line goes.
+ */
+function distinctFrom(points: readonly Point[], from: number, step: number): Point | undefined {
+  const origin = points[from]
+  if (origin === undefined) return undefined
+  for (let index = from + step; index >= 0 && index < points.length; index += step) {
+    const candidate = points[index]
+    if (candidate === undefined) continue
+    if (candidate.x !== origin.x || candidate.y !== origin.y) return candidate
+  }
+  return undefined
+}
+
+/**
+ * READ OFF THE ROUTE, rather than worked out a second time.
+ *
+ * This used to re-derive which way the route left each end from the same
+ * dominant-axis rule `connectorPath` used — and got it inverted, so every
+ * orthogonal connector finished with its arrowhead turned ninety degrees off
+ * its own line. Two pieces of code answering one question is what allowed
+ * that, and a bend would have given them a third way to disagree.
+ */
+export function routeAngles(
+  start: Point,
+  end: Point,
+  routing: Routing,
+  bend: Bend | null = null,
+): RouteAngles {
+  const points = connectorRoute(start, end, routing, bend).points
   const straight = Math.atan2(end.y - start.y, end.x - start.x)
 
-  switch (routing) {
-    case 'straight':
-      return { departure: straight, arrival: straight }
+  const afterStart = distinctFrom(points, 0, 1)
+  const beforeEnd = distinctFrom(points, points.length - 1, -1)
+  const first = points[0]
+  const last = points[points.length - 1]
+  if (afterStart === undefined || beforeEnd === undefined || first === undefined || last === undefined) {
+    return { departure: straight, arrival: straight }
+  }
 
-    case 'orthogonal': {
-      /*
-       * THIS WAS INVERTED, and it is worth saying how.
-       *
-       * `connectorPath` turns on the dominant axis FIRST: when the run is
-       * mostly horizontal it goes across, down, and across again — so it
-       * leaves and arrives HORIZONTALLY. The old code read the same
-       * `horizontal` flag and returned a vertical angle for it, and a
-       * horizontal one for the vertical case. Every orthogonal connector has
-       * been finishing with its arrowhead turned ninety degrees off its own
-       * line.
-       *
-       * Both ends lie on the same axis here, because the route has three
-       * segments and the first and last are parallel by construction.
-       */
-      const horizontal = Math.abs(end.x - start.x) >= Math.abs(end.y - start.y)
-      if (horizontal) {
-        const along = end.x >= start.x ? 0 : Math.PI
-        return { departure: along, arrival: along }
-      }
-      const along = end.y >= start.y ? Math.PI / 2 : -Math.PI / 2
-      return { departure: along, arrival: along }
-    }
-
-    case 'curved': {
-      /*
-       * A cubic's direction at each end is the line to its nearest control
-       * point, and both are offset along the dominant axis — so a curve leaves
-       * and arrives along that axis too, not along the diagonal between the
-       * endpoints.
-       */
-      const horizontal = Math.abs(end.x - start.x) >= Math.abs(end.y - start.y)
-      if (horizontal) {
-        const along = end.x >= start.x ? 0 : Math.PI
-        return { departure: along, arrival: along }
-      }
-      const along = end.y >= start.y ? Math.PI / 2 : -Math.PI / 2
-      return { departure: along, arrival: along }
-    }
+  return {
+    departure: Math.atan2(afterStart.y - first.y, afterStart.x - first.x),
+    arrival: Math.atan2(last.y - beforeEnd.y, last.x - beforeEnd.x),
   }
 }
 
 /** Angle the path arrives at `end`, for orienting an end cap. */
-export function arrivalAngle(start: Point, end: Point, routing: Routing): number {
-  return routeAngles(start, end, routing).arrival
+export function arrivalAngle(
+  start: Point,
+  end: Point,
+  routing: Routing,
+  bend: Bend | null = null,
+): number {
+  return routeAngles(start, end, routing, bend).arrival
 }

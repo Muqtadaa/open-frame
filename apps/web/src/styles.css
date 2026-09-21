@@ -522,10 +522,16 @@ body {
   color: var(--of-accent);
 }
 
+/*
+ * The rail's menus. PLACED BY THE SURFACE THEY SIT ON, not by this rule.
+ *
+ * `position: absolute; top: 0; left: calc(100% + 10px)` pinned them to the
+ * rail slot with their own arithmetic and no clamping, so the table picker ran
+ * 48 pixels off the bottom of a 420-pixel window. Being in the rail rather
+ * than on the board did not make that a different problem from the one the
+ * chrome layer was built for.
+ */
 .of-flyout {
-  position: absolute;
-  top: 0;
-  left: calc(100% + 10px);
   /* Two columns: one column of eight shapes is a list to read rather than a
      palette to glance at.
 
@@ -4935,4 +4941,18 @@ textarea.of-input {
   height: 18px;
   margin: 0 4px;
   background: var(--of-panel-border);
+}
+
+/*
+ * A connector's bend handle: HOLLOW and squared off, where an end is a filled
+ * dot. It shapes the line between the ends and is not one of them, so a third
+ * identical dot invites a drag that expects the line to attach there.
+ *
+ * Not rotated into a diamond, tempting as that is: the overlay positions these
+ * with an inline `transform`, which a rule here cannot add to — it can only
+ * replace it, and that puts the handle at the origin of the board.
+ */
+.of-endpoint--control {
+  background: var(--of-panel);
+  border-radius: 2px;
 }

@@ -58,10 +58,38 @@ export const ARROWHEADS = [
 ] as const
 export type Arrowhead = (typeof ARROWHEADS)[number]
 
+/**
+ * Where a connector's route bends, relative to the line between its ends.
+ *
+ * `along` is a FRACTION from start to end, so the bend keeps its relative
+ * place as the objects move. `across` is a perpendicular distance in WORLD
+ * UNITS, because a fraction has nothing to be a fraction of: a horizontal
+ * connector has no vertical span, and an offset expressed against it would
+ * collapse or explode as the two ends came level.
+ *
+ * Here rather than in `route.ts` because it is part of what a connector IS,
+ * and because the route needs `Routing` from this file — the two pointing at
+ * each other is a cycle, which the build refuses.
+ */
+export interface Bend {
+  readonly along: number
+  readonly across: number
+}
+
 export interface ConnectorData {
   readonly from: ConnectorEndpoint
   readonly to: ConnectorEndpoint
   readonly routing: Routing
+  /**
+   * Where the route bends, or `null` for wherever it would go on its own.
+   *
+   * Optional in the SCHEMA as well as nullable, so every connector saved
+   * before this existed still parses. That is what makes this a new field
+   * rather than a migration: an absent value and a null one mean the same
+   * thing, which is the only shape of change that can be added to a shipped
+   * type without rewriting anybody's board.
+   */
+  readonly bend?: Bend | null
   readonly startArrow: Arrowhead
   readonly endArrow: Arrowhead
   readonly text: string
@@ -73,6 +101,10 @@ export const ConnectorDataSchema: ZodType<ConnectorData> = z.object({
   from: EndpointSchema,
   to: EndpointSchema,
   routing: z.enum(ROUTINGS),
+  bend: z
+    .object({ along: z.number().finite(), across: z.number().finite() })
+    .nullable()
+    .optional(),
   startArrow: z.enum(ARROWHEADS),
   endArrow: z.enum(ARROWHEADS),
   text: z.string(),

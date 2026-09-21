@@ -10,12 +10,31 @@ import { describe, expect, it } from 'vitest'
  */
 const read = (path: string): string => readFileSync(resolve(process.cwd(), path), 'utf8')
 
-const LAYER = read('src/canvas/EditorChrome.tsx')
+const LAYER = read('src/controls/AnchoredSurface.tsx')
+const WORLD_LAYER = read('src/canvas/EditorChrome.tsx')
 const GESTURES = read('src/canvas/use-canvas-gestures.ts')
 const VIEWS = ['TableView', 'CodeView', 'RichTextEditor'].map((name) => ({
   name,
   source: read(`src/views/${name}.tsx`),
 }))
+
+/**
+ * Everything else that floats beside something.
+ *
+ * The tool rail's two menus are here because they were the last holdout: they
+ * placed themselves with `position: absolute` against the rail slot, unclamped,
+ * and the table picker therefore ran off the bottom of a short window. Being
+ * in the interface rather than on the board did not make that a different
+ * problem.
+ */
+const FLOATERS = [
+  // `ChromeSurface` is the world-space caller of `AnchoredSurface`, so going
+  // through it is going through the surface — anchored to a board rectangle
+  // rather than a screen one.
+  { name: 'Toolbar', source: read('src/ui/Toolbar.tsx'), through: 'AnchoredSurface' },
+  { name: 'ArrangeBar', source: read('src/canvas/ArrangeBar.tsx'), through: 'ChromeSurface' },
+  { name: 'EditorChrome', source: WORLD_LAYER, through: 'AnchoredSurface' },
+]
 
 describe('the chrome layer', () => {
   /**
@@ -54,6 +73,20 @@ describe('the chrome layer', () => {
    */
   it('is the only place that decides where apparatus goes', () => {
     expect(LAYER).toContain('placeAnchored')
-    for (const { source } of VIEWS) expect(source).not.toContain('placeAnchored')
+    for (const { source } of [...VIEWS, ...FLOATERS]) {
+      expect(source).not.toContain('placeAnchored')
+    }
   })
+
+  /**
+   * And nothing places itself with CSS instead, which is how the rail's menus
+   * got out of the window: `position: absolute` against their own slot is the
+   * same second placement wearing a stylesheet.
+   */
+  it.each(FLOATERS)(
+    '$name goes through the surface rather than positioning itself',
+    ({ source, through }) => {
+      expect(source).toContain(through)
+    },
+  )
 })
