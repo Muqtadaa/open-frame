@@ -1059,15 +1059,6 @@ body {
   container-type: size;
 }
 
-.of-table__cell-text {
-  --of-clamp-lines: round(down, 100cqh / 1lh, 1);
-
-  display: -webkit-box;
-  -webkit-box-orient: vertical;
-  -webkit-line-clamp: var(--of-clamp-lines);
-  overflow: hidden;
-}
-
 .of-table__cell--head {
   font-weight: 600;
   background: var(--of-hover);
@@ -2537,6 +2528,37 @@ body {
   pointer-events: none;
 }
 
+/*
+ * TEXT THAT DOES NOT FIT, marked rather than silently cut.
+ *
+ * One rule for every type that holds text, because a formula copied per type
+ * is a formula that drifts — the same reason the contrast test restates no hex
+ * values.
+ *
+ * The line count is derived in CSS and measured by nobody: `100cqh` is the
+ * content height of the nearest `container-type: size` ancestor, `1lh` is this
+ * element's own line height, and `round(down, …)` is how many whole lines fit.
+ * So no copy of the padding or the font size exists in JavaScript to go stale
+ * when this stylesheet moves, and there is no per-object DOM measurement in a
+ * render path that must never have one.
+ *
+ * `-webkit-line-clamp` is what draws the ellipsis. The way out of a clipped
+ * object is the gesture, not this rule: double-click the bottom handle to fit
+ * the height to the text, the right handle to fit the width.
+ */
+.of-sticky:not(.of-sticky__editor) .of-sticky__text,
+.of-slip__text,
+.of-text__body,
+.of-shape__label-text,
+.of-table__cell-text {
+  --of-clamp-lines: round(down, 100cqh / 1lh, 1);
+
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: var(--of-clamp-lines);
+  overflow: hidden;
+}
+
 /* ---------- object types ---------- */
 
 .of-sticky {
@@ -2581,15 +2603,6 @@ body {
   white-space: pre-wrap;
 }
 
-.of-sticky:not(.of-sticky__editor) .of-sticky__text {
-  --of-clamp-lines: round(down, 100cqh / 1lh, 1);
-
-  display: -webkit-box;
-  -webkit-box-orient: vertical;
-  -webkit-line-clamp: var(--of-clamp-lines);
-  overflow: hidden;
-}
-
 /*
  * A structured slip: the same physical object as a sticky note, carrying a
  * record.
@@ -2631,15 +2644,6 @@ body {
   display: flex;
   flex-direction: column;
   container-type: size;
-}
-
-.of-slip__text {
-  --of-clamp-lines: round(down, 100cqh / 1lh, 1);
-
-  display: -webkit-box;
-  -webkit-box-orient: vertical;
-  -webkit-line-clamp: var(--of-clamp-lines);
-  overflow: hidden;
 }
 
 /*
@@ -2729,15 +2733,6 @@ body {
   container-type: size;
 }
 
-.of-text__body {
-  --of-clamp-lines: round(down, 100cqh / 1lh, 1);
-
-  display: -webkit-box;
-  -webkit-box-orient: vertical;
-  -webkit-line-clamp: var(--of-clamp-lines);
-  overflow: hidden;
-}
-
 .of-shape {
   position: relative;
   width: 100%;
@@ -2772,16 +2767,10 @@ body {
 }
 
 .of-shape__label-text {
-  --of-clamp-lines: round(down, 100cqh / 1lh, 1);
-
-  display: -webkit-box;
-  -webkit-box-orient: vertical;
-  -webkit-line-clamp: var(--of-clamp-lines);
   /* A flex item sizes to its content, so without this a long word pushes the
      label wider than the box it is meant to be clipped by. */
   min-width: 0;
   max-width: 100%;
-  overflow: hidden;
 }
 
 .of-shape__editor .of-shape__label-text {
