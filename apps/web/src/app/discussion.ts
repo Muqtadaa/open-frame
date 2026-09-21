@@ -15,6 +15,7 @@ export {
   myMentions,
   postComment,
   resolveComment,
+  watchMyMentions,
   type BoardComment,
   type BoardPerson,
   type Mention,

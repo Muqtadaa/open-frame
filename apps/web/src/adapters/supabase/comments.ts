@@ -301,3 +301,49 @@ export async function markMentionsRead(commentIds: readonly string[]): Promise<b
 
   return response.error === null
 }
+
+/**
+ * Calls back when a mention for `userId` is written or changes.
+ *
+ * The callback takes NOTHING. What arrives on the wire is a row from
+ * `comment_mentions` — a comment id, a user id, a read timestamp — and none of
+ * the things the bell shows: who said it, on which board, or what it said.
+ * Building a notification out of that row would need the joins that
+ * `my_mentions()` already does under `security definer`, so the event is
+ * treated as a NUDGE and the list is re-read from the database.
+ *
+ * That is the same choice `use-live-comments.ts` makes about the room socket,
+ * for the same reason: one source of truth about what was said, and no way for
+ * two clients to disagree about it because a message arrived out of order.
+ *
+ * Filtered to one user server-side. Row-level security already means nobody
+ * is sent somebody else's mentions, but without the filter every subscriber is
+ * WOKEN by every mention on the instance and then told it may not see it.
+ *
+ * Returns a function that stops listening. A caller that forgets it leaks a
+ * socket subscription per board opened.
+ */
+export function watchMyMentions(userId: string, onChange: () => void): () => void {
+  const client = supabaseClient()
+  if (client === null) return () => undefined
+
+  const channel = client
+    .channel(`mentions:${userId}`)
+    .on(
+      'postgres_changes',
+      {
+        event: '*',
+        schema: 'public',
+        table: 'comment_mentions',
+        filter: `user_id=eq.${userId}`,
+      },
+      () => {
+        onChange()
+      },
+    )
+    .subscribe()
+
+  return () => {
+    void client.removeChannel(channel)
+  }
+}

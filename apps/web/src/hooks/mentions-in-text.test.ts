@@ -1,6 +1,15 @@
 import { describe, expect, it } from 'vitest'
 
-import { mentionsIn, unknownMentionIn } from './use-comments.js'
+import {
+  activeMentionQuery,
+  insertMention,
+  mentionSegments,
+  mentionToken,
+  mentionsIn,
+  peopleMatching,
+  plainMentionText,
+  unknownMentionIn,
+} from './use-comments.js'
 import type { BoardPerson } from './use-comments.js'
 
 const person = (userId: string, displayName: string): BoardPerson => ({
@@ -90,5 +99,182 @@ describe('a name typed at somebody who is not here', () => {
   it('handles a name outside the Latin alphabet', () => {
     expect(unknownMentionIn('@Мария', BOARD)).toBe('Мария')
     expect(unknownMentionIn('@محمد', [person('u', 'محمد')])).toBeNull()
+  })
+})
+
+describe('a mention written as a token', () => {
+  const JILL = person('u-jill', 'Jill')
+
+  it('reaches the person it names', () => {
+    expect(mentionsIn(`${mentionToken(JILL)} have a look`, [JILL])).toEqual(['u-jill'])
+  })
+
+  /**
+   * The reason the token exists at all.
+   *
+   * The body was written when she was called "Jill"; she is called "Jill
+   * Okonkwo" now. Name matching cannot find her — "@Jill" no longer equals
+   * anybody's display name — so under plain text this mention would quietly
+   * stop reaching her. The id in the token never changed.
+   */
+  it('survives the person being renamed', () => {
+    const written = `${mentionToken(JILL)} have a look`
+    const renamed = [person('u-jill', 'Jill Okonkwo')]
+    expect(mentionsIn(written, renamed)).toEqual(['u-jill'])
+  })
+
+  /**
+   * The other thing a name cannot express. Two accounts, one display name:
+   * text says "@Kat" and means exactly one of them, and there is no way to
+   * tell which. The token says which.
+   */
+  it('tells two people with the same name apart', () => {
+    const board = [person('u-kat-1', 'Kat'), person('u-kat-2', 'Kat')]
+    expect(mentionsIn(`${mentionToken(board[1]!)} which one`, board)).toEqual(['u-kat-2'])
+  })
+
+  /**
+   * A body pasted from another board carries ids for people who are not here.
+   * The database refuses such a row — the insert policy checks membership —
+   * and one refused mention takes the whole comment down with it.
+   */
+  it('drops an id that is not on this board', () => {
+    const elsewhere = person('u-stranger', 'Wren')
+    expect(mentionsIn(`${mentionToken(elsewhere)} hello`, BOARD)).toEqual([])
+  })
+
+  it('counts a token and a typed name as two people, and each of them once', () => {
+    const board = [...BOARD, JILL]
+    const text = `${mentionToken(JILL)} and @Rowan and ${mentionToken(JILL)}`
+    expect(mentionsIn(text, board).sort()).toEqual(['u-jill', 'u-rowan'])
+  })
+
+  it('does not offer to invite somebody who is already a token', () => {
+    expect(unknownMentionIn(`${mentionToken(JILL)} hello`, [JILL])).toBeNull()
+  })
+})
+
+describe('showing a body that contains a token', () => {
+  const JILL = person('u-jill', 'Jill')
+
+  it('reads as the name, never as the token', () => {
+    const shown = plainMentionText(`${mentionToken(JILL)} take a look`)
+    expect(shown).toBe('@Jill take a look')
+    expect(shown).not.toContain('u-jill')
+  })
+
+  it('splits into the words and the people', () => {
+    expect(mentionSegments(`hi ${mentionToken(JILL)} ok`)).toEqual([
+      { kind: 'text', text: 'hi ' },
+      { kind: 'mention', userId: 'u-jill', displayName: 'Jill' },
+      { kind: 'text', text: ' ok' },
+    ])
+  })
+
+  it('leaves a body with no mentions in one piece', () => {
+    expect(mentionSegments('just words')).toEqual([{ kind: 'text', text: 'just words' }])
+  })
+
+  /**
+   * `matchAll` copies the pattern, so the shared global regex is safe as
+   * written — this holds the NEXT person to `TOKEN.exec()` in a loop, which
+   * does carry `lastIndex` between calls and would drop the mention on the
+   * second pass through a render.
+   */
+  it('gives the same answer twice in a row', () => {
+    const text = `${mentionToken(JILL)} hello`
+    expect(mentionSegments(text)).toEqual(mentionSegments(text))
+  })
+})
+
+describe('the menu that opens when you type @', () => {
+  it('opens on a bare @', () => {
+    expect(activeMentionQuery('hello @', 7)).toEqual({ start: 6, query: '' })
+  })
+
+  it('carries what has been typed so far', () => {
+    expect(activeMentionQuery('hello @Sam', 10)).toEqual({ start: 6, query: 'Sam' })
+  })
+
+  /** "Sam Smith" is a name, so a menu that closed on the space could never offer one. */
+  it('keeps going across a space, because names have them', () => {
+    expect(activeMentionQuery('@Sam Sm', 7)).toEqual({ start: 0, query: 'Sam Sm' })
+  })
+
+  /** The cost of allowing spaces: an @ that was never a name must let go. */
+  it('gives up once what follows is clearly prose', () => {
+    expect(activeMentionQuery(`@${'word '.repeat(12)}`, 61)).toBeNull()
+  })
+
+  /**
+   * The @ has to OPEN a word. A domain with a dot in it is turned away by the
+   * character check instead, so it cannot tell this rule apart from that one
+   * — this address is one the menu would otherwise be happy to answer.
+   */
+  it('stays shut inside an email address', () => {
+    expect(activeMentionQuery('write to sam@rowan', 18)).toBeNull()
+    expect(activeMentionQuery('write to me@example.com', 23)).toBeNull()
+  })
+
+  it('stays shut inside a token that is already written', () => {
+    const text = `${mentionToken(person('u-jill', 'Jill'))} hi`
+    expect(activeMentionQuery(text, text.length)).toBeNull()
+  })
+
+  it('reopens for a second mention after a token', () => {
+    const text = `${mentionToken(person('u-jill', 'Jill'))} @Ka`
+    expect(activeMentionQuery(text, text.length)?.query).toBe('Ka')
+  })
+
+  it('offers everybody before a letter is typed', () => {
+    expect(peopleMatching('', BOARD)).toHaveLength(3)
+  })
+
+  /**
+   * Typing "Sam" must put Sam above Samira, and both above somebody merely
+   * containing it. Filtering alone returns them in board order, which is
+   * whatever the database felt like.
+   */
+  it('puts the name that starts with what you typed first', () => {
+    const board = [person('u-x', 'Rosamund'), person('u-samira', 'Samira'), person('u-sam', 'Sam')]
+    expect(peopleMatching('sam', board).map((p) => p.userId)).toEqual([
+      'u-sam',
+      'u-samira',
+      'u-x',
+    ])
+  })
+
+  it('offers nobody when nobody matches', () => {
+    expect(peopleMatching('zzz', BOARD)).toEqual([])
+  })
+})
+
+describe('choosing somebody from the menu', () => {
+  const JILL = person('u-jill', 'Jill')
+
+  it('replaces the half-typed name and keeps the rest of the sentence', () => {
+    const { text } = insertMention('hey @Ji please look', 7, JILL)
+    expect(text).toBe('hey @[Jill](u-jill) please look')
+  })
+
+  it('leaves the caret after the name, ready for the next word', () => {
+    const { text, caret } = insertMention('hey @Ji', 7, JILL)
+    expect(text.slice(0, caret)).toBe('hey @[Jill](u-jill) ')
+  })
+
+  it('writes a mention that reaches the person it just named', () => {
+    const { text } = insertMention('@Ji', 3, JILL)
+    expect(mentionsIn(text, [JILL])).toEqual(['u-jill'])
+  })
+
+  /**
+   * A name with a bracket in it would end the token early and leave the rest
+   * of it as visible punctuation in the comment.
+   */
+  it('survives a name that contains a bracket', () => {
+    const awkward = person('u-odd', 'Ali [Ops]')
+    const { text } = insertMention('@Al', 3, awkward)
+    expect(mentionsIn(text, [awkward])).toEqual(['u-odd'])
+    expect(plainMentionText(text).trim()).toBe('@Ali Ops')
   })
 })

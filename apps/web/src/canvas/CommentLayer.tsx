@@ -3,6 +3,7 @@ import { useMemo } from 'react'
 import type { Point } from '@openframe/core'
 
 import { useDiscussion } from '../app/comments-context.js'
+import { plainMentionText } from '../hooks/use-comments.js'
 import { useBoardDocument } from '../hooks/use-document-object.js'
 import { useInteractionStore } from '../interaction/interaction-store.js'
 import { useRemoteDragStore } from '../interaction/remote-drags.js'
@@ -114,7 +115,7 @@ export function CommentLayer() {
             style={{
               transform: `translate(${String(pin.at.x)}px, ${String(pin.at.y)}px) scale(${String(1 / zoom)})`,
             }}
-            title={`${pin.authorName}: ${pin.body.slice(0, 80)}`}
+            title={`${pin.authorName}: ${plainMentionText(pin.body).slice(0, 80)}`}
             aria-label={`Comment from ${pin.authorName}${
               replies > 0 ? `, ${String(replies)} replies` : ''
             }`}

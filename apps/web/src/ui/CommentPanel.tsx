@@ -4,14 +4,22 @@ import { accessKey, shareLink } from '../app/collab-config.js'
 
 import { useDiscussion } from '../app/comments-context.js'
 import {
+  activeMentionQuery,
+  insertMention,
   mentionsIn,
+  peopleMatching,
+  plainMentionText,
   repliesTo,
   unknownMentionIn,
   type BoardComment,
+  type BoardPerson,
 } from '../hooks/use-comments.js'
+import { useIdentity } from '../hooks/use-identity.js'
 import { useInteractionStore } from '../interaction/interaction-store.js'
 import { useOpenFrame } from '../runtime/context.js'
 import { hueVar } from '../scene/presence.js'
+import { MentionPicker } from './MentionPicker.js'
+import { MentionText } from './MentionText.js'
 
 /**
  * Reading and writing one conversation.
@@ -45,6 +53,54 @@ export function CommentPanel() {
   const [problem, setProblem] = useState<string | null>(null)
   const [invited, setInvited] = useState(false)
   const input = useRef<HTMLTextAreaElement>(null)
+  const me = useIdentity()
+
+  /*
+   * Where the caret is, tracked rather than read during render.
+   *
+   * The menu has to know which `@` the caret is inside, and that is not
+   * derivable from the text: the same body has a different answer depending on
+   * where you are standing in it. React does not re-render on a cursor move,
+   * so every event that can move one reports it.
+   */
+  const [caret, setCaret] = useState(0)
+  const [highlight, setHighlight] = useState(0)
+  /*
+   * Escape shuts the menu WITHOUT shutting the panel, so it has to be
+   * remembered — the query is still under the caret and would otherwise
+   * reopen on the next render. Cleared by moving to a different mention, since
+   * dismissing one is not a decision about the next.
+   */
+  const [dismissed, setDismissed] = useState<number | null>(null)
+
+  const query = useMemo(() => activeMentionQuery(body, caret), [body, caret])
+  const candidates = useMemo(
+    () => (query === null ? [] : peopleMatching(query.query, people)),
+    [query, people],
+  )
+  const picking = query !== null && candidates.length > 0 && dismissed !== query.start
+
+  const say = (next: string, at: number): void => {
+    setBody(next)
+    setCaret(at)
+    setHighlight(0)
+    // Typing a different name makes the last copy stale, and a button still
+    // reading "Link copied" is a button claiming something it did not do.
+    setInvited(false)
+  }
+
+  const choose = (person: BoardPerson): void => {
+    const next = insertMention(body, caret, person)
+    say(next.text, next.caret)
+    const field = input.current
+    if (field === null) return
+    // The value lands on the next render, so the caret is placed after it.
+    // Setting it now would position it inside the text that is still there.
+    queueMicrotask(() => {
+      field.focus()
+      field.setSelectionRange(next.caret, next.caret)
+    })
+  }
 
   /** Somebody named in this draft who is not on the board, if anybody. */
   const stranger = useMemo(() => unknownMentionIn(body, people), [body, people])
@@ -140,6 +196,7 @@ export function CommentPanel() {
         return
       }
       setBody('')
+      setCaret(0)
       // Writing a thread is done with the composer; replying keeps you where
       // you are, reading what you just added to.
       if (thread === null) startComment(null)
@@ -201,7 +258,9 @@ export function CommentPanel() {
                 }}
               >
                 <span className="of-comment-panel__who">{open.authorName}</span>
-                <span className="of-comment-panel__said">{open.body.slice(0, 90)}</span>
+                <span className="of-comment-panel__said">
+                  {plainMentionText(open.body).slice(0, 90)}
+                </span>
               </button>
             ))
           )}
@@ -210,9 +269,9 @@ export function CommentPanel() {
 
       {thread !== null && (
         <div className="of-comment-panel__thread">
-          <Remark comment={thread} />
+          <Remark comment={thread} whoIsMe={me?.userId ?? null} />
           {replies.map((reply) => (
-            <Remark key={reply.id} comment={reply} />
+            <Remark key={reply.id} comment={reply} whoIsMe={me?.userId ?? null} />
           ))}
         </div>
       )}
@@ -234,15 +293,61 @@ export function CommentPanel() {
           placeholder={thread === null ? 'Say something' : 'Reply'}
           aria-label={thread === null ? 'Your comment' : 'Your reply'}
           data-testid="comment-input"
+          role="combobox"
+          aria-expanded={picking}
+          aria-controls="of-mention-menu"
+          aria-autocomplete="list"
+          aria-activedescendant={
+            picking ? `of-mention-menu-${String(highlight)}` : undefined
+          }
           onChange={(event) => {
-            setBody(event.target.value)
-            // Typing a different name makes the last copy stale, and a button
-            // still reading "Link copied" is a button claiming something it
-            // did not do. Reset here rather than in an effect: this is the
-            // event that invalidates it.
-            setInvited(false)
+            say(event.target.value, event.target.selectionStart)
+          }}
+          // Every way a caret moves without the text changing.
+          onSelect={(event) => {
+            setCaret(event.currentTarget.selectionStart)
           }}
           onKeyDown={(event) => {
+            /*
+             * The menu takes the keys it needs and passes on the rest, so the
+             * composer behaves exactly as it did whenever nothing is open.
+             * Checked FIRST because every one of these keys already means
+             * something here — Enter is a newline, Escape closes the panel.
+             */
+            if (picking) {
+              if (event.key === 'ArrowDown' || event.key === 'ArrowUp') {
+                event.preventDefault()
+                const step = event.key === 'ArrowDown' ? 1 : -1
+                // Wraps, because a menu of three that stops at the bottom
+                // makes you travel back up through all of them.
+                setHighlight(
+                  (current) =>
+                    (current + step + candidates.length) % candidates.length,
+                )
+                return
+              }
+              if (event.key === 'Escape') {
+                event.preventDefault()
+                setDismissed(query.start)
+                return
+              }
+              /*
+               * Tab and plain Enter choose. Enter with a modifier does NOT:
+               * Cmd+Enter posts, and somebody who has finished typing a name
+               * and wants to send it should not have to dismiss a menu first.
+               */
+              if (
+                event.key === 'Tab' ||
+                (event.key === 'Enter' && !event.metaKey && !event.ctrlKey)
+              ) {
+                const person = candidates[highlight]
+                if (person !== undefined) {
+                  event.preventDefault()
+                  choose(person)
+                  return
+                }
+              }
+            }
             /*
              * Cmd or Ctrl + Enter posts; Escape closes without posting.
              *
@@ -266,6 +371,15 @@ export function CommentPanel() {
           }}
         />
 
+        {picking && (
+          <MentionPicker
+            id="of-mention-menu"
+            people={candidates}
+            highlight={highlight}
+            onPick={choose}
+          />
+        )}
+
         {/*
           * A few names and a count, not the whole list.
           *
@@ -274,7 +388,7 @@ export function CommentPanel() {
           * hold a great many, and a hint that turns into a paragraph is one
           * nobody reads — including the part that says what to type.
           */}
-        {stranger === null && people.length > 1 && (
+        {!picking && stranger === null && people.length > 1 && (
           <p className="of-comment-panel__hint" data-testid="comment-people-hint">
             Type @ and a name to notify someone:{' '}
             {people
@@ -299,7 +413,7 @@ export function CommentPanel() {
           * saying the thing you just typed will not work, is a paragraph
           * nobody reads.
           */}
-        {stranger !== null && (
+        {!picking && stranger !== null && (
           <p className="of-comment-panel__hint" data-testid="comment-stranger">
             Nobody here is called {stranger}. Share the board with them and they can be
             mentioned.{' '}
@@ -359,7 +473,13 @@ export function CommentPanel() {
   )
 }
 
-function Remark({ comment }: { readonly comment: BoardComment }) {
+function Remark({
+  comment,
+  whoIsMe,
+}: {
+  readonly comment: BoardComment
+  readonly whoIsMe: string | null
+}) {
   return (
     <article className="of-comment">
       <span className="of-comment__who" style={{ background: hueVar(comment.authorHue) }}>
@@ -367,7 +487,9 @@ function Remark({ comment }: { readonly comment: BoardComment }) {
       </span>
       <div className="of-comment__body">
         <span className="of-comment__name">{comment.authorName}</span>
-        <p className="of-comment__text">{comment.body}</p>
+        <p className="of-comment__text">
+          <MentionText body={comment.body} whoIsMe={whoIsMe} />
+        </p>
       </div>
     </article>
   )

@@ -10,6 +10,7 @@ import { applyTheme, readTheme, type Theme } from '../app/theme.js'
 import { AccountControl } from './AccountControl.js'
 import { BoardExit } from './BoardExit.js'
 import { BoardTitle } from './BoardTitle.js'
+import { Mentions } from './Mentions.js'
 import { DevPanel } from './DevPanel.js'
 import { ShareControl } from './ShareControl.js'
 import { AfterHoursIcon, RedoIcon, UndoIcon } from './icons.js'
@@ -138,6 +139,12 @@ export function StatusBar() {
        * something about the page you are reading.
        */}
       <ShareControl />
+      {/*
+       * Being named somewhere else has to reach you HERE. The bell was on the
+       * dashboard alone, which is the one screen you are not on while you
+       * work — so a mention waited until you happened to go home.
+       */}
+      <Mentions />
       <AccountControl />
 
       {/*

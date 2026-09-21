@@ -346,3 +346,139 @@ test('names a few people and counts the rest', async ({ page }) => {
   await page.getByTestId('comment-input').fill('@Tam can you look at this')
   await expect(page.getByTestId('comment-stranger')).toHaveCount(0)
 })
+
+const ROWAN = '00000000-0000-4000-8000-000000000002'
+
+/**
+ * The menu that makes a mention something you PICK rather than something you
+ * spell correctly.
+ *
+ * The hint it replaces asked people to type a name exactly, and nothing told
+ * them whether it had matched until the notification silently failed to
+ * arrive. What this proves is the whole path: the menu names real people, the
+ * choice writes a token, and the token reaches the server as an id.
+ */
+test('offers the people on the board when you type @, and mentions the one you pick', async ({
+  page,
+}) => {
+  const account = await signedIn(page, [{ id: BOARD, title: 'Shared', role: 'owner' }])
+  await openBoard(page)
+
+  await page.getByRole('button', { name: /comment/i }).first().click()
+  await page.locator('[data-testid="canvas"]').click({ position: { x: 280, y: 220 } })
+
+  const input = page.getByTestId('comment-input')
+  await input.pressSequentially('@Ro')
+
+  const menu = page.getByTestId('mention-menu')
+  await expect(menu).toBeVisible()
+  await expect(menu).toContainText('Rowan')
+  // Somebody who does not match is not offered.
+  await expect(menu).not.toContainText('Wren')
+
+  await page.getByTestId(`mention-option-${ROWAN}`).click()
+
+  // The id is what was written, not the letters that were typed.
+  await expect(input).toHaveValue(`@[Rowan](${ROWAN}) `)
+
+  await input.pressSequentially('does this look right?')
+  await page.getByTestId('comment-post').click()
+
+  await expect(page.locator('[data-testid^="comment-pin-cmt_"]')).toHaveCount(1)
+  expect(account.mentioned).toEqual([ROWAN])
+})
+
+/**
+ * The token is storage, not writing. A reader must never see one.
+ */
+test('shows a picked mention as a name, never as the token it is stored as', async ({ page }) => {
+  await signedIn(page, [{ id: BOARD, title: 'Shared', role: 'owner' }])
+  await openBoard(page)
+
+  await page.getByRole('button', { name: /comment/i }).first().click()
+  await page.locator('[data-testid="canvas"]').click({ position: { x: 300, y: 240 } })
+
+  const input = page.getByTestId('comment-input')
+  await input.pressSequentially('@Ro')
+  await page.getByTestId(`mention-option-${ROWAN}`).click()
+  await input.pressSequentially('have a look')
+  await page.getByTestId('comment-post').click()
+
+  await page.locator('[data-testid^="comment-pin-cmt_"]').first().click()
+
+  const said = page.locator('.of-comment__text').first()
+  await expect(said).toContainText('@Rowan')
+  await expect(said).toContainText('have a look')
+  // The two halves of the token, neither of which is for reading.
+  await expect(said).not.toContainText(ROWAN)
+  await expect(said).not.toContainText('](')
+  await expect(page.getByTestId('mention-chip').first()).toBeVisible()
+})
+
+/**
+ * Both keys already meant something in this composer: Enter is a newline,
+ * because a comment is prose, and Escape closes the panel. The menu borrows
+ * them while it is open and has to give them back when it is not.
+ */
+test('the menu takes Enter and Escape only while it is open', async ({ page }) => {
+  await signedIn(page, [{ id: BOARD, title: 'Shared', role: 'owner' }])
+  await openBoard(page)
+
+  await page.getByRole('button', { name: /comment/i }).first().click()
+  await page.locator('[data-testid="canvas"]').click({ position: { x: 260, y: 200 } })
+
+  const input = page.getByTestId('comment-input')
+  await input.pressSequentially('@Ro')
+  await expect(page.getByTestId('mention-menu')).toBeVisible()
+
+  // Enter chooses rather than breaking the line.
+  await input.press('Enter')
+  await expect(input).toHaveValue(`@[Rowan](${ROWAN}) `)
+  await expect(page.getByTestId('mention-menu')).toHaveCount(0)
+
+  // Escape now closes the panel, because there is no menu to close instead.
+  await input.pressSequentially('@Wr')
+  await expect(page.getByTestId('mention-menu')).toBeVisible()
+  await input.press('Escape')
+  await expect(page.getByTestId('mention-menu')).toHaveCount(0)
+  await expect(page.getByTestId('comment-panel')).toBeVisible()
+
+  await input.press('Escape')
+  await expect(page.getByTestId('comment-panel')).toHaveCount(0)
+})
+
+/**
+ * Where the notification actually has to arrive.
+ *
+ * The bell lived on the front door alone — the one screen you are not on
+ * while you work — so being named on another board waited until you happened
+ * to go home. This is the same bell, on a canvas.
+ */
+test('carries the bell onto the board, not just the front door', async ({ page }) => {
+  await signedIn(
+    page,
+    [{ id: BOARD, title: 'Shared', role: 'owner' }],
+    'Muqtadaa Miandara',
+    {
+      mentions: [
+        {
+          commentId: 'cmt_elsewhere',
+          boardId: BOARD,
+          boardTitle: 'Another board',
+          authorName: 'Rowan',
+          body: `@[Muqtadaa Miandara](${'0'.repeat(8)}-0000-4000-8000-000000000001) come and look`,
+        },
+      ],
+    },
+  )
+  await openBoard(page)
+
+  const bell = page.getByTestId('mentions-button')
+  await expect(bell).toHaveText(/1 mention/)
+
+  await bell.click()
+  const item = page.getByTestId('mention-cmt_elsewhere')
+  await expect(item).toContainText('come and look')
+  // A preview is a place a token would show through just as badly.
+  await expect(item).not.toContainText('](')
+})
