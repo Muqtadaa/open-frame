@@ -33,6 +33,13 @@ const FLOATERS = [
   // rather than a screen one.
   { name: 'Toolbar', source: read('src/ui/Toolbar.tsx'), through: 'AnchoredSurface' },
   { name: 'ArrangeBar', source: read('src/canvas/ArrangeBar.tsx'), through: 'ChromeSurface' },
+  /*
+   * The crop overlay's RESET button. It was an ordinary button in world space
+   * and did nothing at all: unmarked as apparatus, the press was read as a
+   * board gesture, which cleared the selection, which ended crop mode, which
+   * unmounted the button between `pointerdown` and `click`. Fifth time.
+   */
+  { name: 'CropOverlay', source: read('src/canvas/CropOverlay.tsx'), through: 'ChromeSurface' },
   { name: 'EditorChrome', source: WORLD_LAYER, through: 'AnchoredSurface' },
 ]
 

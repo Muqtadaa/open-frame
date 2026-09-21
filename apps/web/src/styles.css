@@ -5097,18 +5097,16 @@ textarea.of-input {
   border-right-style: solid;
 }
 
+/* On the chrome layer now, so it needs no counter-scale and no placement of
+   its own — the layer does both. */
 .of-crop__reset {
-  position: absolute;
-  left: 0;
-  padding: 3px 9px;
+  padding: 5px 11px;
   font-size: 11px;
   color: var(--of-ink-muted);
-  background: var(--of-panel);
+  background: none;
   border: none;
   border-radius: 7px;
   cursor: pointer;
-  transform-origin: 0 0;
-  pointer-events: auto;
 }
 
 .of-crop__reset:hover {

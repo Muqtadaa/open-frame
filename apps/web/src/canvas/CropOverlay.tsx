@@ -4,6 +4,8 @@ import { useCommands } from '../hooks/use-commands.js'
 import { useBoardDocument } from '../hooks/use-document-object.js'
 import { useInteractionStore } from '../interaction/interaction-store.js'
 import { useOpenFrame } from '../runtime/context.js'
+import { ChromeSurface } from './EditorChrome.js'
+import { optionsPanelRect } from './options-panel.js'
 import { HANDLES, HANDLE_CURSORS, HANDLE_HIT_PX, handleAnchor } from '../scene/resize.js'
 
 /**
@@ -79,6 +81,42 @@ export function CropOverlay() {
   const trimmed = crop.x > 0 || crop.y > 0 || crop.width < 1 || crop.height < 1
 
   return (
+    <>
+      {trimmed && (
+        /*
+         * ON THE CHROME LAYER, not beside the grips in world space.
+         *
+         * It was an ordinary button inside this overlay, and it did nothing at
+         * all: the press was not marked as apparatus, so the canvas read it as
+         * a board gesture and cleared the selection — which ends crop mode,
+         * which unmounts the button between `pointerdown` and `click`. The
+         * click event never fired. That is the FIFTH time this exact fault has
+         * appeared, and the layer exists precisely so that a control does not
+         * have to remember the marker.
+         *
+         * A grip is different and stays here: the canvas gesture reads
+         * `data-handle` off it, so marking a grip as apparatus would stop the
+         * crop drag from ever starting.
+         */
+        <ChromeSurface
+          bounds={frame}
+          prefer={['below', 'above']}
+          avoid={optionsPanelRect()}
+          testId="crop-apparatus"
+        >
+          <button
+            type="button"
+            className="of-crop__reset of-surface"
+            data-testid="crop-reset"
+            onClick={() => {
+              commands.uncropImage(croppingId)
+            }}
+          >
+            reset crop
+          </button>
+        </ChromeSurface>
+      )}
+
     <div
       className="of-crop"
       data-testid="crop-overlay"
@@ -128,29 +166,8 @@ export function CropOverlay() {
         )
       })}
 
-      {trimmed && (
-        /*
-         * Putting it back is not "set the window to full": the frame shrank
-         * with the crop, so restoring one without the other squeezes the whole
-         * picture into the trimmed box. `uncrop` does both, and this is the
-         * only way to reach it.
-         */
-        <button
-          type="button"
-          className="of-crop__reset of-surface"
-          data-testid="crop-reset"
-          style={{
-            top: `${String(frame.height + 8 / zoom)}px`,
-            transform: `scale(${String(1 / zoom)})`,
-          }}
-          onClick={() => {
-            commands.uncropImage(croppingId)
-          }}
-        >
-          reset
-        </button>
-      )}
     </div>
+    </>
   )
 }
 

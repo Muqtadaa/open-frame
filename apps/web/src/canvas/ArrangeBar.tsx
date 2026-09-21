@@ -6,6 +6,7 @@ import { useBoardDocument } from '../hooks/use-document-object.js'
 import { useInteractionStore } from '../interaction/interaction-store.js'
 import { useOpenFrame } from '../runtime/context.js'
 import { ChromeSurface } from './EditorChrome.js'
+import { optionsPanelRect } from './options-panel.js'
 import {
   AlignBottomIcon,
   AlignCenterXIcon,
@@ -92,24 +93,9 @@ export function ArrangeBar() {
   const bounds: Rect | null = arrangeable.bounds
   const canDistribute = arrangeable.count >= 3
 
-  /*
-   * The options panel is the other thing that floats beside a selection, and
-   * it is placed by its own arithmetic rather than on this layer — so the two
-   * can want the same space. On a selection too wide for the panel to sit
-   * beside, the panel takes the whole band above, which is exactly where a bar
-   * anchored to the same selection wants to be.
-   *
-   * Read from the DOM rather than plumbed through, which is the same fallback
-   * rule 15 names: some geometry only exists once the browser has drawn it.
-   * The panel's own size depends on which controls the selection declares, so
-   * there is no constant to consult.
-   */
-  const panel =
-    typeof window === 'undefined'
-      ? null
-      : (window.document
-          .querySelector<HTMLElement>('[data-testid="inspector"]')
-          ?.getBoundingClientRect() ?? null)
+  // The other thing that floats beside a selection, and the one this layer
+  // cannot place — so it is told where it is.
+  const panel = optionsPanelRect()
 
   return (
     <ChromeSurface

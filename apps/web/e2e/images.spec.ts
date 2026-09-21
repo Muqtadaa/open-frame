@@ -350,7 +350,44 @@ test.describe('cropping', () => {
     await expect(page.getByTestId('handle-se')).toHaveCount(0)
   })
 
-  test('is one undoable action, and reset puts the whole picture back', async ({ page }) => {
+  /**
+   * RESET, clicked.
+   *
+   * The test that was supposed to cover this was called "is one undoable
+   * action, and reset puts the whole picture back" and its body never touched
+   * the button — it pressed undo and stopped. A name is not a test, and this
+   * one let a control ship that did nothing at all.
+   */
+  test('reset puts the whole picture back', async ({ page }) => {
+    const image = page.locator('[data-object-type="image"]')
+    await image.dblclick()
+    const before = await image.boundingBox()
+    if (before === null) throw new Error('no image')
+
+    const grip = await page.getByTestId('crop-e').boundingBox()
+    if (grip === null) throw new Error('no handle')
+    await page.mouse.move(grip.x + grip.width / 2, grip.y + grip.height / 2)
+    await page.mouse.down()
+    await page.mouse.move(grip.x + grip.width / 2 - 60, grip.y + grip.height / 2, { steps: 6 })
+    await page.mouse.up()
+    await expect.poll(async () => (await image.boundingBox())?.width ?? 0).toBeLessThan(before.width)
+
+    await page.getByTestId('crop-reset').click()
+
+    /*
+     * The frame grows BACK. Restoring the window without growing the frame
+     * would squeeze the whole picture into the cropped box, which looks like
+     * the image was rescaled rather than uncropped.
+     */
+    await expect.poll(async () => (await image.boundingBox())?.width ?? 0).toBeCloseTo(
+      before.width,
+      0,
+    )
+    // And the button is gone, because there is nothing left to reset.
+    await expect(page.getByTestId('crop-reset')).toHaveCount(0)
+  })
+
+  test('is one undoable action', async ({ page }) => {
     const image = page.locator('[data-object-type="image"]')
     await image.dblclick()
     const before = await image.boundingBox()
