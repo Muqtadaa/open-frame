@@ -2,6 +2,7 @@ import { useState, type CSSProperties } from 'react'
 
 import {
   cellRange,
+  cellRegion,
   plainTextOf,
   resizeGrid,
   styleCells,
@@ -141,7 +142,7 @@ function TableRenderer({ object }: ObjectViewProps<TableData>) {
  * the editor every time: adding three columns would mean re-opening it three
  * times.
  */
-function TableEditor({ object, at, zoom, onCommit, onCancel }: ObjectEditorProps<TableData>) {
+function TableEditor({ object, at, zoom, Chrome, onCommit, onCancel }: ObjectEditorProps<TableData>) {
   /*
    * The whole table as a draft, not just its text. `resizeGrid` moves the
    * weights and the cells together, which is the only way the two cannot
@@ -232,6 +233,19 @@ function TableEditor({ object, at, zoom, onCommit, onCancel }: ObjectEditorProps
         if (
           event.relatedTarget instanceof Node &&
           event.currentTarget.contains(event.relatedTarget)
+        ) {
+          return
+        }
+        /*
+         * The apparatus is PORTALED out of this element, so `contains` says a
+         * click on a swatch left the editor — and committing there closed it
+         * mid-edit. The layer is the editor as far as focus is concerned: the
+         * DOM is what knows where a portal landed, which is the same fallback
+         * rule 15 uses for chrome outside an object's world bounds.
+         */
+        if (
+          event.relatedTarget instanceof Element &&
+          event.relatedTarget.closest('[data-chrome-layer]') !== null
         ) {
           return
         }
@@ -341,23 +355,15 @@ function TableEditor({ object, at, zoom, onCommit, onCancel }: ObjectEditorProps
         * one, and teaching the panel about "the selected cells of the selected
         * table" would put type-specific knowledge in the one component that
         * exists to have none — rule 21.
-        */}
-      {/*
-        * COUNTER-SCALED, like a frame's title.
         *
-        * This editor renders in WORLD space, so everything in it is multiplied
-        * by the board's zoom — the bar was the size of a dialog at 400% and a
-        * stamp at 25%. Chrome is chrome: it is the same size on screen at every
-        * zoom, which is the whole reason a frame's title is counter-scaled too.
-        *
-        * The origin is the bottom-left corner it is pinned to, so it grows away
-        * from the table rather than drifting off it.
+        * Rendered into `Chrome`, so it sits in SCREEN space beside the cells
+        * it acts on. Inside the editor it was multiplied by the zoom and
+        * anchored to the table's top edge, which is off the window as soon as
+        * you zoom into a large table — and it pointed at the table rather than
+        * at the selection, which is not what it changes.
         */}
-      <div
-        className="of-cellbar"
-        data-testid="table-cell-style"
-        style={{ transform: `scale(${String(1 / zoom)})`, transformOrigin: 'bottom left' }}
-      >
+      <Chrome anchor={cellRegion(draft, selected)} prefer={['above', 'below']}>
+      <div className="of-cellbar" data-testid="table-cell-style">
         <div className="of-cellbar__head">
           <span className="of-cellbar__count">
             {selected.length === 1 ? '1 cell' : `${String(selected.length)} cells`}
@@ -415,18 +421,15 @@ function TableEditor({ object, at, zoom, onCommit, onCancel }: ObjectEditorProps
           }}
         />
       </div>
+      </Chrome>
 
       {/*
         * The shape controls, beside the axis each one changes: columns on the
         * right, rows underneath. A row of four identical buttons in a corner
         * would make you read every label to find the one you want.
         */}
-      <div
-        className="of-table-edit__columns"
-        role="group"
-        aria-label="Columns"
-        style={{ transform: `scale(${String(1 / zoom)})`, transformOrigin: 'top left' }}
-      >
+      <Chrome anchor={{ x: 1, y: 0, width: 0, height: 1 }} prefer={['right', 'left']}>
+      <div className="of-table-edit__columns" role="group" aria-label="Columns">
         <button
           type="button"
           className="of-table-edit__step"
@@ -454,12 +457,10 @@ function TableEditor({ object, at, zoom, onCommit, onCancel }: ObjectEditorProps
         </button>
       </div>
 
-      <div
-        className="of-table-edit__rows"
-        role="group"
-        aria-label="Rows"
-        style={{ transform: `scale(${String(1 / zoom)})`, transformOrigin: 'top left' }}
-      >
+      </Chrome>
+
+      <Chrome anchor={{ x: 0, y: 1, width: 1, height: 0 }} prefer={['below', 'above']}>
+      <div className="of-table-edit__rows" role="group" aria-label="Rows">
         <button
           type="button"
           className="of-table-edit__step"
@@ -486,6 +487,7 @@ function TableEditor({ object, at, zoom, onCommit, onCancel }: ObjectEditorProps
           −
         </button>
       </div>
+      </Chrome>
     </div>
   )
 }

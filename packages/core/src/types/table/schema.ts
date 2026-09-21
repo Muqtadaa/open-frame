@@ -361,3 +361,45 @@ export function styleCells(
     }),
   }
 }
+
+/**
+ * Where a range of cells sits inside the table, as fractions of its extent.
+ *
+ * Fractions rather than pixels, because the caller placing something beside
+ * these cells knows where the table is on screen and this does not — the same
+ * split `dividerPositions` makes, and the same unit a comment pin uses.
+ *
+ * `null` for an empty range: there is no rectangle around no cells, and
+ * returning the whole table instead would silently anchor a control to
+ * something the user did not select.
+ */
+export function cellRegion(
+  data: TableData,
+  indices: readonly number[],
+): { x: number; y: number; width: number; height: number } | null {
+  const width = data.columns.length
+  if (width === 0 || indices.length === 0) return null
+
+  const columns = indices.map((index) => index % width)
+  const rows = indices.map((index) => Math.floor(index / width))
+  const left = Math.min(...columns)
+  const right = Math.max(...columns)
+  const top = Math.min(...rows)
+  const bottom = Math.max(...rows)
+
+  const across = data.columns.reduce((sum, weight) => sum + weight, 0)
+  const down = data.rows.reduce((sum, weight) => sum + weight, 0)
+  if (across === 0 || down === 0) return null
+
+  const before = (weights: readonly number[], upTo: number): number =>
+    weights.slice(0, upTo).reduce((sum, weight) => sum + weight, 0)
+  const span = (weights: readonly number[], from: number, to: number): number =>
+    weights.slice(from, to + 1).reduce((sum, weight) => sum + weight, 0)
+
+  return {
+    x: before(data.columns, left) / across,
+    y: before(data.rows, top) / down,
+    width: span(data.columns, left, right) / across,
+    height: span(data.rows, top, bottom) / down,
+  }
+}

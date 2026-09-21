@@ -1,4 +1,4 @@
-import type { ComponentType } from 'react'
+import type { ComponentType, ReactNode } from 'react'
 
 import type {
   AnyOpenFrameObject,
@@ -6,6 +6,7 @@ import type {
   BoardDocument,
   ObjectBase,
   Point,
+  Rect,
 } from '@openframe/core'
 
 /**
@@ -76,6 +77,32 @@ export interface ObjectEditorProps<TData = unknown> {
    * however carefully you aimed.
    */
   readonly at: Point | null
+  /**
+   * Apparatus placed beside the object rather than drawn inside it.
+   *
+   * A table's colour bar and its row and column controls were rendered inside
+   * this editor, which is inside the world transform — so they multiplied by
+   * the zoom and were pinned to an edge that leaves the window as soon as you
+   * zoom in. Anything rendered into this lands in a SCREEN-space layer that
+   * places and clamps it with the same code the record panel uses.
+   *
+   * It arrives as a PROP rather than being imported, and that is the whole
+   * design: `views/` is a leaf and may not reach the canvas, the runtime or
+   * the interaction store. The canvas hands down a component already bound to
+   * its layer, so a view can place apparatus perfectly without knowing that a
+   * viewport exists.
+   *
+   * `anchor` is what the apparatus belongs beside, as a fraction of the
+   * object's own extent — the unit a divider's position and a comment pin
+   * already use. `null` means the whole object.
+   */
+  readonly Chrome: ComponentType<{
+    readonly anchor?: Rect | null | undefined
+    /** Sides to try, in order. Two pieces of apparatus on one object that both
+     * take the default land on top of each other. */
+    readonly prefer?: readonly ('right' | 'left' | 'below' | 'above' | 'over')[] | undefined
+    readonly children: ReactNode
+  }>
   readonly onCommit: (patch: Partial<TData>) => void
   readonly onCancel: () => void
 }
@@ -107,14 +134,20 @@ export function defineObjectView<TData>(definition: {
   InlineEditor?: ComponentType<ObjectEditorProps<TData>>
   usesAssets?: boolean
 }): ObjectViewDefinition {
-  const base = {
+  /*
+   * Spread one optional at a time. Every member has to be listed or it is
+   * silently dropped — the same trap `defineObjectType` warns about in core,
+   * and the reason a capability added to one of these and forgotten here
+   * simply never arrives.
+   */
+  return {
     type: definition.type,
     Renderer: definition.Renderer as ComponentType<ObjectViewProps>,
     ...(definition.usesAssets === true ? { usesAssets: true } : {}),
+    ...(definition.InlineEditor === undefined
+      ? {}
+      : { InlineEditor: definition.InlineEditor as ComponentType<ObjectEditorProps> }),
   }
-  return definition.InlineEditor === undefined
-    ? base
-    : { ...base, InlineEditor: definition.InlineEditor as ComponentType<ObjectEditorProps> }
 }
 
 export class ObjectViewRegistry {

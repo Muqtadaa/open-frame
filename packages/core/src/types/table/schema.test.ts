@@ -6,6 +6,7 @@ import {
   cellIndex,
   emptyCells,
   cellRange,
+  cellRegion,
   dividerPositions,
   styleCells,
   moveDividerAt,
@@ -348,5 +349,34 @@ describe('styleCells', () => {
     expect(
       TableDataSchema.safeParse(styleCells(three, [0], { fill: 'chartreuse' as never })).success,
     ).toBe(false)
+  })
+})
+
+describe('cellRegion', () => {
+  const three = grid(3, 3) as TableData
+
+  it('is the fraction of the table one cell occupies', () => {
+    expect(cellRegion(three, [0])).toEqual({ x: 0, y: 0, width: 1 / 3, height: 1 / 3 })
+    expect(cellRegion(three, [8])).toEqual({ x: 2 / 3, y: 2 / 3, width: 1 / 3, height: 1 / 3 })
+  })
+
+  it('bounds a rectangle of cells', () => {
+    expect(cellRegion(three, [0, 1, 3, 4])).toEqual({ x: 0, y: 0, width: 2 / 3, height: 2 / 3 })
+  })
+
+  /**
+   * WEIGHTED, not counted. A table whose first column is three times the
+   * others puts its second column at three quarters across, and a control
+   * anchored by cell COUNT would point at the middle of the first one.
+   */
+  it('reads the weights rather than assuming equal tracks', () => {
+    const uneven: TableData = { ...three, columns: [3, 1, 1] }
+    const region = cellRegion(uneven, [1])
+    expect(region?.x).toBeCloseTo(0.6, 10)
+    expect(region?.width).toBeCloseTo(0.2, 10)
+  })
+
+  it('has no rectangle for no cells', () => {
+    expect(cellRegion(three, [])).toBeNull()
   })
 })

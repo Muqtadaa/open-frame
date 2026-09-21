@@ -1,5 +1,5 @@
 import type { ObjectId } from '@openframe/core'
-import { memo } from 'react'
+import { memo, useMemo } from 'react'
 
 import { useAssetUrl } from '../hooks/use-asset-url.js'
 import { useDependencySubscriptions, useDocumentObject } from '../hooks/use-document-object.js'
@@ -8,8 +8,9 @@ import { useOpenFrame } from '../runtime/context.js'
 import { useInteractionStore } from '../interaction/interaction-store.js'
 import { useRemoteDrag } from '../interaction/remote-drags.js'
 import { ObjectErrorBoundary } from './ObjectErrorBoundary.js'
+import { EditorChrome } from './EditorChrome.js'
 import { FallbackView } from '../views/FallbackView.js'
-import type { ObjectViewRegistry } from '../views/registry.js'
+import type { ObjectEditorProps, ObjectViewRegistry } from '../views/registry.js'
 
 interface Props {
   readonly id: ObjectId
@@ -23,7 +24,31 @@ interface Props {
  * component. The live drag delta is added HERE at render time — the document
  * still holds the committed position, and will until pointer-up.
  */
+/**
+ * The chrome component handed to this object's editor.
+ *
+ * MEMOISED on the id, and that is not an optimisation. Written inline it was a
+ * new component TYPE on every render, so React unmounted and remounted the
+ * portal each time — the apparatus flickered out of existence mid-interaction
+ * and took the focus with it, which presented as buttons that were visible and
+ * could not be clicked.
+ */
+function useChrome(id: ObjectId): ObjectEditorProps['Chrome'] {
+  return useMemo(
+    () =>
+      function ObjectChrome({ anchor, prefer, children }) {
+        return (
+          <EditorChrome objectId={id} anchor={anchor} prefer={prefer}>
+            {children}
+          </EditorChrome>
+        )
+      },
+    [id],
+  )
+}
+
 function ObjectViewInner({ id, views }: Props) {
+  const chrome = useChrome(id)
   const object = useDocumentObject(id)
   const selected = useInteractionStore((state) => state.selection.has(id))
   const zoom = useInteractionStore((state) => state.viewport.zoom)
@@ -148,6 +173,7 @@ function ObjectViewInner({ id, views }: Props) {
             zoom={zoom}
             document={runtime.store.getDocument()}
             at={editingAt}
+            Chrome={chrome}
             onCommit={(patch) => {
               // Types name their editable field differently (`text`, `name`),
               // so the patch is passed through rather than picked apart here.

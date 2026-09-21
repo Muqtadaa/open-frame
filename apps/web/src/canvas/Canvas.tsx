@@ -115,6 +115,13 @@ export function Canvas() {
         */}
         <CommentLayer />
       </div>
+
+      {/*
+        * Where a type's own apparatus lands: OUTSIDE the world transform, so
+        * it is the same size on screen at every zoom and can be clamped to the
+        * window. Empty until something is being edited.
+        */}
+      <div className="of-chrome-layer" data-chrome-layer />
     </div>
   )
 }

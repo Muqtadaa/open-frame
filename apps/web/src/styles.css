@@ -1139,7 +1139,35 @@ body {
 }
 
 /*
- * The cell colours, ABOVE the grid.
+ * THE CHROME LAYER.
+ *
+ * Outside the world transform, so a type's apparatus is the same size on
+ * screen at every zoom and can be clamped to the window. Click-through except
+ * where a surface actually paints, like every other overlay here.
+ */
+.of-chrome-layer {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+
+/*
+ * THE SHELL every contextual surface shares.
+ *
+ * A record panel, a colour bar, a language menu and a picker were four
+ * different pieces of stock with four radii and three shadows, because each
+ * was written where it was needed rather than from one place. One shell means
+ * a fifth surface inherits the world instead of guessing at it.
+ */
+.of-chrome {
+  position: absolute;
+  top: 0;
+  left: 0;
+  pointer-events: auto;
+}
+
+/*
+ * The cell colours.
  *
  * The other two edges are taken — columns to the right, rows underneath — and
  * the fourth is where a formatting bar goes in everything people come from.
@@ -1147,13 +1175,9 @@ body {
  * set to" without a separate inspector.
  */
 .of-cellbar {
-  position: absolute;
-  bottom: 100%;
-  left: 0;
   display: grid;
   gap: 7px;
   padding: 7px;
-  margin-bottom: 6px;
   background: var(--of-page);
   border: 1px solid var(--of-panel-border);
   /* Apparatus radius: this bar is margin chrome, like the rail. */
@@ -1198,25 +1222,19 @@ body {
 
 /* The ring itself is set inline, in screen pixels: see `TableView`. */
 
+/*
+ * Beside the axis each one changes: columns to the right, rows underneath.
+ * WHERE that is on screen is the chrome layer's decision now; these only say
+ * which way they stack.
+ */
 .of-table-edit__columns,
 .of-table-edit__rows {
-  position: absolute;
   display: flex;
   gap: 2px;
 }
 
-/* Beside the axis it changes: columns to the right, rows underneath. */
 .of-table-edit__columns {
-  top: 0;
-  left: 100%;
   flex-direction: column;
-  margin-left: 4px;
-}
-
-.of-table-edit__rows {
-  top: 100%;
-  left: 0;
-  margin-top: 4px;
 }
 
 .of-table-edit__step {

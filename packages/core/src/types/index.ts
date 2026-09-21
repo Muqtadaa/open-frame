@@ -36,6 +36,7 @@ export {
   CELL_STYLE_KEYS,
   cellIndex,
   cellRange,
+  cellRegion,
   styleCells,
   emptyCells,
   dividerPositions,
