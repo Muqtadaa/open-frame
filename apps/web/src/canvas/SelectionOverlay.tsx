@@ -59,6 +59,7 @@ export function SelectionOverlay() {
   const zoom = useInteractionStore((state) => state.viewport.zoom)
   const dragKind = useInteractionStore((state) => state.drag.kind)
   const editingId = useInteractionStore((state) => state.editingId)
+  const croppingId = useInteractionStore((state) => state.croppingId)
   const previewFrames = useInteractionStore((state) =>
     state.drag.kind === 'resize' || state.drag.kind === 'rotate' ? state.drag.frames : null,
   )
@@ -100,9 +101,21 @@ export function SelectionOverlay() {
   const only = objects.length === 1 ? objects[0] : undefined
   const single =
     only !== undefined && only.frame.width > 0 && only.frame.height > 0 ? only : undefined
+  /*
+   * CROP MODE REPLACES THE GRIPS, it does not add to them.
+   *
+   * The crop grips sit on exactly the same corners and edges, above the object
+   * at `z-index: 3` — so with both on screen every press meant for a resize
+   * hit a crop instead, and the image could not be resized at all. Two
+   * gestures cannot offer a handle in the same place and expect the user to
+   * know which one they got.
+   */
+  const cropping = croppingId !== null && croppingId === single?.id
+
   const rotation = single?.frame.rotation ?? 0
   const box = single === undefined ? bounds : single.frame
   const rotatable =
+    !cropping &&
     single !== undefined &&
     !single.locked &&
     runtime.registry.get(single.type)?.capabilities.rotatable === true
@@ -122,6 +135,7 @@ export function SelectionOverlay() {
   const locked = objects.length > 0 && objects.every((object) => object.locked)
 
   const resizable =
+    !cropping &&
     objects.length > 0 &&
     objects.every((object) => !object.locked) &&
     objects.some((object) => runtime.registry.get(object.type)?.capabilities.resizable === true)

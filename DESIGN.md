@@ -784,10 +784,19 @@ bug.
 
 ### Cropping an Image
 
-Double-click an image to trim it. The handles shrink the visible window and the
-frame shrinks with it, so what you see is the object's size — and the pixels
-that survive do not move, which is the whole point: a crop that rescales what
-is left feels like stretching a rubber sheet rather than using scissors.
+Double-click an image to trim it. The grips are **corner brackets and edge
+bars**, not squares: a square is what a resize handle looks like, and the two
+gestures do different things to the same object. Crop mode REPLACES the resize
+handles and the connection points rather than adding to them — two gestures
+offering a grip in the same place is a coin toss the user has to call.
+
+The handles shrink the visible window and the frame shrinks with it, so what
+you see is the object's size — and the pixels that survive do not move, which
+is the whole point: a crop that rescales what is left feels like stretching a
+rubber sheet rather than using scissors.
+
+Crop mode belongs to the selected object and ends the moment the selection
+changes or Escape is pressed.
 
 A trimmed image offers **reset**, which grows the frame back as it restores the
 window. Restoring one without the other would squeeze the whole picture into

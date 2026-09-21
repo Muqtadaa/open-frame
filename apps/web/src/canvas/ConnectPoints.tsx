@@ -36,9 +36,17 @@ export function ConnectPoints() {
   const zoom = useInteractionStore((state) => state.viewport.zoom)
   const dragKind = useInteractionStore((state) => state.drag.kind)
   const editingId = useInteractionStore((state) => state.editingId)
+  const croppingId = useInteractionStore((state) => state.croppingId)
 
   // Hidden mid-gesture and while editing, like every other piece of chrome.
-  if (selection.size !== 1 || editingId !== null || dragKind !== 'idle') return null
+  /*
+   * Hidden while cropping, like everything else that offers a grip. Crop mode
+   * covers the object's edges with brackets, and a connection point sitting
+   * among them is both clutter and one more press to lose.
+   */
+  if (selection.size !== 1 || editingId !== null || croppingId !== null || dragKind !== 'idle') {
+    return null
+  }
 
   const [id] = [...selection]
   const object = id === undefined ? undefined : document.objects.get(id)

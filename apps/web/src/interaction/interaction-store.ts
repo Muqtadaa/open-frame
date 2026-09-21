@@ -119,6 +119,29 @@ function writeWheelMode(mode: WheelMode): void {
  * makes a 500-event drag one undo entry, one save and (later) one collaborative
  * update, and it is the reason this state lives here rather than in the board.
  */
+/**
+ * Crop mode belongs to the object that is SELECTED, and only when it is the
+ * only one.
+ *
+ * Nothing used to clear `croppingId`, and that single omission produced three
+ * separate symptoms: the dashed outline and its reset button stayed on the
+ * image you had left, the crop grips stayed in the DOM at `z-index: 3` — which
+ * is above a selected object — and because those grips sit on exactly the same
+ * corners as the resize handles, every later attempt to resize that image
+ * cropped it instead.
+ *
+ * Expressed once here rather than remembered at each of the three call sites,
+ * because a rule that has to be remembered three times is a rule that will be
+ * forgotten once.
+ */
+function croppingWithin(
+  croppingId: ObjectId | null,
+  selection: ReadonlySet<ObjectId>,
+): ObjectId | null {
+  if (croppingId === null) return null
+  return selection.size === 1 && selection.has(croppingId) ? croppingId : null
+}
+
 export type DragState =
   | { readonly kind: 'idle' }
   | {
@@ -471,15 +494,19 @@ export const useInteractionStore = create<InteractionState>((set) => ({
       writeWheelMode(next)
       return { wheelMode: next }
     }),
-  setSelection: (ids) => set({ selection: new Set(ids) }),
+  setSelection: (ids) =>
+    set((state) => {
+      const selection = new Set(ids)
+      return { selection, croppingId: croppingWithin(state.croppingId, selection) }
+    }),
   toggleSelection: (id) =>
     set((state) => {
       const next = new Set(state.selection)
       if (next.has(id)) next.delete(id)
       else next.add(id)
-      return { selection: next }
+      return { selection: next, croppingId: croppingWithin(state.croppingId, next) }
     }),
-  clearSelection: () => set({ selection: new Set<ObjectId>() }),
+  clearSelection: () => set({ selection: new Set<ObjectId>(), croppingId: null }),
   setHovered: (hoveredId) => set({ hoveredId }),
   setEditing: (editingId, at) =>
     set((state) => {

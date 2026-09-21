@@ -196,11 +196,22 @@ test.describe('cropping', () => {
     await expect(page.locator('[data-object-type="image"]')).toHaveCount(1)
   })
 
-  test('double-click opens crop handles, and escape is not needed to leave', async ({ page }) => {
+  test('double-click opens crop brackets rather than resize squares', async ({ page }) => {
     await expect(page.getByTestId('crop-overlay')).toHaveCount(0)
     await page.locator('[data-object-type="image"]').dblclick()
     await expect(page.getByTestId('crop-overlay')).toBeVisible()
     await expect(page.getByTestId('crop-e')).toBeVisible()
+
+    /*
+     * A BRACKET, not a square. A corner grip draws only the two sides it owns,
+     * so it reads as the edge you are about to move rather than as the resize
+     * handle it used to be mistaken for.
+     */
+    const corner = page.getByTestId('crop-nw')
+    await expect(corner).toHaveCSS('border-top-style', 'solid')
+    await expect(corner).toHaveCSS('border-left-style', 'solid')
+    await expect(corner).toHaveCSS('border-right-style', 'none')
+    await expect(corner).toHaveCSS('border-bottom-style', 'none')
   })
 
   test('trims the right edge without moving what is left', async ({ page }) => {
@@ -263,6 +274,80 @@ test.describe('cropping', () => {
     expect(after.x).toBeCloseTo(before.x + trim, 0)
     expect(after.width).toBeCloseTo(before.width - trim, 0)
     expect(shown.x).toBeCloseTo(picture.x, 0)
+  })
+
+  /**
+   * CROP MODE BELONGS TO THE SELECTED OBJECT.
+   *
+   * Nothing cleared it, and that single omission produced three symptoms at
+   * once: the dashed outline and its reset button stayed on the image you had
+   * left; the crop grips stayed in the DOM at `z-index: 3`, which is above a
+   * selected object; and because those grips sit on exactly the corners the
+   * resize handles use, every later attempt to resize that image cropped it
+   * instead.
+   */
+  test('leaves crop mode when something else is selected', async ({ page }) => {
+    await page.locator('[data-object-type="image"]').dblclick()
+    await expect(page.getByTestId('crop-overlay')).toBeVisible()
+
+    // Anywhere else on the board.
+    await page.locator(CANVAS).click({ position: { x: 1180, y: 160 } })
+    await expect(page.getByTestId('crop-overlay')).toHaveCount(0)
+    await expect(page.getByTestId('crop-reset')).toHaveCount(0)
+  })
+
+  test('leaves crop mode on escape', async ({ page }) => {
+    await page.locator('[data-object-type="image"]').dblclick()
+    await expect(page.getByTestId('crop-overlay')).toBeVisible()
+    await page.keyboard.press('Escape')
+    await expect(page.getByTestId('crop-overlay')).toHaveCount(0)
+  })
+
+  test('can still be resized after being cropped', async ({ page }) => {
+    const image = page.locator('[data-object-type="image"]')
+    await image.dblclick()
+
+    const grip = await page.getByTestId('crop-e').boundingBox()
+    if (grip === null) throw new Error('no crop handle')
+    await page.mouse.move(grip.x + grip.width / 2, grip.y + grip.height / 2)
+    await page.mouse.down()
+    await page.mouse.move(grip.x + grip.width / 2 - 40, grip.y + grip.height / 2, { steps: 6 })
+    await page.mouse.up()
+
+    // Leave crop mode the way anybody would: click away, then select it again.
+    await page.locator(CANVAS).click({ position: { x: 1180, y: 160 } })
+    await image.click()
+
+    const cropped = await image.boundingBox()
+    if (cropped === null) throw new Error('no image')
+
+    /*
+     * The resize handle must be reachable. It was not: the crop grips were
+     * still in the DOM, above the object, on the same corner.
+     */
+    const handle = await page.getByTestId('handle-se').boundingBox()
+    if (handle === null) throw new Error('no resize handle')
+    await page.mouse.move(handle.x + handle.width / 2, handle.y + handle.height / 2)
+    await page.mouse.down()
+    await page.mouse.move(handle.x + 60, handle.y + 45, { steps: 8 })
+    await page.mouse.up()
+
+    await expect.poll(async () => (await image.boundingBox())?.width ?? 0).toBeGreaterThan(
+      cropped.width + 30,
+    )
+  })
+
+  test('offers crop grips OR resize grips, never both at once', async ({ page }) => {
+    const image = page.locator('[data-object-type="image"]')
+    await image.click()
+    await expect(page.getByTestId('handle-se')).toBeVisible()
+    await expect(page.getByTestId('crop-se')).toHaveCount(0)
+
+    await image.dblclick()
+    await expect(page.getByTestId('crop-se')).toBeVisible()
+    // Two gestures cannot offer a handle in the same place and expect anyone
+    // to know which one they got.
+    await expect(page.getByTestId('handle-se')).toHaveCount(0)
   })
 
   test('is one undoable action, and reset puts the whole picture back', async ({ page }) => {

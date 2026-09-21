@@ -5058,12 +5058,43 @@ textarea.of-input {
   pointer-events: none;
 }
 
+/*
+ * Brackets, not squares. A square is what a resize handle looks like, and the
+ * two gestures do different things to the same object — one changes how big
+ * the picture is drawn, the other how much of it there is.
+ *
+ * Each grip draws only the sides it owns, so a corner is an L and an edge is a
+ * bar. `border-style: none` on the base, then turned on per side below.
+ */
 .of-crop__grip {
   position: absolute;
-  background: var(--of-accent);
-  border: solid var(--of-panel);
-  border-radius: 1px;
+  border-style: none;
+  border-color: var(--of-accent);
   pointer-events: auto;
+}
+
+.of-crop__grip--nw,
+.of-crop__grip--n,
+.of-crop__grip--ne {
+  border-top-style: solid;
+}
+
+.of-crop__grip--sw,
+.of-crop__grip--s,
+.of-crop__grip--se {
+  border-bottom-style: solid;
+}
+
+.of-crop__grip--nw,
+.of-crop__grip--w,
+.of-crop__grip--sw {
+  border-left-style: solid;
+}
+
+.of-crop__grip--ne,
+.of-crop__grip--e,
+.of-crop__grip--se {
+  border-right-style: solid;
 }
 
 .of-crop__reset {

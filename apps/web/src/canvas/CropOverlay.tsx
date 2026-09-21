@@ -6,8 +6,18 @@ import { useInteractionStore } from '../interaction/interaction-store.js'
 import { useOpenFrame } from '../runtime/context.js'
 import { HANDLES, HANDLE_CURSORS, HANDLE_HIT_PX, handleAnchor } from '../scene/resize.js'
 
-/** The drawn handle, matching the resize grips so the gesture reads the same. */
-const HANDLE_PX = 9
+/**
+ * A crop grip is a BRACKET, not a square.
+ *
+ * Squares are what a resize handle looks like, and the two gestures do
+ * different things to the same object — one changes how big the picture is
+ * drawn, the other how much of it there is. Corner brackets and edge bars are
+ * the shape every tool with a crop uses, and the reason is that they draw the
+ * EDGE you are about to move rather than a point.
+ */
+const CORNER_PX = 20
+const CORNER_THICK_PX = 3
+const EDGE_PX = 22
 
 /**
  * Trimming an image, entered by double-clicking it.
@@ -58,9 +68,12 @@ export function CropOverlay() {
       ? object.frame
       : { ...object.frame, x: previewX, y: previewY, width: previewWidth, height: previewHeight }
 
-  const size = HANDLE_PX / zoom
-  const hitPad = Math.max(0, (HANDLE_HIT_PX - HANDLE_PX) / 2) / zoom
-  const half = size / 2
+  const corner = CORNER_PX / zoom
+  const thick = CORNER_THICK_PX / zoom
+  const edge = EDGE_PX / zoom
+  // The 24px pointer target (WCAG 2.5.8), as for every other handle: the drawn
+  // size is a design decision and the target is not.
+  const pad = Math.max(0, HANDLE_HIT_PX / zoom - thick) / 2
 
   const crop: ImageCrop = (object.data as { crop?: ImageCrop | null }).crop ?? FULL_CROP
   const trimmed = crop.x > 0 || crop.y > 0 || crop.width < 1 || crop.height < 1
@@ -78,28 +91,38 @@ export function CropOverlay() {
     >
       {HANDLES.map((handle) => {
         const anchor = handleAnchor(handle)
+        const isCorner = handle.length === 2
+        /*
+         * A bracket is drawn with BORDERS on the two sides it owns, so the
+         * corner piece is an L and an edge piece is a bar. Sized in world
+         * units divided by the zoom, like every other piece of chrome, so it
+         * stays a constant size on screen.
+         */
+        const across = isCorner ? corner : handle === 'n' || handle === 's' ? edge : thick
+        const down = isCorner ? corner : handle === 'e' || handle === 'w' ? edge : thick
+
         return (
           <div
             key={handle}
-            className="of-crop__grip"
+            className={`of-crop__grip of-crop__grip--${handle}`}
             // Read back by the gesture, which does not otherwise know what was
             // grabbed — the same handshake the resize and divider grips use.
             data-handle="crop"
             data-crop-handle={handle}
             data-testid={`crop-${handle}`}
             style={{
-              left: `${String(anchor.x * frame.width - half)}px`,
-              top: `${String(anchor.y * frame.height - half)}px`,
-              width: `${String(size)}px`,
-              height: `${String(size)}px`,
-              borderWidth: `${String(1 / zoom)}px`,
+              left: `${String(anchor.x * frame.width - across / 2)}px`,
+              top: `${String(anchor.y * frame.height - down / 2)}px`,
+              width: `${String(across)}px`,
+              height: `${String(down)}px`,
+              borderWidth: `${String(thick)}px`,
               cursor: HANDLE_CURSORS[handle],
             }}
           >
             <span
               className="of-handle__target"
               aria-hidden="true"
-              style={{ inset: `${String(-hitPad)}px`, cursor: HANDLE_CURSORS[handle] }}
+              style={{ inset: `${String(-pad)}px`, cursor: HANDLE_CURSORS[handle] }}
             />
           </div>
         )
