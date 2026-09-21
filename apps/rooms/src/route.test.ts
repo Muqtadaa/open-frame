@@ -165,3 +165,58 @@ describe('destroying a room', () => {
     expect(route.kind).toBe('destroy')
   })
 })
+
+/**
+ * The asset endpoints.
+ *
+ * The credential travels in a HEADER rather than the query string, which is
+ * why nothing here parses a key: the room reads the headers. That is the same
+ * reasoning `destroy` follows — the socket's key is in the URL because a link
+ * is a thing people paste, and an image request is not.
+ */
+describe('one image on a board', () => {
+  const at = (path: string, method: string) =>
+    routeRequest(new URL(`https://rooms.example${path}`), null, method)
+
+  it('routes a read and a write', () => {
+    expect(at('/room/brd_1/asset/ast_2', 'GET')).toEqual({
+      kind: 'asset',
+      boardId: 'brd_1',
+      assetId: 'ast_2',
+    })
+    expect(at('/room/brd_1/asset/ast_2', 'PUT')).toMatchObject({ kind: 'asset' })
+  })
+
+  it('answers the preflight, since this is a cross-origin request with headers', () => {
+    expect(at('/room/brd_1/asset/ast_2', 'OPTIONS')).toEqual({ kind: 'preflight' })
+  })
+
+  it('refuses any other method', () => {
+    expect(at('/room/brd_1/asset/ast_2', 'POST')).toMatchObject({ kind: 'refuse', status: 405 })
+    expect(at('/room/brd_1/asset/ast_2', 'DELETE')).toMatchObject({ kind: 'refuse', status: 405 })
+  })
+
+  /*
+   * An asset id becomes a key in a bucket, so anything a path allows but a key
+   * should not carry is refused before it reaches storage.
+   */
+  it('refuses an id that could mean something to a bucket', () => {
+    expect(at('/room/brd_1/asset/../../secret', 'GET')).toMatchObject({ kind: 'refuse' })
+    expect(at('/room/brd_1/asset/a b', 'GET')).toMatchObject({ kind: 'refuse' })
+    expect(at('/room/brd_1/asset/', 'GET')).toMatchObject({ kind: 'refuse' })
+  })
+
+  it('refuses a board id that is not one', () => {
+    expect(at('/room/not a board/asset/ast_2', 'GET')).toMatchObject({
+      kind: 'refuse',
+      status: 400,
+    })
+  })
+
+  /* The socket route must still be the socket route. */
+  it('does not swallow the room path', () => {
+    expect(routeRequest(new URL('https://rooms.example/room/brd_1'), 'websocket')).toMatchObject({
+      kind: 'room',
+    })
+  })
+})

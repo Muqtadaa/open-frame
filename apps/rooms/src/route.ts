@@ -23,6 +23,14 @@ const DESTROY_PATH = /^\/room\/([^/]+)\/destroy\/?$/
 const PASSWORD_PATH = /^\/room\/([^/]+)\/password\/?$/
 const UNLOCK_PATH = /^\/room\/([^/]+)\/unlock\/?$/
 const OWNER_PATH = /^\/room\/([^/]+)\/owner\/?$/
+/**
+ * One image on a board.
+ *
+ * The asset id is checked here for the same reason the board id is: it becomes
+ * a key in a bucket, so anything a path allows but a key should not carry gets
+ * refused before it reaches storage.
+ */
+const ASSET_PATH = /^\/room\/([^/]+)\/asset\/([A-Za-z0-9_-]{1,64})\/?$/
 
 /**
  * The shape of an access key.
@@ -62,6 +70,15 @@ export type Route =
   | { readonly kind: 'unlock'; readonly boardId: string }
   /** Mint this board's owner key, once, for a board claimed before they existed. */
   | { readonly kind: 'owner'; readonly boardId: string }
+  /**
+   * Reading or writing one image.
+   *
+   * The credential travels in a HEADER, not the query string — the same
+   * reasoning as `destroy`. The socket's key is in the URL because a link is a
+   * thing people paste; an image request is not, and a credential in a URL is
+   * a credential in an access log.
+   */
+  | { readonly kind: 'asset'; readonly boardId: string; readonly assetId: string }
   /** A CORS preflight for the above: the web app is on another origin. */
   | { readonly kind: 'preflight' }
   | { readonly kind: 'refuse'; readonly status: number; readonly reason: string }
@@ -94,6 +111,20 @@ export function routeRequest(url: URL, upgradeHeader: string | null, method = 'G
     if (method === 'OPTIONS') return { kind: 'preflight' }
     if (method !== 'POST') return { kind: 'refuse', status: 405, reason: `${name} is a POST` }
     return { kind, boardId }
+  }
+
+  const asset = ASSET_PATH.exec(url.pathname)
+  if (asset !== null) {
+    const boardId = asset[1]
+    const assetId = asset[2]
+    if (boardId === undefined || !BOARD_ID.test(boardId) || assetId === undefined) {
+      return { kind: 'refuse', status: 400, reason: 'That is not a board id' }
+    }
+    if (method === 'OPTIONS') return { kind: 'preflight' }
+    if (method !== 'GET' && method !== 'PUT') {
+      return { kind: 'refuse', status: 405, reason: 'An asset is a GET or a PUT' }
+    }
+    return { kind: 'asset', boardId, assetId }
   }
 
   const match = ROOM_PATH.exec(url.pathname)

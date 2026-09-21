@@ -26,6 +26,7 @@ import {
   tokenAdmits,
   type PasswordVerifier,
 } from './password.js'
+import { assetDecision, assetKey } from './assets.js'
 import type { Env } from './env.js'
 
 /**
@@ -136,6 +137,8 @@ export class BoardRoomObject extends DurableObject<Env> {
       return new Response('This board no longer exists', { status: 410, headers: CORS })
     }
 
+    if (url.pathname.includes('/asset/')) return this.#asset(request, url)
+
     if (url.pathname.endsWith('/claim')) return this.#claim()
     if (url.pathname.endsWith('/password')) return this.#setPassword(request)
     if (url.pathname.endsWith('/unlock')) return this.#unlock(request)
@@ -230,6 +233,68 @@ export class BoardRoomObject extends DurableObject<Env> {
         socket.send(data)
       },
     }
+  }
+
+  /**
+   * One image on this board: read it, or put it there.
+   *
+   * The DECISION is in `assets.ts`, which is values in and a verdict out, so
+   * the rule about who can see every picture anybody has put on a board can be
+   * run in Node. What is left here is storage and a response — the same split
+   * as `claimDecision`, and for the same reason.
+   */
+  async #asset(request: Request, url: URL): Promise<Response> {
+    const assetId = url.pathname.split('/asset/')[1]?.replace(/\/$/, '') ?? ''
+    if (assetId === '') return new Response('Not found', { status: 404, headers: CORS })
+
+    const keys = await this.ctx.storage.get<AccessKeys>(KEYS)
+    const verifier = await this.ctx.storage.get<PasswordVerifier>(PASSWORD)
+    const owner = isOwnerKey(keys, request.headers.get('x-openframe-owner'))
+
+    const decision = assetDecision({
+      method: request.method,
+      role: roleForKey(keys, request.headers.get('x-openframe-key')),
+      owner,
+      unlocked: tokenAdmits(verifier, request.headers.get('x-openframe-token')),
+      contentType: request.headers.get('content-type'),
+      contentLength: Number(request.headers.get('content-length') ?? Number.NaN),
+    })
+
+    if (!decision.ok) {
+      return new Response(decision.reason, { status: decision.status, headers: CORS })
+    }
+
+    const key = assetKey(this.#boardId(url), assetId)
+
+    if (decision.write) {
+      await this.env.ASSETS.put(key, request.body, {
+        httpMetadata: { contentType: decision.contentType },
+      })
+      return new Response(null, { status: 204, headers: CORS })
+    }
+
+    const object = await this.env.ASSETS.get(key)
+    if (object === null) return new Response('No such image', { status: 404, headers: CORS })
+
+    return new Response(object.body, {
+      headers: {
+        ...CORS,
+        'content-type': object.httpMetadata?.contentType ?? 'application/octet-stream',
+        /*
+         * An image is immutable — its id is minted per upload — so it can be
+         * cached hard. `nosniff` because the type is whatever the uploader
+         * declared, checked against an allowlist but never re-derived from the
+         * bytes.
+         */
+        'cache-control': 'private, max-age=31536000, immutable',
+        'x-content-type-options': 'nosniff',
+      },
+    })
+  }
+
+  /** The board this room is, taken from the path it was reached by. */
+  #boardId(url: URL): string {
+    return url.pathname.split('/')[2] ?? ''
   }
 
   async #roleFor(key: string | null): Promise<RoomRole | null> {

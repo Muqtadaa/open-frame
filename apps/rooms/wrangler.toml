@@ -24,3 +24,17 @@ class_name = "BoardRoomObject"
 [exports.BoardRoomObject]
 type = "durable-object"
 storage = "sqlite"
+
+# Where a board's images live.
+#
+# Outside the Durable Object's storage on purpose: that storage is the board's
+# document and its update log, and putting megabytes of photograph beside them
+# would be paid for on every snapshot and every compaction — for bytes nothing
+# reading the board needs.
+#
+# R2 has no egress charge, which is the property that matters here: an image is
+# written once and read by everyone who opens the board, for as long as it
+# exists.
+[[r2_buckets]]
+binding = "ASSETS"
+bucket_name = "openframe-assets"

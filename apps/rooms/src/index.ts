@@ -40,12 +40,18 @@ export default {
           status: 204,
           headers: {
             'access-control-allow-origin': '*',
-            'access-control-allow-methods': 'POST, OPTIONS',
-            'access-control-allow-headers': 'content-type',
+            'access-control-allow-methods': 'GET, PUT, POST, OPTIONS',
+            /*
+             * The key and the password token travel as headers rather than in
+             * the URL, so the preflight has to allow them by name — a browser
+             * will not send a header the server has not said it accepts.
+             */
+            'access-control-allow-headers': 'content-type, x-openframe-key, x-openframe-owner, x-openframe-token',
             'access-control-max-age': '86400',
           },
         })
 
+      case 'asset':
       case 'claim':
       case 'destroy':
       case 'password':
