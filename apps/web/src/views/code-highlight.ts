@@ -22,12 +22,33 @@ import type HighlightEngine from 'highlight.js/lib/core'
 /** What the picker offers, mapped to the module that teaches it. */
 const LANGUAGES: Readonly<Record<string, () => Promise<{ default: unknown }>>> = {
   bash: () => import('highlight.js/lib/languages/bash'),
+  c: () => import('highlight.js/lib/languages/c'),
+  cpp: () => import('highlight.js/lib/languages/cpp'),
+  csharp: () => import('highlight.js/lib/languages/csharp'),
   css: () => import('highlight.js/lib/languages/css'),
+  diff: () => import('highlight.js/lib/languages/diff'),
+  dockerfile: () => import('highlight.js/lib/languages/dockerfile'),
+  go: () => import('highlight.js/lib/languages/go'),
+  graphql: () => import('highlight.js/lib/languages/graphql'),
   html: () => import('highlight.js/lib/languages/xml'),
+  ini: () => import('highlight.js/lib/languages/ini'),
+  java: () => import('highlight.js/lib/languages/java'),
+  javascript: () => import('highlight.js/lib/languages/javascript'),
   json: () => import('highlight.js/lib/languages/json'),
+  kotlin: () => import('highlight.js/lib/languages/kotlin'),
+  lua: () => import('highlight.js/lib/languages/lua'),
+  markdown: () => import('highlight.js/lib/languages/markdown'),
+  php: () => import('highlight.js/lib/languages/php'),
   python: () => import('highlight.js/lib/languages/python'),
+  r: () => import('highlight.js/lib/languages/r'),
+  ruby: () => import('highlight.js/lib/languages/ruby'),
+  rust: () => import('highlight.js/lib/languages/rust'),
+  scala: () => import('highlight.js/lib/languages/scala'),
   sql: () => import('highlight.js/lib/languages/sql'),
+  swift: () => import('highlight.js/lib/languages/swift'),
   typescript: () => import('highlight.js/lib/languages/typescript'),
+  xml: () => import('highlight.js/lib/languages/xml'),
+  yaml: () => import('highlight.js/lib/languages/yaml'),
 }
 
 /**

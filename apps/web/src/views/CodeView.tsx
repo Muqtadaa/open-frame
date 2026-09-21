@@ -3,6 +3,7 @@ import { useEffect, useRef, useState } from 'react'
 import { CODE_LANGUAGES, MAX_CODE, type CodeData } from '@openframe/core'
 
 import { inkColor } from '../scene/style-tokens.js'
+import { canFormat, formatCode } from './code-format.js'
 import { defineObjectView, type ObjectEditorProps, type ObjectViewProps } from './registry.js'
 import { highlight } from './code-highlight.js'
 
@@ -90,6 +91,39 @@ function CodeEditor({ object, Chrome, onCommit, onCancel }: ObjectEditorProps<Co
   const [language, setLanguage] = useState(object.data.language)
   const area = useRef<HTMLTextAreaElement>(null)
 
+  /**
+   * Pretty-prints what is in the box, in place.
+   *
+   * The WHOLE block, never the selection: a selected fragment of JSON is not
+   * JSON, and a formatter handed half an expression either refuses or invents
+   * the missing half. Formatting the document is what the same key does in an
+   * editor.
+   *
+   * Nothing is written to the object — this is an edit in the field like any
+   * other, so it lands in the single command the editor commits on close and
+   * one press is one undo.
+   */
+  const prettyPrint = (): void => {
+    const field = area.current
+    const caret = field?.selectionStart ?? 0
+    void formatCode(code, language).then((printed) => {
+      // `MAX_CODE` is enforced by the field's own `maxLength`, which state set
+      // from here goes straight past. Formatting is not a reason to exceed the
+      // one limit the schema will reject the object for.
+      if (printed === null || printed === code || printed.length > MAX_CODE) return
+      setCode(printed)
+      requestAnimationFrame(() => {
+        if (field === null) return
+        // Focus comes back because the press moved it to the button, and the
+        // next thing you do after formatting is keep typing.
+        field.focus()
+        const at = Math.min(caret, printed.length)
+        field.selectionStart = at
+        field.selectionEnd = at
+      })
+    })
+  }
+
   return (
     <div
       className="of-code of-code--editing of-editor-chrome"
@@ -127,6 +161,7 @@ function CodeEditor({ object, Chrome, onCommit, onCancel }: ObjectEditorProps<Co
         * off-window on a code block bigger than the viewport.
         */}
       <Chrome anchor={{ x: 0, y: 0, width: 1, height: 0 }} prefer={['above', 'below']}>
+      <div className="of-code__bar">
       <select
         className="of-code__picker of-surface"
         value={CODE_LANGUAGES.includes(language as (typeof CODE_LANGUAGES)[number]) ? language : 'plain'}
@@ -145,6 +180,26 @@ function CodeEditor({ object, Chrome, onCommit, onCancel }: ObjectEditorProps<Co
           </option>
         ))}
       </select>
+      {/*
+        * DISABLED rather than hidden where the language has no formatter.
+        * A control that comes and goes as the menu beside it changes reads as
+        * a glitch; one that is plainly unavailable answers the question it
+        * raises. Twenty-one of the twenty-nine languages get the indenter,
+        * eight get Prettier, and the rest — Python, YAML as a diff, Markdown —
+        * are the ones whose leading space IS their meaning.
+        */}
+      <button
+        type="button"
+        className="of-button of-button--ghost of-surface of-code__format"
+        disabled={!canFormat(language)}
+        aria-label="Pretty print"
+        title="Pretty print (Shift+Alt+F)"
+        data-testid="code-format"
+        onClick={prettyPrint}
+      >
+        format
+      </button>
+      </div>
       </Chrome>
 
       <textarea
@@ -164,6 +219,19 @@ function CodeEditor({ object, Chrome, onCommit, onCancel }: ObjectEditorProps<Co
           event.stopPropagation()
           if (event.key === 'Escape') {
             onCancel()
+            return
+          }
+          /*
+           * Shift+Alt+F pretty-prints, as it does in an editor.
+           *
+           * Matched on `code` rather than `key`: Alt is a compose modifier, so
+           * the character this produces is 'Ï' on a Mac and depends on the
+           * layout everywhere else. `event.code` is the physical key, which is
+           * what a shortcut with a modifier actually means.
+           */
+          if (event.altKey && event.shiftKey && event.code === 'KeyF') {
+            event.preventDefault()
+            prettyPrint()
             return
           }
           if (event.key === 'Tab') {

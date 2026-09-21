@@ -75,6 +75,9 @@ importers:
       highlight.js:
         specifier: ^11.12.0
         version: 11.12.0
+      prettier:
+        specifier: ^3.9.7
+        version: 3.9.7
       react:
         specifier: ^19.3.0
         version: 19.3.0

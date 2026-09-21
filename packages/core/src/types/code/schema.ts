@@ -34,15 +34,48 @@ export const CODE_VERSION = 1
 export const MAX_CODE = 20_000
 
 /** The languages the picker offers. NOT what the schema accepts. */
+/**
+ * The languages offered, alphabetical after `plain`.
+ *
+ * Each one costs nothing until somebody picks it: the highlighter loads its
+ * grammar on demand, so this list is a menu rather than a payload. What it
+ * must NOT become is every grammar the highlighter ships — a menu of two
+ * hundred is one nobody reads, so this is the set that turns up in
+ * documentation and nothing beyond it.
+ *
+ * Adding a name only widens what the schema accepts, so no board written
+ * before this needs migrating.
+ */
 export const CODE_LANGUAGES = [
   'plain',
   'bash',
+  'c',
+  'cpp',
+  'csharp',
   'css',
+  'diff',
+  'dockerfile',
+  'go',
+  'graphql',
   'html',
+  'ini',
+  'java',
+  'javascript',
   'json',
+  'kotlin',
+  'lua',
+  'markdown',
+  'php',
   'python',
+  'r',
+  'ruby',
+  'rust',
+  'scala',
   'sql',
+  'swift',
   'typescript',
+  'xml',
+  'yaml',
 ] as const
 
 export const CodeDataSchema: ZodType<CodeData> = z.object({

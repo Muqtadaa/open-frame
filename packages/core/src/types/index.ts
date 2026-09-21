@@ -19,6 +19,12 @@ import { tableType } from './table/definition.js'
 import { textType } from './text/definition.js'
 import { unknownType } from './unknown/definition.js'
 
+export {
+  canTidy,
+  tidyCode,
+  tidyKindOf,
+  type TidyKind,
+} from './code/format.js'
 export { CODE_TYPE, codeType } from './code/definition.js'
 export {
   CODE_LANGUAGES,

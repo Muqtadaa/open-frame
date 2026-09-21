@@ -4717,3 +4717,21 @@ textarea.of-input {
     opacity: 0;
   }
 }
+
+/*
+ * The code block's apparatus: its language menu and its format button, side by
+ * side on the chrome layer. Each carries its own surface rather than sharing
+ * one, which is how the table's groups are built and keeps the select's own
+ * control styling intact.
+ */
+.of-code__bar {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+}
+
+.of-code__format {
+  padding: 0 10px;
+  font-size: 11px;
+  line-height: 24px;
+}

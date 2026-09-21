@@ -1,5 +1,6 @@
 import { readdirSync, readFileSync, statSync } from 'node:fs'
 import { join, resolve } from 'node:path'
+import { CODE_LANGUAGES } from '@openframe/core'
 import { describe, expect, it } from 'vitest'
 
 /**
@@ -60,5 +61,37 @@ describe('the highlighter is loaded on demand', () => {
   it('is imported dynamically', () => {
     const dynamic = files.filter((file) => /import\(['"]highlight\.js/.test(file.source))
     expect(dynamic.length).toBeGreaterThan(0)
+  })
+})
+
+/**
+ * The menu and the grammars are two lists that must agree.
+ *
+ * `CODE_LANGUAGES` is what the dropdown offers and what the schema accepts;
+ * the loader map is what can actually be highlighted. A name in one and not
+ * the other is either a language you can pick that renders as plain text, or
+ * a grammar nobody can reach — and neither announces itself, because both
+ * degrade quietly to unhighlighted code.
+ *
+ * Read off the source rather than imported, because the loaders are dynamic
+ * imports that would each be fetched to enumerate them.
+ */
+describe('every language offered can be highlighted', () => {
+  const read = (path: string): string =>
+    readFileSync(resolve(process.cwd(), path), 'utf8')
+
+  const loaders = new Set(
+    [...read('src/views/code-highlight.ts').matchAll(/^ {2}([a-z0-9]+): \(\) =>/gm)].map(
+      (match) => match[1],
+    ),
+  )
+
+  it.each(CODE_LANGUAGES.filter((name) => name !== 'plain'))('%s has a grammar', (name) => {
+    expect(loaders.has(name)).toBe(true)
+  })
+
+  /** And nothing is loadable that the menu never offers. */
+  it('offers every grammar it can load', () => {
+    expect([...loaders].filter((name) => !CODE_LANGUAGES.includes(name as never))).toEqual([])
   })
 })

@@ -492,3 +492,74 @@ test('fits a column to the same width at any zoom', async ({ page }) => {
   // just half the right one.
   expect(atTwoHundred).toBeCloseTo(atOneHundred, 0)
 })
+
+/**
+ * Pretty-printing a code block, by the button and by the key.
+ *
+ * Two formatters behind one control: a real one for the languages it has a
+ * parser for, and the indenter in core for the rest. The assertions below pick
+ * one of each on purpose — a suite that only tried JavaScript would say
+ * nothing about the twenty-one languages that take the fallback.
+ */
+test('pretty-prints a code block from the button', async ({ page }) => {
+  await board(page)
+  await place(page, 'code', { x: 340, y: 260 })
+
+  await page.locator('[data-object-id]').first().dblclick()
+  await page.getByTestId('code-language').selectOption('javascript')
+  await page.getByTestId('code-input').fill("const a = {b:1,c:'two'}")
+
+  await page.getByTestId('code-format').click()
+
+  // Quote style and spacing INSIDE the expression: a real formatter, not the
+  // indenter, which could not reach either.
+  await expect(page.getByTestId('code-input')).toHaveValue('const a = { b: 1, c: "two" };')
+})
+
+test('pretty-prints with Shift+Alt+F, and commits it as one edit', async ({ page }) => {
+  await board(page)
+  await place(page, 'code', { x: 340, y: 260 })
+
+  await page.locator('[data-object-id]').first().dblclick()
+  await page.getByTestId('code-language').selectOption('go')
+  const field = page.getByTestId('code-input')
+  await field.fill('func f() {\nreturn 1\n}')
+
+  await field.press('Shift+Alt+F')
+
+  // Go has no real formatter here, so this is the indenter — the floor that
+  // makes the control worth having for every language.
+  await expect(field).toHaveValue('func f() {\n  return 1\n}')
+
+  /*
+   * And it is part of the edit rather than a write of its own.
+   *
+   * Closing the editor commits ONCE, so a single undo takes back the whole
+   * edit — formatting included — and the block is empty again. A formatter
+   * that dispatched its own command would cost an undo of its own, and that
+   * undo would leave the UNFORMATTED text sitting there, which is what this
+   * asserts against.
+   */
+  await page.locator(CANVAS).click({ position: { x: 900, y: 560 } })
+  await expect(page.getByTestId('code-block')).toContainText('  return 1')
+  await page.keyboard.press('ControlOrMeta+z')
+  await expect(page.getByTestId('code-block')).not.toContainText('return 1')
+})
+
+test('offers no formatting for a language nothing can format', async ({ page }) => {
+  await board(page)
+  await place(page, 'code', { x: 340, y: 260 })
+
+  await page.locator('[data-object-id]').first().dblclick()
+  await page.getByTestId('code-language').selectOption('javascript')
+  await expect(page.getByTestId('code-format')).toBeEnabled()
+
+  /*
+   * Python's indentation IS its syntax, so re-indenting it changes what the
+   * program means and the honest answer is not to offer. Disabled rather than
+   * hidden: a control that vanishes as the menu beside it changes reads as a
+   * glitch.
+   */
+  await page.getByTestId('code-language').selectOption('python')
+  await expect(page.getByTestId('code-format')).toBeDisabled()
+})
