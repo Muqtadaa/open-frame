@@ -729,6 +729,25 @@ width**. The side handle for the axis being fitted, matching the table
 divider's double-click exactly — one vocabulary for "make this the size of what
 is in it."
 
+### Arrange Bar
+
+Two or more objects selected raises a bar above the selection on the chrome
+layer: six alignments, a rule, then two distributions. Align works on the
+selection's own bounding box — align-left goes to the leftmost edge among the
+things selected, not to the board or to a frame. Distribute equalises the
+**gaps**, leaving the outermost two exactly where they are, so it reads as
+tidying rather than moving.
+
+Distribution is disabled below three rather than hidden, the same call the code
+box's format button makes. Icons are a rule plus bars that have landed on it,
+at two different lengths: the shape that separates "left" from "centre" is the
+same shape that separates the operations.
+
+The bar is told where the options panel is and stays off it. Two floating
+surfaces placed by separate arithmetic will eventually want the same space, and
+on a selection too wide for the panel to sit beside, the panel takes the whole
+band above — which is where a bar anchored to that selection wants to be.
+
 ### The Rotate Grip
 
 A **glyph**, not a dot: a 15px curved arrow on a soft-radius chip above the top

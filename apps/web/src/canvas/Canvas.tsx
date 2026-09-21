@@ -8,6 +8,7 @@ import { ConnectorPreview } from './ConnectorPreview.js'
 import { ConnectPoints } from './ConnectPoints.js'
 import { DrawPreview } from './DrawPreview.js'
 import { EndpointOverlay } from './EndpointOverlay.js'
+import { ArrangeBar } from './ArrangeBar.js'
 import { DividerOverlay } from './DividerOverlay.js'
 import { MarqueeOverlay } from './MarqueeOverlay.js'
 import { ObjectLayer } from './ObjectLayer.js'
@@ -103,6 +104,13 @@ export function Canvas() {
         <EndpointOverlay />
         <DividerOverlay />
         <ConnectorPreview />
+        {/*
+          Rendered here but PORTALED out, like every other piece of apparatus:
+          it lives inside the world tree so it sees the selection and the
+          document, and lands on the screen-space layer so it is not multiplied
+          by the zoom.
+        */}
+        <ArrangeBar />
         {/*
           Last, so other people's cursors sit above the board and every overlay
           on it — a cursor behind a note is a cursor nobody can follow.

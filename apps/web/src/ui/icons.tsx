@@ -446,3 +446,92 @@ export function RotateIcon({ className }: IconProps) {
     </svg>
   )
 }
+
+/**
+ * Aligning and distributing a selection.
+ *
+ * Each one is a RULE plus the bars that have landed on it, because that is the
+ * thing being described: not "left" as a direction but "these edges, on this
+ * line". Two bars of different lengths, so the icon for centring cannot be
+ * mistaken for the icon for aligning left — the shape that tells them apart is
+ * the same shape that tells the operations apart.
+ */
+function alignIcon(
+  rule: { readonly x1: number; readonly y1: number; readonly x2: number; readonly y2: number },
+  bars: readonly { readonly x: number; readonly y: number; readonly w: number; readonly h: number }[],
+) {
+  return function Icon({ className }: IconProps) {
+    return (
+      <svg {...base} className={className}>
+        {/* Vertical when the rule's two x values agree, horizontal otherwise. */}
+        <path
+          d={
+            rule.x1 === rule.x2
+              ? `M${String(rule.x1)} ${String(rule.y1)}V${String(rule.y2)}`
+              : `M${String(rule.x1)} ${String(rule.y1)}H${String(rule.x2)}`
+          }
+        />
+        {bars.map((bar) => (
+          <rect
+            key={`${String(bar.x)}-${String(bar.y)}`}
+            x={bar.x}
+            y={bar.y}
+            width={bar.w}
+            height={bar.h}
+            rx={1.5}
+          />
+        ))}
+      </svg>
+    )
+  }
+}
+
+export const AlignLeftIcon = alignIcon({ x1: 4, y1: 4, x2: 4, y2: 20 }, [
+  { x: 4, y: 6.5, w: 15, h: 4 },
+  { x: 4, y: 13.5, w: 9, h: 4 },
+])
+export const AlignCenterXIcon = alignIcon({ x1: 12, y1: 4, x2: 12, y2: 20 }, [
+  { x: 4.5, y: 6.5, w: 15, h: 4 },
+  { x: 7.5, y: 13.5, w: 9, h: 4 },
+])
+export const AlignRightIcon = alignIcon({ x1: 20, y1: 4, x2: 20, y2: 20 }, [
+  { x: 5, y: 6.5, w: 15, h: 4 },
+  { x: 11, y: 13.5, w: 9, h: 4 },
+])
+export const AlignTopIcon = alignIcon({ x1: 4, y1: 4, x2: 20, y2: 4 }, [
+  { x: 6.5, y: 4, w: 4, h: 15 },
+  { x: 13.5, y: 4, w: 4, h: 9 },
+])
+export const AlignMiddleYIcon = alignIcon({ x1: 4, y1: 12, x2: 20, y2: 12 }, [
+  { x: 6.5, y: 4.5, w: 4, h: 15 },
+  { x: 13.5, y: 7.5, w: 4, h: 9 },
+])
+export const AlignBottomIcon = alignIcon({ x1: 4, y1: 20, x2: 20, y2: 20 }, [
+  { x: 6.5, y: 5, w: 4, h: 15 },
+  { x: 13.5, y: 11, w: 4, h: 9 },
+])
+
+/**
+ * Distribution: three bars with the GAPS between them shown equal, which is
+ * what the operation equalises. An icon showing three evenly spaced centres
+ * would describe the other answer.
+ */
+export function DistributeXIcon({ className }: IconProps) {
+  return (
+    <svg {...base} className={className}>
+      <rect x={3} y={5} width={4} height={14} rx={1.5} />
+      <rect x={10} y={5} width={4} height={14} rx={1.5} />
+      <rect x={17} y={5} width={4} height={14} rx={1.5} />
+    </svg>
+  )
+}
+
+export function DistributeYIcon({ className }: IconProps) {
+  return (
+    <svg {...base} className={className}>
+      <rect x={5} y={3} width={14} height={4} rx={1.5} />
+      <rect x={5} y={10} width={14} height={4} rx={1.5} />
+      <rect x={5} y={17} width={14} height={4} rx={1.5} />
+    </svg>
+  )
+}

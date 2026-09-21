@@ -10,10 +10,27 @@ import type {
   Point,
   Rect,
 } from '@openframe/core'
-import { childrenOf, unionAll } from '@openframe/core'
+import {
+  alignOffsets,
+  childrenOf,
+  distributeOffsets,
+  unionAll,
+  type AlignEdge,
+  type DistributeAxis,
+} from '@openframe/core'
 import { useMemo } from 'react'
 
 import { renameRemoteBoard } from '../app/remote-boards.js'
+
+/** What the undo entry says, which is the only place these names show up. */
+const ALIGN_LABELS: Readonly<Record<AlignEdge, string>> = {
+  left: 'Align left',
+  centerX: 'Align centres',
+  right: 'Align right',
+  top: 'Align top',
+  middleY: 'Align middles',
+  bottom: 'Align bottom',
+}
 import { useOpenFrame } from '../runtime/context.js'
 import { useInteractionStore } from '../interaction/interaction-store.js'
 import { objectsInMarquee } from '../scene/hit-testing.js'
@@ -57,6 +74,17 @@ export interface BoardCommands {
   group(): void
   /** Dissolves any groups in the selection, keeping their members. */
   ungroup(): void
+  /**
+   * Lines the selection up on one edge of its own bounding box.
+   *
+   * Not a command of its own: it is a move, and `MoveObjects` already cascades
+   * into a container's contents, which aligning a group needs. The dispatcher
+   * takes an explicit label, so the undo entry still reads "Align left"
+   * rather than "Move 5 objects".
+   */
+  align(edge: AlignEdge): void
+  /** Evens out the gaps between the selection, along one axis. */
+  distribute(axis: DistributeAxis): void
   setLocked(locked: boolean): void
   setHidden(hidden: boolean): void
   deleteSelection(): void
@@ -223,6 +251,58 @@ export function useCommands(): BoardCommands {
       return result.ok ? id : null
     }
 
+    /**
+     * Applies an arrangement to the selection, as ONE move.
+     *
+     * The selection is turned into what the geometry needs — an id and the
+     * extent it presents — and two kinds of object are held out of it:
+     *
+     * A type whose shape IS its ends, which is asked of the registry rather
+     * than compared against 'connector'. A connector has no position of its
+     * own; it is wherever the things it joins are, so moving it would be a
+     * patch that changes nothing (rule 16) and counting it as a thing to line
+     * up would be lining up a consequence.
+     *
+     * A locked object, because the command refuses those outright — but it
+     * still counts toward the bounding box everything lines up on, since it is
+     * visibly part of what was selected and aligning TO something pinned down
+     * is a reasonable thing to want.
+     */
+    const arrange = (
+      offsetsOf: (items: readonly { id: ObjectId; bounds: Rect }[]) => readonly {
+        id: ObjectId
+        dx: number
+        dy: number
+      }[],
+      label: string,
+    ): void => {
+      const store = useInteractionStore.getState()
+      const doc = runtime.store.getDocument()
+
+      const selected = [...store.selection]
+        .map((id) => doc.objects.get(id))
+        .filter((object) => object !== undefined)
+        .filter((object) => runtime.registry.get(object.type)?.capabilities.spatial === true)
+        .filter((object) => runtime.registry.endpointsOf(object, doc).length === 0)
+
+      const items = selected.map((object) => ({
+        id: object.id,
+        // From the REGISTRY: a rotated object's extent is not its frame, and
+        // lining up frames would leave a rotated note visibly off the line.
+        bounds: runtime.registry.boundsOf(object, doc),
+      }))
+
+      const movable = new Set(selected.filter((object) => !object.locked).map((o) => o.id))
+      const moves = offsetsOf(items)
+        .filter((offset) => movable.has(offset.id))
+        .filter((offset) => offset.dx !== 0 || offset.dy !== 0)
+      // Everything already where it belongs: nothing to do, and nothing that
+      // should cost an undo step.
+      if (moves.length === 0) return
+
+      report(dispatcher.dispatch({ kind: 'MoveObjects', moves }, { label }))
+    }
+
     return {
       createObject(type, at, data) {
         const definition = runtime.registry.get(type)
@@ -269,6 +349,15 @@ export function useCommands(): BoardCommands {
         return result.ok ? (result.affected[0] ?? null) : null
       },
 
+      align(edge) {
+        arrange((items) => alignOffsets(items, edge), ALIGN_LABELS[edge])
+      },
+      distribute(axis) {
+        arrange(
+          (items) => distributeOffsets(items, axis),
+          axis === 'x' ? 'Distribute horizontally' : 'Distribute vertically',
+        )
+      },
       group() {
         const store = useInteractionStore.getState()
         const doc = runtime.store.getDocument()

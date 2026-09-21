@@ -4884,3 +4884,55 @@ textarea.of-input {
   font-size: 11px;
   line-height: 24px;
 }
+
+/*
+ * Align and distribute, floating above a selection of two or more.
+ *
+ * Shares the contextual surface every floating thing shares — panel white, a
+ * 1px margin rule, 10px radius, the contact shadow — which `.of-surface`
+ * carries. This adds only the row.
+ */
+.of-arrange {
+  display: flex;
+  gap: 2px;
+  align-items: center;
+  padding: 4px;
+}
+
+.of-arrange__button {
+  display: grid;
+  place-items: center;
+  width: 28px;
+  height: 28px;
+  padding: 0;
+  color: var(--of-ink-muted);
+  background: none;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+}
+
+.of-arrange__button:hover:not(:disabled),
+.of-arrange__button:focus-visible {
+  color: var(--of-ink);
+  background: var(--of-hover);
+}
+
+.of-arrange__button:disabled {
+  /* Still legible, so it reads as unavailable rather than as missing. */
+  opacity: 0.35;
+  cursor: default;
+}
+
+.of-arrange__glyph {
+  width: 17px;
+  height: 17px;
+}
+
+/* The break between lining things up and spacing them out: two operations. */
+.of-arrange__rule {
+  width: 1px;
+  height: 18px;
+  margin: 0 4px;
+  background: var(--of-panel-border);
+}

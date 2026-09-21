@@ -85,3 +85,60 @@ describe('placeAnchored', () => {
     ).toBe('over')
   })
 })
+
+/**
+ * Staying off another floating surface.
+ *
+ * The options panel is placed by its own arithmetic rather than on the chrome
+ * layer, so it is the one thing this cannot reason about from the anchor
+ * alone — it has to be told. On a selection too wide for the panel to sit
+ * beside it, the panel takes the whole band above, which is exactly where a
+ * bar anchored to that selection wants to go.
+ */
+describe('avoiding another surface', () => {
+  const request = {
+    anchor: { x: 200, y: 300, width: 600, height: 120 },
+    surface: { width: 260, height: 40 },
+    within: { width: 1280, height: 720 },
+    prefer: ['above', 'below'] as const,
+    gap: 8,
+    margin: 12,
+  }
+
+  it('takes the first preferred side when nothing is in the way', () => {
+    expect(placeAnchored(request).side).toBe('above')
+  })
+
+  it('takes the next side when the first would land on the panel', () => {
+    // Ends at 392, and 'below' starts at 428: the obstacle has to leave one
+    // side genuinely clear or this only tests the fallback. The first version
+    // of this fixture was 420 tall, which clipped 'below' by four pixels and
+    // made the answer 'above' for the right reason and the wrong test.
+    const panel = { x: 200, y: 12, width: 360, height: 380 }
+    expect(placeAnchored({ ...request, avoid: panel }).side).toBe('below')
+  })
+
+  /*
+   * Checked AFTER clamping, because clamping is what pushes a surface into
+   * something else: a side that is clear at its natural position can be moved
+   * onto the panel by the edge of the window.
+   */
+  it('judges the side by where the surface actually ends up', () => {
+    const tall = { ...request, anchor: { x: 200, y: 8, width: 600, height: 120 } }
+    // 'above' does not fit at all here, so the answer is 'below' either way —
+    // what matters is that adding an obstacle there does not change it.
+    const panel = { x: 900, y: 400, width: 360, height: 300 }
+    expect(placeAnchored({ ...tall, avoid: panel }).side).toBe('below')
+  })
+
+  it('still places the surface when every side collides', () => {
+    // A PREFERENCE, not a constraint: two surfaces overlapping is bad, a
+    // surface shoved somewhere unrelated to what it acts on is worse.
+    const everywhere = { x: 0, y: 0, width: 1280, height: 720 }
+    expect(placeAnchored({ ...request, avoid: everywhere }).side).toBe('above')
+  })
+
+  it('is unchanged by a null obstacle', () => {
+    expect(placeAnchored({ ...request, avoid: null })).toEqual(placeAnchored(request))
+  })
+})

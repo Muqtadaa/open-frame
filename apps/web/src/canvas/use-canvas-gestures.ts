@@ -89,12 +89,23 @@ type GestureMode =
 const EDITOR_CHROME = '.of-editor-chrome'
 
 function isTextEntry(target: EventTarget | null): boolean {
-  return (
-    target instanceof HTMLTextAreaElement ||
-    target instanceof HTMLInputElement ||
-    (target instanceof HTMLElement &&
-      (target.isContentEditable || target.closest(EDITOR_CHROME) !== null))
-  )
+  if (target instanceof HTMLTextAreaElement || target instanceof HTMLInputElement) return true
+  if (target instanceof HTMLElement && target.isContentEditable) return true
+  /*
+   * `Element`, NOT `HTMLElement`.
+   *
+   * A control whose face is a drawn icon puts an `SVGElement` under the
+   * pointer, and an SVGElement is not an HTMLElement — so the chrome check
+   * never ran for it, the canvas read the press as a board gesture, and the
+   * selection was cleared. The apparatus then unmounted between `pointerdown`
+   * and `click`, which means the click event never fired at all: a button that
+   * looks fine, highlights on hover, and does nothing.
+   *
+   * The fifth appearance of this family of fault, and the first one where the
+   * marker was present and correct — it was the type test that let the press
+   * through.
+   */
+  return target instanceof Element && target.closest(EDITOR_CHROME) !== null
 }
 
 interface Gesture {
