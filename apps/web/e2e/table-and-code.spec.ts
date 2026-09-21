@@ -433,3 +433,62 @@ test('fits a column to its content on a double click', async ({ page }) => {
   await page.keyboard.press('ControlOrMeta+z')
   await expect.poll(widthOf).toBeCloseTo(before, 0)
 })
+
+/**
+ * Fitting is the same size whatever the board is zoomed to.
+ *
+ * The reported bug: autosizing a column at anything past 100% shrank it
+ * instead of fitting it, badly enough that text which had been on one line
+ * wrapped onto three. The measurement is taken from an element outside the
+ * canvas's `scale()`, so it is already in world units, and the code converted
+ * it by the zoom a second time.
+ *
+ * ZOOMED IS THE WHOLE TEST. The suite above fits a column at 100%, where
+ * dividing by the zoom does nothing at all — it passed throughout.
+ */
+test('fits a column to the same width at any zoom', async ({ page }) => {
+  await board(page)
+  /*
+   * Placed to the lower right ON PURPOSE. Zooming is anchored at the middle of
+   * the viewport, so a table near the top left ends up with its boundary
+   * underneath the tool rail at 200% — where the press lands on the rail and
+   * the test measures a gesture that never happened.
+   */
+  await place(page, 'table', { x: 740, y: 460 })
+
+  await page.locator('[data-object-id]').first().dblclick()
+  await page.getByTestId('table-cell-0').fill('a considerably longer heading than fits')
+  await page.locator(CANVAS).click({ position: { x: 400, y: 150 } })
+
+  /*
+   * WORLD units, read off the layout rather than from a bounding box. The
+   * canvas is scaled with a transform, so a bounding box is screen pixels and
+   * would grow with the zoom whether or not the bug is present — an assertion
+   * against it could not tell the two apart.
+   */
+  const worldWidth = async (): Promise<number> =>
+    await page
+      .locator('[role="table"] [role="columnheader"]')
+      .first()
+      .evaluate((cell) => (cell as HTMLElement).offsetWidth)
+
+  const fit = async (): Promise<number> => {
+    await page.locator('[data-object-id]').first().click()
+    const grip = await page.getByTestId('divider-c0').boundingBox()
+    if (grip === null) throw new Error('the boundary is not on screen')
+    await page.mouse.dblclick(grip.x + grip.width / 2, grip.y + grip.height / 2)
+    return await worldWidth()
+  }
+
+  const atOneHundred = await fit()
+  await page.keyboard.press('ControlOrMeta+z')
+
+  await page.getByTestId('zoom-in').click()
+  await expect(page.getByTestId('zoom-percent')).toHaveText('200%')
+
+  const atTwoHundred = await fit()
+
+  // Not "wider than before" — the bug produced a perfectly plausible number,
+  // just half the right one.
+  expect(atTwoHundred).toBeCloseTo(atOneHundred, 0)
+})

@@ -83,16 +83,17 @@ export function DividerOverlay() {
     const wanted = across ? fitColumnWidth(inTrack) : fitRowHeight(inTrack)
     if (wanted === null) return
 
-    // Measured on screen, applied in WORLD units: the two differ by the zoom,
-    // and fitting to a screen measurement at 400% would make the track four
-    // times too big.
+    /*
+     * Applied as measured, with NO zoom conversion.
+     *
+     * The canvas is one `scale(zoom)` on a wrapper, so everything inside it is
+     * laid out at world size and only painted larger; the measurement comes
+     * back in world units already. Dividing by the zoom here — which this did
+     * — halved every column fitted at 200%, which is what "autosize just
+     * shrinks it" was.
+     */
     const extent = across ? object.frame.width : object.frame.height
-    const sized = setTrackSize(
-      across ? data.columns : data.rows,
-      index,
-      wanted / zoom,
-      extent,
-    )
+    const sized = setTrackSize(across ? data.columns : data.rows, index, wanted, extent)
     if (sized === null) return
 
     commands.resizeDivider(
