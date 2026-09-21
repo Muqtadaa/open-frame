@@ -6,6 +6,7 @@ import { App } from './app/App.js'
 import { AppErrorBoundary } from './app/AppErrorBoundary.js'
 import { createBoardCapabilities } from './app/board-capabilities.js'
 import { COLLAB_ENABLED } from './app/collab-config.js'
+import { healAssets } from './app/heal-assets.js'
 import { forgetDeletedBoard } from './app/board-lifecycle.js'
 import { startCollaboration } from './app/collaboration.js'
 import { createRuntime } from './app/composition-root.js'
@@ -85,6 +86,33 @@ if (route.kind === 'home') {
   collaboration?.onRole((role) => {
     capabilities.narrowTo(role)
   })
+
+  /*
+   * IMAGES THAT NEVER LEFT THIS BROWSER.
+   *
+   * Every picture placed before the room could serve them carries a local
+   * locator, which means nobody else can see it — and so does one whose
+   * upload failed, because the store keeps the local locator on failure
+   * precisely so this pass is also the retry.
+   *
+   * After the socket, so an editor's rewrite reaches everyone; not awaited,
+   * because a board with twenty photographs on it must not hold up the first
+   * paint to lift them. Silent either way: this is repair of a state that
+   * should never have existed, and the person opening the board can act on no
+   * part of it.
+   */
+  if (collaboration !== null) {
+    void healAssets(runtime.store.getDocument(), {
+      resolve: (ref) => runtime.assets.resolveNow(ref),
+      reupload: (ref, blob) => runtime.assets.replace(ref.id, blob),
+      rewrite: (objectId, asset) => {
+        runtime.dispatcher.dispatch(
+          { kind: 'UpdateObjectData', id: objectId, patch: { asset } },
+          { label: 'Publish image' },
+        )
+      },
+    })
+  }
 
   /*
    * The board was deleted by whoever owns it, while this browser had it open.

@@ -17,6 +17,9 @@ import {
 } from '@openframe/core'
 
 import { IndexedDbAssetStore } from '../adapters/indexeddb/indexeddb-asset-store.js'
+import { RoomAssetStore } from '../adapters/room/room-asset-store.js'
+import { accessKey, assetUrl, COLLAB_ENABLED } from './collab-config.js'
+import { heldOwnerKey, heldToken } from './board-password.js'
 import { IndexedDbBoardRepository } from '../adapters/indexeddb/indexeddb-board-repository.js'
 import { AssetService } from '../runtime/asset-service.js'
 import { BENCH_TOOLS_ENABLED } from './bench-flag.js'
@@ -54,12 +57,39 @@ export interface CreateRuntimeOptions {
 export const DEFAULT_BOARD_ID = asBoardId('board_local')
 const DEFAULT_AUTOSAVE_DELAY_MS = 500
 
+/**
+ * Where a board's images go.
+ *
+ * Local only when this build has no room server: without one there is nobody
+ * to share with, and a store that tried to upload would fail on every picture
+ * for a deployment that never intended to collaborate.
+ *
+ * With one, the local store becomes a CACHE in front of the room — still the
+ * first thing asked on every resolve, so an image this browser holds paints
+ * without a round trip and keeps painting offline.
+ */
+function defaultAssetStore(boardId: BoardId): AssetStore {
+  const local = new IndexedDbAssetStore()
+  if (!COLLAB_ENABLED) return local
+
+  return new RoomAssetStore(local, {
+    url: (assetId) => assetUrl(boardId, assetId),
+    // Read at call time, not captured: a board can be unlocked, or adopt an
+    // owner key, after the runtime is built.
+    credentials: () => ({
+      key: accessKey(window.location.search),
+      owner: heldOwnerKey(boardId),
+      token: heldToken(boardId),
+    }),
+  })
+}
+
 export async function createRuntime(options: CreateRuntimeOptions = {}): Promise<OpenFrameRuntime> {
   const boardId = options.boardId ?? DEFAULT_BOARD_ID
   const repository = options.repository ?? new IndexedDbBoardRepository()
   const registry = createDefaultRegistry()
   const ids = createIdGenerator()
-  const assets = new AssetService(options.assetStore ?? new IndexedDbAssetStore(), ids)
+  const assets = new AssetService(options.assetStore ?? defaultAssetStore(boardId), ids)
 
   const notices: string[] = []
   let readOnly = false

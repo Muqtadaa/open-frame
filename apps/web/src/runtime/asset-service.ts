@@ -1,4 +1,4 @@
-import type { AssetId, AssetRef, AssetStore, IdGenerator } from '@openframe/core'
+import type { AssetBlob, AssetId, AssetRef, AssetStore, IdGenerator } from '@openframe/core'
 
 import { describeFailure, validateImage } from './asset-validation.js'
 
@@ -129,6 +129,29 @@ export class AssetService {
   }
 
   /** True once a load has been tried and failed — the view shows "missing", not "loading". */
+  /**
+   * The bytes' URL, awaited rather than cached-or-nothing.
+   *
+   * `urlFor` is the render path's question and answers synchronously or not at
+   * all, because a view cannot await. This is for the repair pass, which can.
+   */
+  resolveNow(ref: AssetRef): Promise<string> {
+    return this.#store.resolve(ref)
+  }
+
+  /**
+   * Stores the same asset id again, which is how a picture already on a board
+   * gets published to the room.
+   *
+   * The id does not change, so nothing that references it has to. Only the
+   * locator does — and the caller decides whether to write that back, because
+   * an upload that did not land must leave the object pointing where the bytes
+   * actually are.
+   */
+  replace(id: AssetId, blob: AssetBlob): Promise<AssetRef> {
+    return this.#store.put(id, blob)
+  }
+
   isMissing(ref: AssetRef): boolean {
     return this.#failed.has(ref.id)
   }

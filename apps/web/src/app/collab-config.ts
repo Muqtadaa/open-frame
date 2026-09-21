@@ -182,6 +182,11 @@ export function roomSocketUrl(
   return url.toString()
 }
 
+/** Where one of a board's images is read or written. */
+export function assetUrl(boardId: BoardId, assetId: string): string {
+  return `${httpBase()}/room/${boardId}/asset/${assetId}`
+}
+
 /** Where a board claimed before owner keys existed adopts one. */
 export function ownerKeyUrl(boardId: BoardId): string {
   return `${httpBase()}/room/${boardId}/owner`
