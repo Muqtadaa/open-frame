@@ -171,6 +171,15 @@ export type DragState =
       readonly dividerId: string
       /** What the object's data would become. Null until the pointer moves. */
       readonly data: Readonly<Record<string, unknown>> | null
+      /**
+       * How much bigger the object must be to hold that data.
+       *
+       * Resizing one track no longer takes the space from its neighbour, so a
+       * table grows — and the preview has to carry that, or the drag looks
+       * like it stops working at the point the old model would have run out
+       * of room.
+       */
+      readonly grow: { readonly width: number; readonly height: number }
     }
   /** Drawing a connector: one end fixed, the other following the pointer. */
   | {
@@ -325,7 +334,10 @@ interface InteractionState {
   setViewport(viewport: Viewport): void
   setFollowing(clientId: number | null): void
   beginDivider(objectId: ObjectId, dividerId: string): void
-  previewDivider(data: Readonly<Record<string, unknown>>): void
+  previewDivider(
+    data: Readonly<Record<string, unknown>>,
+    grow: { readonly width: number; readonly height: number },
+  ): void
   setTableSize(size: TableSize): void
   setCommentsOpen(open: boolean): void
   startComment(at: ComposingComment | null): void
@@ -465,12 +477,12 @@ export const useInteractionStore = create<InteractionState>((set) => ({
   // Writing a new one closes whatever was being read, and vice versa: two
   // panels over the same pin is two places to type into.
   beginDivider: (objectId, dividerId) =>
-    set({ drag: { kind: 'divider', objectId, dividerId, data: null } }),
-  previewDivider: (data) =>
+    set({ drag: { kind: 'divider', objectId, dividerId, data: null, grow: { width: 0, height: 0 } } }),
+  previewDivider: (data, grow) =>
     set((state) =>
       // Guarded: a preview arriving after the gesture ended would resurrect a
       // drag state nothing is going to commit.
-      state.drag.kind === 'divider' ? { drag: { ...state.drag, data } } : {},
+      state.drag.kind === 'divider' ? { drag: { ...state.drag, data, grow } } : {},
     ),
   setTableSize: (tableSize) => set({ tableSize, tool: 'table' }),
   setCommentsOpen: (commentsOpen) => set({ commentsOpen }),

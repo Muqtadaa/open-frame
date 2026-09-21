@@ -25,6 +25,7 @@ const WITH_CORNERS = Object.freeze([
   'dash',
   'font',
   'align',
+  'verticalAlign',
   'opacity',
   'radius',
 ] as const satisfies readonly StyleProp[])

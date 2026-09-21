@@ -32,7 +32,7 @@ export const hypothesisType = defineObjectType<typeof HYPOTHESIS_TYPE, Hypothesi
     canHaveChildren: false,
     selectsAsUnit: false,
     connectable: true,
-    styleProps: ['color', 'textColor', 'font', 'align', 'opacity'],
+    styleProps: ['color', 'textColor', 'font', 'align', 'verticalAlign', 'opacity'],
   },
 
   fields: [{ key: 'status', label: 'Status', kind: 'select', options: HYPOTHESIS_STATUS }],

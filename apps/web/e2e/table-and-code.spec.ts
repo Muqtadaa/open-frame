@@ -281,7 +281,9 @@ test('widens a column by dragging its boundary, in one undo entry', async ({ pag
   await expect.poll(widthOf).toBeCloseTo(before, 0)
 })
 
-test('stops at the narrowest a column may be, rather than losing the drag', async ({ page }) => {
+test('stops at the narrowest a column may be, and leaves its neighbours alone', async ({
+  page,
+}) => {
   await board(page)
   await place(page, 'table', { x: 340, y: 240 })
   await page.locator('[data-object-id]').first().click()
@@ -290,7 +292,11 @@ test('stops at the narrowest a column may be, rather than losing the drag', asyn
     page
       .locator('[role="table"] [role="columnheader"]')
       .evaluateAll((cells) => cells.map((cell) => cell.getBoundingClientRect().width))
+  const tableWidth = async (): Promise<number> =>
+    (await page.locator('[role="table"]').boundingBox())?.width ?? 0
+
   const before = await widths()
+  const wasWide = await tableWidth()
 
   const grip = await page.getByTestId('divider-c0').boundingBox()
   if (grip === null) throw new Error('the boundary is not on screen')
@@ -307,28 +313,23 @@ test('stops at the narrowest a column may be, rather than losing the drag', asyn
   if (isFirst === undefined || isSecond === undefined) throw new Error('no columns were drawn')
 
   /*
-   * Two things, and the second is the one worth having.
+   * Two things, and the second is the one that changed.
    *
    * A column of no width is one nothing can be typed into and nothing can be
-   * grabbed to drag back — so the drag stops short of it. But the WEIGHT is
-   * also refused at the boundary by `TableDataSchema`, which means an
-   * unclamped drag does not produce a thin column: it produces a patch that is
-   * thrown away, and the table does not move at all. Asserting only that the
-   * column is still visible would therefore pass with the clamp deleted, for
-   * the wrong reason. The drag has to be shown to have LANDED.
+   * grabbed to drag back, so the drag stops short of it rather than being
+   * refused — an unclamped drag produces a weight the schema rejects, which
+   * throws the whole patch away and moves nothing at all.
+   *
+   * And the NEIGHBOUR is untouched. Resizing a column used to take the space
+   * from the one beside it, so the table could only rearrange the width it
+   * already had; now the table itself gets narrower.
    */
   expect(isFirst).toBeGreaterThan(4)
   expect(isFirst).toBeLessThan(wasFirst / 2)
-  expect(isSecond).toBeGreaterThan(wasSecond + 60)
+  expect(isSecond).toBeCloseTo(wasSecond, 0)
+  expect(await tableWidth()).toBeLessThan(wasWide - 50)
 })
 
-/**
- * Dressing a range of cells.
- *
- * The colours live on the CELL, so this reads them back off the rendered cell
- * rather than off the control — a bar that reported a colour the table never
- * painted is the failure rule 21 exists for.
- */
 test('colours a range of cells, in one undo entry', async ({ page }) => {
   await board(page)
   await place(page, 'table', { x: 340, y: 240 })
@@ -396,4 +397,39 @@ test('puts a cell back to the colour the table gives it', async ({ page }) => {
    * directly, and fails when the delete becomes an assignment.
    */
   await expect(cleared).toHaveCSS('background-color', 'rgba(0, 0, 0, 0)')
+})
+
+/**
+ * Double-clicking a boundary fits the track to its content, as a spreadsheet
+ * does.
+ *
+ * Measured against a column carrying text far wider than its share, so the
+ * assertion cannot be satisfied by the column staying where it was.
+ */
+test('fits a column to its content on a double click', async ({ page }) => {
+  await board(page)
+  await place(page, 'table', { x: 300, y: 240 })
+
+  await page.locator('[data-object-id]').first().dblclick()
+  await page.getByTestId('table-cell-0').fill('a considerably longer heading than fits')
+  await page.locator(CANVAS).click({ position: { x: 950, y: 620 } })
+
+  await page.locator('[data-object-id]').first().click()
+  const widthOf = async (): Promise<number> =>
+    (await page.locator('[role="table"] [role="columnheader"]').first().boundingBox())?.width ?? 0
+  const before = await widthOf()
+
+  const grip = await page.getByTestId('divider-c0').boundingBox()
+  if (grip === null) throw new Error('the boundary is not on screen')
+  await page.mouse.dblclick(grip.x + grip.width / 2, grip.y + grip.height / 2)
+
+  const after = await widthOf()
+  expect(after).toBeGreaterThan(before + 40)
+
+  /*
+   * And it is ONE undoable action, like a drag: the weights and the table's
+   * new size go in the same transaction.
+   */
+  await page.keyboard.press('ControlOrMeta+z')
+  await expect.poll(widthOf).toBeCloseTo(before, 0)
 })

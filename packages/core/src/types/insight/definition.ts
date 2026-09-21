@@ -40,7 +40,7 @@ export const insightType = defineObjectType<typeof INSIGHT_TYPE, InsightData>({
     canHaveChildren: false,
     selectsAsUnit: false,
     connectable: true,
-    styleProps: ['color', 'textColor', 'font', 'align', 'opacity'],
+    styleProps: ['color', 'textColor', 'font', 'align', 'verticalAlign', 'opacity'],
   },
 
   fields: [

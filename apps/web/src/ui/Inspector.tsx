@@ -1,5 +1,6 @@
 import {
   ALIGN_TOKENS,
+  VALIGN_TOKENS,
   DASH_TOKENS,
   RADIUS_TOKENS,
   FILL_TOKENS,
@@ -8,6 +9,7 @@ import {
   unionAll,
   worldToScreen,
   type AlignToken,
+  type VAlignToken,
   type AnyOpenFrameObject,
   type DashToken,
   type RadiusToken,
@@ -27,7 +29,7 @@ import { useInteractionStore } from '../interaction/interaction-store.js'
 import { PANEL_CLEARANCE_PX } from '../scene/connect-points.js'
 import { useOpenFrame } from '../runtime/context.js'
 import { Swatches, groundOf, type SwatchKind } from '../controls/Swatches.js'
-import { AlignIcon, DashIcon,
+import { AlignIcon, VAlignIcon, DashIcon,
   RadiusIcon, FillIcon, StrokeIcon, TrashIcon } from './icons.js'
 import { Provenance } from './Provenance.js'
 import { RecordFields } from './RecordFields.js'
@@ -425,6 +427,18 @@ export function Inspector() {
             name="align"
             onPick={(align) => apply({ align })}
             render={(token) => <AlignIcon variant={token} />}
+          />
+        </Field>
+      )}
+
+      {props.has('verticalAlign') && (
+        <Field name="down">
+          <Choice<VAlignToken>
+            options={VALIGN_TOKENS}
+            current={value('verticalAlign') ?? 'top'}
+            name="verticalAlign"
+            onPick={(verticalAlign) => apply({ verticalAlign })}
+            render={(token) => <VAlignIcon variant={token} />}
           />
         </Field>
       )}

@@ -107,6 +107,16 @@ function ObjectViewInner({ id, views }: Props) {
   const dividerPreview = useInteractionStore((state) =>
     state.drag.kind === 'divider' && state.drag.objectId === id ? state.drag.data : null,
   )
+  /*
+   * Primitives, not the object: rule 9. A fresh `{ width, height }` from a
+   * selector never compares equal and re-renders forever.
+   */
+  const growWidth = useInteractionStore((state) =>
+    state.drag.kind === 'divider' && state.drag.objectId === id ? state.drag.grow.width : 0,
+  )
+  const growHeight = useInteractionStore((state) =>
+    state.drag.kind === 'divider' && state.drag.objectId === id ? state.drag.grow.height : 0,
+  )
   const commands = useCommands()
   const { runtime } = useOpenFrame()
   // Resolved before the early return so hook order never varies. Only views
@@ -121,7 +131,17 @@ function ObjectViewInner({ id, views }: Props) {
   const Renderer = view?.Renderer ?? FallbackView
   const InlineEditor = view?.InlineEditor
 
-  const frame = preview ?? object.frame
+  /*
+   * The frame a resize gesture is previewing, or the object's own — grown by
+   * whatever a divider drag is asking for. Both are previews of the same
+   * thing, and the wrapper has to carry the growth or the cells redistribute
+   * inside a box that never changes size.
+   */
+  const shown = preview ?? object.frame
+  const frame =
+    growWidth === 0 && growHeight === 0
+      ? shown
+      : { ...shown, width: shown.width + growWidth, height: shown.height + growHeight }
   /*
    * A connector's geometry is its resolved endpoints, in absolute world
    * coordinates — it has no frame to be positioned by. Anchoring its wrapper at
@@ -192,7 +212,17 @@ function ObjectViewInner({ id, views }: Props) {
             object={
               dividerPreview === null
                 ? object
-                : { ...object, data: { ...(object.data as object), ...dividerPreview } }
+                : {
+                    ...object,
+                    data: { ...(object.data as object), ...dividerPreview },
+                    /*
+                     * The FRAME previews too. Resizing one track takes space
+                     * from nowhere, so the object grows — without this the
+                     * cells redistribute inside a box that is not changing and
+                     * the drag looks like it has hit a limit.
+                     */
+                    frame,
+                  }
             }
             selected={selected}
             zoom={zoom}

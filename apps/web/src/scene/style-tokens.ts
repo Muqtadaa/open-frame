@@ -1,4 +1,6 @@
-import { isColorToken, type AlignToken, type ColorToken, type ColorValue, type DashToken, type FontToken } from '@openframe/core'
+import { isColorToken, type AlignToken, type ColorToken, type ColorValue, type DashToken, type FontToken,
+  type VAlignToken,
+} from '@openframe/core'
 
 /**
  * The one place design tokens become CSS values.
@@ -134,6 +136,17 @@ export function textAlign(token: AlignToken | undefined): 'left' | 'center' | 'r
  * the token twice: once for where the text block sits, once for how its lines
  * sit within it.
  */
+/**
+ * Vertical alignment, as a flex cross-axis value.
+ *
+ * `start` is the default and is left UNSET rather than written out: an absent
+ * property is what lets a view's own stylesheet decide, and a table cell and a
+ * sticky do not start from the same place.
+ */
+export function verticalAlign(token: VAlignToken | undefined): 'flex-start' | 'center' | 'flex-end' {
+  return token === 'middle' ? 'center' : token === 'bottom' ? 'flex-end' : 'flex-start'
+}
+
 export function justifyAlign(token: AlignToken | undefined): 'flex-start' | 'center' | 'flex-end' {
   return token === 'center' ? 'center' : token === 'end' ? 'flex-end' : 'flex-start'
 }

@@ -163,6 +163,20 @@ function handleUnderPointer(target: EventTarget | null): string | null {
 }
 
 /**
+ * The handle at a point on screen, if any.
+ *
+ * `handleUnderPointer` reads the event's target, which is right for a press —
+ * a `pointerdown` is addressed to exactly what it landed on. A `dblclick` is
+ * not: it targets the nearest common ancestor of its two clicks, so one that
+ * begins on a handle and ends on what is beneath arrives addressed to the
+ * canvas, and the handle is invisible to it.
+ */
+function handleAt(clientX: number, clientY: number): string | null {
+  if (typeof window === 'undefined') return null
+  return handleUnderPointer(window.document.elementFromPoint(clientX, clientY))
+}
+
+/**
  * Grabbing a division inside an object, which the REGISTRY named.
  *
  * Nothing type-specific here: the handle carries its own id, the registry
@@ -287,6 +301,13 @@ export function useCanvasGestures(containerRef: RefObject<HTMLElement | null>) {
   const { runtime } = useOpenFrame()
   const commands = useCommands()
   const gesture = useRef<Gesture | null>(null)
+  /**
+   * Whether the last press landed on a handle.
+   *
+   * Read by the double-click handler, which cannot work it out for itself: see
+   * the note there.
+   */
+  const pressedHandle = useRef(false)
   const spaceHeld = useRef(false)
 
   const toWorld = useCallback(
@@ -435,6 +456,12 @@ export function useCanvasGestures(containerRef: RefObject<HTMLElement | null>) {
       else if (store.editingId !== null) store.setEditing(null)
 
       const grabbed = handleUnderPointer(event.target)
+      /*
+       * Remembered for the `dblclick` that may follow this press: by then the
+       * handle can have moved out from under the pointer, and a double-click
+       * on a handle must never also reach the object beneath it.
+       */
+      pressedHandle.current = grabbed !== null
 
       if (grabbed === 'divider') {
         const started = beginDividerDrag(event, store, runtime, toWorld)
@@ -654,10 +681,16 @@ export function useCanvasGestures(containerRef: RefObject<HTMLElement | null>) {
               ? (worldPoint.x - bounds.x) / bounds.width
               : (worldPoint.y - bounds.y) / bounds.height
 
-        const patch = runtime.registry.moveDivider(subject, active.dividerId, along)
-        if (patch !== null) {
+        const moved = runtime.registry.moveDivider(subject, active.dividerId, along)
+        if (moved !== null) {
           active.moved = true
-          store.previewDivider(patch)
+          /*
+           * The data AND the size it needs. Resizing one track no longer takes
+           * the space from its neighbour, so the table itself grows — and the
+           * preview has to show that, or the drag looks like it is doing
+           * nothing past the point the old model would have stopped at.
+           */
+          store.previewDivider(moved.data, moved.grow)
         }
         return
       }
@@ -820,8 +853,18 @@ export function useCanvasGestures(containerRef: RefObject<HTMLElement | null>) {
        */
       if (active.mode === 'divider') {
         const drag = store.drag
-        if (drag.kind === 'divider' && drag.data !== null && active.moved) {
-          commands.updateData(drag.objectId, drag.data)
+        const subject = active.subjects[0]
+        if (drag.kind === 'divider' && drag.data !== null && active.moved && subject !== undefined) {
+          /*
+           * ONE transaction for the two changes. Weights are data and a frame
+           * is geometry, so they are two commands — but they are one action,
+           * and undoing a drag has to put both back.
+           */
+          commands.resizeDivider(drag.objectId, drag.data, {
+            ...subject.frame,
+            width: subject.frame.width + drag.grow.width,
+            height: subject.frame.height + drag.grow.height,
+          })
         }
         store.endDrag()
       }
@@ -918,6 +961,26 @@ export function useCanvasGestures(containerRef: RefObject<HTMLElement | null>) {
   const onDoubleClick = useCallback(
     // Double-click arrives as a MouseEvent in React, not a PointerEvent.
     (event: ReactMouseEvent<HTMLElement>): void => {
+      /*
+       * A HANDLE is not the object under it.
+       *
+       * Double-clicking a table's column boundary fits that column to its
+       * content, and the boundary lies over the cells — so hit testing the
+       * point finds the table and opens its editor on top of the thing that
+       * just happened.
+       *
+       * Neither `event.target` nor the point can answer this on its own. A
+       * `dblclick` targets the nearest common ancestor of its two clicks, so a
+       * pair landing on a handle and then on what is under it arrives
+       * addressed to the canvas — and by the time it arrives the handle may
+       * have MOVED, because fitting a column to its content is exactly what
+       * the second press just did.
+       *
+       * What was under the pointer when it went down is the thing that was
+       * true, so that is what is remembered.
+       */
+      if (pressedHandle.current || handleAt(event.clientX, event.clientY) !== null) return
+
       const worldPoint = toWorld(event.clientX, event.clientY)
       /*
        * RAW, not group-resolved.

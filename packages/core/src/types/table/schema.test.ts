@@ -9,7 +9,9 @@ import {
   cellRegion,
   dividerPositions,
   styleCells,
-  moveDividerAt,
+  MIN_TRACK,
+  resizeTrackAt,
+  setTrackSize,
   resizeGrid,
   type TableData,
 } from './schema.js'
@@ -198,62 +200,6 @@ describe('the divisions inside a table', () => {
   it('reads uneven weights, not just even ones', () => {
     expect(dividerPositions([3, 1])).toEqual([0.75])
   })
-
-  /**
-   * The property that makes a table feel like a table: dragging one boundary
-   * moves ONLY the two tracks either side of it. Anything further along stays
-   * exactly where it was.
-   *
-   * Asserted on four columns, because on three the "rest of the table" is a
-   * single track and a change that spread across everything would be hard to
-   * tell from one that did not.
-   */
-  it('moves only the two tracks it sits between', () => {
-    const before = [1, 1, 1, 1]
-    const after = moveDividerAt(before, 1, 0.6)
-
-    expect(after[0]).toBe(1)
-    expect(after[3]).toBe(1)
-    // And the pair it does move keeps their combined width.
-    expect((after[1] ?? 0) + (after[2] ?? 0)).toBeCloseTo(2, 10)
-  })
-
-  it('widens one track by exactly what it takes from its neighbour', () => {
-    const after = moveDividerAt([1, 1], 0, 0.75)
-    expect(after[0]).toBeCloseTo(1.5, 10)
-    expect(after[1]).toBeCloseTo(0.5, 10)
-  })
-
-  /**
-   * A column dragged to nothing is one nothing can be typed into and nothing
-   * can be grabbed to drag back. The drag STOPS at the limit rather than being
-   * refused, because a handle that ignores you past a point feels broken and
-   * one that lets you erase a column is broken.
-   */
-  it('will not squeeze a track out of existence in either direction', () => {
-    const squashed = moveDividerAt([1, 1], 0, 0)
-    expect(squashed[0]).toBeGreaterThan(0)
-    expect(TableDataSchema.safeParse(grid(2, 1, { columns: squashed })).success).toBe(true)
-
-    const stretched = moveDividerAt([1, 1], 0, 1)
-    expect(stretched[1]).toBeGreaterThan(0)
-    expect(TableDataSchema.safeParse(grid(2, 1, { columns: stretched })).success).toBe(true)
-  })
-
-  it('leaves the weights alone when the boundary does not exist', () => {
-    const weights = [1, 1]
-    expect(moveDividerAt(weights, 5, 0.5)).toBe(weights)
-  })
-
-  /**
-   * Round trip: after moving a boundary, asking where the boundaries are gives
-   * back where it was put. Without this the handle would drift away from the
-   * pointer on every drag.
-   */
-  it('puts the boundary where it was dragged', () => {
-    const moved = moveDividerAt([1, 1, 1], 1, 0.8)
-    expect(dividerPositions(moved)[1]).toBeCloseTo(0.8, 10)
-  })
 })
 
 describe('cellRange', () => {
@@ -378,5 +324,89 @@ describe('cellRegion', () => {
 
   it('has no rectangle for no cells', () => {
     expect(cellRegion(three, [])).toBeNull()
+  })
+})
+
+describe('resizeTrackAt', () => {
+  // Three columns, equal, in a 300-unit table: 100 each.
+  const equal = [1, 1, 1]
+
+  it('sets the dragged track to the size the pointer asks for', () => {
+    // The first boundary dragged to half way: column 0 becomes 150.
+    expect(resizeTrackAt(equal, 0, 0.5, 300)?.weights[0]).toBeCloseTo(150, 6)
+  })
+
+  /**
+   * THE WHOLE POINT. Widening one column used to narrow its neighbour, so a
+   * table could only ever rearrange the width it already had.
+   */
+  it('leaves every other track exactly as it was, and grows the table', () => {
+    const moved = resizeTrackAt(equal, 0, 0.5, 300)
+    expect(moved?.weights[1]).toBeCloseTo(100, 6)
+    expect(moved?.weights[2]).toBeCloseTo(100, 6)
+    expect(moved?.total).toBeCloseTo(350, 6)
+  })
+
+  it('shrinks the table when a track is made narrower', () => {
+    const moved = resizeTrackAt(equal, 0, 0.2, 300)
+    expect(moved?.weights[0]).toBeCloseTo(60, 6)
+    expect(moved?.weights[1]).toBeCloseTo(100, 6)
+    expect(moved?.total).toBeCloseTo(260, 6)
+  })
+
+  /**
+   * A middle boundary moves the track BEFORE it, and on four columns rather
+   * than three — on three, "everything after" is a single track and a change
+   * that spread across the rest would be hard to tell from one that did not.
+   */
+  it('moves the track before the boundary and nothing after it', () => {
+    const moved = resizeTrackAt([1, 1, 1, 1], 1, 0.75, 400)
+    expect(moved?.weights[0]).toBeCloseTo(100, 6)
+    expect(moved?.weights[1]).toBeCloseTo(200, 6)
+    expect(moved?.weights[2]).toBeCloseTo(100, 6)
+    expect(moved?.weights[3]).toBeCloseTo(100, 6)
+  })
+
+  /**
+   * A track of no width is one nothing can be typed into and nothing can be
+   * grabbed to drag back, so the drag stops at the limit. Absolute now, not a
+   * share: a share of a wide table is still too small to use.
+   */
+  it('stops at the narrowest a track may be', () => {
+    const moved = resizeTrackAt(equal, 0, 0, 300)
+    expect(moved?.weights[0]).toBe(MIN_TRACK)
+    expect(moved?.weights[1]).toBeCloseTo(100, 6)
+    expect(moved?.total).toBeCloseTo(MIN_TRACK + 200, 6)
+  })
+
+  it('reads the existing sizes from the weights rather than assuming even ones', () => {
+    const moved = resizeTrackAt([3, 1], 0, 0.5, 400)
+    expect(moved?.weights[0]).toBeCloseTo(200, 6)
+    expect(moved?.weights[1]).toBeCloseTo(100, 6)
+    expect(moved?.total).toBeCloseTo(300, 6)
+  })
+
+  it('refuses a boundary that is not there', () => {
+    expect(resizeTrackAt(equal, 9, 0.5, 300)).toBeNull()
+    expect(resizeTrackAt(equal, 0, 0.5, 0)).toBeNull()
+  })
+
+  it('produces weights the schema accepts', () => {
+    const moved = resizeTrackAt(equal, 0, 0.5, 300)
+    expect(TableDataSchema.safeParse(grid(3, 1, { columns: moved?.weights ?? [] })).success).toBe(
+      true,
+    )
+  })
+})
+
+describe('setTrackSize', () => {
+  it('sets one track to an exact size and leaves the rest', () => {
+    const sized = setTrackSize([1, 1, 1], 1, 220, 300)
+    expect(sized?.weights).toEqual([100, 220, 100])
+    expect(sized?.total).toBe(420)
+  })
+
+  it('will not go below the floor, however small the measurement', () => {
+    expect(setTrackSize([1, 1], 0, 2, 200)?.weights[0]).toBe(MIN_TRACK)
   })
 })

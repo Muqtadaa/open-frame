@@ -37,7 +37,7 @@ export const stickyType = defineObjectType<typeof STICKY_TYPE, StickyData>({
      * rather than inventing a behaviour: a slip is defined by having a body,
      * and an unfilled sticky is just a text object, which already exists.
      */
-    styleProps: ['color', 'textColor', 'font', 'align', 'opacity'],
+    styleProps: ['color', 'textColor', 'font', 'align', 'verticalAlign', 'opacity'],
   },
 
   /*

@@ -227,15 +227,6 @@ export function resizeGrid(
   return { ...data, columns, rows, cells }
 }
 
-/**
- * The smallest share of a table a column or row may be reduced to.
- *
- * Not zero. A column dragged to nothing is one nothing can be typed into and
- * nothing can be grabbed to drag back — it would be a column that exists in
- * the data and not on the board, which is the same reason a weight of zero is
- * refused outright.
- */
-export const MIN_SHARE = 0.04
 
 /**
  * Where a table's internal divisions fall, as fractions of its extent.
@@ -258,43 +249,74 @@ export function dividerPositions(weights: readonly number[]): number[] {
 }
 
 /**
- * The weights after dragging the boundary at `index` to `to`.
+ * The smallest a track may be, in world units.
  *
- * Only the two tracks either side of that boundary change, and their SUM is
- * preserved — so widening one column narrows its neighbour and everything
- * further along stays exactly where it was. Spreading the difference across
- * the whole table instead would make every column shift when you adjusted one,
- * which reads as the table fighting you.
+ * ABSOLUTE rather than a share of the table, because a track is now resized
+ * without reference to its neighbours — there is no pair to take a fraction
+ * of, and a share of the whole would let a column in a wide table be dragged
+ * to something you still could not type into.
  */
-export function moveDividerAt(
+export const MIN_TRACK = 20
+
+/**
+ * The weights and total size after dragging the boundary at `index` to `to`.
+ *
+ * ONLY the track before the boundary changes. Everything past it keeps the
+ * size it had and simply shifts along, and the table GROWS or SHRINKS to
+ * accommodate — which is what a spreadsheet does, and what somebody widening
+ * one column is asking for. The previous behaviour preserved the pair's sum,
+ * so widening a column narrowed its neighbour: you could not make a column
+ * bigger without making another smaller, and the table could never change
+ * size at all.
+ *
+ * `to` is a fraction of the object's CURRENT extent, which is the unit the
+ * gesture speaks. `total` is that extent in world units, which is what makes
+ * the answer absolute.
+ *
+ * Weights come back as sizes. They are relative by definition, so any scale
+ * describes the same table — and using the sizes themselves is what keeps
+ * every other track exactly where it was.
+ */
+export function resizeTrackAt(
   weights: readonly number[],
   index: number,
   to: number,
-): readonly number[] {
-  const before = weights[index]
-  const after = weights[index + 1]
-  if (before === undefined || after === undefined) return weights
+  total: number,
+): { readonly weights: readonly number[]; readonly total: number } | null {
+  const sum = weights.reduce((weight, next) => weight + next, 0)
+  if (weights[index] === undefined || sum <= 0 || total <= 0) return null
 
-  const total = weights.reduce((sum, weight) => sum + weight, 0)
-  if (total <= 0) return weights
+  // Every track at its present size, so the ones we do not touch are untouched.
+  const sizes = weights.map((weight) => (weight / sum) * total)
+  const before = sizes.slice(0, index).reduce((running, size) => running + size, 0)
 
-  // Where the boundary sits now, and where the pair begins, as fractions.
-  const start = weights.slice(0, index).reduce((sum, weight) => sum + weight, 0) / total
-  const pair = (before + after) / total
+  const wanted = to * total - before
+  const next = [...sizes]
+  next[index] = Math.max(MIN_TRACK, wanted)
 
-  /*
-   * Clamped so NEITHER of the two can be squeezed out of existence. The drag
-   * simply stops rather than being refused: a handle that ignored you past a
-   * limit would feel broken, and one that let you erase a column would be.
-   */
-  const lowest = start + pair * MIN_SHARE
-  const highest = start + pair * (1 - MIN_SHARE)
-  const landed = Math.min(highest, Math.max(lowest, to))
+  return { weights: next, total: next.reduce((running, size) => running + size, 0) }
+}
 
-  const next = [...weights]
-  next[index] = (landed - start) * total
-  next[index + 1] = before + after - next[index]
-  return next
+/**
+ * The weights and total size after setting one track to an exact size.
+ *
+ * The same operation the drag performs, reached from a measurement rather than
+ * from a pointer — double-clicking a boundary asks for the size the content
+ * needs, and that arrives already in world units.
+ */
+export function setTrackSize(
+  weights: readonly number[],
+  index: number,
+  size: number,
+  total: number,
+): { readonly weights: readonly number[]; readonly total: number } | null {
+  const sum = weights.reduce((weight, next) => weight + next, 0)
+  if (weights[index] === undefined || sum <= 0 || total <= 0) return null
+
+  const sizes = weights.map((weight) => (weight / sum) * total)
+  const next = [...sizes]
+  next[index] = Math.max(MIN_TRACK, size)
+  return { weights: next, total: next.reduce((running, each) => running + each, 0) }
 }
 
 /**

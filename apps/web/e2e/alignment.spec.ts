@@ -102,6 +102,17 @@ async function pushAnchorOffGrid(page: Page): Promise<number> {
 
   const after = await box(page, 0)
   expect(Math.round(after.x) % 10).not.toBe(0)
+
+  /*
+   * DESELECT before returning, so the record panel goes away.
+   *
+   * The panel floats beside the selection and is over 300px tall, which on
+   * this fixture lands squarely on the mover — its opacity slider ends up
+   * under the point the drag starts from, and the press goes to the panel
+   * instead of the note. That made this suite fail whenever the panel changed
+   * height, which is nothing to do with alignment guides.
+   */
+  await page.locator(CANVAS).click({ position: { x: 1150, y: 160 } })
   return after.x
 }
 

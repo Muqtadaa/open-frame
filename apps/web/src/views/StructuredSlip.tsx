@@ -8,7 +8,7 @@ import {
 import { RichTextEditor } from './RichTextEditor.js'
 import { RichTextView } from './RichTextView.js'
 import type { ObjectEditorProps, ObjectViewProps } from './registry.js'
-import { fontFamily, textAlign, inkColor, readableInkOn, surfaceOf } from '../scene/style-tokens.js'
+import { fontFamily, textAlign, verticalAlign, inkColor, readableInkOn, surfaceOf } from '../scene/style-tokens.js'
 
 /**
  * The card every structured type is drawn as.
@@ -78,6 +78,7 @@ export function StructuredSlip<TData extends { readonly text: RichText }>({
         style={{
           fontFamily: fontFamily(object.style.font),
           textAlign: textAlign(object.style.align),
+        justifyContent: verticalAlign(object.style.verticalAlign),
         }}
       >
         <RichTextView value={text} />
@@ -127,6 +128,7 @@ export function StructuredEditor<TData extends { readonly text: RichText }>({
         color: inkColor(object.style.textColor) ?? readableInkOn(object.style.color),
         fontFamily: fontFamily(object.style.font),
         textAlign: textAlign(object.style.align),
+        justifyContent: verticalAlign(object.style.verticalAlign),
       }}
       ariaLabel={label}
       onCommit={(next) => onCommit({ text: next } as Partial<TData>)}

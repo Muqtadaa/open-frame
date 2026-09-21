@@ -32,7 +32,7 @@ export const requirementType = defineObjectType<typeof REQUIREMENT_TYPE, Require
     canHaveChildren: false,
     selectsAsUnit: false,
     connectable: true,
-    styleProps: ['color', 'textColor', 'font', 'align', 'opacity'],
+    styleProps: ['color', 'textColor', 'font', 'align', 'verticalAlign', 'opacity'],
   },
 
   fields: [{ key: 'priority', label: 'Priority', kind: 'select', options: REQUIREMENT_PRIORITY }],

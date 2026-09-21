@@ -272,6 +272,29 @@ export function AlignIcon({ className, variant }: IconProps & { variant: string 
   )
 }
 
+/**
+ * The same three lines turned through a right angle.
+ *
+ * Deliberately a rotation of `AlignIcon` rather than a new drawing: the two
+ * controls ask the same question about different axes, and a reader who has
+ * understood one should not have to learn the other.
+ */
+export function VAlignIcon({ className, variant }: IconProps & { variant: string }) {
+  const columns =
+    variant === 'middle'
+      ? ['M8 6v12', 'M12 8v8', 'M16 5v14']
+      : variant === 'bottom'
+        ? ['M8 6v12', 'M12 10v8', 'M16 4v14']
+        : ['M8 6v12', 'M12 6v8', 'M16 6v14']
+  return (
+    <svg {...base} className={className}>
+      {columns.map((d) => (
+        <path key={d} d={d} />
+      ))}
+    </svg>
+  )
+}
+
 /** Replaces a `\u25b8` text glyph: icons are drawn, at one stroke weight. */
 export function DisclosureIcon({ className }: IconProps) {
   return (

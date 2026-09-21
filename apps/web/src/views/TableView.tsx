@@ -17,7 +17,7 @@ import { RichTextView } from './RichTextView.js'
 import { cellAt, tracks } from '../scene/table-grid.js'
 import {
   fontFamily,
-  textAlign,
+  textAlign, verticalAlign,
   inkColor,
   inkOf,
   readableInkOn,
@@ -95,6 +95,7 @@ function TableRenderer({ object }: ObjectViewProps<TableData>) {
         gridTemplateRows: tracks(rows),
         fontFamily: fontFamily(object.style.font),
         textAlign: textAlign(object.style.align),
+        justifyContent: verticalAlign(object.style.verticalAlign),
         // On the table, not on each cell: one declaration the cells inherit,
         // rather than a style object rebuilt per cell on every render.
         color: inkColor(object.style.textColor),

@@ -60,6 +60,20 @@ export interface BoardCommands {
   setLocked(locked: boolean): void
   setHidden(hidden: boolean): void
   deleteSelection(): void
+  /**
+   * A divider's new data AND the size the object needs to hold it, as ONE
+   * undoable action.
+   *
+   * Two commands rather than one because they are two different changes —
+   * weights are data, a frame is geometry — and `transact` is what makes a
+   * drag that produced both still a single step to undo. Rule 4 is about one
+   * ACTION per gesture, not one command.
+   */
+  resizeDivider(
+    id: ObjectId,
+    patch: Readonly<Record<string, unknown>>,
+    frame: ObjectFrame,
+  ): void
   updateData(id: ObjectId, patch: Readonly<Record<string, unknown>>): void
   /** Promotes the selection to another type, keeping every object's identity. */
   promoteSelection(toType: string): void
@@ -549,6 +563,15 @@ export function useCommands(): BoardCommands {
 
       updateData(id, patch) {
         report(dispatcher.dispatch({ kind: 'UpdateObjectData', id, patch }))
+      },
+
+      resizeDivider(id, patch, frame) {
+        report(
+          dispatcher.transact('Resize track', [
+            { kind: 'UpdateObjectData', id, patch },
+            { kind: 'ResizeObjects', resizes: [{ id, frame }] },
+          ]),
+        )
       },
 
       promoteSelection(toType) {

@@ -82,6 +82,12 @@ export interface DraggableDivider {
   readonly at: number
 }
 
+/** What moving a divider produces: new data, and the size that data needs. */
+export interface DividerMove<TData> {
+  readonly data: Partial<TData>
+  readonly grow: { readonly width: number; readonly height: number }
+}
+
 export interface DraggableEndpoint {
   readonly id: string
   readonly at: Point
@@ -322,18 +328,24 @@ export interface ObjectTypeDefinition<TType extends string, TData> {
   readonly dividers?: (object: ObjectBase<TType, TData>) => readonly DraggableDivider[]
 
   /**
-   * Where a dragged divider ends up, as a data patch.
+   * Where a dragged divider ends up: a data patch, and how much bigger the
+   * object has to be to hold it.
    *
    * `to` is a fraction of the object's extent, exactly as `at` was. The TYPE
-   * decides what moving one means — a table converts it back into column
-   * weights and refuses to make a column narrower than something can be typed
-   * into — so the gesture only reports where the pointer got to.
+   * decides what moving one means — a table sets the track before the boundary
+   * to the size the pointer asks for and leaves every other track alone, which
+   * is why the object itself has to grow or shrink.
+   *
+   * `grow` is a DELTA on the frame, in world units, and is usually zero on one
+   * axis: dragging a column boundary changes a table's width and never its
+   * height. The caller applies it as a resize in the same transaction as the
+   * data, so the pair is one undoable action.
    */
   readonly moveDivider?: (
     object: ObjectBase<TType, TData>,
     dividerId: string,
     to: number,
-  ) => Partial<TData>
+  ) => DividerMove<TData> | null
 
   /**
    * The link this object represents, if it represents one.
@@ -435,7 +447,7 @@ export interface ErasedObjectTypeDefinition {
     object: AnyOpenFrameObject,
     dividerId: string,
     to: number,
-  ) => Record<string, unknown>
+  ) => DividerMove<Record<string, unknown>> | null
   readonly retargetEndpoint?: (
     object: AnyOpenFrameObject,
     endpointId: string,
@@ -679,7 +691,7 @@ export class ObjectTypeRegistry {
     object: AnyOpenFrameObject,
     dividerId: string,
     to: number,
-  ): Record<string, unknown> | null {
+  ): DividerMove<Record<string, unknown>> | null {
     const move = this.#definitions.get(object.type)?.moveDivider
     return move === undefined ? null : move(object, dividerId, to)
   }

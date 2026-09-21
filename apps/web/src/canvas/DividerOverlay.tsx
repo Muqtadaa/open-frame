@@ -1,3 +1,9 @@
+import { useRef } from 'react'
+
+import { setTrackSize, type TableData } from '@openframe/core'
+
+import { useCommands } from '../hooks/use-commands.js'
+import { fitColumnWidth, fitRowHeight } from '../scene/fit-track.js'
 import { useOpenFrame } from '../runtime/context.js'
 import { useBoardDocument } from '../hooks/use-document-object.js'
 import { useInteractionStore } from '../interaction/interaction-store.js'
@@ -19,8 +25,18 @@ const GRAB_PX = 14
  * one table is the gesture, and with several selected the meaningful action is
  * moving them together.
  */
+/** How close two presses must be to count as one gesture. */
+const DOUBLE_PRESS_MS = 400
+
 export function DividerOverlay() {
   const { runtime } = useOpenFrame()
+  const commands = useCommands()
+  /*
+   * The last press on a divider, for counting a double. A ref rather than
+   * state: nothing renders differently because of it, and a re-render between
+   * the two presses would lose the count.
+   */
+  const pressed = useRef<{ id: string; at: number } | null>(null)
   const document = useBoardDocument()
   const selection = useInteractionStore((state) => state.selection)
   const zoom = useInteractionStore((state) => state.viewport.zoom)
@@ -38,6 +54,56 @@ export function DividerOverlay() {
 
   const dividers = runtime.registry.dividersOf(object)
   if (dividers.length === 0) return null
+
+  /**
+   * Fits the track before a boundary to what is in it.
+   *
+   * The type still owns the arithmetic — `setTrackSize` keeps every other
+   * track exactly as it is and reports the new total, the same contract a drag
+   * uses — and this owns only the measurement, which cannot be done without
+   * the laid-out DOM.
+   *
+   * It reads the cells by attribute rather than by knowing what a table is.
+   * That is the same fallback rule 15 names: some geometry only exists once
+   * the browser has drawn it.
+   */
+  const fitTrack = (dividerId: string): void => {
+    const across = dividerId.startsWith('c')
+    const index = Number.parseInt(dividerId.slice(1), 10)
+    if (!Number.isInteger(index) || index < 0) return
+
+    const grid = window.document.querySelector(`[data-object-id="${id ?? ''}"] [role="table"]`)
+    if (grid === null) return
+
+    const data = object.data as TableData
+    const columns = data.columns.length
+    const cells = [...grid.children].filter((child): child is HTMLElement => child instanceof HTMLElement)
+    const inTrack = cells.filter((_, at) => (across ? at % columns === index : Math.floor(at / columns) === index))
+
+    const wanted = across ? fitColumnWidth(inTrack) : fitRowHeight(inTrack)
+    if (wanted === null) return
+
+    // Measured on screen, applied in WORLD units: the two differ by the zoom,
+    // and fitting to a screen measurement at 400% would make the track four
+    // times too big.
+    const extent = across ? object.frame.width : object.frame.height
+    const sized = setTrackSize(
+      across ? data.columns : data.rows,
+      index,
+      wanted / zoom,
+      extent,
+    )
+    if (sized === null) return
+
+    commands.resizeDivider(
+      object.id,
+      across ? { columns: sized.weights } : { rows: sized.weights },
+      {
+        ...object.frame,
+        ...(across ? { width: sized.total } : { height: sized.total }),
+      },
+    )
+  }
 
   const bounds = runtime.registry.boundsOf(object, document)
   const grab = GRAB_PX / zoom
@@ -63,6 +129,26 @@ export function DividerOverlay() {
             data-handle="divider"
             data-divider-id={divider.id}
             data-testid={`divider-${divider.id}`}
+            /*
+             * DOUBLE-PRESS FITS THE TRACK TO ITS CONTENT, the way a
+             * spreadsheet does. The measurement is the DOM's — it depends on
+             * the face, the size and where the text breaks — and the
+             * arithmetic that follows is the type's, through `setTrackSize`.
+             *
+             * Counted here rather than taken from `dblclick`, which never
+             * arrives: that event targets the nearest common ancestor of its
+             * two clicks, and a pair landing on a handle and then on the cell
+             * beneath it resolves all the way up to the canvas.
+             */
+            onPointerDown={(event) => {
+              const now = event.timeStamp
+              const last = pressed.current
+              pressed.current = { id: divider.id, at: now }
+              if (last !== null && last.id === divider.id && now - last.at < DOUBLE_PRESS_MS) {
+                pressed.current = null
+                fitTrack(divider.id)
+              }
+            }}
             style={{
               transform: `translate(${String(across ? x - grab / 2 : x)}px, ${String(
                 across ? y : y - grab / 2,

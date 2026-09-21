@@ -5,7 +5,7 @@ import {
   TableDataSchema,
   emptyCells,
   dividerPositions,
-  moveDividerAt,
+  resizeTrackAt,
   type TableData,
 } from './schema.js'
 
@@ -74,7 +74,7 @@ export const tableType = defineObjectType<typeof TABLE_TYPE, TableData>({
      * lines that make it a table. Declared properties that the view ignores
      * are what rule 21 forbids, so only what is honoured is listed.
      */
-    styleProps: ['color', 'textColor', 'strokeColor', 'font', 'align', 'opacity', 'stroke'],
+    styleProps: ['color', 'textColor', 'strokeColor', 'font', 'align', 'verticalAlign', 'opacity', 'stroke'],
   },
 
   /**
@@ -102,19 +102,37 @@ export const tableType = defineObjectType<typeof TABLE_TYPE, TableData>({
     })),
   ],
 
+  /**
+   * ONE track changes, and the table changes size to hold it.
+   *
+   * Dragging a column boundary sets the column before it to whatever width the
+   * pointer asks for; every other column keeps the width it had and shifts
+   * along, so the table grows or shrinks. It used to preserve the pair's sum,
+   * which meant widening a column narrowed its neighbour and the table could
+   * never change size — you could rearrange the space a table already had and
+   * never ask for more.
+   */
   moveDivider: (object, dividerId, to) => {
     const index = Number.parseInt(dividerId.slice(1), 10)
-    if (!Number.isInteger(index) || index < 0) return {}
+    if (!Number.isInteger(index) || index < 0) return null
 
-    // Only the two tracks either side move, so the rest of the table stays
-    // exactly where it was — see `moveDividerAt`.
-    if (dividerId.startsWith('c')) {
-      return { columns: moveDividerAt(object.data.columns, index, to) }
+    const across = dividerId.startsWith('c')
+    if (!across && !dividerId.startsWith('r')) return null
+
+    const extent = across ? object.frame.width : object.frame.height
+    const moved = resizeTrackAt(
+      across ? object.data.columns : object.data.rows,
+      index,
+      to,
+      extent,
+    )
+    if (moved === null) return null
+
+    const grew = moved.total - extent
+    return {
+      data: across ? { columns: moved.weights } : { rows: moved.weights },
+      grow: { width: across ? grew : 0, height: across ? 0 : grew },
     }
-    if (dividerId.startsWith('r')) {
-      return { rows: moveDividerAt(object.data.rows, index, to) }
-    }
-    return {}
   },
 
   describe: (object) => {

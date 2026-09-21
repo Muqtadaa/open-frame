@@ -82,6 +82,16 @@ export interface ObjectStyle {
   readonly dash?: DashToken
   readonly font?: FontToken
   readonly align?: AlignToken
+  /**
+   * Where text sits in the space it is given, up and down.
+   *
+   * `align` is the other axis and always has been; this is the one a box with
+   * more height than its text needs has always had an answer to and never let
+   * anybody choose. A table cell is the clearest case — a short label in a
+   * tall row floats at the top for no reason anybody asked for — but every
+   * type with a box around its text has the same question.
+   */
+  readonly verticalAlign?: VAlignToken
   /** 0..1 */
   readonly opacity?: number
   /**
@@ -130,6 +140,8 @@ export const STROKE_TOKENS = ['none', 'thin', 'medium', 'thick'] as const
 export const DASH_TOKENS = ['solid', 'dashed', 'dotted'] as const
 export const FONT_TOKENS = ['sans', 'serif', 'mono'] as const
 export const ALIGN_TOKENS = ['start', 'center', 'end'] as const
+/** The same three, up and down. Named separately so one control means one axis. */
+export const VALIGN_TOKENS = ['top', 'middle', 'bottom'] as const
 export const RADIUS_TOKENS = ['none', 'small', 'medium', 'large'] as const
 
 export type ColorToken = (typeof COLOR_TOKENS)[number]
@@ -187,6 +199,7 @@ export type StrokeToken = (typeof STROKE_TOKENS)[number]
 export type DashToken = (typeof DASH_TOKENS)[number]
 export type FontToken = (typeof FONT_TOKENS)[number]
 export type AlignToken = (typeof ALIGN_TOKENS)[number]
+export type VAlignToken = (typeof VALIGN_TOKENS)[number]
 export type RadiusToken = (typeof RADIUS_TOKENS)[number]
 
 export type StyleProp = keyof ObjectStyle
@@ -213,6 +226,7 @@ const EVERY_STYLE_PROP: Readonly<Record<StyleProp, true>> = {
   dash: true,
   font: true,
   align: true,
+  verticalAlign: true,
   opacity: true,
   radius: true,
 }

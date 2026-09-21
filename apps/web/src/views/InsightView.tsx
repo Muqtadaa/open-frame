@@ -3,7 +3,7 @@ import { isEmptyText, plainTextOf, type ColorValue, type InsightData } from '@op
 import { defineObjectView, type ObjectEditorProps, type ObjectViewProps } from './registry.js'
 import { RichTextEditor } from './RichTextEditor.js'
 import { RichTextView } from './RichTextView.js'
-import { fontFamily, textAlign, inkColor, readableInkOn, surfaceOf } from '../scene/style-tokens.js'
+import { fontFamily, textAlign, verticalAlign, inkColor, readableInkOn, surfaceOf } from '../scene/style-tokens.js'
 
 function background(color: ColorValue | undefined): string {
   return surfaceOf(color, 'blue')
@@ -33,6 +33,7 @@ function InsightRenderer({ object }: ObjectViewProps<InsightData>) {
         style={{
           fontFamily: fontFamily(object.style.font),
           textAlign: textAlign(object.style.align),
+        justifyContent: verticalAlign(object.style.verticalAlign),
         }}
       >
         <RichTextView value={text} />
@@ -63,6 +64,7 @@ function InsightEditor({ object, Chrome, onCommit, onCancel }: ObjectEditorProps
         color: inkColor(object.style.textColor) ?? readableInkOn(object.style.color),
         fontFamily: fontFamily(object.style.font),
         textAlign: textAlign(object.style.align),
+        justifyContent: verticalAlign(object.style.verticalAlign),
       }}
       ariaLabel="Edit insight text"
       onCommit={(text) => onCommit({ text })}

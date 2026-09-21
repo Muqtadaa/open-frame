@@ -41,7 +41,7 @@ export const textType = defineObjectType<typeof TEXT_TYPE, TextData>({
      * two things (rule 21). The view still READS `color` so boards written
      * before this keep the colour they were given.
      */
-    styleProps: ['textColor', 'font', 'align', 'opacity'],
+    styleProps: ['textColor', 'font', 'align', 'verticalAlign', 'opacity'],
   },
 
   describe: (object) => {

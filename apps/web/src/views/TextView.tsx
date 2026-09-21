@@ -1,6 +1,6 @@
 import { isEmptyText, plainTextOf, type ColorValue, type TextData } from '@openframe/core'
 
-import { fontFamily, textAlign, inkOf } from '../scene/style-tokens.js'
+import { fontFamily, textAlign, verticalAlign, inkOf } from '../scene/style-tokens.js'
 import { defineObjectView, type ObjectEditorProps, type ObjectViewProps } from './registry.js'
 import { RichTextEditor } from './RichTextEditor.js'
 import { RichTextView } from './RichTextView.js'
@@ -27,6 +27,7 @@ function TextRenderer({ object }: ObjectViewProps<TextData>) {
         color: ink(object.style),
         fontFamily: fontFamily(object.style.font),
         textAlign: textAlign(object.style.align),
+        justifyContent: verticalAlign(object.style.verticalAlign),
         opacity: object.style.opacity ?? 1,
       }}
       role="group"
@@ -47,6 +48,7 @@ function TextEditor({ object, Chrome, onCommit, onCancel }: ObjectEditorProps<Te
         color: ink(object.style),
         fontFamily: fontFamily(object.style.font),
         textAlign: textAlign(object.style.align),
+        justifyContent: verticalAlign(object.style.verticalAlign),
       }}
       ariaLabel="Edit text"
       onCommit={(text) => onCommit({ text })}

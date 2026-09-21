@@ -6,7 +6,17 @@ import { RichTextView } from './RichTextView.js'
 import { ELLIPSE_MARGIN, labelInset, roundedShapePath } from '../scene/shape-geometry.js'
 import { plainTextOf } from '@openframe/core'
 
-import { fontFamily, inkColor, readableInkOn, dashArray, justifyAlign, textAlign, inkOf, surfaceOf } from '../scene/style-tokens.js'
+import {
+  dashArray,
+  fontFamily,
+  inkColor,
+  inkOf,
+  justifyAlign,
+  readableInkOn,
+  surfaceOf,
+  textAlign,
+  verticalAlign,
+} from '../scene/style-tokens.js'
 
 function ShapeOutline({ object }: { object: ObjectBase<string, ShapeData> }) {
   // `strokeColor` when it is set, the object's own colour otherwise — which
@@ -91,6 +101,13 @@ function ShapeRenderer({ object }: ObjectViewProps<ShapeData>) {
             // the block. Without the first, a shape label is permanently
             // centred no matter what the panel says.
             justifyContent: justifyAlign(object.style.align),
+            /*
+             * The shape's label box is a COLUMN of one item, so the cross axis
+             * is the horizontal one and `alignItems` is what places the text
+             * up and down — the opposite of every other view here, where the
+             * box stacks downward.
+             */
+            alignItems: verticalAlign(object.style.verticalAlign),
             textAlign: textAlign(object.style.align),
             color: inkColor(object.style.textColor) ?? readableInkOn(object.style.color),
           }}
