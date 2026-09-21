@@ -22,7 +22,7 @@ import {
   readableInkOn,
   surfaceOf,
 } from '../scene/style-tokens.js'
-import { Swatches, groundOf } from '../controls/Swatches.js'
+import { Swatches, groundOf, type SwatchKind } from '../controls/Swatches.js'
 
 /**
  * What a colour lands on, named in the order somebody reaches for them.
@@ -38,6 +38,13 @@ const CELL_TARGETS: readonly { key: CellTarget; label: string; name: string }[] 
   { key: 'text', label: 'text', name: 'Cell text colour' },
   { key: 'rule', label: 'rule', name: 'Cell rule colour' },
 ]
+
+/** The same three specimens the record panel uses, for the same reason. */
+const CELL_KIND: Readonly<Record<CellTarget, SwatchKind>> = {
+  fill: 'surface',
+  text: 'ink',
+  rule: 'line',
+}
 
 const CELL_KEY: Readonly<Record<CellTarget, keyof CellStyle>> = {
   fill: 'fill',
@@ -393,7 +400,7 @@ function TableEditor({ object, at, zoom, onCommit, onCancel }: ObjectEditorProps
         </div>
 
         <Swatches
-          kind={target === 'fill' ? 'surface' : 'ink'}
+          kind={CELL_KIND[target]}
           label={CELL_TARGETS.find((option) => option.key === target)?.name ?? 'Colour'}
           testPrefix={`cell-${target}`}
           current={agreed(CELL_KEY[target])}

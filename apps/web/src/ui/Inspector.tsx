@@ -26,7 +26,7 @@ import { useBoardDocument } from '../hooks/use-document-object.js'
 import { useInteractionStore } from '../interaction/interaction-store.js'
 import { PANEL_CLEARANCE_PX } from '../scene/connect-points.js'
 import { useOpenFrame } from '../runtime/context.js'
-import { Swatches, groundOf } from '../controls/Swatches.js'
+import { Swatches, groundOf, type SwatchKind } from '../controls/Swatches.js'
 import { AlignIcon, DashIcon,
   RadiusIcon, FillIcon, StrokeIcon, TrashIcon } from './icons.js'
 import { Provenance } from './Provenance.js'
@@ -88,6 +88,18 @@ const PAINTABLE: readonly { prop: PaintProp; label: string; name: string }[] = [
   { prop: 'textColor', label: 'text', name: 'Text colour' },
   { prop: 'strokeColor', label: 'line', name: 'Line colour' },
 ]
+
+/*
+ * What each property's swatches are a specimen of. A fill is a slip; text is a
+ * letter; a line is a rule. Text and line resolve to the same colour — a token
+ * has only two answers — and differ in what they DRAW, because a swatch has to
+ * say which property it sets.
+ */
+const PAINT_KIND: Readonly<Record<PaintProp, SwatchKind>> = {
+  color: 'surface',
+  textColor: 'ink',
+  strokeColor: 'line',
+}
 
 /** Stable test handles, so a renamed label never renames a selector. */
 const PAINT_PREFIX: Readonly<Record<PaintProp, string>> = {
@@ -342,12 +354,7 @@ export function Inspector() {
               </div>
             )}
             <Swatches
-              /*
-               * A fill is a slip; text and a line are both ink. That is the
-               * pair model, not three cases — `surfaceOf` and `inkOf` are the
-               * only two answers a token has.
-               */
-              kind={painting.prop === 'color' ? 'surface' : 'ink'}
+              kind={PAINT_KIND[painting.prop]}
               label={painting.name}
               testPrefix={PAINT_PREFIX[painting.prop]}
               current={value(painting.prop)}

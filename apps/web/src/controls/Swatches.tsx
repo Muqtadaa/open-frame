@@ -23,9 +23,9 @@ import { ColorPicker } from './ColorPicker.js'
  * answer only when the document has not loaded, which is when nothing is
  * selected anyway.
  */
-function seedOf(kind: 'surface' | 'ink', current: ColorValue | undefined): HexColor {
+function seedOf(kind: SwatchKind, current: ColorValue | undefined): HexColor {
   if (typeof window === 'undefined') return '#000000'
-  const css = kind === 'ink' ? inkOf(current) : surfaceOf(current, 'gray')
+  const css = kind === 'surface' ? surfaceOf(current, 'gray') : inkOf(current)
   return resolveCssColor(css, window.document.documentElement) ?? '#000000'
 }
 
@@ -57,6 +57,30 @@ export function groundOf(surface: ColorValue | undefined): HexColor | null {
  * what the product recommends and what it can prove; a literal is available,
  * not equal.
  */
+/**
+ * What a swatch is a specimen OF.
+ *
+ * `surface` is a slip you stand on; `ink` is text; `line` is a rule. The last
+ * two resolve to the same colour — a token has only two answers — and differ
+ * in what they draw, because a swatch has to say which property it sets.
+ */
+export type SwatchKind = 'surface' | 'ink' | 'line'
+
+/** A rule, at the weight a shape's outline is drawn at. */
+function RuleMark() {
+  return (
+    <svg viewBox="0 0 24 24" width="17" height="17" aria-hidden="true" focusable="false">
+      <path
+        d="M4 12h16"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="3"
+        strokeLinecap="round"
+      />
+    </svg>
+  )
+}
+
 /**
  * The mark on the custom swatch: a wheel, quartered.
  *
@@ -103,7 +127,7 @@ export function Swatches({
   against,
   onPick,
 }: {
-  readonly kind: 'surface' | 'ink'
+  readonly kind: SwatchKind
   readonly label: string
   readonly testPrefix: string
   readonly current: ColorValue | undefined
@@ -119,7 +143,7 @@ export function Swatches({
         <button
           key={token}
           type="button"
-          className={`of-swatch${kind === 'ink' ? ' of-swatch--ink' : ''}${
+          className={`of-swatch${kind === 'surface' ? '' : ' of-swatch--ink'}${
             current === token ? ' of-swatch--on' : ''
           }`}
           /*
@@ -130,9 +154,9 @@ export function Swatches({
            * guarantee the board is.
            */
           style={
-            kind === 'ink'
-              ? { color: COLOR_VARS[token], background: inkSpecimenGround(token) }
-              : { background: SURFACE_VARS[token] }
+            kind === 'surface'
+              ? { background: SURFACE_VARS[token] }
+              : { color: COLOR_VARS[token], background: inkSpecimenGround(token) }
           }
           aria-label={token}
           aria-pressed={current === token}
@@ -143,7 +167,14 @@ export function Swatches({
             onPick(token)
           }}
         >
+          {/*
+            * The specimen shows what the colour will BE: a letter for text, a
+            * rule for a line. Both are ink on the token's own slip — the pair
+            * the palette tests — but a line offered as a row of letters is a
+            * control announcing the wrong property, which is what shipped.
+            */}
           {kind === 'ink' ? 'A' : null}
+          {kind === 'line' ? <RuleMark /> : null}
         </button>
       ))}
 
