@@ -42,6 +42,35 @@ export function handleAnchor(handle: HandleId): { readonly x: number; readonly y
  */
 export const HANDLE_HIT_PX = 24
 
+/** The four edges, which resize on one axis. */
+export const EDGE_HANDLES: readonly HandleId[] = ['n', 'e', 's', 'w']
+
+/**
+ * How thick an EDGE is as a target, in screen pixels.
+ *
+ * The whole edge resizes, not just the square at its middle. Every graphics
+ * tool works this way and for the same reason: a selection's boundary is the
+ * obvious place to pull from, and a user who has to find the one square in
+ * the middle of a 900-pixel edge is hunting for pixels rather than using an
+ * interface.
+ *
+ * Thinner than `HANDLE_HIT_PX` on purpose, and that is not a lapse from the
+ * 24px floor: the squares are still there, still 24, and still meet it. This
+ * is a second and larger way to reach the same gesture, and a strip 24 thick
+ * would reach 12 pixels INSIDE the object — far enough to swallow presses
+ * meant for the thing itself, like a double-click into its text.
+ */
+export const EDGE_HIT_PX = 12
+
+/**
+ * How far an edge strip stops short of each corner, in screen pixels.
+ *
+ * The corner resizes on BOTH axes and is the more specific gesture, so it
+ * keeps its full target rather than relying on which of two overlapping
+ * elements happens to be painted last.
+ */
+export const EDGE_INSET_PX = HANDLE_HIT_PX / 2
+
 /**
  * How far above the object the rotate grip sits, in SCREEN pixels.
  *

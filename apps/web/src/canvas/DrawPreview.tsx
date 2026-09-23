@@ -33,7 +33,17 @@ export function DrawPreview() {
 
   return (
     <div
-      className="of-draw-preview"
+      /*
+       * A shape that draws its OWN outline does not also get the box.
+       *
+       * The container's dashed border is the preview for anything this
+       * overlay cannot draw — and for a rectangle the shape's own path IS
+       * that box, so both were drawn and you followed the pointer with two
+       * dashed rectangles, one inset in the other by the geometry's margin.
+       * For an ellipse it was a box the finished object never fills, which
+       * the comment above calls a lie about where its edges will land.
+       */
+      className={shape === null ? 'of-draw-preview' : 'of-draw-preview of-draw-preview--shaped'}
       data-testid="draw-preview"
       style={{
         transform: `translate(${String(rect.x)}px, ${String(rect.y)}px)`,

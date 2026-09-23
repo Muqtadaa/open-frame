@@ -2684,6 +2684,16 @@ body {
 }
 
 /*
+ * The grabbable edge. Invisible: the boundary is already drawn by the
+ * selection's own outline, and a second visible band over it would read as a
+ * thicker selection rather than as a target.
+ */
+.of-edge {
+  position: absolute;
+  pointer-events: auto;
+}
+
+/*
  * The grabbable area, sized in SelectionOverlay. Invisible, and deliberately
  * much larger than the 9px square it surrounds: the drawn handle is a design
  * decision and the target is an accessibility one (WCAG 2.5.8 puts the floor at
@@ -3818,11 +3828,19 @@ textarea.of-input {
   pointer-events: none;
 }
 
+/*
+ * The border is the FALLBACK, for a type whose outline this overlay cannot
+ * draw. A shape draws its own and must not get both.
+ */
+.of-draw-preview--shaped {
+  border-color: transparent;
+}
+
 .of-draw-preview svg {
   display: block;
   width: 100%;
   height: 100%;
-  /* The border above is the rectangle; a shape draws its own outline inside it. */
+  /* A shape's outline may sit on the box's own edge, so it must not clip. */
   overflow: visible;
 }
 

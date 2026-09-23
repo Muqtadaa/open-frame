@@ -6,6 +6,9 @@ import { useInteractionStore } from '../interaction/interaction-store.js'
 import {
   HANDLES,
   HANDLE_CURSORS,
+  EDGE_HANDLES,
+  EDGE_HIT_PX,
+  EDGE_INSET_PX,
   HANDLE_HIT_PX,
   ROTATE_OFFSET_PX,
   handleAnchor,
@@ -211,6 +214,42 @@ export function SelectionOverlay() {
           <LockIcon className="of-lock__glyph" />
         </div>
       )}
+
+      {/*
+        * THE EDGES, before the squares so a corner is always painted over a
+        * strip it overlaps — and inset from them so it never comes to that.
+        *
+        * A selection's boundary is the obvious place to pull from, and only
+        * the square at the middle of each edge used to answer. On a long edge
+        * that is one target in nine hundred pixels of the thing that looks
+        * like the target.
+        */}
+      {resizable &&
+        EDGE_HANDLES.map((handle) => {
+          const thick = EDGE_HIT_PX / zoom
+          const inset = EDGE_INSET_PX / zoom
+          const across = handle === 'n' || handle === 's'
+          const length = (across ? box.width : box.height) - inset * 2
+          // Too short to be worth a strip: the corners already cover it, and
+          // a negative length would draw a target outside the selection.
+          if (length <= 0) return null
+          return (
+            <div
+              key={`edge-${handle}`}
+              className="of-edge"
+              data-handle={handle}
+              data-testid={`edge-${handle}`}
+              aria-hidden="true"
+              style={{
+                left: `${String(across ? inset : (handle === 'e' ? box.width : 0) - thick / 2)}px`,
+                top: `${String(across ? (handle === 's' ? box.height : 0) - thick / 2 : inset)}px`,
+                width: `${String(across ? length : thick)}px`,
+                height: `${String(across ? thick : length)}px`,
+                cursor: HANDLE_CURSORS[handle],
+              }}
+            />
+          )
+        })}
 
       {resizable &&
         HANDLES.map((handle) => {
