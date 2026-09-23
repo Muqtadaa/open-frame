@@ -84,6 +84,35 @@ describe('placeAnchored', () => {
       }).side,
     ).toBe('over')
   })
+
+  /**
+   * When nothing fits, covering the anchor is the LAST answer rather than the
+   * first.
+   *
+   * This is the rule the record panel used to carry in its own arithmetic —
+   * "covering a neighbour is a cost of floating, covering what you have just
+   * selected is not" — and dropping it on the way to the shared primitive put
+   * the panel squarely on top of a table's own column boundaries, where the
+   * double-click that fits a column landed on the panel instead.
+   *
+   * The anchor here is far too tall for `above` or `below` and too wide for
+   * either side, so every candidate has to be clamped. `below` clamps to a
+   * strip under it that covers least.
+   */
+  it('takes the side that covers the anchor least when none of them fit', () => {
+    const placed = placeAnchored({
+      ...base,
+      anchor: { x: 200, y: 40, width: 1000, height: 800 },
+      surface: { width: 300, height: 200 },
+    })
+    expect(placed.side).not.toBe('over')
+
+    const covered =
+      Math.max(0, Math.min(placed.x + 300, 1200) - Math.max(placed.x, 200)) *
+      Math.max(0, Math.min(placed.y + 200, 840) - Math.max(placed.y, 40))
+    // Landing ON it would be the full 300x200. Anything less is the point.
+    expect(covered).toBeLessThan(300 * 200)
+  })
 })
 
 /**

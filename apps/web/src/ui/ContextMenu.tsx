@@ -1,5 +1,7 @@
-import { useEffect, useLayoutEffect, useRef, useState } from 'react'
+import { useEffect, useRef } from 'react'
 
+import { AnchoredSurface } from '../controls/AnchoredSurface.js'
+import { useViewportSize } from '../controls/use-viewport-size.js'
 import { useCommands } from '../hooks/use-commands.js'
 import { useOpenFrame } from '../runtime/context.js'
 import { useInteractionStore } from '../interaction/interaction-store.js'
@@ -28,36 +30,24 @@ export function ContextMenu() {
   const commands = useCommands()
   const { runtime } = useOpenFrame()
   const ref = useRef<HTMLDivElement>(null)
+  const surface = useViewportSize()
 
   /*
-   * Where the menu actually fits, which is not always where you clicked.
+   * A menu anchored to a POINT rather than to a control: a zero-sized
+   * rectangle where the pointer was, with no gap, so `below` puts its
+   * top-left exactly there.
    *
-   * It was placed at the pointer and never clamped, so a right-click near the
-   * bottom of the window put its lower entries off-screen — unreachable, and
-   * silent about it. That was true at every size; making the rows a real
-   * target is simply what made it reachable in a test, which then sat there
-   * timing out for thirty seconds on an item nobody could have clicked either.
+   * It FLIPS above the pointer rather than sliding up, which is `above` as the
+   * second preference — sliding would put the menu over the thing you just
+   * right-clicked.
    *
-   * It FLIPS above the pointer rather than sliding up, because sliding puts
-   * the menu over the thing you just right-clicked.
+   * This was a third hand-rolled clamp, after the record panel's and the
+   * mentions list's: `Math.max(margin, Math.min(at.x, innerWidth - width -
+   * margin))`, measured in a layout effect, with its own margin constant. It
+   * was written because a right-click near the bottom of the window put the
+   * menu's lower entries off-screen — unreachable, and silent about it.
    */
-  const [placed, setPlaced] = useState<{ readonly left: number; readonly top: number } | null>(null)
-
-  useLayoutEffect(() => {
-    const node = ref.current
-    if (node === null || at === null) {
-      setPlaced(null)
-      return
-    }
-
-    const margin = 8
-    const { width, height } = node.getBoundingClientRect()
-    const left = Math.max(margin, Math.min(at.x, window.innerWidth - width - margin))
-    const fitsBelow = at.y + height + margin <= window.innerHeight
-    const top = fitsBelow ? at.y : Math.max(margin, at.y - height)
-
-    setPlaced({ left, top })
-  }, [at])
+  const anchor = at === null ? null : { x: at.x, y: at.y, width: 0, height: 0 }
 
   useEffect(() => {
     if (at === null) return
@@ -234,19 +224,15 @@ export function ContextMenu() {
   ]
 
   return (
-    <div
-      ref={ref}
-      className="of-menu of-surface"
-      role="menu"
-      data-testid="context-menu"
-      style={{
-        left: `${String(placed?.left ?? at.x)}px`,
-        top: `${String(placed?.top ?? at.y)}px`,
-        /* Hidden for the one frame before it has been measured: a menu that
-           appears at the pointer and then jumps reads as a glitch. */
-        visibility: placed === null ? 'hidden' : 'visible',
-      }}
+    <AnchoredSurface
+      anchor={anchor}
+      surface={surface}
+      prefer={['below', 'above']}
+      gap={0}
+      margin={8}
+      testId="context-menu-surface"
     >
+    <div ref={ref} className="of-menu of-surface" role="menu" data-testid="context-menu">
       {/*
        * Empty groups are dropped, not rendered. A group carries a separator
        * rule, so a selection with no promotions on offer would otherwise show
@@ -278,5 +264,6 @@ export function ContextMenu() {
           </div>
         ))}
     </div>
+    </AnchoredSurface>
   )
 }

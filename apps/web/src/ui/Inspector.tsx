@@ -23,6 +23,7 @@ import {
 } from '@openframe/core'
 import { useMemo, useState } from 'react'
 
+import { AnchoredSurface } from '../controls/AnchoredSurface.js'
 import { useCommands } from '../hooks/use-commands.js'
 import { useBoardDocument } from '../hooks/use-document-object.js'
 import { useInteractionStore } from '../interaction/interaction-store.js'
@@ -55,14 +56,14 @@ const MARGIN_PX = 12
  * left margin, which parked it squarely on top of the rail.
  */
 const RAIL_CLEARANCE_PX = 84
-/**
- * Roughly the panel's tallest form: a structured type's semantic fields plus
- * every style control. Only used to keep the panel inside the viewport, so an
- * approximation is enough and measuring would cost a layout read on every
- * render — but it must not UNDER-estimate, or the bottom of the panel leaves
- * the window on a selection near the lower edge.
+/*
+ * There WAS a PANEL_HEIGHT_PX here — 420, "roughly the panel's tallest form" —
+ * because the placement it fed could not measure. A guess that must never
+ * under-estimate is a guess that always over-estimates, so the panel was kept
+ * further from the bottom edge than it needed to be, by an amount nobody could
+ * name. `AnchoredSurface` measures what it is placing, so the guess is gone
+ * rather than moved.
  */
-const PANEL_HEIGHT_PX = 420
 
 /**
  * The record panel: the fields of whatever is selected.
@@ -210,33 +211,17 @@ export function Inspector() {
   })
 
   /*
-   * Prefer the right of the selection, then its left, then the right edge of
-   * the viewport. The panel follows the object rather than parking in a corner,
-   * which is the whole reason it floats — but it never crosses the rail, and it
-   * never leaves the viewport.
+   * The selection, in screen pixels. Converted here because this panel is the
+   * one piece of apparatus in `ui/` anchored to something on the BOARD, and
+   * `ui` may not import the canvas — `ChromeSurface`, which does this
+   * conversion for a view, is on the wrong side of that line.
    */
-  const rightmost = canvasSize.width - PANEL_WIDTH - MARGIN_PX
-  const fitsRight = bottomRight.x + GAP_PX <= rightmost
-  const fitsLeft = topLeft.x - GAP_PX - PANEL_WIDTH >= RAIL_CLEARANCE_PX
-  const beside = fitsRight || fitsLeft
-
-  const preferred = fitsRight ? bottomRight.x + GAP_PX : topLeft.x - GAP_PX - PANEL_WIDTH
-  const left = beside
-    ? preferred
-    : // Neither side has room — a narrow window, or a selection nearly as wide
-      // as one. Sit under the selection instead of on top of it: covering a
-      // neighbour is a cost of floating, covering the thing you just selected
-      // is not.
-      Math.min(Math.max(topLeft.x, RAIL_CLEARANCE_PX), Math.max(rightmost, RAIL_CLEARANCE_PX))
-
-  const below = bottomRight.y + GAP_PX
-  const lowest = canvasSize.height - PANEL_HEIGHT_PX - MARGIN_PX
-  const top = beside
-    ? Math.min(Math.max(MARGIN_PX, topLeft.y), Math.max(MARGIN_PX, lowest))
-    : // Under the selection, or above it when there is no room underneath.
-      below <= lowest
-      ? below
-      : Math.max(MARGIN_PX, topLeft.y - GAP_PX - PANEL_HEIGHT_PX)
+  const selectionBox = {
+    x: topLeft.x,
+    y: topLeft.y,
+    width: bottomRight.x - topLeft.x,
+    height: bottomRight.y - topLeft.y,
+  }
 
   const value = <K extends StyleProp>(prop: K): ObjectStyle[K] | undefined => {
     const first = objects[0]?.style[prop]
@@ -262,16 +247,27 @@ export function Inspector() {
     objects.length === 1 ? (objects[0]?.type ?? '') : `${String(objects.length)} objects`
 
   return (
+    <AnchoredSurface
+      anchor={selectionBox}
+      surface={canvasSize}
+      /*
+       * Beside the selection first, because the panel follows the object
+       * rather than parking in a corner — that is the whole reason it floats.
+       * Under it next: covering a neighbour is a cost of floating, covering
+       * the thing you have just selected is not.
+       */
+      prefer={['right', 'left', 'below', 'above']}
+      gap={GAP_PX}
+      margin={MARGIN_PX}
+      keepClearLeft={RAIL_CLEARANCE_PX}
+      testId="inspector-surface"
+    >
     <div
       className="of-inspector of-surface"
       data-testid="inspector"
       role="group"
       aria-label="Selected object properties"
-      style={{
-        left: `${String(left)}px`,
-        top: `${String(top)}px`,
-        width: `${String(PANEL_WIDTH)}px`,
-      }}
+      style={{ width: `${String(PANEL_WIDTH)}px` }}
     >
       <div className="of-inspector__head">
         <span className="of-inspector__subject">{label}</span>
@@ -475,6 +471,7 @@ export function Inspector() {
         </Field>
       )}
     </div>
+    </AnchoredSurface>
   )
 }
 

@@ -35,9 +35,16 @@ export interface AnchorRequest {
   /** The window the surface must stay inside. */
   readonly within: Size
   /**
-   * Sides to try, in order. The first that fits wins; if none does, the
-   * surface is placed OVER the anchor and clamped, because a surface off the
-   * screen is worse than a surface in the way.
+   * Sides to try, in order. The first that fits wins.
+   *
+   * When none fits, the surface goes on the preferred side that covers the
+   * ANCHOR LEAST once clamped, rather than over it. A flyout hanging off a
+   * button can sit on the button — there is nothing under it worth seeing —
+   * but the record panel is anchored to a selection you are about to work on,
+   * and landing on it hides the very thing it describes. That was written out
+   * longhand in the panel's own arithmetic before it came here: covering a
+   * neighbour is a cost of floating, covering what you have just selected is
+   * not. Making it the rule for everything is what let that arithmetic go.
    */
   readonly prefer: readonly Side[]
   /** Clearance between the anchor and the surface. */
@@ -120,6 +127,13 @@ function overlaps(a: Rect, b: Rect): boolean {
   )
 }
 
+/** How much of two rectangles is the same pixels. */
+function overlapArea(a: Rect, b: Rect): number {
+  const across = Math.min(a.x + a.width, b.x + b.width) - Math.max(a.x, b.x)
+  const down = Math.min(a.y + a.height, b.y + b.height) - Math.max(a.y, b.y)
+  return across <= 0 || down <= 0 ? 0 : across * down
+}
+
 /**
  * The first preferred side that fits, clamped so the surface stays inside the
  * window and clear of the rail.
@@ -155,7 +169,37 @@ export function placeAnchored(request: AnchorRequest): Placement {
   const avoid = request.avoid ?? null
   const clear =
     avoid === null ? undefined : fitting.find((candidate) => !overlaps(settle(candidate), avoid))
-  const side = clear ?? fitting[0] ?? 'over'
+
+  /*
+   * Nothing fits. Take the preferred side that ends up covering the anchor
+   * least, rather than dropping straight onto it: on a window too small for
+   * any side, "below, clamped up a bit" still shows most of what the surface
+   * is about, and "over" shows none of it.
+   *
+   * Stable under ties, so a surface does not hop between two equally bad
+   * sides as the window is dragged a pixel at a time.
+   */
+  const leastCovering = (): Side => {
+    /*
+     * `over` is the bar to beat, not the last resort. An anchor as big as the
+     * window leaves every side covering it just as completely, and there the
+     * honest answer is still `over` — aligned with the thing it belongs to
+     * rather than pinned to an edge for no gain. A side has to do strictly
+     * better to be worth the move.
+     */
+    let best: Side = 'over'
+    let least = overlapArea(settle('over'), request.anchor)
+    for (const candidate of request.prefer) {
+      const area = overlapArea(settle(candidate), request.anchor)
+      if (area < least) {
+        least = area
+        best = candidate
+      }
+    }
+    return best
+  }
+
+  const side = clear ?? fitting[0] ?? leastCovering()
 
   const placed = settle(side)
   return { x: placed.x, y: placed.y, side }

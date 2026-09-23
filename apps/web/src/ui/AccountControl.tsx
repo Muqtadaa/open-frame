@@ -1,6 +1,8 @@
 import { useState } from 'react'
 
 import { ACCOUNTS_ENABLED, signOut } from '../app/identity.js'
+import { AnchoredSurface } from '../controls/AnchoredSurface.js'
+import { useAnchoredTo } from '../controls/use-anchor.js'
 import { useIdentity } from '../hooks/use-identity.js'
 import { AccountForm } from './AccountForm.js'
 import { hueVar, initialOf } from '../scene/presence.js'
@@ -16,6 +18,7 @@ import { hueVar, initialOf } from '../scene/presence.js'
 export function AccountControl() {
   const identity = useIdentity()
   const [open, setOpen] = useState(false)
+  const { ref, anchor, surface } = useAnchoredTo<HTMLButtonElement>(open)
 
   if (!ACCOUNTS_ENABLED) return null
 
@@ -45,6 +48,7 @@ export function AccountControl() {
   return (
     <>
       <button
+        ref={ref}
         type="button"
         className="of-status__share"
         data-testid="sign-in"
@@ -54,15 +58,35 @@ export function AccountControl() {
       >
         <span className="of-status__share-label">Sign in</span>
       </button>
-      {open && <AccountDialog onClose={() => setOpen(false)} />}
-    </>
-  )
-}
 
-function AccountDialog({ onClose }: { readonly onClose: () => void }) {
-  return (
-    <div className="of-account" role="dialog" aria-label="Account" data-testid="account-dialog">
-      <AccountForm onDone={onClose} />
-    </div>
+      {/*
+        * Above the button, and clamped. It used to be `bottom: calc(100% +
+        * 10px); left: 0` against whichever ancestor happened to be positioned
+        * — which was the BAR, not the button, so a 320px dialog was aligned to
+        * the left edge of the screen rather than to the control that opened
+        * it, and nothing stopped it running off the right on a narrow window.
+        */}
+      {open && (
+        <AnchoredSurface
+          anchor={anchor}
+          surface={surface}
+          prefer={['above', 'below']}
+          testId="account-surface"
+        >
+          <div
+            className="of-account"
+            role="dialog"
+            aria-label="Account"
+            data-testid="account-dialog"
+          >
+            <AccountForm
+              onDone={() => {
+                setOpen(false)
+              }}
+            />
+          </div>
+        </AnchoredSurface>
+      )}
+    </>
   )
 }

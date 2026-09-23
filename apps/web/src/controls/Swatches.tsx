@@ -3,7 +3,9 @@ import { useState } from 'react'
 
 import { resolveCssColor } from '../scene/color.js'
 import { COLOR_VARS, SURFACE_VARS, inkOf, surfaceOf } from '../scene/style-tokens.js'
+import { AnchoredSurface } from './AnchoredSurface.js'
 import { ColorPicker } from './ColorPicker.js'
+import { useAnchoredTo } from './use-anchor.js'
 
 /**
  * Presentational controls, shared by the record panel and by object views.
@@ -135,6 +137,7 @@ export function Swatches({
   readonly onPick: (color: ColorValue) => void
 }) {
   const [picking, setPicking] = useState(false)
+  const { ref: swatch, anchor, surface } = useAnchoredTo<HTMLButtonElement>(picking)
   const custom = isHexColor(current) ? current : null
 
   return (
@@ -179,6 +182,7 @@ export function Swatches({
       ))}
 
       <button
+        ref={swatch}
         type="button"
         className={`of-swatch of-swatch--custom${custom === null ? '' : ' of-swatch--on'}`}
         // Shows the literal it currently holds, so the grid still answers "what
@@ -200,15 +204,33 @@ export function Swatches({
         {custom === null ? <SpectrumMark /> : null}
       </button>
 
+      {/*
+        * The picker placed itself with `left: calc(100% + 14px)` and nothing
+        * clamped it. That was a SECOND placement rather than a live bug —
+        * measured at three window widths and with the panel pushed both ways,
+        * it kept about 96px of clearance every time, because the record panel
+        * it hangs off is itself kept clear of the right edge.
+        *
+        * It is here anyway, because "correct as long as the panel it sits
+        * inside stays where it is" is not a property anybody checks when they
+        * move the panel.
+        */}
       {picking && (
-        <ColorPicker
-          current={custom ?? seedOf(kind, current)}
-          against={against}
-          onPick={onPick}
-          onClose={() => {
-            setPicking(false)
-          }}
-        />
+        <AnchoredSurface
+          anchor={anchor}
+          surface={surface}
+          prefer={['right', 'left', 'above', 'below']}
+          testId="color-picker-surface"
+        >
+          <ColorPicker
+            current={custom ?? seedOf(kind, current)}
+            against={against}
+            onPick={onPick}
+            onClose={() => {
+              setPicking(false)
+            }}
+          />
+        </AnchoredSurface>
       )}
     </div>
   )

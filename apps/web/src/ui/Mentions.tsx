@@ -1,10 +1,10 @@
-import { useEffect, useRef, useState } from 'react'
+import { useState } from 'react'
 
 import { shareLink } from '../app/collab-config.js'
 import { AnchoredSurface } from '../controls/AnchoredSurface.js'
 import { plainMentionText } from '../hooks/use-comments.js'
+import { useAnchoredTo } from '../controls/use-anchor.js'
 import { useMentions } from '../hooks/use-mentions.js'
-import { useViewportSize } from '../hooks/use-viewport-size.js'
 
 /**
  * What somebody wanted you to see.
@@ -28,20 +28,7 @@ import { useViewportSize } from '../hooks/use-viewport-size.js'
 export function Mentions() {
   const { mentions, keyFor, markRead } = useMentions()
   const [open, setOpen] = useState(false)
-  const [anchor, setAnchor] = useState<DOMRect | null>(null)
-  const bell = useRef<HTMLButtonElement>(null)
-  const viewport = useViewportSize()
-
-  /*
-   * The bar this sits in moves when the window does, so a rectangle captured
-   * at the moment of opening would leave the list behind. Measured in an
-   * effect rather than during render, which is both the rule and the reason
-   * for it: a ref holds no value React is allowed to re-render on.
-   */
-  useEffect(() => {
-    if (!open) return
-    setAnchor(bell.current?.getBoundingClientRect() ?? null)
-  }, [open, viewport])
+  const { ref: bell, anchor, surface } = useAnchoredTo<HTMLButtonElement>(open)
 
   if (mentions.length === 0) return null
 
@@ -53,10 +40,7 @@ export function Mentions() {
         className="of-mentions__bell"
         aria-expanded={open}
         data-testid="mentions-button"
-        onClick={(event) => {
-          // Measured here too, so the first render after opening already has
-          // it — the effect above is what keeps it true afterwards.
-          setAnchor(event.currentTarget.getBoundingClientRect())
+        onClick={() => {
           setOpen((current) => !current)
         }}
       >
@@ -66,7 +50,7 @@ export function Mentions() {
       {open && (
         <AnchoredSurface
           anchor={anchor}
-          surface={viewport}
+          surface={surface}
           prefer={['below', 'above']}
           testId="mentions-surface"
         >

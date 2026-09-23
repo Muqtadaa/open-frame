@@ -1,5 +1,7 @@
 import { useEffect, useState } from 'react'
 
+import { AnchoredSurface } from '../controls/AnchoredSurface.js'
+import { useAnchoredTo } from '../controls/use-anchor.js'
 import { accessKey, COLLAB_ENABLED, shareLink } from '../app/collab-config.js'
 import { ACCOUNTS_ENABLED } from '../app/identity.js'
 import { guestIdentity } from '../app/guest.js'
@@ -35,6 +37,16 @@ export function ShareControl() {
   const [shareError, setShareError] = useState<string | null>(null)
   const [links, setLinks] = useState<SharedBoard | null>(null)
   const [role, setRole] = useState(collaboration?.role ?? 'editor')
+  /*
+   * One anchor for both the links panel and the failure notice: they hang off
+   * the same button and are never up at the same time, so two would be two
+   * measurements of one rectangle.
+   */
+  const {
+    ref: shareButton,
+    anchor: shareAnchor,
+    surface,
+  } = useAnchoredTo<HTMLButtonElement>(shareError !== null || links !== null)
 
   useEffect(() => {
     if (collaboration === null || collaboration === undefined) return
@@ -64,6 +76,7 @@ export function ShareControl() {
     return (
       <>
       <button
+        ref={shareButton}
         type="button"
         className="of-status__share"
         disabled={sharing || runtime.readOnly}
@@ -98,12 +111,35 @@ export function ShareControl() {
       >
         {sharing ? 'Sharing…' : 'Share'}
       </button>
+      {/*
+        * Both hang ABOVE the button and are clamped, rather than pinned with
+        * `bottom: calc(100% + 10px)` against whichever ancestor happened to be
+        * positioned. Same 320px panel, same bar on the bottom edge, same way
+        * of leaving the window sideways that the mentions list left it
+        * downward.
+        */}
       {shareError !== null && (
-        <p className="of-share__error" role="alert" data-testid="share-error">
-          {shareError}
-        </p>
+        <AnchoredSurface
+          anchor={shareAnchor}
+          surface={surface}
+          prefer={['above', 'below']}
+          testId="share-error-surface"
+        >
+          <p className="of-share__error" role="alert" data-testid="share-error">
+            {shareError}
+          </p>
+        </AnchoredSurface>
       )}
-      {links !== null && <ShareLinks links={links} onOpen={() => window.location.assign(links.editLink)} />}
+      {links !== null && (
+        <AnchoredSurface
+          anchor={shareAnchor}
+          surface={surface}
+          prefer={['above', 'below']}
+          testId="share-links-surface"
+        >
+          <ShareLinks links={links} onOpen={() => window.location.assign(links.editLink)} />
+        </AnchoredSurface>
+      )}
       </>
     )
   }

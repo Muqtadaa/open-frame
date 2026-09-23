@@ -19,27 +19,27 @@ const VIEWS = ['TableView', 'CodeView', 'RichTextEditor'].map((name) => ({
 }))
 
 /**
- * Everything else that floats beside something.
+ * Everything that floats beside something.
  *
- * The tool rail's two menus are here because they were the last holdout: they
- * placed themselves with `position: absolute` against the rail slot, unclamped,
- * and the table picker therefore ran off the bottom of a short window. Being
- * in the interface rather than on the board did not make that a different
- * problem.
+ * This WAS a hand-written list, and that was the flaw in it: the test could
+ * only hold the files somebody had remembered to add, so a new floating
+ * surface joined the codebase without joining the rule. The mentions bell
+ * proved it — it placed itself in CSS for as long as it existed and this file
+ * never had an opinion, right up until the same list appeared in a bar on the
+ * bottom edge of the window and opened downward off the screen.
+ *
+ * The list is still here, because naming the callers is worth something. What
+ * it is no longer relied on for is COVERAGE: the two rules at the end of this
+ * file go looking instead.
  */
 const FLOATERS = [
-  // `ChromeSurface` is the world-space caller of `AnchoredSurface`, so going
-  // through it is going through the surface — anchored to a board rectangle
-  // rather than a screen one.
   { name: 'Toolbar', source: read('src/ui/Toolbar.tsx'), through: 'AnchoredSurface' },
-  /*
-   * The mentions bell. It opened downward with `top: calc(100% + 6px)`, which
-   * was correct under the front door's header and put the whole list below the
-   * bottom of the window the moment the same bell appeared in the status bar.
-   * No one direction is right in both places — which is the tell that writing
-   * a direction down was the mistake, not which direction was written.
-   */
   { name: 'Mentions', source: read('src/ui/Mentions.tsx'), through: 'AnchoredSurface' },
+  { name: 'AccountControl', source: read('src/ui/AccountControl.tsx'), through: 'AnchoredSurface' },
+  { name: 'ShareControl', source: read('src/ui/ShareControl.tsx'), through: 'AnchoredSurface' },
+  { name: 'ContextMenu', source: read('src/ui/ContextMenu.tsx'), through: 'AnchoredSurface' },
+  { name: 'Inspector', source: read('src/ui/Inspector.tsx'), through: 'AnchoredSurface' },
+  { name: 'Swatches', source: read('src/controls/Swatches.tsx'), through: 'AnchoredSurface' },
   { name: 'ArrangeBar', source: read('src/canvas/ArrangeBar.tsx'), through: 'ChromeSurface' },
   /*
    * The crop overlay's RESET button. It was an ordinary button in world space
@@ -104,4 +104,74 @@ describe('the chrome layer', () => {
       expect(source).toContain(through)
     },
   )
+})
+
+/**
+ * And the two rules that go LOOKING, so the list above cannot be the coverage.
+ *
+ * Both read a signature rather than a name, which is what makes them find a
+ * surface nobody thought to declare.
+ */
+describe('nothing places itself', () => {
+  const CSS = read('src/styles.css')
+
+  /**
+   * `calc(100% + n)` in an offset means exactly one thing: put me just outside
+   * my parent's edge. That is anchoring, written in a stylesheet, with the
+   * direction decided once and never revisited — which is how the mentions
+   * list came to open downward out of a bar on the bottom of the window, and
+   * how the colour picker came to open rightward out of a panel on the right.
+   *
+   * The exception is not a name, it is a PROPERTY: if you cannot touch it, it
+   * is decoration rather than apparatus. A tooltip takes no presses, needs no
+   * `.of-editor-chrome` marker to keep an editor alive through one, and has
+   * nothing in it to reach for if it is half off the screen. Anything you can
+   * put a pointer on belongs on the layer.
+   */
+  it('places nothing outside its parent in CSS unless it cannot be touched', () => {
+    const offenders: string[] = []
+    for (const [, selector, body] of CSS.matchAll(/([^{}]+)\{([^{}]*)\}/g)) {
+      if (selector === undefined || body === undefined) continue
+      if (!/position:\s*(absolute|fixed)/.test(body)) continue
+      if (!/(top|bottom|left|right):[^;]*calc\(100%/.test(body)) continue
+      if (/pointer-events:\s*none/.test(body)) continue
+      offenders.push(selector.trim().split('\n').pop()?.trim() ?? '?')
+    }
+    expect(offenders, 'these place themselves instead of going through the layer').toEqual([])
+  })
+
+  it('finds the stylesheet to read, so the rule above is not vacuous', () => {
+    // The pattern matched nothing at all once, because the regex was wrong.
+    // A rule that examines no rules passes every time.
+    expect(CSS.match(/([^{}]+)\{([^{}]*)\}/g)?.length ?? 0).toBeGreaterThan(200)
+    expect(CSS).toContain('calc(100%')
+  })
+
+  /**
+   * The same mistake in JavaScript. `ui/` and `controls/` are the interface;
+   * nothing in them has a position of its own to compute, because everything
+   * in them is either in normal flow or anchored to something.
+   *
+   * Scoped to those two folders on purpose: `canvas/` and `views/` DO set a
+   * left and a top in pixels, because that is how an object is put where its
+   * frame says it goes, and that is not placement of apparatus.
+   */
+  it.each([
+    'src/ui/Inspector.tsx',
+    'src/ui/ContextMenu.tsx',
+    'src/ui/Mentions.tsx',
+    'src/ui/AccountControl.tsx',
+    'src/ui/ShareControl.tsx',
+    'src/ui/SearchPanel.tsx',
+    'src/ui/Toolbar.tsx',
+    'src/controls/Swatches.tsx',
+    'src/controls/ColorPicker.tsx',
+  ])('%s computes no screen position of its own', (path) => {
+    const source = read(path)
+    // A percentage is a position INSIDE a control — the pointer on a colour
+    // field — and is not what this is about. Pixels are.
+    expect(source).not.toMatch(/(left|top):\s*`\$\{String\([^)]*\)\}px`/)
+    expect(source).not.toContain('window.innerWidth')
+    expect(source).not.toContain('window.innerHeight')
+  })
 })
