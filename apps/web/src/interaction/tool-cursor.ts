@@ -92,14 +92,26 @@ function shapeMark(kind: ShapeKind): Mark {
 }
 
 /**
- * Thirty-two pixels square, which is the classic cursor and the documented
- * ceiling on Windows. Above it the image is refused rather than scaled down,
- * so an oversized cursor works everywhere it was tested and nowhere else.
+ * Forty-four pixels square.
+ *
+ * It was 32, on the belief that Windows refuses anything larger. That is true
+ * of an OS cursor RESOURCE and not of one a browser paints itself: Blink and
+ * Gecko both cap a custom cursor at 128 square and ignore it above that, so
+ * 32 was leaving most of the room on the table and the glyph read as small.
+ *
+ * Well under that cap rather than near it, because a cursor that is silently
+ * ignored is the worst failure available here — it leaves the plain arrow,
+ * which says nothing about a tool being armed at all.
  */
-const SIZE = 32
+const SIZE = 52
 
-/** Where in that square the pointer actually points. */
-const HOT = 3
+/**
+ * Where in that square the pointer actually points.
+ *
+ * The mark grew with the box: a crosshair sized for a 32px cursor is a speck
+ * in a 52px one, and it is the part doing the aiming.
+ */
+const HOT = 5
 
 export interface CursorInk {
   /** The glyph. */
@@ -124,19 +136,34 @@ export const DEFAULT_INK: CursorInk = { ink: '#16202b', halo: '#ffffff' }
  * no single colour manages on its own.
  */
 function markup(mark: Mark, { ink, halo }: CursorInk): string {
-  const crosshair = '<path d="M2.4 0h1.2v6H2.4zM0 2.4h6v1.2H0z"/>'
-  const glyph = `<g transform="translate(10 10) scale(0.74)">${shapes(mark.body)}</g>`
+  /*
+   * Heavier than a hairline, and as long as the gap it has to bridge. Beside
+   * a filled glyph a thin cross reads as a different cursor that happens to
+   * be nearby, rather than as the point of this one.
+   */
+  const crosshair = '<path d="M3.8 0h2.4v13H3.8zM0 3.8h13v2.4H0z"/>'
+  /*
+   * Close to the crosshair, not merely inside the box.
+   *
+   * The first pass set this by arithmetic and looked sparse: the glyph sat in
+   * the lower-right corner with a wide empty diagonal between it and the
+   * mark doing the aiming, so the cursor read as small even as the box grew.
+   * Scale is what makes the glyph legible; the translate is what stops the
+   * two halves looking like two cursors.
+   */
+  const place = 'translate(10 10) scale(1.65)'
+  const glyph = `<g transform="${place}">${shapes(mark.body)}</g>`
 
   const detail =
     mark.detail === undefined
       ? ''
-      : `<g transform="translate(10 10) scale(0.74)" fill="none" stroke="${halo}" stroke-width="1.5" stroke-linecap="round">` +
+      : `<g transform="${place}" fill="none" stroke="${halo}" stroke-width="1.5" stroke-linecap="round">` +
         `<path d="${mark.detail}"/></g>`
 
   return [
     `<svg xmlns="http://www.w3.org/2000/svg" width="${String(SIZE)}" height="${String(SIZE)}" viewBox="0 0 ${String(SIZE)} ${String(SIZE)}">`,
     // The rim: the same silhouette, stroked fat, under everything.
-    `<g fill="${halo}" stroke="${halo}" stroke-width="3" stroke-linejoin="round">`,
+    `<g fill="${halo}" stroke="${halo}" stroke-width="3.4" stroke-linejoin="round">`,
     crosshair,
     glyph,
     '</g>',

@@ -272,6 +272,33 @@ describe('every placing tool carries its own cursor', () => {
     expect(new Set(seen).size, 'two shape variants share a cursor').toBe(SHAPE_KINDS.length)
   })
 
+  /**
+   * The glyph has to FIT the box it is drawn in.
+   *
+   * A cursor is clipped to its own width and height with no warning — the
+   * corner simply is not there — and the numbers that decide it are a
+   * translate, a scale and half a rim stroke, none of which is obviously
+   * related to the others. Growing the cursor is exactly when this gets got
+   * wrong, so it is arithmetic rather than judgement.
+   */
+  it.each(['comment', 'table', 'frame', 'code', 'sticky', 'text'] as const)(
+    '%s stays inside the cursor box',
+    (tool) => {
+      const svg = decodeURIComponent(cursorFor(tool) ?? '')
+      const box = /width="(\d+(?:\.\d+)?)"/.exec(svg)
+      const place = /translate\((\d+(?:\.\d+)?) \d+(?:\.\d+)?\) scale\((\d+(?:\.\d+)?)\)/.exec(svg)
+      const rim = /stroke-width="(\d+(?:\.\d+)?)"/.exec(svg)
+      expect(box, 'no width on the svg').not.toBeNull()
+      expect(place, 'no glyph transform').not.toBeNull()
+      expect(rim, 'no rim stroke').not.toBeNull()
+      if (box === null || place === null || rim === null) return
+
+      // The marks are drawn on a 24 grid; the rim straddles the edge.
+      const far = Number(place[1]) + 24 * Number(place[2]) + Number(rim[1]) / 2
+      expect(far, 'the glyph runs out of the cursor').toBeLessThanOrEqual(Number(box[1]))
+    },
+  )
+
   /** And the geometry is the object's own, so a new kind arrives with one. */
   it('draws the variant from the same geometry the object is drawn from', () => {
     const diamond = decodeURIComponent(cursorFor('shape', 'diamond') ?? '')
