@@ -9,6 +9,7 @@ import {
   mentionsIn,
   peopleMatching,
   plainMentionText,
+  tokeniseMentions,
   repliesTo,
   unknownMentionIn,
   type BoardComment,
@@ -72,26 +73,60 @@ export function CommentPanel() {
    * dismissing one is not a decision about the next.
    */
   const [dismissed, setDismissed] = useState<number | null>(null)
+  /*
+   * Who was chosen from the menu, in the order they were chosen.
+   *
+   * The composer holds names, so this is what turns them back into ids on the
+   * way out. Kept as a plain list rather than as positions in the text: a
+   * range would have to be nudged along by every keystroke either side of it,
+   * and getting that wrong sends a notification to the wrong person, whereas
+   * a stale entry here simply finds no name to replace.
+   */
+  const [picked, setPicked] = useState<readonly BoardPerson[]>([])
+  /*
+   * A mention that has just been chosen is SETTLED, and the menu shuts.
+   *
+   * It did not have to be said while a pick wrote a token, because a token
+   * contains a bracket and `activeMentionQuery` refuses one. A name does not:
+   * "@Rowan " is a perfectly good query that matches Rowan, so picking him
+   * re-opened the menu underneath the name it had just written.
+   *
+   * Cleared by the next keystroke rather than by position, so backspacing
+   * into the name you just chose offers the menu again — which is what you
+   * are doing it for.
+   */
+  const [settled, setSettled] = useState(false)
 
   const query = useMemo(() => activeMentionQuery(body, caret), [body, caret])
   const candidates = useMemo(
     () => (query === null ? [] : peopleMatching(query.query, people)),
     [query, people],
   )
-  const picking = query !== null && candidates.length > 0 && dismissed !== query.start
+  const picking =
+    query !== null && candidates.length > 0 && dismissed !== query.start && !settled
 
   const say = (next: string, at: number): void => {
     setBody(next)
     setCaret(at)
     setHighlight(0)
+    setSettled(false)
     // Typing a different name makes the last copy stale, and a button still
     // reading "Link copied" is a button claiming something it did not do.
     setInvited(false)
   }
 
   const choose = (person: BoardPerson): void => {
-    const next = insertMention(body, caret, person)
+    const next = insertMention(body, caret, person, people)
+    setPicked((current) =>
+      // By id, not by reference: the board's people are re-read on focus and
+      // after every write, so the same person arrives as a new object and a
+      // reference check would grow this list without bound.
+      current.some((who) => who.userId === person.userId) ? current : [...current, person],
+    )
     say(next.text, next.caret)
+    // AFTER `say`, which clears it: choosing is itself a text change, and it
+    // is the one text change that must not re-offer the menu.
+    setSettled(true)
     const field = input.current
     if (field === null) return
     // The value lands on the next render, so the caret is placed after it.
@@ -158,7 +193,8 @@ export function CommentPanel() {
    */
   const submit = (event: FormEvent): void => {
     event.preventDefault()
-    const text = body.trim()
+    // Names become ids here, at the one point the comment leaves the browser.
+    const text = tokeniseMentions(body, picked, people).trim()
     if (text === '' || busy) return
     setBusy(true)
     setProblem(null)
@@ -197,6 +233,9 @@ export function CommentPanel() {
       }
       setBody('')
       setCaret(0)
+      // A fresh composer has chosen nobody. Carrying these into the next
+      // comment would tokenise a name that this one never picked.
+      setPicked([])
       // Writing a thread is done with the composer; replying keeps you where
       // you are, reading what you just added to.
       if (thread === null) startComment(null)

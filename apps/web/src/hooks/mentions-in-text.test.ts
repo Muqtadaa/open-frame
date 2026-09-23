@@ -8,6 +8,7 @@ import {
   mentionsIn,
   peopleMatching,
   plainMentionText,
+  tokeniseMentions,
   unknownMentionIn,
 } from './use-comments.js'
 import type { BoardPerson } from './use-comments.js'
@@ -251,20 +252,85 @@ describe('the menu that opens when you type @', () => {
 
 describe('choosing somebody from the menu', () => {
   const JILL = person('u-jill', 'Jill')
+  const BOARD_WITH_JILL = [JILL, ...BOARD]
 
-  it('replaces the half-typed name and keeps the rest of the sentence', () => {
-    const { text } = insertMention('hey @Ji please look', 7, JILL)
-    expect(text).toBe('hey @[Jill](u-jill) please look')
+  /**
+   * What goes in the box is the NAME.
+   *
+   * A textarea lays out its whole value even where the glyphs are hidden, so
+   * a token in the composer cannot be painted over or concealed — it occupies
+   * its full width whatever is drawn on top. The only way a plain textarea
+   * shows a name is for the value to be the name.
+   */
+  it('puts a readable name in the composer, not a token', () => {
+    const { text } = insertMention('hey @Ji please look', 7, JILL, BOARD_WITH_JILL)
+    expect(text).toBe('hey @Jill please look')
+    expect(text).not.toContain('](')
   })
 
   it('leaves the caret after the name, ready for the next word', () => {
-    const { text, caret } = insertMention('hey @Ji', 7, JILL)
-    expect(text.slice(0, caret)).toBe('hey @[Jill](u-jill) ')
+    const { text, caret } = insertMention('hey @Ji', 7, JILL, BOARD_WITH_JILL)
+    expect(text.slice(0, caret)).toBe('hey @Jill ')
   })
 
-  it('writes a mention that reaches the person it just named', () => {
-    const { text } = insertMention('@Ji', 3, JILL)
-    expect(mentionsIn(text, [JILL])).toEqual(['u-jill'])
+  /**
+   * And the id arrives on the way OUT, so the stored body keeps everything
+   * the token was introduced for.
+   */
+  it('becomes a token when the comment is posted', () => {
+    const { text } = insertMention('@Ji', 3, JILL, BOARD_WITH_JILL)
+    const sent = tokeniseMentions(text, [JILL], BOARD_WITH_JILL)
+    expect(sent.trim()).toBe('@[Jill](u-jill)')
+    expect(mentionsIn(sent, BOARD_WITH_JILL)).toEqual(['u-jill'])
+  })
+
+  it('survives the person being renamed after the comment was written', () => {
+    const { text } = insertMention('@Ji', 3, JILL, BOARD_WITH_JILL)
+    const sent = tokeniseMentions(text, [JILL], BOARD_WITH_JILL)
+    expect(mentionsIn(sent, [person('u-jill', 'Jill Okonkwo')])).toEqual(['u-jill'])
+  })
+
+  /**
+   * The shadowing problem, now on the way out as well: "@Sam Smith" ends on a
+   * boundary for both names, so the longer has to be taken out of the text
+   * before the shorter is looked for.
+   */
+  it('does not tokenise Sam inside Sam Smith', () => {
+    const board = [person('u-sam', 'Sam'), person('u-smith', 'Sam Smith')]
+    const sent = tokeniseMentions('@Sam Smith please look', board, board)
+    expect(mentionsIn(sent, board)).toEqual(['u-smith'])
+  })
+
+  it('leaves a picked name that has since been deleted alone', () => {
+    expect(tokeniseMentions('never mind', [JILL], BOARD_WITH_JILL)).toBe('never mind')
+  })
+
+  it('does not touch a name that was typed rather than picked', () => {
+    const sent = tokeniseMentions('@Rowan what do you think', [], BOARD)
+    expect(sent).toBe('@Rowan what do you think')
+    // Still reaches him, by the matching that has always been the fallback.
+    expect(mentionsIn(sent, BOARD)).toEqual(['u-rowan'])
+  })
+
+  /**
+   * Two people, one name. Text cannot tell them apart — that ambiguity is the
+   * whole reason tokens exist — so this is the one case where the machinery
+   * shows in the composer rather than the mention going to whichever of them
+   * happens to sort first.
+   */
+  describe('two people with the same name', () => {
+    const board = [person('u-kat-1', 'Kat'), person('u-kat-2', 'Kat')]
+
+    it('writes the token in full, because a name would be a guess', () => {
+      const { text } = insertMention('@Ka', 3, board[1]!, board)
+      expect(text.trim()).toBe('@[Kat](u-kat-2)')
+      expect(mentionsIn(text, board)).toEqual(['u-kat-2'])
+    })
+
+    it('and never rewrites the other one over it on the way out', () => {
+      const { text } = insertMention('@Ka', 3, board[1]!, board)
+      expect(mentionsIn(tokeniseMentions(text, [board[1]!], board), board)).toEqual(['u-kat-2'])
+    })
   })
 
   /**
@@ -273,8 +339,10 @@ describe('choosing somebody from the menu', () => {
    */
   it('survives a name that contains a bracket', () => {
     const awkward = person('u-odd', 'Ali [Ops]')
-    const { text } = insertMention('@Al', 3, awkward)
-    expect(mentionsIn(text, [awkward])).toEqual(['u-odd'])
-    expect(plainMentionText(text).trim()).toBe('@Ali Ops')
+    const board = [awkward]
+    const { text } = insertMention('@Al', 3, awkward, board)
+    const sent = tokeniseMentions(text, [awkward], board)
+    expect(mentionsIn(sent, board)).toEqual(['u-odd'])
+    expect(plainMentionText(sent).trim()).toBe('@Ali Ops')
   })
 })

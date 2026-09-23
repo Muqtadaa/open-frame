@@ -233,24 +233,80 @@ export interface Insertion {
   readonly caret: number
 }
 
+/** Whether a display name picks out exactly one person on this board. */
+function nameIsUnambiguous(person: BoardPerson, people: readonly BoardPerson[]): boolean {
+  const name = person.displayName.trim().toLowerCase()
+  return people.filter((other) => other.displayName.trim().toLowerCase() === name).length <= 1
+}
+
 /**
- * Replaces the half-typed name at `caret` with a token for `person`.
+ * Replaces the half-typed name at `caret` with the person that was picked.
  *
- * A trailing space goes in because the next thing typed is a word, and
- * landing it against the token's closing bracket would look like part of it —
- * but only when there is not one there already. Picking a name from the
- * middle of a written sentence otherwise leaves a double space behind, which
- * is the common case rather than the odd one: the menu is most useful when
- * you are adding somebody to a remark you have already written.
+ * What goes IN is the name — `@Jill`. The token is assembled at post time by
+ * `tokeniseMentions`, from the record of who was picked. A textarea lays out
+ * its whole value even where the glyphs are hidden, so a token in the box
+ * cannot be painted over or concealed: it takes up its full width whatever is
+ * drawn on top. The only way a plain textarea shows a name is for the value
+ * to BE the name.
+ *
+ * The exception is a name two people share. Text cannot tell those apart —
+ * that ambiguity is the reason tokens exist — so such a pick is written out
+ * in full and the machinery shows, rather than the mention going to whichever
+ * of them sorts first. Rare, and the honest failure.
+ *
+ * A trailing space goes in because the next thing typed is a word, but only
+ * when there is not one there already: picking a name from the middle of a
+ * written sentence otherwise leaves a double space behind, which is the
+ * common case rather than the odd one.
  */
 export function insertMention(
   text: string,
   caret: number,
   person: BoardPerson,
+  people: readonly BoardPerson[],
 ): Insertion {
   const active = activeMentionQuery(text, caret)
   if (active === null) return { text, caret }
   const rest = text.slice(caret)
-  const token = mentionToken(person) + (/^\s/u.test(rest) ? '' : ' ')
-  return { text: text.slice(0, active.start) + token + rest, caret: active.start + token.length }
+  const written = nameIsUnambiguous(person, people)
+    ? `@${person.displayName}`
+    : mentionToken(person)
+  const insert = written + (/^\s/u.test(rest) ? '' : ' ')
+  return { text: text.slice(0, active.start) + insert + rest, caret: active.start + insert.length }
+}
+
+/**
+ * Turns the names that were PICKED back into tokens, on the way to the server.
+ *
+ * The stored body keeps everything the token was introduced for — it survives
+ * a rename and it names one person rather than a string — while the composer
+ * never has to show one.
+ *
+ * Longest name first, and each replacement consumed, for the reason
+ * `mentionsIn` sorts the same way: "@Sam Smith" ends on a word boundary for
+ * both "Sam" and "Sam Smith", so the longer has to be taken out of the text
+ * before the shorter is looked for.
+ *
+ * A pick whose name is no longer in the text is simply not found, which is
+ * what should happen: deleting "@Jill" after choosing her is how you take a
+ * mention back. And a name typed rather than picked is left alone here —
+ * `mentionsIn` matches it the way it always has, so the fallback that keeps a
+ * hand-typed mention working is untouched.
+ */
+export function tokeniseMentions(
+  text: string,
+  picked: readonly BoardPerson[],
+  people: readonly BoardPerson[],
+): string {
+  const byLongest = [...picked].sort((a, b) => b.displayName.length - a.displayName.length)
+  let written = text
+  for (const person of byLongest) {
+    if (!nameIsUnambiguous(person, people)) continue
+    const pattern = new RegExp(
+      `@${escapeForPattern(person.displayName)}(?![\\p{L}\\p{N}'-])`,
+      'giu',
+    )
+    written = written.replace(pattern, mentionToken(person))
+  }
+  return written
 }

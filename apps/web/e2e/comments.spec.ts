@@ -378,8 +378,14 @@ test('offers the people on the board when you type @, and mentions the one you p
 
   await page.getByTestId(`mention-option-${ROWAN}`).click()
 
-  // The id is what was written, not the letters that were typed.
-  await expect(input).toHaveValue(`@[Rowan](${ROWAN}) `)
+  /*
+   * A NAME in the box. A textarea lays out its whole value even where the
+   * glyphs are hidden, so a token here could not be painted over — it would
+   * take up its full width whatever was drawn on top. The id is added on the
+   * way out instead, which is what the server assertion below checks.
+   */
+  await expect(input).toHaveValue('@Rowan ')
+  await expect(input).not.toHaveValue(/\]\(/)
 
   await input.pressSequentially('does this look right?')
   await page.getByTestId('comment-post').click()
@@ -433,7 +439,7 @@ test('the menu takes Enter and Escape only while it is open', async ({ page }) =
 
   // Enter chooses rather than breaking the line.
   await input.press('Enter')
-  await expect(input).toHaveValue(`@[Rowan](${ROWAN}) `)
+  await expect(input).toHaveValue('@Rowan ')
   await expect(page.getByTestId('mention-menu')).toHaveCount(0)
 
   // Escape now closes the panel, because there is no menu to close instead.
@@ -554,4 +560,32 @@ test('still opens the mentions list on the front door', async ({ page }) => {
   if (box === null || window === null) return
   expect(box.y).toBeGreaterThanOrEqual(0)
   expect(box.y + box.height).toBeLessThanOrEqual(window.height)
+})
+
+/**
+ * Picking settles the mention, and editing it reopens the offer.
+ *
+ * This only became a question when the composer started holding names: a
+ * token contains a bracket and `activeMentionQuery` refuses one, so the menu
+ * shut by accident. "@Rowan " is a perfectly good query that matches Rowan,
+ * so choosing him re-offered him on top of the name just written.
+ */
+test('shuts the menu when you choose, and offers it again if you edit', async ({ page }) => {
+  await signedIn(page, [{ id: BOARD, title: 'Shared', role: 'owner' }])
+  await openBoard(page)
+
+  await page.getByRole('button', { name: /comment/i }).first().click()
+  await page.locator('[data-testid="canvas"]').click({ position: { x: 300, y: 260 } })
+
+  const input = page.getByTestId('comment-input')
+  await input.pressSequentially('@Ro')
+  await page.getByTestId(`mention-option-${ROWAN}`).click()
+
+  await expect(input).toHaveValue('@Rowan ')
+  await expect(page.getByTestId('mention-menu')).toHaveCount(0)
+
+  // Backspacing into the name you just chose is how you change your mind.
+  await input.press('Backspace')
+  await input.press('Backspace')
+  await expect(page.getByTestId('mention-menu')).toBeVisible()
 })

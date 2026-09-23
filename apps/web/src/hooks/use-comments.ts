@@ -148,6 +148,7 @@ export {
   mentionsIn,
   peopleMatching,
   plainMentionText,
+  tokeniseMentions,
   unknownMentionIn,
   type BodySegment,
   type MentionQuery,
