@@ -311,6 +311,12 @@ export async function signedIn(
     }
 
     if (url.includes('rpc/my_mentions')) {
+      /*
+       * Read ones come back too, carrying `read_at`. The function used to
+       * filter them out, which made following a notification the last time it
+       * could ever be found — so a double that still dropped them would let
+       * that bug back in without failing anything.
+       */
       return json(
         server.mentions.map((mention) => ({
           comment_id: mention.commentId,
@@ -319,6 +325,7 @@ export async function signedIn(
           author_name: mention.authorName,
           body: mention.body,
           created_at: new Date().toISOString(),
+          read_at: read.includes(mention.commentId) ? new Date().toISOString() : null,
         })),
       )
     }

@@ -589,3 +589,113 @@ test('shuts the menu when you choose, and offers it again if you edit', async ({
   await input.press('Backspace')
   await expect(page.getByTestId('mention-menu')).toBeVisible()
 })
+
+/**
+ * Following a notification has to land on the REMARK.
+ *
+ * The bell's href was the plain share link — board id and access key, nothing
+ * about which remark was being pointed at — so it reopened the board at its
+ * default view with no thread open and no pin marked. Indistinguishable from
+ * clicking the board in the list, and no answer at all to "somebody mentioned
+ * you HERE".
+ */
+test('a mention link opens the thread it names, not just the board', async ({ page }) => {
+  await signedIn(page, [{ id: BOARD, title: 'Shared', role: 'owner' }])
+  await openBoard(page)
+
+  // A real remark, so the id is one the board actually holds.
+  await page.getByRole('button', { name: /comment/i }).first().click()
+  await page.locator('[data-testid="canvas"]').click({ position: { x: 300, y: 240 } })
+  await page.getByTestId('comment-input').fill('the bit I wanted you to see')
+  await page.getByTestId('comment-post').click()
+  await expect(page.locator('[data-testid^="comment-pin-cmt_"]')).toHaveCount(1)
+
+  const id = await page
+    .locator('[data-testid^="comment-pin-cmt_"]')
+    .first()
+    .getAttribute('data-testid')
+  const commentId = (id ?? '').replace('comment-pin-', '')
+  expect(commentId).not.toBe('')
+
+  // Arrive as somebody following the notification would.
+  await page.goto(`/?room=${BOARD}&k=${KEY}&c=${commentId}`)
+  await page.waitForSelector('[data-testid="status-bar"]')
+
+  const panel = page.getByTestId('comment-panel')
+  await expect(panel).toBeVisible()
+  await expect(panel).toContainText('the bit I wanted you to see')
+
+  /*
+   * And the anchor is consumed. It describes an ARRIVAL, not a location —
+   * left in the address bar, every later reload drags you back to a remark
+   * you have already read, and so does every copy of the URL.
+   */
+  await expect.poll(() => new URL(page.url()).searchParams.get('c')).toBeNull()
+})
+
+test('a mention link for a remark that is gone still opens the board', async ({ page }) => {
+  await signedIn(page, [{ id: BOARD, title: 'Shared', role: 'owner' }])
+  await page.routeWebSocket(/\/room\//, () => undefined)
+  await page.goto(`/?room=${BOARD}&k=${KEY}&c=cmt_nothing`)
+
+  // The board is open, which is most of what was asked for. A notice about a
+  // remark nobody can see any more is not worth the interruption.
+  await expect(page.locator('[data-testid="status-bar"]')).toBeVisible()
+  await expect(page.getByTestId('comment-panel')).toHaveCount(0)
+})
+
+/**
+ * Read and GONE are two different states.
+ *
+ * `my_mentions()` filtered on `read_at is null`, so following a notification
+ * was the last time you could ever find it — the thing somebody wanted you to
+ * see disappeared at the moment you looked at it, taking the only link back
+ * with it.
+ */
+test('reading a mention keeps it, quietened, rather than destroying it', async ({ page }) => {
+  const account = await signedIn(
+    page,
+    [{ id: BOARD, title: 'Shared', role: 'owner' }],
+    'Muqtadaa Miandara',
+    {
+      mentions: [
+        {
+          commentId: 'cmt_kept',
+          boardId: BOARD,
+          boardTitle: 'Shared',
+          authorName: 'Rowan',
+          body: 'the thing I wanted you to see',
+        },
+      ],
+    },
+  )
+  await page.goto(HOME_URL)
+
+  const bell = page.getByTestId('mentions-button')
+  await expect(bell).toHaveText('1 mention')
+
+  await bell.click()
+  const item = page.getByTestId('mention-cmt_kept')
+  await expect(item).toHaveAttribute('data-unread', 'true')
+
+  // The link carries the remark now, not just the board.
+  const href = await item.getAttribute('href')
+  expect(href).toContain('c=cmt_kept')
+
+  await item.click()
+  await expect.poll(() => account.read).toContain('cmt_kept')
+  await page.waitForSelector('[data-testid="status-bar"]')
+
+  /*
+   * The bell is still there, and still reaches it. It used to vanish the
+   * moment you had read everything — which is exactly when somebody goes
+   * looking for the notification they followed ten minutes ago.
+   */
+  const onBoard = page.getByTestId('mentions-button')
+  await expect(onBoard).toHaveText('Mentions')
+  await onBoard.click()
+  const kept = page.getByTestId('mention-cmt_kept')
+  await expect(kept).toBeVisible()
+  await expect(kept).toContainText('the thing I wanted you to see')
+  await expect(kept).toHaveAttribute('data-unread', 'false')
+})

@@ -1,5 +1,6 @@
 import { useMemo, type ReactNode } from 'react'
 
+import { useCommentAnchor } from '../hooks/use-comment-anchor.js'
 import { useComments } from '../hooks/use-comments.js'
 import { useLiveComments } from '../hooks/use-live-comments.js'
 import { useIdentity } from '../hooks/use-identity.js'
@@ -25,6 +26,10 @@ export function CommentsProvider({ children }: { readonly children: ReactNode })
   // And again whenever somebody else in the room says something, so the
   // discussion is live rather than something you find on your way back.
   useLiveComments(enabled, refresh)
+
+  // Arriving from a notification: open the remark it was about. Here rather
+  // than in the panel, because it has to run whether or not the panel is up.
+  useCommentAnchor(comments, enabled)
 
   const value = useMemo<Discussion>(() => {
     const replyCounts = new Map<string, number>()

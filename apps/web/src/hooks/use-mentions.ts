@@ -36,6 +36,14 @@ export type { Mention }
 export interface Notifications {
   readonly mentions: readonly Mention[]
   /**
+   * How many have not been read, which is what the bell counts.
+   *
+   * Not `mentions.length`: the list keeps the ones already read so an old
+   * notification can be found again, and a bell claiming eleven when nothing
+   * is new is a bell people stop looking at.
+   */
+  readonly unread: number
+  /**
    * The access key for a board, or `null` for one shared before roles — never
    * for one whose key has merely not arrived yet.
    */
@@ -90,6 +98,18 @@ export function useMentions(): Notifications {
   const keyFor = useCallback((boardId: string) => keys.get(boardId) ?? null, [keys])
 
   const markRead = useCallback((commentId: string) => {
+    /*
+     * Marked here as well as written, so the row quietens under the pointer
+     * rather than after a round trip. The realtime nudge confirms it; this is
+     * what makes the change visible when the click is also a navigation.
+     */
+    setMentions((current) =>
+      current.map((mention) =>
+        mention.commentId === commentId && mention.readAt === null
+          ? { ...mention, readAt: Date.now() }
+          : mention,
+      ),
+    )
     // Recorded on the way out. The navigation is what matters, so a failure to
     // write this must not stop the link working.
     markMentionsRead([commentId]).catch(() => {
@@ -97,5 +117,11 @@ export function useMentions(): Notifications {
     })
   }, [])
 
-  return { mentions: userId === null ? [] : mentions, keyFor, markRead }
+  const shown = userId === null ? [] : mentions
+  return {
+    mentions: shown,
+    unread: shown.filter((mention) => mention.readAt === null).length,
+    keyFor,
+    markRead,
+  }
 }

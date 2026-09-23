@@ -67,6 +67,16 @@ export interface Mention {
   readonly authorName: string
   readonly body: string
   readonly createdAt: number
+  /**
+   * When this was read, or `null` while it is still new.
+   *
+   * Read and GONE are two different states. The list used to return only the
+   * unread, so following a notification was the last time you could ever find
+   * it — the thing somebody wanted you to see disappeared at the moment you
+   * looked at it, along with the only link back to the board and remark it
+   * named.
+   */
+  readonly readAt: number | null
 }
 
 /** Milliseconds from a timestamp the database wrote, or `null`. */
@@ -268,6 +278,7 @@ export async function myMentions(): Promise<readonly Mention[]> {
       author_name: authorName,
       body,
       created_at: createdAt,
+      read_at: readAt,
     } = row as {
       comment_id?: unknown
       board_id?: unknown
@@ -275,6 +286,7 @@ export async function myMentions(): Promise<readonly Mention[]> {
       author_name?: unknown
       body?: unknown
       created_at?: unknown
+      read_at?: unknown
     }
     if (typeof commentId !== 'string' || typeof boardId !== 'string') continue
     mentions.push({
@@ -284,6 +296,7 @@ export async function myMentions(): Promise<readonly Mention[]> {
       authorName: typeof authorName === 'string' ? authorName : 'Someone',
       body: typeof body === 'string' ? body : '',
       createdAt: when(createdAt) ?? 0,
+      readAt: when(readAt),
     })
   }
   return mentions

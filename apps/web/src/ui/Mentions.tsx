@@ -1,6 +1,6 @@
 import { useState } from 'react'
 
-import { shareLink } from '../app/collab-config.js'
+import { commentLink } from '../app/collab-config.js'
 import { AnchoredSurface } from '../controls/AnchoredSurface.js'
 import { plainMentionText } from '../hooks/use-comments.js'
 import { useAnchoredTo } from '../controls/use-anchor.js'
@@ -26,7 +26,7 @@ import { useMentions } from '../hooks/use-mentions.js'
  * correct in both places, so neither is written down.
  */
 export function Mentions() {
-  const { mentions, keyFor, markRead } = useMentions()
+  const { mentions, unread, keyFor, markRead } = useMentions()
   const [open, setOpen] = useState(false)
   const { ref: bell, anchor, surface } = useAnchoredTo<HTMLButtonElement>(open)
 
@@ -34,17 +34,30 @@ export function Mentions() {
 
   return (
     <div className="of-mentions">
+      {/*
+        * The COUNT is the unread; the list is everything recent.
+        *
+        * Read and gone were the same state until now, so following a
+        * notification was the last time you could find it. They are kept, and
+        * the bell goes quiet rather than disappearing — an old mention is
+        * still the only link back to the remark it named.
+        */}
       <button
         ref={bell}
         type="button"
-        className="of-mentions__bell"
+        className={unread === 0 ? 'of-mentions__bell is-read' : 'of-mentions__bell'}
         aria-expanded={open}
+        aria-label={
+          unread === 0
+            ? `Mentions, none unread, ${String(mentions.length)} recent`
+            : `${String(unread)} unread ${unread === 1 ? 'mention' : 'mentions'}`
+        }
         data-testid="mentions-button"
         onClick={() => {
           setOpen((current) => !current)
         }}
       >
-        {mentions.length} {mentions.length === 1 ? 'mention' : 'mentions'}
+        {unread === 0 ? 'Mentions' : `${String(unread)} ${unread === 1 ? 'mention' : 'mentions'}`}
       </button>
 
       {open && (
@@ -58,9 +71,14 @@ export function Mentions() {
             {mentions.map((mention) => (
               <li key={mention.commentId}>
                 <a
-                  className="of-mentions__item"
-                  href={shareLink(mention.boardId, '', keyFor(mention.boardId))}
+                  className={
+                    mention.readAt === null
+                      ? 'of-mentions__item'
+                      : 'of-mentions__item is-read'
+                  }
+                  href={commentLink(mention.boardId, '', keyFor(mention.boardId), mention.commentId)}
                   data-testid={`mention-${mention.commentId}`}
+                  data-unread={mention.readAt === null ? 'true' : 'false'}
                   onClick={() => {
                     markRead(mention.commentId)
                   }}

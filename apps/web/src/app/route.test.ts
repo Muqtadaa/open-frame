@@ -2,6 +2,7 @@ import { asBoardId } from '@openframe/core'
 import { describe, expect, it } from 'vitest'
 
 import { boardHref, newLocalBoardId, readRoute } from './route.js'
+import { commentLink, shareLink } from './collab-config.js'
 
 /**
  * Two surfaces, decided from a query string.
@@ -16,7 +17,7 @@ describe('reading a route', () => {
     expect(readRoute('?room=brd_abcdefgh12345678')).toEqual({
       kind: 'board',
       boardId: asBoardId('brd_abcdefgh12345678'),
-      shared: true, key: null,
+      shared: true, key: null, commentId: null,
     })
   })
 
@@ -24,7 +25,7 @@ describe('reading a route', () => {
     expect(readRoute('?board=board_local')).toEqual({
       kind: 'board',
       boardId: asBoardId('board_local'),
-      shared: false, key: null,
+      shared: false, key: null, commentId: null,
     })
   })
 
@@ -49,7 +50,7 @@ describe('reading a route', () => {
     expect(route).toEqual({
       kind: 'board',
       boardId: asBoardId('brd_abcdefgh12345678'),
-      shared: true, key: null,
+      shared: true, key: null, commentId: null,
     })
   })
 })
@@ -60,7 +61,7 @@ describe('writing a route', () => {
     expect(readRoute(boardHref(id, false).slice(1))).toEqual({
       kind: 'board',
       boardId: id,
-      shared: false, key: null,
+      shared: false, key: null, commentId: null,
     })
   })
 
@@ -70,7 +71,7 @@ describe('writing a route', () => {
     expect(readRoute(href.slice(1))).toEqual({
       kind: 'board',
       boardId: asBoardId('brd_abcdefgh12345678'),
-      shared: true, key: null,
+      shared: true, key: null, commentId: null,
     })
   })
 
@@ -88,6 +89,7 @@ describe('the key on a shared link', () => {
       boardId: asBoardId('brd_abcdefgh12345678'),
       shared: true,
       key,
+      commentId: null,
     })
   })
 
@@ -103,6 +105,7 @@ describe('the key on a shared link', () => {
       boardId: asBoardId('brd_abcdefgh12345678'),
       shared: true,
       key: null,
+      commentId: null,
     })
   })
 
@@ -117,5 +120,65 @@ describe('the key on a shared link', () => {
       shared: false,
       key: null,
     })
+  })
+})
+
+/**
+ * Which remark a notification is pointing at.
+ *
+ * A mention link used to be the plain share link, so following one reopened
+ * the board with no thread open and no pin marked — the same thing clicking
+ * the board in the list does, and no answer at all to "somebody mentioned you
+ * HERE".
+ */
+describe('the comment a link points at', () => {
+  const ID = '28ee4fc7-08f9-49a2-a591-c65200ecff19'
+
+  it('is carried on a shared link', () => {
+    expect(readRoute(`?room=brd_abcdefgh12345678&c=${ID}`).kind).toBe('board')
+    expect(
+      readRoute(`?room=brd_abcdefgh12345678&c=${ID}`),
+    ).toMatchObject({ commentId: ID })
+  })
+
+  it('is carried on a local board too, which can also be commented on', () => {
+    expect(readRoute(`?board=board_local&c=${ID}`)).toMatchObject({ commentId: ID })
+  })
+
+  it('is null when the link does not name one', () => {
+    expect(readRoute('?room=brd_abcdefgh12345678')).toMatchObject({ commentId: null })
+  })
+
+  /**
+   * Checked for SHAPE rather than for being a uuid: the client never
+   * interprets the value, it hands it to a lookup and writes it back into the
+   * address bar. What must not get through is anything carrying a path, a
+   * script or a query of its own.
+   */
+  it('is dropped when it is not the shape of an id', () => {
+    for (const bad of ['', '../../etc', '<script>', 'a'.repeat(200), 'two words', 'a&b=c']) {
+      expect(
+        readRoute(`?room=brd_abcdefgh12345678&c=${encodeURIComponent(bad)}`),
+        bad,
+      ).toMatchObject({ commentId: null })
+    }
+  })
+
+  it('builds a link that reads back as the comment it named', () => {
+    const link = commentLink(asBoardId('brd_abcdefgh12345678'), '', 'e'.repeat(32), ID)
+    expect(readRoute(link.slice(1))).toMatchObject({
+      boardId: asBoardId('brd_abcdefgh12345678'),
+      key: 'e'.repeat(32),
+      commentId: ID,
+    })
+  })
+
+  /**
+   * Sharing a BOARD and pointing at a REMARK are different acts. A share link
+   * that quietly carried whichever thread happened to be open would be a
+   * surprise in the one place this product asks people to trust a URL.
+   */
+  it('is never added by the ordinary share link', () => {
+    expect(shareLink(asBoardId('brd_abcdefgh12345678'), '', 'e'.repeat(32))).not.toContain('&c=')
   })
 })

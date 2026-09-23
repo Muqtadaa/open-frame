@@ -1613,6 +1613,34 @@ body {
 }
 
 /*
+ * Nothing new, but the ones already read are still in here.
+ *
+ * The bell used to vanish once you had read everything, which is exactly when
+ * somebody goes looking for the notification they followed ten minutes ago.
+ * Quiet rather than absent: it stops claiming your attention without taking
+ * the way back with it.
+ */
+.of-mentions__bell.is-read {
+  color: var(--of-ink-muted);
+  background: transparent;
+  border-color: var(--of-control-border);
+}
+
+/*
+ * A read row is still a row. Muted, and the accent bar down its edge goes:
+ * "unread" is the thing worth marking, so the mark belongs on those.
+ */
+.of-mentions__item.is-read .of-mentions__who,
+.of-mentions__item.is-read .of-mentions__what {
+  color: var(--of-ink-muted);
+}
+
+.of-mentions__item:not(.is-read) {
+  border-left: 2px solid var(--of-accent);
+  padding-left: 6px;
+}
+
+/*
  * Placement is NOT here any more.
  *
  * `top: calc(100% + 6px)` opens downward, which was right under a header on

@@ -1,6 +1,6 @@
 import { asBoardId, type BoardId } from '@openframe/core'
 
-import { accessKey, ROOM_PARAM, sharedBoardId } from './collab-config.js'
+import { accessKey, commentAnchor, ROOM_PARAM, sharedBoardId } from './collab-config.js'
 
 /**
  * The whole of this application's routing, still in a query string.
@@ -44,17 +44,35 @@ export type Route =
        * before links had roles, which the room still admits as an editor.
        */
       readonly key: string | null
+      /**
+       * A remark the link is pointing at, for a notification that says "come
+       * and look at THIS" rather than "come and look at the board". `null`
+       * for every other way of arriving.
+       */
+      readonly commentId: string | null
     }
 
 export function readRoute(search: string): Route {
   const shared = sharedBoardId(search)
   if (shared !== null) {
-    return { kind: 'board', boardId: shared, shared: true, key: accessKey(search) }
+    return {
+      kind: 'board',
+      boardId: shared,
+      shared: true,
+      key: accessKey(search),
+      commentId: commentAnchor(search),
+    }
   }
 
   const raw = new URLSearchParams(search).get(BOARD_PARAM)
   if (raw !== null && LOCAL_ID.test(raw)) {
-    return { kind: 'board', boardId: asBoardId(raw), shared: false, key: null }
+    return {
+      kind: 'board',
+      boardId: asBoardId(raw),
+      shared: false,
+      key: null,
+      commentId: commentAnchor(search),
+    }
   }
 
   /*

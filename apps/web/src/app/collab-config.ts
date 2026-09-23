@@ -140,6 +140,42 @@ export function shareLink(boardId: BoardId, origin: string, key?: string | null)
 }
 
 /**
+ * Which remark a link is pointing at. `?c=<comment id>`.
+ *
+ * Separate from `shareLink` rather than a fourth argument to it: sharing a
+ * BOARD and pointing at a REMARK on one are different acts, and a share link
+ * that quietly carried whichever thread you happened to have open would be a
+ * surprise in the one place this product asks people to trust a URL.
+ */
+export const COMMENT_PARAM = 'c'
+
+/**
+ * An opaque handle, checked for SHAPE rather than for being a uuid.
+ *
+ * The client never interprets a comment id — it hands it to a lookup and
+ * writes it back into the address bar. What matters is that neither can be
+ * made to carry a path, a script or a query of its own; the exact format is
+ * the database's business, and pinning it here would make the identifier's
+ * spelling a thing two layers have to agree about.
+ */
+const COMMENT_ID = /^[A-Za-z0-9_-]{1,64}$/
+
+export function commentAnchor(search: string): string | null {
+  const raw = new URLSearchParams(search).get(COMMENT_PARAM)
+  return raw !== null && COMMENT_ID.test(raw) ? raw : null
+}
+
+/** Where a notification sends you: the board, and the thing it was about. */
+export function commentLink(
+  boardId: BoardId,
+  origin: string,
+  key: string | null,
+  commentId: string,
+): string {
+  return `${shareLink(boardId, origin, key)}&${COMMENT_PARAM}=${encodeURIComponent(commentId)}`
+}
+
+/**
  * ONE server, addressed two ways, because the platform insists.
  *
  * `new WebSocket()` throws on anything but ws/wss, and `fetch()` rejects those
