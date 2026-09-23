@@ -110,9 +110,18 @@ export function Mentions() {
                     ) {
                       return
                     }
+                    /*
+                     * Only take the click if there is somewhere to take it
+                     * TO. The discussion loads asynchronously, so a click in
+                     * the first moment of a board finds nothing — and a
+                     * prevented click that then does nothing is worse than
+                     * the reload it was saving, because it looks like the
+                     * notification is broken. The link still works, and the
+                     * fresh page honours `?c=` on the way in.
+                     */
+                    if (!focusComment(mention.commentId)) return
                     event.preventDefault()
                     setOpen(false)
-                    focusComment(mention.commentId)
                   }}
                 >
                   <span className="of-mentions__who">{mention.authorName}</span>

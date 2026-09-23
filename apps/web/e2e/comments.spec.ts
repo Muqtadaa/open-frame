@@ -803,3 +803,49 @@ test('a notification for this board goes to the remark without reloading', async
   // Marked read all the same, which the navigation used to be doing for it.
   await expect.poll(() => account.read).toContain(commentId)
 })
+
+/**
+ * A prevented click that does nothing is worse than the reload it saved.
+ *
+ * The discussion loads asynchronously, so a notification clicked in the first
+ * moment of a board finds no comment to go to. Taking the click anyway would
+ * leave the notification looking broken; the link still works, and the fresh
+ * page honours `?c=` on the way in.
+ */
+test('falls back to the link when the discussion is not loaded yet', async ({ page }) => {
+  const account = await signedIn(
+    page,
+    [{ id: BOARD, title: 'Shared', role: 'owner' }],
+    'Muqtadaa Miandara',
+    {
+      mentions: [
+        {
+          commentId: 'cmt_unknown',
+          boardId: BOARD,
+          boardTitle: 'Shared',
+          authorName: 'Rowan',
+          body: 'a remark this page has not read yet',
+        },
+      ],
+    },
+  )
+  await openBoard(page)
+
+  // This board's discussion holds nothing, so there is nowhere to go in page.
+  await page.getByTestId('mentions-button').click()
+  const item = page.getByTestId('mention-cmt_unknown')
+  await expect(item).toHaveAttribute('data-here', 'true')
+
+  await page.evaluate(() => {
+    ;(window as unknown as { __stillHere?: boolean }).__stillHere = true
+  })
+  await item.click()
+
+  // It navigated rather than silently doing nothing.
+  await page.waitForSelector('[data-testid="status-bar"]')
+  expect(
+    await page.evaluate(() => (window as unknown as { __stillHere?: boolean }).__stillHere),
+    'the click was swallowed instead of following the link',
+  ).toBeUndefined()
+  await expect.poll(() => account.read).toContain('cmt_unknown')
+})
