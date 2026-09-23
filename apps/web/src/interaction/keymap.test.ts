@@ -4,7 +4,10 @@ import { resolve } from 'node:path'
 import { describe, expect, it } from 'vitest'
 
 import { resolveKeyAction, type KeyContext } from './keymap.js'
-import { cursorFor } from './tool-cursor.js'
+import { SHAPE_KINDS } from '@openframe/core'
+
+import { shapePath } from '../scene/shape-geometry.js'
+import { cursorFor, DEFAULT_INK } from './tool-cursor.js'
 import type { Tool } from './interaction-store.js'
 
 function key(k: string, mods: Partial<KeyContext> = {}): KeyContext {
@@ -233,11 +236,45 @@ describe('every placing tool carries its own cursor', () => {
     expect(cursorFor('pan')).toBeNull()
   })
 
-  /** The halo. A single-coloured cursor vanishes into at least one board. */
+  /** The rim. A single-coloured cursor vanishes into at least one board. */
   it('draws each mark twice, so it reads on any ground', () => {
-    const cursor = cursorFor('comment') ?? ''
-    const decoded = decodeURIComponent(cursor)
-    expect(decoded).toContain('stroke="#ffffff"')
-    expect(decoded).toContain('stroke="#16202b"')
+    const decoded = decodeURIComponent(cursorFor('comment') ?? '')
+    expect(decoded).toContain(DEFAULT_INK.halo)
+    expect(decoded).toContain(DEFAULT_INK.ink)
+  })
+
+  /**
+   * Drawn in the THEME's ink, not in a second copy of the palette.
+   *
+   * A cursor is an image and cannot inherit a custom property, which makes it
+   * exactly the kind of thing that keeps a stale palette alive long after the
+   * stylesheet has moved on. The colours are passed in from the tokens.
+   */
+  it('takes its colours from whichever world is being drawn in', () => {
+    const night = decodeURIComponent(
+      cursorFor('comment', 'rectangle', { ink: '#f2f5f8', halo: '#101820' }) ?? '',
+    )
+    expect(night).toContain('#f2f5f8')
+    expect(night).toContain('#101820')
+    expect(night).not.toContain(DEFAULT_INK.ink)
+  })
+
+  /**
+   * The rail's shape icon follows the chosen variant, and a pointer showing a
+   * rectangle while the rail shows a diamond is the interface disagreeing
+   * with itself.
+   */
+  it('follows the shape variant the rail is showing', () => {
+    const seen = SHAPE_KINDS.map((kind) => cursorFor('shape', kind))
+    for (const [index, cursor] of seen.entries()) {
+      expect(cursor, `${SHAPE_KINDS[index] ?? '?'} has no cursor`).not.toBeNull()
+    }
+    expect(new Set(seen).size, 'two shape variants share a cursor').toBe(SHAPE_KINDS.length)
+  })
+
+  /** And the geometry is the object's own, so a new kind arrives with one. */
+  it('draws the variant from the same geometry the object is drawn from', () => {
+    const diamond = decodeURIComponent(cursorFor('shape', 'diamond') ?? '')
+    expect(diamond).toContain(shapePath('diamond') ?? 'no path')
   })
 })

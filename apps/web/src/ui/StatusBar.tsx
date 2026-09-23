@@ -27,7 +27,6 @@ const mod = isMac ? '⌘' : 'Ctrl'
  */
 export function StatusBar() {
   const document = useBoardDocument()
-  const zoom = useInteractionStore((state) => state.viewport.zoom)
   const selection = useInteractionStore((state) => state.selection)
   const commands = useCommands()
   const { canUndo, canRedo, undoLabel } = useUndoState()
@@ -115,7 +114,15 @@ export function StatusBar() {
       <span className="of-status__counts">
         <b>{selection.size}</b> selected
       </span>
-      <span className="of-status__counts">{Math.round(zoom * 100)}%</span>
+
+      {/*
+       * The zoom is NOT repeated here. It was in both bottom bars at once —
+       * the same number twice, a few hundred pixels apart — and the one in
+       * the zoom control is the one you can also type into and step with the
+       * slider beside it. A readout next to the control that changes it is a
+       * readout; the same figure on its own is a second thing to keep in
+       * agreement for no gain.
+       */}
 
       <span className="of-status__rule" aria-hidden="true" />
 

@@ -186,3 +186,24 @@ test.describe('the comment tool', () => {
     await expect(page.locator(CANVAS)).toHaveCSS('cursor', 'auto')
   })
 })
+
+/**
+ * The zoom was in both bottom bars at once — the same number a few hundred
+ * pixels apart, one of them next to nothing that changes it.
+ */
+test('shows the zoom once, beside the control that changes it', async ({ page }) => {
+  await board(page)
+
+  await expect(page.getByTestId('zoom-percent')).toBeVisible()
+  await expect(page.getByTestId('zoom-percent')).toHaveText('100%')
+
+  // The status bar keeps what only it can say, and drops the repeat.
+  const status = page.getByTestId('status-bar')
+  await expect(status).toContainText('objects')
+  await expect(status).not.toContainText('100%')
+
+  // And the one that is left is still live.
+  await page.getByTestId('zoom-in').click()
+  await expect(page.getByTestId('zoom-percent')).toHaveText('200%')
+  await expect(status).not.toContainText('200%')
+})

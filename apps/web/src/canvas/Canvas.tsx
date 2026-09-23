@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, type CSSProperties } from 'react'
 
 import { useInteractionStore } from '../interaction/interaction-store.js'
 import { cursorFor } from '../interaction/tool-cursor.js'
+import { useCursorInk } from '../hooks/use-cursor-ink.js'
 import { useKeyboardShortcuts } from '../interaction/use-keyboard-shortcuts.js'
 import { gridStyle } from '../scene/grid.js'
 import { AlignmentOverlay } from './AlignmentOverlay.js'
@@ -56,6 +57,7 @@ export function Canvas() {
   const setCanvasSize = useInteractionStore((state) => state.setCanvasSize)
   const viewport = useInteractionStore((state) => state.viewport)
   const tool = useInteractionStore((state) => state.tool)
+  const shapeKind = useInteractionStore((state) => state.shapeKind)
   const gestures = useCanvasGestures(containerRef)
   // Promotes the world layer only while it is actually moving — see use-moving.
   const moving = useMoving()
@@ -74,9 +76,16 @@ export function Canvas() {
     setCanvasSize(width, height)
   }, [setCanvasSize, width, height])
 
-  // Built once per tool rather than per render: it is a string of a kilobyte
-  // and this component re-renders on every pointer move.
-  const toolCursor = useMemo(() => cursorFor(tool), [tool])
+  /*
+   * Built once per tool, variant and theme rather than per render: it is a
+   * string of a kilobyte and this component re-renders on every pointer move.
+   *
+   * The SHAPE variant is in the key because the rail's icon follows it and so
+   * should the pointer — a cursor showing a rectangle while the rail shows a
+   * diamond is the interface disagreeing with itself.
+   */
+  const ink = useCursorInk()
+  const toolCursor = useMemo(() => cursorFor(tool, shapeKind, ink), [tool, shapeKind, ink])
 
   return (
     <div
