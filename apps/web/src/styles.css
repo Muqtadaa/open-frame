@@ -1169,9 +1169,23 @@ body {
  * screen at every zoom and can be clamped to the window. Click-through except
  * where a surface actually paints, like every other overlay here.
  */
+/*
+ * FIXED, not absolute.
+ *
+ * `placeAnchored` works in the coordinates `getBoundingClientRect` returns,
+ * which are the viewport's. Inside the board that made no difference — the app
+ * shell is exactly one viewport and does not scroll — but the front door does
+ * scroll, and an absolute layer there is as tall as the document, so a surface
+ * placed at a viewport y lands that far down the PAGE instead.
+ *
+ * Above the comment panel, below the board-is-gone notice: apparatus sits over
+ * the interface it belongs to, and nothing sits over being told the board no
+ * longer exists.
+ */
 .of-chrome-layer {
-  position: absolute;
+  position: fixed;
   inset: 0;
+  z-index: 60;
   pointer-events: none;
 }
 
@@ -1602,11 +1616,17 @@ body {
   border-radius: 999px;
 }
 
+/*
+ * Placement is NOT here any more.
+ *
+ * `top: calc(100% + 6px)` opens downward, which was right under a header on
+ * the front door and put the whole list under the bottom of the window once
+ * the same bell appeared in the status bar. No single direction can be right
+ * for both, which is the tell that a direction was the wrong thing to write
+ * down — `AnchoredSurface` picks one and clamps it. What is left here is what
+ * the list LOOKS like.
+ */
 .of-mentions__list {
-  position: absolute;
-  top: calc(100% + 6px);
-  right: 0;
-  z-index: 30;
   width: 280px;
   max-height: 320px;
   padding: 4px;
@@ -2497,9 +2517,22 @@ body {
   cursor: grab;
 }
 
+/*
+ * Every tool you AIM before you press. `select` is not one of them — it acts
+ * on what is already there — and `pan` has its own hand above.
+ *
+ * Frame, table and code were missing from this list for the same reason
+ * comment was: the rule was written when there were three tools and never
+ * revisited as tools were added. The test below now reads the rail and fails
+ * when a tool arrives without one.
+ */
 .of-canvas--sticky,
 .of-canvas--text,
-.of-canvas--shape {
+.of-canvas--shape,
+.of-canvas--frame,
+.of-canvas--table,
+.of-canvas--code,
+.of-canvas--comment {
   cursor: crosshair;
 }
 
@@ -2586,6 +2619,29 @@ body {
   z-index: 1;
   /* Selected and draggable, so the cursor says what the next press does. */
   cursor: move;
+}
+
+/*
+ * COMMENT MODE overrides every object's own cursor, and has to.
+ *
+ * The canvas paints a tool's cursor on itself, which works for every tool that
+ * only ever acts on empty board. Commenting is the one you aim AT something —
+ * and an object answers for its own cursor (`default` at rest, `move` when
+ * selected), so the mode that is about objects was the one mode where the
+ * cursor was wrong over everything worth using it on.
+ *
+ * Written as descendants of the mode rather than as a rule on the object,
+ * because the object does not know what mode the board is in and should not
+ * have to. Specificity does the rest: two classes beat one.
+ *
+ * An open editor keeps its caret, which is still the truth — a comment mode
+ * does not stop the text you are already inside from being text.
+ */
+.of-canvas--comment .of-object,
+.of-canvas--comment .of-object--selected,
+.of-canvas--comment .of-object--locked,
+.of-canvas--comment .of-object--locked.of-object--selected {
+  cursor: crosshair;
 }
 
 .of-selection {

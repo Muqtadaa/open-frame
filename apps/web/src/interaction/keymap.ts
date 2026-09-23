@@ -61,6 +61,9 @@ const TOOL_KEYS: Readonly<Record<string, Tool>> = {
   // one already bound, which is the only reason these two are what they are.
   g: 'table',
   k: 'code',
+  // C was already the connector, so commenting takes M — which is also what
+  // Figma binds it to.
+  m: 'comment',
 }
 
 const NUDGE_KEYS: Readonly<Record<string, { dx: number; dy: number }>> = {

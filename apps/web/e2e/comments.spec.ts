@@ -482,3 +482,76 @@ test('carries the bell onto the board, not just the front door', async ({ page }
   // A preview is a place a token would show through just as badly.
   await expect(item).not.toContainText('](')
 })
+
+/**
+ * The bell's list, placed rather than pointed.
+ *
+ * Reported from a screenshot: the status bar sits on the bottom edge, the list
+ * opened downward from it, and all but the first row was below the window
+ * where nothing could reach it. The assertion is deliberately about the
+ * RECTANGLE rather than about which side was chosen — "opens upward" would
+ * pass on the front door with the bug still present, and the thing that was
+ * actually wrong is that part of it was off the screen.
+ */
+test('keeps the mentions list on screen when the bell is on the bottom edge', async ({ page }) => {
+  await signedIn(page, [{ id: BOARD, title: 'Shared', role: 'owner' }], 'Muqtadaa Miandara', {
+    mentions: Array.from({ length: 5 }, (_, index) => ({
+      commentId: `cmt_${String(index)}`,
+      boardId: BOARD,
+      boardTitle: 'Another board',
+      authorName: 'Rowan',
+      body: 'have a look at this when you get a chance',
+    })),
+  })
+  await openBoard(page)
+
+  const bell = page.getByTestId('mentions-button')
+  await expect(bell).toHaveText(/5 mentions/)
+  await bell.click()
+
+  const list = page.getByTestId('mentions-list')
+  await expect(list).toBeVisible()
+
+  const box = await list.boundingBox()
+  const window = page.viewportSize()
+  expect(box).not.toBeNull()
+  expect(window).not.toBeNull()
+  if (box === null || window === null) return
+
+  expect(box.y, 'ran off the top').toBeGreaterThanOrEqual(0)
+  expect(box.x, 'ran off the left').toBeGreaterThanOrEqual(0)
+  expect(box.y + box.height, 'ran off the bottom').toBeLessThanOrEqual(window.height)
+  expect(box.x + box.width, 'ran off the right').toBeLessThanOrEqual(window.width)
+
+  // And every row is reachable, not just the rectangle being nominally inside.
+  await expect(page.getByTestId('mention-cmt_4')).toBeVisible()
+})
+
+/** The same list, from the front door, where it has room to open downward. */
+test('still opens the mentions list on the front door', async ({ page }) => {
+  await signedIn(page, [{ id: BOARD, title: 'Shared', role: 'owner' }], 'Muqtadaa Miandara', {
+    mentions: [
+      {
+        commentId: 'cmt_home',
+        boardId: BOARD,
+        boardTitle: 'Shared',
+        authorName: 'Rowan',
+        body: 'what do you think of this?',
+      },
+    ],
+  })
+  await page.goto(HOME_URL)
+
+  await page.getByTestId('mentions-button').click()
+
+  // The front door is a separate render root, so it needed its own chrome
+  // layer — without one the surface portals into nothing and shows nothing.
+  await expect(page.getByTestId('mentions-list')).toBeVisible()
+  await expect(page.getByTestId('mention-cmt_home')).toContainText('what do you think')
+
+  const box = await page.getByTestId('mentions-list').boundingBox()
+  const window = page.viewportSize()
+  if (box === null || window === null) return
+  expect(box.y).toBeGreaterThanOrEqual(0)
+  expect(box.y + box.height).toBeLessThanOrEqual(window.height)
+})

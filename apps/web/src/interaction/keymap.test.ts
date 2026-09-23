@@ -1,3 +1,6 @@
+import { readFileSync } from 'node:fs'
+import { resolve } from 'node:path'
+
 import { describe, expect, it } from 'vitest'
 
 import { resolveKeyAction, type KeyContext } from './keymap.js'
@@ -147,5 +150,68 @@ describe('grouping', () => {
 
   it('leaves a bare g alone rather than grouping without a modifier', () => {
     expect(resolveKeyAction(key('g'))).not.toEqual({ kind: 'group' })
+  })
+})
+
+/**
+ * The rail and the keymap are two claims about the same thing.
+ *
+ * Every tool button carries `title={`${label} (${shortcut})`}`, so the rail
+ * TELLS people which key selects it — and nothing made that true. The comment
+ * tool advertised M from the day it was added and M was never bound, which is
+ * the worst version of this: a shortcut that is documented in the interface,
+ * in front of the user, and does nothing when pressed.
+ *
+ * Read off the source rather than duplicated here, because a copy of the table
+ * is a third claim and would drift from both.
+ */
+describe('the rail does not promise a shortcut the keymap does not bind', () => {
+  const TOOLBAR = readFileSync(resolve(process.cwd(), 'src/ui/Toolbar.tsx'), 'utf8')
+
+  const advertised = [...TOOLBAR.matchAll(/\{\s*id:\s*'([a-z]+)',[^}]*shortcut:\s*'([^']+)'/g)].map(
+    ([, id, shortcut]) => ({ id: id ?? '', shortcut: shortcut ?? '' }),
+  )
+
+  it('finds the rail to read in the first place', () => {
+    // A regex that quietly matches nothing would pass every case below.
+    expect(advertised.length).toBeGreaterThanOrEqual(10)
+  })
+
+  it.each(advertised)('$shortcut selects $id, as the button says it does', ({ id, shortcut }) => {
+    const action = resolveKeyAction(key(shortcut.toLowerCase()))
+    /*
+     * Shape is reached by `cycle-shape`, which selects the tool AND steps its
+     * variant — pressed once from another tool it is a selection, which is
+     * why it counts here rather than being excused.
+     */
+    expect(action).toEqual(id === 'shape' ? { kind: 'cycle-shape' } : { kind: 'tool', tool: id })
+  })
+})
+
+/**
+ * And every tool you aim before pressing says so with a cursor.
+ *
+ * The canvas is `of-canvas of-canvas--${tool}`, so the class is always there;
+ * what was missing for comment, frame, table and code was any rule to match
+ * it. An aiming tool with no cursor looks exactly like a tool that did not
+ * activate.
+ */
+describe('every placing tool paints a cursor', () => {
+  const CSS = readFileSync(resolve(process.cwd(), 'src/styles.css'), 'utf8')
+  const TOOLBAR = readFileSync(resolve(process.cwd(), 'src/ui/Toolbar.tsx'), 'utf8')
+  const ids = [...TOOLBAR.matchAll(/\{\s*id:\s*'([a-z]+)',\s*label:/g)].map(([, id]) => id)
+
+  // `select` acts on what is already on the board rather than aiming at empty
+  // space, so the ordinary arrow is the honest cursor for it.
+  const aiming = ids.filter((id) => id !== 'select')
+
+  it.each(aiming)('%s', (id) => {
+    /*
+     * The tool's OWN rule: the class followed by a comma or a brace. Allowing
+     * whitespace after it also matched `.of-canvas--comment .of-object`, which
+     * is the override that makes the cursor survive an object — so deleting
+     * the cursor itself left this passing. Found by deleting it.
+     */
+    expect(CSS).toMatch(new RegExp(`\\.of-canvas--${id}\\s*[,{]`))
   })
 })

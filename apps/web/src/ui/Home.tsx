@@ -369,6 +369,17 @@ export function Home({ repository }: { readonly repository: BoardRepository }) {
           )}
         </div>
       </div>
+
+      {/*
+        * The front door's chrome layer.
+        *
+        * The board's lives in `Canvas.tsx`, and the two screens are separate
+        * render roots with no component in common — so a surface opened from
+        * here had nothing to portal into and rendered nothing at all. One per
+        * screen, never two at once, which is what makes the layer's
+        * `querySelector` unambiguous.
+        */}
+      <div className="of-chrome-layer" data-chrome-layer />
     </main>
   )
 }

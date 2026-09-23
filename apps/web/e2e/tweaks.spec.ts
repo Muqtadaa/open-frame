@@ -103,3 +103,46 @@ test.describe('a locked object', () => {
     await expect(page.getByTestId('selection-lock')).toBeVisible()
   })
 })
+
+/**
+ * Commenting is the one tool you aim AT something.
+ *
+ * Every other placing tool only ever acts on empty board, so painting the
+ * cursor on the canvas was enough for them. An object answers for its own
+ * cursor — `default` at rest, `move` when selected — so the mode that is
+ * entirely about objects was the one mode where the cursor was wrong over
+ * everything worth using it on. The canvas half of this passed on its own;
+ * the object half is the half that was broken.
+ */
+test.describe('the comment tool', () => {
+  test('is reached by the key the button says it is', async ({ page }) => {
+    await board(page)
+    await page.keyboard.press('m')
+    await expect(page.getByTestId('tool-comment')).toHaveAttribute('aria-pressed', 'true')
+  })
+
+  test('shows its cursor over an object, not only over empty board', async ({ page }) => {
+    await board(page)
+    await note(page, { x: 500, y: 300 }, 'about this')
+
+    const object = page.locator('[data-object-id]').first()
+    await expect(object).toHaveCSS('cursor', 'default')
+
+    await page.keyboard.press('m')
+    await expect(page.locator(CANVAS)).toHaveCSS('cursor', 'crosshair')
+    await expect(object).toHaveCSS('cursor', 'crosshair')
+  })
+
+  test('keeps the comment cursor over something already selected', async ({ page }) => {
+    await board(page)
+    await note(page, { x: 500, y: 300 }, 'about this')
+
+    const object = page.locator('[data-object-id]').first()
+    await object.click()
+    await expect(object).toHaveCSS('cursor', 'move')
+
+    // `move` is a stronger claim than `default` and beat the canvas too.
+    await page.keyboard.press('m')
+    await expect(object).toHaveCSS('cursor', 'crosshair')
+  })
+})

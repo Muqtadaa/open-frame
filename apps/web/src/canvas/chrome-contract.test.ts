@@ -32,6 +32,14 @@ const FLOATERS = [
   // through it is going through the surface — anchored to a board rectangle
   // rather than a screen one.
   { name: 'Toolbar', source: read('src/ui/Toolbar.tsx'), through: 'AnchoredSurface' },
+  /*
+   * The mentions bell. It opened downward with `top: calc(100% + 6px)`, which
+   * was correct under the front door's header and put the whole list below the
+   * bottom of the window the moment the same bell appeared in the status bar.
+   * No one direction is right in both places — which is the tell that writing
+   * a direction down was the mistake, not which direction was written.
+   */
+  { name: 'Mentions', source: read('src/ui/Mentions.tsx'), through: 'AnchoredSurface' },
   { name: 'ArrangeBar', source: read('src/canvas/ArrangeBar.tsx'), through: 'ChromeSurface' },
   /*
    * The crop overlay's RESET button. It was an ordinary button in world space
