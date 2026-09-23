@@ -1,6 +1,7 @@
-import { useEffect, useRef } from 'react'
+import { useEffect, useMemo, useRef, type CSSProperties } from 'react'
 
 import { useInteractionStore } from '../interaction/interaction-store.js'
+import { cursorFor } from '../interaction/tool-cursor.js'
 import { useKeyboardShortcuts } from '../interaction/use-keyboard-shortcuts.js'
 import { gridStyle } from '../scene/grid.js'
 import { AlignmentOverlay } from './AlignmentOverlay.js'
@@ -73,11 +74,30 @@ export function Canvas() {
     setCanvasSize(width, height)
   }, [setCanvasSize, width, height])
 
+  // Built once per tool rather than per render: it is a string of a kilobyte
+  // and this component re-renders on every pointer move.
+  const toolCursor = useMemo(() => cursorFor(tool), [tool])
+
   return (
     <div
       ref={containerRef}
-      className={`of-canvas of-canvas--${tool}`}
-      style={gridStyle(viewport)}
+      /*
+       * `--aiming` is "a tool is armed", which is one question; WHICH tool is
+       * a custom property rather than a class, because the answer is an image
+       * and a stylesheet cannot hold ten of those without holding the icons
+       * twice.
+       */
+      className={`of-canvas of-canvas--${tool}${toolCursor === null ? '' : ' of-canvas--aiming'}`}
+      style={
+        toolCursor === null
+          ? gridStyle(viewport)
+          : /*
+             * A custom property is not in React's `CSSProperties`, which only
+             * knows the named ones. The cast is the narrowest way to say
+             * "this is a CSS variable" without loosening the whole object.
+             */
+            ({ ...gridStyle(viewport), '--of-tool-cursor': toolCursor } as CSSProperties)
+      }
       data-testid="canvas"
       role="application"
       aria-label="OpenFrame board canvas"

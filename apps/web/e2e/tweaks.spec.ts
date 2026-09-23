@@ -129,8 +129,9 @@ test.describe('the comment tool', () => {
     await expect(object).toHaveCSS('cursor', 'default')
 
     await page.keyboard.press('m')
-    await expect(page.locator(CANVAS)).toHaveCSS('cursor', 'crosshair')
-    await expect(object).toHaveCSS('cursor', 'crosshair')
+    const armed = await page.locator(CANVAS).evaluate((el) => getComputedStyle(el).cursor)
+    expect(armed, 'the canvas is not showing a tool cursor').toContain('data:image/svg+xml')
+    await expect(object).toHaveCSS('cursor', armed)
   })
 
   test('keeps the comment cursor over something already selected', async ({ page }) => {
@@ -143,6 +144,45 @@ test.describe('the comment tool', () => {
 
     // `move` is a stronger claim than `default` and beat the canvas too.
     await page.keyboard.press('m')
-    await expect(object).toHaveCSS('cursor', 'crosshair')
+    const armed = await page.locator(CANVAS).evaluate((el) => getComputedStyle(el).cursor)
+    await expect(object).toHaveCSS('cursor', armed)
+  })
+
+  /**
+   * The point of a tool cursor, and the thing `crosshair` could never say.
+   *
+   * Every placing tool painted the same plus sign, so the pointer answered
+   * "you are about to put something down" and never which thing — and the
+   * rail is at the edge of the screen while the pointer is where you are
+   * looking.
+   */
+  test('says WHICH tool is armed, not merely that one is', async ({ page }) => {
+    await board(page)
+    const cursor = async (): Promise<string> =>
+      await page.locator(CANVAS).evaluate((el) => getComputedStyle(el).cursor)
+
+    await page.keyboard.press('m')
+    const comment = await cursor()
+    await page.keyboard.press('s')
+    const sticky = await cursor()
+    await page.keyboard.press('g')
+    const table = await cursor()
+
+    for (const [name, value] of [
+      ['comment', comment],
+      ['sticky', sticky],
+      ['table', table],
+    ] as const) {
+      expect(value, `${name} has no mark of its own`).toContain('data:image/svg+xml')
+      // The keyword after the image: a data URI cursor is refused outright on
+      // some platforms, and a declaration with no fallback is dropped whole.
+      expect(value).toMatch(/,\s*crosshair$/)
+    }
+
+    expect(new Set([comment, sticky, table]).size, 'two tools share a cursor').toBe(3)
+
+    // And select goes back to the arrow, because it aims at nothing.
+    await page.keyboard.press('v')
+    await expect(page.locator(CANVAS)).toHaveCSS('cursor', 'auto')
   })
 })

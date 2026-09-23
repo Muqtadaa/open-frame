@@ -5,6 +5,8 @@ import { accessKey, shareLink } from '../app/collab-config.js'
 import { useDiscussion } from '../app/comments-context.js'
 import {
   activeMentionQuery,
+  allThreads,
+  openThreads,
   insertMention,
   mentionsIn,
   peopleMatching,
@@ -83,6 +85,14 @@ export function CommentPanel() {
    * a stale entry here simply finds no name to replace.
    */
   const [picked, setPicked] = useState<readonly BoardPerson[]>([])
+  /*
+   * Resolving used to be indistinguishable from deleting: the pin came off
+   * the board and the entry left the list, and there was nowhere left to read
+   * what had been agreed. Off by default all the same — the reason a finished
+   * discussion stops being shown is that a board which keeps every one of
+   * them accumulates until nobody reads any.
+   */
+  const [showResolved, setShowResolved] = useState(false)
   /*
    * A mention that has just been chosen is SETTLED, and the menu shuts.
    *
@@ -179,9 +189,9 @@ export function CommentPanel() {
     setCommentsOpen(false)
   }
 
-  const threads = comments.filter(
-    (comment) => comment.parentId === null && comment.resolvedAt === null,
-  )
+  const live = openThreads(comments)
+  const threads = showResolved ? allThreads(comments) : live
+  const resolvedCount = allThreads(comments).length - live.length
 
   /**
    * Writes the comment, or the reply, and says so if it could not be written.
@@ -283,15 +293,22 @@ export function CommentPanel() {
         <div className="of-comment-panel__list" data-testid="comment-list">
           {threads.length === 0 ? (
             <p className="of-comment-panel__hint" data-testid="comment-list-empty">
-              Nothing has been said on this board yet. Click anywhere to start.
+              {resolvedCount === 0
+                ? 'Nothing has been said on this board yet. Click anywhere to start.'
+                : 'Everything here has been resolved.'}
             </p>
           ) : (
             threads.map((open) => (
               <button
                 key={open.id}
                 type="button"
-                className="of-comment-panel__entry"
+                className={
+                  open.resolvedAt === null
+                    ? 'of-comment-panel__entry'
+                    : 'of-comment-panel__entry is-resolved'
+                }
                 data-testid={`comment-entry-${open.id}`}
+                data-resolved={open.resolvedAt === null ? 'false' : 'true'}
                 onClick={() => {
                   openThread(open.id)
                 }}
@@ -302,6 +319,27 @@ export function CommentPanel() {
                 </span>
               </button>
             ))
+          )}
+
+          {/*
+            * Offered only when there IS one. A control that reveals nothing
+            * is a control people press once and learn to distrust, and the
+            * count is what makes pressing it worth it.
+            */}
+          {resolvedCount > 0 && (
+            <button
+              type="button"
+              className="of-button of-button--ghost of-comment-panel__resolved-toggle"
+              aria-pressed={showResolved}
+              data-testid="comment-show-resolved"
+              onClick={() => {
+                setShowResolved((was) => !was)
+              }}
+            >
+              {showResolved
+                ? 'Hide resolved'
+                : `Show ${String(resolvedCount)} resolved`}
+            </button>
           )}
         </div>
       )}

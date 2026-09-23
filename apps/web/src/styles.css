@@ -1920,6 +1920,22 @@ body {
   border-radius: var(--of-radius);
 }
 
+/*
+ * A finished discussion, still readable.
+ *
+ * Quietened rather than struck through: it was agreed, not withdrawn, and the
+ * point of keeping it is that somebody can go back and read what was said.
+ */
+.of-comment-panel__entry.is-resolved .of-comment-panel__who,
+.of-comment-panel__entry.is-resolved .of-comment-panel__said {
+  color: var(--of-ink-muted);
+}
+
+.of-comment-panel__resolved-toggle {
+  align-self: start;
+  font-size: 11px;
+}
+
 .of-comment-panel__entry:hover {
   background: var(--of-hover);
 }
@@ -2538,22 +2554,29 @@ body {
 }
 
 /*
- * Every tool you AIM before you press. `select` is not one of them — it acts
- * on what is already there — and `pan` has its own hand above.
+ * Every tool you AIM before you press, carrying its OWN mark.
  *
- * Frame, table and code were missing from this list for the same reason
- * comment was: the rule was written when there were three tools and never
- * revisited as tools were added. The test below now reads the rail and fails
- * when a tool arrives without one.
+ * This was a list of tools all set to `crosshair`, which answered "you are
+ * about to put something down" and never which thing — the same plus sign
+ * whether you reached for a sticky note, a table or a remark. The image comes
+ * from `tool-cursor.ts` through a custom property, because a stylesheet
+ * cannot hold ten of them without holding every icon twice.
+ *
+ * The keyword after the `var()` is not decoration: a data URI cursor is
+ * refused outright on some platforms, and a declaration with nothing to fall
+ * back to is dropped whole, leaving the ordinary arrow.
+ *
+ * The descendants are the half that matters. An object answers for its own
+ * cursor — `default` at rest, `move` when selected — so without these the
+ * pointer is right over empty board and wrong over everything you would
+ * actually aim at. Two classes beat one, which is what settles it.
  */
-.of-canvas--sticky,
-.of-canvas--text,
-.of-canvas--shape,
-.of-canvas--frame,
-.of-canvas--table,
-.of-canvas--code,
-.of-canvas--comment {
-  cursor: crosshair;
+.of-canvas--aiming,
+.of-canvas--aiming .of-object,
+.of-canvas--aiming .of-object--selected,
+.of-canvas--aiming .of-object--locked,
+.of-canvas--aiming .of-object--locked.of-object--selected {
+  cursor: var(--of-tool-cursor, crosshair);
 }
 
 /*
@@ -2641,28 +2664,6 @@ body {
   cursor: move;
 }
 
-/*
- * COMMENT MODE overrides every object's own cursor, and has to.
- *
- * The canvas paints a tool's cursor on itself, which works for every tool that
- * only ever acts on empty board. Commenting is the one you aim AT something —
- * and an object answers for its own cursor (`default` at rest, `move` when
- * selected), so the mode that is about objects was the one mode where the
- * cursor was wrong over everything worth using it on.
- *
- * Written as descendants of the mode rather than as a rule on the object,
- * because the object does not know what mode the board is in and should not
- * have to. Specificity does the rest: two classes beat one.
- *
- * An open editor keeps its caret, which is still the truth — a comment mode
- * does not stop the text you are already inside from being text.
- */
-.of-canvas--comment .of-object,
-.of-canvas--comment .of-object--selected,
-.of-canvas--comment .of-object--locked,
-.of-canvas--comment .of-object--locked.of-object--selected {
-  cursor: crosshair;
-}
 
 .of-selection {
   position: absolute;

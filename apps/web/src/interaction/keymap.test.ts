@@ -4,6 +4,8 @@ import { resolve } from 'node:path'
 import { describe, expect, it } from 'vitest'
 
 import { resolveKeyAction, type KeyContext } from './keymap.js'
+import { cursorFor } from './tool-cursor.js'
+import type { Tool } from './interaction-store.js'
 
 function key(k: string, mods: Partial<KeyContext> = {}): KeyContext {
   return { key: k, metaKey: false, ctrlKey: false, shiftKey: false, altKey: false, ...mods }
@@ -189,29 +191,53 @@ describe('the rail does not promise a shortcut the keymap does not bind', () => 
 })
 
 /**
- * And every tool you aim before pressing says so with a cursor.
+ * And every tool you aim before pressing says so with its OWN mark.
  *
- * The canvas is `of-canvas of-canvas--${tool}`, so the class is always there;
- * what was missing for comment, frame, table and code was any rule to match
- * it. An aiming tool with no cursor looks exactly like a tool that did not
- * activate.
+ * This used to check the stylesheet for a `.of-canvas--<tool>` rule, because
+ * the cursor was `crosshair` written out once per tool. That answered "you
+ * are about to put something down" and never which thing — the same plus sign
+ * for a sticky note, a table and a remark. The marks moved to
+ * `tool-cursor.ts`, and `Record<Tool, …>` makes a MISSING tool a compile
+ * error; what a type cannot catch is a tool added with `null`, which is a
+ * deliberate "no mark" and is right for exactly two of them.
  */
-describe('every placing tool paints a cursor', () => {
-  const CSS = readFileSync(resolve(process.cwd(), 'src/styles.css'), 'utf8')
+describe('every placing tool carries its own cursor', () => {
   const TOOLBAR = readFileSync(resolve(process.cwd(), 'src/ui/Toolbar.tsx'), 'utf8')
-  const ids = [...TOOLBAR.matchAll(/\{\s*id:\s*'([a-z]+)',\s*label:/g)].map(([, id]) => id)
+  const ids = [...TOOLBAR.matchAll(/\{\s*id:\s*'([a-z]+)',\s*label:/g)].map(([, id]) => id ?? '')
 
-  // `select` acts on what is already on the board rather than aiming at empty
-  // space, so the ordinary arrow is the honest cursor for it.
-  const aiming = ids.filter((id) => id !== 'select')
+  /*
+   * `select` acts on what is already on the board rather than aiming at empty
+   * space, and `pan` has a hand every user of every map already knows.
+   */
+  const aiming = ids.filter((id) => id !== 'select' && id !== 'pan')
+
+  it('finds the rail to read, so the cases below are not vacuous', () => {
+    expect(aiming.length).toBeGreaterThanOrEqual(8)
+  })
 
   it.each(aiming)('%s', (id) => {
+    const cursor = cursorFor(id as Tool)
+    expect(cursor, 'no mark, so this tool shows somebody else\'s pointer').not.toBeNull()
+    expect(cursor).toContain('data:image/svg+xml')
     /*
-     * The tool's OWN rule: the class followed by a comma or a brace. Allowing
-     * whitespace after it also matched `.of-canvas--comment .of-object`, which
-     * is the override that makes the cursor survive an object — so deleting
-     * the cursor itself left this passing. Found by deleting it.
+     * A KEYWORD after the image. A data URI cursor is refused outright on
+     * some platforms, and a declaration with nothing to fall back to is
+     * dropped whole — leaving the arrow, which says nothing about a tool
+     * being armed at all.
      */
-    expect(CSS).toMatch(new RegExp(`\\.of-canvas--${id}\\s*[,{]`))
+    expect(cursor).toMatch(/,\s*crosshair$/)
+  })
+
+  it('leaves the two that should keep the platform\'s own', () => {
+    expect(cursorFor('select')).toBeNull()
+    expect(cursorFor('pan')).toBeNull()
+  })
+
+  /** The halo. A single-coloured cursor vanishes into at least one board. */
+  it('draws each mark twice, so it reads on any ground', () => {
+    const cursor = cursorFor('comment') ?? ''
+    const decoded = decodeURIComponent(cursor)
+    expect(decoded).toContain('stroke="#ffffff"')
+    expect(decoded).toContain('stroke="#16202b"')
   })
 })

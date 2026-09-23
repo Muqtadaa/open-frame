@@ -849,3 +849,69 @@ test('falls back to the link when the discussion is not loaded yet', async ({ pa
   ).toBeUndefined()
   await expect.poll(() => account.read).toContain('cmt_unknown')
 })
+
+/**
+ * Resolving is not deleting.
+ *
+ * A resolved thread loses its pin — deliberately, because a board that keeps
+ * every finished discussion pinned accumulates them until nobody reads any —
+ * and it also left the panel's list, which left nowhere at all to read back
+ * what had been agreed.
+ */
+test('keeps a resolved thread findable, and lets it be reopened', async ({ page }) => {
+  await signedIn(page, [{ id: BOARD, title: 'Shared', role: 'owner' }])
+  await openBoard(page)
+
+  await page.getByRole('button', { name: /comment/i }).first().click()
+  await page.locator('[data-testid="canvas"]').click({ position: { x: 320, y: 260 } })
+  await page.getByTestId('comment-input').fill('are we agreed on this?')
+  await page.getByTestId('comment-post').click()
+
+  const pin = page.locator('[data-testid^="comment-pin-cmt_"]').first()
+  await expect(pin).toBeVisible()
+  const id = ((await pin.getAttribute('data-testid')) ?? '').replace('comment-pin-', '')
+
+  await pin.click()
+  await page.getByTestId('comment-resolve').click()
+
+  // Off the board, as before. That part was never the complaint.
+  await expect(page.locator('[data-testid^="comment-pin-cmt_"]')).toHaveCount(0)
+
+  await page.getByRole('button', { name: /comment/i }).first().click()
+  await expect(page.getByTestId('comment-list')).toBeVisible()
+  await expect(page.getByTestId(`comment-entry-${id}`)).toHaveCount(0)
+
+  // But reachable, and the control says how many are behind it.
+  const toggle = page.getByTestId('comment-show-resolved')
+  await expect(toggle).toHaveText('Show 1 resolved')
+  await toggle.click()
+
+  const entry = page.getByTestId(`comment-entry-${id}`)
+  await expect(entry).toBeVisible()
+  await expect(entry).toHaveAttribute('data-resolved', 'true')
+  await expect(entry).toContainText('are we agreed on this?')
+
+  // And opening one offers to reopen it, which is what finding it is for.
+  await entry.click()
+  await expect(page.getByTestId('comment-resolve')).toHaveText('Reopen')
+  await page.getByTestId('comment-resolve').click()
+  await expect(page.locator('[data-testid^="comment-pin-cmt_"]')).toHaveCount(1)
+})
+
+test('offers nothing to reveal when nothing has been resolved', async ({ page }) => {
+  await signedIn(page, [{ id: BOARD, title: 'Shared', role: 'owner' }])
+  await openBoard(page)
+
+  await page.getByRole('button', { name: /comment/i }).first().click()
+  await page.locator('[data-testid="canvas"]').click({ position: { x: 320, y: 260 } })
+  await page.getByTestId('comment-input').fill('still open')
+  await page.getByTestId('comment-post').click()
+
+  // Off the tool and back on, so the press below selects it rather than
+  // toggling off the one that is already active.
+  await page.keyboard.press('v')
+  await page.getByRole('button', { name: /comment/i }).first().click()
+  await expect(page.getByTestId('comment-list')).toBeVisible()
+  // A control that reveals nothing is one people press once and distrust.
+  await expect(page.getByTestId('comment-show-resolved')).toHaveCount(0)
+})
