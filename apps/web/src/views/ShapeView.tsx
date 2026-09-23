@@ -52,6 +52,21 @@ function ShapeOutline({ object }: { object: ObjectBase<string, ShapeData> }) {
       aria-hidden="true"
       focusable="false"
     >
+      {/*
+        * BOTH branches take the pattern and the round cap.
+        *
+        * Neither did. The path — which is every shape but the ellipse, so
+        * rectangle, diamond, triangle, hexagon and parallelogram — had no
+        * `strokeDasharray` at all, so setting a line style on five of the six
+        * variants did nothing whatsoever. The ellipse had the pattern but no
+        * cap, and `dotted` is a ZERO-LENGTH dash: under the default butt cap
+        * it draws nothing, so the one variant that read the setting went
+        * invisible instead.
+        *
+        * `shape` declares `dash` and the inspector offers it on that
+        * declaration alone, which is rule 21's warning about a capability no
+        * view honours — the same shape of bug as `sticky` claiming `fill`.
+        */}
       {path === null ? (
         <ellipse
           cx={width / 2}
@@ -61,6 +76,7 @@ function ShapeOutline({ object }: { object: ObjectBase<string, ShapeData> }) {
           fill={fill}
           stroke={stroke}
           strokeWidth={lineWidth}
+          strokeLinecap="round"
           strokeDasharray={dashArray(object.style.dash, lineWidth)}
         />
       ) : (
@@ -70,6 +86,8 @@ function ShapeOutline({ object }: { object: ObjectBase<string, ShapeData> }) {
           stroke={stroke}
           strokeWidth={lineWidth}
           strokeLinejoin="round"
+          strokeLinecap="round"
+          strokeDasharray={dashArray(object.style.dash, lineWidth)}
         />
       )}
     </svg>
