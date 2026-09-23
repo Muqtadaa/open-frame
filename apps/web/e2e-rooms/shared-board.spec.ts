@@ -248,7 +248,29 @@ test.describe('other people', () => {
 
     await bob.locator(NOTE).first().click()
 
-    await expect(alice.locator('.of-presence__outline')).toHaveCount(1, { timeout: 15_000 })
+    const outline = alice.locator('.of-presence__outline')
+    await expect(outline).toHaveCount(1, { timeout: 15_000 })
+
+    /*
+     * WHO, not merely that somebody. The name used to appear only once they
+     * started typing, so a selection was an unlabelled dashed rectangle in
+     * somebody's colour, and finding out whose meant matching that colour
+     * against the row of faces in the status bar.
+     *
+     * Read from the second browser's own identity rather than asserted as a
+     * literal: a guest is named after a randomly chosen creature, so the only
+     * honest way to check the right name appeared is to ask whose it is.
+     */
+    const whoIsBob = await bob.evaluate(() => {
+      const stored: unknown = JSON.parse(localStorage.getItem('openframe:guest') ?? 'null')
+      return typeof stored === 'object' && stored !== null && 'name' in stored
+        ? String(stored.name)
+        : ''
+    })
+    expect(whoIsBob, 'the second browser has no guest identity to show').not.toBe('')
+    await expect(outline).toContainText(whoIsBob)
+    // And it does not yet claim they are editing, which means something else.
+    await expect(outline).not.toContainText('is editing')
   })
 
   /**

@@ -93,7 +93,7 @@ function PresentPeers({ peers }: { readonly peers: readonly Peer[] }) {
             width: rect.width,
             height: rect.height,
             // Constant on screen, whatever the zoom.
-            borderWidth: 1.5 / zoom,
+            borderWidth: 2 / zoom,
             // Both, and they are not the same thing: `color` drives the border
             // through `currentcolor`, while the label needs a value that
             // survives setting its own `color`. See the note in styles.css.
@@ -101,11 +101,21 @@ function PresentPeers({ peers }: { readonly peers: readonly Peer[] }) {
             ['--of-presence-hue' as string]: hueVar(peer.hue),
           }}
         >
-          {editing && (
-            <span className="of-presence__tag" style={{ transform: `scale(${String(1 / zoom)})` }}>
-              {peer.name} is editing
-            </span>
-          )}
+          {/*
+            * WHO, always — not only once they start typing.
+            *
+            * A selection used to be an unlabelled dashed outline in somebody's
+            * colour, so you could see that an object was spoken for and had to
+            * match the colour against the row of faces in the status bar to
+            * find out whose. The colour is a hint; the name is the answer.
+            *
+            * The wording still separates the two states, because they mean
+            * different things: having something selected is a claim on your
+            * attention, and having it OPEN is a claim you cannot type into it.
+            */}
+          <span className="of-presence__tag" style={{ transform: `scale(${String(1 / zoom)})` }}>
+            {editing ? `${peer.name} is editing` : peer.name}
+          </span>
         </div>
       ))}
 

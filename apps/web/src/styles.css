@@ -2359,6 +2359,23 @@ body {
 }
 
 /*
+ * A wash of the holder's colour, faint enough to read through.
+ *
+ * The outline alone is a line at the edge of an object you may be looking at
+ * the middle of. This is what makes "somebody has this" survive a glance
+ * across a busy board — and it is kept very low, because an object somebody
+ * else has selected is still an object you need to be able to READ.
+ */
+.of-presence__outline::after {
+  position: absolute;
+  inset: 0;
+  content: '';
+  background: var(--of-presence-hue);
+  border-radius: inherit;
+  opacity: 0.08;
+}
+
+/*
  * Solid, not dashed, for an object somebody has OPEN. The difference has to
  * survive being glanced at: a dashed outline says "they have this selected",
  * and a solid one says "you cannot type in this".
