@@ -88,7 +88,9 @@ function shapeMark(kind: ShapeKind): Mark {
     path === null
       ? `<ellipse cx="${String(ELLIPSE.cx)}" cy="${String(ELLIPSE.cy)}" rx="${String(ELLIPSE.rx)}" ry="${String(ELLIPSE.ry)}"/>`
       : `<path d="${path}"/>`
-  return { body: `<g transform="scale(0.24)">${inner}</g>` }
+  // Onto the same ink box as every other mark: the geometry is a 0-100 grid
+  // and the marks are drawn in 3..21 of a 24 one.
+  return { body: `<g transform="translate(3 3) scale(0.18)">${inner}</g>` }
 }
 
 /**
@@ -103,15 +105,61 @@ function shapeMark(kind: ShapeKind): Mark {
  * ignored is the worst failure available here — it leaves the plain arrow,
  * which says nothing about a tool being armed at all.
  */
-const SIZE = 52
+const SIZE = 60
 
 /**
- * Where in that square the pointer actually points.
+ * The rim is stroked OUTSIDE the path it follows, half of it either side.
  *
- * The mark grew with the box: a crosshair sized for a 32px cursor is a speck
- * in a 52px one, and it is the part doing the aiming.
+ * Which is what cut the corner off the crosshair: its arms were drawn from
+ * zero, so the halo along the top and the left had nowhere to go and the
+ * browser clipped it flat. Every measurement below leaves this much clear of
+ * the edge.
  */
-const HOT = 5
+const RIM = 3.4
+
+/** How far the crosshair reaches from its centre, in each of four directions. */
+const ARM = 6
+
+/**
+ * Where in that square the pointer actually points, and the centre of the
+ * crosshair — the same number, which is the whole of what a hotspot means.
+ * Far enough in that the arm and its rim both fit.
+ */
+const HOT = 9
+
+/**
+ * The marks are drawn on a 24 grid with their ink inside this box.
+ *
+ * 22 rather than 21 because of the comment bubble's tail, which is the lowest
+ * point any mark reaches. It was declared as 21 and the fit below therefore
+ * understated the glyph by a whole unit — it passed, and the tail came out
+ * flush against the bottom edge with a third of a pixel to spare. A box that
+ * is not the real extent is a measurement that happens to be close enough.
+ */
+const INK_FROM = 3
+const INK_TO = 22
+
+/** Where the glyph starts, clear of the crosshair, and how big it is drawn. */
+const PLACE = 18
+const SCALE = 2
+
+/**
+ * The numbers, for the test that holds them to fitting.
+ *
+ * A cursor is clipped to its own box with no warning — the corner simply is
+ * not there — and nothing about a translate, a scale and half a stroke says
+ * whether they add up. This was got wrong twice: once by growing the glyph
+ * past the edge, and once by drawing the crosshair hard against it.
+ */
+export const CURSOR_GEOMETRY = {
+  size: SIZE,
+  rim: RIM,
+  arm: ARM,
+  hot: HOT,
+  place: PLACE,
+  scale: SCALE,
+  ink: INK_TO - INK_FROM,
+} as const
 
 export interface CursorInk {
   /** The glyph. */
@@ -137,41 +185,56 @@ export const DEFAULT_INK: CursorInk = { ink: '#16202b', halo: '#ffffff' }
  */
 function markup(mark: Mark, { ink, halo }: CursorInk): string {
   /*
-   * Heavier than a hairline, and as long as the gap it has to bridge. Beside
-   * a filled glyph a thin cross reads as a different cursor that happens to
-   * be nearby, rather than as the point of this one.
-   */
-  const crosshair = '<path d="M3.8 0h2.4v13H3.8zM0 3.8h13v2.4H0z"/>'
-  /*
-   * Close to the crosshair, not merely inside the box.
+   * SYMMETRIC about the hotspot, and heavier than a hairline.
    *
-   * The first pass set this by arithmetic and looked sparse: the glyph sat in
-   * the lower-right corner with a wide empty diagonal between it and the
-   * mark doing the aiming, so the cursor read as small even as the box grew.
-   * Scale is what makes the glyph legible; the translate is what stops the
-   * two halves looking like two cursors.
+   * It was neither. The arms ran from zero to thirteen with the hotspot at
+   * five, so it reached further down and right than up and left — and the rim
+   * on the two short sides was cut off by the edge of the image, which is
+   * what made it look broken rather than merely lopsided.
+   *
+   * Beside a filled glyph a thin cross also reads as a different cursor that
+   * happens to be nearby, rather than as the point of this one.
    */
-  const place = 'translate(10 10) scale(1.65)'
-  const glyph = `<g transform="${place}">${shapes(mark.body)}</g>`
+  const bar = 1.2
+  const crosshair =
+    `<path d="M${String(HOT - bar)} ${String(HOT - ARM)}h${String(bar * 2)}v${String(ARM * 2)}h-${String(bar * 2)}z` +
+    `M${String(HOT - ARM)} ${String(HOT - bar)}h${String(ARM * 2)}v${String(bar * 2)}h-${String(ARM * 2)}z"/>`
 
-  const detail =
-    mark.detail === undefined
-      ? ''
-      : `<g transform="${place}" fill="none" stroke="${halo}" stroke-width="1.5" stroke-linecap="round">` +
-        `<path d="${mark.detail}"/></g>`
+  /*
+   * Close to the crosshair, not merely inside the box. Set by arithmetic
+   * alone the glyph sat in the lower-right corner with a wide empty diagonal
+   * between it and the mark doing the aiming, and the cursor read as small
+   * even as the box grew. The inner translate takes the marks' own padding
+   * off, so the scale is spent on ink rather than on margin.
+   */
+  const place = `translate(${String(PLACE)} ${String(PLACE)}) scale(${String(SCALE)}) translate(-${String(INK_FROM)} -${String(INK_FROM)})`
+
+  /*
+   * A stroke inside a scaled group is scaled WITH it, so the glyph's rim came
+   * out twice the crosshair's and the two halves of one cursor were outlined
+   * differently. Every width below is divided back out, so what is written is
+   * what is rendered.
+   */
+  const rimmed = (transform: string | null, width: number, body: string): string =>
+    `<g${transform === null ? '' : ` transform="${transform}"`} fill="${halo}" stroke="${halo}" ` +
+    `stroke-width="${String(width)}" stroke-linejoin="round">${body}</g>`
+
+  const filled = (transform: string | null, body: string): string =>
+    `<g${transform === null ? '' : ` transform="${transform}"`} fill="${ink}">${body}</g>`
+
+  const glyph = shapes(mark.body)
 
   return [
     `<svg xmlns="http://www.w3.org/2000/svg" width="${String(SIZE)}" height="${String(SIZE)}" viewBox="0 0 ${String(SIZE)} ${String(SIZE)}">`,
-    // The rim: the same silhouette, stroked fat, under everything.
-    `<g fill="${halo}" stroke="${halo}" stroke-width="3.4" stroke-linejoin="round">`,
-    crosshair,
-    glyph,
-    '</g>',
-    `<g fill="${ink}">`,
-    crosshair,
-    glyph,
-    '</g>',
-    detail,
+    // Every rim first, so one half's halo never paints over the other's ink.
+    rimmed(null, RIM, crosshair),
+    rimmed(place, RIM / SCALE, glyph),
+    filled(null, crosshair),
+    filled(place, glyph),
+    mark.detail === undefined
+      ? ''
+      : `<g transform="${place}" fill="none" stroke="${halo}" stroke-width="${String(1.5 / SCALE)}" stroke-linecap="round">` +
+        `<path d="${mark.detail}"/></g>`,
     '</svg>',
   ].join('')
 }

@@ -7,7 +7,7 @@ import { resolveKeyAction, type KeyContext } from './keymap.js'
 import { SHAPE_KINDS } from '@openframe/core'
 
 import { shapePath } from '../scene/shape-geometry.js'
-import { cursorFor, DEFAULT_INK } from './tool-cursor.js'
+import { CURSOR_GEOMETRY, cursorFor, DEFAULT_INK } from './tool-cursor.js'
 import type { Tool } from './interaction-store.js'
 
 function key(k: string, mods: Partial<KeyContext> = {}): KeyContext {
@@ -273,31 +273,59 @@ describe('every placing tool carries its own cursor', () => {
   })
 
   /**
-   * The glyph has to FIT the box it is drawn in.
+   * The parts have to FIT the box they are drawn in, and not each other.
    *
    * A cursor is clipped to its own width and height with no warning — the
-   * corner simply is not there — and the numbers that decide it are a
-   * translate, a scale and half a rim stroke, none of which is obviously
-   * related to the others. Growing the cursor is exactly when this gets got
-   * wrong, so it is arithmetic rather than judgement.
+   * corner simply is not there — and nothing about a translate, a scale and
+   * half a stroke says whether they add up. Both halves have already been got
+   * wrong: the glyph once ran past the right edge, and the crosshair was
+   * drawn hard against the top-left, where the rim it is outlined with had
+   * nowhere to go and came out cut flat.
+   *
+   * Arithmetic on the numbers themselves rather than judgement about them,
+   * because growing the cursor is exactly when this gets got wrong.
    */
-  it.each(['comment', 'table', 'frame', 'code', 'sticky', 'text'] as const)(
-    '%s stays inside the cursor box',
-    (tool) => {
-      const svg = decodeURIComponent(cursorFor(tool) ?? '')
-      const box = /width="(\d+(?:\.\d+)?)"/.exec(svg)
-      const place = /translate\((\d+(?:\.\d+)?) \d+(?:\.\d+)?\) scale\((\d+(?:\.\d+)?)\)/.exec(svg)
-      const rim = /stroke-width="(\d+(?:\.\d+)?)"/.exec(svg)
-      expect(box, 'no width on the svg').not.toBeNull()
-      expect(place, 'no glyph transform').not.toBeNull()
-      expect(rim, 'no rim stroke').not.toBeNull()
-      if (box === null || place === null || rim === null) return
+  describe('the cursor fits together', () => {
+    const { size, rim, arm, hot, place, scale, ink } = CURSOR_GEOMETRY
 
-      // The marks are drawn on a 24 grid; the rim straddles the edge.
-      const far = Number(place[1]) + 24 * Number(place[2]) + Number(rim[1]) / 2
-      expect(far, 'the glyph runs out of the cursor').toBeLessThanOrEqual(Number(box[1]))
-    },
-  )
+    it('leaves room for the rim around the crosshair', () => {
+      // The rim is stroked outside the path, half either side.
+      expect(hot - arm - rim / 2, 'the crosshair is cut off at the top left').toBeGreaterThanOrEqual(0)
+    })
+
+    it('points where the crosshair crosses', () => {
+      // A hotspot anywhere else is a cursor that aims at a different pixel
+      // from the one it draws a cross on.
+      const svg = decodeURIComponent(cursorFor('comment') ?? '')
+      const spot = /"\)\s(\d+(?:\.\d+)?)\s(\d+(?:\.\d+)?),/.exec(cursorFor('comment') ?? '')
+      expect(spot?.[1]).toBe(String(hot))
+      expect(spot?.[2]).toBe(String(hot))
+      // Drawn symmetrically about that point, rather than reaching further
+      // one way than the other.
+      expect(svg).toContain(`M${String(hot - arm)} `)
+    })
+
+    it('keeps the glyph inside the box', () => {
+      expect(place + ink * scale + rim / 2, 'the glyph runs out of the cursor').toBeLessThanOrEqual(size)
+    })
+
+    it('keeps the glyph off the crosshair', () => {
+      // Two marks that touch read as one shape rather than as a tool held
+      // beside a point.
+      expect(place - rim / 2, 'the glyph overlaps the crosshair').toBeGreaterThanOrEqual(hot + arm)
+    })
+
+    /**
+     * A stroke inside a scaled group is scaled with it, so the same written
+     * width came out twice as fat on the glyph as on the crosshair — one
+     * cursor outlined two ways.
+     */
+    it('rims both halves at the same weight', () => {
+      const svg = decodeURIComponent(cursorFor('comment') ?? '')
+      expect(svg).toContain(`stroke-width="${String(rim)}"`)
+      expect(svg).toContain(`stroke-width="${String(rim / scale)}"`)
+    })
+  })
 
   /** And the geometry is the object's own, so a new kind arrives with one. */
   it('draws the variant from the same geometry the object is drawn from', () => {
