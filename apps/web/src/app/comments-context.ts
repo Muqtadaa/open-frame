@@ -1,5 +1,7 @@
 import { createContext, useContext } from 'react'
 
+import type { BoardId } from '@openframe/core'
+
 import type { BoardComment, BoardPerson, NewComment } from './discussion.js'
 
 /**
@@ -15,23 +17,41 @@ import type { BoardComment, BoardPerson, NewComment } from './discussion.js'
  * when somebody says something.
  */
 export interface Discussion {
+  /**
+   * Which board this is, or `null` where there is no board at all.
+   *
+   * Carried here so the notification bell can tell a mention on THIS board
+   * from one somewhere else without reaching for the runtime — which throws
+   * outside its provider, and the bell also renders on the front door.
+   */
+  readonly boardId: BoardId | null
   readonly comments: readonly BoardComment[]
   readonly people: readonly BoardPerson[]
   readonly replyCounts: ReadonlyMap<string, number>
   readonly refresh: () => void
   readonly post: (comment: NewComment) => Promise<boolean>
   readonly resolve: (id: string, resolved: boolean) => Promise<boolean>
+  /**
+   * Opens a remark's thread and puts its pin in the middle of the board.
+   *
+   * `false` when there is no such comment here. Returned rather than thrown:
+   * a notification for a remark that has since gone is an ordinary thing, and
+   * the caller decides what to do about it.
+   */
+  readonly focusComment: (commentId: string) => boolean
   /** False for a board that is nobody else's, or for somebody not signed in. */
   readonly enabled: boolean
 }
 
 const NOTHING: Discussion = {
+  boardId: null,
   comments: [],
   people: [],
   replyCounts: new Map(),
   refresh: () => undefined,
   post: () => Promise.resolve(false),
   resolve: () => Promise.resolve(false),
+  focusComment: () => false,
   enabled: false,
 }
 

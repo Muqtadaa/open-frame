@@ -16,6 +16,7 @@ import {
   nextZoomIn,
   nextZoomOut,
   sliderToZoom,
+  centreOn,
   viewportForBounds,
   ZOOM_STEPS,
   zoomAtCentre,
@@ -202,5 +203,51 @@ describe('revealing an object without reframing the board', () => {
   it('does not move an axis that was already fine', () => {
     const moved = panToReveal(view, { x: 100, y: -200, width: 100, height: 100 }, 1000, 800)
     expect(moved.x).toBe(view.x)
+  })
+})
+
+/**
+ * Arriving somewhere, as opposed to revealing something.
+ *
+ * `panToReveal` moves as little as possible, which is right for something the
+ * user did here and wrong for somebody following a link that says "look at
+ * this": the minimum pan leaves the target at the very edge of the screen,
+ * and a target already in view does not move at all — which reads as the link
+ * not having worked. A notification needs the remark in the middle, with the
+ * board around it for context.
+ */
+describe('centreOn', () => {
+  const viewport = { x: 0, y: 0, zoom: 1 }
+
+  it('puts the point in the middle of the window', () => {
+    const next = centreOn(viewport, { x: 1000, y: 800 }, 800, 600)
+    // Screen position of the point is (world - viewport) * zoom.
+    expect((1000 - next.x) * next.zoom).toBeCloseTo(400, 5)
+    expect((800 - next.y) * next.zoom).toBeCloseTo(300, 5)
+  })
+
+  it('never touches the zoom, at any zoom', () => {
+    for (const zoom of [0.25, 1, 2.5]) {
+      expect(centreOn({ x: 0, y: 0, zoom }, { x: 10, y: 10 }, 800, 600).zoom).toBe(zoom)
+    }
+  })
+
+  it('centres in world units, so the same point lands centre at any zoom', () => {
+    for (const zoom of [0.5, 1, 4]) {
+      const next = centreOn({ x: 0, y: 0, zoom }, { x: 300, y: 200 }, 800, 600)
+      expect((300 - next.x) * zoom).toBeCloseTo(400, 5)
+      expect((200 - next.y) * zoom).toBeCloseTo(300, 5)
+    }
+  })
+
+  /** Room for the panel that is about to open over the right-hand side. */
+  it('centres in what is left when a panel takes the right', () => {
+    const next = centreOn(viewport, { x: 1000, y: 800 }, 800, 600, 324)
+    expect((1000 - next.x) * next.zoom).toBeCloseTo((800 - 324) / 2, 5)
+  })
+
+  it('moves a point that was already in view, unlike revealing one', () => {
+    const already = { x: 100, y: 100 }
+    expect(centreOn(viewport, already, 800, 600)).not.toEqual(viewport)
   })
 })

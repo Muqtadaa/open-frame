@@ -2,6 +2,7 @@ import { useMemo, type ReactNode } from 'react'
 
 import { useCommentAnchor } from '../hooks/use-comment-anchor.js'
 import { useComments } from '../hooks/use-comments.js'
+import { useFocusComment } from '../hooks/use-focus-comment.js'
 import { useLiveComments } from '../hooks/use-live-comments.js'
 import { useIdentity } from '../hooks/use-identity.js'
 import { CommentPanel } from '../ui/CommentPanel.js'
@@ -27,9 +28,14 @@ export function CommentsProvider({ children }: { readonly children: ReactNode })
   // discussion is live rather than something you find on your way back.
   useLiveComments(enabled, refresh)
 
-  // Arriving from a notification: open the remark it was about. Here rather
-  // than in the panel, because it has to run whether or not the panel is up.
-  useCommentAnchor(comments, enabled)
+  /*
+   * Going to a remark, and the two ways of asking for it: a link with `?c=`,
+   * and a notification clicked while already on this board. One
+   * implementation, because two answers to "take me to this comment" is how
+   * one of them quietly stops matching the other.
+   */
+  const focusComment = useFocusComment(comments)
+  useCommentAnchor(focusComment, comments.length > 0, enabled)
 
   const value = useMemo<Discussion>(() => {
     const replyCounts = new Map<string, number>()
@@ -37,8 +43,18 @@ export function CommentsProvider({ children }: { readonly children: ReactNode })
       if (comment.parentId === null) continue
       replyCounts.set(comment.parentId, (replyCounts.get(comment.parentId) ?? 0) + 1)
     }
-    return { comments, people, replyCounts, refresh, post, resolve, enabled }
-  }, [comments, people, refresh, post, resolve, enabled])
+    return {
+      boardId: runtime.boardId,
+      comments,
+      people,
+      replyCounts,
+      refresh,
+      post,
+      resolve,
+      focusComment,
+      enabled,
+    }
+  }, [runtime, comments, people, refresh, post, resolve, focusComment, enabled])
 
   return <CommentsContext.Provider value={value}>{children}</CommentsContext.Provider>
 }

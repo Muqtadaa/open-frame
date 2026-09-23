@@ -6,6 +6,7 @@ import {
   type BoardDocument,
   type ObjectId,
   type ObjectTypeRegistry,
+  type Point,
   type Rect,
   type Viewport,
 } from '@openframe/core'
@@ -86,6 +87,38 @@ export function viewportForBounds(
     zoom,
     x: bounds.x + bounds.width / 2 - screenWidth / zoom / 2,
     y: bounds.y + bounds.height / 2 - screenHeight / zoom / 2,
+  }
+}
+
+/**
+ * Puts `point` in the middle of the window. Zoom is never touched.
+ *
+ * The opposite request from `panToReveal`, and both are wanted for different
+ * reasons. Revealing is for something the user did HERE — it moves as little
+ * as possible, because they built this view and a reframe would lose the
+ * arrangement they are thinking with. Arriving is for somebody following a
+ * link that says "look at this": the minimum pan puts the thing at the very
+ * edge of the screen, which is technically visible and reads as not having
+ * gone anywhere.
+ *
+ * `inset` is room to leave on the right for a panel that is about to open
+ * over that side. Zero when nothing is there, which is the honest answer on a
+ * fresh arrival: the panel opens as a RESULT of this, so there is nothing to
+ * measure yet, and the middle of the window clears a 324px panel on anything
+ * wider than about 650.
+ */
+export function centreOn(
+  viewport: Viewport,
+  point: Point,
+  screenWidth: number,
+  screenHeight: number,
+  inset = 0,
+): Viewport {
+  const usableWidth = Math.max(1, screenWidth - inset)
+  return {
+    zoom: viewport.zoom,
+    x: point.x - usableWidth / 2 / viewport.zoom,
+    y: point.y - screenHeight / 2 / viewport.zoom,
   }
 }
 

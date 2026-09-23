@@ -699,3 +699,107 @@ test('reading a mention keeps it, quietened, rather than destroying it', async (
   await expect(kept).toContainText('the thing I wanted you to see')
   await expect(kept).toHaveAttribute('data-unread', 'false')
 })
+
+/**
+ * Where "take me to the comment" actually puts you.
+ *
+ * The first attempt used `panToReveal`, which moves as LITTLE as possible —
+ * so an off-screen pin landed at the very edge of the window and one already
+ * in view did not move at all. Both read as the link not having worked. A
+ * notification needs the remark in the middle, with the board around it.
+ */
+test('arriving from a link puts the remark in the middle, not at the edge', async ({ page }) => {
+  await signedIn(page, [{ id: BOARD, title: 'Shared', role: 'owner' }])
+  await openBoard(page)
+
+  /*
+   * Low and to the left, but CLEAR OF THE RAIL — a press at x=60 lands on the
+   * toolbar, which the table suite learned the same way. Far enough from the
+   * middle that a centring pan and a minimal one cannot agree: reopening puts
+   * the board back at its default view, where this pin is already visible, so
+   * `panToReveal` would not move at all.
+   */
+  await page.getByRole('button', { name: /comment/i }).first().click()
+  await page.locator('[data-testid="canvas"]').click({ position: { x: 240, y: 560 } })
+  await page.getByTestId('comment-input').fill('over here')
+  await page.getByTestId('comment-post').click()
+
+  const pin = page.locator('[data-testid^="comment-pin-cmt_"]').first()
+  await expect(pin).toBeVisible()
+  const commentId = ((await pin.getAttribute('data-testid')) ?? '').replace('comment-pin-', '')
+
+  await page.goto(`/?room=${BOARD}&k=${KEY}&c=${commentId}`)
+  await page.waitForSelector('[data-testid="status-bar"]')
+  await expect(page.getByTestId('comment-panel')).toBeVisible()
+
+  const box = await page.locator('[data-testid^="comment-pin-cmt_"]').first().boundingBox()
+  const canvas = await page.locator('[data-testid="canvas"]').boundingBox()
+  expect(box).not.toBeNull()
+  expect(canvas).not.toBeNull()
+  if (box === null || canvas === null) return
+
+  /*
+   * Within a quarter of the window of the middle. Loose enough not to care
+   * about the pin's own size or the panel's exact width, tight enough that
+   * "clamped to an edge" — which is what the reveal did — cannot pass.
+   */
+  const dx = Math.abs(box.x + box.width / 2 - (canvas.x + canvas.width / 2))
+  const dy = Math.abs(box.y + box.height / 2 - (canvas.y + canvas.height / 2))
+  expect(dx, 'not horizontally central').toBeLessThan(canvas.width / 4)
+  expect(dy, 'not vertically central').toBeLessThan(canvas.height / 4)
+})
+
+/**
+ * And clicking one for the board you are ALREADY on does not reload it.
+ *
+ * A full page load throws away the socket, the document and the view for a
+ * board the browser already has open, and the only thing it achieves is
+ * arriving at the same place slower.
+ */
+test('a notification for this board goes to the remark without reloading', async ({ page }) => {
+  const account = await signedIn(
+    page,
+    [{ id: BOARD, title: 'Shared', role: 'owner' }],
+    'Muqtadaa Miandara',
+  )
+  await openBoard(page)
+
+  await page.getByRole('button', { name: /comment/i }).first().click()
+  await page.locator('[data-testid="canvas"]').click({ position: { x: 240, y: 560 } })
+  await page.getByTestId('comment-input').fill('the one you were sent')
+  await page.getByTestId('comment-post').click()
+  const pin = page.locator('[data-testid^="comment-pin-cmt_"]').first()
+  await expect(pin).toBeVisible()
+  const commentId = ((await pin.getAttribute('data-testid')) ?? '').replace('comment-pin-', '')
+
+  // A mention for that remark, on this board, delivered live.
+  account.server.mentions.push({
+    commentId,
+    boardId: BOARD,
+    boardTitle: 'Shared',
+    authorName: 'Rowan',
+    body: 'the one you were sent',
+  })
+  await page.getByTestId('comment-close').click()
+  await page.reload()
+  await page.waitForSelector('[data-testid="status-bar"]')
+
+  // A mark this page load owns. It does not survive a navigation.
+  await page.evaluate(() => {
+    ;(window as unknown as { __stillHere?: boolean }).__stillHere = true
+  })
+
+  await page.getByTestId('mentions-button').click()
+  const item = page.getByTestId(`mention-${commentId}`)
+  await expect(item).toHaveAttribute('data-here', 'true')
+  await item.click()
+
+  await expect(page.getByTestId('comment-panel')).toContainText('the one you were sent')
+  expect(
+    await page.evaluate(() => (window as unknown as { __stillHere?: boolean }).__stillHere),
+    'the page reloaded instead of going to the comment',
+  ).toBe(true)
+
+  // Marked read all the same, which the navigation used to be doing for it.
+  await expect.poll(() => account.read).toContain(commentId)
+})

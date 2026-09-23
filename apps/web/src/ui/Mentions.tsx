@@ -1,6 +1,7 @@
 import { useState } from 'react'
 
 import { commentLink } from '../app/collab-config.js'
+import { useDiscussion } from '../app/comments-context.js'
 import { AnchoredSurface } from '../controls/AnchoredSurface.js'
 import { plainMentionText } from '../hooks/use-comments.js'
 import { useAnchoredTo } from '../controls/use-anchor.js'
@@ -28,6 +29,13 @@ import { useMentions } from '../hooks/use-mentions.js'
 export function Mentions() {
   const { mentions, unread, keyFor, markRead } = useMentions()
   const [open, setOpen] = useState(false)
+  /*
+   * The board under this bell, and the way to go to a remark on it. Empty on
+   * the front door, where the context has no provider and answers "no
+   * discussion" rather than throwing — which is why this comes from here
+   * rather than from the runtime, and why the bell can be in both places.
+   */
+  const { boardId: here, focusComment } = useDiscussion()
   const { ref: bell, anchor, surface } = useAnchoredTo<HTMLButtonElement>(open)
 
   if (mentions.length === 0) return null
@@ -79,8 +87,32 @@ export function Mentions() {
                   href={commentLink(mention.boardId, '', keyFor(mention.boardId), mention.commentId)}
                   data-testid={`mention-${mention.commentId}`}
                   data-unread={mention.readAt === null ? 'true' : 'false'}
-                  onClick={() => {
+                  data-here={mention.boardId === here ? 'true' : 'false'}
+                  onClick={(event) => {
                     markRead(mention.commentId)
+                    /*
+                     * Already HERE: go to the remark instead of reloading the
+                     * board you are standing on. A full page load throws away
+                     * the socket, the document and the view for a board the
+                     * browser already has open, and the only thing it
+                     * achieves is arriving at the same place slower.
+                     *
+                     * A modified click is left alone — that is somebody
+                     * asking for a new tab, and the link still works there.
+                     */
+                    if (
+                      mention.boardId !== here ||
+                      event.metaKey ||
+                      event.ctrlKey ||
+                      event.shiftKey ||
+                      event.altKey ||
+                      event.button !== 0
+                    ) {
+                      return
+                    }
+                    event.preventDefault()
+                    setOpen(false)
+                    focusComment(mention.commentId)
                   }}
                 >
                   <span className="of-mentions__who">{mention.authorName}</span>
