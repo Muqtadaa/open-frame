@@ -103,6 +103,30 @@ export interface ObjectStyle {
    * which is why the ellipse does not offer it — see `stylePropsFor`.
    */
   readonly radius?: RadiusToken
+  /**
+   * The weight, slant and rule of whatever text this object holds — all of it,
+   * not a span of it.
+   *
+   * WHOLE-OBJECT, where a sticky's body text takes its marks per span through
+   * the rich-text editor (ADR 0012). Both exist because they answer different
+   * questions: a paragraph has words worth emphasising, and a connector's
+   * label is two words naming a relationship. A type declares whichever suits
+   * it and no type declares both, so there is never a second way to bold the
+   * same characters.
+   */
+  readonly bold?: boolean
+  readonly italic?: boolean
+  readonly underline?: boolean
+  readonly textSize?: TextSizeToken
+  /**
+   * The ground behind that text, or absent for none.
+   *
+   * Its OWN colour rather than the object's, because the two are chosen for
+   * different reasons: a connector's label sits on the line it names, so what
+   * makes it readable is a plate that knocks the line out from under it —
+   * usually the board's own white, whatever colour the line is.
+   */
+  readonly labelFill?: ColorValue | 'none'
 }
 
 /**
@@ -143,6 +167,14 @@ export const ALIGN_TOKENS = ['start', 'center', 'end'] as const
 /** The same three, up and down. Named separately so one control means one axis. */
 export const VALIGN_TOKENS = ['top', 'middle', 'bottom'] as const
 export const RADIUS_TOKENS = ['none', 'small', 'medium', 'large'] as const
+/**
+ * How big the text is, as a step on the board's own scale.
+ *
+ * A token and not a number, like every other size here: a free pixel value is
+ * how twelve labels end up at eleven sizes, and the point of a scale is that
+ * two things chosen separately still look like they belong to one document.
+ */
+export const TEXT_SIZE_TOKENS = ['small', 'medium', 'large'] as const
 
 export type ColorToken = (typeof COLOR_TOKENS)[number]
 
@@ -201,6 +233,7 @@ export type FontToken = (typeof FONT_TOKENS)[number]
 export type AlignToken = (typeof ALIGN_TOKENS)[number]
 export type VAlignToken = (typeof VALIGN_TOKENS)[number]
 export type RadiusToken = (typeof RADIUS_TOKENS)[number]
+export type TextSizeToken = (typeof TEXT_SIZE_TOKENS)[number]
 
 export type StyleProp = keyof ObjectStyle
 
@@ -229,6 +262,11 @@ const EVERY_STYLE_PROP: Readonly<Record<StyleProp, true>> = {
   verticalAlign: true,
   opacity: true,
   radius: true,
+  bold: true,
+  italic: true,
+  underline: true,
+  textSize: true,
+  labelFill: true,
 }
 
 export const STYLE_PROPS = Object.keys(EVERY_STYLE_PROP) as readonly StyleProp[]

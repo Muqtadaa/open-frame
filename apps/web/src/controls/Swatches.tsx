@@ -128,6 +128,7 @@ export function Swatches({
   current,
   against,
   onPick,
+  onNone,
 }: {
   readonly kind: SwatchKind
   readonly label: string
@@ -135,6 +136,15 @@ export function Swatches({
   readonly current: ColorValue | undefined
   readonly against: HexColor | null
   readonly onPick: (color: ColorValue) => void
+  /**
+   * What "no colour at all" does, for a property that has such a state.
+   *
+   * Absent for the properties that do not: an object's surface, its ink and
+   * its line always have a colour, so offering to take it away would be
+   * offering something that cannot happen. A label's background is the one
+   * that can genuinely be nothing.
+   */
+  readonly onNone?: () => void
 }) {
   const [picking, setPicking] = useState(false)
   const { ref: swatch, anchor, surface } = useAnchoredTo<HTMLButtonElement>(picking)
@@ -142,6 +152,17 @@ export function Swatches({
 
   return (
     <div className="of-swatches" role="group" aria-label={label}>
+      {onNone !== undefined && (
+        <button
+          type="button"
+          className={`of-swatch of-swatch--none${current === undefined ? ' of-swatch--on' : ''}`}
+          aria-pressed={current === undefined}
+          aria-label="none"
+          title="none"
+          data-testid={`${testPrefix}-none`}
+          onClick={onNone}
+        />
+      )}
       {COLOR_TOKENS.map((token: ColorToken) => (
         <button
           key={token}

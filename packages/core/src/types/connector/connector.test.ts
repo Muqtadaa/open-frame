@@ -2,6 +2,7 @@ import { beforeEach, describe, expect, it } from 'vitest'
 
 import type { ObjectId } from '../../domain/ids.js'
 import type { AnyOpenFrameObject } from '../../domain/object.js'
+import { sanitizeStyle } from '../../domain/style-boundary.js'
 import { createTestHarness, type TestHarness } from '../../testing.js'
 import { attachmentAnchor, resolveEndpoints } from './geometry.js'
 import { bendAt, connectorRoute, flattenRoute } from './route.js'
@@ -1633,19 +1634,34 @@ describe('placing a connector label', () => {
     expect(at.x).toBeGreaterThan(120)
   })
 
-  it('goes where it is dropped, and comes back to the same place', () => {
+  it('slides to the nearest place ON the line, however far off it is dropped', () => {
     const { h, object } = titled('depends on')
-    const patch = h.registry.retargetEndpoint(object, h.store.getDocument(), 'label', {
-      kind: 'point',
-      x: 240,
-      y: 60,
-      tolerance: 14,
-      final: true,
+    const drop = (x: number, y: number): AnyOpenFrameObject => ({
+      ...object,
+      data: {
+        ...(object.data as object),
+        ...(h.registry.retargetEndpoint(object, h.store.getDocument(), 'label', {
+          kind: 'point',
+          x,
+          y,
+          tolerance: 14,
+          final: true,
+        }) as object),
+      },
     })
-    const moved = { ...object, data: { ...(object.data as object), ...(patch as object) } }
-    const at = handle(h, moved)?.at
-    expect(at?.x).toBeCloseTo(240, 6)
-    expect(at?.y).toBeCloseTo(60, 6)
+
+    /*
+     * The route runs (0,0) → (200,0) → (200,200) → (400,200). Dropped beside
+     * the crossing run, the label takes the height it was dropped at and the
+     * run's own x — it does not follow the pointer off the line.
+     */
+    const beside = handle(h, drop(240, 60))?.at
+    expect(beside).toEqual({ x: 200, y: 60 })
+
+    // And a drop way out in open space lands on the nearest point of the
+    // route rather than anywhere inside the connector's bounds.
+    const adrift = handle(h, drop(60, 400))?.at
+    expect(adrift).toEqual({ x: 200, y: 200 })
   })
 
   it('keeps its place along the line when an end moves', () => {
@@ -1657,7 +1673,7 @@ describe('placing a connector label', () => {
       tolerance: 14,
       final: true,
     })
-    const placed = (patch as { label: { at: number; off: number } }).label
+    const placed = (patch as { label: { at: number } }).label
 
     // The same placement on a longer line: a fifth of the way along is still a
     // fifth of the way along, not forty units from the start.
@@ -1675,7 +1691,7 @@ describe('placing a connector label', () => {
     const plain = titled('depends on')
     expect(plain.h.registry.actionsOf(plain.object).map((action) => action.id)).toEqual([])
 
-    const { h, object } = titled('depends on', { at: 0.2, off: 30 })
+    const { h, object } = titled('depends on', { at: 0.2 })
     expect(h.registry.actionsOf(object).map((action) => action.id)).toEqual(['centre-label'])
     expect(h.registry.applyAction(object, 'centre-label')).toEqual({ label: null })
 
@@ -1694,5 +1710,61 @@ describe('placing a connector label', () => {
     const { h, object } = titled('depends on')
     expect(h.registry.applyAction(object, 'reset')).toBeNull()
     expect(h.registry.applyAction(object, 'nonsense')).toBeNull()
+  })
+})
+
+/**
+ * FORMATTING the label, which is a caption on a line rather than a paragraph.
+ *
+ * Whole-object marks, declared as style properties, where a sticky's body text
+ * takes its marks per span through the rich-text editor. Both exist because
+ * they answer different questions — and no type declares both, so there is
+ * never a second way to bold the same characters.
+ */
+describe('a connector label takes its own formatting', () => {
+  const h = createTestHarness()
+  const id = create(h, 'connector', 0, 0, {
+    from: { kind: 'point', x: 0, y: 0 },
+    to: { kind: 'point', x: 400, y: 200 },
+    text: 'depends on',
+  })
+  const object = h.store.getObject(id)
+  if (object === undefined) throw new Error('missing connector')
+
+  it('offers the marks, a size and a background of its own', () => {
+    const props = h.registry.stylePropsOf(object)
+    expect(props).toContain('bold')
+    expect(props).toContain('italic')
+    expect(props).toContain('underline')
+    expect(props).toContain('textSize')
+    expect(props).toContain('labelFill')
+  })
+
+  it('does not offer them on a type whose text takes marks per span', () => {
+    const sticky = h.store.getObject(create(h, 'sticky', 0, 0))
+    if (sticky === undefined) throw new Error('missing note')
+    /*
+     * A sticky's words are bolded in the editor, a span at a time (ADR 0012).
+     * Declaring the whole-object marks here as well would be two controls for
+     * one question, and the second one would silently win.
+     */
+    const props = h.registry.stylePropsOf(sticky)
+    expect(props).not.toContain('bold')
+    expect(props).not.toContain('textSize')
+  })
+
+  it('keeps a background turned off through a save and a load', () => {
+    /*
+     * `none` and not `undefined`, because a style command drops undefined
+     * values and would have nothing left to apply — so a background that had
+     * been turned on could never be turned off again.
+     */
+    const off = sanitizeStyle({ labelFill: 'none' })
+    expect(off.labelFill).toBe('none')
+
+    // And a colour a build cannot read is still dropped, which is what this
+    // boundary is for: it reaches CSS as written.
+    expect(sanitizeStyle({ labelFill: 'javascript:alert(1)' }).labelFill).toBeUndefined()
+    expect(sanitizeStyle({ labelFill: '#ff8800' }).labelFill).toBe('#ff8800')
   })
 })

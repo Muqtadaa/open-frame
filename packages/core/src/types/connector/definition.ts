@@ -202,7 +202,25 @@ export const connectorType = defineObjectType<typeof CONNECTOR_TYPE, ConnectorDa
     canHaveChildren: false,
     selectsAsUnit: false,
     connectable: false,
-    styleProps: ['color', 'textColor', 'strokeColor', 'stroke', 'dash', 'opacity'],
+    /*
+     * The line's, then the LABEL's. A connector is the one type whose text is
+     * a caption on something rather than its content, so it takes the
+     * whole-object marks — a sticky's body text takes its own per span,
+     * through the rich-text editor, and no type declares both.
+     */
+    styleProps: [
+      'color',
+      'textColor',
+      'strokeColor',
+      'stroke',
+      'dash',
+      'opacity',
+      'bold',
+      'italic',
+      'underline',
+      'textSize',
+      'labelFill',
+    ],
   },
 
   /*

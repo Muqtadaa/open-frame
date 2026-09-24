@@ -5,6 +5,7 @@ import {
   RADIUS_TOKENS,
   FILL_TOKENS,
   FONT_TOKENS,
+  TEXT_SIZE_TOKENS,
   STROKE_TOKENS,
   unionAll,
   worldToScreen,
@@ -15,6 +16,7 @@ import {
   type RadiusToken,
   type FieldDefinition,
   type OfferedAction,
+  type TextSizeToken,
   type FillToken,
   type FontToken,
   type ObjectStyle,
@@ -85,12 +87,13 @@ const RAIL_CLEARANCE_PX = 84
  * reader, where "surface" and "text" alone would be two identically announced
  * groups.
  */
-type PaintProp = 'color' | 'textColor' | 'strokeColor'
+type PaintProp = 'color' | 'textColor' | 'strokeColor' | 'labelFill'
 
 const PAINTABLE: readonly { prop: PaintProp; label: string; name: string }[] = [
   { prop: 'color', label: 'fill', name: 'Colour' },
   { prop: 'textColor', label: 'text', name: 'Text colour' },
   { prop: 'strokeColor', label: 'line', name: 'Line colour' },
+  { prop: 'labelFill', label: 'label', name: 'Label background' },
 ]
 
 /*
@@ -103,13 +106,29 @@ const PAINT_KIND: Readonly<Record<PaintProp, SwatchKind>> = {
   color: 'surface',
   textColor: 'ink',
   strokeColor: 'line',
+  labelFill: 'surface',
 }
+
+/**
+ * The whole-object text marks, in the order they are shown.
+ *
+ * A GROUP of toggles rather than a radio row: they combine, where every other
+ * control in this panel is a choice of one. Bold and italic together is the
+ * commonest pair there is.
+ */
+const MARK_PROPS: readonly { prop: 'bold' | 'italic' | 'underline'; name: string; glyph: string }[] =
+  [
+    { prop: 'bold', name: 'Bold', glyph: 'B' },
+    { prop: 'italic', name: 'Italic', glyph: 'I' },
+    { prop: 'underline', name: 'Underline', glyph: 'U' },
+  ]
 
 /** Stable test handles, so a renamed label never renames a selector. */
 const PAINT_PREFIX: Readonly<Record<PaintProp, string>> = {
   color: 'swatch',
   textColor: 'ink',
   strokeColor: 'line',
+  labelFill: 'label',
 }
 
 export function Inspector() {
@@ -396,13 +415,28 @@ export function Inspector() {
               kind={PAINT_KIND[painting.prop]}
               label={painting.name}
               testPrefix={PAINT_PREFIX[painting.prop]}
-              current={value(painting.prop)}
+              /*
+               * `none` reads as nothing selected, because that is what it
+               * means — the swatch marked on is the one for no background.
+               */
+              current={(() => {
+                const picked = value(painting.prop)
+                return picked === 'none' ? undefined : picked
+              })()}
               /*
                * An ink is read against what it will sit on: the object's own
                * surface when the selection agrees on one, the board otherwise.
                */
               against={painting.prop === 'textColor' ? groundOf(value('color')) : null}
               onPick={(colour) => apply({ [painting.prop]: colour })}
+              /*
+               * Only a label's background can be nothing at all. Cleared by
+               * being SET to none rather than to undefined, which a style
+               * command drops (see `sanitizeStyle`).
+               */
+              {...(painting.prop === 'labelFill'
+                ? { onNone: () => apply({ labelFill: 'none' }) }
+                : {})}
             />
           </div>
         </Field>
@@ -440,6 +474,42 @@ export function Inspector() {
             name="line"
             onPick={(dash) => apply({ dash })}
             render={(token) => <DashIcon variant={token} />}
+          />
+        </Field>
+      )}
+
+      {(props.has('bold') || props.has('italic') || props.has('underline')) && (
+        <Field name="text">
+          <div className="of-choice" role="group" aria-label="Text style">
+            {MARK_PROPS.filter((mark) => props.has(mark.prop)).map((mark) => {
+              const on = value(mark.prop) === true
+              return (
+                <button
+                  key={mark.prop}
+                  type="button"
+                  aria-pressed={on}
+                  aria-label={mark.name}
+                  title={mark.name}
+                  data-testid={`mark-${mark.prop}`}
+                  className={`of-choice__item${on ? ' of-choice__item--on' : ''}`}
+                  onClick={() => apply({ [mark.prop]: !on })}
+                >
+                  <span className={`of-mark of-mark--${mark.prop}`}>{mark.glyph}</span>
+                </button>
+              )
+            })}
+          </div>
+        </Field>
+      )}
+
+      {props.has('textSize') && (
+        <Field name="size">
+          <Choice<TextSizeToken>
+            options={TEXT_SIZE_TOKENS}
+            current={value('textSize') ?? 'medium'}
+            name="size"
+            onPick={(textSize) => apply({ textSize })}
+            render={(token) => <span className={`of-size of-size--${token}`}>A</span>}
           />
         </Field>
       )}

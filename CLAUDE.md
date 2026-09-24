@@ -481,6 +481,19 @@ starts exactly where the midpoint that adds a stop sits, and the overlay draws
 them in order — so reaching for the text put a bend in the line, which moved
 the text, which looked for all the world like it had worked.
 
+**A colour property is cleared by being SET to `none`.** `UpdateStyle` drops
+undefined values and refuses a command with nothing left in it, so a
+background that could be turned on could never be turned off again. `none` is
+a value, and the boundary that checks colours lets it through for exactly that
+reason.
+
+**Text takes its marks per SPAN or per OBJECT, and no type takes both.** A
+paragraph has words worth emphasising, so a sticky's body text carries marks
+on its rich-text spans (ADR 0012); a connector's label is two words naming a
+relationship, so the whole of it takes `bold`, `italic`, `underline` and
+`textSize` as style properties. A type that declared both would have two
+controls for one question, and the second would silently win.
+
 ---
 
 ## Conventions

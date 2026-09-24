@@ -928,9 +928,9 @@ function alongPath(path: readonly Point[], fraction: number): { at: Point; way: 
  * them do. On a route with one run the two are the same point, so nothing
  * moves on a straight line or a plain curve.
  *
- * PLACED, it is a fraction of the drawn route's length and an offset across
- * it, so the label travels with the line: it stays on the leg it was put on
- * instead of sliding round as the objects move.
+ * PLACED, it is a fraction of the drawn route's length — and nothing else, so
+ * the text stays ON the line it belongs to rather than anywhere inside the
+ * connector's bounds.
  */
 export function labelAnchor(route: Route, label: LabelPlacement | null | undefined): Point {
   if (label === null || label === undefined) {
@@ -954,26 +954,27 @@ export function labelAnchor(route: Route, label: LabelPlacement | null | undefin
     return best === null ? routeMidpoint(route) : best.at
   }
 
-  const { at, way } = alongPath(flattenRoute(route), label.at)
-  // The left-hand normal, so a positive offset is always the same side of the
-  // line whichever way round the line was drawn.
-  return { x: at.x - way.y * label.off, y: at.y + way.x * label.off }
+  return alongPath(flattenRoute(route), label.at).at
 }
 
 /**
  * The placement a label dropped HERE describes — the inverse of `labelAnchor`.
  *
- * Nearest point on the drawn route, then how far off it the drop was. Stored
- * that way rather than as a coordinate for the same reason a stop is: a
- * fraction and an offset still mean something once both ends have moved, and
- * a point does not.
+ * The nearest point ON the drawn route to wherever the drop was, as a fraction
+ * of its length. Stored that way rather than as a coordinate for the same
+ * reason a stop is: a fraction still means something once both ends have
+ * moved, and a point does not.
+ *
+ * How far the drop was from the line is DISCARDED, which is what pins a label
+ * to the line it belongs to — drag it away and it slides to the nearest place
+ * on the route instead of following the pointer into open space.
  */
 export function labelFrom(route: Route, point: Point): LabelPlacement {
   const path = flattenRoute(route)
   const { total, upto } = walkOf(path)
-  if (total === 0) return { at: 0.5, off: 0 }
+  if (total === 0) return { at: 0.5 }
 
-  let best: { at: number; off: number; away: number } | null = null
+  let best: { at: number; away: number } | null = null
   for (let index = 1; index < path.length; index += 1) {
     const from = path[index - 1]
     const to = path[index]
@@ -987,12 +988,7 @@ export function labelFrom(route: Route, point: Point): LabelPlacement {
     const on = { x: from.x + dx * t, y: from.y + dy * t }
     const away = Math.hypot(point.x - on.x, point.y - on.y)
     if (best !== null && away >= best.away) continue
-    best = {
-      at: (before + span * t) / total,
-      // Signed against the left-hand normal, matching `labelAnchor`.
-      off: -(point.x - on.x) * (dy / span) + (point.y - on.y) * (dx / span),
-      away,
-    }
+    best = { at: (before + span * t) / total, away }
   }
-  return best === null ? { at: 0.5, off: 0 } : { at: best.at, off: best.off }
+  return best === null ? { at: 0.5 } : { at: best.at }
 }

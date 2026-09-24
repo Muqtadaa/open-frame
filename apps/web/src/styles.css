@@ -3287,6 +3287,15 @@ body {
   stroke-width: 4px;
   stroke-linejoin: round;
 }
+/*
+ * With a plate behind it the halo is worse than useless: it is a second,
+ * board-coloured background drawn on top of the chosen one, fringing every
+ * glyph. The label sits ON the line now, so one of the two has to be there —
+ * and when a colour has been picked, that is the one.
+ */
+.of-connector__label--plated {
+  stroke: none;
+}
 
 .of-connector__editor-wrap {
   position: absolute;
@@ -3598,6 +3607,42 @@ textarea.of-input {
 }
 
 /* Separates what an object IS from how it looks. */
+/*
+ * The mark buttons show what they DO — a bold B, an italic I, an underlined U
+ * — because three letters that all look the same are three buttons nobody can
+ * tell apart.
+ */
+.of-mark--bold {
+  font-weight: 700;
+}
+.of-mark--italic {
+  font-style: italic;
+}
+.of-mark--underline {
+  text-decoration: underline;
+}
+/* And the size steps are shown at their own size, for the same reason. */
+.of-size--small {
+  font-size: 10px;
+}
+.of-size--medium {
+  font-size: 13px;
+}
+.of-size--large {
+  font-size: 16px;
+}
+/* No background at all, drawn as the absence it is. */
+.of-swatch--none {
+  background:
+    linear-gradient(
+      to top right,
+      transparent calc(50% - 1px),
+      var(--of-danger) calc(50% - 1px),
+      var(--of-danger) calc(50% + 1px),
+      transparent calc(50% + 1px)
+    ),
+    var(--of-panel);
+}
 .of-inspector__actions {
   display: flex;
   flex-wrap: wrap;

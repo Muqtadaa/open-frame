@@ -1,11 +1,23 @@
+import { useLayoutEffect, useRef, useState } from 'react'
+
 import { resolveEndpoints, type ConnectorData } from '@openframe/core'
 
 import { connectorPath, pathMidpoint, routeAngles } from '../scene/connector-path.js'
 import { capPath } from '../scene/connector-caps.js'
-import { dashArray, inkColor, inkOf, strokeWidth } from '../scene/style-tokens.js'
+import {
+  dashArray,
+  inkColor,
+  inkOf,
+  strokeWidth,
+  surfaceColor,
+  textSizePx,
+} from '../scene/style-tokens.js'
 import { defineObjectView, type ObjectEditorProps, type ObjectViewProps } from './registry.js'
 import { InlineTextEditor } from './shared-editor.js'
 
+
+/** How far a label's plate stands clear of the text on it, in screen pixels. */
+const PLATE_PAD = 4
 
 /**
  * A connector draws itself in ABSOLUTE world coordinates.
@@ -54,6 +66,49 @@ function ConnectorRenderer({
   )
   const label = object.data.text
   const mid = pathMidpoint(start, end, object.data.routing, held, normals, avoiding, object.data.label)
+
+  // `none` is a colour property's way of saying there is nothing there, which
+  // is how a background that has been turned off is stored (see `sanitizeStyle`).
+  const chosen = object.style.labelFill
+  const ground = chosen === undefined || chosen === 'none' ? undefined : surfaceColor(chosen)
+  /*
+   * The label's own box, MEASURED.
+   *
+   * A plate has to be the size of the text on it, and only the browser knows
+   * that: it depends on the face, the size, the weight and the string. Taken
+   * in a layout effect so the rect is drawn on the frame after the text
+   * appears — one frame without a background is not worth the arithmetic of
+   * predicting glyph widths, which is wrong for every font.
+   *
+   * Guarded, because `getBBox` is SVG's and jsdom has no layout: under test
+   * the plate is simply absent rather than the view throwing.
+   */
+  const text = useRef<SVGTextElement | null>(null)
+  const [plate, setPlate] = useState<{
+    x: number
+    y: number
+    width: number
+    height: number
+  } | null>(null)
+  useLayoutEffect(() => {
+    const element = text.current
+    if (element === null || typeof element.getBBox !== 'function') return
+    const box = element.getBBox()
+    setPlate((was) =>
+      was !== null &&
+      was.x === box.x &&
+      was.y === box.y &&
+      was.width === box.width &&
+      was.height === box.height
+        ? was
+        : { x: box.x, y: box.y, width: box.width, height: box.height },
+    )
+    /*
+     * NOT on the zoom. The group this sits in is counter-scaled, so the box is
+     * the same at every zoom — re-measuring on each wheel notch would be a
+     * layout read per frame for an answer that never changes.
+     */
+  }, [label, object.style.textSize, object.style.bold, object.style.italic, object.style.font])
 
   // Both ends, resolved once. `angle` is the direction of travel as the line
   // arrives, so the near end is the same angle turned around.
@@ -108,12 +163,36 @@ function ConnectorRenderer({
 
       {label.trim() !== '' && (
         <g transform={`translate(${String(mid.x)} ${String(mid.y)}) scale(${String(1 / zoom)})`}>
+          {/*
+           * The PLATE, when one has been asked for. Sized from the text it
+           * covers rather than guessed at from the character count, because a
+           * guess is wrong for every face and every size — and drawn first,
+           * since SVG paints in document order and a background drawn after
+           * its text is not a background.
+           */}
+          {ground !== undefined && plate !== null && (
+            <rect
+              x={plate.x - PLATE_PAD}
+              y={plate.y - PLATE_PAD}
+              width={plate.width + PLATE_PAD * 2}
+              height={plate.height + PLATE_PAD * 2}
+              rx={3}
+              fill={ground}
+            />
+          )}
           <text
-            className="of-connector__label"
+            ref={text}
+            className={`of-connector__label${ground === undefined ? '' : ' of-connector__label--plated'}`}
             textAnchor="middle"
             dominantBaseline="middle"
             // `fill`, not `color`: an SVG glyph is painted, not inked.
             fill={inkColor(object.style.textColor)}
+            style={{
+              fontSize: `${String(textSizePx(object.style.textSize))}px`,
+              ...(object.style.bold === true ? { fontWeight: 700 } : {}),
+              ...(object.style.italic === true ? { fontStyle: 'italic' } : {}),
+              ...(object.style.underline === true ? { textDecoration: 'underline' } : {}),
+            }}
           >
             {label}
           </text>

@@ -570,17 +570,76 @@ test.describe('putting a line back', () => {
 
     const before = await page.locator('.of-connector__label').boundingBox()
     if (before === null) throw new Error('no label')
-    await drag(page, from, { x: from.x + 60, y: from.y - 70 })
+
+    /*
+     * Dragged ALONG the line and pulled well off it at the same time. The
+     * label follows the route and ignores the rest: it belongs to the line,
+     * and given a cross-offset it could be dragged anywhere inside the
+     * connector's bounds, which on a long line is most of the board.
+     */
+    await drag(page, from, { x: from.x + 150, y: from.y - 120 })
 
     const after = await page.locator('.of-connector__label').boundingBox()
     if (after === null) throw new Error('no label')
-    // The TEXT moved, not just the handle.
-    expect(Math.hypot(after.x - before.x, after.y - before.y)).toBeGreaterThan(40)
+    expect(Math.abs(after.x - before.x), 'the label did not move along').toBeGreaterThan(40)
+
+    const away = await page.locator('.of-connector__line').evaluate((element, at: number) => {
+      const path = element as unknown as SVGPathElement
+      const matrix = path.getScreenCTM()
+      if (matrix === null) throw new Error('the line is not on screen')
+      let nearest = Number.POSITIVE_INFINITY
+      const total = path.getTotalLength()
+      for (let step = 0; step <= 200; step += 1) {
+        const point = path.getPointAtLength((total * step) / 200)
+        const screen = new DOMPoint(point.x, point.y).matrixTransform(matrix)
+        nearest = Math.min(nearest, Math.abs(screen.y - at))
+      }
+      return nearest
+    }, after.y + after.height / 2)
+    expect(away, 'the label came off the line').toBeLessThan(8)
 
     await page.getByTestId('action-centre-label').click()
     const back = await page.locator('.of-connector__label').boundingBox()
     if (back === null) throw new Error('no label')
     expect(Math.hypot(back.x - before.x, back.y - before.y)).toBeLessThan(2)
+  })
+})
+
+test.describe('formatting a connector label', () => {
+  test('takes bold, a size and a background of its own', async ({ page }) => {
+    await connectedPair(page)
+    await page.locator(CANVAS).click({ position: MIDPOINT })
+    await page.locator(CANVAS).dblclick({ position: MIDPOINT })
+    await expect(page.locator(EDITOR)).toBeFocused()
+    await page.locator(EDITOR).fill('depends on')
+    await page.locator(CANVAS).click({ position: { x: 1180, y: 120 } })
+    await page.locator('.of-connector__line').click({ force: true })
+
+    const label = page.locator('.of-connector__label')
+    await expect(label).toBeVisible()
+
+    await page.getByTestId('mark-bold').click()
+    await expect(label).toHaveCSS('font-weight', '700')
+    await page.getByTestId('mark-italic').click()
+    await expect(label).toHaveCSS('font-style', 'italic')
+
+    await page.getByTestId('size-large').click()
+    await expect(label).toHaveCSS('font-size', '16px')
+
+    /*
+     * A background is a PLATE behind the text, sized from the text itself —
+     * so it only exists once one has been chosen, and it is drawn before the
+     * label so it is behind it rather than over it.
+     */
+    await expect(page.locator('.of-connector svg rect, .of-connector rect')).toHaveCount(0)
+    await page.getByTestId('paint-labelFill').click()
+    await page.getByTestId('label-white').click()
+    await expect(page.locator('.of-connector rect')).toHaveCount(1)
+
+    // And turned off again, because a background is the one colour on this
+    // object that can genuinely be nothing.
+    await page.getByTestId('label-none').click()
+    await expect(page.locator('.of-connector rect')).toHaveCount(0)
   })
 })
 

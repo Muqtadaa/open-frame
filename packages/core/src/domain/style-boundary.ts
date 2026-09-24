@@ -7,10 +7,11 @@ import { isColorValue, type ObjectStyle } from './object.js'
  * is one: a colour property added to `ObjectStyle` and forgotten here would be
  * a value going unchecked at the one place that checks.
  */
-const COLOUR_KEYS: Readonly<Record<'color' | 'textColor' | 'strokeColor', true>> = {
+const COLOUR_KEYS: Readonly<Record<'color' | 'textColor' | 'strokeColor' | 'labelFill', true>> = {
   color: true,
   textColor: true,
   strokeColor: true,
+  labelFill: true,
 }
 
 /**
@@ -34,7 +35,13 @@ export function sanitizeStyle(json: Record<string, unknown>): ObjectStyle {
   const style: Record<string, unknown> = {}
   for (const [key, value] of Object.entries(json)) {
     if (value === undefined) continue
-    if (key in COLOUR_KEYS && !isColorValue(value)) continue
+    /*
+     * `none` is a colour key's way of saying there is nothing there, which a
+     * style command can send and `undefined` cannot: a property is cleared by
+     * being SET to none, because `UpdateStyle` drops undefined values and
+     * would otherwise have nothing left to apply.
+     */
+    if (key in COLOUR_KEYS && value !== 'none' && !isColorValue(value)) continue
     style[key] = value
   }
   // Other tokens stay unvalidated on purpose: each is only ever a key into a
