@@ -5244,6 +5244,25 @@ textarea.of-input {
   background: var(--of-panel);
   border-radius: 2px;
 }
+/*
+ * A LEG of an orthogonal route: grabbed anywhere along its length, because
+ * that is the gesture the shape asks for — you push a run out of the way,
+ * you do not aim at a dot on it.
+ *
+ * Drawn as a thin bar over the line it moves rather than beside it, so what
+ * lights up under the pointer is the thing that will move. It carries no
+ * border: a 1.5px outline on a 10px bar reads as a second line next to the
+ * connector, which is exactly the confusion a handle must not add.
+ */
+.of-endpoint--leg {
+  background: var(--of-accent);
+  border: none;
+  border-radius: 999px;
+  opacity: 0.55;
+}
+.of-endpoint--leg:hover {
+  opacity: 0.85;
+}
 
 /*
  * The badge on a selection that is locked.

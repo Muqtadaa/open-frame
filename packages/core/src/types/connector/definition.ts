@@ -3,24 +3,28 @@ import { boundsOfPoints, inflate, rectFromPoints } from '../../geometry/rect.js'
 import { distanceToSegment, type Point } from '../../geometry/point.js'
 import { bendToPoints } from './bend-to-points.js'
 import { attachmentAnchor, endpointDependencies, resolveEndpoints } from './geometry.js'
+import type { RouteNormals } from './route.js'
 import {
   bendAt,
   connectorRoute,
-  elbowAnchor,
-  elbowFrom,
-  heldPoint,
   flattenRoute,
+  orthogonalLegs,
+  orthogonalNodes,
   pointAt,
   routeNodes,
   routeSegments,
   routeStops,
   routeVertices,
+  samePoint,
+  type LegAxis,
+  type RouteLeg,
 } from './route.js'
 import {
   ARROWHEADS,
   CONNECTOR_VERSION,
   ConnectorDataSchema,
   ROUTINGS,
+  type Bend,
   type ConnectorData,
 } from './schema.js'
 
@@ -53,6 +57,94 @@ function stopIndex(endpointId: string): { kind: 'vertex' | 'midpoint'; index: nu
   const index = Number(rest)
   if (!Number.isInteger(index) || index < 0) return null
   return { kind, index }
+}
+
+/**
+ * The handles an orthogonal route offers: one per leg that has somewhere to
+ * write to.
+ *
+ * ONE function for the ids, so `endpoints` and `retargetEndpoint` cannot
+ * disagree about which leg `leg:x:stop:1` means. A leg is named by WHAT IT
+ * CHANGES rather than by its ordinal — the axis it moves along, and the stop
+ * it moves or the slot a new one goes in — because an ordinal shifts the
+ * moment a drag inserts a stop, and the rest of that drag would then be
+ * sliding a different leg.
+ */
+interface LegHandle {
+  readonly id: string
+  readonly leg: RouteLeg
+  /** Where it sits in the leg list, which is how its neighbours are found. */
+  readonly index: number
+  /** The axis a drag moves it along, which is across the way it runs. */
+  readonly sets: LegAxis
+  /** The handle this one hands over to once it has made its stop. */
+  readonly becomes?: string
+}
+
+function legHandles(legs: readonly RouteLeg[]): LegHandle[] {
+  const handles: LegHandle[] = []
+  legs.forEach((leg, index) => {
+    const anchor = leg.moves[0]
+    if (anchor === undefined) return
+    const sets: LegAxis = leg.runs === 'x' ? 'y' : 'x'
+    const stop = String(anchor.stop)
+    handles.push({
+      id: anchor.insert ? `leg:${sets}:new:${stop}:${String(index)}` : `leg:${sets}:stop:${stop}`,
+      leg,
+      index,
+      sets,
+      /*
+       * A leg held by a node that is not in the list yet makes one the first
+       * time it is moved, and from then on the drag belongs to the leg that
+       * moves THAT — or it would make a second stop on the next pointer
+       * event, and a third.
+       *
+       * Which is also why a leg that inserts carries its own position in its
+       * id: on a route with no stops at all, three legs would otherwise every
+       * one of them be called "the leg that puts a stop at nought".
+       */
+      ...(anchor.insert ? { becomes: `leg:${sets}:stop:${stop}` } : {}),
+    })
+  })
+  return handles
+}
+
+/**
+ * Stops the route no longer turns at, dropped.
+ *
+ * Asked by DRAWING it both ways rather than by reasoning about corners: a stop
+ * that changes nothing is invisible and, since legs are the only handles,
+ * unreachable — and it would resurrect a jog the user flattened the moment
+ * either end moved, because what it holds is relative to the run. Only ever on
+ * release, when no further pointer event can be confused by the indices
+ * shifting.
+ */
+function withoutIdleStops(
+  start: Point,
+  end: Point,
+  points: readonly Bend[],
+  normals: RouteNormals,
+): Bend[] {
+  const drawn = (list: readonly Bend[]): readonly Point[] =>
+    connectorRoute(start, end, 'orthogonal', list, normals).points
+  const same = (a: readonly Point[], b: readonly Point[]): boolean =>
+    a.length === b.length &&
+    a.every((point, at) => {
+      const other = b[at]
+      return other !== undefined && samePoint(point, other)
+    })
+
+  let kept = [...points]
+  for (let index = kept.length - 1; index >= 0; index -= 1) {
+    const without = [...kept.slice(0, index), ...kept.slice(index + 1)]
+    if (same(drawn(without), drawn(kept))) kept = without
+  }
+  return kept
+}
+
+/** The middle of a leg, which is where anything that wants a point looks. */
+function legMiddle(leg: RouteLeg): Point {
+  return { x: (leg.from.x + leg.to.x) / 2, y: (leg.from.y + leg.to.y) / 2 }
 }
 
 export const connectorType = defineObjectType<typeof CONNECTOR_TYPE, ConnectorData>({
@@ -205,16 +297,30 @@ export const connectorType = defineObjectType<typeof CONNECTOR_TYPE, ConnectorDa
        * second one until legs can be dragged by their own side.
        */
       ...(object.data.routing === 'orthogonal'
-        ? [
-            {
-              id: 'bend',
-              at: elbowAnchor(start, end, heldPoint(object.data.points), {
-                start: startNormal,
-                end: endNormal,
-              }),
-              role: 'control' as const,
-            },
-          ]
+        ? /*
+           * LEGS, not points. A staircase is pushed about by its own sides:
+           * you take hold of a run and slide it, and the runs either side
+           * stretch to stay square. A dot floating at a corner would be a
+           * second way to say the same thing, and it would multiply with
+           * every turn the route gains.
+           *
+           * Only the legs with somewhere to write to. The stubs out of each
+           * end are where the line meets the thing it is attached to, and
+           * offering to move one is a promise that cannot be kept.
+           */
+          legHandles(
+            orthogonalLegs(start, end, object.data.points, {
+              start: startNormal,
+              end: endNormal,
+            }),
+          ).map((handle) => ({
+            id: handle.id,
+            at: legMiddle(handle.leg),
+            role: 'control' as const,
+            grip: [handle.leg.from, handle.leg.to] as const,
+            shownNear: [handle.leg.from, handle.leg.to],
+            ...(handle.becomes === undefined ? {} : { becomes: handle.becomes }),
+          }))
         : [
             ...object.data.points.map((bend, index) => ({
               id: `vertex:${String(index)}`,
@@ -276,15 +382,14 @@ export const connectorType = defineObjectType<typeof CONNECTOR_TYPE, ConnectorDa
    */
   retargetEndpoint: (object, doc, endpointId, target, { boundsOf }) => {
     /*
-     * The bend takes the drop POINT and nothing else — what it landed on is
-     * irrelevant, because a bend attaches to nothing. It is stored as a
-     * fraction along the run and an offset across it, so it survives both ends
-     * moving; storing the point itself would leave the route doubling back
-     * through where the bend used to be.
+     * A LEG of an orthogonal route, slid sideways.
+     *
+     * The drop's POINT and nothing else: a leg attaches to nothing. Only the
+     * coordinate ACROSS the way it runs means anything — pushing a vertical
+     * run up and down has nothing to change — and it is written to whichever
+     * nodes hold the leg where it is, which the leg itself says.
      */
-    if (endpointId === 'bend') {
-      // Only an orthogonal route has one. The other two are held by the points
-      // they pass through, which are handles of their own.
+    if (endpointId.startsWith('leg:')) {
       if (object.data.routing !== 'orthogonal') return {}
       const { start, end, startNormal, endNormal } = resolveEndpoints(
         doc,
@@ -292,40 +397,78 @@ export const connectorType = defineObjectType<typeof CONNECTOR_TYPE, ConnectorDa
         object.data.to,
         boundsOf,
       )
+      const normals = { start: startNormal, end: endNormal }
+      const legs = orthogonalLegs(start, end, object.data.points, normals)
+      const handle = legHandles(legs).find((each) => each.id === endpointId)
+      if (handle === undefined) return {}
+
+      const sets = handle.sets
+      const coordinate = (point: Point): number => (sets === 'x' ? point.x : point.y)
+      let to = sets === 'x' ? target.x : target.y
+
       /*
-       * The drop's tolerance means "how close collapses this to an L" here,
-       * which is the same question it always asks — how close counts — put to
-       * the part of the type that is being dragged. A curve has no L to find
-       * and ignores it.
+       * SNAPPED FLUSH with a neighbour, which is how two runs merge into one
+       * and how a route collapses to an L — the same "dropped onto the thing
+       * next to it" rule a stop follows, said in the language of legs. The
+       * values that do it are the ones that leave the leg on either side with
+       * no length at all. Without the snap, landing exactly on one is a pixel
+       * hunt and missing by one leaves a jog that reads as a rendering fault.
        *
-       * STICKIER once it has taken: a route already collapsed holds its shape
-       * until the elbow is pulled meaningfully away, or the L would flicker on
-       * and off while a hand hovered at the threshold. Read off the object's
-       * own bend rather than remembered by the gesture — which is what lets
-       * the caller stay ignorant of what a bend even is, since the preview it
-       * feeds back IS this object's data a moment later.
+       * A PINNED neighbour is not on offer: collapsing the stub would take
+       * the route's departure with it, and the line would leave the object
+       * from a direction it is not attached by. It still counts as being
+       * flush, though — that is what a route already collapsed to an L looks
+       * like, and forgetting it there is forgetting the snap exactly where it
+       * has just been taken.
        */
-      const held = heldPoint(object.data.points)
-      const collapsed =
-        held !== null && held !== undefined && (held.along === 0 || held.along === 1)
       /*
-       * A LIST of one, and only one. An orthogonal route's elbow REPLACES
-       * whatever the route was held by: it is the offset of the whole middle
-       * segment rather than a place the line passes through, and two of them
-       * would describe two different routes.
+       * SNAPPED FLUSH with a node either side of the one this leg is held by,
+       * which is how two runs merge into one and how a route collapses to an
+       * L — the same "dropped onto the thing next to it" rule a stop follows,
+       * said in the language of legs. Landing exactly on one is otherwise a
+       * pixel hunt, and missing by one leaves a jog that reads as a rendering
+       * fault.
+       *
+       * Off the NODES rather than off the legs either side, because the leg
+       * that proves the snap is the leg the snap removes: once the route has
+       * collapsed there is nothing left next to it to measure against, and a
+       * shape that let go at the width it was caught at would flicker under a
+       * hand held at the threshold.
        */
-      return {
-        points: [
-          elbowFrom(
-            start,
-            end,
-            { x: target.x, y: target.y },
-            { start: startNormal, end: endNormal },
-            target.tolerance * (collapsed ? RELEASE : 1),
-          ),
-        ],
+      const anchor = handle.leg.moves[0]
+      if (anchor === undefined) return {}
+      const nodes = orthogonalNodes(start, end, object.data.points, normals)
+      const beside = [nodes[anchor.node - 1], nodes[anchor.node + 1]]
+      const flush = beside.some(
+        (node) => node !== undefined && coordinate(node) === coordinate(handle.leg.from),
+      )
+      let nearest = target.tolerance * (flush ? RELEASE : 1)
+      for (const node of beside) {
+        if (node === undefined) continue
+        const away = Math.abs(coordinate(node) - to)
+        if (away > nearest) continue
+        nearest = away
+        to = coordinate(node)
       }
+
+      /*
+       * Written to EVERY node that holds this leg, each keeping the coordinate
+       * it is not being dragged along — which is what makes the run before it
+       * collapse instead of the route gaining a jog nobody asked for.
+       *
+       * Descending, so an insertion never moves a slot still to be dealt with.
+       */
+      const points = [...object.data.points]
+      for (const move of [...handle.leg.moves].sort((a, b) => b.stop - a.stop)) {
+        const moved = sets === 'x' ? { x: to, y: move.at.y } : { x: move.at.x, y: to }
+        const bend = bendAt(start, end, moved)
+        if (move.insert) points.splice(move.stop, 0, bend)
+        else points[move.stop] = bend
+      }
+
+      return { points: target.final ? withoutIdleStops(start, end, points, normals) : points }
     }
+
     /*
      * A VERTEX the route passes through, or the midpoint that creates one.
      *

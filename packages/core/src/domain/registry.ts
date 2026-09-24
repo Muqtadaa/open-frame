@@ -144,6 +144,16 @@ export interface DraggableEndpoint {
    */
   readonly becomes?: string
   /**
+   * The stretch this handle is GRABBED ALONG, rather than at a point.
+   *
+   * A connector's leg is slid sideways by taking hold of it anywhere, which is
+   * the gesture the shape asks for — you push a line out of the way, you do
+   * not aim at a dot on it. The overlay draws a thin strip between these two
+   * points instead of a square, and `at` stays the middle of it so anything
+   * that only wants somewhere to point still has an answer.
+   */
+  readonly grip?: readonly [Point, Point]
+  /**
    * A stretch of the object this handle only appears NEAR, in world units.
    *
    * Every segment of a route offers a midpoint to drag, and drawn all at once

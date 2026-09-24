@@ -409,6 +409,27 @@ Two consequences worth keeping:
   finishes somewhere other than the thing it is attached to. Geometry cannot
   see this, since the two are at the same coordinates by then; what it decides
   is what the handles mean
+- a handle named by its ORDINAL is a handle that means something different a
+  moment later. An orthogonal route is dragged by its legs, and a leg is named
+  by the axis it shifts along and the stop it moves — `leg:x:stop:1` — because
+  the list it indexes into changes under the drag that is reading it
+
+**The shape and the handles come out of one walk.** An orthogonal route is a
+list of legs, each carrying the node that holds it, and the polyline is those
+legs end to end. Work the handles out separately and they sit where the line is
+not. The same walk draws the DEFAULT route, with the middle it would otherwise
+have to invent standing in as a node — so there is no second code path for "no
+stops yet", and dragging either free leg of it turns that middle into a real
+stop.
+
+**Two places are the same place to a tolerance, never to the bit.** A stop is
+stored as a fraction along the run and an offset across it, so putting one
+exactly on the line it came from is a round trip through that pair and back —
+and floating point brings it home a ten-thousandth of a millionth out. Compared
+exactly, the leg between them is not empty, so it survives as a corner the
+route visibly turns at: sliding the crossing of a plain elbow added a bend
+nobody asked for. Worse, whether it happens depends on the numbers — the first
+test of this passed on one pair of endpoints and failed on the next.
 
 **Chrome that only appears under the pointer must survive its own press.**
 Hiding a revealed handle "while a drag is running" cannot be pressed at all:

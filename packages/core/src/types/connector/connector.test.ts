@@ -4,6 +4,7 @@ import type { ObjectId } from '../../domain/ids.js'
 import type { AnyOpenFrameObject } from '../../domain/object.js'
 import { createTestHarness, type TestHarness } from '../../testing.js'
 import { attachmentAnchor, resolveEndpoints } from './geometry.js'
+import { connectorRoute } from './route.js'
 import type { ConnectorData } from './schema.js'
 
 /**
@@ -564,41 +565,83 @@ describe('draggable endpoints', () => {
       })
     })
 
-    const elbowTo = (at: { x: number; y: number }, bend?: unknown) => {
+    /** The line as it currently stands, with a pending patch merged in. */
+    const shaped = (patch?: unknown): AnyOpenFrameObject => {
       const held = h.store.getObject(line)
       if (held === undefined) throw new Error('the line went missing')
-      const object =
-        bend === undefined
-          ? held
-          : { ...held, data: { ...(held.data as object), points: [bend] } }
-      return h.registry.retargetEndpoint(object, h.store.getDocument(), 'bend', {
-        kind: 'point',
-        ...at,
-        tolerance: 14,
-        final: true,
-      })
+      return patch === undefined
+        ? held
+        : { ...held, data: { ...(held.data as object), ...(patch as object) } }
     }
 
-    it('takes the L when the elbow is dropped near an end', () => {
-      expect(elbowTo({ x: 6, y: 100 })).toEqual({ points: [{ along: 0, across: 0 }] })
+    /**
+     * The handle on the leg nearest a point, which is how a hand picks one:
+     * by what it can see, not by an id. Ids move about as a route gains and
+     * loses stops, and a test that named one would be testing the naming.
+     */
+    const legNear = (object: AnyOpenFrameObject, at: { x: number; y: number }): string => {
+      const handles = h.registry
+        .endpointsOf(object, h.store.getDocument())
+        .filter((point) => point.id.startsWith('leg:'))
+      let best: { id: string; away: number } | null = null
+      for (const handle of handles) {
+        const away = Math.hypot(handle.at.x - at.x, handle.at.y - at.y)
+        if (best === null || away < best.away) best = { id: handle.id, away }
+      }
+      if (best === null) throw new Error('no legs to drag')
+      return best.id
+    }
+
+    const slide = (
+      object: AnyOpenFrameObject,
+      grab: { x: number; y: number },
+      to: { x: number; y: number },
+      final = true,
+    ): unknown =>
+      h.registry.retargetEndpoint(object, h.store.getDocument(), legNear(object, grab), {
+        kind: 'point',
+        ...to,
+        tolerance: 14,
+        final,
+      })
+
+    /** Where the line actually runs, asked of the route rather than the data. */
+    const inks = (object: AnyOpenFrameObject, at: { x: number; y: number }): boolean =>
+      h.registry.hitTestObject(object, h.store.getDocument(), at)
+
+    it('takes the L when the crossing is pushed near an end', () => {
+      const before = shaped()
+      // It starts out standing in the middle: that is the route it draws.
+      expect(inks(before, { x: 200, y: 100 })).toBe(true)
+
+      const after = shaped(slide(before, { x: 200, y: 100 }, { x: 6, y: 100 }))
+      /*
+       * Flush against the near end, so the route turns ONCE. Asserted on the
+       * ink rather than on the stored fraction: what matters is where the
+       * line is, and the number behind it has already changed shape twice.
+       */
+      expect(inks(after, { x: 0, y: 100 })).toBe(true)
+      expect(inks(after, { x: 200, y: 100 })).toBe(false)
     })
 
     it('holds it further out than it took it, once collapsed', () => {
       const out = { x: 20, y: 100 }
-      // From a route with an elbow in the middle, twenty units is too far.
-      expect(elbowTo(out, { along: 0.5, across: 0 })).not.toEqual({
-        points: [{ along: 0, across: 0 }],
-      })
+      // From a route crossing the middle, twenty units is too far to snap.
+      const fresh = shaped(slide(shaped(), { x: 200, y: 100 }, out))
+      expect(inks(fresh, { x: 20, y: 100 })).toBe(true)
+      expect(inks(fresh, { x: 0, y: 100 })).toBe(false)
+
       // From one already collapsed, the same drop keeps the L.
-      expect(elbowTo(out, { along: 0, across: 0 })).toEqual({
-        points: [{ along: 0, across: 0 }],
-      })
+      const collapsed = shaped(slide(shaped(), { x: 200, y: 100 }, { x: 6, y: 100 }))
+      const still = shaped(slide(collapsed, { x: 0, y: 100 }, out))
+      expect(inks(still, { x: 0, y: 100 })).toBe(true)
     })
 
-    it('lets go when the elbow is pulled well clear', () => {
-      expect(elbowTo({ x: 120, y: 100 }, { along: 0, across: 0 })).not.toEqual({
-        points: [{ along: 0, across: 0 }],
-      })
+    it('lets go when the crossing is pulled well clear', () => {
+      const collapsed = shaped(slide(shaped(), { x: 200, y: 100 }, { x: 6, y: 100 }))
+      const freed = shaped(slide(collapsed, { x: 0, y: 100 }, { x: 120, y: 100 }))
+      expect(inks(freed, { x: 120, y: 100 })).toBe(true)
+      expect(inks(freed, { x: 0, y: 100 })).toBe(false)
     })
   })
 
@@ -740,10 +783,17 @@ describe('a bend', () => {
     return { h, object }
   }
 
-  it('offers an elbow on an orthogonal route, and stops on the others', () => {
+  it('offers legs on an orthogonal route, and stops on the others', () => {
     const { h, object } = bent(null)
     const ids = h.registry.endpointsOf(object, h.store.getDocument()).map((point) => point.id)
-    expect(ids).toEqual(['from', 'to', 'bend'])
+    /*
+     * Three runs, each named by what moving it CHANGES: the axis it shifts
+     * along, and the stop it moves or the slot a new one goes in. None of
+     * them holds a stop yet, so all three would make the route's first one —
+     * which is why the id carries the leg's own place as well, or they would
+     * every one of them be called the same thing.
+     */
+    expect(ids).toEqual(['from', 'to', 'leg:y:new:0:0', 'leg:x:new:0:1', 'leg:y:new:0:2'])
 
     /*
      * A straight route has no elbow — there is no middle segment to slide —
@@ -914,7 +964,7 @@ describe('a route held at several points', () => {
     ).toEqual({})
   })
 
-  it('leaves an orthogonal route to its elbow', () => {
+  it('leaves an orthogonal route to its legs', () => {
     const h = createTestHarness()
     const id = create(h, 'connector', 0, 0, {
       from: { kind: 'point', x: 0, y: 0 },
@@ -924,7 +974,8 @@ describe('a route held at several points', () => {
     const object = h.store.getObject(id)
     if (object === undefined) throw new Error('missing connector')
     const ids = h.registry.endpointsOf(object, h.store.getDocument()).map((point) => point.id)
-    expect(ids).toEqual(['from', 'to', 'bend'])
+    // Legs, not points: a staircase is pushed about by its own sides.
+    expect(ids.every((id) => id === 'from' || id === 'to' || id.startsWith('leg:'))).toBe(true)
     expect(
       h.registry.retargetEndpoint(object, h.store.getDocument(), 'midpoint:0', drop(10, 10)),
     ).toEqual({})
@@ -1151,5 +1202,224 @@ describe('dissolving a stop into its neighbour', () => {
      * the stop that is currently merged.
      */
     expect(ids).toEqual(['from', 'to', 'vertex:0', 'vertex:1', 'midpoint:0', 'midpoint:2'])
+  })
+})
+
+/**
+ * A STAIRCASE, which is what an orthogonal route becomes once it is pushed
+ * about. Each run is dragged by its own side, and the runs either side stretch
+ * to stay square.
+ */
+describe('pushing an orthogonal route about by its legs', () => {
+  const squared = (points: readonly { along: number; across: number }[] = []) => {
+    const h = createTestHarness()
+    const id = create(h, 'connector', 0, 0, {
+      from: { kind: 'point', x: 0, y: 0 },
+      to: { kind: 'point', x: 400, y: 200 },
+      routing: 'orthogonal',
+      points,
+    })
+    const object = h.store.getObject(id)
+    if (object === undefined) throw new Error('missing connector')
+    return { h, object }
+  }
+
+  const merged = (object: AnyOpenFrameObject, patch: unknown): AnyOpenFrameObject => ({
+    ...object,
+    data: { ...(object.data as object), ...(patch as object) },
+  })
+
+  const stopsOf = (object: AnyOpenFrameObject): readonly unknown[] =>
+    (object.data as { points: readonly unknown[] }).points
+
+  const slide = (
+    h: TestHarness,
+    object: AnyOpenFrameObject,
+    id: string,
+    to: { x: number; y: number },
+    final = false,
+  ): unknown =>
+    h.registry.retargetEndpoint(object, h.store.getDocument(), id, {
+      kind: 'point',
+      ...to,
+      tolerance: 14,
+      final,
+    })
+
+  it('names every leg by what moving it would change', () => {
+    const { h, object } = squared()
+    const ids = h.registry
+      .endpointsOf(object, h.store.getDocument())
+      .filter((point) => point.id.startsWith('leg:'))
+    /*
+     * The axis it shifts along, then the stop it moves or the slot a new one
+     * goes in. An ordinal alone would mean something different the moment a
+     * drag inserted a stop — and the rest of that drag would be sliding a
+     * different run.
+     */
+    expect(ids.map((point) => point.id)).toEqual([
+      'leg:y:new:0:0',
+      'leg:x:new:0:1',
+      'leg:y:new:0:2',
+    ])
+    // Each hands over to the leg that moves the stop it just made.
+    expect(ids.map((point) => point.becomes)).toEqual([
+      'leg:y:stop:0',
+      'leg:x:stop:0',
+      'leg:y:stop:0',
+    ])
+    // And each is grabbed ALONG its run, not at a point on it.
+    expect(ids.every((point) => point.grip !== undefined)).toBe(true)
+  })
+
+  it('gives every handle its own name, however many legs there are', () => {
+    const { h, object } = squared([
+      { along: 0.3, across: 60 },
+      { along: 0.6, across: -60 },
+    ])
+    const ids = h.registry.endpointsOf(object, h.store.getDocument()).map((point) => point.id)
+    // React keys and the gesture's own lookup both need this, and three legs
+    // of an untouched route would otherwise all be called the same thing.
+    expect(new Set(ids).size).toBe(ids.length)
+  })
+
+  it('moves the run that was grabbed, and stretches the ones either side', () => {
+    const { h, object } = squared()
+    const pushed = merged(object, slide(h, object, 'leg:x:new:0:1', { x: 120, y: 100 }))
+    // The crossing is where it was put, and the route still reaches both ends.
+    expect(h.registry.hitTestObject(pushed, h.store.getDocument(), { x: 120, y: 100 })).toBe(true)
+    expect(h.registry.hitTestObject(pushed, h.store.getDocument(), { x: 60, y: 0 })).toBe(true)
+    expect(h.registry.hitTestObject(pushed, h.store.getDocument(), { x: 300, y: 200 })).toBe(true)
+
+  })
+
+  it('gains no turn from a run being slid, on any geometry', () => {
+    /*
+     * Sliding a run is not adding a corner to the route: the stop the drag
+     * makes carries the coordinate it is NOT being dragged along, so the leg
+     * before it collapses to nothing and goes.
+     *
+     * Several shapes, because a stop is stored as a fraction along the run and
+     * an offset across it — and whether that round trip lands exactly back on
+     * the line depends on the numbers. On (400, 200) it does, and this test
+     * passed with the tolerance that makes it work deleted; on (300, 100) it
+     * comes home a ten-thousandth of a millionth out, and the corner that
+     * leaves behind is invisible to a hit test but plainly there in the path.
+     */
+    for (const corner of [
+      { x: 400, y: 200 },
+      { x: 373, y: 241 },
+      { x: 300, y: 100 },
+    ]) {
+      const h = createTestHarness()
+      const id = create(h, 'connector', 0, 0, {
+        from: { kind: 'point', x: 0, y: 0 },
+        to: { kind: 'point', ...corner },
+        routing: 'orthogonal',
+      })
+      const object = h.store.getObject(id)
+      if (object === undefined) throw new Error('missing connector')
+
+      const drawn = (on: AnyOpenFrameObject): number =>
+        connectorRoute(
+          { x: 0, y: 0 },
+          corner,
+          'orthogonal',
+          (on.data as { points: readonly { along: number; across: number }[] }).points,
+        ).points.length
+
+      const pushed = merged(
+        object,
+        slide(h, object, legNear(h, object, { x: corner.x / 2, y: corner.y / 2 }), {
+          x: corner.x / 3,
+          y: corner.y / 2,
+        }),
+      )
+      expect(drawn(pushed), `a turn appeared on (${String(corner.x)}, ${String(corner.y)})`).toBe(
+        drawn(object),
+      )
+    }
+  })
+
+  /**
+   * The handle on the leg nearest a point, which is how a hand picks one: by
+   * what it can see. Ids move about as a route gains stops, and a test that
+   * named them would be testing the naming.
+   */
+  const legNear = (
+    h: TestHarness,
+    object: AnyOpenFrameObject,
+    at: { x: number; y: number },
+  ): string => {
+    let best: { id: string; away: number } | null = null
+    for (const handle of h.registry.endpointsOf(object, h.store.getDocument())) {
+      if (!handle.id.startsWith('leg:')) continue
+      const away = Math.hypot(handle.at.x - at.x, handle.at.y - at.y)
+      if (best === null || away < best.away) best = { id: handle.id, away }
+    }
+    if (best === null) throw new Error('no legs to drag')
+    return best.id
+  }
+
+  it('builds a staircase, one leg at a time', () => {
+    const { h, object } = squared()
+    const inks = (on: AnyOpenFrameObject, at: { x: number; y: number }): boolean =>
+      h.registry.hitTestObject(on, h.store.getDocument(), at)
+
+    // The crossing first, which puts the route's first stop in the list.
+    const first = merged(object, slide(h, object, legNear(h, object, { x: 200, y: 100 }), { x: 120, y: 100 }))
+    expect(stopsOf(first)).toHaveLength(1)
+    expect(inks(first, { x: 120, y: 100 })).toBe(true)
+
+    // Then the run leaving the start, which that stop now holds: it moves,
+    // and a new corner appears between it and the end it leaves.
+    const second = merged(first, slide(h, first, legNear(h, first, { x: 60, y: 0 }), { x: 60, y: 70 }))
+    expect(inks(second, { x: 60, y: 70 })).toBe(true)
+    expect(inks(second, { x: 0, y: 35 })).toBe(true)
+
+    /*
+     * And that new corner's own run, which is held by the START — so there is
+     * nowhere to write to until a stop goes in beside it. That is the second
+     * one, and the route is a staircase.
+     */
+    const third = merged(second, slide(h, second, legNear(h, second, { x: 0, y: 35 }), { x: 40, y: 35 }))
+    expect(stopsOf(third)).toHaveLength(2)
+    expect(inks(third, { x: 40, y: 35 })).toBe(true)
+    expect(inks(third, { x: 60, y: 70 })).toBe(true)
+    expect(inks(third, { x: 120, y: 150 })).toBe(true)
+  })
+
+  it('drops a stop the line no longer turns at, on release', () => {
+    const { h, object } = squared()
+    const bent = merged(object, slide(h, object, 'leg:x:new:0:1', { x: 120, y: 100 }))
+    expect(stopsOf(bent)).toHaveLength(1)
+
+    /*
+     * Pushed back to where the route would have gone anyway. While the drag
+     * is live the stop stays — the indices must not move under a hand — and
+     * the release drops it, or it would resurrect the jog the moment either
+     * object moved, since what it holds is relative to the run.
+     */
+    const flat = merged(bent, slide(h, bent, 'leg:x:stop:0', { x: 200, y: 100 }))
+    expect(stopsOf(flat)).toHaveLength(1)
+
+    const let_go = merged(bent, slide(h, bent, 'leg:x:stop:0', { x: 200, y: 100 }, true))
+    expect(stopsOf(let_go)).toHaveLength(0)
+    // And the route is the one it draws with nothing stored at all.
+    expect(h.registry.hitTestObject(let_go, h.store.getDocument(), { x: 200, y: 100 })).toBe(true)
+  })
+
+  it('refuses a leg handle on a route that has no legs', () => {
+    const h = createTestHarness()
+    const id = create(h, 'connector', 0, 0, {
+      from: { kind: 'point', x: 0, y: 0 },
+      to: { kind: 'point', x: 400, y: 200 },
+      routing: 'curved',
+    })
+    const object = h.store.getObject(id)
+    if (object === undefined) throw new Error('missing connector')
+    expect(
+      slide(h, object, 'leg:x:new:0:1', { x: 100, y: 100 }),
+    ).toEqual({})
   })
 })

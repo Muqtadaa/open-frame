@@ -18,6 +18,16 @@ const HANDLE_PX = 9
 const REVEAL_PX = 20
 
 /**
+ * How thick a leg's grab bar is, in SCREEN pixels.
+ *
+ * Ten rather than the twenty-four a press target usually gets: a bar lies ON
+ * the line it moves, and a fat one would cover the two runs either side of it
+ * and offer to move those instead. It only appears while the pointer is on
+ * that run, so it is never hunted for.
+ */
+const GRIP_PX = 10
+
+/**
  * Which of the handles that hide themselves is currently on offer.
  *
  * ONE at a time, and the nearest: two midpoints lit at once on adjacent
@@ -124,6 +134,36 @@ export function EndpointOverlay() {
     <>
       {shown.map((endpoint) => {
         const at = worldToScreen(viewport, endpoint.at)
+        /*
+         * A GRIPPED handle is a bar along the thing it moves, not a square at
+         * a point — and it is measured on the apparatus layer, so both its
+         * ends convert to screen once and every length out here is what it
+         * says (rule 24).
+         */
+        if (endpoint.grip !== undefined) {
+          const [from, to] = endpoint.grip
+          const a = worldToScreen(viewport, from)
+          const b = worldToScreen(viewport, to)
+          const horizontal = Math.abs(b.x - a.x) >= Math.abs(b.y - a.y)
+          const width = horizontal ? Math.abs(b.x - a.x) : GRIP_PX
+          const height = horizontal ? GRIP_PX : Math.abs(b.y - a.y)
+          return (
+            <div
+              key={endpoint.id}
+              className="of-endpoint of-endpoint--control of-endpoint--leg"
+              data-handle="endpoint"
+              data-endpoint-id={endpoint.id}
+              data-testid={`endpoint-${endpoint.id}`}
+              style={{
+                transform: `translate(${String(Math.min(a.x, b.x) - (horizontal ? 0 : GRIP_PX / 2))}px, ${String(Math.min(a.y, b.y) - (horizontal ? GRIP_PX / 2 : 0))}px)`,
+                width: `${String(width)}px`,
+                height: `${String(height)}px`,
+                // Which way it can be pushed, which is across the way it runs.
+                cursor: horizontal ? 'ns-resize' : 'ew-resize',
+              }}
+            />
+          )
+        }
         return (
           <div
             key={endpoint.id}

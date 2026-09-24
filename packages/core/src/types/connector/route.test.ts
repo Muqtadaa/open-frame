@@ -4,13 +4,19 @@ import { distanceToSegment, type Point } from '../../geometry/point.js'
 import {
   bendAt,
   connectorRoute,
-  elbowAnchor,
-  elbowFrom,
   flattenRoute,
+  orthogonalLegs,
   pointAt,
   routeSegments,
   NO_BEND,
+  type RouteLeg,
 } from './route.js'
+
+/** The middle of a leg, which is where its handle sits. */
+const middleOf = (leg: RouteLeg): Point => ({
+  x: (leg.from.x + leg.to.x) / 2,
+  y: (leg.from.y + leg.to.y) / 2,
+})
 
 const start = { x: 0, y: 0 }
 const end = { x: 200, y: 100 }
@@ -23,7 +29,10 @@ describe('where the handle sits', () => {
    * started anywhere else would jump on first touch.
    */
   it('starts at the middle of the drawn route, whatever the routing', () => {
-    expect(elbowAnchor(start, end, null)).toEqual({ x: 100, y: 50 })
+    // An orthogonal route's handles are its LEGS, so its middle is the middle
+    // of the run that crosses — which is the same point.
+    const crossing = orthogonalLegs(start, end, [])[1]
+    expect(crossing === undefined ? null : middleOf(crossing)).toEqual({ x: 100, y: 50 })
     for (const routing of ['straight', 'curved'] as const) {
       const [segment] = routeSegments(connectorRoute(start, end, routing, []))
       expect(segment?.middle).toEqual({ x: 100, y: 50 })
@@ -45,15 +54,6 @@ describe('describing a point from where it was dropped', () => {
     expect(back.y).toBeCloseTo(at.y, 6)
   })
 
-  it('round-trips an elbow along its own axis', () => {
-    const at = { x: 150, y: 20 }
-    const back = elbowAnchor(start, end, elbowFrom(start, end, at))
-    // An orthogonal elbow only moves along the run, so the other axis is not a
-    // round trip — it snaps back to the middle segment.
-    expect(back.x).toBeCloseTo(at.x, 6)
-    expect(back.y).toBeCloseTo(50, 6)
-  })
-
   it('reads the middle as no offset at all', () => {
     const bend = bendAt(start, end, { x: 100, y: 50 })
     expect(bend.along).toBeCloseTo(0.5, 6)
@@ -62,7 +62,9 @@ describe('describing a point from where it was dropped', () => {
 
   it('survives two ends in the same place', () => {
     expect(bendAt(start, start, { x: 5, y: 5 })).toEqual(NO_BEND)
-    expect(elbowFrom(start, start, { x: 5, y: 5 })).toEqual(NO_BEND)
+    expect(connectorRoute(start, start, 'orthogonal', []).points).not.toContainEqual(
+      expect.objectContaining({ x: Number.NaN }),
+    )
   })
 })
 
@@ -72,9 +74,21 @@ describe('the route itself', () => {
     expect(route.points).toEqual([start, { x: 100, y: 0 }, { x: 100, y: 100 }, end])
   })
 
-  it('moves the elbow where the bend says', () => {
+  it('turns a corner at every stop an orthogonal route is given', () => {
+    /*
+     * THROUGH the stop, turning there. A stop that only moved the crossing
+     * and ignored its other coordinate would be a point the route passes near
+     * — and a staircase would be unreachable, because each stop could only
+     * ever buy one bend.
+     */
     const route = connectorRoute(start, end, 'orthogonal', [{ along: 0.25, across: 0 }])
-    expect(route.points).toEqual([start, { x: 50, y: 0 }, { x: 50, y: 100 }, end])
+    expect(route.points).toEqual([
+      start,
+      { x: 0, y: 25 },
+      { x: 50, y: 25 },
+      { x: 50, y: 100 },
+      end,
+    ])
   })
 
   /*
@@ -237,9 +251,10 @@ describe('the bend handle still sits on the line it bends', () => {
     'starts on the %s route as drawn, not on the straight line',
     (routing) => {
       const route = connectorRoute(start, end, routing, [], normals)
+      const crossing = orthogonalLegs(start, end, [], normals)[1]
       const handle =
         routing === 'orthogonal'
-          ? elbowAnchor(start, end, null, normals)
+          ? (crossing === undefined ? { x: 0, y: 0 } : middleOf(crossing))
           : (routeSegments(route)[0]?.middle ?? { x: 0, y: 0 })
       const drawn = flattenRoute(route, 48)
       // On the line it bends, which is the whole contract: a handle anywhere
@@ -262,79 +277,5 @@ describe('the bend handle still sits on the line it bends', () => {
     // EXACTLY through it, not near it: a curve that merely passes close by
     // slides out from under the pointer as it is dragged.
     expect(nearest).toBeLessThan(1e-6)
-  })
-})
-
-/**
- * THE L, which is the shape people actually draw.
- *
- * An orthogonal route turns twice: out of one end, across, and into the other.
- * Pushed all the way to either end it becomes a single corner — and hitting
- * that exactly with a pointer is a pixel hunt, so the drag finds it.
- *
- * How close counts is the CALLER's number, not a constant here. That is what
- * lets the snap be stickier once it has taken — a wider distance to release
- * than to catch — without this having to remember anything between one pointer
- * event and the next.
- */
-describe('collapsing an orthogonal route to one corner', () => {
-  const normals = { start: { x: 0, y: -1 }, end: { x: 0, y: 1 } }
-  /** Where the elbow sits, in world units along the run. */
-  const elbowOf = (bend: ReturnType<typeof elbowFrom>): number =>
-    elbowAnchor(start, end, bend, normals).x
-
-  it('takes the L when the elbow is dropped near one end', () => {
-    const near = { x: start.x + 6, y: 50 }
-    expect(elbowFrom(start, end, near, normals, 14).along).toBe(0)
-
-    const far = { x: end.x - 6, y: 50 }
-    expect(elbowFrom(start, end, far, normals, 14).along).toBe(1)
-  })
-
-  it('leaves the elbow where it was put when nothing is near', () => {
-    const middle = { x: 100, y: 50 }
-    const bend = elbowFrom(start, end, middle, normals, 14)
-    expect(bend.along).toBeCloseTo(0.5, 1)
-    expect(elbowOf(bend)).toBeCloseTo(100, 6)
-  })
-
-  it('never snaps when the caller asks for none', () => {
-    const near = { x: start.x + 6, y: 50 }
-    expect(elbowFrom(start, end, near, normals, 0).along).not.toBe(0)
-  })
-
-  /**
-   * The release is the same call with a bigger number, which is the whole
-   * reason the distance is a parameter: a drag that has already taken the L
-   * asks for a wider one, so the shape does not flicker while a hand hovers
-   * at the threshold.
-   */
-  it('holds the L further out than it took it', () => {
-    const at = { x: start.x + 20, y: 50 }
-    expect(elbowFrom(start, end, at, normals, 14).along).not.toBe(0)
-    expect(elbowFrom(start, end, at, normals, 28).along).toBe(0)
-  })
-
-  it('measures in world units, not as a fraction of the run', () => {
-    const longEnd = { x: 1000, y: 100 }
-    // The same six units from the start snaps on a long run as on a short one.
-    expect(elbowFrom(start, longEnd, { x: 6, y: 50 }, normals, 14).along).toBe(0)
-
-    /*
-     * And the case the two rules DISAGREE about, which is the only one worth
-     * asserting: sixty units out is 6% of this run. A fraction-based snap of
-     * any usable size would take it; fourteen world units does not. A test
-     * that only used points near the very start would pass either way — and
-     * the first version of this one did.
-     */
-    const sixPercent = { x: 60, y: 50 }
-    expect(elbowFrom(start, longEnd, sixPercent, normals, 14).along).not.toBe(0)
-  })
-
-  it('leaves a vertex alone, which has no corner to collapse', () => {
-    const near = { x: start.x + 2, y: 2 }
-    // `bendAt` takes no snapping distance at all: a point the route passes
-    // through is wherever it was put.
-    expect(bendAt(start, end, near).along).not.toBe(0)
   })
 })

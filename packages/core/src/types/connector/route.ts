@@ -17,18 +17,6 @@ import type { Bend, Routing } from './schema.js'
 export const NO_BEND: Bend = { along: 0.5, across: 0 }
 
 /**
- * The one point an ORTHOGONAL route is held by, of however many it has.
- *
- * ONE SITE for the fact that one routing still understands a single bend, so
- * there is one place to look rather than seven. Straight and curved routes
- * read the whole list; an orthogonal route is dragged by its legs rather than
- * by points in space, which is a different gesture and a stage of its own.
- */
-export function heldPoint(points: readonly Bend[]): Bend | null {
-  return points[0] ?? null
-}
-
-/**
  * Which way the route leaves each end, when that end is attached to something.
  *
  * Both optional, because both can be free: a half-drawn connector has no
@@ -175,9 +163,23 @@ export interface RouteStop {
   readonly stop: number | null
 }
 
-/** Whether two pinned places are the same place. */
-function samePlace(a: Point, b: Point): boolean {
-  return a.x === b.x && a.y === b.y
+/**
+ * Whether two places are the same place, to well under a drawn pixel.
+ *
+ * NOT `===`. A stop is stored as a fraction along the run and an offset across
+ * it, so landing one exactly on another means a round trip through that pair
+ * and back — and floating point brings it home a ten-thousandth of a
+ * millionth out. Compared exactly, the leg between them is not empty, so it
+ * survives as a corner the route visibly turns at: dragging the crossing of a
+ * plain elbow added a turn nobody asked for.
+ *
+ * A millionth of a world unit is a nanometre on a board and a hundred million
+ * times the error.
+ */
+const TOUCHING = 1e-6
+
+export function samePoint(a: Point, b: Point): boolean {
+  return Math.abs(a.x - b.x) < TOUCHING && Math.abs(a.y - b.y) < TOUCHING
 }
 
 /**
@@ -203,7 +205,7 @@ export function routeStops(start: Point, end: Point, points: readonly Bend[]): R
   const kept: RouteStop[] = []
   for (const node of all) {
     const last = kept[kept.length - 1]
-    if (last !== undefined && samePlace(last.at, node.at)) {
+    if (last !== undefined && samePoint(last.at, node.at)) {
       if (node.stop === null) kept.pop()
       else continue
     }
@@ -342,90 +344,180 @@ function middle(start: Point, end: Point): Point {
 }
 
 /**
- * Where an orthogonal route's ELBOW handle sits.
- *
- * With no bend this is the middle of the run between the stubs, which is where
- * the route's middle segment is centred by construction — a handle that
- * started anywhere else would jump on first touch.
- *
- * ORTHOGONAL ONLY. The other two routings pass through the points they are
- * given, so a point's place on them is `pointAt` and needs no second answer;
- * this one is a different thing wearing the same clothes, because an elbow is
- * not a place the line goes through but the offset of a segment that has to
- * stay square.
+ * WHICH AXIS a leg runs along. `x` is horizontal, so a drag moves it in y.
  */
-export function elbowAnchor(
-  start: Point,
-  end: Point,
-  bend: Bend | null,
-  normals: RouteNormals | null = null,
-): Point {
-  /*
-   * Between the STUBS, not between the ends: the middle segment of an
-   * orthogonal route starts where the departure finishes. Measuring against
-   * the ends instead would put the handle a stub's length off the line it is
-   * supposed to be on.
+export type LegAxis = 'x' | 'y'
+
+/**
+ * The place a leg is held, and so what moving it has to change.
+ *
+ * A leg's fixed coordinate always comes from one node of the route: a stop it
+ * passes through, an end it leaves, or — on a route with no stops at all — the
+ * middle it crosses at. `insert` says that node is not in the list yet, so
+ * moving the leg puts it there; `at` is where that node currently is, and the
+ * drag replaces ONE of its coordinates. Inheriting the other is what stops a
+ * drag from adding a jog nobody asked for: the leg before it collapses to
+ * nothing and disappears.
+ *
+ * The leg says all this itself because working it out a second time in the
+ * gesture is how a handle comes to write to the wrong point.
+ */
+export interface LegAnchor {
+  /** The stop it follows, or the slot a new one goes in. */
+  readonly stop: number
+  readonly insert: boolean
+  readonly at: Point
+  /** Where that node sits among all of them, which is how its two neighbours
+   * are found — and they are what a leg snaps flush with. */
+  readonly node: number
+}
+
+/** One straight run of an orthogonal route. */
+export interface RouteLeg {
+  readonly from: Point
+  readonly to: Point
+  readonly runs: LegAxis
+  /**
+   * Every node that must move for this leg to move. EMPTY means pinned: the
+   * stub out of each end is where the line meets the thing it is attached to,
+   * and that is not negotiable.
+   *
+   * A list rather than one, because two parallel legs at the same coordinate
+   * are drawn as a single run — that is what merging two of them looks like —
+   * and moving it has to take both with it or the path tears.
    */
-  const [s, e] = stubs(start, end, normals)
-  const mid = middle(s, e)
-  if (bend === null) return mid
-  /*
-   * ONE axis. An orthogonal route's middle segment is perpendicular to the
-   * run, so sliding it is a one-dimensional move — dragging along the
-   * segment's own direction has nothing to change. Same as every diagramming
-   * tool: you push the elbow across, not up and down.
-   */
-  return isHorizontal(s, e)
-    ? { x: lerp(s.x, e.x, bend.along), y: mid.y }
-    : { x: mid.x, y: lerp(s.y, e.y, bend.along) }
+  readonly moves: readonly LegAnchor[]
+}
+
+/** The axis a route leaves an end on, which is what its stub runs along. */
+function departureAxis(from: Point, stub: Point, other: Point): LegAxis {
+  if (stub.x !== from.x) return 'x'
+  if (stub.y !== from.y) return 'y'
+  // A free end has no direction of its own, so the run decides.
+  return isHorizontal(from, other) ? 'x' : 'y'
+}
+
+/** Drops empty legs, then merges any two that run along the same axis. */
+function tidyLegs(legs: readonly RouteLeg[]): RouteLeg[] {
+  const kept: RouteLeg[] = []
+  for (const leg of legs) {
+    if (samePoint(leg.from, leg.to)) continue
+    const last = kept[kept.length - 1]
+    /*
+     * A PINNED leg never merges. The stub out of each end is one, and folding
+     * it into the run that follows loses the departure entirely: a line
+     * leaving a right edge towards something on the left came back as a
+     * single leg heading LEFT, so the arrowhead — which is oriented by the
+     * route's own first segment — turned round to face the object it was
+     * leaving. It would also make the pinned half of the merged leg look
+     * draggable, which is a handle that writes somewhere it must not.
+     */
+    if (last?.runs === leg.runs && last.moves.length > 0 && leg.moves.length > 0) {
+      // Connected and along the same axis means collinear, so the two are one
+      // run of the line — and whoever drags it moves both of their nodes.
+      kept[kept.length - 1] = {
+        from: last.from,
+        to: leg.to,
+        runs: leg.runs,
+        moves: [...last.moves, ...leg.moves],
+      }
+      continue
+    }
+    kept.push(leg)
+  }
+  return kept
 }
 
 /**
- * The bend an elbow dropped HERE describes — the inverse of `elbowAnchor`.
+ * An orthogonal route, leg by leg.
  *
- * Inverting rather than storing the point is what makes the bend survive the
- * objects moving: a fraction still means something after both ends have gone
- * somewhere else, and a point does not.
+ * ONE decomposition for the shape and the handles alike: the polyline is these
+ * legs end to end, and what you can grab is these legs. Two functions
+ * answering that separately is how a handle comes to sit where the line is
+ * not.
+ *
+ * The walk ALTERNATES: out of each node perpendicular to the run just drawn,
+ * then along it again. That is what makes a stop a corner rather than a
+ * suggestion, and a staircase reachable at all — and where a node lies on the
+ * line the route was already taking, the perpendicular leg is empty and
+ * disappears, which is how one drag bends a route without also folding it.
+ *
+ * With NO stops the walk is seeded with the midpoint it would otherwise have
+ * to invent, so the default is exactly the route this always drew: out of each
+ * edge, across the middle, and in. Dragging either free leg of it turns that
+ * midpoint into a real stop.
  */
-export function elbowFrom(
+export function orthogonalNodes(
   start: Point,
   end: Point,
-  at: Point,
+  points: readonly Bend[],
   normals: RouteNormals | null = null,
-  /**
-   * How close, in world units, an elbow has to come to collapse the route to
-   * a single corner. Zero never snaps.
-   *
-   * An orthogonal route turns twice: out of one end, across, and into the
-   * other. Pushed all the way to either end it becomes an L, which is the
-   * shape people actually draw — so the drag finds it rather than requiring
-   * the elbow to be landed on an exact pixel. The caller decides HOW close by
-   * what it passes, which is how the snap can be stickier once it has taken
-   * (a wider number to release than to catch) without this having to remember
-   * anything between one pointer event and the next.
-   */
-  snapWithin = 0,
-): Bend {
+): Point[] {
   const [s, e] = stubs(start, end, normals)
-  const horizontal = isHorizontal(s, e)
-  const span = horizontal ? e.x - s.x : e.y - s.y
-  // A run with no span on its dominant axis is two ends in the same place;
-  // there is no fraction to take, and the middle is as good as anywhere.
-  if (span === 0) return NO_BEND
-  const from = horizontal ? at.x - s.x : at.y - s.y
-  const along = from / span
+  if (points.length > 0) return [s, ...points.map((bend) => pointAt(start, end, bend)), e]
   /*
-   * The two L's: the elbow standing at one end of the run or the other.
-   * Measured in world units along that run rather than as a fraction of it,
-   * or a long connector would snap from half a screen away and a short one
-   * would never snap at all.
+   * With nothing stored, the middle the route crosses at stands in for a stop
+   * — so the default is exactly the route this always drew: out of each edge,
+   * across the middle, and in. Dragging either free leg of it turns that
+   * middle into a real stop, and until then it is a node like any other.
    */
-  if (snapWithin > 0) {
-    const reach = Math.abs(snapWithin / span)
-    if (along < reach) return { along: 0, across: 0 }
-    if (along > 1 - reach) return { along: 1, across: 0 }
+  const horizontal = isHorizontal(s, e)
+  return [
+    s,
+    horizontal ? { x: lerp(s.x, e.x, 0.5), y: s.y } : { x: s.x, y: lerp(s.y, e.y, 0.5) },
+    e,
+  ]
+}
+
+export function orthogonalLegs(
+  start: Point,
+  end: Point,
+  points: readonly Bend[],
+  normals: RouteNormals | null = null,
+): RouteLeg[] {
+  const [s, e] = stubs(start, end, normals)
+  /*
+   * The run's own dominant axis decides which way the route crosses, as it
+   * always has — NOT the direction it departs in. Those differ whenever a line
+   * leaves a top edge towards something mostly sideways, and taking the
+   * departure would turn every one of those routes inside out.
+   */
+  const last: LegAxis = isHorizontal(s, e) ? 'x' : 'y'
+  const nodes = orthogonalNodes(start, end, points, normals)
+
+  const targets = nodes.slice(1).map((at, index) => ({
+    at,
+    anchor: {
+      // The last node is the far stub: moving a leg it holds has to put a stop
+      // at the end of the list, since there is nothing there to move.
+      stop: index + 1 === nodes.length - 1 ? points.length : index,
+      insert: points.length === 0 || index + 1 === nodes.length - 1,
+      at,
+      node: index + 1,
+    },
+  }))
+
+  const legs: RouteLeg[] = [{ from: start, to: s, runs: departureAxis(start, s, end), moves: [] }]
+  let cursor = s
+  let cursorAnchor: LegAnchor = { stop: 0, insert: true, at: s, node: 0 }
+
+  for (const target of targets) {
+    const across: LegAxis = last === 'x' ? 'y' : 'x'
+    /*
+     * The corner takes one coordinate from each end of the pair, which is
+     * exactly what decides who has to move when a leg is dragged: the run OUT
+     * is held where it came from, the run ALONG by where it is going.
+     */
+    const corner =
+      across === 'y' ? { x: cursor.x, y: target.at.y } : { x: target.at.x, y: cursor.y }
+    legs.push({ from: cursor, to: corner, runs: across, moves: [cursorAnchor] })
+    legs.push({ from: corner, to: target.at, runs: last, moves: [target.anchor] })
+    cursor = target.at
+    cursorAnchor = target.anchor
   }
-  return { along, across: 0 }
+
+  legs.push({ from: e, to: end, runs: departureAxis(end, e, start), moves: [] })
+  return tidyLegs(legs)
 }
 
 /** The route, as the renderer and everything else sees it. */
@@ -448,29 +540,22 @@ export function connectorRoute(
 
     case 'orthogonal': {
       /*
-       * OUT of each edge first, then turn. The run between the two stubs
-       * turns on its own dominant axis, which reads as a deliberate route
-       * rather than a diagonal approximated with steps; the turn is at the
-       * halfway point unless a bend says otherwise.
+       * OUT of each edge first, then turn, and a right angle at every stop.
+       * The legs are the shape AND what you grab to change it, worked out in
+       * one place so the two cannot disagree — see `orthogonalLegs`.
        *
        * Without the stubs a line leaving a right edge towards something on
        * the left turned immediately and ran back over the object it had just
        * left — which is the same fault as an arrowhead pointing along an
        * object rather than into it, in a different routing.
-       *
-       * ONE point still, where the other two routings take a list: an
-       * orthogonal route through several stops is a different problem — each
-       * leg is dragged by its own side rather than by a point in space — and
-       * doing it here would give it the wrong gesture. It has a stage of its
-       * own.
        */
-      const bend = heldPoint(points)
-      const [s, e] = stubs(start, end, normals)
-      const at = bend?.along ?? 0.5
-      const turn = isHorizontal(s, e)
-        ? [{ x: lerp(s.x, e.x, at), y: s.y }, { x: lerp(s.x, e.x, at), y: e.y }]
-        : [{ x: s.x, y: lerp(s.y, e.y, at) }, { x: e.x, y: lerp(s.y, e.y, at) }]
-      return { kind: 'polyline', points: withoutRepeats([start, s, ...turn, e, end]) }
+      const legs = orthogonalLegs(start, end, points, normals)
+      const first = legs[0]
+      if (first === undefined) return { kind: 'polyline', points: [start, end] }
+      return {
+        kind: 'polyline',
+        points: withoutRepeats([first.from, ...legs.map((leg) => leg.to)]),
+      }
     }
 
     case 'curved': {

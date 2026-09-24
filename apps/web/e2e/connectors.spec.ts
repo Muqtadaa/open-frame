@@ -69,6 +69,24 @@ async function alongTheLine(page: Page, fraction = 0.5): Promise<{ x: number; y:
   }, fraction)
 }
 
+/**
+ * The grab bar on the leg nearest a point along the drawn route.
+ *
+ * A leg only offers itself while the pointer is on it, so reaching for one is
+ * part of the gesture rather than setup — and the bar, not the point that
+ * revealed it, is what gets pressed: the two are a few pixels apart and a
+ * press that misses lands on the line and drags the whole connector.
+ */
+async function legAt(page: Page, fraction = 0.5): Promise<{ x: number; y: number }> {
+  const at = await alongTheLine(page, fraction)
+  await page.mouse.move(at.x, at.y)
+  const grip = page.locator('[data-testid^="endpoint-leg:"]')
+  await expect(grip).toHaveCount(1)
+  const box = await grip.boundingBox()
+  if (box === null) throw new Error('no leg to grab')
+  return { x: box.x + box.width / 2, y: box.y + box.height / 2 }
+}
+
 async function drag(page: Page, from: { x: number; y: number }, to: { x: number; y: number }) {
   await page.mouse.move(from.x, from.y)
   await page.mouse.down()
@@ -421,55 +439,59 @@ test.describe('bending a route', () => {
     await page.getByTestId('field-routing').selectOption(routing)
   }
 
-  test('offers a bend handle on a bendable route and none on a straight one', async ({ page }) => {
+  test('offers a leg to push on an orthogonal route, and only where you point', async ({
+    page,
+  }) => {
     await connectedPair(page)
     await page.locator('.of-connector__line').click({ force: true })
     await expect(page.getByTestId('endpoint-from')).toBeVisible()
 
-    /*
-     * No ELBOW on a straight line — there is no middle segment to slide, and a
-     * control that appears and does nothing is worse than one that is absent.
-     * It can still be given stops; those are handles of their own, and they
-     * appear on the stretch you point at rather than sitting there.
-     */
-    await expect(page.getByTestId('endpoint-bend')).toHaveCount(0)
-
     await page.getByTestId('field-routing').selectOption('orthogonal')
-    await expect(page.getByTestId('endpoint-bend')).toBeVisible()
-    // Drawn as a control rather than an end, so it does not read as a third
-    // point the line could detach to.
-    await expect(page.getByTestId('endpoint-bend')).toHaveClass(/of-endpoint--control/)
+
+    /*
+     * ONE at a time, and only the run being pointed at. Every leg lit at once
+     * turns a staircase into a ladder of bars and hides the line they are
+     * there to move.
+     */
+    const middle = await alongTheLine(page)
+    await page.mouse.move(middle.x, middle.y - 200)
+    await expect(page.locator('[data-testid^="endpoint-leg:"]')).toHaveCount(0)
+    await page.mouse.move(middle.x, middle.y)
+    await expect(page.locator('[data-testid^="endpoint-leg:"]')).toHaveCount(1)
+
+    // A bar along the run, not a dot on it: it is grabbed anywhere.
+    const grip = await page.locator('[data-testid^="endpoint-leg:"]').boundingBox()
+    if (grip === null) throw new Error('no leg')
+    expect(Math.max(grip.width, grip.height)).toBeGreaterThan(30)
   })
 
-  test('drags the elbow of an orthogonal route', async ({ page }) => {
+  test('pushes a leg of an orthogonal route sideways', async ({ page }) => {
     await bendableConnector(page, 'orthogonal')
 
-    const before = await page.getByTestId('endpoint-bend').boundingBox()
-    if (before === null) throw new Error('no bend handle')
-
-    await drag(
-      page,
-      { x: before.x + before.width / 2, y: before.y + before.height / 2 },
-      { x: before.x + before.width / 2 - 90, y: before.y + before.height / 2 },
-    )
-
-    const after = await page.getByTestId('endpoint-bend').boundingBox()
-    if (after === null) throw new Error('no bend handle')
-    // The elbow followed the pointer along the run.
-    expect(after.x).toBeLessThan(before.x - 60)
+    const before = await legAt(page)
+    await drag(page, before, { x: before.x - 90, y: before.y })
 
     /*
-     * And the LINE moved with it, not just the handle. A handle that slides
-     * without the route following is the shape this bug would take.
+     * The LINE moved, not just a handle: the crossing now runs down where the
+     * pointer left it. Read off the path, because a handle that slides while
+     * the route stays put is the shape this bug would take.
      */
-    const corner = { x: after.x + after.width / 2, y: before.y - 40 }
-    const onTheLine = await page
-      .locator('.of-connector__line')
-      .evaluate((line, at: { x: number; y: number }) => {
-        const box = line.getBoundingClientRect()
-        return at.x >= box.x - 2 && at.x <= box.x + box.width + 2
-      }, corner)
-    expect(onTheLine).toBe(true)
+    const crossings = await page.locator('.of-connector__line').evaluate((element) => {
+      const path = element as unknown as SVGPathElement
+      const matrix = path.getScreenCTM()
+      if (matrix === null) throw new Error('the line is not on screen')
+      const seen: number[] = []
+      const total = path.getTotalLength()
+      for (let at = 0; at <= total; at += total / 60) {
+        const point = new DOMPoint(
+          path.getPointAtLength(at).x,
+          path.getPointAtLength(at).y,
+        ).matrixTransform(matrix)
+        seen.push(point.x)
+      }
+      return seen
+    })
+    expect(Math.min(...crossings)).toBeLessThan(before.x - 60)
   })
 
   test('drags the apex of a curve, and one undo puts it back', async ({ page }) => {
@@ -782,11 +804,7 @@ test.describe('reshaping a line', () => {
     throw new Error('this route does not cross')
   }
 
-  const grab = async (page: Page) => {
-    const box = await page.getByTestId('endpoint-bend').boundingBox()
-    if (box === null) throw new Error('no bend handle')
-    return { x: box.x + box.width / 2, y: box.y + box.height / 2 }
-  }
+  const grab = async (page: Page) => legAt(page)
 
   test('draws the route as it will be, and no line to nowhere', async ({ page }) => {
     await bendable(page, 'curved')
@@ -916,6 +934,39 @@ test.describe('reshaping a line', () => {
     await page.keyboard.press('ControlOrMeta+z')
     await expect(page.getByTestId('endpoint-vertex:0')).toBeVisible()
     expect(await route(page)).not.toBe(plain)
+  })
+
+  test('builds a staircase out of an orthogonal route, one leg at a time', async ({ page }) => {
+    await bendable(page, 'orthogonal')
+    const corners = async (): Promise<number> => points(await route(page)).length
+
+    const turns = await corners()
+
+    // Pushing the crossing MOVES the route; it does not add a turn to it.
+    const crossing = await legAt(page)
+    await drag(page, crossing, { x: crossing.x - 90, y: crossing.y })
+    expect(await corners(), 'sliding the crossing added a turn').toBe(turns)
+
+    /*
+     * Pushing the run that LEAVES the start is what adds one: the line still
+     * has to depart where it is attached, so a corner appears between the two
+     * and the run you grabbed moves clear.
+     */
+    const leaving = await legAt(page, 0.12)
+    await drag(page, leaving, { x: leaving.x, y: leaving.y - 70 })
+    expect(await corners(), 'the route did not gain a turn').toBeGreaterThan(turns)
+
+    // And it is still square: every run is along one axis or the other.
+    const run = points(await route(page))
+    for (let at = 1; at < run.length; at += 1) {
+      const a = run[at - 1]
+      const b = run[at]
+      if (a === undefined || b === undefined) continue
+      expect(
+        Math.abs(a.x - b.x) < 0.01 || Math.abs(a.y - b.y) < 0.01,
+        'a leg ran diagonally',
+      ).toBe(true)
+    }
   })
 
   test('collapses an orthogonal route to an L, and holds it until pulled clear', async ({
