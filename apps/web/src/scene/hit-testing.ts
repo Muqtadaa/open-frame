@@ -1,5 +1,6 @@
 import {
   ancestorsOf,
+  attachmentAnchor,
   contains,
   containsPoint,
   objectsInPaintOrder,
@@ -79,6 +80,57 @@ export function hitTest(
 ): ObjectId | null {
   const hit = hitTestRaw(doc, registry, worldPoint)
   return hit === null ? null : selectionTargetFor(doc, registry, hit)
+}
+
+/**
+ * What a connector being dragged is over: the object under the pointer, or one
+ * whose connection anchors reach out to it.
+ *
+ * The anchors are drawn OUTSIDE the object — they had to move off its edges,
+ * which is where the resize handles are — so aiming at one means letting go
+ * outside the thing you are aiming at. Hit testing the objects alone therefore
+ * reported nothing at exactly the moment somebody was being most deliberate,
+ * and the line fell to the floor as a free point.
+ *
+ * `reach` is how far out to look, in world units. It is the same number the
+ * overlay uses to decide which anchor to mark and the same one the drop
+ * carries to the type, so what is highlighted, what is attachable and what
+ * actually attaches cannot disagree.
+ *
+ * Only types that declare `connectable` extend this halo — a type with no
+ * anchors has nothing out there to aim at.
+ */
+export function attachTargetAt(
+  doc: BoardDocument,
+  registry: ObjectTypeRegistry,
+  worldPoint: Point,
+  reach: number,
+): ObjectId | null {
+  const direct = hitTest(doc, registry, worldPoint)
+  if (direct !== null) return direct
+
+  let nearest: { id: ObjectId; distance: number } | null = null
+  for (const object of objectsInPaintOrder(doc)) {
+    if (object.hidden || object.locked) continue
+    const definition = registry.get(object.type)
+    if (definition?.capabilities.connectable !== true) continue
+    // Its own ends are handles already; a connector does not grow anchors.
+    if (registry.endpointsOf(object, doc).length > 0) continue
+    /*
+     * The TYPE decides whether this counts as aiming at an anchor, exactly as
+     * it will when the pointer comes up. `auto` here means "near the object
+     * but at none of its anchors", which out here means not near at all.
+     */
+    const bounds = registry.boundsOf(object, doc)
+    const anchor = attachmentAnchor(object, worldPoint, reach, (other) =>
+      registry.boundsOf(other, doc),
+    )
+    if (anchor.kind !== 'side') continue
+    const middle = { x: bounds.x + bounds.width / 2, y: bounds.y + bounds.height / 2 }
+    const distance = Math.hypot(middle.x - worldPoint.x, middle.y - worldPoint.y)
+    if (nearest === null || distance < nearest.distance) nearest = { id: object.id, distance }
+  }
+  return nearest === null ? null : selectionTargetFor(doc, registry, nearest.id)
 }
 
 /**

@@ -17,11 +17,13 @@ export function ConnectorPreview() {
 
   if (drag.kind !== 'connect') return null
 
-  const { start } = resolveEndpoints(runtime.store.getDocument(), drag.from, {
-    kind: 'point',
-    x: drag.to.x,
-    y: drag.to.y,
-  })
+  const document = runtime.store.getDocument()
+  const { start } = resolveEndpoints(
+    document,
+    drag.from,
+    { kind: 'point', x: drag.to.x, y: drag.to.y },
+    (other) => runtime.registry.boundsOf(other, document),
+  )
 
   /*
    * Both ends converted, because the preview is drawn on the apparatus layer

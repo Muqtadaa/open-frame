@@ -29,7 +29,9 @@ export function deleteObjects(
    * removal patches, so their endpoints can still be resolved. One orphaned end
    * becomes a free point; two orphaned ends delete the connector.
    */
-  const { patches: detachPatches, alsoDelete } = detachConnectors(doc, doomed)
+  const { patches: detachPatches, alsoDelete } = detachConnectors(doc, doomed, (other) =>
+    ctx.registry.boundsOf(other, doc),
+  )
   for (const id of alsoDelete) doomed.add(id)
 
   /*

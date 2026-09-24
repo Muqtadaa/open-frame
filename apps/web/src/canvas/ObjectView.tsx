@@ -1,5 +1,5 @@
-import type { ObjectId } from '@openframe/core'
-import { memo, useMemo } from 'react'
+import type { AnyOpenFrameObject, ObjectId } from '@openframe/core'
+import { memo, useCallback, useMemo } from 'react'
 
 import { useAssetUrl } from '../hooks/use-asset-url.js'
 import { useDependencySubscriptions, useDocumentObject } from '../hooks/use-document-object.js'
@@ -148,6 +148,16 @@ function ObjectViewInner({ id, views }: Props) {
   const assetUrl = useAssetUrl(
     object !== undefined && views.get(object.type)?.usesAssets === true,
   )
+  /*
+   * WHERE ANOTHER OBJECT'S EDGES ARE, for the one view that draws against
+   * them. Handed down rather than reached for: views are a leaf module with no
+   * registry, and `other.frame` is wrong for anything with a derived extent —
+   * a group's frame is 0x0 and its children are the truth.
+   */
+  const boundsOf = useCallback(
+    (other: AnyOpenFrameObject) => runtime.registry.boundsOf(other, runtime.store.getDocument()),
+    [runtime],
+  )
 
   if (object === undefined) return null
 
@@ -220,6 +230,7 @@ function ObjectViewInner({ id, views }: Props) {
             object={object}
             zoom={zoom}
             document={runtime.store.getDocument()}
+            boundsOf={boundsOf}
             at={editingAt}
             Chrome={chrome}
             onCommit={(patch) => {
@@ -258,6 +269,7 @@ function ObjectViewInner({ id, views }: Props) {
             zoom={zoom}
             document={runtime.store.getDocument()}
             assetUrl={assetUrl}
+            boundsOf={boundsOf}
           />
         )}
       </ObjectErrorBoundary>

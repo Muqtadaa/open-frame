@@ -1,4 +1,11 @@
-import { bendAnchor, connectorRoute, type Bend, type Point, type Routing } from '@openframe/core'
+import {
+  bendAnchor,
+  connectorRoute,
+  type Bend,
+  type Point,
+  type RouteNormals,
+  type Routing,
+} from '@openframe/core'
 
 /** Arrowhead size in world units at 100% zoom. */
 export const ARROW_SIZE = 9
@@ -15,8 +22,9 @@ export function connectorPath(
   end: Point,
   routing: Routing,
   bend: Bend | null = null,
+  normals: RouteNormals | null = null,
 ): string {
-  const route = connectorRoute(start, end, routing, bend)
+  const route = connectorRoute(start, end, routing, bend, normals)
   const [first, ...rest] = route.points
   if (first === undefined) return ''
   const from = `M ${String(first.x)} ${String(first.y)}`
@@ -41,8 +49,9 @@ export function pathMidpoint(
   end: Point,
   routing: Routing = 'straight',
   bend: Bend | null = null,
+  normals: RouteNormals | null = null,
 ): Point {
-  return bendAnchor(start, end, routing, bend)
+  return bendAnchor(start, end, routing, bend, normals)
 }
 
 /**
@@ -96,8 +105,9 @@ export function routeAngles(
   end: Point,
   routing: Routing,
   bend: Bend | null = null,
+  normals: RouteNormals | null = null,
 ): RouteAngles {
-  const points = connectorRoute(start, end, routing, bend).points
+  const points = connectorRoute(start, end, routing, bend, normals).points
   const straight = Math.atan2(end.y - start.y, end.x - start.x)
 
   const afterStart = distinctFrom(points, 0, 1)

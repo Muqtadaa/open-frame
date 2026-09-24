@@ -196,7 +196,14 @@ Consequences to respect when adding a type like this:
 
 - anything needing bounds asks `registry.boundsOf(object, doc)`, never
   `object.frame` — the selection overlay got this wrong and drew a degenerate
-  box at the origin
+  box at the origin, and the connector's own anchors got it wrong a second
+  time, running every line joined to a GROUP to that group's 0×0 frame instead
+  of to its edge. A type that needs another object's extent is handed a
+  `boundsOf`: the registry gives one to `getBounds`, `hitTest`, `endpoints` and
+  `retargetEndpoint`, and `ObjectView` gives one to every view. The exception
+  is an object that is TURNED, whose bounds are the axis-aligned box around it
+  rather than where its edges are — and nothing both rotates and keeps its
+  extent elsewhere
 - bounds are a superset, so hit testing rejects on bounds then asks
   `registry.hitTestObject`
 - per-object subscriptions mean a dependent object goes stale unless the type
@@ -205,6 +212,20 @@ Consequences to respect when adding a type like this:
   and gets drag handles, preview and undo without the canvas knowing what it is.
   The gesture reports only what was dropped on; where exactly an attachment
   lands is the type's decision
+- so a drop carries where the pointer was AND how precise a pointer is at that
+  zoom — a tolerance in world units, because a constant means something
+  different at 25% than at 400%, and only the view knows the zoom. Whether that
+  counts as aiming at an anchor or merely at the object is then decided inside
+  the type, and the overlay's highlight, the gesture's hit test and the drop
+  itself all ask that one function, so none of them can promise what another
+  does not deliver
+- an end that is attached resolves to a point AND a direction, and the route
+  leaves along it. Take the direction from the run between the ends instead and
+  a line anchored to a bottom edge departs sideways — the caps are oriented by
+  the route's own first and last segments, so the arrowhead then points along
+  the object rather than into it. The anchors are drawn clear of the edges, so
+  aiming at one means letting go OUTSIDE the target: hit testing the objects
+  alone finds nothing at exactly the moment somebody is being most deliberate
 
 ### 17. Snapping is a preference with a held-key override
 

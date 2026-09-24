@@ -66,7 +66,12 @@ export {
   type ConnectorEndpoint,
   type Routing,
 } from './connector/schema.js'
-export { endpointDependencies, resolveEndpoints } from './connector/geometry.js'
+export {
+  attachmentAnchor,
+  endpointDependencies,
+  resolveEndpoints,
+  type ResolvedEnds,
+} from './connector/geometry.js'
 export {
   bendAnchor,
   bendFrom,
@@ -75,6 +80,7 @@ export {
   routeVertices,
   NO_BEND,
   type Route,
+  type RouteNormals,
 } from './connector/route.js'
 export { EVIDENCE_TYPE, evidenceType } from './evidence/definition.js'
 export { EvidenceDataSchema, type EvidenceData } from './evidence/schema.js'

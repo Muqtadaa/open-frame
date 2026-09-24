@@ -1,7 +1,7 @@
 import type { BoardDocument } from '../../domain/document.js'
 import type { ObjectId } from '../../domain/ids.js'
 import type { Patch } from '../../domain/patch.js'
-import { resolveEndpoints } from './geometry.js'
+import { resolveEndpoints, type BoundsOf } from './geometry.js'
 import { CONNECTOR_TYPE } from './definition.js'
 import type { ConnectorData, ConnectorEndpoint } from './schema.js'
 
@@ -24,6 +24,12 @@ function attachedTo(endpoint: ConnectorEndpoint, doomed: ReadonlySet<ObjectId>):
 export function detachConnectors(
   doc: BoardDocument,
   doomed: ReadonlySet<ObjectId>,
+  /**
+   * The real extent of an object, from the registry. Freezing an orphaned end
+   * where it currently RENDERS means resolving it exactly as the renderer
+   * does, and a frame is not that for a group.
+   */
+  boundsOf: BoundsOf,
 ): { readonly patches: readonly Patch[]; readonly alsoDelete: readonly ObjectId[] } {
   const patches: Patch[] = []
   const alsoDelete: ObjectId[] = []
@@ -43,7 +49,7 @@ export function detachConnectors(
 
     // Freeze the orphaned end where it currently renders, so the connector does
     // not visibly jump when its neighbour disappears.
-    const { start, end } = resolveEndpoints(doc, data.from, data.to)
+    const { start, end } = resolveEndpoints(doc, data.from, data.to, boundsOf)
     const frozen = fromLost ? start : end
     patches.push({
       op: 'set',

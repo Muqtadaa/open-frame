@@ -53,6 +53,24 @@ export const CONNECT_REACH_PX = CONNECT_OUTSET_PX + CONNECT_TARGET_PX / 2
  */
 export const PANEL_CLEARANCE_PX = CONNECT_REACH_PX + 4
 
+/**
+ * How close a drop counts as aiming AT an anchor, in world units.
+ *
+ * One definition, because two would be two different answers to "did they
+ * mean this anchor or the object": the gesture asks it when a line is let go,
+ * and the overlay asks it every frame to mark the anchor under the pointer.
+ * A highlight that promised a side the drop did not deliver would be worse
+ * than no highlight at all.
+ *
+ * Derived from the reach of the anchor's own pointer target and divided by
+ * the zoom HERE, where it is a world measurement rather than something drawn:
+ * a pointer is no more precise at 25% than at 400%, but a world unit is
+ * sixteen times as far.
+ */
+export function anchorReach(zoom: number): number {
+  return CONNECT_REACH_PX / Math.max(zoom, 0.0001)
+}
+
 /** The outward normal of a side, as a unit vector. */
 function outward(side: Side): Point {
   if (side === 'top') return { x: 0, y: -1 }

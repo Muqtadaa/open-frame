@@ -79,6 +79,18 @@ describe('every type that declares textColor paints it', () => {
           zoom={1}
           document={{ ...doc, objects: new Map([[object.id, object]]) }}
           assetUrl={() => ({ status: 'missing' })}
+          /*
+           * The frame IS the extent for every type here — nothing in this
+           * fixture is a container — so the simplest honest answer. A view
+           * that needs the real thing gets it from the registry through
+           * `ObjectView`, which is the point of it being a prop.
+           */
+          boundsOf={(other) => ({
+            x: other.frame.x,
+            y: other.frame.y,
+            width: other.frame.width,
+            height: other.frame.height,
+          })}
         />,
       )
 

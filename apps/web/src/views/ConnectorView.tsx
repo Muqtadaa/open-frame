@@ -14,14 +14,37 @@ import { InlineTextEditor } from './shared-editor.js'
  * geometry comes from wherever its endpoints resolve to, not from a frame. The
  * wrapper compensates by placing connectors at the origin — see `ObjectView`.
  */
-function ConnectorRenderer({ object, document: doc, zoom }: ObjectViewProps<ConnectorData>) {
-  const { start, end } = resolveEndpoints(doc, object.data.from, object.data.to)
+function ConnectorRenderer({
+  object,
+  document: doc,
+  zoom,
+  boundsOf,
+}: ObjectViewProps<ConnectorData>) {
+  /*
+   * `boundsOf`, never `other.frame` — a group's frame is 0x0 and its extent is
+   * its children's, so a line joined to a group used to run to the group's
+   * origin instead of to its edge (rule 16).
+   */
+  const { start, end, startNormal, endNormal } = resolveEndpoints(
+    doc,
+    object.data.from,
+    object.data.to,
+    boundsOf,
+  )
+  /*
+   * WHICH WAY each end faces, carried into the route so the line leaves and
+   * arrives perpendicular to whatever it is attached to. The caps are oriented
+   * by the route's own first and last segments, so they follow for free — and
+   * without this they pointed along the object rather than into it.
+   */
+  const normals = { start: startNormal, end: endNormal }
   const stroke = inkOf(object.style.strokeColor ?? object.style.color)
   const width = strokeWidth(object.style.stroke, 'medium')
-  const path = connectorPath(start, end, object.data.routing, object.data.bend ?? null)
-  const { departure, arrival } = routeAngles(start, end, object.data.routing, object.data.bend ?? null)
+  const bend = object.data.bend ?? null
+  const path = connectorPath(start, end, object.data.routing, bend, normals)
+  const { departure, arrival } = routeAngles(start, end, object.data.routing, bend, normals)
   const label = object.data.text
-  const mid = pathMidpoint(start, end, object.data.routing, object.data.bend ?? null)
+  const mid = pathMidpoint(start, end, object.data.routing, bend, normals)
 
   // Both ends, resolved once. `angle` is the direction of travel as the line
   // arrives, so the near end is the same angle turned around.
@@ -94,11 +117,22 @@ function ConnectorRenderer({ object, document: doc, zoom }: ObjectViewProps<Conn
 function ConnectorEditor({
   object,
   document: doc,
+  boundsOf,
   onCommit,
   onCancel,
 }: ObjectEditorProps<ConnectorData>) {
-  const { start, end } = resolveEndpoints(doc, object.data.from, object.data.to)
-  const mid = pathMidpoint(start, end, object.data.routing, object.data.bend ?? null)
+  // The label's place is the middle of the DRAWN route, which now depends on
+  // which way each end leaves — same call as the renderer, same answer.
+  const { start, end, startNormal, endNormal } = resolveEndpoints(
+    doc,
+    object.data.from,
+    object.data.to,
+    boundsOf,
+  )
+  const mid = pathMidpoint(start, end, object.data.routing, object.data.bend ?? null, {
+    start: startNormal,
+    end: endNormal,
+  })
   return (
     <div
       className="of-connector__editor-wrap"

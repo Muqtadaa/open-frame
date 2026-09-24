@@ -1,4 +1,5 @@
 import {
+  attachmentAnchor,
   FULL_CROP,
   panViewport,
   rectFromPoints,
@@ -34,9 +35,16 @@ import {
   type PointerIntent,
 } from '../interaction/pointer-controller.js'
 import { anchorForSide } from './ConnectPoints.js'
+import { anchorReach } from '../scene/connect-points.js'
 import { croppedBy } from './CropOverlay.js'
 import { committedRect, constrainToAxis } from '../scene/draw.js'
-import { containerAt, hitTest, hitTestRaw, objectsInMarquee } from '../scene/hit-testing.js'
+import {
+  attachTargetAt,
+  containerAt,
+  hitTest,
+  hitTestRaw,
+  objectsInMarquee,
+} from '../scene/hit-testing.js'
 import { alignToNeighbours, alignmentTargets, type AlignmentGuide } from '../scene/alignment.js'
 import { cullToViewport } from '../scene/culling.js'
 import { snapDelta, snapRect } from '../scene/snapping.js'
@@ -579,10 +587,7 @@ export function useCanvasGestures(containerRef: RefObject<HTMLElement | null>) {
         const [subject] = [...store.selection]
         if (subject !== undefined && side !== null) {
           const at = toWorld(event.clientX, event.clientY)
-          store.beginConnect(
-            { kind: 'object', objectId: subject, anchor: anchorForSide(side) },
-            at,
-          )
+          store.beginConnect({ kind: 'object', objectId: subject, anchor: anchorForSide(side) }, at)
           event.currentTarget.setPointerCapture(event.pointerId)
           gesture.current = {
             pointerId: event.pointerId,
@@ -624,9 +629,7 @@ export function useCanvasGestures(containerRef: RefObject<HTMLElement | null>) {
         const subjects = [...store.selection]
           .map((id) => document.objects.get(id))
           .filter((object): object is AnyOpenFrameObject => object !== undefined)
-          .filter(
-            (object) => runtime.registry.get(object.type)?.capabilities.resizable === true,
-          )
+          .filter((object) => runtime.registry.get(object.type)?.capabilities.resizable === true)
         const startBounds = framesBounds(subjects)
         if (startBounds !== null) {
           const worldStart = toWorld(event.clientX, event.clientY)
@@ -660,8 +663,7 @@ export function useCanvasGestures(containerRef: RefObject<HTMLElement | null>) {
       const worldPoint = toWorld(event.clientX, event.clientY)
       const document = runtime.store.getDocument()
       const hitId =
-        hitTest(document, runtime.registry, worldPoint) ??
-        objectChromeUnderPointer(event.target)
+        hitTest(document, runtime.registry, worldPoint) ?? objectChromeUnderPointer(event.target)
       const intents = decidePointerDown({
         tool: store.tool,
         worldPoint,
@@ -718,7 +720,11 @@ export function useCanvasGestures(containerRef: RefObject<HTMLElement | null>) {
                   cullToViewport(
                     doc,
                     runtime.registry,
-                    visibleWorldRect(settled.viewport, settled.canvasSize.width, settled.canvasSize.height),
+                    visibleWorldRect(
+                      settled.viewport,
+                      settled.canvasSize.width,
+                      settled.canvasSize.height,
+                    ),
                   ),
                   settled.selection,
                 )
@@ -776,8 +782,10 @@ export function useCanvasGestures(containerRef: RefObject<HTMLElement | null>) {
            * the frame actually changing rather than on the pointer twitching,
            * which is the same distinction the divider drag makes.
            */
-          if (result.frame.width !== subject.frame.width ||
-              result.frame.height !== subject.frame.height) {
+          if (
+            result.frame.width !== subject.frame.width ||
+            result.frame.height !== subject.frame.height
+          ) {
             active.moved = true
           }
           store.previewCrop(result.frame, result.crop)
@@ -871,7 +879,18 @@ export function useCanvasGestures(containerRef: RefObject<HTMLElement | null>) {
          * something it visibly does not touch.
          */
         const free = event.shiftKey ? constrainToAxis(active.startWorld, worldPoint) : worldPoint
-        const over = hitTest(runtime.store.getDocument(), runtime.registry, free)
+        /*
+         * The anchors as well as the object. They are drawn clear of its
+         * edges, so aiming at one means letting go OUTSIDE the thing being
+         * aimed at — and hit testing the objects alone reported nothing at
+         * exactly the moment somebody was being most deliberate.
+         */
+        const over = attachTargetAt(
+          runtime.store.getDocument(),
+          runtime.registry,
+          free,
+          anchorReach(store.viewport.zoom),
+        )
         // The object being edited must not offer itself as a target: attaching
         // an end to its own connector is unresolvable, so it would silently
         // become a no-op rather than the free point the drop implied.
@@ -987,7 +1006,12 @@ export function useCanvasGestures(containerRef: RefObject<HTMLElement | null>) {
       if (active.mode === 'divider') {
         const drag = store.drag
         const subject = active.subjects[0]
-        if (drag.kind === 'divider' && drag.data !== null && active.moved && subject !== undefined) {
+        if (
+          drag.kind === 'divider' &&
+          drag.data !== null &&
+          active.moved &&
+          subject !== undefined
+        ) {
           /*
            * ONE transaction for the two changes. Weights are data and a frame
            * is geometry, so they are two commands — but they are one action,
@@ -1021,17 +1045,48 @@ export function useCanvasGestures(containerRef: RefObject<HTMLElement | null>) {
              */
             over === null
               ? { kind: 'point', x: to.x, y: to.y }
-              : { kind: 'object', objectId: over, x: to.x, y: to.y },
+              : {
+                  kind: 'object',
+                  objectId: over,
+                  x: to.x,
+                  y: to.y,
+                  /*
+                   * How precise a pointer is, in world units at this zoom.
+                   * The type uses it to tell "dropped on that anchor" from
+                   * "dropped on the object" — and a constant here would mean
+                   * something different at 25% than at 400%, which is the
+                   * whole reason it travels with the drop rather than living
+                   * in the type.
+                   */
+                  tolerance: anchorReach(store.viewport.zoom),
+                },
           )
         }
       }
 
       if (active.mode === 'connect' && store.drag.kind === 'connect') {
         const { from, to, over } = store.drag
+        /*
+         * A NEW line answers "where does this attach" exactly as a re-dragged
+         * end does, through the same function in the type. Two answers to one
+         * question is how drawing a connector onto an anchor and dropping an
+         * existing one there came to behave differently.
+         */
+        const document = runtime.store.getDocument()
+        const onto = over === null ? undefined : document.objects.get(over)
         const target =
-          over === null
+          over === null || onto === undefined
             ? ({ kind: 'point', x: to.x, y: to.y } as const)
-            : ({ kind: 'object', objectId: over, anchor: { kind: 'auto' } } as const)
+            : ({
+                kind: 'object',
+                objectId: over,
+                anchor: attachmentAnchor(
+                  onto,
+                  { x: to.x, y: to.y },
+                  anchorReach(store.viewport.zoom),
+                  (other) => runtime.registry.boundsOf(other, document),
+                ),
+              } as const)
 
         // A connector to nowhere from nowhere is a stray click, not a gesture.
         const trivial =
@@ -1144,7 +1199,11 @@ export function useCanvasGestures(containerRef: RefObject<HTMLElement | null>) {
        */
       if (hitId !== null) {
         const object = runtime.store.getDocument().objects.get(hitId)
-        if (object !== undefined && !object.locked && runtime.registry.cropWindowOf(object) !== null) {
+        if (
+          object !== undefined &&
+          !object.locked &&
+          runtime.registry.cropWindowOf(object) !== null
+        ) {
           const store = useInteractionStore.getState()
           store.setSelection([hitId])
           store.setCropping(hitId)

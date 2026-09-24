@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest'
 
+import { distanceToSegment, type Point } from '../../geometry/point.js'
 import { bendAnchor, bendFrom, connectorRoute, flattenRoute, NO_BEND } from './route.js'
 
 const start = { x: 0, y: 0 }
@@ -90,5 +91,139 @@ describe('the route itself', () => {
   it('leaves a straight route straight, because it has nothing to bend', () => {
     const route = connectorRoute(start, end, 'straight', { along: 0.2, across: 90 })
     expect(route.points).toEqual([start, end])
+  })
+})
+
+/**
+ * WHICH WAY THE LINE LEAVES, which is what makes a route meet an object
+ * rather than merely reach it.
+ *
+ * Every curve used to take its control points from the run's dominant axis,
+ * so a line anchored to a bottom edge left sideways — and the arrowheads are
+ * oriented by the route's first and last segments, so the cap pointed along
+ * the object instead of into it. That is the fault these hold.
+ */
+describe('leaving along the edge it is attached to', () => {
+  const down = { x: 0, y: 1 }
+  const up = { x: 0, y: -1 }
+  const right = { x: 1, y: 0 }
+
+  it('sends a curve straight out of the edge, not along the run', () => {
+    const route = connectorRoute(start, end, 'curved', null, { start: down, end: null })
+    if (route.kind !== 'cubic') throw new Error('a curve is a cubic')
+    const [from, control] = route.points
+    // The tangent at t=0 is the first control point minus the start.
+    expect(control.x).toBeCloseTo(from.x, 6)
+    expect(control.y).toBeGreaterThan(from.y)
+  })
+
+  it('arrives along the far edge, so the arrowhead points into it', () => {
+    const route = connectorRoute(start, end, 'curved', null, { start: null, end: up })
+    if (route.kind !== 'cubic') throw new Error('a curve is a cubic')
+    const [, , control, to] = route.points
+    // The tangent at t=1 is the end minus the last control point: the line
+    // arrives travelling DOWNWARD into an end whose outward normal is up.
+    expect(control.x).toBeCloseTo(to.x, 6)
+    expect(control.y).toBeLessThan(to.y)
+  })
+
+  it('keeps the old shape for an end attached to nothing', () => {
+    const free = connectorRoute(start, end, 'curved', null, { start: null, end: null })
+    const none = connectorRoute(start, end, 'curved', null)
+    expect(free).toEqual(none)
+  })
+
+  it('runs an orthogonal route out of the edge before it turns', () => {
+    const route = connectorRoute(start, end, 'orthogonal', null, { start: down, end: null })
+    const [first, second] = route.points
+    if (first === undefined || second === undefined) throw new Error('two points at least')
+    expect(second.x).toBeCloseTo(first.x, 6)
+    expect(second.y).toBeGreaterThan(first.y)
+  })
+
+  /**
+   * The case the stub exists for: leaving a right edge towards something on
+   * the LEFT. Without it the route turned immediately and ran back across the
+   * object it had just left.
+   */
+  it('leaves the right edge rightward even when the target is to the left', () => {
+    const route = connectorRoute({ x: 200, y: 0 }, { x: 0, y: 100 }, 'orthogonal', null, {
+      start: right,
+      end: null,
+    })
+    const [first, second] = route.points
+    if (first === undefined || second === undefined) throw new Error('two points at least')
+    expect(second.x).toBeGreaterThan(first.x)
+  })
+
+  it('drops a stub that lands on the corner after it, so no segment is empty', () => {
+    // A rightward departure towards a target directly right: the stub is
+    // collinear with the turn, and a zero-length segment has no direction for
+    // an arrowhead to take.
+    const route = connectorRoute({ x: 0, y: 0 }, { x: 200, y: 0 }, 'orthogonal', null, {
+      start: right,
+      end: null,
+    })
+    const points = route.points
+    for (let index = 1; index < points.length; index += 1) {
+      const a = points[index - 1]
+      const b = points[index]
+      if (a === undefined || b === undefined) continue
+      expect(`${String(a.x)},${String(a.y)}`).not.toBe(`${String(b.x)},${String(b.y)}`)
+    }
+  })
+})
+
+describe('the bend handle still sits on the line it bends', () => {
+  /*
+   * ASYMMETRIC on purpose. With the start leaving downward and the end
+   * arriving from directly above, the two stubs cancel and the handle lands on
+   * the straight midpoint anyway — so a test using them passes whether or not
+   * the normals were consulted at all.
+   */
+  const normals = { start: { x: 0, y: 1 }, end: { x: 1, y: 0 } }
+
+  /** How far a point is from the nearest segment of a drawn route. */
+  const offRoute = (at: Point, points: readonly Point[]): number => {
+    let nearest = Number.POSITIVE_INFINITY
+    for (let index = 1; index < points.length; index += 1) {
+      const a = points[index - 1]
+      const b = points[index]
+      if (a === undefined || b === undefined) continue
+      nearest = Math.min(nearest, distanceToSegment(at, a, b))
+    }
+    return nearest
+  }
+
+  it.each(['curved', 'orthogonal'] as const)(
+    'starts on the %s route as drawn, not on the straight line',
+    (routing) => {
+      const handle = bendAnchor(start, end, routing, null, normals)
+      const drawn = flattenRoute(connectorRoute(start, end, routing, null, normals), 48)
+      // On the line it bends, which is the whole contract: a handle anywhere
+      // else jumps the moment it is touched.
+      expect(offRoute(handle, drawn)).toBeLessThan(0.5)
+      // And not simply the straight midpoint, or this would pass with the
+      // normals ignored entirely.
+      expect(offRoute({ x: 100, y: 50 }, drawn)).toBeGreaterThan(1)
+    },
+  )
+
+  it('round-trips a dropped point through the bend, with normals', () => {
+    const at = { x: 150, y: 20 }
+    const bend = bendFrom(start, end, 'curved', at, normals)
+    const back = bendAnchor(start, end, 'curved', bend, normals)
+    expect(back.x).toBeCloseTo(at.x, 6)
+    expect(back.y).toBeCloseTo(at.y, 6)
+  })
+
+  it('puts the bent curve through the handle it was bent to', () => {
+    const bend = bendFrom(start, end, 'curved', { x: 150, y: 20 }, normals)
+    const target = bendAnchor(start, end, 'curved', bend, normals)
+    const points = flattenRoute(connectorRoute(start, end, 'curved', bend, normals), 2)
+    const sampled = points[1]
+    if (sampled === undefined) throw new Error('a sampled midpoint')
+    expect(sampled.x).toBeCloseTo(target.x, 6)
+    expect(sampled.y).toBeCloseTo(target.y, 6)
   })
 })

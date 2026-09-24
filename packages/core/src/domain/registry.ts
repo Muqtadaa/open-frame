@@ -43,16 +43,38 @@ interface RelationIndex {
 }
 
 /**
- * What a container type is handed to work out its own extent.
+ * What a type is handed when its geometry depends on ANOTHER object.
  *
- * Both are supplied rather than reached for, and both are shared across one
- * bounds pass. `childrenOf` in particular: calling the document helper directly
- * would scan every object once PER CONTAINER, which on a board of 10,000
- * objects with 250 groups measured at 7.5ms of pure scanning per cull — half a
- * frame budget, spent before anything was drawn (rule 10).
+ * Supplied rather than reached for, and shared across one pass: a type has no
+ * registry of its own, and the alternative — reading `other.frame` — is the
+ * answer that is right about a note and wrong about everything whose extent is
+ * derived.
  */
-export interface BoundsContext {
+export interface GeometryContext {
+  /**
+   * The real extent of another object, whatever its type keeps it in.
+   *
+   * A group's `frame` is 0x0 and its extent is its children's union; a
+   * connector has no meaningful frame at all. Anything that needs to know
+   * where another object's EDGES are has to ask this rather than read a frame
+   * — which is rule 16, and which the connector's own anchors got wrong: a
+   * line attached to a group resolved to the group's frame origin, so it ran
+   * to a corner of the board instead of to the thing it was joined to.
+   */
   readonly boundsOf: (other: AnyOpenFrameObject) => Rect
+}
+
+/**
+ * And what a CONTAINER type is handed to work out its own extent: the above,
+ * plus its members.
+ *
+ * `childrenOf` is shared across one bounds pass for a reason — calling the
+ * document helper directly would scan every object once PER CONTAINER, which
+ * on a board of 10,000 objects with 250 groups measured at 7.5ms of pure
+ * scanning per cull: half a frame budget, spent before anything was drawn
+ * (rule 10).
+ */
+export interface BoundsContext extends GeometryContext {
   readonly childrenOf: (parentId: ObjectId) => readonly AnyOpenFrameObject[]
 }
 
@@ -130,6 +152,16 @@ export type EndpointTarget =
       readonly objectId: ObjectId
       readonly x: number
       readonly y: number
+      /**
+       * How close, in WORLD units, counts as the same place on screen.
+       *
+       * Not anchor detail either: it is how precise a pointer is at the
+       * current zoom, which only the view can know and which a type cannot
+       * work out from a document. A type is free to ignore it — but one that
+       * offers places to aim at needs it, or "near enough" means something
+       * different at 25% than it does at 400%.
+       */
+      readonly tolerance: number
     }
 
 /**
@@ -307,7 +339,12 @@ export interface ObjectTypeDefinition<TType extends string, TData> {
    * including the empty space between the two objects it joins. Types that omit
    * this are hit-tested by their bounds, which is right for anything solid.
    */
-  readonly hitTest?: (object: ObjectBase<TType, TData>, doc: BoardDocument, point: Point) => boolean
+  readonly hitTest?: (
+    object: ObjectBase<TType, TData>,
+    doc: BoardDocument,
+    point: Point,
+    context: GeometryContext,
+  ) => boolean
 
   /**
    * Other objects this one's geometry or rendering depends on.
@@ -331,6 +368,7 @@ export interface ObjectTypeDefinition<TType extends string, TData> {
   readonly endpoints?: (
     object: ObjectBase<TType, TData>,
     doc: BoardDocument,
+    context: GeometryContext,
   ) => readonly DraggableEndpoint[]
 
   /**
@@ -345,6 +383,7 @@ export interface ObjectTypeDefinition<TType extends string, TData> {
     doc: BoardDocument,
     endpointId: string,
     target: EndpointTarget,
+    context: GeometryContext,
   ) => Partial<TData>
 
   /**
@@ -476,13 +515,22 @@ export interface ErasedObjectTypeDefinition {
     doc: BoardDocument,
     context: BoundsContext,
   ) => Rect
-  readonly hitTest?: (object: AnyOpenFrameObject, doc: BoardDocument, point: Point) => boolean
+  readonly hitTest?: (
+    object: AnyOpenFrameObject,
+    doc: BoardDocument,
+    point: Point,
+    context: GeometryContext,
+  ) => boolean
   readonly dependencies?: (object: AnyOpenFrameObject) => readonly ObjectId[]
   readonly relation?: (object: AnyOpenFrameObject) => RelationEdge | null
   readonly fields?: readonly FieldDefinition[]
   readonly promotions?: readonly string[]
   readonly derivations?: readonly Derivation[]
-  readonly endpoints?: (object: AnyOpenFrameObject, doc: BoardDocument) => readonly DraggableEndpoint[]
+  readonly endpoints?: (
+    object: AnyOpenFrameObject,
+    doc: BoardDocument,
+    context: GeometryContext,
+  ) => readonly DraggableEndpoint[]
   readonly dividers?: (object: AnyOpenFrameObject) => readonly DraggableDivider[]
   readonly moveDivider?: (
     object: AnyOpenFrameObject,
@@ -494,6 +542,7 @@ export interface ErasedObjectTypeDefinition {
     doc: BoardDocument,
     endpointId: string,
     target: EndpointTarget,
+    context: GeometryContext,
   ) => Record<string, unknown>
   readonly cropWindow?: (object: AnyOpenFrameObject) => CropWindow
 }
@@ -601,7 +650,8 @@ export function defineObjectType<TType extends string, TData>(
     ...(hitTest === undefined
       ? {}
       : {
-          hitTest: (object, doc, point) => hitTest(object as ObjectBase<TType, TData>, doc, point),
+          hitTest: (object, doc, point, context) =>
+            hitTest(object as ObjectBase<TType, TData>, doc, point, context),
         }),
     ...(dependencies === undefined
       ? {}
@@ -623,12 +673,15 @@ export function defineObjectType<TType extends string, TData>(
         }),
     ...(endpoints === undefined
       ? {}
-      : { endpoints: (object, doc) => endpoints(object as ObjectBase<TType, TData>, doc) }),
+      : {
+          endpoints: (object, doc, context) =>
+            endpoints(object as ObjectBase<TType, TData>, doc, context),
+        }),
     ...(retargetEndpoint === undefined
       ? {}
       : {
-          retargetEndpoint: (object, doc, endpointId, target) =>
-            retargetEndpoint(object as ObjectBase<TType, TData>, doc, endpointId, target),
+          retargetEndpoint: (object, doc, endpointId, target, context) =>
+            retargetEndpoint(object as ObjectBase<TType, TData>, doc, endpointId, target, context),
         }),
   }
 }
@@ -708,7 +761,7 @@ export class ObjectTypeRegistry {
 
   hitTestObject(object: AnyOpenFrameObject, doc: BoardDocument, point: Point): boolean {
     const precise = this.#definitions.get(object.type)?.hitTest
-    if (precise !== undefined) return precise(object, doc, point)
+    if (precise !== undefined) return precise(object, doc, point, this.#geometryContext(doc))
     const { x, y, width, height } = object.frame
     return containsRotatedPoint({ x, y, width, height }, object.frame.rotation, point)
   }
@@ -719,7 +772,20 @@ export class ObjectTypeRegistry {
    * selected object without caring what it is.
    */
   endpointsOf(object: AnyOpenFrameObject, doc: BoardDocument): readonly DraggableEndpoint[] {
-    return this.#definitions.get(object.type)?.endpoints?.(object, doc) ?? []
+    return this.#definitions.get(object.type)?.endpoints?.(object, doc, this.#geometryContext(doc)) ?? []
+  }
+
+  /**
+   * What a type is handed when it needs to know where ANOTHER object is.
+   *
+   * Only `boundsOf`, and only through the registry: a type that read
+   * `other.frame` would be right about a note and wrong about a group, whose
+   * frame is 0x0 and whose extent is its children's. That is rule 16 from the
+   * other side — the object being asked about is the one with derived
+   * geometry, rather than the one asking.
+   */
+  #geometryContext(doc: BoardDocument): GeometryContext {
+    return { boundsOf: (other) => this.boundsOf(other, doc) }
   }
 
   /**
@@ -767,7 +833,9 @@ export class ObjectTypeRegistry {
     target: EndpointTarget,
   ): Record<string, unknown> | null {
     const retarget = this.#definitions.get(object.type)?.retargetEndpoint
-    return retarget === undefined ? null : retarget(object, doc, endpointId, target)
+    return retarget === undefined
+      ? null
+      : retarget(object, doc, endpointId, target, this.#geometryContext(doc))
   }
 
   /**

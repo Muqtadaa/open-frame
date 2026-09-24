@@ -61,12 +61,26 @@ export interface ObjectViewProps<TData = unknown> {
    * re-renders when the bytes arrive.
    */
   readonly assetUrl: AssetUrlLookup
+  /**
+   * Where ANOTHER object's edges are, for a type that draws against one.
+   *
+   * Handed in rather than reached for: a view is a leaf and has no registry,
+   * and `other.frame` is the wrong answer for anything whose extent is derived
+   * — a group's frame is 0x0 and its children are the truth. A connector
+   * joined to a group ran to the group's origin until this existed (rule 16).
+   */
+  readonly boundsOf: BoundsLookup
 }
+
+/** The real extent of an object, as the registry computes it. */
+export type BoundsLookup = (object: AnyOpenFrameObject) => Rect
 
 export interface ObjectEditorProps<TData = unknown> {
   readonly object: ObjectBase<string, TData>
   readonly zoom: number
   readonly document: BoardDocument
+  /** The same lookup the renderer gets, for an editor that draws geometry. */
+  readonly boundsOf: BoundsLookup
   /**
    * Where the pointer was when editing began, in WORLD units, or `null` when
    * it began some other way — a keypress, or a command.

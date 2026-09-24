@@ -3941,6 +3941,19 @@ textarea.of-input {
 }
 
 /*
+ * THE ONE BEING AIMED AT, while a line is being dragged over the object.
+ *
+ * Filled rather than outlined, and grown: dropping here pins this side for
+ * good, so the difference between "joining this object" and "joining it HERE"
+ * has to be visible before the pointer comes up rather than discovered after.
+ */
+.of-connect-point.is-aimed {
+  background: var(--of-accent);
+  transform-origin: center;
+  box-shadow: 0 0 0 3px var(--of-accent-soft);
+}
+
+/*
  * The grabbable area, sized in ConnectPoints. Invisible, and much larger than
  * the dot: the drawn size is a design decision and the 24px pointer target is
  * an accessibility one (WCAG 2.5.8), exactly as for the resize handles.

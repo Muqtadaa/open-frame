@@ -1,9 +1,22 @@
 import { beforeEach, describe, expect, it } from 'vitest'
 
 import type { ObjectId } from '../../domain/ids.js'
+import type { AnyOpenFrameObject } from '../../domain/object.js'
 import { createTestHarness, type TestHarness } from '../../testing.js'
-import { resolveEndpoints } from './geometry.js'
+import { attachmentAnchor, resolveEndpoints } from './geometry.js'
 import type { ConnectorData } from './schema.js'
+
+/**
+ * The REAL extent of whatever an end is attached to, which is what the
+ * registry answers and what the renderer draws against.
+ *
+ * A sticky's frame IS its extent, so these tests would pass reading the frame
+ * — which is exactly why the group case has a test of its own. A group's frame
+ * is 0x0 and its children are the truth.
+ */
+function extentIn(h: TestHarness) {
+  return (object: AnyOpenFrameObject) => h.registry.boundsOf(object, h.store.getDocument())
+}
 
 function create(
   h: TestHarness,
@@ -37,11 +50,13 @@ describe('endpoint resolution', () => {
     b = create(h, 'sticky', 500, 0)
   })
 
+
   it('resolves a free point to itself', () => {
     const { start } = resolveEndpoints(
       h.store.getDocument(),
       { kind: 'point', x: 7, y: 9 },
       { kind: 'point', x: 0, y: 0 },
+      extentIn(h),
     )
     expect(start).toEqual({ x: 7, y: 9 })
   })
@@ -51,6 +66,7 @@ describe('endpoint resolution', () => {
       h.store.getDocument(),
       { kind: 'object', objectId: a, anchor: { kind: 'side', side: 'right' } },
       { kind: 'point', x: 999, y: 90 },
+      extentIn(h),
     )
     expect(start).toEqual({ x: 180, y: 90 })
   })
@@ -64,15 +80,110 @@ describe('endpoint resolution', () => {
     }
     const far = { kind: 'point' as const, x: 999, y: 90 }
 
-    const before = resolveEndpoints(h.store.getDocument(), endpoint, far).start
+    const before = resolveEndpoints(h.store.getDocument(), endpoint, far, extentIn(h)).start
     h.dispatcher.dispatch({
       kind: 'ResizeObjects',
       resizes: [{ id: a, frame: { x: 0, y: 0, width: 360, height: 180, rotation: 0 } }],
     })
-    const after = resolveEndpoints(h.store.getDocument(), endpoint, far).start
+    const after = resolveEndpoints(h.store.getDocument(), endpoint, far, extentIn(h)).start
 
     expect(before.x).toBe(180)
     expect(after.x).toBe(360)
+  })
+
+  /**
+   * A CONTAINER, whose frame is not where it is.
+   *
+   * A group's frame is 0x0 by design — its extent is its children's union,
+   * reported by `getBounds` — so an anchor read off the frame resolved to the
+   * group's origin, and a line joined to a group ran to a corner of the board
+   * instead of to the thing it was joined to. This is rule 16 inside the
+   * connector's own geometry: anything needing bounds asks the registry.
+   */
+  it('attaches to a container where it actually IS, not to its 0x0 frame', () => {
+    const group = create(h, 'group', 0, 0)
+    h.dispatcher.dispatch({ kind: 'ReparentObjects', ids: [a, b], parentId: group })
+
+    const held = h.store.getObject(group)
+    if (held === undefined) throw new Error('the group went missing')
+    // The premise: its own frame says nothing about where it is.
+    expect(held.frame.width).toBe(0)
+    const extent = extentIn(h)(held)
+    expect(extent.width).toBeGreaterThan(0)
+
+    const { start } = resolveEndpoints(
+      h.store.getDocument(),
+      { kind: 'object', objectId: group, anchor: { kind: 'side', side: 'right' } },
+      { kind: 'point', x: 5000, y: 90 },
+      extentIn(h),
+    )
+    expect(start.x).toBeCloseTo(extent.x + extent.width, 6)
+    expect(start.y).toBeCloseTo(extent.y + extent.height / 2, 6)
+  })
+
+  it('aims at a container\'s anchors where they are drawn, not at its origin', () => {
+    const group = create(h, 'group', 0, 0)
+    h.dispatcher.dispatch({ kind: 'ReparentObjects', ids: [a, b], parentId: group })
+    const held = h.store.getObject(group)
+    if (held === undefined) throw new Error('the group went missing')
+
+    const extent = extentIn(h)(held)
+    const onItsLeftEdge = { x: extent.x, y: extent.y + extent.height / 2 }
+    expect(attachmentAnchor(held, onItsLeftEdge, 38, extentIn(h))).toEqual({
+      kind: 'side',
+      side: 'left',
+    })
+    // And its 0x0 frame is not an anchor of anything.
+    expect(attachmentAnchor(held, { x: held.frame.x, y: held.frame.y }, 38, extentIn(h))).toEqual({
+      kind: 'auto',
+    })
+  })
+
+  /**
+   * And the other half of the same decision. Bounds are AXIS-ALIGNED, so for a
+   * turned object they describe the box around the rectangle rather than where
+   * its edges are — and the rotation is already inside them, so applying it
+   * again would turn the anchor twice. A rotated object's own frame is the
+   * honest answer, which is only safe because nothing both rotates and keeps
+   * its extent somewhere else.
+   */
+  it('keeps a turned object\'s anchor on its turned edge', () => {
+    // A SHAPE, because a sticky note is deliberately not rotatable — the
+    // command refuses it, and a test that ignored the refusal would be
+    // asserting about an object that never turned.
+    const shape = create(h, 'shape', 0, 0)
+    const result = h.dispatcher.dispatch({
+      kind: 'RotateObjects',
+      rotations: [{ id: shape, rotation: Math.PI / 4 }],
+    })
+    expect(result.ok).toBe(true)
+    const turned = h.store.getObject(shape)
+    if (turned === undefined) throw new Error('the object went missing')
+    expect(turned.frame.rotation).toBeCloseTo(Math.PI / 4, 6)
+
+    const { start } = resolveEndpoints(
+      h.store.getDocument(),
+      { kind: 'object', objectId: shape, anchor: { kind: 'side', side: 'right' } },
+      { kind: 'point', x: 5000, y: turned.frame.y },
+      extentIn(h),
+    )
+
+    const box = extentIn(h)(turned)
+    // The axis-aligned box AROUND a turned rectangle is wider than the
+    // rectangle, and the anchor belongs on the rectangle — inside that box.
+    expect(box.width).toBeGreaterThan(turned.frame.width + 1)
+    expect(start.x).toBeLessThan(box.x + box.width - 1)
+
+    // Exactly half the width from the centre, turned: that is where the
+    // midpoint of the right edge goes.
+    const centre = {
+      x: turned.frame.x + turned.frame.width / 2,
+      y: turned.frame.y + turned.frame.height / 2,
+    }
+    expect(Math.hypot(start.x - centre.x, start.y - centre.y)).toBeCloseTo(
+      turned.frame.width / 2,
+      6,
+    )
   })
 
   it('points auto anchors at each other', () => {
@@ -80,6 +191,7 @@ describe('endpoint resolution', () => {
       h.store.getDocument(),
       { kind: 'object', objectId: a, anchor: { kind: 'auto' } },
       { kind: 'object', objectId: b, anchor: { kind: 'auto' } },
+      extentIn(h),
     )
     // a is left of b, so they should meet on a's right and b's left edge.
     expect(start.x).toBe(180)
@@ -91,6 +203,7 @@ describe('endpoint resolution', () => {
       h.store.getDocument(),
       { kind: 'object', objectId: 'obj_gone' as ObjectId, anchor: { kind: 'auto' } },
       { kind: 'point', x: 10, y: 10 },
+      extentIn(h),
     )
     expect(Number.isFinite(start.x)).toBe(true)
   })
@@ -130,6 +243,7 @@ describe('deleting an attached object', () => {
       h.store.getDocument(),
       connectorData(h, connector).from,
       connectorData(h, connector).to,
+      extentIn(h),
     ).start
 
     h.dispatcher.dispatch({ kind: 'DeleteObjects', ids: [a] })
@@ -257,6 +371,33 @@ describe('draggable endpoints', () => {
     return found
   }
 
+  /** The middle of an object's face, which is a drop that aims at no anchor. */
+  const middleOf = (id: ObjectId): { x: number; y: number } => {
+    const found = h.store.getObject(id)
+    if (found === undefined) throw new Error('object went missing')
+    return {
+      x: found.frame.x + found.frame.width / 2,
+      y: found.frame.y + found.frame.height / 2,
+    }
+  }
+
+  /** The anchor on one side of an object, as a drop that aims straight at it. */
+  const anchorOf = (id: ObjectId, side: 'top' | 'right' | 'bottom' | 'left') => {
+    const found = h.store.getObject(id)
+    if (found === undefined) throw new Error('object went missing')
+    const { x, y, width, height } = found.frame
+    if (side === 'top') return { x: x + width / 2, y }
+    if (side === 'bottom') return { x: x + width / 2, y: y + height }
+    if (side === 'left') return { x, y: y + height / 2 }
+    return { x: x + width, y: y + height / 2 }
+  }
+
+  /**
+   * How close counts, in world units. The app passes the reach of a connection
+   * point's own target divided by the zoom; this is that number at 100%.
+   */
+  const REACH = 38
+
   it('reports both ends, where they resolve to', () => {
     const ends = h.registry.endpointsOf(object(), h.store.getDocument())
     expect(ends.map((e) => e.id)).toEqual(['from', 'to'])
@@ -283,7 +424,13 @@ describe('draggable endpoints', () => {
   })
 
   it('re-attaches an end to a different object', () => {
-    const patch = h.registry.retargetEndpoint(object(), h.store.getDocument(), 'to', { kind: 'object', objectId: c, x: 0, y: 0 })
+    const at = middleOf(c)
+    const patch = h.registry.retargetEndpoint(object(), h.store.getDocument(), 'to', {
+      kind: 'object',
+      objectId: c,
+      ...at,
+      tolerance: REACH,
+    })
     expect(patch).not.toBeNull()
     if (patch === null) return
 
@@ -293,6 +440,102 @@ describe('draggable endpoints', () => {
       kind: 'object',
       objectId: c,
       anchor: { kind: 'auto' },
+    })
+  })
+
+  /**
+   * The aim you took is kept. This used to be discarded: every drop on an
+   * object produced `auto`, whatever the pointer was over, so a line dragged
+   * deliberately to the left edge of something could come back entering from
+   * the right the moment anything moved.
+   */
+  it('pins the side an end was dropped on', () => {
+    const patch = h.registry.retargetEndpoint(object(), h.store.getDocument(), 'to', {
+      kind: 'object',
+      objectId: c,
+      ...anchorOf(c, 'left'),
+      tolerance: REACH,
+    })
+    if (patch === null) throw new Error('expected a patch')
+    h.dispatcher.dispatch({ kind: 'UpdateObjectData', id: connector, patch })
+    expect(connectorData(h, connector).to).toEqual({
+      kind: 'object',
+      objectId: c,
+      anchor: { kind: 'side', side: 'left' },
+    })
+  })
+
+  it.each(['top', 'right', 'bottom', 'left'] as const)(
+    'pins the %s anchor, not whichever side is nearest the other end',
+    (side) => {
+      const patch = h.registry.retargetEndpoint(object(), h.store.getDocument(), 'to', {
+        kind: 'object',
+        objectId: c,
+        ...anchorOf(c, side),
+        tolerance: REACH,
+      })
+      if (patch === null) throw new Error('expected a patch')
+      h.dispatcher.dispatch({ kind: 'UpdateObjectData', id: connector, patch })
+      expect(connectorData(h, connector).to).toEqual({
+        kind: 'object',
+        objectId: c,
+        anchor: { kind: 'side', side },
+      })
+    },
+  )
+
+  /**
+   * And a drop that aimed at nothing still means "join this", which is the
+   * behaviour worth keeping: `auto` re-picks the facing side as things move.
+   */
+  it('leaves a drop on the face of an object on auto', () => {
+    const patch = h.registry.retargetEndpoint(object(), h.store.getDocument(), 'to', {
+      kind: 'object',
+      objectId: c,
+      ...middleOf(c),
+      tolerance: REACH,
+    })
+    if (patch === null) throw new Error('expected a patch')
+    h.dispatcher.dispatch({ kind: 'UpdateObjectData', id: connector, patch })
+    expect(connectorData(h, connector).to).toEqual({
+      kind: 'object',
+      objectId: c,
+      anchor: { kind: 'auto' },
+    })
+  })
+
+  /**
+   * A pointer is no more precise at 25% than it is at 400%, but a world unit
+   * is sixteen times as far — so the tolerance travels with the drop rather
+   * than being a constant here. With none of it, aiming stops working the
+   * moment the board is zoomed out.
+   */
+  it('takes how close counts from the drop, not from a constant', () => {
+    const found = h.store.getObject(c)
+    if (found === undefined) throw new Error('object went missing')
+    /*
+     * A drop FURTHER out than the reach at 100% — the same few pixels on
+     * screen, seen from four times as far out. Inside the cap the object puts
+     * on its own anchors, so the only thing that can pin it is the tolerance
+     * that travelled with the drop.
+     */
+    const offset = (Math.min(found.frame.width, found.frame.height) / 3) * 0.9
+    expect(offset, 'the fixture cannot tell the two apart').toBeGreaterThan(REACH)
+
+    const at = anchorOf(c, 'left')
+    const zoomedOut = h.registry.retargetEndpoint(object(), h.store.getDocument(), 'to', {
+      kind: 'object',
+      objectId: c,
+      x: at.x + offset,
+      y: at.y,
+      tolerance: REACH * 4,
+    })
+    if (zoomedOut === null) throw new Error('expected a patch')
+    h.dispatcher.dispatch({ kind: 'UpdateObjectData', id: connector, patch: zoomedOut })
+    expect(connectorData(h, connector).to).toEqual({
+      kind: 'object',
+      objectId: c,
+      anchor: { kind: 'side', side: 'left' },
     })
   })
 
@@ -323,6 +566,7 @@ describe('draggable endpoints', () => {
       objectId: connector,
       x: 0,
       y: 0,
+      tolerance: REACH,
     })
     expect(patch).toEqual({})
   })
@@ -334,7 +578,13 @@ describe('draggable endpoints', () => {
   })
 
   it('re-attaching is undoable like any other edit', () => {
-    const patch = h.registry.retargetEndpoint(object(), h.store.getDocument(), 'to', { kind: 'object', objectId: c, x: 0, y: 0 })
+    const at = middleOf(c)
+    const patch = h.registry.retargetEndpoint(object(), h.store.getDocument(), 'to', {
+      kind: 'object',
+      objectId: c,
+      ...at,
+      tolerance: REACH,
+    })
     if (patch === null) throw new Error('expected a patch')
     h.dispatcher.dispatch({ kind: 'UpdateObjectData', id: connector, patch })
 

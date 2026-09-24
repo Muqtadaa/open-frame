@@ -37,7 +37,7 @@ async function freshBoard(page: Page): Promise<void> {
    * paint, so a keystroke sent on the canvas alone can land in the gap and be
    * dropped. That showed up as a rare, unexplained tool-selection failure.
    */
-  await expect(page.getByTestId("tool-select")).toBeVisible()
+  await expect(page.getByTestId('tool-select')).toBeVisible()
 }
 
 async function sticky(page: Page, x: number, y: number, text: string): Promise<void> {
@@ -442,13 +442,12 @@ test.describe('bending a route', () => {
      * without the route following is the shape this bug would take.
      */
     const corner = { x: after.x + after.width / 2, y: before.y - 40 }
-    const onTheLine = await page.locator('.of-connector__line').evaluate(
-      (line, at: { x: number; y: number }) => {
+    const onTheLine = await page
+      .locator('.of-connector__line')
+      .evaluate((line, at: { x: number; y: number }) => {
         const box = line.getBoundingClientRect()
         return at.x >= box.x - 2 && at.x <= box.x + box.width + 2
-      },
-      corner,
-    )
+      }, corner)
     expect(onTheLine).toBe(true)
   })
 
@@ -474,5 +473,228 @@ test.describe('bending a route', () => {
     await expect
       .poll(async () => (await page.getByTestId('endpoint-bend').boundingBox())?.y ?? 0)
       .toBeCloseTo(before.y, -1)
+  })
+})
+
+/**
+ * WHERE ON THE TARGET a line attaches, which used to be discarded.
+ *
+ * Every drop produced the `auto` anchor whatever the pointer was over, so a
+ * line dragged deliberately onto an edge came back attached to the middle of
+ * the object and left from whichever side happened to face the other end. The
+ * arrowhead then pointed along the thing it was joined to rather than into it,
+ * because the route took its direction from the run rather than from the edge.
+ */
+test.describe('aiming at an anchor', () => {
+  /** Where the target sticky's four anchors are, on screen. */
+  async function anchors(page: Page) {
+    const box = await page
+      .locator('[data-object-type="sticky"]')
+      .filter({ hasText: 'B' })
+      .boundingBox()
+    if (box === null) throw new Error('no target object')
+    return {
+      box,
+      top: { x: box.x + box.width / 2, y: box.y },
+      bottom: { x: box.x + box.width / 2, y: box.y + box.height },
+      left: { x: box.x, y: box.y + box.height / 2 },
+      right: { x: box.x + box.width, y: box.y + box.height / 2 },
+    }
+  }
+
+  /** The two ends of the drawn line, read off the path. */
+  async function ends(page: Page): Promise<{ from: number[]; to: number[] }> {
+    const d = await page.locator('.of-connector__line').getAttribute('d')
+    if (d === null) throw new Error('no line')
+    const numbers = [...d.matchAll(/-?\d+(\.\d+)?/g)].map((m) => Number(m[0]))
+    return { from: numbers.slice(0, 2), to: numbers.slice(-2) }
+  }
+
+  test('attaches to the anchor the line was dropped on, not the nearest side', async ({ page }) => {
+    await sticky(page, A_AT.x, A_AT.y, 'A')
+    await sticky(page, B_AT.x, B_AT.y, 'B')
+    const at = await anchors(page)
+
+    await page.keyboard.press('c')
+    /*
+     * Onto the FAR side: the bottom of an object that is below and to the
+     * right, which is the last side `auto` would ever pick. If the drop is
+     * being discarded this lands on the top or the left instead.
+     */
+    await drag(page, A_AT, { x: at.bottom.x, y: at.bottom.y + 12 })
+    await page.keyboard.press('v')
+
+    const { to } = await ends(page)
+    expect(to[0]).toBeCloseTo(at.bottom.x, 0)
+    expect(to[1]).toBeCloseTo(at.bottom.y, 0)
+  })
+
+  test('still takes a drop on the face of an object as "join this"', async ({ page }) => {
+    await sticky(page, A_AT.x, A_AT.y, 'A')
+    await sticky(page, B_AT.x, B_AT.y, 'B')
+    const at = await anchors(page)
+
+    await page.keyboard.press('c')
+    await drag(page, A_AT, { x: at.box.x + at.box.width / 2, y: at.box.y + at.box.height / 2 })
+    await page.keyboard.press('v')
+
+    /*
+     * `auto` faces the other end, and A is up and to the left of B — so the
+     * line arrives on the top or the left, never the bottom the previous test
+     * pinned. Which of the two it is depends on the fixture's proportions and
+     * is not what this is about.
+     */
+    const { to } = await ends(page)
+    const onTop = Math.abs(to[1]! - at.box.y) < 2
+    const onLeft = Math.abs(to[0]! - at.box.x) < 2
+    expect(onTop || onLeft, 'a drop on the face should face the other end').toBe(true)
+  })
+
+  test('shows the anchors on whatever is under the line, and marks the one being aimed at', async ({
+    page,
+  }) => {
+    await sticky(page, A_AT.x, A_AT.y, 'A')
+    await sticky(page, B_AT.x, B_AT.y, 'B')
+    const at = await anchors(page)
+
+    await page.keyboard.press('c')
+    await page.mouse.move(A_AT.x, A_AT.y)
+    await page.mouse.down()
+    await page.mouse.move(at.left.x - 60, at.left.y, { steps: 6 })
+    await page.mouse.move(at.left.x - 10, at.left.y, { steps: 4 })
+
+    // Four anchors on the object being dragged over, and exactly one marked.
+    await expect(page.locator('.of-connect-point')).toHaveCount(4)
+    await expect(page.locator('.of-connect-point.is-aimed')).toHaveCount(1)
+
+    // Over the FACE instead: still offered, none of them being aimed at.
+    await page.mouse.move(at.box.x + at.box.width / 2, at.box.y + at.box.height / 2, { steps: 4 })
+    await expect(page.locator('.of-connect-point')).toHaveCount(4)
+    await expect(page.locator('.of-connect-point.is-aimed')).toHaveCount(0)
+    await page.mouse.up()
+  })
+
+  /**
+   * The fault in the report: a curve anchored to a bottom edge left sideways,
+   * because the control points came from the run's dominant axis. The cap is
+   * oriented by the route's own last segment, so the arrowhead pointed along
+   * the object rather than into it.
+   */
+  test('arrives perpendicular to the edge it is attached to', async ({ page }) => {
+    await sticky(page, A_AT.x, A_AT.y, 'A')
+    await sticky(page, B_AT.x, B_AT.y, 'B')
+    const at = await anchors(page)
+
+    await page.keyboard.press('c')
+    await drag(page, A_AT, { x: at.bottom.x, y: at.bottom.y + 12 })
+    await page.keyboard.press('v')
+    await page.locator('.of-connector__line').click({ force: true })
+    await page.getByTestId('field-routing').selectOption('curved')
+
+    const d = await page.locator('.of-connector__line').getAttribute('d')
+    if (d === null) throw new Error('no line')
+    const numbers = [...d.matchAll(/-?\d+(\.\d+)?/g)].map((m) => Number(m[0]))
+    // M x y C c1x c1y, c2x c2y, ex ey
+    const [, , , , c2x, c2y, ex, ey] = numbers
+    if (c2x === undefined || c2y === undefined || ex === undefined || ey === undefined) {
+      throw new Error('a cubic has eight numbers in it')
+    }
+    // The last control point sits directly BELOW the end, so the line arrives
+    // travelling upward into the bottom edge it is attached to.
+    expect(c2x).toBeCloseTo(ex, 0)
+    expect(c2y).toBeGreaterThan(ey)
+  })
+})
+
+/**
+ * A CONTAINER is not where its frame says it is.
+ *
+ * A group's frame is 0x0 by design — its extent is its children's union — and
+ * `resolveEndpoints` read the frame, so a line joined to a group ran to the
+ * group's origin instead of to its edge. Frames are the same shape of thing
+ * and people join lines to those on purpose.
+ *
+ * In the browser rather than in a unit test because what is being checked is
+ * that the whole path agrees: what the hit test offers, what the type pins,
+ * and what is finally drawn.
+ */
+test.describe('joining a line to a container', () => {
+  test('meets the group where it is drawn, and follows it', async ({ page }) => {
+    await sticky(page, 320, 260, 'A')
+    await sticky(page, 620, 260, 'B')
+    await page.keyboard.press(`${MOD}+a`)
+    await page.keyboard.press(`${MOD}+g`)
+    await expect(page.locator('[data-object-type="group"]')).toHaveCount(1)
+    await page.locator(CANVAS).click({ position: { x: 1120, y: 620 } })
+
+    /*
+     * Where the group actually is: the union of the notes it holds — named by
+     * id, because a third note joins the board in a moment and a span taken
+     * over every sticky would then be measuring something else entirely. That
+     * is not hypothetical: it is what this test did at first, and it reported
+     * the line had not followed when it had.
+     */
+    const members = await page
+      .locator('[data-object-type="sticky"]')
+      .evaluateAll((notes) => notes.map((note) => note.getAttribute('data-object-id') ?? ''))
+    expect(members).toHaveLength(2)
+
+    const span = async () => {
+      const boxes = await Promise.all(
+        members.map(async (id) => page.locator(`[data-object-id="${id}"]`).boundingBox()),
+      )
+      const rects = boxes.filter((box) => box !== null)
+      return {
+        left: Math.min(...rects.map((r) => r.x)),
+        right: Math.max(...rects.map((r) => r.x + r.width)),
+        bottom: Math.max(...rects.map((r) => r.y + r.height)),
+      }
+    }
+    const before = await span()
+
+    await sticky(page, 460, 640, 'C')
+    await page.keyboard.press('c')
+    // Onto the group's bottom edge, which is a place only its children know.
+    await drag(
+      page,
+      { x: 460, y: 640 },
+      { x: (before.left + before.right) / 2, y: before.bottom - 6 },
+    )
+    await page.keyboard.press('v')
+
+    const endOfLine = async () => {
+      const d = await page.locator('.of-connector__line').getAttribute('d')
+      if (d === null) throw new Error('no line')
+      const numbers = [...d.matchAll(/-?\d+(\.\d+)?/g)].map((m) => Number(m[0]))
+      const x = numbers[numbers.length - 2]
+      const y = numbers[numbers.length - 1]
+      if (x === undefined || y === undefined) throw new Error('no end point')
+      return { x, y }
+    }
+
+    /*
+     * The line's coordinates are the world's, and a fresh board sits at the
+     * viewport origin, so the two are comparable. It lands on the group's
+     * bottom edge rather than at the group's 0x0 frame.
+     */
+    const landed = await endOfLine()
+    expect(landed.x).toBeGreaterThan(before.left - 8)
+    expect(landed.x).toBeLessThan(before.right + 8)
+    expect(Math.abs(landed.y - before.bottom)).toBeLessThan(8)
+
+    /*
+     * AND IT FOLLOWS. This is the half that cannot be faked: a free point
+     * dropped in the same spot passes every assertion above and then sits
+     * still while the group walks away. Dragging a member moves the whole
+     * group, and the line is derived, so its end must move with it.
+     */
+    await page.locator(CANVAS).click({ position: { x: 320, y: 260 } })
+    await drag(page, { x: 320, y: 260 }, { x: 320, y: 160 })
+    await page.keyboard.press('v')
+
+    const after = await span()
+    expect(after.bottom, 'the group did not move').not.toBeCloseTo(before.bottom, 0)
+    const moved = await endOfLine()
+    expect(Math.abs(moved.y - after.bottom), 'the line stayed where it was dropped').toBeLessThan(8)
   })
 })

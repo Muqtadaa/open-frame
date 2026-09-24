@@ -17,6 +17,125 @@ import type { Bend, Routing } from './schema.js'
 export const NO_BEND: Bend = { along: 0.5, across: 0 }
 
 /**
+ * Which way the route leaves each end, when that end is attached to something.
+ *
+ * Both optional, because both can be free: a half-drawn connector has no
+ * attachment at all, and a route given neither behaves exactly as it did
+ * before these existed. `resolveEndpoints` is where they come from.
+ */
+export interface RouteNormals {
+  readonly start: Point | null
+  readonly end: Point | null
+}
+
+/**
+ * How far an orthogonal route runs straight out of an edge before it turns.
+ *
+ * Without it "leaves along the normal" is only true when the geometry happens
+ * to agree: a line leaving a right edge towards something on the left would
+ * turn immediately and run back across the object it just left. The stub makes
+ * the departure real, and is why an orthogonal route now has up to two more
+ * corners than it used to.
+ *
+ * Sixteen world units: long enough to read as a departure at the zooms
+ * anybody works at, short enough not to read as a leg of the route.
+ */
+const STUB = 16
+
+/** How far a curve's control points may reach, at the two extremes. */
+const MIN_REACH = 12
+const MAX_REACH = 160
+
+function along(point: Point, normal: Point | null, distance: number): Point {
+  if (normal === null) return point
+  return { x: point.x + normal.x * distance, y: point.y + normal.y * distance }
+}
+
+/**
+ * The stubbed ends an orthogonal route actually turns between.
+ *
+ * An end with no normal keeps its own position, so a free end and an attached
+ * one can be mixed without special-casing either.
+ */
+function stubs(start: Point, end: Point, normals: RouteNormals | null): [Point, Point] {
+  return [
+    along(start, normals?.start ?? null, STUB),
+    along(end, normals?.end ?? null, STUB),
+  ]
+}
+
+/**
+ * How far a curve's control points reach, which has to scale with the run.
+ *
+ * A fixed reach loops on a short connector and barely bends a long one. This
+ * is the same fraction of the distance the old dominant-axis offset used, with
+ * a floor so two touching objects still get a curve and a ceiling so a line
+ * across the board does not bow into the next county.
+ */
+function reachFor(start: Point, end: Point): number {
+  const distance = Math.hypot(end.x - start.x, end.y - start.y)
+  return Math.max(MIN_REACH, Math.min(distance * 0.4, MAX_REACH))
+}
+
+/** The four points of the untouched curve, before any bend is applied. */
+function defaultCubic(
+  start: Point,
+  end: Point,
+  normals: RouteNormals | null,
+): [Point, Point, Point, Point] {
+  /*
+   * With a normal the control point goes straight out of the edge; without
+   * one it falls back to the offset along the run's dominant axis, which is
+   * what every curve did before ends knew which way they faced.
+   */
+  const reach = reachFor(start, end)
+  const from = normals?.start ?? null
+  const to = normals?.end ?? null
+  const dx = (end.x - start.x) * 0.5
+  const dy = (end.y - start.y) * 0.5
+  const horizontal = isHorizontal(start, end)
+  const c1 =
+    from !== null
+      ? along(start, from, reach)
+      : horizontal
+        ? { x: start.x + dx, y: start.y }
+        : { x: start.x, y: start.y + dy }
+  const c2 =
+    to !== null
+      ? along(end, to, reach)
+      : horizontal
+        ? { x: end.x - dx, y: end.y }
+        : { x: end.x, y: end.y - dy }
+  return [start, c1, c2, end]
+}
+
+/** A cubic at t = 0.5, which is where its own middle is. */
+function cubicMiddle([p0, c1, c2, p3]: readonly [Point, Point, Point, Point]): Point {
+  return {
+    x: (p0.x + 3 * c1.x + 3 * c2.x + p3.x) / 8,
+    y: (p0.y + 3 * c1.y + 3 * c2.y + p3.y) / 8,
+  }
+}
+
+/**
+ * Drops points a route passes through twice.
+ *
+ * A stub can land exactly on the corner that follows it, and a zero-length
+ * segment has no direction — which matters because the arrowheads are
+ * oriented by the first and last segments. A cap with no segment to sit on
+ * points wherever the arithmetic happened to land.
+ */
+function withoutRepeats(points: readonly Point[]): Point[] {
+  const kept: Point[] = []
+  for (const point of points) {
+    const last = kept[kept.length - 1]
+    if (last?.x === point.x && last.y === point.y) continue
+    kept.push(point)
+  }
+  return kept
+}
+
+/**
  * A resolved route: straight segments, or one cubic.
  *
  * Two shapes rather than one, because flattening a curve to segments loses the
@@ -56,33 +175,52 @@ export function bendAnchor(
   end: Point,
   routing: Routing,
   bend: Bend | null,
+  normals: RouteNormals | null = null,
 ): Point {
-  const mid = middle(start, end)
-  if (bend === null) return mid
-
   if (routing === 'orthogonal') {
+    /*
+     * Between the STUBS, not between the ends: the middle segment of an
+     * orthogonal route now starts where the departure finishes. Measuring
+     * against the ends instead would put the handle a stub's length off the
+     * line it is supposed to be on.
+     */
+    const [s, e] = stubs(start, end, normals)
+    const mid = middle(s, e)
+    if (bend === null) return mid
     /*
      * ONE axis. An orthogonal route's middle segment is perpendicular to the
      * run, so sliding it is a one-dimensional move — dragging along the
      * segment's own direction has nothing to change. Same as every diagramming
      * tool: you push the elbow across, not up and down.
      */
-    return isHorizontal(start, end)
-      ? { x: lerp(start.x, end.x, bend.along), y: mid.y }
-      : { x: mid.x, y: lerp(start.y, end.y, bend.along) }
+    return isHorizontal(s, e)
+      ? { x: lerp(s.x, e.x, bend.along), y: mid.y }
+      : { x: mid.x, y: lerp(s.y, e.y, bend.along) }
   }
+
+  /*
+   * The middle of the DRAWN route, which for a curve is its own midpoint and
+   * no longer the midpoint of the straight line: control points that leave
+   * along an edge's normal put the curve somewhere else entirely. A handle
+   * that started anywhere but on the line jumps the moment it is touched.
+   */
+  const base =
+    routing === 'curved' ? cubicMiddle(defaultCubic(start, end, normals)) : middle(start, end)
+  if (bend === null) return base
 
   const dx = end.x - start.x
   const dy = end.y - start.y
   const length = Math.hypot(dx, dy)
-  if (length === 0) return mid
+  if (length === 0) return base
 
-  // Unit vector along the run, and its left-hand normal.
+  // Unit vector along the run, and its left-hand normal. `along` is measured
+  // from the middle, so an untouched bend leaves the handle exactly on `base`.
   const ux = dx / length
   const uy = dy / length
+  const slide = length * (bend.along - 0.5)
   return {
-    x: start.x + ux * length * bend.along - uy * bend.across,
-    y: start.y + uy * length * bend.along + ux * bend.across,
+    x: base.x + ux * slide - uy * bend.across,
+    y: base.y + uy * slide + ux * bend.across,
   }
 }
 
@@ -93,17 +231,26 @@ export function bendAnchor(
  * objects moving: a fraction and an offset still mean something after both
  * ends have gone somewhere else, and a point does not.
  */
-export function bendFrom(start: Point, end: Point, routing: Routing, at: Point): Bend {
+export function bendFrom(
+  start: Point,
+  end: Point,
+  routing: Routing,
+  at: Point,
+  normals: RouteNormals | null = null,
+): Bend {
   if (routing === 'orthogonal') {
-    const horizontal = isHorizontal(start, end)
-    const span = horizontal ? end.x - start.x : end.y - start.y
+    const [s, e] = stubs(start, end, normals)
+    const horizontal = isHorizontal(s, e)
+    const span = horizontal ? e.x - s.x : e.y - s.y
     // A run with no span on its dominant axis is two ends in the same place;
     // there is no fraction to take, and the middle is as good as anywhere.
     if (span === 0) return NO_BEND
-    const from = horizontal ? at.x - start.x : at.y - start.y
+    const from = horizontal ? at.x - s.x : at.y - s.y
     return { along: from / span, across: 0 }
   }
 
+  const base =
+    routing === 'curved' ? cubicMiddle(defaultCubic(start, end, normals)) : middle(start, end)
   const dx = end.x - start.x
   const dy = end.y - start.y
   const length = Math.hypot(dx, dy)
@@ -111,10 +258,10 @@ export function bendFrom(start: Point, end: Point, routing: Routing, at: Point):
 
   const ux = dx / length
   const uy = dy / length
-  const px = at.x - start.x
-  const py = at.y - start.y
+  const px = at.x - base.x
+  const py = at.y - base.y
   return {
-    along: (px * ux + py * uy) / length,
+    along: 0.5 + (px * ux + py * uy) / length,
     across: -px * uy + py * ux,
   }
 }
@@ -125,35 +272,49 @@ export function connectorRoute(
   end: Point,
   routing: Routing,
   bend: Bend | null,
+  normals: RouteNormals | null = null,
 ): Route {
   switch (routing) {
     case 'straight':
+      /*
+       * A straight line is a straight line. It cannot leave along a normal
+       * and still arrive where it is going, and pretending otherwise would
+       * make the one routing that promises nothing the one that lies.
+       */
       return { kind: 'polyline', points: [start, end] }
 
     case 'orthogonal': {
       /*
-       * Turn on the dominant axis first, which reads as a deliberate route
-       * rather than a diagonal approximated with steps. The turn is at the
+       * OUT of each edge first, then turn. The run between the two stubs
+       * turns on its own dominant axis, which reads as a deliberate route
+       * rather than a diagonal approximated with steps; the turn is at the
        * halfway point unless a bend says otherwise.
+       *
+       * Without the stubs a line leaving a right edge towards something on
+       * the left turned immediately and ran back over the object it had just
+       * left — which is the same fault as an arrowhead pointing along an
+       * object rather than into it, in a different routing.
        */
+      const [s, e] = stubs(start, end, normals)
       const at = bend?.along ?? 0.5
-      if (isHorizontal(start, end)) {
-        const x = lerp(start.x, end.x, at)
-        return { kind: 'polyline', points: [start, { x, y: start.y }, { x, y: end.y }, end] }
-      }
-      const y = lerp(start.y, end.y, at)
-      return { kind: 'polyline', points: [start, { x: start.x, y }, { x: end.x, y }, end] }
+      const turn = isHorizontal(s, e)
+        ? [{ x: lerp(s.x, e.x, at), y: s.y }, { x: lerp(s.x, e.x, at), y: e.y }]
+        : [{ x: s.x, y: lerp(s.y, e.y, at) }, { x: e.x, y: lerp(s.y, e.y, at) }]
+      return { kind: 'polyline', points: withoutRepeats([start, s, ...turn, e, end]) }
     }
 
     case 'curved': {
-      // Control points offset along the dominant axis give a smooth S-curve
-      // that leaves and arrives roughly perpendicular to the nearest edge.
-      const dx = (end.x - start.x) * 0.5
-      const dy = (end.y - start.y) * 0.5
-      const horizontal = isHorizontal(start, end)
-      const c1 = horizontal ? { x: start.x + dx, y: start.y } : { x: start.x, y: start.y + dy }
-      const c2 = horizontal ? { x: end.x - dx, y: end.y } : { x: end.x, y: end.y - dy }
-      if (bend === null) return { kind: 'cubic', points: [start, c1, c2, end] }
+      /*
+       * Control points straight out of each edge, so the curve leaves and
+       * arrives perpendicular to the thing it is attached to — and with it
+       * the arrowheads, which are oriented by the first and last segments of
+       * the route rather than by the line between the ends.
+       *
+       * An end attached to nothing keeps the old offset along the run's
+       * dominant axis, which is all there is to go on.
+       */
+      const cubic = defaultCubic(start, end, normals)
+      if (bend === null) return { kind: 'cubic', points: cubic }
 
       /*
        * BOTH control points move together, by the amount that puts the curve's
@@ -165,8 +326,9 @@ export function connectorRoute(
        * too, and would flatten the default S into a symmetric arc the moment
        * you touched it.
        */
-      const target = bendAnchor(start, end, routing, bend)
-      const mid = middle(start, end)
+      const [, c1, c2] = cubic
+      const target = bendAnchor(start, end, routing, bend, normals)
+      const mid = cubicMiddle(cubic)
       const shiftX = (target.x - mid.x) / 0.75
       const shiftY = (target.y - mid.y) / 0.75
       return {

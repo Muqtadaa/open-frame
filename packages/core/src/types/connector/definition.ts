@@ -1,7 +1,7 @@
 import { defineObjectType } from '../../domain/registry.js'
 import { boundsOfPoints, inflate, rectFromPoints } from '../../geometry/rect.js'
 import { distanceToSegment } from '../../geometry/point.js'
-import { endpointDependencies, resolveEndpoints } from './geometry.js'
+import { attachmentAnchor, endpointDependencies, resolveEndpoints } from './geometry.js'
 import {
   bendAnchor,
   bendFrom,
@@ -80,15 +80,23 @@ export const connectorType = defineObjectType<typeof CONNECTOR_TYPE, ConnectorDa
    * on objects it merely references, and culling, hit testing and zoom-to-fit
    * all need the real answer.
    */
-  getBounds: (object, doc) => {
-    const { start, end } = resolveEndpoints(doc, object.data.from, object.data.to)
+  getBounds: (object, doc, { boundsOf }) => {
+    const { start, end, startNormal, endNormal } = resolveEndpoints(
+      doc,
+      object.data.from,
+      object.data.to,
+      boundsOf,
+    )
     /*
      * Over the ROUTE, not the straight line. A bent connector leaves the
      * rectangle its two ends describe, and an object whose bounds do not
      * contain it is culled while still on screen and missed by a marquee
      * dragged over it.
      */
-    const route = connectorRoute(start, end, object.data.routing, object.data.bend ?? null)
+    const route = connectorRoute(start, end, object.data.routing, object.data.bend ?? null, {
+      start: startNormal,
+      end: endNormal,
+    })
     // A route always has at least its two ends, so the fallback is for a
     // shape that cannot occur rather than one that might.
     const box = boundsOfPoints(routeVertices(route)) ?? rectFromPoints(start, end)
@@ -100,8 +108,13 @@ export const connectorType = defineObjectType<typeof CONNECTOR_TYPE, ConnectorDa
    * Bounds containment would make clicking the empty space between two
    * connected objects select the connector joining them.
    */
-  hitTest: (object, doc, point) => {
-    const { start, end } = resolveEndpoints(doc, object.data.from, object.data.to)
+  hitTest: (object, doc, point, { boundsOf }) => {
+    const { start, end, startNormal, endNormal } = resolveEndpoints(
+      doc,
+      object.data.from,
+      object.data.to,
+      boundsOf,
+    )
     /*
      * Against the DRAWN route. This used to measure to the straight line
      * between the ends, which for anything but `straight` routing is nowhere
@@ -110,7 +123,10 @@ export const connectorType = defineObjectType<typeof CONNECTOR_TYPE, ConnectorDa
      * nothing at all.
      */
     const points = flattenRoute(
-      connectorRoute(start, end, object.data.routing, object.data.bend ?? null),
+      connectorRoute(start, end, object.data.routing, object.data.bend ?? null, {
+        start: startNormal,
+        end: endNormal,
+      }),
     )
     for (let index = 1; index < points.length; index += 1) {
       const a = points[index - 1]
@@ -125,8 +141,13 @@ export const connectorType = defineObjectType<typeof CONNECTOR_TYPE, ConnectorDa
   dependencies: (object) => endpointDependencies(object.data.from, object.data.to),
 
   /** Both ends are draggable, at wherever they currently resolve to. */
-  endpoints: (object, doc) => {
-    const { start, end } = resolveEndpoints(doc, object.data.from, object.data.to)
+  endpoints: (object, doc, { boundsOf }) => {
+    const { start, end, startNormal, endNormal } = resolveEndpoints(
+      doc,
+      object.data.from,
+      object.data.to,
+      boundsOf,
+    )
     return [
       {
         id: 'from',
@@ -152,7 +173,10 @@ export const connectorType = defineObjectType<typeof CONNECTOR_TYPE, ConnectorDa
         : [
             {
               id: 'bend',
-              at: bendAnchor(start, end, object.data.routing, object.data.bend ?? null),
+              at: bendAnchor(start, end, object.data.routing, object.data.bend ?? null, {
+                start: startNormal,
+                end: endNormal,
+              }),
               role: 'control' as const,
             },
           ]),
@@ -163,16 +187,18 @@ export const connectorType = defineObjectType<typeof CONNECTOR_TYPE, ConnectorDa
    * Dropping an end on an object attaches it; dropping it on empty space makes
    * it a free point.
    *
-   * Attachment always uses the `auto` anchor rather than the side nearest the
-   * drop. A dropped end means "join this object", and auto keeps the line
-   * sensible when either object later moves — pinning the side it happened to
-   * be dropped on would leave the connector entering from behind as soon as
-   * anything changed.
+   * WHERE on the object depends on where you let go. Dropped on one of its
+   * anchors, the end pins to that side and stays there; dropped anywhere else
+   * on it, the anchor is `auto` and re-picks the facing side whenever either
+   * object moves. This used to be `auto` unconditionally, on the argument that
+   * a pinned side would leave a connector entering from behind once things
+   * moved — true, and not a reason to discard an aim somebody took. Both
+   * behaviours are now reachable, and which one you get is what you did.
    *
    * Attaching a connector to ITSELF is refused, since resolving that endpoint
    * would need the bounds it is currently computing.
    */
-  retargetEndpoint: (object, doc, endpointId, target) => {
+  retargetEndpoint: (object, doc, endpointId, target, { boundsOf }) => {
     /*
      * The bend takes the drop POINT and nothing else — what it landed on is
      * irrelevant, because a bend attaches to nothing. It is stored as a
@@ -182,16 +208,39 @@ export const connectorType = defineObjectType<typeof CONNECTOR_TYPE, ConnectorDa
      */
     if (endpointId === 'bend') {
       if (object.data.routing === 'straight') return {}
-      const { start, end } = resolveEndpoints(doc, object.data.from, object.data.to)
-      return { bend: bendFrom(start, end, object.data.routing, { x: target.x, y: target.y }) }
+      const { start, end, startNormal, endNormal } = resolveEndpoints(
+        doc,
+        object.data.from,
+        object.data.to,
+        boundsOf,
+      )
+      return {
+        bend: bendFrom(
+          start,
+          end,
+          object.data.routing,
+          { x: target.x, y: target.y },
+          { start: startNormal, end: endNormal },
+        ),
+      }
     }
     if (endpointId !== 'from' && endpointId !== 'to') return {}
     if (target.kind === 'object' && target.objectId === object.id) return {}
 
+    const onto = target.kind === 'object' ? doc.objects.get(target.objectId) : undefined
     const endpoint =
-      target.kind === 'point'
+      target.kind === 'point' || onto === undefined
         ? ({ kind: 'point', x: target.x, y: target.y } as const)
-        : ({ kind: 'object', objectId: target.objectId, anchor: { kind: 'auto' } } as const)
+        : ({
+            kind: 'object',
+            objectId: target.objectId,
+            anchor: attachmentAnchor(
+              onto,
+              { x: target.x, y: target.y },
+              target.tolerance,
+              boundsOf,
+            ),
+          } as const)
 
     return endpointId === 'from' ? { from: endpoint } : { to: endpoint }
   },
