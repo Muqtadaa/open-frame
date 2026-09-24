@@ -59,7 +59,28 @@ named rules and do/don't lists re-derived from DESIGN.md).
 **Detector after C1:** 56 → **29** advisory hits (19 radius, 6 type, 2 colour,
 plus the two known false positives).
 
-## C2 — extract the system (next)
+## Screenshot baselines ✅
+
+`apps/web/e2e/surfaces.visual.spec.ts` photographs nine surfaces in both worlds
+(18 goldens): front door, empty board, selection + record panel, context menu,
+tool tip on keyboard focus, sign-in sheet (the shell the share sheet shares),
+shape flyout, comment composer, password gate. `pnpm --filter @openframe/web
+test:visual` compares; `--update-snapshots` accepts. Stable across
+`--repeat-each=3`. A separate Playwright project, not a CI gate yet: the goldens
+were taken in the development container and must be regenerated in CI's image
+first (review plan, B4).
+
+Found by looking at them:
+
+- **Unstyled buttons, visible**: "Close" and "Comment" on the comment composer
+  and "Open the board" on the password gate are browser-default buttons — the
+  `.of-button` gap below, on screen.
+- **The record line runs under the zoom cluster** on a signed-in shared board at
+  1280px: the connection status, avatar and name overlap the "zoom" label. The
+  `max-width` reservation in `.of-status` does not hold once presence and the
+  account chip join the line. (C3 #3.)
+
+## C2 — extract the system (in progress)
 
 Ordered by severity.
 
