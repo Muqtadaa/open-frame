@@ -362,7 +362,7 @@ export function CommentPanel() {
       <form onSubmit={submit}>
         <textarea
           ref={input}
-          className="of-comment-panel__input"
+          className="of-input"
           rows={3}
           value={body}
           maxLength={4000}

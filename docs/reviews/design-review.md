@@ -92,11 +92,13 @@ Found by looking at them:
   gate's submit sits at `--of-hit` (40px). Goldens updated for the four
   screenshots that changed (composer and gate, both worlds); nothing else moved.
 
-### Found on the way
-
-- **`.of-input` is below the field floor**: 28px tall at 12px with a
-  `panel-border` edge (~1.5:1 on the page) where DESIGN.md gives a field 40px
-  and a boundary you must see to operate `control-border` (3:1, WCAG 1.4.11).
-  The password gate shows it: a 30px field above a 40px button. Next step.
+- **C2.2 — one field** (`.of-input`, `--large`). Four text-field implementations
+  (record panel, account sheet, comment composer, workspace bar) become one,
+  on `control-border` — the record panel's fields had been drawn with the
+  margin rule at ~1.5:1, below the 3:1 a boundary you operate needs (WCAG
+  1.4.11). 30px in a panel, 40px (`--large`) in a sheet or gate, with a
+  matching `.of-button--large`, so the password gate's field and button now
+  share one height. Goldens moved on the front door, sign-in sheet, composer
+  and gate, and nowhere else.
 
 ### Remaining

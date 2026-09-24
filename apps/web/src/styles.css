@@ -395,6 +395,12 @@
   color: var(--of-ink);
 }
 
+/* The one act a sheet or a gate exists for, at the operating height. */
+.of-button--large {
+  min-height: var(--of-hit);
+  padding: 0 18px;
+}
+
 /* Numerals in any record read as columns, never as ransom text. */
 .of-status,
 .of-zoom__value,
@@ -1656,13 +1662,6 @@ body {
 .of-spaces__link {
   flex: 1 1 auto;
   min-width: 0;
-  padding: 4px 8px;
-  font: inherit;
-  font-size: 12px;
-  color: var(--of-ink);
-  background: var(--of-panel);
-  border: 1px solid var(--of-control-border);
-  border-radius: var(--of-radius);
 }
 
 .of-spaces__share {
@@ -1949,18 +1948,6 @@ body {
   overflow-y: auto;
 }
 
-.of-comment-panel__input {
-  width: 100%;
-  padding: 8px;
-  font: inherit;
-  font-size: 13px;
-  color: var(--of-ink);
-  resize: vertical;
-  background: var(--of-page);
-  border: 1px solid var(--of-control-border);
-  border-radius: var(--of-radius);
-}
-
 .of-comment-panel__hint {
   margin: 6px 0 0;
   font-size: 12px;
@@ -2138,7 +2125,6 @@ body {
 
 .of-gone__submit {
   width: 100%;
-  min-height: var(--of-hit);
 }
 
 .of-status__source {
@@ -2311,20 +2297,6 @@ body {
   color: var(--of-ink-muted);
 }
 
-.of-account__field input {
-  width: 100%;
-  /* A text field is a control you must be able to hit, and the mono label
-     above it is at the functional-text floor rather than below it. */
-  height: var(--of-hit);
-  padding: 0 12px;
-  font-family: var(--of-font);
-  font-size: 15px;
-  color: var(--of-ink);
-  background: var(--of-page);
-  border: 1px solid var(--of-control-border);
-  border-radius: 4px;
-}
-
 .of-account__error {
   margin: 0 0 12px;
   font-size: 14px;
@@ -2355,10 +2327,7 @@ body {
   color: var(--of-ink);
 }
 
-.of-account__submit {
-  min-height: var(--of-hit);
-  padding: 0 18px;
-}
+
 
 /* The status line is the dialog's positioning context. */
 .of-status {
@@ -3629,20 +3598,33 @@ body {
 }
 
 /*
- * A written value, as opposed to a chosen one. It sits ON the 12px functional
- * floor rather than below it: this is text the user AUTHORS and will re-read,
- * and the floor is the least any readable text gets.
+ * A written value, as opposed to a chosen one. One field, everywhere.
+ *
+ * There were four: this one at 28px and 12px, the account sheet's at 40px and
+ * 15px, the comment composer's textarea, and the workspace bar's name and link
+ * fields — three radii, two grounds. This one was also drawn with the MARGIN
+ * rule, about 1.5:1 on the page, when its edge is a boundary you must see to
+ * operate the control: that is `control-border` and 3:1 (WCAG 1.4.11), which
+ * the other three already used.
+ *
+ * 30px in a panel row; `--large` is the 40px operating height for a sheet or a
+ * gate, where the field is the whole task.
  */
 .of-input {
   width: 100%;
-  min-height: 28px;
-  padding: 5px 7px;
+  min-height: var(--of-hit-sm);
+  padding: 5px 10px;
   font-family: var(--of-font);
-  font-size: 12px;
+  font-size: 14px;
   color: var(--of-ink);
   background: var(--of-page);
-  border: 1px solid var(--of-panel-border);
-  border-radius: 5px;
+  border: 1px solid var(--of-control-border);
+  border-radius: var(--of-radius);
+}
+
+.of-input--large {
+  min-height: var(--of-hit);
+  padding: 8px 12px;
 }
 
 .of-input::placeholder {
@@ -3661,7 +3643,7 @@ body {
 }
 
 textarea.of-input {
-  min-height: 56px;
+  min-height: 60px;
   line-height: 1.45;
   resize: vertical;
 }
@@ -5014,7 +4996,6 @@ textarea.of-input {
 
 .of-share__open {
   width: 100%;
-  min-height: var(--of-hit);
 }
 
 .of-share__error {

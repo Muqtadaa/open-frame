@@ -97,7 +97,7 @@ export function BoardLocked() {
         </label>
         <input
           id="of-board-password"
-          className="of-input of-gone__input"
+          className="of-input of-input--large of-gone__input"
           type="password"
           autoComplete="off"
           autoFocus
@@ -117,7 +117,7 @@ export function BoardLocked() {
 
         <button
           type="submit"
-          className="of-button of-button--primary of-gone__submit"
+          className="of-button of-button--primary of-button--large of-gone__submit"
           disabled={trying || password.length === 0}
           data-testid="board-unlock"
         >

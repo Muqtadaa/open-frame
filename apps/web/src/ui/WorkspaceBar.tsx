@@ -119,7 +119,7 @@ export function WorkspaceBar({
           }}
         >
           <input
-            className="of-spaces__name"
+            className="of-input of-spaces__name"
             value={name}
             maxLength={80}
             placeholder="What is it for?"
@@ -156,7 +156,7 @@ export function WorkspaceBar({
           </button>
           {invite !== null && (
             <input
-              className="of-spaces__link"
+              className="of-input of-spaces__link"
               readOnly
               value={invite}
               aria-label={`Invite link for ${current.name}`}
