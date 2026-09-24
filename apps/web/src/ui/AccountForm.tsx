@@ -93,7 +93,7 @@ export function AccountForm({
         >
           {mode === 'in' ? 'Create an account' : 'I already have one'}
         </button>
-        <button type="submit" className="of-account__submit" disabled={busy}>
+        <button type="submit" className="of-button of-button--primary of-account__submit" disabled={busy}>
           {busy ? (mode === 'in' ? 'Signing in…' : 'Creating…') : mode === 'in' ? 'Sign in' : 'Create account'}
         </button>
       </div>

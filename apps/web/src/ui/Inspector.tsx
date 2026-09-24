@@ -341,7 +341,7 @@ export function Inspector() {
             <button
               key={action.id}
               type="button"
-              className="of-inspector__action"
+              className="of-button"
               data-testid={`action-${action.id}`}
               onClick={() => {
                 const patch = runtime.registry.applyAction(only, action.id)

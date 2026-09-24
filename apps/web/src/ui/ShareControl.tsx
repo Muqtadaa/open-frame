@@ -321,7 +321,7 @@ function ShareLinks({ links, onOpen }: { readonly links: SharedBoard; readonly o
         <span className="of-share__link-what">They can watch, and be seen watching</span>
       </button>
 
-      <button type="button" className="of-share__open" data-testid="open-shared" onClick={onOpen}>
+      <button type="button" className="of-button of-button--primary of-share__open" data-testid="open-shared" onClick={onOpen}>
         Open the shared board
       </button>
     </div>

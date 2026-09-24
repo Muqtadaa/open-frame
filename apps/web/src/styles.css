@@ -320,6 +320,81 @@
   border-radius: 3px;
 }
 
+/*
+ * The button. One, with three weights.
+ *
+ * `.of-button` was used twelve times — the notice's Dismiss, the comment
+ * composer's Close and Comment, the password gate, workspaces, the code and
+ * table bars — and had no rule anywhere, so every one of them was a browser
+ * default in a world that claims its browser surfaces. Meanwhile the account
+ * and share sheets each drew their own identical accent button and the record
+ * panel drew a third, bordered one. Same intent, four implementations, one of
+ * them missing.
+ *
+ * - default: a bordered control on panel white — "do this", not the main act
+ * - primary: the accent fill — the one thing a sheet or gate exists to do
+ * - ghost:   text on no ground — dismissals and secondary moves beside a primary
+ *
+ * Layout (width, alignment in a row) stays with the surface that places the
+ * button; what a button LOOKS like is decided here. Declared before
+ * `.of-surface` on purpose: a ghost button that is also a surface (the code
+ * block's format button) takes the surface's stock.
+ */
+.of-button {
+  display: inline-flex;
+  gap: 6px;
+  align-items: center;
+  justify-content: center;
+  min-height: var(--of-hit-sm);
+  padding: 0 12px;
+  font: inherit;
+  font-family: var(--of-font);
+  font-size: 14px;
+  line-height: 1;
+  color: var(--of-ink);
+  white-space: nowrap;
+  text-decoration: none;
+  background: var(--of-panel);
+  border: 1px solid var(--of-control-border);
+  border-radius: var(--of-radius);
+  cursor: pointer;
+  transition:
+    background-color var(--of-quick) var(--of-ease),
+    border-color var(--of-quick) var(--of-ease),
+    color var(--of-quick) var(--of-ease);
+}
+
+.of-button:hover:not(:disabled) {
+  background: var(--of-hover);
+}
+
+.of-button:disabled {
+  opacity: 0.35;
+  cursor: default;
+}
+
+.of-button--primary {
+  color: var(--of-panel);
+  background: var(--of-accent);
+  border-color: var(--of-accent);
+}
+
+/* Toward the ink, in either world: deeper blue on the page, paler cyan at night. */
+.of-button--primary:hover:not(:disabled) {
+  background: color-mix(in srgb, var(--of-accent) 84%, var(--of-ink));
+  border-color: color-mix(in srgb, var(--of-accent) 84%, var(--of-ink));
+}
+
+.of-button--ghost {
+  color: var(--of-ink-muted);
+  background: transparent;
+  border-color: transparent;
+}
+
+.of-button--ghost:hover:not(:disabled) {
+  color: var(--of-ink);
+}
+
 /* Numerals in any record read as columns, never as ransom text. */
 .of-status,
 .of-zoom__value,
@@ -2063,6 +2138,7 @@ body {
 
 .of-gone__submit {
   width: 100%;
+  min-height: var(--of-hit);
 }
 
 .of-status__source {
@@ -2280,20 +2356,8 @@ body {
 }
 
 .of-account__submit {
-  height: var(--of-hit);
+  min-height: var(--of-hit);
   padding: 0 18px;
-  font-family: var(--of-font);
-  font-size: 14px;
-  color: var(--of-panel);
-  background: var(--of-accent);
-  border: 1px solid var(--of-accent);
-  border-radius: 4px;
-  cursor: pointer;
-}
-
-.of-account__submit:disabled {
-  opacity: 0.55;
-  cursor: default;
 }
 
 /* The status line is the dialog's positioning context. */
@@ -3654,18 +3718,6 @@ textarea.of-input {
  * they sit at the weight of a field label rather than of the delete control —
  * which is the one thing in this panel that is meant to give you pause.
  */
-.of-inspector__action {
-  border: 1px solid var(--of-control-border);
-  border-radius: 6px;
-  background: var(--of-panel);
-  color: var(--of-ink);
-  font-size: 12px;
-  padding: 4px 8px;
-  cursor: pointer;
-}
-.of-inspector__action:hover {
-  background: var(--of-hover);
-}
 .of-inspector__rule {
   height: 0;
   margin: 7px 0 5px;
@@ -4962,14 +5014,7 @@ textarea.of-input {
 
 .of-share__open {
   width: 100%;
-  height: var(--of-hit);
-  font-family: var(--of-font);
-  font-size: 14px;
-  color: var(--of-panel);
-  background: var(--of-accent);
-  border: 1px solid var(--of-accent);
-  border-radius: 4px;
-  cursor: pointer;
+  min-height: var(--of-hit);
 }
 
 .of-share__error {
@@ -5124,8 +5169,7 @@ textarea.of-input {
 .of-home__start,
 .of-home__account,
 .of-status__title,
-.of-share__link,
-.of-share__open {
+.of-share__link {
   transition:
     background-color var(--of-quick) ease-out,
     border-color var(--of-quick) ease-out,

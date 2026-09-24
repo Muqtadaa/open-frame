@@ -82,58 +82,21 @@ Found by looking at them:
 
 ## C2 — extract the system (in progress)
 
-Ordered by severity.
+### Done
 
-1. **`.of-button` has no rule.** `.of-button`, `--primary` and `--ghost` are used
-   12 times (NoticeBanner "Dismiss", WorkspaceBar, BoardGone, BoardLocked,
-   CommentPanel, CodeView, TableView) and render as browser defaults. Build ONE
-   button primitive and fold the per-surface ones into it (`.of-zoom__button`,
-   `.of-status__action`, `.of-inspector__action`, `.of-format-bar__button`,
-   `.of-arrange__button`, `.of-home__row-action`, …).
-2. **Scales that exist only on paper** — make them tokens, then migrate:
-   - type ramp: 114 of 122 font sizes are raw px
-   - radius: 17 distinct values against one `--of-radius` (frontmatter has
-     `slip/apparatus/panel/control/surface/round`)
-   - spacing below 10px: 11 of 220 declarations use a token
-   - z-index: raw 1–100; `.of-search` (8) sits below `.of-overlay` (10) — verify
-   - motion: tool-tip 110ms and the 600ms copy flash bypass `--of-quick`
-3. **Duplicates.** `.of-account` ≡ `.of-share` (sheet shells), `.of-notice` ≈
-   `.of-toast`. Floating sheets split between 10px (`.of-surface`) and 6px.
-4. **Icons.** Stray inline SVGs in WorkspaceBar (1.8 stroke), Swatches (3–3.2),
-   ColorPicker, PresenceLayer (1.2); typed glyphs `−`, `A−`, `×` where DESIGN.md
-   says icons are drawn. Fold into `ui/icons.tsx` at 1.6.
-5. **Tooltips.** ~44 native `title=` tips a keyboard cannot summon, against
-   DESIGN.md's own rule. Extract the rail's focusable tip; share one `isMac`
-   modifier helper (copied into ContextMenu, StatusBar, ZoomControl).
-6. **Colour leaks.** `interaction/tool-cursor.ts:178` hard-codes ink/halo, so the
-   cursor ignores After Hours; `controls/Swatches.tsx:29` falls back to
-   `#000000` against Never-Black.
-7. **Guards.** Extend `design-tokens.test.ts` to reject raw radius / z-index /
-   font-size outside the token scales, as it already rejects colour literals.
-8. Split `styles.css` by layer (tokens, primitives, chrome, apparatus, views).
+- **C2.1 — one button** (`.of-button`, `--primary`, `--ghost`). The twelve
+  unstyled uses now render as designed; the account sheet's submit, the share
+  sheet's open and the record panel's action fold into it, deleting three
+  private implementations. Hover on primary mixes the accent toward the ink, so
+  it deepens on the page and brightens at night from the same rule. The password
+  gate's submit sits at `--of-hit` (40px). Goldens updated for the four
+  screenshots that changed (composer and gate, both worlds); nothing else moved.
 
-Waits on the Track B screenshot + axe baselines, which are the regression net
-for a stylesheet-wide change.
+### Found on the way
 
-## C3 — per-surface critique (after C2)
+- **`.of-input` is below the field floor**: 28px tall at 12px with a
+  `panel-border` edge (~1.5:1 on the page) where DESIGN.md gives a field 40px
+  and a boundary you must see to operate `control-border` (3:1, WCAG 1.4.11).
+  The password gate shows it: a 30px field above a 40px button. Next step.
 
-Each: `/impeccable critique <surface>` (two isolated assessments + detector,
-browser evidence at desktop and narrow widths, both worlds) → surface contract
-in `apps/web/.impeccable/surfaces/` → `polish`; `bolder`/`typeset` permitted on
-the inspector, rail and record line.
-
-| #   | Surface                                                      | Contract | Known going in                                                  |
-| --- | ------------------------------------------------------------ | -------- | --------------------------------------------------------------- |
-| 1   | Record panel (Inspector, RecordFields, Provenance, Swatches) | none     | the signature component; segmented items 26px tall (off-rhythm) |
-| 2   | Tool rail + flyouts                                          | none     |                                                                 |
-| 3   | Record line + zoom cluster                                   | none     |                                                                 |
-| 4   | Context menu, search, arrange bar, format bar                | none     | search input `outline: none` with no ring; `:focus` not visible |
-| 5   | Comments, mentions, presence                                 | none     | 999px pills are back, against the Sharing refusal               |
-| 6   | BoardLocked, BoardGone, notices (quarantine), toasts, errors | none     | `harden` + `clarify` on copy                                    |
-| 7   | Selection apparatus                                          | none     | handle radius 2px vs 4px; FrameView/TableView divide by zoom    |
-| 8   | Object views (11 types + 8 semantic slips)                   | none     | shape fill-vs-stroke contrast never checked (PRODUCT.md)        |
-| 9   | Home, account, share                                         | yes      | re-critique for regressions                                     |
-| 10  | Boot splash                                                  | none     | inline styles, own timings                                      |
-
-Closing pass: `/impeccable audit apps/web/src` (a11y, performance, theming in
-both worlds, responsive/touch), then `impeccable-finish-reviewer` per surface.
+### Remaining
