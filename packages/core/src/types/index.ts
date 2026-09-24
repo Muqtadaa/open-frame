@@ -73,15 +73,21 @@ export {
   type ResolvedEnds,
 } from './connector/geometry.js'
 export {
-  bendAnchor,
-  bendFrom,
+  bendAt,
   connectorRoute,
+  elbowAnchor,
+  elbowFrom,
   heldPoint,
   flattenRoute,
+  pointAt,
+  routeMidpoint,
+  routeNodes,
+  routeSegments,
   routeVertices,
   NO_BEND,
   type Route,
   type RouteNormals,
+  type RouteSegment,
 } from './connector/route.js'
 export { EVIDENCE_TYPE, evidenceType } from './evidence/definition.js'
 export { EvidenceDataSchema, type EvidenceData } from './evidence/schema.js'

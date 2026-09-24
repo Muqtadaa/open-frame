@@ -376,6 +376,38 @@ outside the selection. An edge strip still straddles the boundary: that is the
 tolerance band that makes an edge grabbable, and four of them cannot meet in the
 middle of anything.
 
+### 25. A handle that makes something hands the drag over to it
+
+A route passes through the points it is given, in the order it is given them,
+and a new one is made by dragging the middle of a segment. That handle cannot
+go on meaning "insert here": the preview it produces is fed straight back to
+the type, so asked again it would insert a second point, then a third — one per
+pointer event, with the route folding up as you drag.
+
+So a handle names its successor (`becomes`), and from the first move the
+gesture is dragging THAT. The canvas follows a declaration rather than
+recognising a naming convention, which is what keeps the rule in the registry
+where behaviour belongs.
+
+The same shape of problem is why a point is not REMOVED mid-drag: every index
+after it would shift, and the hand that was moving vertex 2 would find itself
+moving what used to be vertex 3.
+
+**Chrome that only appears under the pointer must survive its own press.**
+Hiding a revealed handle "while a drag is running" cannot be pressed at all:
+the press starts the drag, the handle unmounts between `pointerdown` and
+`pointerup`, and a `click` needs both on the same element — so no click, no
+double-click, and a connector's label became unreachable. (The sixth appearance
+of apparatus that unmounts under its own press.) It needs no such gate: the
+pointer is only tracked BETWEEN gestures, so during a drag it stays where the
+press was while the shape moves away from it, and the handle drops out of reach
+on its own.
+
+And a handle that has no double-click of its own must not swallow one. A
+table's divider does have one — double-clicking it fits the column, so the
+object underneath must not also open — but a drag-only grip sitting where
+somebody double-clicks to type is just in the way.
+
 ---
 
 ## Conventions

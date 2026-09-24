@@ -280,6 +280,20 @@ interface InteractionState {
   readonly guides: readonly AlignmentGuide[]
   readonly selection: ReadonlySet<ObjectId>
   readonly hoveredId: ObjectId | null
+  /**
+   * Where the pointer is, in world units, while no gesture is running.
+   *
+   * For chrome that only appears when you REACH for it: a connector offers a
+   * midpoint on every stretch, and drawn all at once they turn a line into a
+   * row of dots that hides the line. Null between visits — a stale position
+   * would leave a handle hanging over a line nobody is pointing at.
+   *
+   * Held here rather than in the overlay that wants it because the canvas owns
+   * pointer handling: a second listener on the same events is a second answer
+   * to where the pointer is, and they disagree the moment one of them misses
+   * an event.
+   */
+  readonly pointerWorld: Point | null
   readonly editingId: ObjectId | null
   /**
    * The image being cropped, if any.
@@ -395,6 +409,7 @@ interface InteractionState {
   toggleSelection(id: ObjectId): void
   clearSelection(): void
   setHovered(id: ObjectId | null): void
+  setPointer(at: Point | null): void
   setEditing(id: ObjectId | null, at?: Point): void
   setCropping(id: ObjectId | null): void
   beginCrop(objectId: ObjectId, handle: string): void
@@ -457,6 +472,7 @@ export const useInteractionStore = create<InteractionState>((set) => ({
   guides: NO_GUIDES,
   selection: new Set<ObjectId>(),
   hoveredId: null,
+  pointerWorld: null,
   editingId: null,
   croppingId: null,
   editingAt: null,
@@ -534,6 +550,7 @@ export const useInteractionStore = create<InteractionState>((set) => ({
     }),
   clearSelection: () => set({ selection: new Set<ObjectId>(), croppingId: null }),
   setHovered: (hoveredId) => set({ hoveredId }),
+  setPointer: (pointerWorld) => set({ pointerWorld }),
   setEditing: (editingId, at) =>
     set((state) => {
       // Refused, not queued. Somebody else has the note open, and the right

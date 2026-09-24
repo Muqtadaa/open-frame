@@ -114,6 +114,7 @@ export function Canvas() {
       onPointerMove={gestures.onPointerMove}
       onPointerUp={gestures.onPointerUp}
       onPointerCancel={gestures.onPointerUp}
+      onPointerLeave={gestures.onPointerLeave}
       onDoubleClick={gestures.onDoubleClick}
       onContextMenu={gestures.onContextMenu}
       onDragOver={imageDrop.onDragOver}

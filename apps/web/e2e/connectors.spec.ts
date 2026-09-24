@@ -50,6 +50,25 @@ async function sticky(page: Page, x: number, y: number, text: string): Promise<v
   await page.keyboard.press('v')
 }
 
+/**
+ * A point a given fraction of the way along the DRAWN line, on screen.
+ *
+ * Asked of the path itself rather than worked out from the two ends: a curve's
+ * middle is nowhere near the middle of the straight line between them, and a
+ * test that aimed there would miss the handle it is reaching for — and then
+ * pass or fail for the wrong reason.
+ */
+async function alongTheLine(page: Page, fraction = 0.5): Promise<{ x: number; y: number }> {
+  return page.locator('.of-connector__line').evaluate((element, at: number) => {
+    const path = element as unknown as SVGPathElement
+    const point = path.getPointAtLength(path.getTotalLength() * at)
+    const matrix = path.getScreenCTM()
+    if (matrix === null) throw new Error('the line is not on screen')
+    const screen = new DOMPoint(point.x, point.y).matrixTransform(matrix)
+    return { x: screen.x, y: screen.y }
+  }, fraction)
+}
+
 async function drag(page: Page, from: { x: number; y: number }, to: { x: number; y: number }) {
   await page.mouse.move(from.x, from.y)
   await page.mouse.down()
@@ -408,8 +427,10 @@ test.describe('bending a route', () => {
     await expect(page.getByTestId('endpoint-from')).toBeVisible()
 
     /*
-     * Nothing to bend on a straight line, and a control that appears and does
-     * nothing is worse than one that is absent.
+     * No ELBOW on a straight line — there is no middle segment to slide, and a
+     * control that appears and does nothing is worse than one that is absent.
+     * It can still be given stops; those are handles of their own, and they
+     * appear on the stretch you point at rather than sitting there.
      */
     await expect(page.getByTestId('endpoint-bend')).toHaveCount(0)
 
@@ -454,14 +475,22 @@ test.describe('bending a route', () => {
   test('drags the apex of a curve, and one undo puts it back', async ({ page }) => {
     await bendableConnector(page, 'curved')
 
-    const before = await page.getByTestId('endpoint-bend').boundingBox()
-    if (before === null) throw new Error('no bend handle')
-    const from = { x: before.x + before.width / 2, y: before.y + before.height / 2 }
+    /*
+     * A curve has no elbow to slide. It has stretches, and the middle of the
+     * one you are pointing at can be pulled out into a stop the line then
+     * passes through — which is how a curve gets its shape now.
+     */
+    const from = await alongTheLine(page)
+    await page.mouse.move(from.x, from.y)
+    await expect(page.getByTestId('endpoint-midpoint:0')).toBeVisible()
+    // Drawn as a control rather than an end, so it does not read as a third
+    // point the line could detach to.
+    await expect(page.getByTestId('endpoint-midpoint:0')).toHaveClass(/of-endpoint--control/)
 
     await drag(page, from, { x: from.x, y: from.y - 120 })
 
-    const after = await page.getByTestId('endpoint-bend').boundingBox()
-    if (after === null) throw new Error('no bend handle')
+    const after = await page.getByTestId('endpoint-vertex:0').boundingBox()
+    if (after === null) throw new Error('no vertex handle')
     /*
      * The handle ends up under the POINTER, which is the whole test: a curve
      * whose midpoint only moves part of the way slides out from under your
@@ -469,10 +498,9 @@ test.describe('bending a route', () => {
      */
     expect(after.y + after.height / 2).toBeCloseTo(from.y - 120, -1)
 
+    // ONE undo, not one per pointer event: the whole drag is one command.
     await page.keyboard.press('ControlOrMeta+z')
-    await expect
-      .poll(async () => (await page.getByTestId('endpoint-bend').boundingBox())?.y ?? 0)
-      .toBeCloseTo(before.y, -1)
+    await expect(page.getByTestId('endpoint-vertex:0')).toHaveCount(0)
   })
 })
 
@@ -716,8 +744,9 @@ test.describe('reshaping a line', () => {
     await page.keyboard.press('v')
     await page.locator('.of-connector__line').click({ force: true })
     await page.getByTestId('field-routing').selectOption(routing)
-    await expect(page.getByTestId('endpoint-bend')).toBeVisible()
+    await expect(page.getByTestId('endpoint-from')).toBeVisible()
   }
+
 
   const route = async (page: Page): Promise<string> =>
     (await page.locator('.of-connector__line').getAttribute('d')) ?? ''
@@ -763,7 +792,25 @@ test.describe('reshaping a line', () => {
     await bendable(page, 'curved')
     const before = await route(page)
 
-    const from = await grab(page)
+    /*
+     * Reach for the middle of the LINE, not for a handle sitting in the air:
+     * a midpoint only appears while the pointer is on the stretch it would
+     * change, which is what keeps a long route from becoming a row of dots.
+     */
+    const middle = await alongTheLine(page)
+    // Away from the line first: selecting the route left the pointer on it,
+    // and a handle that is already showing proves nothing about the reveal.
+    await page.mouse.move(middle.x, middle.y - 160)
+    await expect(page.getByTestId('endpoint-midpoint:0')).toHaveCount(0)
+    await page.mouse.move(middle.x, middle.y)
+    await expect(page.getByTestId('endpoint-midpoint:0')).toBeVisible()
+
+    // From the handle itself, not from the point that revealed it: the two are
+    // a few pixels apart, and a press that misses lands on the line and drags
+    // the whole connector instead.
+    const grip = await page.getByTestId('endpoint-midpoint:0').boundingBox()
+    if (grip === null) throw new Error('no midpoint handle')
+    const from = { x: grip.x + grip.width / 2, y: grip.y + grip.height / 2 }
     await page.mouse.move(from.x, from.y)
     await page.mouse.down()
     await page.mouse.move(from.x + 90, from.y - 60, { steps: 6 })
@@ -773,14 +820,60 @@ test.describe('reshaping a line', () => {
     // And the rubber band that belongs to an END drag is absent.
     await expect(page.locator('.of-connector--preview')).toHaveCount(0)
 
+    /*
+     * ONE stop, after six pointer events. The handle that created it handed
+     * the drag over to it — without that it would add a stop per event, and
+     * the route would fold up on itself as you dragged.
+     */
+    await expect(page.getByTestId('endpoint-vertex:0')).toBeVisible()
+    await expect(page.getByTestId('endpoint-vertex:1')).toHaveCount(0)
+
     // The handle came with it: what you are dragging is where you dragged it.
-    const held = await grab(page)
-    expect(held.x).toBeCloseTo(from.x + 90, 0)
+    const held = await page.getByTestId('endpoint-vertex:0').boundingBox()
+    if (held === null) throw new Error('no vertex handle')
+    expect(held.x + held.width / 2).toBeCloseTo(from.x + 90, 0)
 
     const previewed = await route(page)
     await page.mouse.up()
     // What was drawn is what was committed.
     expect(await route(page)).toBe(previewed)
+    await expect(page.getByTestId('endpoint-vertex:1')).toHaveCount(0)
+  })
+
+  test('takes a second stop on the stretch that was pointed at', async ({ page }) => {
+    await bendable(page, 'curved')
+
+    const first = await alongTheLine(page)
+    await page.mouse.move(first.x, first.y)
+    const firstGrip = await page.getByTestId('endpoint-midpoint:0').boundingBox()
+    if (firstGrip === null) throw new Error('no midpoint handle')
+    await drag(
+      page,
+      { x: firstGrip.x + firstGrip.width / 2, y: firstGrip.y + firstGrip.height / 2 },
+      { x: firstGrip.x + firstGrip.width / 2, y: firstGrip.y + firstGrip.height / 2 - 80 },
+    )
+    await expect(page.getByTestId('endpoint-vertex:0')).toBeVisible()
+
+    /*
+     * The middle of the route is now the stop itself, so aim at the middle of
+     * one of the two stretches either side of it instead — which is where the
+     * second midpoint handle lives.
+     */
+    const second = await alongTheLine(page, 0.75)
+    await page.mouse.move(second.x, second.y)
+    await expect(page.getByTestId('endpoint-midpoint:1')).toBeVisible()
+    const secondGrip = await page.getByTestId('endpoint-midpoint:1').boundingBox()
+    if (secondGrip === null) throw new Error('no second midpoint handle')
+    await drag(
+      page,
+      { x: secondGrip.x + secondGrip.width / 2, y: secondGrip.y + secondGrip.height / 2 },
+      { x: secondGrip.x + secondGrip.width / 2, y: secondGrip.y + secondGrip.height / 2 + 70 },
+    )
+
+    // TWO stops, and the line goes through both of them.
+    await expect(page.getByTestId('endpoint-vertex:0')).toBeVisible()
+    await expect(page.getByTestId('endpoint-vertex:1')).toBeVisible()
+    await expect(page.getByTestId('endpoint-vertex:2')).toHaveCount(0)
   })
 
   test('collapses an orthogonal route to an L, and holds it until pulled clear', async ({

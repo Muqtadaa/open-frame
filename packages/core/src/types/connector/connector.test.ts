@@ -400,7 +400,8 @@ describe('draggable endpoints', () => {
 
   it('reports both ends, where they resolve to', () => {
     const ends = h.registry.endpointsOf(object(), h.store.getDocument())
-    expect(ends.map((e) => e.id)).toEqual(['from', 'to'])
+    // The ends first, then whatever shapes the route between them.
+    expect(ends.slice(0, 2).map((e) => e.id)).toEqual(['from', 'to'])
     // Attached ends sit on the edge of their object, not at its origin.
     expect(ends[0]?.at.x).toBeGreaterThan(0)
   })
@@ -730,11 +731,16 @@ describe('a bend', () => {
     return { h, object }
   }
 
-  it('offers a handle on a route that can bend, and none on one that cannot', () => {
+  it('offers an elbow on an orthogonal route, and stops on the others', () => {
     const { h, object } = bent(null)
     const ids = h.registry.endpointsOf(object, h.store.getDocument()).map((point) => point.id)
     expect(ids).toEqual(['from', 'to', 'bend'])
 
+    /*
+     * A straight route has no elbow — there is no middle segment to slide —
+     * but it does have a stretch whose middle can be pulled into a vertex,
+     * which is how a line gets its first stop.
+     */
     const straight = createTestHarness()
     const id = create(straight, 'connector', 0, 0, {
       from: { kind: 'point', x: 0, y: 0 },
@@ -745,7 +751,7 @@ describe('a bend', () => {
     if (line === undefined) throw new Error('missing')
     expect(
       straight.registry.endpointsOf(line, straight.store.getDocument()).map((p) => p.id),
-    ).toEqual(['from', 'to'])
+    ).toEqual(['from', 'to', 'midpoint:0'])
   })
 
   it('moves the drawn line, and the bounds with it', () => {
@@ -774,5 +780,153 @@ describe('a bend', () => {
     if (object === undefined) throw new Error('missing')
     const bounds = h.registry.boundsOf(object, h.store.getDocument())
     expect(bounds.height).toBeGreaterThan(100)
+  })
+})
+
+/**
+ * MANY STOPS, which is what a connector needs to get round anything.
+ *
+ * The route passes THROUGH each one — not near it, and not in whatever order
+ * the arithmetic lands on. A stop you placed is a position you chose, and a
+ * line that visits two of them backwards crosses itself in front of you.
+ */
+describe('a route held at several points', () => {
+  const stops = (routing: 'straight' | 'curved', points: readonly { along: number; across: number }[]) => {
+    const h = createTestHarness()
+    const id = create(h, 'connector', 0, 0, {
+      from: { kind: 'point', x: 0, y: 0 },
+      to: { kind: 'point', x: 400, y: 0 },
+      routing,
+      points,
+    })
+    const object = h.store.getObject(id)
+    if (object === undefined) throw new Error('missing connector')
+    return { h, object, id }
+  }
+
+  /** Where a drop lands, as the drag would report it. */
+  const drop = (x: number, y: number) => ({ kind: 'point' as const, x, y, tolerance: 8 })
+
+  it.each(['straight', 'curved'] as const)(
+    'offers one midpoint per stretch of a %s route, and a handle at each stop',
+    (routing) => {
+      const { h, object } = stops(routing, [{ along: 0.5, across: 60 }])
+      const ids = h.registry.endpointsOf(object, h.store.getDocument()).map((point) => point.id)
+      expect(ids).toEqual(['from', 'to', 'vertex:0', 'midpoint:0', 'midpoint:1'])
+    },
+  )
+
+  it('puts a midpoint handle on the line it would change', () => {
+    const { h, object } = stops('straight', [])
+    const [midpoint] = h.registry
+      .endpointsOf(object, h.store.getDocument())
+      .filter((point) => point.id === 'midpoint:0')
+    expect(midpoint?.at).toEqual({ x: 200, y: 0 })
+    // And it names that stretch, so the overlay can show it only while the
+    // pointer is on it rather than drawing a dot on every segment at once.
+    expect(midpoint?.shownNear?.length).toBeGreaterThanOrEqual(2)
+    // And hands the drag over to the vertex it creates, or it would create
+    // one per pointer event for as long as the drag lasted.
+    expect(midpoint?.becomes).toBe('vertex:0')
+  })
+
+  it('creates a stop where a midpoint was dropped', () => {
+    const { h, object } = stops('straight', [])
+    const patch = h.registry.retargetEndpoint(
+      object,
+      h.store.getDocument(),
+      'midpoint:0',
+      drop(200, 90),
+    )
+    const points = (patch as { points?: readonly { along: number; across: number }[] }).points
+    expect(points).toHaveLength(1)
+    const moved = { ...object, data: { ...(object.data as object), ...patch } }
+    // THROUGH the drop, which is the whole promise of a stop.
+    expect(h.registry.hitTestObject(moved, h.store.getDocument(), { x: 200, y: 90 })).toBe(true)
+  })
+
+  it('inserts at the stretch that was dragged, not at the end of the list', () => {
+    const { h, object } = stops('straight', [{ along: 0.5, across: 0 }])
+    /*
+     * The FIRST stretch: between the near end and the stop that is already
+     * there. Dragging the last stretch instead would prove nothing — its
+     * index is the length of the list, so appending and inserting land in the
+     * same place, and this test passed with the insertion deleted.
+     */
+    const patch = h.registry.retargetEndpoint(
+      object,
+      h.store.getDocument(),
+      'midpoint:0',
+      drop(100, 80),
+    )
+    const points = (patch as { points: { along: number; across: number }[] }).points
+    expect(points).toHaveLength(2)
+    /*
+     * Order is the point. Appended instead, the route would run out to the
+     * middle, back to a quarter along and out again — visibly crossing
+     * itself, and the failure a length check alone cannot see.
+     */
+    expect(points[0]?.along).toBeCloseTo(0.25, 6)
+    expect(points[1]?.along).toBeCloseTo(0.5, 6)
+  })
+
+  it('moves the stop a vertex handle names, and leaves the others alone', () => {
+    const { h, object } = stops('curved', [
+      { along: 0.25, across: 40 },
+      { along: 0.75, across: -40 },
+    ])
+    const patch = h.registry.retargetEndpoint(
+      object,
+      h.store.getDocument(),
+      'vertex:1',
+      drop(300, 120),
+    )
+    const points = (patch as { points: { along: number; across: number }[] }).points
+    expect(points).toHaveLength(2)
+    expect(points[0]).toEqual({ along: 0.25, across: 40 })
+    expect(points[1]?.across).toBeCloseTo(120, 6)
+  })
+
+  it('refuses a handle naming a stop that is not there', () => {
+    const { h, object } = stops('straight', [])
+    expect(
+      h.registry.retargetEndpoint(object, h.store.getDocument(), 'vertex:0', drop(10, 10)),
+    ).toEqual({})
+    expect(
+      h.registry.retargetEndpoint(object, h.store.getDocument(), 'midpoint:4', drop(10, 10)),
+    ).toEqual({})
+  })
+
+  it('leaves an orthogonal route to its elbow', () => {
+    const h = createTestHarness()
+    const id = create(h, 'connector', 0, 0, {
+      from: { kind: 'point', x: 0, y: 0 },
+      to: { kind: 'point', x: 400, y: 200 },
+      routing: 'orthogonal',
+    })
+    const object = h.store.getObject(id)
+    if (object === undefined) throw new Error('missing connector')
+    const ids = h.registry.endpointsOf(object, h.store.getDocument()).map((point) => point.id)
+    expect(ids).toEqual(['from', 'to', 'bend'])
+    expect(
+      h.registry.retargetEndpoint(object, h.store.getDocument(), 'midpoint:0', drop(10, 10)),
+    ).toEqual({})
+  })
+
+  it('grows the bounds and the hit area around every stop', () => {
+    const { h, object } = stops('straight', [
+      { along: 0.25, across: 200 },
+      { along: 0.75, across: -200 },
+    ])
+    const bounds = h.registry.boundsOf(object, h.store.getDocument())
+    expect(bounds.height).toBeGreaterThanOrEqual(400)
+    expect(h.registry.hitTestObject(object, h.store.getDocument(), { x: 100, y: 200 })).toBe(true)
+    /*
+     * And still NOT the straight line between the ends, which the route no
+     * longer travels. A quarter of the way along it, where the drawn route is
+     * a hundred units above — the exact middle is no good as a check, because
+     * a zigzag through two opposite stops crosses the straight line there.
+     */
+    expect(h.registry.hitTestObject(object, h.store.getDocument(), { x: 50, y: 0 })).toBe(false)
   })
 })

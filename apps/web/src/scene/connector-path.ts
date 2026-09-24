@@ -1,6 +1,6 @@
 import {
-  bendAnchor,
   connectorRoute,
+  routeMidpoint,
   type Bend,
   type Point,
   type RouteNormals,
@@ -21,17 +21,30 @@ export function connectorPath(
   start: Point,
   end: Point,
   routing: Routing,
-  bend: Bend | null = null,
+  points: readonly Bend[] = [],
   normals: RouteNormals | null = null,
 ): string {
-  const route = connectorRoute(start, end, routing, bend, normals)
+  const route = connectorRoute(start, end, routing, points, normals)
   const [first, ...rest] = route.points
   if (first === undefined) return ''
   const from = `M ${String(first.x)} ${String(first.y)}`
 
-  if (route.kind === 'cubic') {
-    const [c1, c2, last] = rest as [Point, Point, Point]
-    return `${from} C ${String(c1.x)} ${String(c1.y)}, ${String(c2.x)} ${String(c2.y)}, ${String(last.x)} ${String(last.y)}`
+  if (route.kind === 'spline') {
+    /*
+     * A CHAIN of cubics — `p0, c1, c2, p1, c1, c2, p2, …` — so the path takes
+     * the control points three at a time. A single `C` was enough while a
+     * curve could only be one cubic; drawn that way now, a route held at two
+     * places would draw its first stretch and stop.
+     */
+    let path = from
+    for (let index = 0; index + 2 < rest.length; index += 3) {
+      const c1 = rest[index]
+      const c2 = rest[index + 1]
+      const to = rest[index + 2]
+      if (c1 === undefined || c2 === undefined || to === undefined) continue
+      path += ` C ${String(c1.x)} ${String(c1.y)}, ${String(c2.x)} ${String(c2.y)}, ${String(to.x)} ${String(to.y)}`
+    }
+    return path
   }
 
   return rest.reduce((path, point) => `${path} L ${String(point.x)} ${String(point.y)}`, from)
@@ -40,18 +53,18 @@ export function connectorPath(
 /**
  * The middle of the DRAWN route, for placing a label.
  *
- * `bendAnchor` is the same point the bend handle sits on, which is not an
- * accident worth losing: the label and the handle both mean "the middle of
- * this line", and computing them separately is how they drift apart.
+ * Read off the route itself rather than worked out a second time, which is the
+ * same reason `routeAngles` reads it: two pieces of code answering one
+ * question is how a label ends up somewhere the line is not.
  */
 export function pathMidpoint(
   start: Point,
   end: Point,
   routing: Routing = 'straight',
-  bend: Bend | null = null,
+  points: readonly Bend[] = [],
   normals: RouteNormals | null = null,
 ): Point {
-  return bendAnchor(start, end, routing, bend, normals)
+  return routeMidpoint(connectorRoute(start, end, routing, points, normals))
 }
 
 /**
@@ -104,10 +117,10 @@ export function routeAngles(
   start: Point,
   end: Point,
   routing: Routing,
-  bend: Bend | null = null,
+  bends: readonly Bend[] = [],
   normals: RouteNormals | null = null,
 ): RouteAngles {
-  const points = connectorRoute(start, end, routing, bend, normals).points
+  const points = connectorRoute(start, end, routing, bends, normals).points
   const straight = Math.atan2(end.y - start.y, end.x - start.x)
 
   const afterStart = distinctFrom(points, 0, 1)
@@ -129,7 +142,7 @@ export function arrivalAngle(
   start: Point,
   end: Point,
   routing: Routing,
-  bend: Bend | null = null,
+  bends: readonly Bend[] = [],
 ): number {
-  return routeAngles(start, end, routing, bend).arrival
+  return routeAngles(start, end, routing, bends).arrival
 }

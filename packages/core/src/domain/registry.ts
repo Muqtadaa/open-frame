@@ -131,6 +131,29 @@ export interface DraggableEndpoint {
    * user drags the middle one expecting the line to detach there.
    */
   readonly role?: 'end' | 'control'
+  /**
+   * The handle this one HANDS OVER TO once it has been dragged.
+   *
+   * A handle that creates something cannot go on creating it. The midpoint of
+   * a connector's segment adds a vertex the first time it is moved; asked a
+   * second time it would add another, because the preview it produced is fed
+   * straight back to it and index three of a four-point route is not the same
+   * place it was. Declaring the successor lets the gesture follow without
+   * knowing what either handle means — it drags this one, and from the first
+   * move onwards it drags that one.
+   */
+  readonly becomes?: string
+  /**
+   * A stretch of the object this handle only appears NEAR, in world units.
+   *
+   * Every segment of a route offers a midpoint to drag, and drawn all at once
+   * they turn a line into a row of dots that hides the line. Declared as the
+   * stretch rather than as a radius because "near" means near the piece this
+   * handle would change, not near where the handle happens to sit: on a long
+   * leg those are half a leg apart, and a handle you have to hunt for is one
+   * nobody finds. Absent means always shown.
+   */
+  readonly shownNear?: readonly Point[]
 }
 
 /**

@@ -153,8 +153,14 @@ interface Gesture {
   /** Snapshot too: static objects do not move during a drag (see alignment.ts). */
   readonly alignTargets: readonly Rect[]
   readonly handle: HandleId | null
-  /** Which end is being dragged, in the owning type's own naming. */
-  readonly endpointId: string | null
+  /**
+   * Which end is being dragged, in the owning type's own naming.
+   *
+   * Not readonly, because a handle can hand the drag over: one that creates
+   * something names its successor (`becomes`) and the rest of the drag belongs
+   * to that. See `reshapeOf`.
+   */
+  endpointId: string | null
   readonly startAngle: number
   moved: boolean
 }
@@ -216,6 +222,21 @@ function handleUnderPointer(target: EventTarget | null): string | null {
 function handleAt(clientX: number, clientY: number): string | null {
   if (typeof window === 'undefined') return null
   return handleUnderPointer(window.document.elementFromPoint(clientX, clientY))
+}
+
+/**
+ * Whether a handle claims the DOUBLE-click as well as the drag.
+ *
+ * A table's divider does: double-clicking it fits the column to its content,
+ * and the object underneath must not also open its editor on top of that.
+ *
+ * An endpoint handle does not. It is a drag target and nothing else — and a
+ * connector's midpoint handle sits exactly where somebody double-clicks to
+ * label the line, so treating it as in the way made a connector's label
+ * unreachable the moment stops were added.
+ */
+function claimsDoubleClick(handle: string | null): boolean {
+  return handle !== null && handle !== 'endpoint'
 }
 
 /**
@@ -371,7 +392,19 @@ function reshapeOf(
     y: at.y,
     tolerance: SNAP_L_PX / Math.max(zoom, 0.0001),
   })
-  return data === null ? null : { objectId: object.id, data }
+  if (data === null) return null
+
+  /*
+   * A handle that CREATED something hands the rest of the drag over.
+   *
+   * The midpoint of a connector's segment adds a vertex the first time it is
+   * moved, and the preview it produced is fed straight back in — so asked a
+   * second time it would add another, once per pointer event. Which handle
+   * takes over is the type's declaration, not this function's guess: all that
+   * happens here is that the gesture goes on dragging whatever it was told.
+   */
+  if (dragged.becomes !== undefined) active.endpointId = dragged.becomes
+  return { objectId: object.id, data }
 }
 
 function beginEndpointDrag(
@@ -604,9 +637,10 @@ export function useCanvasGestures(containerRef: RefObject<HTMLElement | null>) {
       /*
        * Remembered for the `dblclick` that may follow this press: by then the
        * handle can have moved out from under the pointer, and a double-click
-       * on a handle must never also reach the object beneath it.
+       * on a handle that has its own meaning must never also reach the object
+       * beneath it.
        */
-      pressedHandle.current = grabbed !== null
+      pressedHandle.current = claimsDoubleClick(grabbed)
 
       if (grabbed === 'crop') {
         const started = beginCropDrag(event, store, runtime, toWorld)
@@ -810,6 +844,10 @@ export function useCanvasGestures(containerRef: RefObject<HTMLElement | null>) {
       if (active === null) {
         const worldPoint = toWorld(event.clientX, event.clientY)
         store.setHovered(hitTest(runtime.store.getDocument(), runtime.registry, worldPoint))
+        // For chrome that only appears when you reach for it — a connector's
+        // midpoint handles. Only between gestures: during one, what matters is
+        // where the drag is, and that is the drag's own business.
+        store.setPointer(worldPoint)
         return
       }
 
@@ -1257,7 +1295,7 @@ export function useCanvasGestures(containerRef: RefObject<HTMLElement | null>) {
        * What was under the pointer when it went down is the thing that was
        * true, so that is what is remembered.
        */
-      if (pressedHandle.current || handleAt(event.clientX, event.clientY) !== null) return
+      if (pressedHandle.current || claimsDoubleClick(handleAt(event.clientX, event.clientY))) return
 
       const worldPoint = toWorld(event.clientX, event.clientY)
       /*
@@ -1321,10 +1359,20 @@ export function useCanvasGestures(containerRef: RefObject<HTMLElement | null>) {
     spaceHeld.current = held
   }, [])
 
+  /*
+   * The pointer is nowhere once it has left, which is not the same as being
+   * where it last was. Chrome that appears only under the pointer would
+   * otherwise hang over the board after the hand had gone.
+   */
+  const onPointerLeave = useCallback((): void => {
+    useInteractionStore.getState().setPointer(null)
+  }, [])
+
   return {
     onPointerDown,
     onPointerMove,
     onPointerUp,
+    onPointerLeave,
     onDoubleClick,
     onContextMenu,
     setSpaceHeld,

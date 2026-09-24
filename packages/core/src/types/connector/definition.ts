@@ -4,11 +4,14 @@ import { distanceToSegment } from '../../geometry/point.js'
 import { bendToPoints } from './bend-to-points.js'
 import { attachmentAnchor, endpointDependencies, resolveEndpoints } from './geometry.js'
 import {
-  bendAnchor,
-  bendFrom,
+  bendAt,
   connectorRoute,
+  elbowAnchor,
+  elbowFrom,
   heldPoint,
   flattenRoute,
+  pointAt,
+  routeSegments,
   routeVertices,
 } from './route.js'
 import {
@@ -32,6 +35,23 @@ export const CONNECTOR_TYPE = 'connector'
 const RELEASE = 2
 
 const HIT_PADDING = 6
+
+/**
+ * What a `vertex:2` or `midpoint:0` handle names.
+ *
+ * The index is IN the id because a drag carries nothing else: the gesture
+ * hands back the id it grabbed and a point in the world, so the id has to say
+ * which of several identical-looking handles it was. Anything that is not one
+ * of these two forms is somebody else's handle and answers null.
+ */
+function stopIndex(endpointId: string): { kind: 'vertex' | 'midpoint'; index: number } | null {
+  const [kind, rest, ...extra] = endpointId.split(':')
+  if (extra.length > 0 || rest === undefined) return null
+  if (kind !== 'vertex' && kind !== 'midpoint') return null
+  const index = Number(rest)
+  if (!Number.isInteger(index) || index < 0) return null
+  return { kind, index }
+}
 
 export const connectorType = defineObjectType<typeof CONNECTOR_TYPE, ConnectorData>({
   type: CONNECTOR_TYPE,
@@ -104,7 +124,7 @@ export const connectorType = defineObjectType<typeof CONNECTOR_TYPE, ConnectorDa
      * contain it is culled while still on screen and missed by a marquee
      * dragged over it.
      */
-    const route = connectorRoute(start, end, object.data.routing, heldPoint(object.data.points), {
+    const route = connectorRoute(start, end, object.data.routing, object.data.points, {
       start: startNormal,
       end: endNormal,
     })
@@ -134,7 +154,7 @@ export const connectorType = defineObjectType<typeof CONNECTOR_TYPE, ConnectorDa
      * nothing at all.
      */
     const points = flattenRoute(
-      connectorRoute(start, end, object.data.routing, heldPoint(object.data.points), {
+      connectorRoute(start, end, object.data.routing, object.data.points, {
         start: startNormal,
         end: endNormal,
       }),
@@ -171,25 +191,55 @@ export const connectorType = defineObjectType<typeof CONNECTOR_TYPE, ConnectorDa
         ...(object.data.to.kind === 'object' ? { attachedTo: object.data.to.objectId } : {}),
       },
       /*
-       * And the BEND, which is a draggable point like any other — declared
-       * here rather than detected by the overlay, exactly as this capability's
-       * own description anticipated: "a curve with control points, a route
-       * with stops".
+       * And every place the route is HELD, which are draggable points like any
+       * other — declared here rather than detected by the overlay, exactly as
+       * this capability's own description anticipated: "a curve with control
+       * points, a route with stops".
        *
-       * Not for a straight route, which has nothing to bend: a control that
-       * appears and does nothing is worse than one that is absent.
+       * An orthogonal route still has exactly one, and it is an elbow rather
+       * than a stop: it slides along one axis and there is nowhere to put a
+       * second one until legs can be dragged by their own side.
        */
-      ...(object.data.routing === 'straight'
-        ? []
-        : [
+      ...(object.data.routing === 'orthogonal'
+        ? [
             {
               id: 'bend',
-              at: bendAnchor(start, end, object.data.routing, heldPoint(object.data.points), {
+              at: elbowAnchor(start, end, heldPoint(object.data.points), {
                 start: startNormal,
                 end: endNormal,
               }),
               role: 'control' as const,
             },
+          ]
+        : [
+            ...object.data.points.map((bend, index) => ({
+              id: `vertex:${String(index)}`,
+              at: pointAt(start, end, bend),
+              role: 'control' as const,
+            })),
+            /*
+             * And a midpoint per drawn stretch, which is how a new vertex is
+             * made: drag the middle of a segment and the route starts passing
+             * through where you let go. There is one per segment and never one
+             * per route, because "add a point" has to say WHERE in the order
+             * it goes — a route that ran back on itself would be the answer to
+             * guessing.
+             *
+             * Each hands over to the vertex it creates, so the second move of
+             * the same drag moves that point rather than adding another.
+             */
+            ...routeSegments(
+              connectorRoute(start, end, object.data.routing, object.data.points, {
+                start: startNormal,
+                end: endNormal,
+              }),
+            ).map((segment, index) => ({
+              id: `midpoint:${String(index)}`,
+              at: segment.middle,
+              role: 'control' as const,
+              becomes: `vertex:${String(index)}`,
+              shownNear: segment.path,
+            })),
           ]),
     ]
   },
@@ -218,7 +268,9 @@ export const connectorType = defineObjectType<typeof CONNECTOR_TYPE, ConnectorDa
      * through where the bend used to be.
      */
     if (endpointId === 'bend') {
-      if (object.data.routing === 'straight') return {}
+      // Only an orthogonal route has one. The other two are held by the points
+      // they pass through, which are handles of their own.
+      if (object.data.routing !== 'orthogonal') return {}
       const { start, end, startNormal, endNormal } = resolveEndpoints(
         doc,
         object.data.from,
@@ -242,16 +294,16 @@ export const connectorType = defineObjectType<typeof CONNECTOR_TYPE, ConnectorDa
       const collapsed =
         held !== null && held !== undefined && (held.along === 0 || held.along === 1)
       /*
-       * A LIST of one, for now. Moving the bend replaces the single point a
-       * route is held by; when a route can be held by several, this becomes
-       * a splice at the index the handle names.
+       * A LIST of one, and only one. An orthogonal route's elbow REPLACES
+       * whatever the route was held by: it is the offset of the whole middle
+       * segment rather than a place the line passes through, and two of them
+       * would describe two different routes.
        */
       return {
         points: [
-          bendFrom(
+          elbowFrom(
             start,
             end,
-            object.data.routing,
             { x: target.x, y: target.y },
             { start: startNormal, end: endNormal },
             target.tolerance * (collapsed ? RELEASE : 1),
@@ -259,6 +311,33 @@ export const connectorType = defineObjectType<typeof CONNECTOR_TYPE, ConnectorDa
         ],
       }
     }
+    /*
+     * A VERTEX the route passes through, or the midpoint that creates one.
+     *
+     * Both answer the same question — what should be at this index — so they
+     * share the arithmetic and differ in one word: a vertex replaces, a
+     * midpoint inserts. The handle that inserted hands over to the vertex it
+     * made (`becomes`), so a drag that starts on a midpoint goes on moving
+     * that one point rather than adding a point per pointer event.
+     */
+    const stop = stopIndex(endpointId)
+    if (stop !== null) {
+      // An orthogonal route is held by its elbow alone until legs can be
+      // dragged by their own side; it offers no handle that lands here.
+      if (object.data.routing === 'orthogonal') return {}
+      const { start, end } = resolveEndpoints(doc, object.data.from, object.data.to, boundsOf)
+      const points = [...object.data.points]
+      const at = bendAt(start, end, { x: target.x, y: target.y })
+      if (stop.kind === 'vertex') {
+        if (stop.index >= points.length) return {}
+        points[stop.index] = at
+      } else {
+        if (stop.index > points.length) return {}
+        points.splice(stop.index, 0, at)
+      }
+      return { points }
+    }
+
     if (endpointId !== 'from' && endpointId !== 'to') return {}
     if (target.kind === 'object' && target.objectId === object.id) return {}
 

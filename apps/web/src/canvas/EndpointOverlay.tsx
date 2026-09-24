@@ -1,4 +1,4 @@
-import { worldToScreen } from '@openframe/core'
+import { distanceToSegment, worldToScreen, type DraggableEndpoint, type Point } from '@openframe/core'
 
 import { useOpenFrame } from '../runtime/context.js'
 import { useBoardDocument } from '../hooks/use-document-object.js'
@@ -6,6 +6,47 @@ import { useInteractionStore } from '../interaction/interaction-store.js'
 
 /** Same screen size as a resize handle, so the two feel like one system. */
 const HANDLE_PX = 9
+
+/**
+ * How near the stretch it governs a hidden handle appears, in SCREEN pixels.
+ *
+ * Wider than the line's own hit padding, because this one has to be found
+ * before it can be used: a handle that only appears once you are already on
+ * the line is a handle you discover by accident. Screen pixels, converted at
+ * use — a pointer is no more precise at 25% than at 400%.
+ */
+const REVEAL_PX = 20
+
+/**
+ * Which of the handles that hide themselves is currently on offer.
+ *
+ * ONE at a time, and the nearest: two midpoints lit at once on adjacent
+ * stretches is an invitation to press the wrong one, and every stretch lit at
+ * once is the row of dots this exists to avoid.
+ */
+function revealed(
+  endpoints: readonly DraggableEndpoint[],
+  pointer: Point | null,
+  zoom: number,
+): string | null {
+  if (pointer === null) return null
+  const reach = REVEAL_PX / Math.max(zoom, 0.0001)
+  let nearest: { id: string; distance: number } | null = null
+  for (const endpoint of endpoints) {
+    const near = endpoint.shownNear
+    if (near === undefined) continue
+    let distance = Number.POSITIVE_INFINITY
+    for (let index = 1; index < near.length; index += 1) {
+      const from = near[index - 1]
+      const to = near[index]
+      if (from === undefined || to === undefined) continue
+      distance = Math.min(distance, distanceToSegment(pointer, from, to))
+    }
+    if (distance > reach) continue
+    if (nearest === null || distance < nearest.distance) nearest = { id: endpoint.id, distance }
+  }
+  return nearest === null ? null : nearest.id
+}
 
 /**
  * Grab handles on the draggable ends of a selected object.
@@ -32,6 +73,7 @@ export function EndpointOverlay() {
   const reshaping = useInteractionStore((state) =>
     state.drag.kind === 'connect' ? (state.drag.reshaping?.data ?? null) : null,
   )
+  const pointer = useInteractionStore((state) => state.pointerWorld)
 
   if (selection.size !== 1 || editingId !== null) return null
   if (dragKind === 'marquee' || dragKind === 'translate') return null
@@ -53,13 +95,34 @@ export function EndpointOverlay() {
   const endpoints = runtime.registry.endpointsOf(previewed, document)
   if (endpoints.length === 0) return null
 
+  /*
+   * A handle that hides itself shows only while the pointer is on the stretch
+   * it would change.
+   *
+   * NOT gated on whether a drag is running, though the first version was, and
+   * that version could not be pressed: the press itself starts a drag, the
+   * handle unmounted between `pointerdown` and `pointerup`, and a `click`
+   * needs both on the same element — so no click, no double-click, and a
+   * connector's label became unreachable. (The sixth appearance of apparatus
+   * that unmounts under its own press.)
+   *
+   * It does not need the gate. The pointer is only tracked BETWEEN gestures,
+   * so during a drag it stays where the press was while the route moves away
+   * from it — and the handle drops out of reach on its own, which is exactly
+   * when it should.
+   */
+  const offered = revealed(endpoints, pointer, viewport.zoom)
+  const shown = endpoints.filter(
+    (endpoint) => endpoint.shownNear === undefined || endpoint.id === offered,
+  )
+
   // A screen measurement on the screen-space layer: nothing here divides by
   // the zoom, which is what `.of-apparatus` exists to make possible.
   const size = HANDLE_PX
 
   return (
     <>
-      {endpoints.map((endpoint) => {
+      {shown.map((endpoint) => {
         const at = worldToScreen(viewport, endpoint.at)
         return (
           <div
