@@ -60,7 +60,17 @@ async function placeSticky(page: Page, text: string): Promise<void> {
 async function snap(page: Page, name: string): Promise<void> {
   // The pointer is parked off every control so no hover bed is photographed.
   await page.mouse.move(1270, 5)
-  await expect(page).toHaveScreenshot(`${name}.png`, { animations: 'disabled', caret: 'hide' })
+  /*
+   * Strict. Playwright's default per-pixel tolerance (0.2) let a whole
+   * radius-scale change through on all but one surface — a 2px difference in a
+   * corner is exactly the kind of change this net exists to show. Stable at
+   * this setting across repeated runs in the container that took the goldens.
+   */
+  await expect(page).toHaveScreenshot(`${name}.png`, {
+    animations: 'disabled',
+    caret: 'hide',
+    threshold: 0.02,
+  })
 }
 
 for (const world of WORLDS) {

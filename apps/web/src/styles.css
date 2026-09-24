@@ -80,7 +80,25 @@
   --of-slip-shadow: 0 1px 1px rgb(22 32 43 / 18%), 0 3px 7px rgb(22 32 43 / 14%);
   /* A segmented control's selected index, pressed into its bed. */
   --of-pressed-shadow: 0 1px 2px rgb(22 32 43 / 12%);
-  --of-radius: 6px;
+  /*
+   * THE RADIUS SCALE. Corners get smaller the closer a form is to the page:
+   * stock laid ON the page is nearly square, apparatus in its margins a little
+   * softer, a control you press softer again, and a surface that floats over
+   * the board the softest. Round means "grab me" and is spent on grab points.
+   *
+   * Seventeen values were in use against one token, and the 5–8px band of
+   * "interactive beds" was four different numbers for one idea. A nested bed
+   * takes the next step down from the one that holds it, so the curves stay
+   * concentric: a 6px segmented bed with 2px of padding holds 4px items.
+   */
+  --of-radius-hair: 1px; /* the index on a measurement slider */
+  --of-radius-slip: 2px; /* stock on the page: notes, frames, swatches, handles */
+  --of-radius-apparatus: 4px; /* margin chrome, chips, a focus ring, a nested bed */
+  --of-radius: 6px; /* a control: buttons, fields, menu items, segmented beds */
+  --of-radius-surface: 10px; /* what floats over the board: menus, panels, notices */
+  --of-radius-grip: 25%; /* the rotate grip and the lock badge */
+  --of-radius-round: 50%; /* grab points, presence dots, faces */
+  --of-radius-capsule: 999px; /* a grab point that is longer than it is wide */
 
   /*
    * THE INTERFACE SCALE, on the page's own rule.
@@ -317,7 +335,7 @@
 :focus-visible {
   outline: 2px solid var(--of-accent);
   outline-offset: 2px;
-  border-radius: 3px;
+  border-radius: var(--of-radius-apparatus);
 }
 
 /*
@@ -486,7 +504,7 @@ body {
      ruled pad prints its margin — rather than a white card hovering over it. */
   background: var(--of-page);
   border: 1px solid var(--of-panel-border);
-  border-radius: 4px;
+  border-radius: var(--of-radius-apparatus);
   box-shadow: var(--of-shadow);
 }
 
@@ -514,7 +532,7 @@ body {
   color: var(--of-ink-muted);
   background: transparent;
   border: none;
-  border-radius: 8px;
+  border-radius: var(--of-radius);
   cursor: pointer;
 }
 
@@ -541,7 +559,7 @@ body {
   color: var(--of-page);
   white-space: nowrap;
   background: var(--of-ink);
-  border-radius: 6px;
+  border-radius: var(--of-radius);
   opacity: 0;
   transition: opacity 110ms ease-out;
   pointer-events: none;
@@ -627,7 +645,7 @@ body {
   padding: 6px;
   background: var(--of-panel);
   border: 1px solid var(--of-panel-border);
-  border-radius: 10px;
+  border-radius: var(--of-radius-surface);
   box-shadow: var(--of-shadow);
 }
 
@@ -642,7 +660,7 @@ body {
   text-transform: capitalize;
   background: transparent;
   border: none;
-  border-radius: 7px;
+  border-radius: var(--of-radius);
   cursor: pointer;
 }
 
@@ -678,7 +696,7 @@ body {
    * app" — and the stylesheet had them at 50% anyway. The document was right
    * and the code had drifted.
    */
-  border-radius: 2px;
+  border-radius: var(--of-radius-slip);
   cursor: pointer;
 }
 
@@ -789,7 +807,7 @@ body {
   margin: -6px 0 0 -6px;
   pointer-events: none;
   border: 2px solid #fff;
-  border-radius: 50%;
+  border-radius: var(--of-radius-round);
   box-shadow: 0 0 0 1px rgb(0 0 0 / 45%);
 }
 
@@ -822,7 +840,7 @@ body {
     #f00 100%
   );
   border: 1px solid var(--of-control-border);
-  border-radius: 1px;
+  border-radius: var(--of-radius-hair);
 }
 
 .of-picker__hue::-moz-range-track {
@@ -838,7 +856,7 @@ body {
     #f00 100%
   );
   border: 1px solid var(--of-control-border);
-  border-radius: 1px;
+  border-radius: var(--of-radius-hair);
 }
 
 .of-picker__hue::-webkit-slider-thumb {
@@ -942,7 +960,7 @@ body {
   font-family: var(--of-mono);
   background: var(--of-page);
   border: 1px solid var(--of-panel-border);
-  border-radius: 4px;
+  border-radius: var(--of-radius-apparatus);
   box-shadow: var(--of-shadow);
 }
 
@@ -966,7 +984,7 @@ body {
   color: var(--of-ink-muted);
   background: transparent;
   border: none;
-  border-radius: 7px;
+  border-radius: var(--of-radius);
   cursor: pointer;
 }
 
@@ -1012,7 +1030,7 @@ body {
   text-align: center;
   background: transparent;
   border: none;
-  border-radius: 7px;
+  border-radius: var(--of-radius);
   cursor: pointer;
 }
 
@@ -1036,7 +1054,7 @@ body {
   font-size: 15px;
   background: var(--of-danger-wash);
   border: 1px solid var(--of-danger-edge);
-  border-radius: 10px;
+  border-radius: var(--of-radius-surface);
   box-shadow: var(--of-shadow);
 }
 
@@ -1284,7 +1302,7 @@ body {
 .of-surface {
   background: var(--of-panel);
   border: 1px solid var(--of-panel-border);
-  border-radius: 10px;
+  border-radius: var(--of-radius-surface);
   box-shadow: var(--of-shadow);
 }
 
@@ -1411,7 +1429,7 @@ body {
   cursor: pointer;
   background: var(--of-panel);
   border: 1px solid var(--of-control-border);
-  border-radius: 2px;
+  border-radius: var(--of-radius-slip);
 }
 
 .of-grid-pick__cell--on {
@@ -1577,7 +1595,7 @@ body {
   gap: 2px;
   padding: 2px;
   background: var(--of-bg);
-  border-radius: 7px;
+  border-radius: var(--of-radius);
 }
 
 .of-spaces__tab {
@@ -1592,7 +1610,7 @@ body {
   cursor: pointer;
   background: none;
   border: 1px solid transparent;
-  border-radius: 5px;
+  border-radius: var(--of-radius-apparatus);
   transition:
     background var(--of-quick) var(--of-ease),
     color var(--of-quick) var(--of-ease);
@@ -1642,7 +1660,7 @@ body {
   cursor: pointer;
   background: none;
   border: 1px solid transparent;
-  border-radius: 5px;
+  border-radius: var(--of-radius);
   transition:
     background var(--of-quick) var(--of-ease),
     color var(--of-quick) var(--of-ease);
@@ -1683,7 +1701,7 @@ body {
   cursor: pointer;
   background: var(--of-accent);
   border: 1px solid transparent;
-  border-radius: 999px;
+  border-radius: var(--of-radius-apparatus);
 }
 
 /*
@@ -1733,7 +1751,7 @@ body {
   list-style: none;
   background: var(--of-panel);
   border: 1px solid var(--of-panel-border);
-  border-radius: 10px;
+  border-radius: var(--of-radius-surface);
   box-shadow: var(--of-shadow);
 }
 
@@ -1786,7 +1804,7 @@ body {
   font-weight: 600;
   color: var(--of-accent);
   background: var(--of-accent-soft);
-  border-radius: 3px;
+  border-radius: var(--of-radius-apparatus);
 }
 
 .of-mention.is-me {
@@ -1810,7 +1828,7 @@ body {
   list-style: none;
   background: var(--of-panel);
   border: 1px solid var(--of-panel-border);
-  border-radius: 10px;
+  border-radius: var(--of-radius-surface);
   box-shadow: var(--of-shadow);
 }
 
@@ -1842,7 +1860,7 @@ body {
   font-size: 12px;
   font-weight: 600;
   color: var(--of-ink);
-  border-radius: 999px;
+  border-radius: var(--of-radius-round);
 }
 
 .of-mention-menu__name {
@@ -1888,7 +1906,8 @@ body {
   background: var(--of-accent);
   border: 2px solid var(--of-panel);
   /* A speech-bubble tail: round but for the corner that points at the spot. */
-  border-radius: 50% 50% 50% 2px;
+  border-radius: var(--of-radius-round) var(--of-radius-round) var(--of-radius-round)
+    var(--of-radius-slip);
   box-shadow: var(--of-slip-shadow);
   transform-origin: top left;
 }
@@ -1916,7 +1935,7 @@ body {
   overflow-y: auto;
   background: var(--of-panel);
   border: 1px solid var(--of-panel-border);
-  border-radius: 10px;
+  border-radius: var(--of-radius-surface);
   box-shadow: var(--of-shadow);
 }
 
@@ -2053,7 +2072,7 @@ body {
   font-size: 12px;
   font-weight: 600;
   color: var(--of-panel);
-  border-radius: 50%;
+  border-radius: var(--of-radius-round);
 }
 
 .of-comment__name {
@@ -2088,7 +2107,7 @@ body {
   text-align: left;
   background: var(--of-panel);
   border: 1px solid var(--of-panel-border);
-  border-radius: 10px;
+  border-radius: var(--of-radius-surface);
   box-shadow: var(--of-slip-shadow);
 }
 
@@ -2167,7 +2186,7 @@ body {
   color: var(--of-ink-muted);
   background: var(--of-page);
   border: 1px solid var(--of-panel-border);
-  border-radius: 4px;
+  border-radius: var(--of-radius-apparatus);
   box-shadow: var(--of-shadow);
 }
 
@@ -2192,7 +2211,7 @@ body {
   padding: 0 9px 0 7px;
   color: var(--of-ink-muted);
   text-decoration: none;
-  border-radius: 6px;
+  border-radius: var(--of-radius);
 }
 
 .of-status__exit svg {
@@ -2239,7 +2258,7 @@ body {
   color: var(--of-ink-muted);
   background: transparent;
   border: none;
-  border-radius: 6px;
+  border-radius: var(--of-radius);
   cursor: pointer;
 }
 
@@ -2396,7 +2415,7 @@ body {
 .of-presence__outline {
   position: absolute;
   border: 2px dashed currentcolor;
-  border-radius: 2px;
+  border-radius: var(--of-radius-slip);
 }
 
 /*
@@ -2448,7 +2467,7 @@ body {
   color: var(--of-page);
   white-space: nowrap;
   background: var(--of-presence-hue);
-  border-radius: 3px;
+  border-radius: var(--of-radius-apparatus);
   transform-origin: top left;
 }
 
@@ -2493,7 +2512,7 @@ body {
   color: var(--of-ink-muted);
   background: transparent;
   border: 1px solid var(--of-panel-border);
-  border-radius: 4px;
+  border-radius: var(--of-radius-apparatus);
   cursor: pointer;
 }
 
@@ -2559,7 +2578,7 @@ body {
   font-weight: 600;
   color: var(--of-page);
   border: 1.5px solid var(--of-page);
-  border-radius: 50%;
+  border-radius: var(--of-radius-round);
 }
 
 .of-status__person:last-child {
@@ -2574,7 +2593,7 @@ body {
 .of-status__dot {
   width: 7px;
   height: 7px;
-  border-radius: 50%;
+  border-radius: var(--of-radius-round);
 }
 
 .of-status__dot--connected {
@@ -2773,7 +2792,7 @@ body {
   position: absolute;
   background: var(--of-panel);
   border: 1px solid var(--of-accent);
-  border-radius: 2px;
+  border-radius: var(--of-radius-slip);
   pointer-events: auto;
 }
 
@@ -2812,7 +2831,7 @@ body {
   display: grid;
   place-items: center;
   border: none;
-  border-radius: 25%;
+  border-radius: var(--of-radius-grip);
   cursor: grab;
   box-shadow: 0 0 0 1px var(--of-accent);
 }
@@ -2873,7 +2892,7 @@ body {
   overflow: hidden;
   font-size: 15px;
   line-height: 1.35;
-  border-radius: 2px;
+  border-radius: var(--of-radius-slip);
   /* A slip laid on the page. Shared token so every placed object sits at the
      same height above the rule. */
   box-shadow: var(--of-slip-shadow);
@@ -2925,7 +2944,7 @@ body {
   height: 100%;
   padding: 13px;
   overflow: hidden;
-  border-radius: 2px;
+  border-radius: var(--of-radius-slip);
   box-shadow: var(--of-slip-shadow);
 }
 
@@ -3129,7 +3148,7 @@ body {
     var(--of-bg) 16px
   );
   border: 1px dashed var(--of-panel-border);
-  border-radius: 6px;
+  border-radius: var(--of-radius);
 }
 
 .of-render-error {
@@ -3179,7 +3198,7 @@ body {
   color: var(--of-ink-muted);
   background: var(--of-panel);
   border: 1px solid var(--of-panel-border);
-  border-radius: 4px;
+  border-radius: var(--of-radius-apparatus);
   cursor: pointer;
 }
 
@@ -3230,7 +3249,7 @@ body {
   text-align: left;
   background: transparent;
   border: none;
-  border-radius: 6px;
+  border-radius: var(--of-radius);
   cursor: pointer;
 }
 
@@ -3255,7 +3274,7 @@ body {
   width: 100%;
   height: 100%;
   border: 1px solid var(--of-panel-border);
-  border-radius: 2px;
+  border-radius: var(--of-radius-slip);
   /* The title sits ABOVE the frame, so it must not be clipped. */
   overflow: visible;
 }
@@ -3344,7 +3363,7 @@ body {
   font-size: 12px;
   text-align: center;
   background: var(--of-panel);
-  border-radius: 5px;
+  border-radius: var(--of-radius);
   transform: translate(-50%, -50%);
 }
 
@@ -3367,7 +3386,7 @@ body {
   display: block;
   width: 100%;
   height: 100%;
-  border-radius: 4px;
+  border-radius: var(--of-radius-apparatus);
   /*
    * `fill`, not `contain`. The frame IS the placed size and a user who resizes
    * an image off its aspect ratio meant to; letterboxing would leave dead space
@@ -3407,7 +3426,7 @@ body {
   resize: none;
   background: var(--of-panel);
   border: 1px solid var(--of-accent);
-  border-radius: 4px;
+  border-radius: var(--of-radius-apparatus);
 }
 
 /* Toast ------------------------------------------------------------------- */
@@ -3421,7 +3440,7 @@ body {
   color: var(--of-danger);
   background: var(--of-danger-wash);
   border: 1px solid var(--of-danger-edge);
-  border-radius: 10px;
+  border-radius: var(--of-radius-surface);
   box-shadow: var(--of-shadow);
 }
 
@@ -3469,7 +3488,7 @@ body {
   z-index: 4;
   background: var(--of-panel);
   border: 1.5px solid var(--of-accent);
-  border-radius: 50%;
+  border-radius: var(--of-radius-round);
   cursor: crosshair;
   /*
    * Stated, not inherited. The apparatus layer is glass — `pointer-events:
@@ -3527,7 +3546,7 @@ body {
   color: var(--of-ink-muted);
   background: transparent;
   border: none;
-  border-radius: 6px;
+  border-radius: var(--of-radius);
   cursor: pointer;
 }
 
@@ -3743,7 +3762,7 @@ textarea.of-input {
   gap: 2px;
   padding: 2px;
   background: var(--of-bg);
-  border-radius: 7px;
+  border-radius: var(--of-radius);
 }
 
 .of-choice__item {
@@ -3754,7 +3773,7 @@ textarea.of-input {
   color: var(--of-ink-muted);
   background: transparent;
   border: none;
-  border-radius: 5px;
+  border-radius: var(--of-radius-apparatus);
   cursor: pointer;
 }
 
@@ -3908,7 +3927,7 @@ textarea.of-input {
   margin-top: -5px;
   background: var(--of-ink);
   border: none;
-  border-radius: 1px;
+  border-radius: var(--of-radius-hair);
 }
 
 .of-zoom__slider::-moz-range-thumb,
@@ -3917,7 +3936,7 @@ textarea.of-input {
   height: 14px;
   background: var(--of-ink);
   border: none;
-  border-radius: 1px;
+  border-radius: var(--of-radius-hair);
 }
 
 /*
@@ -3926,7 +3945,7 @@ textarea.of-input {
  * language.
  */
 .of-swatch {
-  border-radius: 2px;
+  border-radius: var(--of-radius-slip);
 }
 
 /*
@@ -3961,7 +3980,7 @@ textarea.of-input {
   white-space: nowrap;
   background: transparent;
   border: none;
-  border-radius: 4px;
+  border-radius: var(--of-radius-apparatus);
   cursor: pointer;
 }
 
@@ -4042,7 +4061,7 @@ textarea.of-input {
   left: 0;
   background: var(--of-panel);
   border: 1px solid var(--of-accent);
-  border-radius: 50%;
+  border-radius: var(--of-radius-round);
   cursor: crosshair;
   pointer-events: auto;
 }
@@ -4068,7 +4087,7 @@ textarea.of-input {
 .of-connect-point__target {
   position: absolute;
   background: transparent;
-  border-radius: 50%;
+  border-radius: var(--of-radius-round);
 }
 
 /*
@@ -4147,7 +4166,7 @@ textarea.of-input {
   color: var(--of-ink);
   background: transparent;
   border: none;
-  border-radius: 4px;
+  border-radius: var(--of-radius-apparatus);
   cursor: pointer;
 }
 
@@ -4424,7 +4443,7 @@ textarea.of-input {
   /* Apparatus radius. Fully round is reserved for the rotate handle and
      connector endpoints, where it signals a grab point. */
   border: 1px solid var(--of-panel-border);
-  border-radius: 4px;
+  border-radius: var(--of-radius-apparatus);
   cursor: pointer;
 }
 
@@ -4447,7 +4466,7 @@ textarea.of-input {
   height: var(--of-hit-sm);
   font-size: 13px;
   color: var(--of-panel);
-  border-radius: 50%;
+  border-radius: var(--of-radius-round);
 }
 
 /*
@@ -4465,7 +4484,7 @@ textarea.of-input {
 .of-home__body {
   background: var(--of-page);
   border: 1px solid var(--of-panel-border);
-  border-radius: 4px;
+  border-radius: var(--of-radius-apparatus);
   box-shadow: var(--of-shadow);
 }
 
@@ -4545,7 +4564,7 @@ textarea.of-input {
   color: var(--of-ink-muted);
   background: none;
   border: none;
-  border-radius: 6px;
+  border-radius: var(--of-radius);
   cursor: pointer;
   opacity: 0.35;
 }
@@ -4619,7 +4638,7 @@ textarea.of-input {
   color: var(--of-ink-muted);
   background: none;
   border: none;
-  border-radius: 6px;
+  border-radius: var(--of-radius);
   cursor: pointer;
 }
 
@@ -4653,7 +4672,7 @@ textarea.of-input {
   color: var(--of-ink);
   background: var(--of-accent-soft);
   border: none;
-  border-radius: 3px;
+  border-radius: var(--of-radius-apparatus);
   outline: 1px solid var(--of-accent);
 }
 
@@ -4687,7 +4706,7 @@ textarea.of-input {
   padding: 0 14px;
   font-family: inherit;
   font-size: 13px;
-  border-radius: 4px;
+  border-radius: var(--of-radius-apparatus);
   cursor: pointer;
 }
 
@@ -4755,7 +4774,7 @@ textarea.of-input {
   color: var(--of-ink);
   background: var(--of-page);
   border: 1px solid var(--of-control-border);
-  border-radius: 4px;
+  border-radius: var(--of-radius-apparatus);
   cursor: pointer;
 }
 
@@ -4875,7 +4894,7 @@ textarea.of-input {
   color: var(--of-panel);
   background: var(--of-accent);
   border: 1px solid var(--of-accent);
-  border-radius: 4px;
+  border-radius: var(--of-radius-apparatus);
   cursor: pointer;
 }
 
@@ -4971,7 +4990,7 @@ textarea.of-input {
   color: var(--of-ink);
   background: var(--of-page);
   border: 1px solid var(--of-control-border);
-  border-radius: 4px;
+  border-radius: var(--of-radius-apparatus);
   cursor: pointer;
 }
 
@@ -5027,7 +5046,7 @@ textarea.of-input {
   color: var(--of-ink-muted);
   background: var(--of-page);
   border: 1px solid var(--of-panel-border);
-  border-radius: 4px;
+  border-radius: var(--of-radius-apparatus);
 }
 
 /* ---------- the board's name ---------- */
@@ -5057,7 +5076,7 @@ textarea.of-input {
   color: var(--of-ink);
   background: none;
   border: none;
-  border-radius: 3px;
+  border-radius: var(--of-radius-apparatus);
   cursor: text;
 }
 
@@ -5097,7 +5116,7 @@ textarea.of-input {
   white-space: nowrap;
   color: var(--of-ink-muted);
   background: var(--of-bg);
-  border-radius: 3px;
+  border-radius: var(--of-radius-apparatus);
 }
 
 /* ---------- motion ---------- */
@@ -5296,7 +5315,7 @@ textarea.of-input {
   color: var(--of-ink-muted);
   background: none;
   border: none;
-  border-radius: 6px;
+  border-radius: var(--of-radius);
   cursor: pointer;
 }
 
@@ -5336,7 +5355,7 @@ textarea.of-input {
  */
 .of-endpoint--control {
   background: var(--of-panel);
-  border-radius: 2px;
+  border-radius: var(--of-radius-slip);
 }
 /*
  * A LEG of an orthogonal route: grabbed anywhere along its length, because
@@ -5351,7 +5370,7 @@ textarea.of-input {
 .of-endpoint--leg {
   background: var(--of-accent);
   border: none;
-  border-radius: 999px;
+  border-radius: var(--of-radius-capsule);
   opacity: 0.55;
 }
 .of-endpoint--leg:hover {
@@ -5371,7 +5390,7 @@ textarea.of-input {
   place-items: center;
   color: var(--of-panel);
   background: var(--of-ink-muted);
-  border-radius: 25%;
+  border-radius: var(--of-radius-grip);
   pointer-events: none;
 }
 
@@ -5395,7 +5414,7 @@ textarea.of-input {
   overflow: hidden;
   border-style: solid;
   border-color: transparent;
-  border-radius: 4px;
+  border-radius: var(--of-radius-apparatus);
 }
 
 .of-image-frame .of-image {
@@ -5471,7 +5490,7 @@ textarea.of-input {
   color: var(--of-ink-muted);
   background: none;
   border: none;
-  border-radius: 7px;
+  border-radius: var(--of-radius);
   cursor: pointer;
 }
 

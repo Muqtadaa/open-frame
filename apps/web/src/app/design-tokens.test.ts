@@ -568,6 +568,35 @@ describe('the twelve pixel floor', () => {
 })
 
 /**
+ * The radius scale (DESIGN.md, Shapes).
+ *
+ * Seventeen radii were in use against one token, so "corners get smaller the
+ * closer a form is to the page" was a sentence rather than a property of the
+ * stylesheet. Every corner now names its step; a new one either takes a step
+ * or adds one to the scale in `:root`, where it has to say what it is for.
+ */
+describe('the radius scale', () => {
+  it('draws every corner from a step of the scale', () => {
+    const source = CSS.replace(/\/\*[\s\S]*?\*\//g, '')
+    const off: string[] = []
+    for (const [, value = ''] of source.matchAll(/(?<![\w-])border-radius:\s*([^;]+);/g)) {
+      const parts = value.trim().split(/\s+(?![^(]*\))/)
+      const onScale = parts.every(
+        (part) => part === '0' || part === 'inherit' || /^var\(--of-radius(-[a-z]+)?\)$/.test(part),
+      )
+      if (!onScale) off.push(value.trim())
+    }
+    expect(off).toEqual([])
+  })
+
+  it('defines the scale it asks for', () => {
+    const defined = new Set([...CSS.matchAll(/(--of-radius(?:-[a-z]+)?):/g)].map((m) => m[1]))
+    const used = new Set([...CSS.matchAll(/var\((--of-radius(?:-[a-z]+)?)\)/g)].map((m) => m[1]))
+    expect([...used].filter((name) => !defined.has(name))).toEqual([])
+  })
+})
+
+/**
  * The stylesheet has to PARSE.
  *
  * This file is only minified by the production build, so a structurally broken

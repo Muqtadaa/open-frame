@@ -101,4 +101,17 @@ Found by looking at them:
   share one height. Goldens moved on the front door, sign-in sheet, composer
   and gate, and nowhere else.
 
+- **C2.3a — the radius scale.** Seventeen values onto seven steps in `:root`
+  (`hair` 1, `slip` 2, `apparatus` 4, control 6, `surface` 10, `grip` 25%,
+  `round` 50%, plus `capsule` for the one elongated grab point). The 5–8px band
+  collapses to 6px; nested beds take the step below so curves stay concentric;
+  the mentions bell's pill — against DESIGN.md's own refusal — goes to 4px.
+  `design-tokens.test.ts` now fails on any literal radius (broken once with a
+  stray `9px`, watched to fail).
+- **The screenshot net was too loose.** At Playwright's default per-pixel
+  tolerance (0.2) the whole radius change registered on one surface of
+  eighteen. Tightened to 0.02 — stable across three repeats against the
+  unchanged stylesheet — and it then showed the change on ten, only at the
+  corners that moved.
+
 ### Remaining

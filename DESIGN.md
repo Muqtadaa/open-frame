@@ -73,13 +73,14 @@ typography:
     lineHeight: 1
     letterSpacing: "0.02em"
 rounded:
-  square: "0px"
+  hair: "1px"
   slip: "2px"
   apparatus: "4px"
-  panel: "6px"
-  control: "7px"
+  control: "6px"
   surface: "10px"
+  grip: "25%"
   round: "50%"
+  capsule: "999px"
 spacing:
   hair: "2px"
   tight: "4px"
@@ -92,7 +93,7 @@ components:
   tool:
     backgroundColor: "transparent"
     textColor: "{colors.ink-muted}"
-    rounded: "8px"
+    rounded: "{rounded.control}"
     size: "50px"
   tool-hover:
     backgroundColor: "{colors.accent-soft}"
@@ -104,7 +105,7 @@ components:
     backgroundColor: "{colors.ink}"
     textColor: "{colors.page}"
     typography: "{typography.ui-small}"
-    rounded: "{rounded.panel}"
+    rounded: "{rounded.control}"
     padding: "5px 8px"
   rail:
     backgroundColor: "{colors.page}"
@@ -138,7 +139,7 @@ components:
   choice-item:
     backgroundColor: "transparent"
     textColor: "{colors.ink-muted}"
-    rounded: "5px"
+    rounded: "{rounded.apparatus}"
     width: "28px"
     height: "26px"
   choice-item-on:
@@ -152,7 +153,7 @@ components:
     backgroundColor: "transparent"
     textColor: "{colors.ink}"
     typography: "{typography.ui}"
-    rounded: "{rounded.panel}"
+    rounded: "{rounded.control}"
     padding: "6px 9px"
   menu-item-hover:
     backgroundColor: "{colors.accent-soft}"
@@ -566,10 +567,16 @@ its row is tight, which is what a long name did to one.
 Corners are small and get smaller the closer a form is to the page. Anything that
 reads as *stock laid on the page* — sticky notes, frames, colour swatches — is cut
 at **2px**, essentially square. Apparatus that lives in the margins — rail, record
-line, zoom cluster — is **4px**. Interactive beds inside a panel are **5–8px**, and
-overlays that appear over the board without belonging to it — menus, flyouts,
-notices, toasts — are **10px**. Only two things are fully round: the rotate handle
-and connector endpoints, where roundness signals a grab point.
+line, zoom cluster — is **4px**. A control you press — a button, a field, a
+menu item, a segmented bed — is **6px**, and an item nested inside a bed takes
+the step below (4px), so the curves stay concentric. Overlays that appear over
+the board without belonging to it — menus, flyouts, notices, toasts — are
+**10px**. Round is spent on grab points: connection points and endpoints, with
+the rotate grip and the lock badge on a softer 25%.
+
+**The Radius Scale Rule.** Every corner names a step of `--of-radius-*` in
+`:root`; `design-tokens.test.ts` fails on a literal. The 5–8px band this file
+used to describe was four different numbers for one idea.
 
 Borders are hairlines: 1px `panel-border` on apparatus, 1px `control-border` on
 anything whose edge you must see to operate it, 1px dashed `panel-border` on
@@ -868,7 +875,7 @@ time presenting as a control that was visible and could not be used.
 
 Every in-place editor inherits the object's own type and drops its border,
 carrying a 2px accent outline instead. Global `:focus-visible` is a 2px accent
-outline at 2px offset with a 3px radius. Browser surfaces are claimed, not
+outline at 2px offset with the apparatus radius (4px). Browser surfaces are claimed, not
 defaulted: selection highlight, caret colour and thin `control-border` scrollbars.
 
 ### Notices and Toasts
