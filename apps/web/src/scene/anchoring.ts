@@ -58,6 +58,23 @@ export interface AnchorRequest {
    */
   readonly keepClearLeft?: number | undefined
   /**
+   * A band at the bottom the surface may not enter — the board's screen-edge
+   * furniture.
+   *
+   * The zoom control and the status bar are anchored to the WINDOW rather than
+   * to anything on the board, so they cannot move out of the way of a surface
+   * that lands on them, and between them they run nearly the full width of the
+   * bottom edge. A panel on a selection low on the board was clamped to the
+   * bottom of the window and landed on the zoom readout.
+   *
+   * A band rather than a rectangle to avoid, which was the first attempt and
+   * was worse: a full-width strip collides with EVERY side a panel would
+   * naturally take, so dodging it threw the panel clear across the selection —
+   * where, on a right-click, it landed on the context menu instead. A band
+   * keeps the surface where it belongs and merely lifts it.
+   */
+  readonly keepClearBottom?: number | undefined
+  /**
    * A rectangle the surface must not land on, when any preferred side avoids
    * it — the options panel, which is the one other thing that floats beside a
    * selection and is placed by its own arithmetic.
@@ -91,7 +108,10 @@ function fits(side: Side, request: AnchorRequest): boolean {
     case 'left':
       return anchor.x - gap - surface.width >= Math.max(margin, left)
     case 'below':
-      return anchor.y + anchor.height + gap + surface.height <= within.height - margin
+      return (
+        anchor.y + anchor.height + gap + surface.height <=
+        within.height - margin - (request.keepClearBottom ?? 0)
+      )
     case 'above':
       return anchor.y - gap - surface.height >= margin
     case 'over':
@@ -148,7 +168,7 @@ export function placeAnchored(request: AnchorRequest): Placement {
   const leftBound = Math.max(margin, request.keepClearLeft ?? 0)
   const rightBound = within.width - surface.width - margin
   const topBound = margin
-  const bottomBound = within.height - surface.height - margin
+  const bottomBound = within.height - surface.height - margin - (request.keepClearBottom ?? 0)
 
   const settle = (side: Side): Rect => {
     const raw = positionOn(side, request)

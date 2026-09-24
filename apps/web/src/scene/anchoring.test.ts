@@ -171,3 +171,55 @@ describe('avoiding another surface', () => {
     expect(placeAnchored({ ...request, avoid: null })).toEqual(placeAnchored(request))
   })
 })
+
+/**
+ * The band at the bottom, where the furniture is.
+ *
+ * The zoom control and the status bar are anchored to the window and between
+ * them run nearly its full width, so they cannot be dodged the way another
+ * floating surface can: a strip that wide collides with every side a panel
+ * would naturally take. A band lifts the surface instead of moving it.
+ */
+describe('keeping clear of the screen-edge furniture', () => {
+  const request = {
+    anchor: { x: 210, y: 470, width: 180, height: 180 },
+    surface: { width: 360, height: 331 },
+    within: { width: 1280, height: 720 },
+    prefer: ['right', 'left', 'below', 'above'] as const,
+    gap: 8,
+    margin: 12,
+  }
+
+  it('lifts a surface clear of the band rather than moving it to another side', () => {
+    const free = placeAnchored(request)
+    const lifted = placeAnchored({ ...request, keepClearBottom: 62 })
+
+    // The point of the band: the side is the one the selection asked for, and
+    // only the height has changed. Dodging a rectangle gave 'above' here, which
+    // put the panel on the other side of the object it describes.
+    expect(free.side).toBe('right')
+    expect(lifted.side).toBe('right')
+    expect(lifted.y + 331).toBeLessThanOrEqual(720 - 62)
+    expect(lifted.y).toBeLessThan(free.y)
+  })
+
+  it('does not call a side below the anchor a fit when the band takes the room', () => {
+    /*
+     * 308px under the anchor and a surface of 260: room for it, and none once
+     * the band takes 62 of them. It must not be called a fit and then clamped
+     * back up over the anchor, which is the failure `fits` exists to prevent.
+     */
+    const low = {
+      ...request,
+      anchor: { x: 210, y: 300, width: 180, height: 100 },
+      surface: { width: 360, height: 260 },
+      prefer: ['below', 'above'] as const,
+    }
+    expect(placeAnchored(low).side).toBe('below')
+    expect(placeAnchored({ ...low, keepClearBottom: 62 }).side).toBe('above')
+  })
+
+  it('is unchanged by a band of nothing', () => {
+    expect(placeAnchored({ ...request, keepClearBottom: 0 })).toEqual(placeAnchored(request))
+  })
+})

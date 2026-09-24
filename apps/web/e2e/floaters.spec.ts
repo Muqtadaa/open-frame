@@ -127,3 +127,38 @@ test('the record panel keeps off the object it is describing', async ({ page }) 
 
   expect(covering, 'the panel is over the boundary you would double-click').toBe(false)
 })
+
+/**
+ * The record panel must not land on the zoom control.
+ *
+ * The panel dodges what it is TOLD about, and it was told about one thing: the
+ * options panel. The zoom control and the status bar are anchored to the
+ * window rather than to anything on the board, so they cannot step aside for
+ * it — and on a selection low and to the right the panel was clamped to the
+ * bottom of the window and landed on the readout and the buttons either side
+ * of it.
+ *
+ * The RECTANGLES, not a press point. A piece of furniture is small and whole:
+ * covering a third of the zoom control hides the readout, which is the part
+ * you are looking at rather than the part you press.
+ */
+test('the record panel keeps off the screen-edge furniture', async ({ page }) => {
+  await board(page)
+  await page.getByTestId('tool-sticky').click()
+  await page.locator(CANVAS).click({ position: { x: 1160, y: 600 } })
+  await page.keyboard.press('Escape')
+  await page.locator('[data-object-id]').first().click()
+
+  const panel = await page.getByTestId('inspector').boundingBox()
+  const zoom = await page.getByTestId('zoom-control').boundingBox()
+  expect(panel).not.toBeNull()
+  expect(zoom).not.toBeNull()
+  if (panel === null || zoom === null) return
+
+  const across = Math.min(panel.x + panel.width, zoom.x + zoom.width) - Math.max(panel.x, zoom.x)
+  const down = Math.min(panel.y + panel.height, zoom.y + zoom.height) - Math.max(panel.y, zoom.y)
+  expect(
+    across <= 0 || down <= 0,
+    `the panel covers ${String(Math.round(Math.max(0, across)))}x${String(Math.round(Math.max(0, down)))}px of the zoom control`,
+  ).toBe(true)
+})
