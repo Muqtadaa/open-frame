@@ -17,6 +17,17 @@ import type { Bend, Routing } from './schema.js'
 export const NO_BEND: Bend = { along: 0.5, across: 0 }
 
 /**
+ * The one point a route is currently held by, of however many it has.
+ *
+ * ONE SITE for the fact that routing still understands a single bend, so the
+ * day it understands several there is one place to look rather than seven.
+ * The data already carries a list; nothing reads past the first yet.
+ */
+export function heldPoint(points: readonly Bend[]): Bend | null {
+  return points[0] ?? null
+}
+
+/**
  * Which way the route leaves each end, when that end is attached to something.
  *
  * Both optional, because both can be free: a half-drawn connector has no

@@ -1,4 +1,4 @@
-import { resolveEndpoints, type ConnectorData } from '@openframe/core'
+import { heldPoint, resolveEndpoints, type ConnectorData } from '@openframe/core'
 
 import { connectorPath, pathMidpoint, routeAngles } from '../scene/connector-path.js'
 import { capPath } from '../scene/connector-caps.js'
@@ -40,7 +40,7 @@ function ConnectorRenderer({
   const normals = { start: startNormal, end: endNormal }
   const stroke = inkOf(object.style.strokeColor ?? object.style.color)
   const width = strokeWidth(object.style.stroke, 'medium')
-  const bend = object.data.bend ?? null
+  const bend = heldPoint(object.data.points)
   const path = connectorPath(start, end, object.data.routing, bend, normals)
   const { departure, arrival } = routeAngles(start, end, object.data.routing, bend, normals)
   const label = object.data.text
@@ -129,7 +129,7 @@ function ConnectorEditor({
     object.data.to,
     boundsOf,
   )
-  const mid = pathMidpoint(start, end, object.data.routing, object.data.bend ?? null, {
+  const mid = pathMidpoint(start, end, object.data.routing, heldPoint(object.data.points), {
     start: startNormal,
     end: endNormal,
   })

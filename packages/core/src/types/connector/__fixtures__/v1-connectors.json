@@ -1,0 +1,74 @@
+{
+  "format": "openframe.board",
+  "schemaVersion": 1,
+  "savedAt": 1700000000000,
+  "board": {
+    "id": "board_frozen_connectors",
+    "meta": { "title": "Before a line could be held in more than one place", "createdAt": 1700000000000 },
+    "objects": [
+      {
+        "id": "obj_bent",
+        "type": "connector",
+        "dataVersion": 1,
+        "frame": { "x": 0, "y": 0, "width": 0, "height": 0, "rotation": 0 },
+        "parentId": null,
+        "order": "a0",
+        "style": {},
+        "locked": false,
+        "hidden": false,
+        "data": {
+          "from": { "kind": "point", "x": 0, "y": 0 },
+          "to": { "kind": "point", "x": 400, "y": 200 },
+          "routing": "orthogonal",
+          "bend": { "along": 0.25, "across": -40 },
+          "startArrow": "none",
+          "endArrow": "arrow",
+          "text": "bent by hand"
+        },
+        "meta": { "createdAt": 1700000000000, "createdBy": null, "createdVia": "user" }
+      },
+      {
+        "id": "obj_bend_null",
+        "type": "connector",
+        "dataVersion": 1,
+        "frame": { "x": 0, "y": 0, "width": 0, "height": 0, "rotation": 0 },
+        "parentId": null,
+        "order": "a1",
+        "style": {},
+        "locked": false,
+        "hidden": false,
+        "data": {
+          "from": { "kind": "point", "x": 0, "y": 0 },
+          "to": { "kind": "point", "x": 100, "y": 100 },
+          "routing": "curved",
+          "bend": null,
+          "startArrow": "none",
+          "endArrow": "arrow",
+          "text": "never bent"
+        },
+        "meta": { "createdAt": 1700000000000, "createdBy": null, "createdVia": "user" }
+      },
+      {
+        "id": "obj_bend_absent",
+        "type": "connector",
+        "dataVersion": 1,
+        "frame": { "x": 0, "y": 0, "width": 0, "height": 0, "rotation": 0 },
+        "parentId": null,
+        "order": "a2",
+        "style": {},
+        "locked": false,
+        "hidden": false,
+        "data": {
+          "from": { "kind": "point", "x": 10, "y": 10 },
+          "to": { "kind": "point", "x": 60, "y": 60 },
+          "routing": "straight",
+          "startArrow": "none",
+          "endArrow": "none",
+          "text": "saved before bends existed at all"
+        },
+        "meta": { "createdAt": 1700000000000, "createdBy": null, "createdVia": "user" }
+      }
+    ],
+    "assets": []
+  }
+}

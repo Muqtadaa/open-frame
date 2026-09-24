@@ -76,6 +76,7 @@ export {
   bendAnchor,
   bendFrom,
   connectorRoute,
+  heldPoint,
   flattenRoute,
   routeVertices,
   NO_BEND,

@@ -1,11 +1,13 @@
 import { defineObjectType } from '../../domain/registry.js'
 import { boundsOfPoints, inflate, rectFromPoints } from '../../geometry/rect.js'
 import { distanceToSegment } from '../../geometry/point.js'
+import { bendToPoints } from './bend-to-points.js'
 import { attachmentAnchor, endpointDependencies, resolveEndpoints } from './geometry.js'
 import {
   bendAnchor,
   bendFrom,
   connectorRoute,
+  heldPoint,
   flattenRoute,
   routeVertices,
 } from './route.js'
@@ -36,7 +38,7 @@ export const connectorType = defineObjectType<typeof CONNECTOR_TYPE, ConnectorDa
 
   schema: ConnectorDataSchema,
   currentVersion: CONNECTOR_VERSION,
-  migrations: {},
+  migrations: { 2: bendToPoints },
 
   create: (init) => ({
     data: {
@@ -44,8 +46,8 @@ export const connectorType = defineObjectType<typeof CONNECTOR_TYPE, ConnectorDa
       to: init?.to ?? { kind: 'point', x: 100, y: 0 },
       routing: init?.routing ?? 'straight',
       // A new connector takes whatever route its type decides, which is what
-      // `null` means here — not "no bend allowed".
-      bend: init?.bend ?? null,
+      // an empty list means here — not "this line cannot be bent".
+      points: init?.points ?? [],
       startArrow: init?.startArrow ?? 'none',
       endArrow: init?.endArrow ?? 'arrow',
       text: init?.text ?? '',
@@ -102,7 +104,7 @@ export const connectorType = defineObjectType<typeof CONNECTOR_TYPE, ConnectorDa
      * contain it is culled while still on screen and missed by a marquee
      * dragged over it.
      */
-    const route = connectorRoute(start, end, object.data.routing, object.data.bend ?? null, {
+    const route = connectorRoute(start, end, object.data.routing, heldPoint(object.data.points), {
       start: startNormal,
       end: endNormal,
     })
@@ -132,7 +134,7 @@ export const connectorType = defineObjectType<typeof CONNECTOR_TYPE, ConnectorDa
      * nothing at all.
      */
     const points = flattenRoute(
-      connectorRoute(start, end, object.data.routing, object.data.bend ?? null, {
+      connectorRoute(start, end, object.data.routing, heldPoint(object.data.points), {
         start: startNormal,
         end: endNormal,
       }),
@@ -182,7 +184,7 @@ export const connectorType = defineObjectType<typeof CONNECTOR_TYPE, ConnectorDa
         : [
             {
               id: 'bend',
-              at: bendAnchor(start, end, object.data.routing, object.data.bend ?? null, {
+              at: bendAnchor(start, end, object.data.routing, heldPoint(object.data.points), {
                 start: startNormal,
                 end: endNormal,
               }),
@@ -236,18 +238,25 @@ export const connectorType = defineObjectType<typeof CONNECTOR_TYPE, ConnectorDa
        * the caller stay ignorant of what a bend even is, since the preview it
        * feeds back IS this object's data a moment later.
        */
-      const held = object.data.bend
+      const held = heldPoint(object.data.points)
       const collapsed =
         held !== null && held !== undefined && (held.along === 0 || held.along === 1)
+      /*
+       * A LIST of one, for now. Moving the bend replaces the single point a
+       * route is held by; when a route can be held by several, this becomes
+       * a splice at the index the handle names.
+       */
       return {
-        bend: bendFrom(
-          start,
-          end,
-          object.data.routing,
-          { x: target.x, y: target.y },
-          { start: startNormal, end: endNormal },
-          target.tolerance * (collapsed ? RELEASE : 1),
-        ),
+        points: [
+          bendFrom(
+            start,
+            end,
+            object.data.routing,
+            { x: target.x, y: target.y },
+            { start: startNormal, end: endNormal },
+            target.tolerance * (collapsed ? RELEASE : 1),
+          ),
+        ],
       }
     }
     if (endpointId !== 'from' && endpointId !== 'to') return {}

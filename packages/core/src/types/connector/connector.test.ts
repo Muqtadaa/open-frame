@@ -562,7 +562,9 @@ describe('draggable endpoints', () => {
       const held = h.store.getObject(line)
       if (held === undefined) throw new Error('the line went missing')
       const object =
-        bend === undefined ? held : { ...held, data: { ...(held.data as object), bend } }
+        bend === undefined
+          ? held
+          : { ...held, data: { ...(held.data as object), points: [bend] } }
       return h.registry.retargetEndpoint(object, h.store.getDocument(), 'bend', {
         kind: 'point',
         ...at,
@@ -571,22 +573,24 @@ describe('draggable endpoints', () => {
     }
 
     it('takes the L when the elbow is dropped near an end', () => {
-      expect(elbowTo({ x: 6, y: 100 })).toEqual({ bend: { along: 0, across: 0 } })
+      expect(elbowTo({ x: 6, y: 100 })).toEqual({ points: [{ along: 0, across: 0 }] })
     })
 
     it('holds it further out than it took it, once collapsed', () => {
       const out = { x: 20, y: 100 }
       // From a route with an elbow in the middle, twenty units is too far.
       expect(elbowTo(out, { along: 0.5, across: 0 })).not.toEqual({
-        bend: { along: 0, across: 0 },
+        points: [{ along: 0, across: 0 }],
       })
       // From one already collapsed, the same drop keeps the L.
-      expect(elbowTo(out, { along: 0, across: 0 })).toEqual({ bend: { along: 0, across: 0 } })
+      expect(elbowTo(out, { along: 0, across: 0 })).toEqual({
+        points: [{ along: 0, across: 0 }],
+      })
     })
 
     it('lets go when the elbow is pulled well clear', () => {
       expect(elbowTo({ x: 120, y: 100 }, { along: 0, across: 0 })).not.toEqual({
-        bend: { along: 0, across: 0 },
+        points: [{ along: 0, across: 0 }],
       })
     })
   })
@@ -719,7 +723,7 @@ describe('a bend', () => {
       from: { kind: 'point', x: 0, y: 0 },
       to: { kind: 'point', x: 400, y: 200 },
       routing: 'orthogonal',
-      ...(bend === null ? {} : { bend }),
+      points: bend === null ? [] : [bend],
     })
     const object = h.store.getObject(connector)
     if (object === undefined) throw new Error('missing connector')
@@ -764,7 +768,7 @@ describe('a bend', () => {
       from: { kind: 'point', x: 0, y: 0 },
       to: { kind: 'point', x: 400, y: 0 },
       routing: 'curved',
-      bend: { along: 0.5, across: 300 },
+      points: [{ along: 0.5, across: 300 }],
     })
     const object = h.store.getObject(id)
     if (object === undefined) throw new Error('missing')

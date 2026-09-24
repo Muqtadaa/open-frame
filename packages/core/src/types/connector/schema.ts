@@ -81,30 +81,28 @@ export interface ConnectorData {
   readonly to: ConnectorEndpoint
   readonly routing: Routing
   /**
-   * Where the route bends, or `null` for wherever it would go on its own.
+   * Where the route is held, in order from `from` to `to`. Empty means
+   * wherever the routing would take it on its own.
    *
-   * Optional in the SCHEMA as well as nullable, so every connector saved
-   * before this existed still parses. That is what makes this a new field
-   * rather than a migration: an absent value and a null one mean the same
-   * thing, which is the only shape of change that can be added to a shipped
-   * type without rewriting anybody's board.
+   * A LIST because a line with one bend in it is not the shape people draw:
+   * a route around two obstacles needs three. This was a single `bend?` — an
+   * optional, nullable field added without a migration, because an absent
+   * value and a null one meant the same thing. A list does not have that
+   * property, so this one IS a migration (v1 → v2).
    */
-  readonly bend?: Bend | null
+  readonly points: readonly Bend[]
   readonly startArrow: Arrowhead
   readonly endArrow: Arrowhead
   readonly text: string
 }
 
-export const CONNECTOR_VERSION = 1
+export const CONNECTOR_VERSION = 2
 
 export const ConnectorDataSchema: ZodType<ConnectorData> = z.object({
   from: EndpointSchema,
   to: EndpointSchema,
   routing: z.enum(ROUTINGS),
-  bend: z
-    .object({ along: z.number().finite(), across: z.number().finite() })
-    .nullable()
-    .optional(),
+  points: z.array(z.object({ along: z.number().finite(), across: z.number().finite() })),
   startArrow: z.enum(ARROWHEADS),
   endArrow: z.enum(ARROWHEADS),
   text: z.string(),
