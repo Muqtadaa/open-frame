@@ -468,8 +468,8 @@ body {
 
 .of-tool__tip kbd {
   font-family: var(--of-mono);
-  /* 11px is the legibility floor for functional text, shortcuts included. */
-  font-size: 11px;
+  /* 12px is the legibility floor for functional text, shortcuts included. */
+  font-size: 12px;
   color: var(--of-rule-decade);
 }
 
@@ -815,10 +815,10 @@ body {
   background: var(--of-hover);
 }
 
-/* 11px is the functional-text floor: this is a readout, not smallprint. */
+/* 12px is the functional-text floor: this is a readout, not smallprint. */
 .of-picker__contrast {
   margin: 0;
-  font-size: 11px;
+  font-size: 12px;
   color: var(--of-ink-muted);
 }
 
@@ -909,7 +909,7 @@ body {
  * beside its icon; at body size next to a mouse it looked like a panel title.
  */
 .of-zoom__mode {
-  font-size: 11px;
+  font-size: 12px;
   letter-spacing: 0.02em;
 }
 
@@ -1340,7 +1340,7 @@ body {
 
 .of-grid-pick__readout {
   margin: 6px 0 0;
-  font-size: 11px;
+  font-size: 12px;
   color: var(--of-ink-muted);
   text-align: center;
   font-variant-numeric: tabular-nums;
@@ -1370,7 +1370,7 @@ body {
   position: absolute;
   top: 2px;
   right: 6px;
-  font-size: 11px;
+  font-size: 12px;
   color: var(--of-ink-muted);
 }
 
@@ -1535,7 +1535,7 @@ body {
  */
 .of-spaces__count {
   font-family: var(--of-mono);
-  font-size: 11px;
+  font-size: 12px;
   font-variant-numeric: tabular-nums;
   color: var(--of-ink-muted);
 }
@@ -1683,7 +1683,7 @@ body {
 }
 
 .of-mentions__where {
-  font-size: 11px;
+  font-size: 12px;
   color: var(--of-ink-muted);
 }
 
@@ -1765,7 +1765,7 @@ body {
   place-items: center;
   width: 20px;
   height: 20px;
-  font-size: 11px;
+  font-size: 12px;
   font-weight: 600;
   color: var(--of-ink);
   border-radius: 999px;
@@ -1806,7 +1806,7 @@ body {
   width: 26px;
   height: 26px;
   padding: 0;
-  font-size: 11px;
+  font-size: 12px;
   font-weight: 600;
   color: var(--of-panel);
   pointer-events: auto;
@@ -1888,14 +1888,14 @@ body {
 
 .of-comment-panel__hint {
   margin: 6px 0 0;
-  font-size: 11px;
+  font-size: 12px;
   color: var(--of-ink-muted);
 }
 
 /*
  * The invite sits INSIDE the sentence that explains it, so it reads as part
  * of the offer rather than as a second control competing with Post. Inline,
- * and sized to the 11px functional floor like the hint around it.
+ * and sized to the 12px functional floor like the hint around it.
  */
 /*
  * BROWSING: the board's open threads, when the panel is showing but nothing
@@ -1933,7 +1933,7 @@ body {
 
 .of-comment-panel__resolved-toggle {
   align-self: start;
-  font-size: 11px;
+  font-size: 12px;
 }
 
 .of-comment-panel__entry:hover {
@@ -1956,7 +1956,7 @@ body {
 
 .of-comment-panel__invite {
   padding: 0;
-  font-size: 11px;
+  font-size: 12px;
   color: var(--of-accent);
   text-decoration: underline;
   vertical-align: baseline;
@@ -1988,7 +1988,7 @@ body {
   place-items: center;
   width: 22px;
   height: 22px;
-  font-size: 11px;
+  font-size: 12px;
   font-weight: 600;
   color: var(--of-panel);
   border-radius: 50%;
@@ -2409,7 +2409,7 @@ body {
   left: 0;
   padding: 2px 5px;
   font-family: var(--of-font);
-  font-size: 11px;
+  font-size: 12px;
   font-weight: 500;
   line-height: 1.3;
   color: var(--of-page);
@@ -2522,7 +2522,7 @@ body {
   height: 22px;
   margin-right: -4px;
   font-family: var(--of-font);
-  font-size: 11px;
+  font-size: 12px;
   font-weight: 600;
   color: var(--of-page);
   border: 1.5px solid var(--of-page);
@@ -2937,8 +2937,8 @@ body {
   padding-top: 6px;
   margin-top: 8px;
   font-family: var(--of-mono);
-  /* The eleven pixel floor: this is functional text, not decoration. */
-  font-size: 11px;
+  /* The twelve pixel floor: this is functional text, not decoration. */
+  font-size: 12px;
   line-height: 1.3;
   letter-spacing: 0.02em;
   /*
@@ -3112,7 +3112,7 @@ body {
 
 .of-unknown__hint,
 .of-fallback__hint {
-  font-size: 11px;
+  font-size: 12px;
 }
 
 .of-fatal {
@@ -3131,7 +3131,7 @@ body {
   display: flex;
   gap: 4px;
   align-items: center;
-  font-size: 11px;
+  font-size: 12px;
 }
 
 .of-dev__label {
@@ -3211,7 +3211,7 @@ body {
 }
 
 .of-menu__shortcut {
-  font-size: 11px;
+  font-size: 12px;
   color: var(--of-ink-muted);
 }
 
@@ -3480,7 +3480,7 @@ body {
 /* The subject of the record, named the way a specimen label names its subject. */
 .of-inspector__subject {
   font-family: var(--of-mono);
-  font-size: 11px;
+  font-size: 12px;
   color: var(--of-ink);
   text-transform: lowercase;
   letter-spacing: 0.02em;
@@ -3512,10 +3512,10 @@ body {
 /*
  * A record row: label column, value column.
  *
- * The label column is 76px, not the 52px that fitted the six hardcoded style
+ * The label column is 82px, not the 52px that fitted the six hardcoded style
  * labels. Labels now come from the REGISTRY — a type declares them — so they
  * can be any length, and "participant" rendered as "participa": a panel
- * clipped into telling the user the wrong field name. 76px holds eleven mono
+ * clipped into telling the user the wrong field name. 82px holds eleven mono
  * characters; anything longer ellipsises and keeps its full text in a title,
  * which is honest in a way a silent truncation is not.
  */
@@ -3530,7 +3530,7 @@ body {
 .of-field__label {
   overflow: hidden;
   font-family: var(--of-mono);
-  font-size: 11px;
+  font-size: 12px;
   color: var(--of-ink-muted);
   text-align: right;
   text-overflow: ellipsis;
@@ -3565,9 +3565,9 @@ body {
 }
 
 /*
- * A written value, as opposed to a chosen one. 12px rather than the 11px
- * functional floor because this is text the user AUTHORS and will re-read, not
- * a shortcut hint or a readout.
+ * A written value, as opposed to a chosen one. It sits ON the 12px functional
+ * floor rather than below it: this is text the user AUTHORS and will re-read,
+ * and the floor is the least any readable text gets.
  */
 .of-input {
   width: 100%;
@@ -3786,7 +3786,7 @@ textarea.of-input {
 .of-inspector__reading {
   min-width: 36px;
   font-family: var(--of-mono);
-  font-size: 11px;
+  font-size: 12px;
   color: var(--of-ink-muted);
   text-align: right;
 }
@@ -3919,7 +3919,7 @@ textarea.of-input {
   padding: 4px 6px;
   overflow: hidden;
   font-family: var(--of-font);
-  /* Functional text: readable, and above the eleven pixel floor. */
+  /* Functional text: readable, and on the twelve pixel floor. */
   font-size: 12px;
   color: var(--of-ink);
   text-align: left;
@@ -4155,7 +4155,7 @@ textarea.of-input {
  * text — so the pair reads without either label.
  */
 .of-format-bar__button--size {
-  font-size: 11px;
+  font-size: 12px;
 }
 
 .of-format-bar__button--bigger {
@@ -4215,8 +4215,8 @@ textarea.of-input {
 .of-search__count {
   padding: 0 12px 7px;
   font-family: var(--of-mono);
-  /* The eleven pixel floor: a readout, like the zoom percentage. */
-  font-size: 11px;
+  /* The twelve pixel floor: a readout, like the zoom percentage. */
+  font-size: 12px;
   color: var(--of-ink-muted);
   letter-spacing: 0.02em;
 }
@@ -4261,7 +4261,7 @@ textarea.of-input {
   flex: none;
   min-width: 56px;
   font-family: var(--of-mono);
-  font-size: 11px;
+  font-size: 12px;
   color: var(--of-ink-muted);
   letter-spacing: 0.02em;
 }
@@ -4926,8 +4926,9 @@ textarea.of-input {
 .of-share__link {
   display: block;
   width: 100%;
-  /* 44px, not 28: two links that differ only in a word are the one control in
-     this product where hitting the wrong one has a consequence. */
+  /* The largest target, not a secondary one: two links that differ only in a
+     word are the one control in this product where hitting the wrong one has a
+     consequence. */
   min-height: var(--of-hit-lg);
   margin-bottom: 10px;
   padding: 8px 14px;
@@ -5243,7 +5244,7 @@ textarea.of-input {
 
 .of-code__format {
   padding: 0 10px;
-  font-size: 11px;
+  font-size: 12px;
   line-height: 24px;
 }
 
@@ -5441,7 +5442,7 @@ textarea.of-input {
    its own — the layer does both. */
 .of-crop__reset {
   padding: 5px 11px;
-  font-size: 11px;
+  font-size: 12px;
   color: var(--of-ink-muted);
   background: none;
   border: none;

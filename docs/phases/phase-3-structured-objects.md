@@ -36,7 +36,7 @@ also a research artefact that can be queried, filtered, summarised and linked.
 `journey-stage`, `requirement`.
 
 Each is a folder in `packages/core/src/types/`, a folder in
-`apps/web/src/canvas/views/`, and two registration lines. If any of them requires
+`apps/web/src/views/`, and two registration lines. If any of them requires
 touching the command layer, persistence or the renderer, **something is wrong
 with the registry** and that is the bug to fix first.
 

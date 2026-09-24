@@ -19,15 +19,15 @@ of moment. NOT a modal: the craft floor bans one for a task that needs neither
 interruption nor protected focus, and this is the clearest case of that in the
 product.
 
-Each link is a row on page stock with a `control-border` hairline, 44px minimum
-rather than the 24px AA floor, because this is the one control in OpenFrame
+Each link is a row on page stock with a `control-border` hairline, 50px minimum
+(`--of-hit-lg`) rather than the 24px AA floor, because this is the one control in OpenFrame
 where missing costs something. The row carries its name and, below it at the
-11px functional floor, what it does to the person who receives it: "they can
+12px functional floor, what it does to the person who receives it: "they can
 change the board", "they can watch, and be seen watching". That second line is
 the deciding information, not decoration, which is why it sits at the floor and
 not below it.
 
-VIEW-ONLY: a record, not a badge. 11px mono, muted ink, page stock, hairline,
+VIEW-ONLY: a record, not a badge. 12px mono, muted ink, page stock, hairline,
 apparatus radius — it sits in the record line beside the other readouts, which
 are all mono and muted. A pill would also have been the third fully-round thing
 in a world where round means "grab me": only the rotate handle and connector

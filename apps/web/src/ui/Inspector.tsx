@@ -41,9 +41,10 @@ import { RecordFields } from './RecordFields.js'
 /** Clearance between the selection and the panel, in screen pixels. */
 const GAP_PX = PANEL_CLEARANCE_PX
 /*
- * Wide enough for all seven colours on ONE row. At 248 the row wrapped 5 + 2,
+ * Wide enough for a full row of the swatch grid. At 248 the row wrapped 5 + 2,
  * which reads as an accident rather than a grid — and a wrapped swatch row is
- * exactly what this panel exists to stop.
+ * exactly what this panel exists to stop. `design-tokens.test.ts` does the
+ * arithmetic against the grid's own column count.
  *
  * Grown from 276 with the label column, which had to widen to stop type-declared
  * field labels being clipped. The two are linked: the swatch row lives in the

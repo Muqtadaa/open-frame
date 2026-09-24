@@ -85,14 +85,15 @@ spacing:
   tight: "4px"
   snug: "6px"
   base: "8px"
-  gutter: "10px"
+  step: "10px"
   margin: "12px"
+  gutter: "20px"
 components:
   tool:
     backgroundColor: "transparent"
     textColor: "{colors.ink-muted}"
     rounded: "8px"
-    size: "40px"
+    size: "50px"
   tool-hover:
     backgroundColor: "{colors.accent-soft}"
     textColor: "{colors.ink}"
@@ -108,28 +109,28 @@ components:
   rail:
     backgroundColor: "{colors.page}"
     rounded: "{rounded.apparatus}"
-    padding: "5px 4px"
+    padding: "5px"
   status:
     backgroundColor: "{colors.page}"
     textColor: "{colors.ink-muted}"
     typography: "{typography.record}"
     rounded: "{rounded.apparatus}"
-    padding: "4px 10px 4px 5px"
+    padding: "5px 10px"
   zoom:
     backgroundColor: "{colors.page}"
     textColor: "{colors.ink-muted}"
     rounded: "{rounded.apparatus}"
-    padding: "4px 6px"
+    padding: "5px"
   inspector:
     backgroundColor: "{colors.panel}"
     textColor: "{colors.ink}"
-    rounded: "{rounded.panel}"
-    padding: "9px 10px 11px"
-    width: "276px"
+    rounded: "{rounded.surface}"
+    padding: "10px"
+    width: "360px"
   field-label:
     textColor: "{colors.ink-muted}"
     typography: "{typography.record}"
-    width: "52px"
+    width: "82px"
   swatch:
     rounded: "{rounded.slip}"
     size: "30px"
@@ -138,7 +139,8 @@ components:
     backgroundColor: "transparent"
     textColor: "{colors.ink-muted}"
     rounded: "5px"
-    size: "28px"
+    width: "28px"
+    height: "26px"
   choice-item-on:
     backgroundColor: "{colors.panel}"
     textColor: "{colors.accent}"
@@ -408,6 +410,12 @@ shortcuts and readouts included. Nothing a user must read goes below it. It was
 eleven until 2026-09-19; a floor is the least you will accept, and this one had
 become the size of nearly everything, which is a different thing.
 
+It was also written down a week before it was true: this file said twelve while
+27 rules in the stylesheet still said eleven, because a floor in prose is a
+floor nothing measures. `design-tokens.test.ts` now reads every absolute
+`font-size` in the stylesheet and fails below 12px. Its one exemption is a
+specimen — the format bar's small-size button, drawn at the size it applies.
+
 **The Mono Is A Record Rule.** Mono marks records and measurement — counts, zoom,
 field values, shortcuts — and nothing else. It is never applied to make something
 look technical.
@@ -420,13 +428,16 @@ no font fetch; the stacks above are the faces.
 The board is edge to edge and owns the viewport; chrome is a set of absolutely
 positioned overlays that are click-through except where they paint.
 
-- **Left margin gutter** — the creation rail, vertically centred, 12px from the
-  edge, 40px square tools in a 48px-wide rail.
-- **Top centre** — notices and toasts, capped at `min(720px, 100vw - 140px)`.
-- **Bottom left** — the record line, offset 72px to clear the rail's real
-  footprint (48px rail + 12px margin), 12px from the bottom.
-- **Bottom right** — the zoom cluster, 12px from both edges.
-- **Floating** — the record panel, placed beside the selection with a 14px gap,
+- **Left margin gutter** — the creation rail, vertically centred, 20px
+  (`--of-gutter`) from the edge, 50px square tools in a rail with 5px of
+  padding and a hairline.
+- **Top centre** — notices and toasts, 20px from the top, capped at
+  `min(720px, 100vw - 140px)`.
+- **Bottom left** — the record line, offset 80px to clear the rail's real
+  footprint and its margin, 20px from the bottom.
+- **Bottom right** — the zoom cluster, 20px from both edges.
+- **Floating** — the record panel, placed beside the selection with a 42px gap
+  (clear of the connection points, which reach 38px out from the edge),
   preferring the selection's right edge, falling back to its left, then above or
   below, always clamped inside the viewport and clear of the rail (84px).
 
@@ -452,7 +463,7 @@ document ever saved.
 
 **Spacing rhythm** runs on even small steps: 2px between sibling controls, 5px
 of padding inside apparatus, 10px between a label and its value, 20px from the
-viewport edge. Tool icons are 21px inside a 40px target; secondary icons are
+viewport edge. Tool icons are 21px inside a 50px target; secondary icons are
 16–17px; the disclosure arrow is 12px.
 
 **World rhythm** is the quadrille: `GRID_SIZE` is 10 world units, snapping lands
@@ -574,9 +585,9 @@ pure CSS. There is no icon font and no icon library.
 ### Tool Rail
 
 Creation only — select, hand, sticky, text, shape, frame, connect, then a ruled
-divider and image. Selection actions are not in the rail. Tools are 40px squares
-(the AA 2.5.8 target minimum is 24; a tool reached for constantly deserves more
-than the floor) with 21px icons, muted ink at rest, ink on an accent wash on
+divider and image. Selection actions are not in the rail. Tools are 50px squares
+(`--of-hit-lg`, a whole decade of the rule; the AA 2.5.8 target minimum is 24,
+and a tool reached for constantly deserves more than the floor) with 21px icons, muted ink at rest, ink on an accent wash on
 hover, accent on accent wash when active, 0.35 opacity when disabled. The shape
 slot carries a 16px disclosure that opens a two-column flyout of eight shapes.
 
@@ -586,23 +597,23 @@ The label, not a standing caption: eleven standing captions were most of the old
 rail's height. Ink-filled, page-coloured text at 12px, 6px radius, 10px to the
 right of the tool, fading in over 110ms and suppressed under
 `prefers-reduced-motion`. It appears on **hover and on keyboard focus** — a
-tooltip only a mouse can summon is not a label. The shortcut inside it is 11px
+tooltip only a mouse can summon is not a label. The shortcut inside it is 12px
 mono in decade-rule grey.
 
 ### Record Line
 
 The bottom-left readout: undo/redo actions, ruled dividers, object and selection
 counts, zoom percentage, and the AGPL source link (underlined by a 1px
-`currentcolor` border, going accent on hover). All 11px mono, muted ink, with
+`currentcolor` border, going accent on hover). All 12px mono, muted ink, with
 counts bolded to 600 in full ink. Its counts are the first thing dropped on a
 narrow viewport.
 
 ### Zoom Cluster
 
-Bottom-right, mono throughout. Icon buttons at 16px, a ruled separator, a
-wheel-mode value at 11px (mono and small so it reads as a *setting* beside its
-icon, not a panel title), a 104px measurement slider and a 54px tabular-numeral
-percentage that becomes an inline editor on an accent-soft bed with a 1px accent
+Bottom-right, mono throughout. 30px buttons (`--of-hit-sm`) carrying 16px
+icons, a ruled separator, a wheel-mode value at 12px (mono and small so it reads
+as a *setting* beside its icon, not a panel title), a 104px measurement slider
+and a 60px, 13px tabular-numeral percentage that becomes an inline editor on an accent-soft bed with a 1px accent
 outline.
 
 ### Measurement Sliders
@@ -614,12 +625,18 @@ to a ruled page.
 
 ### Record Panel (Inspector)
 
-The signature component. A 276px panel on panel white that floats beside the
-selection and exists only while something is selected. Its head names the subject
-the way a specimen label does — 11px mono, lowercase, tracked 0.02em — beside a
-remove action that takes correction red only on hover. Below a hairline divider,
-each property is a record row: a 52px right-aligned mono label column and a value
-column, 30px minimum row height.
+The signature component. A 360px panel on panel white that floats beside the
+selection and exists only while something is selected, cut from the one
+contextual surface (10px, below). Its head names the subject the way a specimen
+label does — 12px mono, lowercase, tracked 0.02em — beside a remove action that
+takes correction red only on hover. Below a hairline divider, each property is a
+record row: an 82px right-aligned mono label column and a value column, 40px
+(`--of-hit`) minimum row height.
+
+The width is arithmetic, not taste: 82px holds eleven 12px mono characters, so a
+type-declared label such as "participant" is never clipped into a different
+word, and what is left must still take a full row of the swatch grid.
+`design-tokens.test.ts` does that sum on every build.
 
 **Which fields appear comes from the registry** (`capabilities.styleProps`), never
 from a hardcoded list; adding a property to an object type surfaces it here with
@@ -654,9 +671,9 @@ pressed-index shadow.
 
 ### Context Menu
 
-Panel white, 10px radius, 196px minimum, 13px items at 6px radius with the accent
-wash on hover, shortcuts at 11px in muted ink, groups separated by a hairline
-margin rule.
+Panel white, 10px radius, 196px minimum. Items are 15px UI text in 40px
+(`--of-hit`) rows at 6px radius, taking the accent wash on hover, with shortcuts
+at 12px mono in muted ink. Groups are separated by a hairline margin rule.
 
 ### The Front Door
 
@@ -669,10 +686,10 @@ two same-size panels of white side by side, which is the neutral void this
 world refuses meeting the card scaffold it refuses, on the first screen anybody
 sees. Ruling it and collapsing the panels into one sheet is what made it belong.
 
-- **Ledger rows** — title in UI sans, "how long ago" in 11px mono with tabular
+- **Ledger rows** — title in UI sans, "how long ago" in 12px mono with tabular
   numerals, divided by the margin rule, taking the accent wash on hover. A time
   is a measurement, so it is set as one.
-- **Specimen labels** — section names are 11px mono, lowercase, tracked, muted:
+- **Specimen labels** — section names are 12px mono, lowercase, tracked, muted:
   the same register the record panel uses to name its subject.
 - **Ground** — tiled `linear-gradient` with `background-size`, never
   `repeating-linear-gradient`, whose stops accumulate in floating point across
@@ -681,11 +698,11 @@ sees. Ruling it and collapsing the panels into one sheet is what made it belong.
 ### Sharing
 
 A sheet above the record line, the same shape as the account sheet. Two link
-rows at 44px — above the usual floor because this is the one control in the
-product where hitting the wrong one has a consequence — each naming what it
-gives away in the second line, at the 11px functional floor.
+rows at 50px (`--of-hit-lg`) — the largest target, because this is the one
+control in the product where hitting the wrong one has a consequence — each
+naming what it gives away in the second line, at the 12px functional floor.
 
-**View-only is a record, not a badge**: 11px mono on page stock with a hairline
+**View-only is a record, not a badge**: 12px mono on page stock with a hairline
 and the apparatus radius, sitting in the record line beside the other readouts.
 A pill would have been the third fully-round thing in a world where round means
 "grab me".
@@ -856,7 +873,7 @@ defaulted: selection highlight, caret colour and thin `control-border` scrollbar
 
 ### Notices and Toasts
 
-Top centre, 10px radius, 13px, contact shadow. Both the advisory and the failure
+Top centre, 10px radius, 15px UI text, contact shadow. Both the advisory and the failure
 pair use the correction wash (`--of-danger-wash`) with a `--of-danger-edge`
 hairline; the failure pair adds correction-red text.
 

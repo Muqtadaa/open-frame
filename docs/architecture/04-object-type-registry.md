@@ -1,6 +1,6 @@
 # 04 · Object type registry
 
-← [Documentation index](../README.md) · Source: [`registry.ts`](../../packages/core/src/domain/registry.ts) · [`views/registry.ts`](../../apps/web/src/canvas/views/registry.ts)
+← [Documentation index](../README.md) · Source: [`registry.ts`](../../packages/core/src/domain/registry.ts) · [`views/registry.ts`](../../apps/web/src/views/registry.ts)
 
 The registry exists to answer one question: **how do you add a new kind of
 canvas object without editing the whole application?**
@@ -98,8 +98,8 @@ NEW    packages/core/src/types/evidence/schema.ts        Zod schema + type
 NEW    packages/core/src/types/evidence/definition.ts    ObjectTypeDefinition
 NEW    packages/core/src/types/evidence/index.test.ts    schema + migration tests
 EDIT   packages/core/src/types/index.ts                  ONE registration line
-NEW    apps/web/src/canvas/views/EvidenceView.tsx        Renderer + InlineEditor
-EDIT   apps/web/src/canvas/views/index.ts                ONE registration line
+NEW    apps/web/src/views/EvidenceView.tsx        Renderer + InlineEditor
+EDIT   apps/web/src/views/index.ts                ONE registration line
 ```
 
 ```ts

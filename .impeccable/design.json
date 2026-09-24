@@ -1,6 +1,6 @@
 {
   "schemaVersion": 2,
-  "generatedAt": "2026-09-18T00:00:00.000Z",
+  "generatedAt": "2026-09-24T00:00:00.000Z",
   "title": "Design System: OpenFrame",
   "extensions": {
     "colorMeta": {
@@ -8,120 +8,441 @@
         "role": "neutral",
         "displayName": "Desk Blue-Grey",
         "canonical": "#eef2f6",
-        "tonalRamp": ["#1e242a", "#333c45", "#4b5761", "#68757f", "#8b979f", "#b3bdc4", "#d6dde2", "#eef2f6"]
+        "tonalRamp": [
+          "#1e242a",
+          "#333c45",
+          "#4b5761",
+          "#68757f",
+          "#8b979f",
+          "#b3bdc4",
+          "#d6dde2",
+          "#eef2f6"
+        ]
       },
       "page": {
         "role": "neutral",
         "displayName": "Page Stock",
         "canonical": "#f7f9fb",
-        "tonalRamp": ["#232830", "#3a414a", "#525b65", "#6d7680", "#929aa3", "#b9c0c7", "#dce1e6", "#f7f9fb"]
+        "tonalRamp": [
+          "#232830",
+          "#3a414a",
+          "#525b65",
+          "#6d7680",
+          "#929aa3",
+          "#b9c0c7",
+          "#dce1e6",
+          "#f7f9fb"
+        ]
       },
       "rule": {
         "role": "neutral",
         "displayName": "Fine Rule",
         "canonical": "#e4ebf2",
-        "tonalRamp": ["#1d242b", "#313a43", "#48535d", "#636f7a", "#87939d", "#aeb9c3", "#ced8e1", "#e4ebf2"]
+        "tonalRamp": [
+          "#1d242b",
+          "#313a43",
+          "#48535d",
+          "#636f7a",
+          "#87939d",
+          "#aeb9c3",
+          "#ced8e1",
+          "#e4ebf2"
+        ]
       },
       "rule-decade": {
         "role": "neutral",
         "displayName": "Decade Rule",
         "canonical": "#c9d6e4",
-        "tonalRamp": ["#1a222b", "#2d3844", "#43505f", "#5c6b7c", "#7f8f9f", "#a3b3c4", "#c9d6e4", "#e6edf4"]
+        "tonalRamp": [
+          "#1a222b",
+          "#2d3844",
+          "#43505f",
+          "#5c6b7c",
+          "#7f8f9f",
+          "#a3b3c4",
+          "#c9d6e4",
+          "#e6edf4"
+        ]
       },
       "panel": {
         "role": "neutral",
         "displayName": "Panel White",
         "canonical": "#ffffff",
-        "tonalRamp": ["#262626", "#3d3d3d", "#565656", "#717171", "#969696", "#bdbdbd", "#e0e0e0", "#ffffff"]
+        "tonalRamp": [
+          "#262626",
+          "#3d3d3d",
+          "#565656",
+          "#717171",
+          "#969696",
+          "#bdbdbd",
+          "#e0e0e0",
+          "#ffffff"
+        ]
       },
       "panel-border": {
         "role": "neutral",
         "displayName": "Margin Rule",
         "canonical": "#c7d2de",
-        "tonalRamp": ["#1a2029", "#2c3540", "#424d5a", "#5b6877", "#7d8b9a", "#a2afbd", "#c7d2de", "#e5ebf1"]
+        "tonalRamp": [
+          "#1a2029",
+          "#2c3540",
+          "#424d5a",
+          "#5b6877",
+          "#7d8b9a",
+          "#a2afbd",
+          "#c7d2de",
+          "#e5ebf1"
+        ]
       },
       "control-border": {
         "role": "neutral",
         "displayName": "Control Edge",
         "canonical": "#758596",
-        "tonalRamp": ["#171b20", "#272e35", "#3a444e", "#4f5b68", "#647283", "#758596", "#9aa7b4", "#c3ccd6"]
+        "tonalRamp": [
+          "#171b20",
+          "#272e35",
+          "#3a444e",
+          "#4f5b68",
+          "#647283",
+          "#758596",
+          "#9aa7b4",
+          "#c3ccd6"
+        ]
       },
       "ink": {
         "role": "neutral",
         "displayName": "Blue-Black Ink",
         "canonical": "#16202b",
-        "tonalRamp": ["#0a1017", "#16202b", "#243444", "#35495d", "#4c6379", "#6b8299", "#9aacbd", "#cbd6e0"]
+        "tonalRamp": [
+          "#0a1017",
+          "#16202b",
+          "#243444",
+          "#35495d",
+          "#4c6379",
+          "#6b8299",
+          "#9aacbd",
+          "#cbd6e0"
+        ]
       },
       "ink-muted": {
         "role": "neutral",
         "displayName": "Muted Ink",
         "canonical": "#4e6070",
-        "tonalRamp": ["#0e151b", "#1b262f", "#2b3945", "#3d4e5c", "#4e6070", "#6a7f91", "#93a5b4", "#c2ced8"]
+        "tonalRamp": [
+          "#0e151b",
+          "#1b262f",
+          "#2b3945",
+          "#3d4e5c",
+          "#4e6070",
+          "#6a7f91",
+          "#93a5b4",
+          "#c2ced8"
+        ]
       },
       "accent": {
         "role": "primary",
         "displayName": "Record Blue",
         "canonical": "#1450b5",
-        "tonalRamp": ["#071a3c", "#0b2758", "#0f3a80", "#1450b5", "#2e6bd4", "#5c90e4", "#96b8f0", "#d2e0fa"]
+        "tonalRamp": [
+          "#071a3c",
+          "#0b2758",
+          "#0f3a80",
+          "#1450b5",
+          "#2e6bd4",
+          "#5c90e4",
+          "#96b8f0",
+          "#d2e0fa"
+        ]
       },
       "accent-soft": {
         "role": "primary",
         "displayName": "Record Blue Wash",
         "canonical": "#e4ecfa",
-        "tonalRamp": ["#0d1b33", "#16294c", "#213b69", "#31538d", "#4d76b5", "#7c9fd4", "#b4c9ec", "#e4ecfa"]
+        "tonalRamp": [
+          "#0d1b33",
+          "#16294c",
+          "#213b69",
+          "#31538d",
+          "#4d76b5",
+          "#7c9fd4",
+          "#b4c9ec",
+          "#e4ecfa"
+        ]
       },
       "guide": {
         "role": "tertiary",
         "displayName": "Guide Magenta",
         "canonical": "#b0197a",
-        "tonalRamp": ["#3a0828", "#560c3b", "#7d114f", "#b0197a", "#cd3b97", "#dd6db2", "#eba3ce", "#f7d6e9"]
+        "tonalRamp": [
+          "#3a0828",
+          "#560c3b",
+          "#7d114f",
+          "#b0197a",
+          "#cd3b97",
+          "#dd6db2",
+          "#eba3ce",
+          "#f7d6e9"
+        ]
       },
       "danger": {
         "role": "secondary",
         "displayName": "Correction Red",
         "canonical": "#a3231b",
-        "tonalRamp": ["#330a07", "#4d100c", "#721812", "#a3231b", "#c43e34", "#d8706a", "#e9a49f", "#f7d7d4"]
+        "tonalRamp": [
+          "#330a07",
+          "#4d100c",
+          "#721812",
+          "#a3231b",
+          "#c43e34",
+          "#d8706a",
+          "#e9a49f",
+          "#f7d7d4"
+        ]
       },
-      "c-yellow": { "role": "tertiary", "displayName": "Slip Yellow Ink", "canonical": "#7a5c00", "tonalRamp": ["#241b00", "#3b2c00", "#523d00", "#7a5c00", "#a37b00", "#cfa41f", "#e7ca75", "#ffe9a3"] },
-      "c-green": { "role": "tertiary", "displayName": "Slip Green Ink", "canonical": "#146045", "tonalRamp": ["#04180f", "#083020", "#0d4632", "#146045", "#1c8560", "#35ab82", "#7ecdac", "#bff0d4"] },
-      "c-blue": { "role": "tertiary", "displayName": "Slip Blue Ink", "canonical": "#17529e", "tonalRamp": ["#071730", "#0b2750", "#103c75", "#17529e", "#2a72c9", "#5b97dd", "#96bdeb", "#cfe2ff"] },
-      "c-red": { "role": "tertiary", "displayName": "Slip Red Ink", "canonical": "#8a4038", "tonalRamp": ["#2a110d", "#421b16", "#5f2921", "#8a4038", "#ac5d53", "#c58a82", "#dfb4ae", "#ffd5d0"] },
-      "c-violet": { "role": "tertiary", "displayName": "Slip Violet Ink", "canonical": "#5b3ba8", "tonalRamp": ["#1c1039", "#2c1a58", "#412878", "#5b3ba8", "#7a5cc6", "#9d86da", "#c2b3ea", "#e3daff"] },
-      "c-orange": { "role": "tertiary", "displayName": "Slip Orange Ink", "canonical": "#8c4715", "tonalRamp": ["#2a1405", "#42200a", "#5f2f0e", "#8c4715", "#b46425", "#d08c53", "#e5b489", "#ffddb8"] },
-      "c-gray": { "role": "tertiary", "displayName": "Slip Grey Ink", "canonical": "#3f5163", "tonalRamp": ["#0d131a", "#1a232c", "#2a3742", "#3f5163", "#59708a", "#7e93aa", "#aab9c9", "#dfe5ec"] },
-      "s-yellow": { "role": "tertiary", "displayName": "Slip Yellow Stock", "canonical": "#ffe9a3" },
-      "s-green": { "role": "tertiary", "displayName": "Slip Green Stock", "canonical": "#bff0d4" },
-      "s-blue": { "role": "tertiary", "displayName": "Slip Blue Stock", "canonical": "#cfe2ff" },
-      "s-red": { "role": "tertiary", "displayName": "Slip Red Stock", "canonical": "#ffd5d0" },
-      "s-violet": { "role": "tertiary", "displayName": "Slip Violet Stock", "canonical": "#e3daff" },
-      "s-orange": { "role": "tertiary", "displayName": "Slip Orange Stock", "canonical": "#ffddb8" },
-      "s-gray": { "role": "tertiary", "displayName": "Slip Grey Stock", "canonical": "#dfe5ec" }
+      "c-yellow": {
+        "role": "tertiary",
+        "displayName": "Slip Yellow Ink",
+        "canonical": "#7a5c00",
+        "tonalRamp": [
+          "#241b00",
+          "#3b2c00",
+          "#523d00",
+          "#7a5c00",
+          "#a37b00",
+          "#cfa41f",
+          "#e7ca75",
+          "#ffe9a3"
+        ]
+      },
+      "c-green": {
+        "role": "tertiary",
+        "displayName": "Slip Green Ink",
+        "canonical": "#146045",
+        "tonalRamp": [
+          "#04180f",
+          "#083020",
+          "#0d4632",
+          "#146045",
+          "#1c8560",
+          "#35ab82",
+          "#7ecdac",
+          "#bff0d4"
+        ]
+      },
+      "c-blue": {
+        "role": "tertiary",
+        "displayName": "Slip Blue Ink",
+        "canonical": "#17529e",
+        "tonalRamp": [
+          "#071730",
+          "#0b2750",
+          "#103c75",
+          "#17529e",
+          "#2a72c9",
+          "#5b97dd",
+          "#96bdeb",
+          "#cfe2ff"
+        ]
+      },
+      "c-red": {
+        "role": "tertiary",
+        "displayName": "Slip Red Ink",
+        "canonical": "#8a4038",
+        "tonalRamp": [
+          "#2a110d",
+          "#421b16",
+          "#5f2921",
+          "#8a4038",
+          "#ac5d53",
+          "#c58a82",
+          "#dfb4ae",
+          "#ffd5d0"
+        ]
+      },
+      "c-violet": {
+        "role": "tertiary",
+        "displayName": "Slip Violet Ink",
+        "canonical": "#5b3ba8",
+        "tonalRamp": [
+          "#1c1039",
+          "#2c1a58",
+          "#412878",
+          "#5b3ba8",
+          "#7a5cc6",
+          "#9d86da",
+          "#c2b3ea",
+          "#e3daff"
+        ]
+      },
+      "c-orange": {
+        "role": "tertiary",
+        "displayName": "Slip Orange Ink",
+        "canonical": "#8c4715",
+        "tonalRamp": [
+          "#2a1405",
+          "#42200a",
+          "#5f2f0e",
+          "#8c4715",
+          "#b46425",
+          "#d08c53",
+          "#e5b489",
+          "#ffddb8"
+        ]
+      },
+      "c-gray": {
+        "role": "tertiary",
+        "displayName": "Slip Grey Ink",
+        "canonical": "#3f5163",
+        "tonalRamp": [
+          "#0d131a",
+          "#1a232c",
+          "#2a3742",
+          "#3f5163",
+          "#59708a",
+          "#7e93aa",
+          "#aab9c9",
+          "#dfe5ec"
+        ]
+      },
+      "s-yellow": {
+        "role": "tertiary",
+        "displayName": "Slip Yellow Stock",
+        "canonical": "#ffe9a3"
+      },
+      "s-green": {
+        "role": "tertiary",
+        "displayName": "Slip Green Stock",
+        "canonical": "#bff0d4"
+      },
+      "s-blue": {
+        "role": "tertiary",
+        "displayName": "Slip Blue Stock",
+        "canonical": "#cfe2ff"
+      },
+      "s-red": {
+        "role": "tertiary",
+        "displayName": "Slip Red Stock",
+        "canonical": "#ffd5d0"
+      },
+      "s-violet": {
+        "role": "tertiary",
+        "displayName": "Slip Violet Stock",
+        "canonical": "#e3daff"
+      },
+      "s-orange": {
+        "role": "tertiary",
+        "displayName": "Slip Orange Stock",
+        "canonical": "#ffddb8"
+      },
+      "s-gray": {
+        "role": "tertiary",
+        "displayName": "Slip Grey Stock",
+        "canonical": "#dfe5ec"
+      }
     },
     "typographyMeta": {
-      "display": { "displayName": "Display", "purpose": "Free text objects on the board. The largest type in the system, and it belongs to the user's content, not the interface." },
-      "body": { "displayName": "Body", "purpose": "Sticky note text." },
-      "shape-label": { "displayName": "Shape Label", "purpose": "Text inside a shape, centred and inset per shape geometry." },
-      "ui": { "displayName": "UI", "purpose": "Menu items, notices, toasts, frame titles, alt-text editor." },
-      "ui-small": { "displayName": "UI Small", "purpose": "Flyout items, connector labels, fallback and unknown object bodies." },
-      "record": { "displayName": "Record", "purpose": "Mono for records and measurement only: record line, panel subject and field labels, slider readings, shortcuts, wheel-mode value. 11px is the functional-text floor." }
+      "display": {
+        "displayName": "Display",
+        "purpose": "Free text objects on the board. The largest type in the system, and it belongs to the user's content, not the interface."
+      },
+      "body": {
+        "displayName": "Body",
+        "purpose": "Sticky note text."
+      },
+      "shape-label": {
+        "displayName": "Shape Label",
+        "purpose": "Text inside a shape, centred and inset per shape geometry."
+      },
+      "ui": {
+        "displayName": "UI",
+        "purpose": "Menu items, notices, toasts, frame titles, alt-text editor."
+      },
+      "ui-small": {
+        "displayName": "UI Small",
+        "purpose": "Flyout items, connector labels, fallback and unknown object bodies."
+      },
+      "record": {
+        "displayName": "Record",
+        "purpose": "Mono for records and measurement only: record line, panel subject and field labels, slider readings, shortcuts, wheel-mode value. 12px is the functional-text floor."
+      }
     },
     "shadows": [
-      { "name": "contact", "value": "0 1px 0 rgb(22 32 43 / 4%), 0 2px 8px rgb(22 32 43 / 7%)", "purpose": "Every piece of page apparatus: rail, record line, zoom cluster, record panel, menus, flyouts, notices, toasts. Deep enough to separate apparatus from the ruling, no deeper." },
-      { "name": "slip", "value": "0 1px 1px rgb(22 32 43 / 18%), 0 3px 7px rgb(22 32 43 / 14%)", "purpose": "The one place the world asks for physical depth: a placed object lying on the rule rather than printed into it. Shared so every object sits at one height." },
-      { "name": "pressed-index", "value": "0 1px 2px rgb(22 32 43 / 12%)", "purpose": "The selected item in a segmented control, lifted off its recessed desk-grey bed." }
+      {
+        "name": "contact",
+        "value": "0 1px 0 rgb(22 32 43 / 4%), 0 2px 8px rgb(22 32 43 / 7%)",
+        "purpose": "Every piece of page apparatus: rail, record line, zoom cluster, record panel, menus, flyouts, notices, toasts. Deep enough to separate apparatus from the ruling, no deeper."
+      },
+      {
+        "name": "slip",
+        "value": "0 1px 1px rgb(22 32 43 / 18%), 0 3px 7px rgb(22 32 43 / 14%)",
+        "purpose": "The one place the world asks for physical depth: a placed object lying on the rule rather than printed into it. Shared so every object sits at one height."
+      },
+      {
+        "name": "pressed-index",
+        "value": "0 1px 2px rgb(22 32 43 / 12%)",
+        "purpose": "The selected item in a segmented control, lifted off its recessed desk-grey bed."
+      }
     ],
     "motion": [
-      { "name": "tip-fade", "value": "opacity 110ms ease-out", "purpose": "The only transition in the system: a tool label fading in on hover or keyboard focus. Removed entirely under prefers-reduced-motion." }
+      {
+        "name": "ease",
+        "value": "cubic-bezier(0.16, 1, 0.3, 1)",
+        "purpose": "The one easing: a confident arrival with no overshoot. `--of-ease`."
+      },
+      {
+        "name": "quick",
+        "value": "140ms",
+        "purpose": "Feedback: hover and active beds, a swatch or cell ring arriving, a sheet raising 4px. `--of-quick`."
+      },
+      {
+        "name": "settle",
+        "value": "240ms",
+        "purpose": "The board ledger settling a row at a time on the front door, staggered 28ms and capped at six rows. `--of-settle`."
+      },
+      {
+        "name": "tip-fade",
+        "value": "opacity 110ms ease-out",
+        "purpose": "A tool label fading in on hover or keyboard focus. Not yet on the motion tokens."
+      },
+      {
+        "name": "took",
+        "value": "600ms",
+        "purpose": "A copied link acknowledged by an accent wash on the row it came from. Not yet on the motion tokens."
+      }
     ],
     "breakpoints": [
-      { "name": "compact", "value": "820px", "purpose": "Below this the bottom clusters collide: the record line un-offsets and drops its counts, the zoom cluster drops its slider." },
-      { "name": "narrow", "value": "560px", "purpose": "Below the rail's own footprint the record line moves above it entirely." }
+      {
+        "name": "compact",
+        "value": "820px",
+        "purpose": "Below this the bottom clusters collide: the record line un-offsets and drops its counts, the zoom cluster drops its slider."
+      },
+      {
+        "name": "narrow",
+        "value": "560px",
+        "purpose": "Below the rail's own footprint the record line moves above it entirely."
+      }
     ],
     "world": [
-      { "name": "grid-size", "value": "10 world units", "purpose": "The fine rule and the unit snapping lands on." },
-      { "name": "min-rule-zoom", "value": "0.7", "purpose": "Below this the fine rule stops painting." },
-      { "name": "min-decade-zoom", "value": "0.12", "purpose": "Below this the decade rule becomes the century rule (1000 world units), so the page is ruled at every reachable zoom." },
-      { "name": "zoom-steps", "value": "0.05, 0.1, 0.25, 0.5, 0.75, 1, 1.5, 2, 3, 4, 8, 16", "purpose": "The zoom ladder the ruled ground must survive at every step." }
+      {
+        "name": "grid-size",
+        "value": "10 world units",
+        "purpose": "The fine rule and the unit snapping lands on."
+      },
+      {
+        "name": "min-rule-zoom",
+        "value": "0.7",
+        "purpose": "Below this the fine rule stops painting."
+      },
+      {
+        "name": "min-decade-zoom",
+        "value": "0.12",
+        "purpose": "Below this the decade rule becomes the century rule (1000 world units), so the page is ruled at every reachable zoom."
+      },
+      {
+        "name": "zoom-steps",
+        "value": "0.05, 0.1, 0.25, 0.5, 0.75, 1, 1.5, 2, 3, 4, 8, 16",
+        "purpose": "The zoom ladder the ruled ground must survive at every step."
+      }
     ]
   },
   "components": [
@@ -129,9 +450,9 @@
       "name": "Tool",
       "kind": "button",
       "refersTo": "tool",
-      "description": "A creation tool in the left margin rail. 40px square because a tool reached for constantly deserves more than the 24px AA target floor.",
+      "description": "A creation tool in the left margin rail. 50px square because a tool reached for constantly deserves more than the 24px AA target floor.",
       "html": "<button class=\"ds-tool ds-tool--active\" aria-label=\"Sticky\"><svg viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.6\" stroke-linecap=\"round\" stroke-linejoin=\"round\" aria-hidden=\"true\"><path d=\"M4.5 4.5h15v9.5L14 19.5H4.5z\"/><path d=\"M19.5 14H14v5.5\"/></svg></button>",
-      "css": ".ds-tool { position: relative; display: grid; place-items: center; width: 40px; height: 40px; font: inherit; color: var(--of-ink-muted, #4e6070); background: transparent; border: none; border-radius: 8px; cursor: pointer; } .ds-tool svg { width: 21px; height: 21px; } .ds-tool:hover:not(:disabled) { color: var(--of-ink, #16202b); background: var(--of-accent-soft, #e4ecfa); } .ds-tool--active { color: var(--of-accent, #1450b5); background: var(--of-accent-soft, #e4ecfa); } .ds-tool:focus-visible { outline: 2px solid var(--of-accent, #1450b5); outline-offset: 2px; } .ds-tool:disabled { opacity: 0.35; cursor: default; }"
+      "css": ".ds-tool { position: relative; display: grid; place-items: center; width: 50px; height: 50px; font: inherit; color: var(--of-ink-muted, #4e6070); background: transparent; border: none; border-radius: 8px; cursor: pointer; } .ds-tool svg { width: 21px; height: 21px; } .ds-tool:hover:not(:disabled) { color: var(--of-ink, #16202b); background: var(--of-accent-soft, #e4ecfa); } .ds-tool--active { color: var(--of-accent, #1450b5); background: var(--of-accent-soft, #e4ecfa); } .ds-tool:focus-visible { outline: 2px solid var(--of-accent, #1450b5); outline-offset: 2px; } .ds-tool:disabled { opacity: 0.35; cursor: default; }"
     },
     {
       "name": "Tool Rail",
@@ -139,7 +460,7 @@
       "refersTo": "rail",
       "description": "The creation-only rail in the left margin gutter. Page stock with a hairline margin rule, not a white card hovering over the board.",
       "html": "<div class=\"ds-rail\" role=\"toolbar\" aria-label=\"Board tools\"><button class=\"ds-rail-tool ds-rail-tool--active\" aria-label=\"Select\"><svg viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.6\" stroke-linecap=\"round\" stroke-linejoin=\"round\" aria-hidden=\"true\"><path d=\"M5 3l6.5 16 2.2-6.3L20 10.5 5 3z\"/></svg></button><button class=\"ds-rail-tool\" aria-label=\"Hand\"><svg viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.6\" stroke-linecap=\"round\" stroke-linejoin=\"round\" aria-hidden=\"true\"><path d=\"M9 11V5.5a1.5 1.5 0 013 0V11m0-1.5V4.8a1.5 1.5 0 013 0V11m0-1.2a1.5 1.5 0 013 0V15a6 6 0 01-6 6h-1a6 6 0 01-6-6v-3a1.5 1.5 0 013 0\"/></svg></button><div class=\"ds-rail-rule\"></div><button class=\"ds-rail-tool\" aria-label=\"Insert image\"><svg viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.6\" stroke-linecap=\"round\" stroke-linejoin=\"round\" aria-hidden=\"true\"><rect x=\"3.5\" y=\"5\" width=\"17\" height=\"14\" rx=\"1.5\"/><path d=\"M3.5 15.5l4.5-4 4 3.5 3.5-3 5 4.5\"/><circle cx=\"9\" cy=\"9.5\" r=\"1.3\"/></svg></button></div>",
-      "css": ".ds-rail { display: inline-flex; flex-direction: column; gap: 2px; padding: 5px 4px; background: var(--of-page, #f7f9fb); border: 1px solid var(--of-panel-border, #c7d2de); border-radius: 4px; box-shadow: 0 1px 0 rgb(22 32 43 / 4%), 0 2px 8px rgb(22 32 43 / 7%); } .ds-rail-rule { height: 1px; margin: 6px 4px; background: var(--of-panel-border, #c7d2de); } .ds-rail-tool { display: grid; place-items: center; width: 40px; height: 40px; color: var(--of-ink-muted, #4e6070); background: transparent; border: none; border-radius: 8px; cursor: pointer; } .ds-rail-tool svg { width: 21px; height: 21px; } .ds-rail-tool:hover { color: var(--of-ink, #16202b); background: var(--of-accent-soft, #e4ecfa); } .ds-rail-tool--active { color: var(--of-accent, #1450b5); background: var(--of-accent-soft, #e4ecfa); } .ds-rail-tool:focus-visible { outline: 2px solid var(--of-accent, #1450b5); outline-offset: 2px; }"
+      "css": ".ds-rail { display: inline-flex; flex-direction: column; gap: 2px; padding: 5px 4px; background: var(--of-page, #f7f9fb); border: 1px solid var(--of-panel-border, #c7d2de); border-radius: 4px; box-shadow: 0 1px 0 rgb(22 32 43 / 4%), 0 2px 8px rgb(22 32 43 / 7%); } .ds-rail-rule { height: 1px; margin: 6px 4px; background: var(--of-panel-border, #c7d2de); } .ds-rail-tool { display: grid; place-items: center; width: 50px; height: 50px; color: var(--of-ink-muted, #4e6070); background: transparent; border: none; border-radius: 8px; cursor: pointer; } .ds-rail-tool svg { width: 21px; height: 21px; } .ds-rail-tool:hover { color: var(--of-ink, #16202b); background: var(--of-accent-soft, #e4ecfa); } .ds-rail-tool--active { color: var(--of-accent, #1450b5); background: var(--of-accent-soft, #e4ecfa); } .ds-rail-tool:focus-visible { outline: 2px solid var(--of-accent, #1450b5); outline-offset: 2px; }"
     },
     {
       "name": "Tool Tip",
@@ -147,23 +468,23 @@
       "refersTo": "tool-tip",
       "description": "The tool's label as a tooltip rather than a standing caption. Appears on hover AND keyboard focus; a tooltip only a mouse can summon is not a label.",
       "html": "<span class=\"ds-tip\">Sticky <kbd>S</kbd></span>",
-      "css": ".ds-tip { display: inline-flex; gap: 7px; align-items: center; padding: 5px 8px; font-family: ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif; font-size: 12px; line-height: 1; color: var(--of-page, #f7f9fb); white-space: nowrap; background: var(--of-ink, #16202b); border-radius: 6px; } .ds-tip kbd { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size: 11px; color: var(--of-rule-decade, #c9d6e4); }"
+      "css": ".ds-tip { display: inline-flex; gap: 7px; align-items: center; padding: 5px 8px; font-family: ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif; font-size: 12px; line-height: 1; color: var(--of-page, #f7f9fb); white-space: nowrap; background: var(--of-ink, #16202b); border-radius: 6px; } .ds-tip kbd { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size: 12px; color: var(--of-rule-decade, #c9d6e4); }"
     },
     {
       "name": "Record Line",
       "kind": "custom",
       "refersTo": "status",
-      "description": "The bottom-left readout: history actions, ruled dividers, counts, zoom and the AGPL source link. All 11px mono with tabular numerals.",
+      "description": "The bottom-left readout: history actions, ruled dividers, counts, zoom and the AGPL source link. All 12px mono with tabular numerals.",
       "html": "<div class=\"ds-status\"><div class=\"ds-status-history\"><button class=\"ds-status-action\" aria-label=\"Undo\"><svg viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.6\" stroke-linecap=\"round\" stroke-linejoin=\"round\" aria-hidden=\"true\"><path d=\"M4 9h11a5 5 0 010 10h-4\"/><path d=\"M8 5L4 9l4 4\"/></svg></button><button class=\"ds-status-action\" disabled aria-label=\"Redo\"><svg viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.6\" stroke-linecap=\"round\" stroke-linejoin=\"round\" aria-hidden=\"true\"><path d=\"M20 9H9a5 5 0 000 10h4\"/><path d=\"M16 5l4 4-4 4\"/></svg></button></div><span class=\"ds-status-rule\"></span><span><b>6</b> objects</span><span><b>1</b> selected</span><span>100%</span><span class=\"ds-status-rule\"></span><a class=\"ds-status-source\" href=\"#\">Source</a></div>",
-      "css": ".ds-status { display: inline-flex; gap: 10px; align-items: center; padding: 4px 10px 4px 5px; font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size: 11px; font-variant-numeric: tabular-nums; color: var(--of-ink-muted, #4e6070); background: var(--of-page, #f7f9fb); border: 1px solid var(--of-panel-border, #c7d2de); border-radius: 4px; box-shadow: 0 1px 0 rgb(22 32 43 / 4%), 0 2px 8px rgb(22 32 43 / 7%); } .ds-status b { font-weight: 600; color: var(--of-ink, #16202b); } .ds-status-history { display: flex; gap: 2px; } .ds-status-rule { width: 1px; height: 14px; background: var(--of-panel-border, #c7d2de); } .ds-status-action { display: grid; place-items: center; width: 26px; height: 26px; color: var(--of-ink-muted, #4e6070); background: transparent; border: none; border-radius: 6px; cursor: pointer; } .ds-status-action svg { width: 16px; height: 16px; } .ds-status-action:hover:not(:disabled) { color: var(--of-ink, #16202b); background: var(--of-bg, #eef2f6); } .ds-status-action:disabled { opacity: 0.3; cursor: default; } .ds-status-source { color: inherit; text-decoration: none; border-bottom: 1px solid currentcolor; } .ds-status-source:hover { color: var(--of-accent, #1450b5); }"
+      "css": ".ds-status { display: inline-flex; gap: 10px; align-items: center; padding: 4px 10px 4px 5px; font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size: 12px; font-variant-numeric: tabular-nums; color: var(--of-ink-muted, #4e6070); background: var(--of-page, #f7f9fb); border: 1px solid var(--of-panel-border, #c7d2de); border-radius: 4px; box-shadow: 0 1px 0 rgb(22 32 43 / 4%), 0 2px 8px rgb(22 32 43 / 7%); } .ds-status b { font-weight: 600; color: var(--of-ink, #16202b); } .ds-status-history { display: flex; gap: 2px; } .ds-status-rule { width: 1px; height: 14px; background: var(--of-panel-border, #c7d2de); } .ds-status-action { display: grid; place-items: center; width: 26px; height: 26px; color: var(--of-ink-muted, #4e6070); background: transparent; border: none; border-radius: 6px; cursor: pointer; } .ds-status-action svg { width: 16px; height: 16px; } .ds-status-action:hover:not(:disabled) { color: var(--of-ink, #16202b); background: var(--of-bg, #eef2f6); } .ds-status-action:disabled { opacity: 0.3; cursor: default; } .ds-status-source { color: inherit; text-decoration: none; border-bottom: 1px solid currentcolor; } .ds-status-source:hover { color: var(--of-accent, #1450b5); }"
     },
     {
       "name": "Record Panel",
       "kind": "card",
       "refersTo": "inspector",
-      "description": "The signature component. A 276px panel that floats beside the selection and exists only while something is selected; its fields come from the registry's capabilities.styleProps, never a hardcoded list.",
+      "description": "The signature component. A 360px panel that floats beside the selection and exists only while something is selected; its fields come from the registry's capabilities.styleProps, never a hardcoded list.",
       "html": "<div class=\"ds-inspector\"><div class=\"ds-inspector-head\"><span class=\"ds-inspector-subject\">shape</span><button class=\"ds-inspector-remove\" aria-label=\"Delete\"><svg viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.6\" stroke-linecap=\"round\" stroke-linejoin=\"round\" aria-hidden=\"true\"><path d=\"M5 7h14\"/><path d=\"M9 7V5h6v2\"/><path d=\"M7 7l1 12h8l1-12\"/></svg></button></div><div class=\"ds-field\"><span class=\"ds-field-label\">colour</span><div class=\"ds-field-control\"><div class=\"ds-swatches\"><button class=\"ds-swatch ds-swatch--on\" style=\"background:#dfe5ec\" aria-label=\"Grey\"></button><button class=\"ds-swatch\" style=\"background:#ffe9a3\" aria-label=\"Yellow\"></button><button class=\"ds-swatch\" style=\"background:#bff0d4\" aria-label=\"Green\"></button><button class=\"ds-swatch\" style=\"background:#cfe2ff\" aria-label=\"Blue\"></button></div></div></div><div class=\"ds-field\"><span class=\"ds-field-label\">opacity</span><div class=\"ds-field-control\"><div class=\"ds-slider\"><input type=\"range\" value=\"100\" aria-label=\"Opacity\"><span class=\"ds-reading\">100%</span></div></div></div></div>",
-      "css": ".ds-inspector { width: 276px; display: flex; flex-direction: column; gap: 2px; padding: 9px 10px 11px; font-family: ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif; font-variant-numeric: tabular-nums; background: var(--of-panel, #fff); border: 1px solid var(--of-panel-border, #c7d2de); border-radius: 6px; box-shadow: 0 1px 0 rgb(22 32 43 / 4%), 0 2px 8px rgb(22 32 43 / 7%); } .ds-inspector-head { display: flex; gap: 8px; align-items: center; justify-content: space-between; padding-bottom: 7px; margin-bottom: 5px; border-bottom: 1px solid var(--of-panel-border, #c7d2de); } .ds-inspector-subject { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 11px; color: var(--of-ink, #16202b); text-transform: lowercase; letter-spacing: 0.02em; } .ds-inspector-remove { display: grid; place-items: center; width: 26px; height: 26px; color: var(--of-ink-muted, #4e6070); background: transparent; border: none; border-radius: 6px; cursor: pointer; } .ds-inspector-remove svg { width: 16px; height: 16px; } .ds-inspector-remove:hover { color: var(--of-danger, #a3231b); background: #fbeceb; } .ds-field { display: grid; grid-template-columns: 52px 1fr; gap: 8px; align-items: center; min-height: 30px; } .ds-field-label { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 11px; color: var(--of-ink-muted, #4e6070); text-align: right; letter-spacing: 0.02em; } .ds-field-control { display: flex; align-items: center; } .ds-swatches { display: flex; gap: 4px; } .ds-swatch { width: 24px; height: 24px; padding: 0; border: 1px solid var(--of-control-border, #758596); border-radius: 2px; cursor: pointer; } .ds-swatch:hover { border-color: var(--of-ink, #16202b); } .ds-swatch--on { border-color: var(--of-ink, #16202b); box-shadow: inset 0 0 0 2px var(--of-panel, #fff); } .ds-slider { display: flex; gap: 8px; align-items: center; width: 100%; } .ds-slider input[type='range'] { flex: 1; min-width: 0; appearance: none; height: 18px; background: transparent; cursor: pointer; } .ds-slider input[type='range']::-webkit-slider-runnable-track { height: 3px; background: var(--of-rule-decade, #c9d6e4); border-radius: 0; } .ds-slider input[type='range']::-moz-range-track { height: 3px; background: var(--of-rule-decade, #c9d6e4); border-radius: 0; } .ds-slider input[type='range']::-webkit-slider-thumb { appearance: none; width: 4px; height: 14px; margin-top: -5px; background: var(--of-ink, #16202b); border: none; border-radius: 1px; } .ds-slider input[type='range']::-moz-range-thumb { width: 4px; height: 14px; background: var(--of-ink, #16202b); border: none; border-radius: 1px; } .ds-reading { min-width: 36px; font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 11px; color: var(--of-ink-muted, #4e6070); text-align: right; }"
+      "css": ".ds-inspector { width: 360px; display: flex; flex-direction: column; gap: 2px; padding: 10px; font-family: ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif; font-variant-numeric: tabular-nums; background: var(--of-panel, #fff); border: 1px solid var(--of-panel-border, #c7d2de); border-radius: 10px; box-shadow: 0 1px 0 rgb(22 32 43 / 4%), 0 2px 8px rgb(22 32 43 / 7%); } .ds-inspector-head { display: flex; gap: 8px; align-items: center; justify-content: space-between; padding-bottom: 7px; margin-bottom: 5px; border-bottom: 1px solid var(--of-panel-border, #c7d2de); } .ds-inspector-subject { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 12px; color: var(--of-ink, #16202b); text-transform: lowercase; letter-spacing: 0.02em; } .ds-inspector-remove { display: grid; place-items: center; width: 26px; height: 26px; color: var(--of-ink-muted, #4e6070); background: transparent; border: none; border-radius: 6px; cursor: pointer; } .ds-inspector-remove svg { width: 16px; height: 16px; } .ds-inspector-remove:hover { color: var(--of-danger, #a3231b); background: #fbeceb; } .ds-field { display: grid; grid-template-columns: 82px 1fr; gap: 8px; align-items: center; min-height: 30px; } .ds-field-label { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 12px; color: var(--of-ink-muted, #4e6070); text-align: right; letter-spacing: 0.02em; } .ds-field-control { display: flex; align-items: center; } .ds-swatches { display: flex; gap: 4px; } .ds-swatch { width: 24px; height: 24px; padding: 0; border: 1px solid var(--of-control-border, #758596); border-radius: 2px; cursor: pointer; } .ds-swatch:hover { border-color: var(--of-ink, #16202b); } .ds-swatch--on { border-color: var(--of-ink, #16202b); box-shadow: inset 0 0 0 2px var(--of-panel, #fff); } .ds-slider { display: flex; gap: 8px; align-items: center; width: 100%; } .ds-slider input[type='range'] { flex: 1; min-width: 0; appearance: none; height: 18px; background: transparent; cursor: pointer; } .ds-slider input[type='range']::-webkit-slider-runnable-track { height: 3px; background: var(--of-rule-decade, #c9d6e4); border-radius: 0; } .ds-slider input[type='range']::-moz-range-track { height: 3px; background: var(--of-rule-decade, #c9d6e4); border-radius: 0; } .ds-slider input[type='range']::-webkit-slider-thumb { appearance: none; width: 4px; height: 14px; margin-top: -5px; background: var(--of-ink, #16202b); border: none; border-radius: 1px; } .ds-slider input[type='range']::-moz-range-thumb { width: 4px; height: 14px; background: var(--of-ink, #16202b); border: none; border-radius: 1px; } .ds-reading { min-width: 36px; font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 12px; color: var(--of-ink-muted, #4e6070); text-align: right; }"
     },
     {
       "name": "Segmented Choice",
@@ -187,7 +508,7 @@
       "refersTo": "menu",
       "description": "Board context menu: panel white over the ruling, grouped by hairline margin rules, shortcuts in muted mono.",
       "html": "<div class=\"ds-menu\" role=\"menu\"><div class=\"ds-menu-group\"><button class=\"ds-menu-item\">Bring to front<span class=\"ds-menu-shortcut\">]</span></button><button class=\"ds-menu-item\">Send to back<span class=\"ds-menu-shortcut\">[</span></button></div><div class=\"ds-menu-group\"><button class=\"ds-menu-item\">Group<span class=\"ds-menu-shortcut\">⌘G</span></button><button class=\"ds-menu-item\" disabled>Ungroup<span class=\"ds-menu-shortcut\">⇧⌘G</span></button></div></div>",
-      "css": ".ds-menu { min-width: 196px; padding: 5px; font-family: ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif; background: var(--of-panel, #fff); border: 1px solid var(--of-panel-border, #c7d2de); border-radius: 10px; box-shadow: 0 1px 0 rgb(22 32 43 / 4%), 0 2px 8px rgb(22 32 43 / 7%); } .ds-menu-group + .ds-menu-group { margin-top: 4px; padding-top: 4px; border-top: 1px solid var(--of-panel-border, #c7d2de); } .ds-menu-item { display: flex; gap: 16px; align-items: center; justify-content: space-between; width: 100%; padding: 6px 9px; font: inherit; font-size: 13px; color: var(--of-ink, #16202b); text-align: left; background: transparent; border: none; border-radius: 6px; cursor: pointer; } .ds-menu-item:hover:not(:disabled) { background: var(--of-accent-soft, #e4ecfa); } .ds-menu-item:disabled { opacity: 0.38; cursor: default; } .ds-menu-shortcut { font-size: 11px; color: var(--of-ink-muted, #4e6070); }"
+      "css": ".ds-menu { min-width: 196px; padding: 5px; font-family: ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif; background: var(--of-panel, #fff); border: 1px solid var(--of-panel-border, #c7d2de); border-radius: 10px; box-shadow: 0 1px 0 rgb(22 32 43 / 4%), 0 2px 8px rgb(22 32 43 / 7%); } .ds-menu-group + .ds-menu-group { margin-top: 4px; padding-top: 4px; border-top: 1px solid var(--of-panel-border, #c7d2de); } .ds-menu-item { display: flex; gap: 16px; align-items: center; justify-content: space-between; width: 100%; padding: 6px 9px; font: inherit; font-size: 13px; color: var(--of-ink, #16202b); text-align: left; background: transparent; border: none; border-radius: 6px; cursor: pointer; } .ds-menu-item:hover:not(:disabled) { background: var(--of-accent-soft, #e4ecfa); } .ds-menu-item:disabled { opacity: 0.38; cursor: default; } .ds-menu-shortcut { font-size: 12px; color: var(--of-ink-muted, #4e6070); }"
     },
     {
       "name": "Index Slip (Sticky)",
@@ -219,36 +540,95 @@
       "WCAG 2.2 AA enforced against the stylesheet by a build test"
     ],
     "rules": [
-      { "name": "The Ground Is Not A Control Rule", "body": "The quadrille is ruled below the 3:1 non-text floor on purpose, and the build asserts a ceiling as well as a floor: the fine rule stays under 2:1 against the page and the decade rule between 1.2:1 and 2.5:1. Ground you cannot ignore is a cage the content has to fight. A future \"improve contrast\" pass must not raise it.", "section": "colors" },
-      { "name": "The One Red Rule", "body": "There is exactly one corrective red in the world. Content red is held more than 30 units of sRGB distance away from it, because when the two sat close a red slip on the page read as a correction mark and the record panel offered the correction hue as an ordinary choice.", "section": "colors" },
-      { "name": "The Token Name Rule", "body": "Documents store token names, never colour values. The one place a name becomes a CSS variable is scene/style-tokens.ts. This is load-bearing: a theme can change without touching a single saved board, and any restyle must preserve it.", "section": "colors" },
-      { "name": "The Never-Black Rule", "body": "Ink carries a blue cast and never reaches #000000; the build fails if the blue and red channels of ink are within 4 of each other.", "section": "colors" },
-      { "name": "The Eleven Pixel Floor", "body": "11px is the smallest functional text in the system, shortcuts and readouts included. Nothing a user must read goes below it.", "section": "typography" },
-      { "name": "The Mono Is A Record Rule", "body": "Mono marks records and measurement — counts, zoom, field values, shortcuts — and nothing else. It is never applied to make something look technical.", "section": "typography" },
-      { "name": "The No Request Rule", "body": "No webfont, ever. Local-first means the page loads with no font fetch; the system sans and system mono stacks are the faces.", "section": "typography" },
-      { "name": "The Board Is The Product Rule", "body": "Chrome occupies margins and corners only. No standing panel taxes board space for something that is only relevant while something is selected.", "section": "layout" },
-      { "name": "The Apparatus Rule", "body": "Chrome is page apparatus, never a floating card. It takes the page's own stock, a hairline margin rule and the contact shadow. A white capsule with a heavy blur over the board is the failure mode this world exists to refuse.", "section": "elevation" },
-      { "name": "The One Slip Height Rule", "body": "Every placed object shares the one slip shadow, so everything on the board sits at the same height above the rule.", "section": "elevation" },
-      { "name": "The Never-Void Rule", "body": "With only two weights both dropped out below 12% and the board became a flat, unruled void — the neutral canvas this design exists to refuse, appearing exactly when someone zooms out to survey the whole record. The ground must survive every step of the zoom ladder.", "section": "layout" }
+      {
+        "name": "The Ground Is Not A Control Rule",
+        "body": "The quadrille is ruled below the 3:1 non-text floor on purpose, and the build asserts a *ceiling* as well as a floor: the fine rule stays under 2:1 against the page and the decade rule between 1.2:1 and 2.5:1. Ground you cannot ignore is a cage the content has to fight. A future \"improve contrast\" pass must not raise it.",
+        "section": "colors"
+      },
+      {
+        "name": "The One Red Rule",
+        "body": "There is exactly one corrective red in the world. Content red is held more than 30 units of sRGB distance away from it, because when the two sat close a red slip on the page read as a correction mark and the record panel offered the correction hue as an ordinary choice.",
+        "section": "colors"
+      },
+      {
+        "name": "The Token Name Rule",
+        "body": "Documents store token *names*, never colour values. The one place a name becomes a CSS variable is `scene/style-tokens.ts`. This is load-bearing: a theme can change without touching a single saved board, and any restyle must preserve it.",
+        "section": "colors"
+      },
+      {
+        "name": "The Never-Black Rule",
+        "body": "Ink carries a blue cast and never reaches `#000000`; the build fails if the blue and red channels of ink are within 4 of each other.",
+        "section": "colors"
+      },
+      {
+        "name": "The Twelve Pixel Floor",
+        "body": "12px is the smallest functional text in the system, shortcuts and readouts included. Nothing a user must read goes below it. It was eleven until 2026-09-19; a floor is the least you will accept, and this one had become the size of nearly everything, which is a different thing.",
+        "section": "typography"
+      },
+      {
+        "name": "The Mono Is A Record Rule",
+        "body": "Mono marks records and measurement — counts, zoom, field values, shortcuts — and nothing else. It is never applied to make something look technical.",
+        "section": "typography"
+      },
+      {
+        "name": "The No Request Rule",
+        "body": "No webfont, ever. Local-first means the page loads with no font fetch; the stacks above are the faces.",
+        "section": "typography"
+      },
+      {
+        "name": "The interface sits on the page's own rule",
+        "body": "`GRID_SIZE` is 10 world units and the quadrille draws it, so the chrome measures itself in the same steps — every height and offset is a multiple of ten. A control's edge lands where a rule does, and the apparatus shares the rhythm of the thing it sits on instead of floating at sizes nobody chose.",
+        "section": "layout"
+      },
+      {
+        "name": "The Board Is The Product Rule",
+        "body": "Chrome occupies margins and corners only. No standing panel taxes board space for something that is only relevant while something is selected.",
+        "section": "layout"
+      },
+      {
+        "name": "The Apparatus Rule",
+        "body": "Chrome is page apparatus, never a floating card. It takes the page's own stock, a hairline margin rule and the contact shadow. A white capsule with a heavy blur over the board is the failure mode this world exists to refuse.",
+        "section": "elevation"
+      },
+      {
+        "name": "The One Slip Height Rule",
+        "body": "Every placed object shares the one slip shadow, so everything on the board sits at the same height above the rule.",
+        "section": "elevation"
+      },
+      {
+        "name": "The Reduced Motion Rule",
+        "body": "Reduced motion means fewer and gentler, not none. Under the preference every moving animation is re-pointed at a fade; the colour and opacity that carry FEEDBACK stay. An interface that stops acknowledging a copied link under that setting has traded an accessibility preference for a loss of information. `motion.test.ts` asserts it against the real stylesheet — and reads every `prefers-reduced-motion` block, having first been written to read only the first one, which was the tool tip's.",
+        "section": "motion"
+      },
+      {
+        "name": "Nothing loops",
+        "body": "There is no idle animation anywhere in this product.",
+        "section": "motion"
+      },
+      {
+        "name": "The Never-Void Rule",
+        "body": "With only two weights both dropped out below 12% and the board became a flat, unruled void — the neutral canvas this design exists to refuse, appearing exactly when someone zooms out to survey the whole record. The ground must survive every step of the zoom ladder.",
+        "section": "layout"
+      }
     ],
     "dos": [
-      "Do cut chrome from the page's own stock (page) with a 1px panel-border margin rule and the contact shadow. Apparatus, never a floating card.",
-      "Do store token names in documents and resolve them through scene/style-tokens.ts. A restyle must never require touching a saved board.",
+      "Do cut chrome from the page's own stock (`page`) with a 1px `panel-border` margin rule and the contact shadow. Apparatus, never a floating card.",
+      "Do store token *names* in documents and resolve them through `scene/style-tokens.ts`. A restyle must never require touching a saved board.",
       "Do keep the quadrille below the 3:1 floor, and keep the build test that asserts that ceiling.",
-      "Do reserve danger for destructive and corrective meaning, and keep any new content hue more than 30 sRGB units clear of it.",
+      "Do reserve `danger` for destructive and corrective meaning, and keep any new content hue more than 30 sRGB units clear of it.",
       "Do use mono only for records and measurement — counts, zoom, field values, shortcuts.",
-      "Do hold functional text at 11px or above, and pointer targets at 24px or above (40px for tools reached for constantly).",
-      "Do let new record-panel fields arrive through the registry's capabilities.styleProps.",
+      "Do hold functional text at 12px or above, and pointer targets at 30px or above (50px for tools reached for constantly). The floors moved with the scale; 11px and 24px were the old ones.",
+      "Do let new record-panel fields arrive through the registry's `capabilities.styleProps`.",
       "Do give every placed object the one shared slip shadow, so the board sits at one height.",
       "Do make tooltips reachable from keyboard focus as well as hover.",
-      "Do draw new icons on the 24×24 grid at 1.6 stroke weight with currentColor."
+      "Do draw new icons on the 24×24 grid at 1.6 stroke weight with `currentColor`."
     ],
     "donts": [
       "Don't use cream, parchment, serif display faces, handwriting, paper texture or torn edges. The register is the computation pad, not the diary.",
       "Don't float white capsules with heavy blur over the board.",
       "Don't add a webfont. Local-first forbids a font request.",
       "Don't use pure black as ink, or a neutral near-black; ink carries a blue cast.",
-      "Don't use danger or guide decoratively.",
+      "Don't use `danger` or `guide` decoratively.",
       "Don't ship a saturated filled slider track with a large round knob; sliders are thin tracks with a square index.",
       "Don't raise the quadrille toward the control floor in a contrast pass.",
       "Don't add a standing panel that occupies board space when nothing is selected.",

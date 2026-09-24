@@ -459,12 +459,16 @@ describe('no colour literals outside the token block', () => {
 /**
  * The record panel's columns have to add up.
  *
- * Its width was chosen so all seven colour swatches sit on ONE row, and the
- * swatches live in the control column — so the label column is spending the
- * same budget. Widening labels (which had to happen: they come from the
- * registry now, and "participant" was being clipped to "participa") silently
- * takes space from the swatches, and a wrapped 5 + 2 swatch row reads as an
- * accident rather than a grid.
+ * Its width was chosen so a full row of the swatch grid fits, and the swatches
+ * live in the control column — so the label column is spending the same
+ * budget. Widening labels (which had to happen: they come from the registry
+ * now, and "participant" was being clipped to "participa") silently takes
+ * space from the swatches, and a grid that wraps short of its own column count
+ * reads as an accident rather than a palette.
+ *
+ * The column count is read from the grid rather than written here. This test
+ * was named for SEVEN swatches after the palette had become a 6×2 grid, so it
+ * went on proving room for a row that no longer existed.
  *
  * The numbers live in two files — the panel's width in `Inspector.tsx`, the
  * columns in the stylesheet — so nothing but arithmetic connects them. This is
@@ -496,7 +500,7 @@ describe('the record panel fits what it promises to show', () => {
     return literal
   }
 
-  it('leaves room for seven swatches on one row', () => {
+  it('leaves room for a full row of the swatch grid', () => {
     const inspector = readFileSync(resolve(process.cwd(), 'src/ui/Inspector.tsx'), 'utf8')
     const widthMatch = /const PANEL_WIDTH = (\d+)/.exec(inspector)
     expect(widthMatch?.[1]).toBeDefined()
@@ -508,16 +512,58 @@ describe('the record panel fits what it promises to show', () => {
 
     const labelColumn = read(String.raw`\.of-field \{[^}]*grid-template-columns:\s*SIZE`)
     const columnGap = read(String.raw`\.of-field \{[^}]*\n\s*gap:\s*SIZE`)
-    const swatch = read(String.raw`\.of-swatch \{[^}]*\n\s*width:\s*SIZE`)
+    const columns = /\.of-swatches \{[^}]*grid-template-columns:\s*repeat\((\d+),/.exec(CSS)?.[1]
+    expect(columns).toBeDefined()
+    const perRow = Number(columns)
+    const swatch = read(String.raw`\.of-swatches \{[^}]*grid-template-columns:\s*repeat\(\d+,\s*SIZE`)
     const swatchGap = read(String.raw`\.of-swatches \{[^}]*gap:\s*SIZE`)
     const sidePadding = read(String.raw`\.of-inspector \{[^}]*\n\s*padding:\s*SIZE`)
     // The panel's own 1px border, both sides.
     const border = 2
 
     const control = panelWidth - border - sidePadding * 2 - labelColumn - columnGap
-    const swatchRow = swatch * 7 + swatchGap * 6
+    const swatchRow = swatch * perRow + swatchGap * (perRow - 1)
 
     expect(swatchRow).toBeLessThanOrEqual(control)
+  })
+})
+
+/**
+ * The Twelve Pixel Floor (DESIGN.md, CLAUDE.md rule 22).
+ *
+ * Nothing a user must read is set below 12px — shortcuts, field labels,
+ * readouts, counts. The floor was written down at 12 while 27 rules sat at 11,
+ * because a floor that lives only in prose is a floor nothing measures.
+ *
+ * Relative sizes (`em`) are the rich-text scale inside an object and belong to
+ * the user's content, so only absolute pixel sizes are read here.
+ */
+describe('the twelve pixel floor', () => {
+  const FLOOR = 12
+  /**
+   * The one exemption: the text format bar shows each size step AT its own
+   * size, so the small step's glyph is a specimen of small type rather than a
+   * label anyone reads — the button carries its name for assistive tech.
+   */
+  const SPECIMENS = new Set(['.of-size--small'])
+
+  it('sets no functional text below 12px', () => {
+    const source = CSS.replace(/\/\*[\s\S]*?\*\//g, '')
+    const below: string[] = []
+    for (const [, selector = '', body = ''] of source.matchAll(/([^{}]+)\{([^{}]*)\}/g)) {
+      const name = selector.trim()
+      if (SPECIMENS.has(name)) continue
+      for (const [, size = ''] of body.matchAll(/font-size:\s*([\d.]+)px/g)) {
+        if (Number(size) < FLOOR) below.push(`${name}: ${size}px`)
+      }
+    }
+    expect(below).toEqual([])
+  })
+
+  it('exempts only the specimen, and only while it exists', () => {
+    for (const selector of SPECIMENS) {
+      expect(CSS).toContain(`${selector} {`)
+    }
   })
 })
 

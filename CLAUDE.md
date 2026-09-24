@@ -327,8 +327,12 @@ rule is neither, so it sits below 3:1 on purpose and the test asserts that
 CEILING as well: a later "improve contrast" pass would otherwise turn the ground
 into a cage the content has to fight.
 
-Functional text has an 11px floor. That covers shortcuts, field labels and
-readouts; only non-interactive legal smallprint gets less.
+Functional text has a 12px floor. That covers shortcuts, field labels and
+readouts, and the same file measures it: no absolute `font-size` in the
+stylesheet goes below 12px. The one exemption is a specimen — the format bar's
+small-size button, drawn AT the size it applies. The floor was eleven until the
+interface scale moved onto the quadrille, and DESIGN.md said twelve for a week
+while 27 rules still said eleven, because nothing read the stylesheet.
 
 ### 23. Break a new architectural rule once, and watch it fail
 
@@ -507,7 +511,7 @@ that hold functions use property syntax (`readonly create: (…) => …`) rather
 method shorthand, because methods are bivariant and properties are not.
 
 **Files** — one object type per folder in `core/src/types/` and
-`web/src/canvas/views/`. A new registry entry is justified by different
+`web/src/views/`. A new registry entry is justified by different
 BEHAVIOUR, not different appearance: the four shape variants are one `shape`
 type with a discriminant, while `text` and `sticky` are separate because they
 mean different things. Components stay small; if `Canvas.tsx` starts growing
@@ -526,8 +530,8 @@ specific failure. Do not narrate what the code already says.
 1. `packages/core/src/types/<name>/schema.ts` — Zod schema and TS type
 2. `packages/core/src/types/<name>/definition.ts` — `defineObjectType({...})`
 3. Register in `packages/core/src/types/index.ts` — one line
-4. `apps/web/src/canvas/views/<Name>View.tsx` — `defineObjectView({...})`
-5. Register in `apps/web/src/canvas/views/index.ts` — one line
+4. `apps/web/src/views/<Name>View.tsx` — `defineObjectView({...})`
+5. Register in `apps/web/src/views/index.ts` — one line
 
 Nothing else should need to change. If it does, that is the bug — fix the
 registry, not the caller. See
