@@ -1,6 +1,6 @@
 import { defineObjectType } from '../../domain/registry.js'
 import { boundsOfPoints, inflate, rectFromPoints } from '../../geometry/rect.js'
-import { distanceToSegment } from '../../geometry/point.js'
+import { distanceToSegment, type Point } from '../../geometry/point.js'
 import { bendToPoints } from './bend-to-points.js'
 import { attachmentAnchor, endpointDependencies, resolveEndpoints } from './geometry.js'
 import {
@@ -11,7 +11,9 @@ import {
   heldPoint,
   flattenRoute,
   pointAt,
+  routeNodes,
   routeSegments,
+  routeStops,
   routeVertices,
 } from './route.js'
 import {
@@ -179,6 +181,8 @@ export const connectorType = defineObjectType<typeof CONNECTOR_TYPE, ConnectorDa
       object.data.to,
       boundsOf,
     )
+    const stops = routeStops(start, end, object.data.points)
+
     return [
       {
         id: 'from',
@@ -233,13 +237,24 @@ export const connectorType = defineObjectType<typeof CONNECTOR_TYPE, ConnectorDa
                 start: startNormal,
                 end: endNormal,
               }),
-            ).map((segment, index) => ({
-              id: `midpoint:${String(index)}`,
-              at: segment.middle,
-              role: 'control' as const,
-              becomes: `vertex:${String(index)}`,
-              shownNear: segment.path,
-            })),
+            ).map((segment, index) => {
+              /*
+               * WHERE IN THE LIST, not which stretch. The two are the same
+               * number until a stop is swallowed by its neighbour mid-drag and
+               * the route pins one place fewer than the list holds — at which
+               * point an ordinal would name the wrong slot. Both this and the
+               * route itself read the same decomposition, so they cannot
+               * disagree about it.
+               */
+              const insertAt = stops[index + 1]?.stop ?? object.data.points.length
+              return {
+                id: `midpoint:${String(insertAt)}`,
+                at: segment.middle,
+                role: 'control' as const,
+                becomes: `vertex:${String(insertAt)}`,
+                shownNear: segment.path,
+              }
+            }),
           ]),
     ]
   },
@@ -328,13 +343,60 @@ export const connectorType = defineObjectType<typeof CONNECTOR_TYPE, ConnectorDa
       const { start, end } = resolveEndpoints(doc, object.data.from, object.data.to, boundsOf)
       const points = [...object.data.points]
       const at = bendAt(start, end, { x: target.x, y: target.y })
-      if (stop.kind === 'vertex') {
-        if (stop.index >= points.length) return {}
-        points[stop.index] = at
-      } else {
+      if (stop.kind === 'midpoint') {
         if (stop.index > points.length) return {}
         points.splice(stop.index, 0, at)
+        return { points }
       }
+      if (stop.index >= points.length) return {}
+      points[stop.index] = at
+
+      /*
+       * DROPPED ON ITS NEIGHBOUR, which is how a stop is taken off a line.
+       *
+       * Snapped exactly onto that neighbour rather than removed, because the
+       * list cannot get shorter while the pointer is down: every index after
+       * this one would shift and the drag would silently continue on a
+       * different point. The route stops pinning at a place it already passes
+       * through (`routeStops`), so what is drawn is already what letting go
+       * commits — and only the release takes it out of the list.
+       *
+       * STICKIER to leave than to reach, off the same constant as the elbow's
+       * L, so the line does not flicker while a hand hovers at the threshold.
+       * Read off the object's own data rather than remembered by the gesture,
+       * for the same reason: the preview fed back IS this object a moment on.
+       */
+      const nodes = routeNodes(start, end, points)
+      const held = nodes[stop.index + 1]
+      /*
+       * The neighbours are the same before and after the move — only the
+       * dragged stop has gone anywhere — so one list answers both questions.
+       */
+      const neighbours = [nodes[stop.index], nodes[stop.index + 2]]
+      const was = object.data.points[stop.index]
+      const before = was === undefined ? undefined : pointAt(start, end, was)
+      const swallowed =
+        before !== undefined &&
+        neighbours.some((node) => node?.x === before.x && node?.y === before.y)
+      const reach = target.tolerance * (swallowed ? RELEASE : 1)
+
+      let onto: Point | null = null
+      let nearest = reach
+      for (const node of neighbours) {
+        if (node === undefined || held === undefined) continue
+        const away = Math.hypot(node.x - held.x, node.y - held.y)
+        if (away > nearest) continue
+        nearest = away
+        onto = node
+      }
+      if (onto === null) return { points }
+
+      // Gone on release; merged into its neighbour until then.
+      if (target.final) {
+        points.splice(stop.index, 1)
+        return { points }
+      }
+      points[stop.index] = bendAt(start, end, onto)
       return { points }
     }
 

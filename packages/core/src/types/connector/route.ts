@@ -161,7 +161,58 @@ export function bendAt(start: Point, end: Point, at: Point): Bend {
   }
 }
 
-/** Every place the route is pinned, in order: the two ends and what is between. */
+/**
+ * Every place the route is pinned, in order: the two ends and what is between.
+ *
+ * WITH PROVENANCE, because two callers need to agree about it: the route is
+ * drawn through these, and the handles are placed against them. `stop` is the
+ * index in `points` a node came from, or null for one of the two ends — which
+ * is what lets a midpoint handle say where in the LIST a new point would go
+ * rather than merely which stretch it sits on.
+ */
+export interface RouteStop {
+  readonly at: Point
+  readonly stop: number | null
+}
+
+/** Whether two pinned places are the same place. */
+function samePlace(a: Point, b: Point): boolean {
+  return a.x === b.x && a.y === b.y
+}
+
+/**
+ * The pinned places, with any that have been dragged ONTO a neighbour dropped.
+ *
+ * This is how a stop is removed. The gesture cannot take it out of the data
+ * mid-drag — every index after it would shift, and the hand that was moving
+ * stop 2 would find itself moving what used to be stop 3 — so a stop dropped
+ * on its neighbour is snapped exactly onto it and the route simply stops
+ * pinning there. What is drawn is then exactly what letting go commits, which
+ * is the whole contract of a preview.
+ *
+ * An END never loses: a stop pushed onto one is the one that goes, or the line
+ * would finish somewhere other than the thing it is attached to.
+ */
+export function routeStops(start: Point, end: Point, points: readonly Bend[]): RouteStop[] {
+  const all: RouteStop[] = [
+    { at: start, stop: null },
+    ...points.map((bend, index) => ({ at: pointAt(start, end, bend), stop: index })),
+    { at: end, stop: null },
+  ]
+
+  const kept: RouteStop[] = []
+  for (const node of all) {
+    const last = kept[kept.length - 1]
+    if (last !== undefined && samePlace(last.at, node.at)) {
+      if (node.stop === null) kept.pop()
+      else continue
+    }
+    kept.push(node)
+  }
+  return kept
+}
+
+/** Every pinned place as a bare point, ends included. */
 export function routeNodes(start: Point, end: Point, points: readonly Bend[]): Point[] {
   return [start, ...points.map((bend) => pointAt(start, end, bend)), end]
 }
@@ -393,7 +444,7 @@ export function connectorRoute(
        * and pretending otherwise would make the one routing that promises
        * nothing the one that lies. With no nodes this is the line itself.
        */
-      return { kind: 'polyline', points: routeNodes(start, end, points) }
+      return { kind: 'polyline', points: routeStops(start, end, points).map((node) => node.at) }
 
     case 'orthogonal': {
       /*
@@ -436,7 +487,7 @@ export function connectorRoute(
        * segment is a straight line, and every plain curve on every board
        * would have flattened.
        */
-      const nodes = routeNodes(start, end, points)
+      const nodes = routeStops(start, end, points).map((node) => node.at)
       if (nodes.length <= 2) return { kind: 'spline', points: defaultCubic(start, end, normals) }
       return { kind: 'spline', points: chainThrough(nodes, normals) }
     }

@@ -175,14 +175,30 @@ export type EndpointTarget =
    * at 400% while a world unit is sixteen times as far. What "close" is close
    * TO is the type's business: an anchor to aim at for one end, the shape a
    * route collapses to for a control point.
+   *
+   * `final` says whether this is the RELEASE or another preview frame, and it
+   * is on both for the same reason again: it describes the drop. Almost
+   * nothing needs it, because a preview that answered differently from the
+   * commit would be a preview that lied — but a change that cannot be undrawn
+   * does: a connector's stop dragged onto its neighbour is snapped onto it
+   * while the pointer is down and only taken OUT of the list on release,
+   * because removing it a frame earlier would shift every index after it and
+   * the drag would silently continue on a different point.
    */
-  | { readonly kind: 'point'; readonly x: number; readonly y: number; readonly tolerance: number }
+  | {
+      readonly kind: 'point'
+      readonly x: number
+      readonly y: number
+      readonly tolerance: number
+      readonly final: boolean
+    }
   | {
       readonly kind: 'object'
       readonly objectId: ObjectId
       readonly x: number
       readonly y: number
       readonly tolerance: number
+      readonly final: boolean
     }
 
 /**

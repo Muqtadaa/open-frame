@@ -431,6 +431,7 @@ describe('draggable endpoints', () => {
       objectId: c,
       ...at,
       tolerance: REACH,
+      final: true,
     })
     expect(patch).not.toBeNull()
     if (patch === null) return
@@ -456,6 +457,7 @@ describe('draggable endpoints', () => {
       objectId: c,
       ...anchorOf(c, 'left'),
       tolerance: REACH,
+      final: true,
     })
     if (patch === null) throw new Error('expected a patch')
     h.dispatcher.dispatch({ kind: 'UpdateObjectData', id: connector, patch })
@@ -474,6 +476,7 @@ describe('draggable endpoints', () => {
         objectId: c,
         ...anchorOf(c, side),
         tolerance: REACH,
+        final: true,
       })
       if (patch === null) throw new Error('expected a patch')
       h.dispatcher.dispatch({ kind: 'UpdateObjectData', id: connector, patch })
@@ -495,6 +498,7 @@ describe('draggable endpoints', () => {
       objectId: c,
       ...middleOf(c),
       tolerance: REACH,
+      final: true,
     })
     if (patch === null) throw new Error('expected a patch')
     h.dispatcher.dispatch({ kind: 'UpdateObjectData', id: connector, patch })
@@ -530,6 +534,7 @@ describe('draggable endpoints', () => {
       x: at.x + offset,
       y: at.y,
       tolerance: REACH * 4,
+      final: true,
     })
     if (zoomedOut === null) throw new Error('expected a patch')
     h.dispatcher.dispatch({ kind: 'UpdateObjectData', id: connector, patch: zoomedOut })
@@ -570,6 +575,7 @@ describe('draggable endpoints', () => {
         kind: 'point',
         ...at,
         tolerance: 14,
+        final: true,
       })
     }
 
@@ -597,7 +603,7 @@ describe('draggable endpoints', () => {
   })
 
   it('detaches an end dropped on empty space', () => {
-    const patch = h.registry.retargetEndpoint(object(), h.store.getDocument(), 'from', { kind: 'point', x: -40, y: -60, tolerance: REACH })
+    const patch = h.registry.retargetEndpoint(object(), h.store.getDocument(), 'from', { kind: 'point', x: -40, y: -60, tolerance: REACH, final: true })
     if (patch === null) throw new Error('expected a patch')
 
     h.dispatcher.dispatch({ kind: 'UpdateObjectData', id: connector, patch })
@@ -605,7 +611,7 @@ describe('draggable endpoints', () => {
   })
 
   it('leaves the other end untouched', () => {
-    const patch = h.registry.retargetEndpoint(object(), h.store.getDocument(), 'from', { kind: 'point', x: 5, y: 5, tolerance: REACH })
+    const patch = h.registry.retargetEndpoint(object(), h.store.getDocument(), 'from', { kind: 'point', x: 5, y: 5, tolerance: REACH, final: true })
     if (patch === null) throw new Error('expected a patch')
 
     h.dispatcher.dispatch({ kind: 'UpdateObjectData', id: connector, patch })
@@ -624,12 +630,13 @@ describe('draggable endpoints', () => {
       x: 0,
       y: 0,
       tolerance: REACH,
+      final: true,
     })
     expect(patch).toEqual({})
   })
 
   it('ignores an endpoint id it does not have', () => {
-    expect(h.registry.retargetEndpoint(object(), h.store.getDocument(), 'middle', { kind: 'point', x: 0, y: 0, tolerance: REACH })).toEqual(
+    expect(h.registry.retargetEndpoint(object(), h.store.getDocument(), 'middle', { kind: 'point', x: 0, y: 0, tolerance: REACH, final: true })).toEqual(
       {},
     )
   })
@@ -641,6 +648,7 @@ describe('draggable endpoints', () => {
       objectId: c,
       ...at,
       tolerance: REACH,
+      final: true,
     })
     if (patch === null) throw new Error('expected a patch')
     h.dispatcher.dispatch({ kind: 'UpdateObjectData', id: connector, patch })
@@ -664,6 +672,7 @@ describe('draggable endpoints', () => {
         x: 0,
         y: 0,
         tolerance: REACH,
+        final: true,
       }),
     ).toBeNull()
   })
@@ -805,7 +814,15 @@ describe('a route held at several points', () => {
   }
 
   /** Where a drop lands, as the drag would report it. */
-  const drop = (x: number, y: number) => ({ kind: 'point' as const, x, y, tolerance: 8 })
+  /**
+   * Where a drop lands, as the drag reports it.
+   *
+   * `final` is what separates the release from another preview frame, and it
+   * defaults to the RELEASE here because most of these ask what a completed
+   * drag produces. The tests that care about the difference say so.
+   */
+  const drop = (x: number, y: number, final = true) =>
+    ({ kind: 'point' as const, x, y, tolerance: 8, final })
 
   it.each(['straight', 'curved'] as const)(
     'offers one midpoint per stretch of a %s route, and a handle at each stop',
@@ -928,5 +945,211 @@ describe('a route held at several points', () => {
      * a zigzag through two opposite stops crosses the straight line there.
      */
     expect(h.registry.hitTestObject(object, h.store.getDocument(), { x: 50, y: 0 })).toBe(false)
+  })
+})
+
+/**
+ * TAKING A STOP OFF AGAIN, which a line needs as much as putting one on.
+ *
+ * Dragged onto the stop or the end next to it, a stop is swallowed: the route
+ * stops pinning there, so what is drawn is already what letting go commits.
+ * It only leaves the LIST on release, because a list that got shorter
+ * mid-drag would shift every index after it and the hand would carry on
+ * moving a different point.
+ */
+describe('dissolving a stop into its neighbour', () => {
+  const held = (points: readonly { along: number; across: number }[]) => {
+    const h = createTestHarness()
+    const id = create(h, 'connector', 0, 0, {
+      from: { kind: 'point', x: 0, y: 0 },
+      to: { kind: 'point', x: 400, y: 0 },
+      routing: 'straight',
+      points,
+    })
+    const object = h.store.getObject(id)
+    if (object === undefined) throw new Error('missing connector')
+    return { h, object }
+  }
+
+  const moved = (object: AnyOpenFrameObject, patch: object): AnyOpenFrameObject => ({
+    ...object,
+    data: { ...(object.data as object), ...patch },
+  })
+
+  const stopsOf = (patch: unknown): readonly { along: number; across: number }[] =>
+    (patch as { points: { along: number; across: number }[] }).points
+
+  /** Where a stop is dropped, in world units, and how close counts. */
+  const at = (x: number, y: number, final = false) =>
+    ({ kind: 'point' as const, x, y, tolerance: 14, final })
+
+  it('merges a stop dropped on the end next to it, without shortening the list', () => {
+    const { h, object } = held([{ along: 0.5, across: 80 }])
+    // The start is at x = 0; eight units away is well inside the tolerance.
+    const patch = h.registry.retargetEndpoint(object, h.store.getDocument(), 'vertex:0', at(8, 0))
+    /*
+     * STILL ONE POINT. Removing it here is what would shift the indices under
+     * a drag that has not finished.
+     */
+    expect(stopsOf(patch)).toHaveLength(1)
+    // And it sits exactly on the end, not eight units off it.
+    expect(stopsOf(patch)[0]).toEqual({ along: 0, across: 0 })
+  })
+
+  it('draws the route as though it were already gone', () => {
+    /*
+     * A CURVE, deliberately. On a straight route a stop sitting exactly on
+     * its neighbour makes a zero-length segment and the drawn line is the
+     * same either way — so a straight route cannot tell whether the route
+     * stopped pinning there, and this test passed with that rule deleted. A
+     * curve can: it takes its tangents from the nodes, and one it passes
+     * through twice kinks at the very place the line should be smoothest.
+     */
+    const h = createTestHarness()
+    const curved = (points: readonly { along: number; across: number }[]): AnyOpenFrameObject => {
+      const id = create(h, 'connector', 0, 0, {
+        from: { kind: 'point', x: 0, y: 0 },
+        to: { kind: 'point', x: 400, y: 0 },
+        routing: 'curved',
+        points,
+      })
+      const made = h.store.getObject(id)
+      if (made === undefined) throw new Error('missing connector')
+      return made
+    }
+
+    const bent = curved([{ along: 0.5, across: 80 }])
+    const patch = h.registry.retargetEndpoint(bent, h.store.getDocument(), 'vertex:0', at(8, 0))
+    const preview = moved(bent, patch as object)
+
+    /*
+     * What is drawn IS what the release commits: the same curve as one that
+     * was never given a stop at all. A preview that showed the stop still in
+     * place would jump the moment the pointer came up.
+     */
+    const plain = curved([])
+    expect(h.registry.boundsOf(preview, h.store.getDocument())).toEqual(
+      h.registry.boundsOf(plain, h.store.getDocument()),
+    )
+    expect(h.registry.hitTestObject(preview, h.store.getDocument(), { x: 200, y: 0 })).toBe(true)
+  })
+
+  it('takes it out of the list on release, and only then', () => {
+    const { h, object } = held([{ along: 0.5, across: 80 }])
+    const preview = h.registry.retargetEndpoint(object, h.store.getDocument(), 'vertex:0', at(8, 0))
+    expect(stopsOf(preview)).toHaveLength(1)
+
+    const released = h.registry.retargetEndpoint(
+      moved(object, preview as object),
+      h.store.getDocument(),
+      'vertex:0',
+      at(8, 0, true),
+    )
+    expect(stopsOf(released)).toHaveLength(0)
+  })
+
+  it('leaves the stop where it was put when no neighbour is near', () => {
+    const { h, object } = held([{ along: 0.5, across: 80 }])
+    const patch = h.registry.retargetEndpoint(
+      object,
+      h.store.getDocument(),
+      'vertex:0',
+      at(200, 40, true),
+    )
+    expect(stopsOf(patch)).toHaveLength(1)
+    expect(stopsOf(patch)[0]?.across).toBeCloseTo(40, 6)
+  })
+
+  it('holds the merge further out than it took it', () => {
+    const { h, object } = held([{ along: 0.5, across: 80 }])
+    // Twenty units out: past the tolerance that would catch it...
+    const fresh = h.registry.retargetEndpoint(object, h.store.getDocument(), 'vertex:0', at(20, 0))
+    expect(stopsOf(fresh)[0]?.along).not.toBe(0)
+
+    // ...and not enough to let go of it once it has taken, so the line does
+    // not flicker while a hand hovers at the threshold.
+    const merged = moved(object, { points: [{ along: 0, across: 0 }] })
+    const still = h.registry.retargetEndpoint(merged, h.store.getDocument(), 'vertex:0', at(20, 0))
+    expect(stopsOf(still)[0]).toEqual({ along: 0, across: 0 })
+
+    // Pulled properly clear, it comes back.
+    const away = h.registry.retargetEndpoint(merged, h.store.getDocument(), 'vertex:0', at(90, 60))
+    expect(stopsOf(away)[0]?.across).toBeCloseTo(60, 6)
+  })
+
+  it('merges into the stop next to it, not only into an end', () => {
+    const { h, object } = held([
+      { along: 0.25, across: 60 },
+      { along: 0.75, across: -60 },
+    ])
+    // The first stop is at (100, 60); dropping the second within reach of it.
+    const patch = h.registry.retargetEndpoint(
+      object,
+      h.store.getDocument(),
+      'vertex:1',
+      at(106, 60),
+    )
+    expect(stopsOf(patch)[1]).toEqual({ along: 0.25, across: 60 })
+
+    const released = h.registry.retargetEndpoint(
+      moved(object, patch as object),
+      h.store.getDocument(),
+      'vertex:1',
+      at(106, 60, true),
+    )
+    // The one that was dragged is the one that goes.
+    expect(stopsOf(released)).toEqual([{ along: 0.25, across: 60 }])
+  })
+
+  it('lets the END win the tie, so the last place pinned is the thing it joins', () => {
+    const { h, object } = held([{ along: 0.5, across: 80 }])
+    const patch = h.registry.retargetEndpoint(
+      object,
+      h.store.getDocument(),
+      'vertex:0',
+      at(396, 0),
+    )
+    const preview = moved(object, patch as object)
+    const route = h.registry.boundsOf(preview, h.store.getDocument())
+    // The stop is on top of the far end, and the route still reaches it.
+    expect(route.x + route.width).toBeGreaterThanOrEqual(400)
+    expect(h.registry.hitTestObject(preview, h.store.getDocument(), { x: 399, y: 0 })).toBe(true)
+
+    /*
+     * And the stretch that remains offers to insert AFTER that stop rather
+     * than to move it. Geometry alone cannot see this — the two nodes are at
+     * the same coordinates, so dropping either draws the same line — but
+     * which one survives decides what the handles mean, and keeping the stop
+     * would turn "add a point here" into "drag the one you just merged".
+     */
+    const ids = h.registry
+      .endpointsOf(preview, h.store.getDocument())
+      .map((point) => point.id)
+    expect(ids).toEqual(['from', 'to', 'vertex:0', 'midpoint:1'])
+  })
+
+  it('keeps the handles naming the right places while one is swallowed', () => {
+    const { h, object } = held([
+      { along: 0.25, across: 60 },
+      { along: 0.75, across: -60 },
+    ])
+    const patch = h.registry.retargetEndpoint(
+      object,
+      h.store.getDocument(),
+      'vertex:1',
+      at(106, 60),
+    )
+    const ids = h.registry
+      .endpointsOf(moved(object, patch as object), h.store.getDocument())
+      .map((point) => point.id)
+    /*
+     * BOTH stops still have a handle, because both are still in the list —
+     * and the midpoints name where in that list a new one would go rather
+     * than which stretch they sit on. With one stop swallowed the route pins
+     * one place fewer than the list holds, so an ordinal would name the wrong
+     * slot: there is no `midpoint:1` here, because no drawn stretch ends at
+     * the stop that is currently merged.
+     */
+    expect(ids).toEqual(['from', 'to', 'vertex:0', 'vertex:1', 'midpoint:0', 'midpoint:2'])
   })
 })

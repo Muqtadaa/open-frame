@@ -389,9 +389,26 @@ gesture is dragging THAT. The canvas follows a declaration rather than
 recognising a naming convention, which is what keeps the rule in the registry
 where behaviour belongs.
 
-The same shape of problem is why a point is not REMOVED mid-drag: every index
-after it would shift, and the hand that was moving vertex 2 would find itself
-moving what used to be vertex 3.
+The same shape of problem is why a point is never REMOVED mid-drag: every index
+after it would shift, and the hand that was moving stop 2 would find itself
+moving what used to be stop 3. So a stop dragged onto its neighbour is SNAPPED
+exactly onto it and the route simply stops pinning there — what is drawn is
+already what letting go commits — and only the release takes it out of the
+list. That is what `final` on a drop is for: almost nothing needs to know
+whether it is the release, because a preview that answered differently would be
+a preview that lied, but a change that cannot be undrawn does.
+
+Two consequences worth keeping:
+
+- a handle names WHERE IN THE LIST it acts, not which stretch it sits on. The
+  two are the same number until a stop is merged into its neighbour and the
+  route pins one place fewer than the list holds, at which point an ordinal
+  names the wrong slot — "add a point here" becomes "drag the one you just
+  merged"
+- an END wins a tie. A stop pushed onto one is the one that goes, or the line
+  finishes somewhere other than the thing it is attached to. Geometry cannot
+  see this, since the two are at the same coordinates by then; what it decides
+  is what the handles mean
 
 **Chrome that only appears under the pointer must survive its own press.**
 Hiding a revealed handle "while a drag is running" cannot be pressed at all:

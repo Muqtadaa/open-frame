@@ -368,6 +368,18 @@ function reshapeOf(
     readonly data: Readonly<Record<string, unknown>>
   } | null,
   zoom: number,
+  /**
+   * Whether this is the RELEASE rather than another preview frame.
+   *
+   * The drop is asked one last time on pointer-up, from the same position and
+   * against the same previewed object, so the answer is the one already on
+   * screen — plus whatever only a release may do. A connector's stop dragged
+   * onto its neighbour is merged into it while the pointer is down and only
+   * taken out of the list here, because a list that got shorter mid-drag would
+   * shift every index after it and the hand would carry on moving a different
+   * point.
+   */
+  final = false,
 ): { objectId: ObjectId; data: Readonly<Record<string, unknown>> } | null {
   const subject = active.subjects[0]
   if (active.mode !== 'endpoint' || subject === undefined || active.endpointId === null) return null
@@ -391,6 +403,7 @@ function reshapeOf(
     x: at.x,
     y: at.y,
     tolerance: SNAP_L_PX / Math.max(zoom, 0.0001),
+    final,
   })
   if (data === null) return null
 
@@ -1146,13 +1159,25 @@ export function useCanvasGestures(containerRef: RefObject<HTMLElement | null>) {
         const { to, over, reshaping } = store.drag
         if (subject !== undefined && active.moved && reshaping?.objectId === subject.id) {
           /*
-           * COMMIT WHAT WAS DRAWN. The preview is already the patch this drop
-           * produces — recomputing it here would ask the type the same
-           * question from the committed data instead of from the shape on
-           * screen, and a snap that holds its shape by reading its own last
-           * answer would then let go at the moment of release.
+           * COMMIT WHAT WAS DRAWN, and let the type settle it.
+           *
+           * The same question, from the same place, against the PREVIEWED
+           * object rather than the committed one — asking from committed data
+           * would let a snap that holds its shape by reading its own last
+           * answer go at the moment of release. So the answer is the shape
+           * already on screen, plus anything only a release may do: a stop
+           * merged into its neighbour is dropped from the list here, where no
+           * further pointer event can be confused by the indices moving.
            */
-          commands.updateData(subject.id, reshaping.data)
+          const settled = reshapeOf(
+            active,
+            to,
+            { store: runtime.store, registry: runtime.registry },
+            reshaping,
+            store.viewport.zoom,
+            true,
+          )
+          commands.updateData(subject.id, settled?.data ?? reshaping.data)
         } else if (subject !== undefined && active.moved) {
           commands.retargetEndpoint(
             subject.id,
@@ -1164,7 +1189,13 @@ export function useCanvasGestures(containerRef: RefObject<HTMLElement | null>) {
              * actually was, and objects cover most of a working board.
              */
             over === null
-              ? { kind: 'point', x: to.x, y: to.y, tolerance: anchorReach(store.viewport.zoom) }
+              ? {
+                  kind: 'point',
+                  x: to.x,
+                  y: to.y,
+                  tolerance: anchorReach(store.viewport.zoom),
+                  final: true,
+                }
               : {
                   kind: 'object',
                   objectId: over,
@@ -1179,6 +1210,7 @@ export function useCanvasGestures(containerRef: RefObject<HTMLElement | null>) {
                    * in the type.
                    */
                   tolerance: anchorReach(store.viewport.zoom),
+                  final: true,
                 },
           )
         }

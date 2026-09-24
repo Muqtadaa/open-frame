@@ -876,6 +876,48 @@ test.describe('reshaping a line', () => {
     await expect(page.getByTestId('endpoint-vertex:2')).toHaveCount(0)
   })
 
+  test('takes a stop off again by dragging it onto the end next to it', async ({ page }) => {
+    await bendable(page, 'curved')
+    const plain = await route(page)
+
+    const middle = await alongTheLine(page)
+    await page.mouse.move(middle.x, middle.y)
+    const grip = await page.getByTestId('endpoint-midpoint:0').boundingBox()
+    if (grip === null) throw new Error('no midpoint handle')
+    const from = { x: grip.x + grip.width / 2, y: grip.y + grip.height / 2 }
+    await drag(page, from, { x: from.x, y: from.y - 90 })
+    await expect(page.getByTestId('endpoint-vertex:0')).toBeVisible()
+    expect(await route(page), 'the stop did not bend the line').not.toBe(plain)
+
+    const stop = await page.getByTestId('endpoint-vertex:0').boundingBox()
+    const end = await page.getByTestId('endpoint-from').boundingBox()
+    if (stop === null || end === null) throw new Error('no handles to drag between')
+
+    await page.mouse.move(stop.x + stop.width / 2, stop.y + stop.height / 2)
+    await page.mouse.down()
+    await page.mouse.move(end.x + end.width / 2 + 4, end.y + end.height / 2, { steps: 8 })
+
+    /*
+     * ALREADY GONE, while the pointer is still down: the route stops pinning
+     * at a place it passes through anyway, so the line drawn mid-drag is the
+     * line the release commits. The stop itself is still in the list — taking
+     * it out now would shift every index after it under a moving hand.
+     */
+    const previewed = await route(page)
+    expect(previewed, 'the merge was not previewed').toBe(plain)
+    await expect(page.getByTestId('endpoint-vertex:0')).toBeVisible()
+
+    await page.mouse.up()
+    // No jump on release, which is the whole reason the removal waits for it.
+    expect(await route(page)).toBe(previewed)
+    await expect(page.getByTestId('endpoint-vertex:0')).toHaveCount(0)
+
+    // And one undo puts it back, because the whole drag was one command.
+    await page.keyboard.press('ControlOrMeta+z')
+    await expect(page.getByTestId('endpoint-vertex:0')).toBeVisible()
+    expect(await route(page)).not.toBe(plain)
+  })
+
   test('collapses an orthogonal route to an L, and holds it until pulled clear', async ({
     page,
   }) => {
