@@ -1,4 +1,4 @@
-import { resolveEndpoints } from '@openframe/core'
+import { resolveEndpoints, worldToScreen } from '@openframe/core'
 
 import { useOpenFrame } from '../runtime/context.js'
 import { useInteractionStore } from '../interaction/interaction-store.js'
@@ -12,6 +12,7 @@ import { connectorPath } from '../scene/connector-path.js'
  */
 export function ConnectorPreview() {
   const drag = useInteractionStore((state) => state.drag)
+  const viewport = useInteractionStore((state) => state.viewport)
   const { runtime } = useOpenFrame()
 
   if (drag.kind !== 'connect') return null
@@ -22,16 +23,25 @@ export function ConnectorPreview() {
     y: drag.to.y,
   })
 
+  /*
+   * Both ends converted, because the preview is drawn on the apparatus layer
+   * rather than in the world: the line stays two pixels thick with the same
+   * dashes at every zoom, where a world-space stroke was thirty-two at 1600%.
+   * The finished connector is an OBJECT and keeps its world-space stroke.
+   */
+  const from = worldToScreen(viewport, start)
+  const to = worldToScreen(viewport, drag.to)
+
   return (
     <svg className="of-connector of-connector--preview" aria-hidden="true">
       <path
-        d={connectorPath(start, drag.to, 'straight')}
+        d={connectorPath(from, to, 'straight')}
         fill="none"
         stroke="var(--of-accent)"
         strokeWidth={2}
         strokeDasharray="6 4"
       />
-      {drag.over !== null && <circle cx={drag.to.x} cy={drag.to.y} r={6} fill="var(--of-accent)" />}
+      {drag.over !== null && <circle cx={to.x} cy={to.y} r={6} fill="var(--of-accent)" />}
     </svg>
   )
 }

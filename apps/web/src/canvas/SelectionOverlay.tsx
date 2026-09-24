@@ -13,7 +13,7 @@ import {
   ROTATE_OFFSET_PX,
   handleAnchor,
 } from '../scene/resize.js'
-import { unionAll, type Rect } from '@openframe/core'
+import { unionAll, worldRectToScreen, type Rect } from '@openframe/core'
 import { LockIcon, RotateIcon } from '../ui/icons.js'
 import { fitToText } from '../scene/fit-text.js'
 import { useCommands } from '../hooks/use-commands.js'
@@ -39,9 +39,13 @@ const FITS: Partial<Record<string, 'x' | 'y'>> = { e: 'x', s: 'y' }
 /**
  * The selection box, resize handles and rotate grip.
  *
- * Drawn in world space so it tracks the objects exactly, but every dimension is
- * divided by zoom so the handles stay a constant, grabbable size on screen —
- * handles that shrink with the board are unusable at 25%.
+ * Drawn on the APPARATUS LAYER, in screen pixels. The box is the selection's
+ * world bounds converted once; everything on it is a plain constant, because a
+ * handle is 9px at 5% and at 1600% alike.
+ *
+ * It used to be drawn inside the world transform with every length divided by
+ * the zoom, which works down to one pixel and then fails — see `.of-apparatus`
+ * in styles.css for exactly how, and what it looked like.
  *
  * A single rotated object gets an ORIENTED box that turns with it; a
  * multi-selection gets the axis-aligned union, because there is no meaningful
@@ -59,7 +63,7 @@ export function SelectionOverlay() {
   const pressed = useRef<{ handle: string; at: number } | null>(null)
   const document = useBoardDocument()
   const selection = useInteractionStore((state) => state.selection)
-  const zoom = useInteractionStore((state) => state.viewport.zoom)
+  const viewport = useInteractionStore((state) => state.viewport)
   const dragKind = useInteractionStore((state) => state.drag.kind)
   const editingId = useInteractionStore((state) => state.editingId)
   const croppingId = useInteractionStore((state) => state.croppingId)
@@ -172,32 +176,29 @@ export function SelectionOverlay() {
     ])
   }
 
-  const size = HANDLE_PX / zoom
-  // Both counter-scaled: a target that shrinks with the board is unusable at
-  // 25%, which is exactly where a user is most likely to be resizing.
-  const hitPad = Math.max(0, (HANDLE_HIT_PX - HANDLE_PX) / 2) / zoom
-  const half = size / 2
-  // The rotate grip is a glyph, so it gets its own counter-scaled size.
-  const glyph = ROTATE_PX / zoom
-  const glyphPad = Math.max(0, (HANDLE_HIT_PX - ROTATE_PX) / 2) / zoom
+  /*
+   * The one conversion. Everything below is a screen measurement, including
+   * the box: a rotation survives it because the world transform is a uniform
+   * scale, so an angle in world space is the same angle on screen.
+   */
+  const screen = worldRectToScreen(viewport, box)
+  const half = HANDLE_PX / 2
+  const glyphPad = Math.max(0, (HANDLE_HIT_PX - ROTATE_PX) / 2)
 
   return (
     <div
       className="of-selection"
       data-testid="selection-overlay"
       style={{
-        transform: `translate(${String(box.x)}px, ${String(box.y)}px) rotate(${String(rotation)}rad)`,
-        width: `${String(box.width)}px`,
-        height: `${String(box.height)}px`,
-        // Border and outline also have to resist the world transform.
-        outlineWidth: `${String(1.5 / zoom)}px`,
+        transform: `translate(${String(screen.x)}px, ${String(screen.y)}px) rotate(${String(rotation)}rad)`,
+        width: `${String(screen.width)}px`,
+        height: `${String(screen.height)}px`,
       }}
     >
       {locked && (
         /*
-         * Outside the box, above its top-left corner, and counter-scaled like
-         * every other piece of chrome — a badge that grew with the board would
-         * swallow a small object at 400%.
+         * Outside the box, above its top-left corner — a badge that grew with
+         * the board would swallow a small object at 400%.
          */
         <div
           className="of-lock"
@@ -205,10 +206,10 @@ export function SelectionOverlay() {
           aria-label="Locked"
           title="Locked — unlock it to move or resize it"
           style={{
-            left: `${String(-LOCK_PX / zoom)}px`,
-            top: `${String(-LOCK_PX / zoom)}px`,
-            width: `${String(LOCK_PX / zoom)}px`,
-            height: `${String(LOCK_PX / zoom)}px`,
+            left: `${String(-LOCK_PX)}px`,
+            top: `${String(-LOCK_PX)}px`,
+            width: `${String(LOCK_PX)}px`,
+            height: `${String(LOCK_PX)}px`,
           }}
         >
           <LockIcon className="of-lock__glyph" />
@@ -216,20 +217,20 @@ export function SelectionOverlay() {
       )}
 
       {/*
-        * THE EDGES, before the squares so a corner is always painted over a
-        * strip it overlaps — and inset from them so it never comes to that.
-        *
-        * A selection's boundary is the obvious place to pull from, and only
-        * the square at the middle of each edge used to answer. On a long edge
-        * that is one target in nine hundred pixels of the thing that looks
-        * like the target.
-        */}
+       * THE EDGES, before the squares so a corner is always painted over a
+       * strip it overlaps — and inset from them so it never comes to that.
+       *
+       * A selection's boundary is the obvious place to pull from, and only
+       * the square at the middle of each edge used to answer. On a long edge
+       * that is one target in nine hundred pixels of the thing that looks
+       * like the target.
+       */}
       {resizable &&
         EDGE_HANDLES.map((handle) => {
-          const thick = EDGE_HIT_PX / zoom
-          const inset = EDGE_INSET_PX / zoom
+          const thick = EDGE_HIT_PX
+          const inset = EDGE_INSET_PX
           const across = handle === 'n' || handle === 's'
-          const length = (across ? box.width : box.height) - inset * 2
+          const length = (across ? screen.width : screen.height) - inset * 2
           // Too short to be worth a strip: the corners already cover it, and
           // a negative length would draw a target outside the selection.
           if (length <= 0) return null
@@ -241,8 +242,8 @@ export function SelectionOverlay() {
               data-testid={`edge-${handle}`}
               aria-hidden="true"
               style={{
-                left: `${String(across ? inset : (handle === 'e' ? box.width : 0) - thick / 2)}px`,
-                top: `${String(across ? (handle === 's' ? box.height : 0) - thick / 2 : inset)}px`,
+                left: `${String(across ? inset : (handle === 'e' ? screen.width : 0) - thick / 2)}px`,
+                top: `${String(across ? (handle === 's' ? screen.height : 0) - thick / 2 : inset)}px`,
                 width: `${String(across ? length : thick)}px`,
                 height: `${String(across ? thick : length)}px`,
                 cursor: HANDLE_CURSORS[handle],
@@ -282,26 +283,43 @@ export function SelectionOverlay() {
                 }
               }}
               style={{
-                left: `${String(anchor.x * box.width - half)}px`,
-                top: `${String(anchor.y * box.height - half)}px`,
-                width: `${String(size)}px`,
-                height: `${String(size)}px`,
-                borderWidth: `${String(1 / zoom)}px`,
-                borderRadius: `${String(2 / zoom)}px`,
+                left: `${String(anchor.x * screen.width - half)}px`,
+                top: `${String(anchor.y * screen.height - half)}px`,
+                width: `${String(HANDLE_PX)}px`,
+                height: `${String(HANDLE_PX)}px`,
                 cursor: HANDLE_CURSORS[handle],
               }}
             >
               {/*
-                * The target, as a real element: a transparent outline or a
-                * box-shadow would look right and still not be clickable. It
-                * bubbles to the handle above, which carries `data-handle`, so
-                * the gesture reads the same attribute either way.
-                */}
+               * The target, as a real element: a transparent outline or a
+               * box-shadow would look right and still not be clickable. It
+               * bubbles to the handle above, which carries `data-handle`, so
+               * the gesture reads the same attribute either way.
+               *
+               * It reaches OUTWARD, and stops at the selection's edge. A
+               * target centred on the corner puts half of itself over the
+               * object, and on a small one the four of them meet in the
+               * middle: the object can then only be resized, never picked up.
+               * It did not show while the apparatus was inside the world,
+               * because a selected object is lifted to `z-index: 1` and so
+               * sat over its own handles — the inner halves were dead and
+               * nobody noticed. On its own layer nothing is over it any more,
+               * and a click in the middle of a small picture began a resize.
+               *
+               * So the whole 24 is spent outside, where there is nothing else
+               * to press. The object's face keeps its interior, and the
+               * target is the size it has to be.
+               *
+               * The edge STRIPS still straddle the boundary, which is not an
+               * inconsistency: a strip is the tolerance band along an edge
+               * that makes it grabbable at all, and four of them cannot meet
+               * in the middle of anything.
+               */}
               <span
                 className="of-handle__target"
                 aria-hidden="true"
                 style={{
-                  inset: `${String(-hitPad)}px`,
+                  ...outwardReach(anchor, half),
                   cursor: HANDLE_CURSORS[handle],
                 }}
               />
@@ -321,10 +339,10 @@ export function SelectionOverlay() {
           data-handle="rotate"
           data-testid="handle-rotate"
           style={{
-            left: `${String(box.width / 2 - glyph / 2)}px`,
-            top: `${String(-ROTATE_OFFSET_PX / zoom - glyph / 2)}px`,
-            width: `${String(glyph)}px`,
-            height: `${String(glyph)}px`,
+            left: `${String(screen.width / 2 - ROTATE_PX / 2)}px`,
+            top: `${String(-ROTATE_OFFSET_PX - ROTATE_PX / 2)}px`,
+            width: `${String(ROTATE_PX)}px`,
+            height: `${String(ROTATE_PX)}px`,
           }}
         >
           <RotateIcon className="of-handle__glyph" />
@@ -339,4 +357,29 @@ export function SelectionOverlay() {
       )}
     </div>
   )
+}
+
+/**
+ * Where a handle's pointer target lies, given the corner it sits on.
+ *
+ * On an axis the handle is at an END of, the whole target is outside the
+ * selection: it runs `HANDLE_HIT_PX` outward from the boundary and stops
+ * there, which is why the inner side is pulled back by the handle's own half.
+ * On an axis where it sits at the MIDDLE it spreads evenly, because that is
+ * along the edge rather than into the object.
+ *
+ * Returned as four insets rather than one, which is the only way to say
+ * "24 across, but not there".
+ */
+function outwardReach(
+  anchor: { x: number; y: number },
+  half: number,
+): { left: number; right: number; top: number; bottom: number } {
+  const outward = HANDLE_HIT_PX - half
+  const even = (HANDLE_HIT_PX - half * 2) / 2
+  const spread = (at: number): [number, number] =>
+    at === 0 ? [-outward, half] : at === 1 ? [half, -outward] : [-even, -even]
+  const [left, right] = spread(anchor.x)
+  const [top, bottom] = spread(anchor.y)
+  return { left, right, top, bottom }
 }

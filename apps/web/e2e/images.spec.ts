@@ -167,7 +167,18 @@ test.describe('images', () => {
    * than an unlabelled caret over a photograph did.
    */
   test('describes an image through a named field in the panel', async ({ page }) => {
-    await upload(page, 'chart.png', 'image/png', png())
+    /*
+     * A real-sized picture, because this CLICKS one.
+     *
+     * The 2x3 fixture makes an object two world units across, and its own
+     * eight grips are nine pixels each — so once it is selected it is
+     * entirely underneath them, and a press lands on a handle. That used to
+     * work by accident: the apparatus was drawn inside the world transform,
+     * where a selected object is lifted to `z-index: 1` and so painted over
+     * its own handles. On the apparatus layer the grips are over the board,
+     * as they are in every tool that has them.
+     */
+    await upload(page, 'chart.png', 'image/png', pngOf(200, 150))
     const image = page.locator('[data-object-type="image"]')
     await image.click()
 

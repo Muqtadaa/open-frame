@@ -1,6 +1,6 @@
 import { useMemo } from 'react'
 
-import type { Rect } from '@openframe/core'
+import { worldRectToScreen, worldToScreen, type Rect } from '@openframe/core'
 
 import { usePeers } from '../hooks/use-peers.js'
 import { useBoardDocument } from '../hooks/use-document-object.js'
@@ -11,10 +11,10 @@ import { hueVar, type DragDelta, type Peer } from '../scene/presence.js'
 /**
  * Other people: where they are pointing, what they have hold of.
  *
- * Drawn in world space so it tracks the board exactly, with every dimension
- * divided by zoom so a cursor stays the same size on screen — the same rule the
- * selection handles follow, and for the same reason: a cursor that shrinks with
- * the board is a dot at 25%.
+ * Drawn on the apparatus layer, at screen size: a cursor that shrank with the
+ * board would be a dot at 25%, and an outline whose 2px border was a world
+ * measurement was a 32px band at 1600%. Positions come from the world and are
+ * converted once, so everything still tracks the board exactly.
  *
  * Nothing here is interactive. `pointer-events: none` throughout, because a
  * cursor belonging to somebody else must never be a thing you can click.
@@ -33,7 +33,7 @@ export function PresenceLayer() {
 function PresentPeers({ peers }: { readonly peers: readonly Peer[] }) {
   const { runtime } = useOpenFrame()
   const document = useBoardDocument()
-  const zoom = useInteractionStore((state) => state.viewport.zoom)
+  const viewport = useInteractionStore((state) => state.viewport)
 
   /*
    * Bounds come from the registry, never from `object.frame`: a connector has
@@ -83,49 +83,52 @@ function PresentPeers({ peers }: { readonly peers: readonly Peer[] }) {
 
   return (
     <div className="of-presence" aria-hidden="true">
-      {outlines.map(({ key, rect, peer, editing }) => (
-        <div
-          key={key}
-          className={`of-presence__outline${editing ? ' of-presence__outline--editing' : ''}`}
-          style={{
-            left: rect.x,
-            top: rect.y,
-            width: rect.width,
-            height: rect.height,
-            // Constant on screen, whatever the zoom.
-            borderWidth: 2 / zoom,
-            // Both, and they are not the same thing: `color` drives the border
-            // through `currentcolor`, while the label needs a value that
-            // survives setting its own `color`. See the note in styles.css.
-            color: hueVar(peer.hue),
-            ['--of-presence-hue' as string]: hueVar(peer.hue),
-          }}
-        >
-          {/*
-            * WHO, always — not only once they start typing.
-            *
-            * A selection used to be an unlabelled dashed outline in somebody's
-            * colour, so you could see that an object was spoken for and had to
-            * match the colour against the row of faces in the status bar to
-            * find out whose. The colour is a hint; the name is the answer.
-            *
-            * The wording still separates the two states, because they mean
-            * different things: having something selected is a claim on your
-            * attention, and having it OPEN is a claim you cannot type into it.
-            */}
-          <span className="of-presence__tag" style={{ transform: `scale(${String(1 / zoom)})` }}>
-            {editing ? `${peer.name} is editing` : peer.name}
-          </span>
-        </div>
-      ))}
+      {outlines.map(({ key, rect, peer, editing }) => {
+        const screenRect = worldRectToScreen(viewport, rect)
+        return (
+          <div
+            key={key}
+            className={`of-presence__outline${editing ? ' of-presence__outline--editing' : ''}`}
+            style={{
+              left: screenRect.x,
+              top: screenRect.y,
+              width: screenRect.width,
+              height: screenRect.height,
+              // Both, and they are not the same thing: `color` drives the border
+              // through `currentcolor`, while the label needs a value that
+              // survives setting its own `color`. See the note in styles.css.
+              color: hueVar(peer.hue),
+              ['--of-presence-hue' as string]: hueVar(peer.hue),
+            }}
+          >
+            {/*
+             * WHO, always — not only once they start typing.
+             *
+             * A selection used to be an unlabelled dashed outline in somebody's
+             * colour, so you could see that an object was spoken for and had to
+             * match the colour against the row of faces in the status bar to
+             * find out whose. The colour is a hint; the name is the answer.
+             *
+             * The wording still separates the two states, because they mean
+             * different things: having something selected is a claim on your
+             * attention, and having it OPEN is a claim you cannot type into it.
+             */}
+            <span className="of-presence__tag">
+              {editing ? `${peer.name} is editing` : peer.name}
+            </span>
+          </div>
+        )
+      })}
 
-      {peers.map((peer) =>
-        peer.cursor === null ? null : (
+      {peers.map((peer) => {
+        if (peer.cursor === null) return null
+        const at = worldToScreen(viewport, peer.cursor)
+        return (
           <div
             key={peer.clientId}
             className="of-presence__cursor"
             style={{
-              transform: `translate(${String(peer.cursor.x)}px, ${String(peer.cursor.y)}px) scale(${String(1 / zoom)})`,
+              transform: `translate(${String(at.x)}px, ${String(at.y)}px)`,
               color: hueVar(peer.hue),
               ['--of-presence-hue' as string]: hueVar(peer.hue),
             }}
@@ -146,8 +149,8 @@ function PresentPeers({ peers }: { readonly peers: readonly Peer[] }) {
             </svg>
             <span className="of-presence__name">{peer.name}</span>
           </div>
-        ),
-      )}
+        )
+      })}
     </div>
   )
 }

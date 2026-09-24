@@ -318,6 +318,43 @@ deleted, a shape-label check that was never run against a real outline, and a
 `z.object({})` that accepted every payload because Zod strips unknown keys
 unless you ask it not to.
 
+### 24. A length inside the world transform is a world unit
+
+The board is drawn by one `scale(zoom)`, so a CSS length written inside it is
+measured in world units. Apparatus is the opposite — a handle is 9 screen
+pixels at 5% and at 1600% alike — and for a long time that was done by dividing
+every length by the zoom.
+
+**That works down to one pixel and then stops.** A border, an outline and a
+shadow cannot be painted thinner than 1px in their own coordinate space, so at
+1600% a `1 / zoom` border came back as one WORLD pixel — sixteen on screen — and
+with `box-sizing: border-box` the border alone then set the element's size: a
+9px resize handle measured 32. The 1.5px selection outline and the rotate grip's
+1px ring were never divided at all and were sixteen times over on their own. The
+arithmetic had been wrong at every zoom past about 2× for as long as it existed;
+it only became visible when the grips above a selected object ran into each
+other at maximum zoom.
+
+So apparatus lives on `.of-apparatus`, OUTSIDE the transform: positions convert
+once through `worldRectToScreen`, and every length out there is what it says.
+`canvas/layers.test.ts` reads the composition root to find out what is on which
+layer, so a new overlay joins the rule without anybody remembering to add it.
+
+Inside the world the one counter-scale that does work is a
+`transform: scale(1 / zoom)`: the element is laid out at its written size and
+only painted smaller, so nothing is ever asked for a sub-pixel border. Nothing
+needs it today — the comment pins were the last users and they moved out — but
+it is the escape hatch for anything that genuinely has to stay in there.
+
+**Apparatus sits over the board, including over its own object.** It used not
+to — a selected object is lifted to `z-index: 1` and so painted over its own
+handles, which quietly made their inner halves dead. A press target that reaches
+inward is one that four corners can meet in the middle of, leaving a small
+object impossible to pick up, so a handle's 24px target is spent entirely
+outside the selection. An edge strip still straddles the boundary: that is the
+tolerance band that makes an edge grabbable, and four of them cannot meet in the
+middle of anything.
+
 ---
 
 ## Conventions

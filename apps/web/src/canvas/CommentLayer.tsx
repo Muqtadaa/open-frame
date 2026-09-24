@@ -1,6 +1,6 @@
 import { useMemo } from 'react'
 
-import type { Point } from '@openframe/core'
+import { worldToScreen, type Point } from '@openframe/core'
 
 import { useDiscussion } from '../app/comments-context.js'
 import { plainMentionText } from '../hooks/use-comments.js'
@@ -13,10 +13,15 @@ import { pinPosition } from '../scene/comment-pin.js'
 /**
  * The pins: where the conversations are.
  *
- * World space, like the presence layer, so they track the board exactly — and
- * counter-scaled so a pin stays the same size on screen. A pin that shrank
- * with the board would be a dot at 25%, which is the same reasoning the
- * cursors follow.
+ * On the apparatus layer, like every other constant-size thing: a pin that
+ * shrank with the board would be a dot at 25%. Its POSITION is the world's and
+ * is converted here, so a pin still sits exactly where it was dropped under
+ * any pan or zoom.
+ *
+ * Above the selection's grips rather than under them, which is the reason it
+ * is here and not in the world: a pin dropped on the edge of an object
+ * disappeared beneath that object's handles as soon as the object was
+ * selected, and a pin is the only way to open the thread under it.
  *
  * These ARE interactive, unlike presence: a pin is the only way to open the
  * thread under it. So the layer itself takes no pointer events and each pin
@@ -33,7 +38,7 @@ export function CommentLayer() {
   const { comments, replyCounts, enabled } = useDiscussion()
   const { runtime } = useOpenFrame()
   const document = useBoardDocument()
-  const zoom = useInteractionStore((state) => state.viewport.zoom)
+  const viewport = useInteractionStore((state) => state.viewport)
   const openThreadId = useInteractionStore((state) => state.openThreadId)
   const openThread = useInteractionStore((state) => state.openThread)
   const composing = useInteractionStore((state) => state.composing)
@@ -56,10 +61,7 @@ export function CommentLayer() {
   const selection = useInteractionStore((state) => state.selection)
   const remoteDrags = useRemoteDragStore((state) => state.drags)
 
-  const held = useMemo(
-    () => (dragging ? new Set<string>(selection) : null),
-    [dragging, selection],
-  )
+  const held = useMemo(() => (dragging ? new Set<string>(selection) : null), [dragging, selection])
 
   /*
    * Resolved threads are hidden rather than greyed. A board that keeps every
@@ -84,9 +86,9 @@ export function CommentLayer() {
       const moving =
         comment.objectId === null
           ? null
-          : (held?.has(comment.objectId) === true ? { dx: myDx, dy: myDy } : null) ??
+          : ((held?.has(comment.objectId) === true ? { dx: myDx, dy: myDy } : null) ??
             remoteDrags.get(comment.objectId) ??
-            null
+            null)
 
       placed.push({
         id: comment.id,
@@ -105,6 +107,7 @@ export function CommentLayer() {
     <div className="of-comments">
       {pins.map((pin) => {
         const replies = replyCounts.get(pin.id) ?? 0
+        const at = worldToScreen(viewport, pin.at)
         return (
           <button
             key={pin.id}
@@ -113,7 +116,7 @@ export function CommentLayer() {
               openThreadId === pin.id ? ' of-comments__pin--open' : ''
             }`}
             style={{
-              transform: `translate(${String(pin.at.x)}px, ${String(pin.at.y)}px) scale(${String(1 / zoom)})`,
+              transform: `translate(${String(at.x)}px, ${String(at.y)}px)`,
             }}
             title={`${pin.authorName}: ${plainMentionText(pin.body).slice(0, 80)}`}
             aria-label={`Comment from ${pin.authorName}${
@@ -134,7 +137,9 @@ export function CommentLayer() {
         <span
           className="of-comments__pin of-comments__pin--new"
           style={{
-            transform: `translate(${String(composing.x)}px, ${String(composing.y)}px) scale(${String(1 / zoom)})`,
+            transform: (({ x, y }) => `translate(${String(x)}px, ${String(y)}px)`)(
+              worldToScreen(viewport, composing),
+            ),
           }}
           aria-hidden="true"
           data-testid="comment-pin-new"

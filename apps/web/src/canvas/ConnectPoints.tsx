@@ -1,4 +1,4 @@
-import type { Anchor } from '@openframe/core'
+import { worldRectToScreen, type Anchor } from '@openframe/core'
 
 import { useOpenFrame } from '../runtime/context.js'
 import { useBoardDocument } from '../hooks/use-document-object.js'
@@ -33,7 +33,7 @@ export function ConnectPoints() {
   const { runtime } = useOpenFrame()
   const document = useBoardDocument()
   const selection = useInteractionStore((state) => state.selection)
-  const zoom = useInteractionStore((state) => state.viewport.zoom)
+  const viewport = useInteractionStore((state) => state.viewport)
   const dragKind = useInteractionStore((state) => state.drag.kind)
   const editingId = useInteractionStore((state) => state.editingId)
   const croppingId = useInteractionStore((state) => state.croppingId)
@@ -58,20 +58,26 @@ export function ConnectPoints() {
   // sprout connection points of its own.
   if (runtime.registry.endpointsOf(object, document).length > 0) return null
 
-  const bounds = runtime.registry.boundsOf(object, document)
-  const size = POINT_PX / zoom
+  /*
+   * The object's bounds ON SCREEN, which is where these are drawn: the layer
+   * is outside the world transform, so the outset and the dot are screen
+   * pixels and stay the same distance apart at every zoom. Divided by the zoom
+   * inside the transform they did not — see `.of-apparatus`.
+   */
+  const bounds = worldRectToScreen(viewport, runtime.registry.boundsOf(object, document))
   /*
    * Pushed clear of the edge, because the `n`, `e`, `s` and `w` resize handles
    * are centred on exactly these four points. Drawn on the edge, the two
    * fought over every press — resizing an object horizontally grabbed a
    * connector instead.
    */
-  const outset = CONNECT_OUTSET_PX / zoom
+  const outset = CONNECT_OUTSET_PX
 
   return (
     <>
       {SIDES.map((side) => {
         const at = connectPointAt(bounds, side, outset)
+        const size = POINT_PX
         return (
           <div
             key={side}
@@ -85,7 +91,6 @@ export function ConnectPoints() {
               transform: `translate(${String(at.x - size / 2)}px, ${String(at.y - size / 2)}px)`,
               width: `${String(size)}px`,
               height: `${String(size)}px`,
-              borderWidth: `${String(1.5 / zoom)}px`,
             }}
           >
             {/*
@@ -96,7 +101,7 @@ export function ConnectPoints() {
             <span
               className="of-connect-point__target"
               aria-hidden="true"
-              style={{ inset: `${String(-(CONNECT_TARGET_PX - POINT_PX) / 2 / zoom)}px` }}
+              style={{ inset: `${String(-(CONNECT_TARGET_PX - POINT_PX) / 2)}px` }}
             />
           </div>
         )

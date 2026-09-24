@@ -126,6 +126,17 @@ export function Canvas() {
         }}
       >
         <ObjectLayer width={width} height={height} />
+      </div>
+
+      {/*
+       * APPARATUS, at screen size.
+       *
+       * Everything here is measured in screen pixels and positioned from the
+       * viewport, because none of it is part of the board: a handle is 9px at
+       * 5% and at 1600% alike. Inside the world transform that is not
+       * expressible — see `.of-apparatus` in styles.css for what fails.
+       */}
+      <div className="of-apparatus" data-apparatus-layer>
         <SelectionOverlay />
         <ConnectPoints />
         <DrawPreview />
@@ -137,29 +148,29 @@ export function Canvas() {
         <ConnectorPreview />
         {/*
           Rendered here but PORTALED out, like every other piece of apparatus:
-          it lives inside the world tree so it sees the selection and the
-          document, and lands on the screen-space layer so it is not multiplied
-          by the zoom.
+          it lives inside the tree so it sees the selection and the document,
+          and lands on the chrome layer so it can be clamped to the window.
         */}
         <ArrangeBar />
+        {/*
+          A pin is above the grips: it is the only way to open the thread under
+          it, and one on the edge of a selected object was covered by that
+          object's handles. The words are elsewhere, in the panel — text that
+          scaled with the board could not be read at 25%.
+        */}
+        <CommentLayer />
         {/*
           Last, so other people's cursors sit above the board and every overlay
           on it — a cursor behind a note is a cursor nobody can follow.
         */}
         <PresenceLayer />
-        {/*
-          Inside the world, so a pin sits exactly where it was dropped under
-          any pan or zoom. The words are outside it, in the panel: text that
-          scales with the board cannot be read at 25%.
-        */}
-        <CommentLayer />
       </div>
 
       {/*
-        * Where a type's own apparatus lands: OUTSIDE the world transform, so
-        * it is the same size on screen at every zoom and can be clamped to the
-        * window. Empty until something is being edited.
-        */}
+       * Where a type's own apparatus lands: OUTSIDE the world transform, so
+       * it is the same size on screen at every zoom and can be clamped to the
+       * window. Empty until something is being edited.
+       */}
       <div className="of-chrome-layer" data-chrome-layer />
     </div>
   )

@@ -1,3 +1,5 @@
+import { worldToScreen } from '@openframe/core'
+
 import { useOpenFrame } from '../runtime/context.js'
 import { useBoardDocument } from '../hooks/use-document-object.js'
 import { useInteractionStore } from '../interaction/interaction-store.js'
@@ -20,7 +22,7 @@ export function EndpointOverlay() {
   const { runtime } = useOpenFrame()
   const document = useBoardDocument()
   const selection = useInteractionStore((state) => state.selection)
-  const zoom = useInteractionStore((state) => state.viewport.zoom)
+  const viewport = useInteractionStore((state) => state.viewport)
   const dragKind = useInteractionStore((state) => state.drag.kind)
   const editingId = useInteractionStore((state) => state.editingId)
 
@@ -34,35 +36,39 @@ export function EndpointOverlay() {
   const endpoints = runtime.registry.endpointsOf(object, document)
   if (endpoints.length === 0) return null
 
-  const size = HANDLE_PX / zoom
+  // A screen measurement on the screen-space layer: nothing here divides by
+  // the zoom, which is what `.of-apparatus` exists to make possible.
+  const size = HANDLE_PX
 
   return (
     <>
-      {endpoints.map((endpoint) => (
-        <div
-          key={endpoint.id}
-          /*
-           * A CONTROL is drawn differently from an END, because they do
-           * different things: an end decides where the line stops, a control
-           * only shapes what runs between them. Identical, the middle one
-           * reads as a third end and gets dragged onto an object in the
-           * expectation that the line will attach there.
-           */
-          className={`of-endpoint${endpoint.attachedTo === undefined ? '' : ' of-endpoint--attached'}${
-            endpoint.role === 'control' ? ' of-endpoint--control' : ''
-          }`}
-          // Read back by the gesture, which does not otherwise know what was grabbed.
-          data-handle="endpoint"
-          data-endpoint-id={endpoint.id}
-          data-testid={`endpoint-${endpoint.id}`}
-          style={{
-            transform: `translate(${String(endpoint.at.x - size / 2)}px, ${String(endpoint.at.y - size / 2)}px)`,
-            width: `${String(size)}px`,
-            height: `${String(size)}px`,
-            borderWidth: `${String(1.5 / zoom)}px`,
-          }}
-        />
-      ))}
+      {endpoints.map((endpoint) => {
+        const at = worldToScreen(viewport, endpoint.at)
+        return (
+          <div
+            key={endpoint.id}
+            /*
+             * A CONTROL is drawn differently from an END, because they do
+             * different things: an end decides where the line stops, a control
+             * only shapes what runs between them. Identical, the middle one
+             * reads as a third end and gets dragged onto an object in the
+             * expectation that the line will attach there.
+             */
+            className={`of-endpoint${endpoint.attachedTo === undefined ? '' : ' of-endpoint--attached'}${
+              endpoint.role === 'control' ? ' of-endpoint--control' : ''
+            }`}
+            // Read back by the gesture, which does not otherwise know what was grabbed.
+            data-handle="endpoint"
+            data-endpoint-id={endpoint.id}
+            data-testid={`endpoint-${endpoint.id}`}
+            style={{
+              transform: `translate(${String(at.x - size / 2)}px, ${String(at.y - size / 2)}px)`,
+              width: `${String(size)}px`,
+              height: `${String(size)}px`,
+            }}
+          />
+        )
+      })}
     </>
   )
 }

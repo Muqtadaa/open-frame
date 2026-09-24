@@ -2352,9 +2352,17 @@ body {
   pointer-events: none;
 }
 
+/*
+ * Two pixels, stated here rather than set per render.
+ *
+ * The width used to be written inline as `2 / zoom` because the outline was
+ * drawn inside the world transform, and this rule's own `1px` never applied at
+ * all — a declaration that is always overridden is a declaration nobody can
+ * trust. On the apparatus layer it is simply two screen pixels.
+ */
 .of-presence__outline {
   position: absolute;
-  border: 1px dashed currentcolor;
+  border: 2px dashed currentcolor;
   border-radius: 2px;
 }
 
@@ -2625,6 +2633,41 @@ body {
   inset: 0;
 }
 
+/*
+ * THE APPARATUS LAYER: everything drawn ABOUT the board rather than on it.
+ *
+ * A selection box, its handles, the rotate grip, a connection point, a crop
+ * bracket, a guide, another person's outline — all of it is a constant size on
+ * screen at every zoom, and none of it can be drawn inside `.of-world`.
+ *
+ * Inside that transform a CSS length is a WORLD unit, so a constant screen
+ * size means dividing by the zoom — and that works down to one pixel and then
+ * stops. A border, an outline and a shadow cannot be painted thinner than 1px
+ * in the element's own coordinate space, so at 1600% a `1 / zoom` border came
+ * back as one world pixel: SIXTEEN on screen. With `box-sizing: border-box`
+ * the border alone then set the size, and a 9px handle measured 32. The 1.5px
+ * selection outline and the rotate grip's 1px ring were never divided at all
+ * and were sixteen times over on their own. The cluster of grips above a
+ * selected object ran into itself, which is how this was found.
+ *
+ * Out here every length is what it says. Positions are converted from world to
+ * screen once, with `worldRectToScreen`, and nothing divides by the zoom.
+ *
+ * Under the chrome layer, which carries surfaces that must clamp to the window
+ * rather than track a rectangle; over the world, because apparatus that the
+ * board paints over is apparatus you cannot press.
+ *
+ * NOT `.of-overlay`, which is the board's screen-edge furniture and makes
+ * every child clickable — a full-canvas layer with that rule on it would take
+ * every press meant for the board.
+ */
+.of-apparatus {
+  position: absolute;
+  inset: 0;
+  /* Only the grips inside it take pointer events; the layer itself is glass. */
+  pointer-events: none;
+}
+
 .of-object {
   position: absolute;
   top: 0;
@@ -2697,6 +2740,7 @@ body {
   position: absolute;
   background: var(--of-panel);
   border: 1px solid var(--of-accent);
+  border-radius: 2px;
   pointer-events: auto;
 }
 
@@ -3378,9 +3422,17 @@ body {
   left: 0;
   z-index: 4;
   background: var(--of-panel);
-  border: solid var(--of-accent);
+  border: 1.5px solid var(--of-accent);
   border-radius: 50%;
   cursor: crosshair;
+  /*
+   * Stated, not inherited. The apparatus layer is glass — `pointer-events:
+   * none` — so that a press meant for the board passes through it, and every
+   * grip on it has to turn presses back on for itself. This one did not, and
+   * an end could not be dragged at all: the layer swallowed it. Every other
+   * grip already said so; this is the one that was relying on the default.
+   */
+  pointer-events: auto;
 }
 
 /* A filled dot means this end is attached to an object rather than floating. */
@@ -5236,7 +5288,7 @@ textarea.of-input {
    * The divider handles learned this the same way.
    */
   z-index: 3;
-  outline: dashed var(--of-accent);
+  outline: 1.5px dashed var(--of-accent);
   outline-offset: 0;
   pointer-events: none;
 }

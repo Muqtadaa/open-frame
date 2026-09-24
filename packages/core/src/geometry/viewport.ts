@@ -35,6 +35,27 @@ export function worldToScreen(viewport: Viewport, world: Point): Point {
 }
 
 /**
+ * A world rectangle as it lands on the screen.
+ *
+ * The companion to `worldToScreen` for everything that is measured as well as
+ * placed. Apparatus drawn beside an object — a selection box, its handles, a
+ * crop bracket — is positioned in world units but sized in screen ones, and
+ * doing that inside the board's own `scale(zoom)` does not work: a CSS length
+ * in there is a world unit, and a border cannot be made thinner than a pixel,
+ * so a counter-scaled one comes back multiplied by the zoom instead. Such
+ * apparatus is drawn OUTSIDE the transform and converts once, here.
+ */
+export function worldRectToScreen(viewport: Viewport, rect: Rect): Rect {
+  const at = worldToScreen(viewport, rect)
+  return {
+    x: at.x,
+    y: at.y,
+    width: rect.width * viewport.zoom,
+    height: rect.height * viewport.zoom,
+  }
+}
+
+/**
  * The world-space rect currently visible in a screen viewport of the given
  * size. This is the input to viewport culling — the single most important
  * performance primitive in the renderer.

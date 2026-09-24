@@ -1,7 +1,7 @@
 import { useInteractionStore } from '../interaction/interaction-store.js'
 import { drawnRect } from '../scene/draw.js'
 import { ELLIPSE, shapePath } from '../scene/shape-geometry.js'
-import type { ShapeKind } from '@openframe/core'
+import { worldRectToScreen, type ShapeKind } from '@openframe/core'
 
 /**
  * The outline of an object being drawn to size, before it exists.
@@ -16,10 +16,14 @@ import type { ShapeKind } from '@openframe/core'
  */
 export function DrawPreview() {
   const drag = useInteractionStore((state) => state.drag)
+  const viewport = useInteractionStore((state) => state.viewport)
   if (drag.kind !== 'draw') return null
 
-  const rect = drawnRect(drag.origin, drag.current, drag.constrained)
-  if (rect.width < 1 || rect.height < 1) return null
+  const world = drawnRect(drag.origin, drag.current, drag.constrained)
+  // Measured in world units, because that is what will be created; drawn on
+  // the apparatus layer, so the outline is a screen pixel at any zoom.
+  if (world.width < 1 || world.height < 1) return null
+  const rect = worldRectToScreen(viewport, world)
 
   /*
    * The preview needs to know WHICH shape, and the gesture only carries the
@@ -55,7 +59,6 @@ export function DrawPreview() {
     </div>
   )
 }
-
 
 /**
  * The outline only — no fill, no colour, no label.

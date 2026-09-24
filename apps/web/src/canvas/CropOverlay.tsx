@@ -1,4 +1,10 @@
-import { cropByHandle, FULL_CROP, type ImageCrop, type ObjectFrame } from '@openframe/core'
+import {
+  cropByHandle,
+  FULL_CROP,
+  worldRectToScreen,
+  type ImageCrop,
+  type ObjectFrame,
+} from '@openframe/core'
 
 import { useCommands } from '../hooks/use-commands.js'
 import { useBoardDocument } from '../hooks/use-document-object.js'
@@ -39,7 +45,7 @@ export function CropOverlay() {
   const commands = useCommands()
   const document = useBoardDocument()
   const croppingId = useInteractionStore((state) => state.croppingId)
-  const zoom = useInteractionStore((state) => state.viewport.zoom)
+  const viewport = useInteractionStore((state) => state.viewport)
   /*
    * Primitives, not the objects: rule 9. A selector building a fresh frame
    * never compares equal and re-renders for ever.
@@ -70,12 +76,21 @@ export function CropOverlay() {
       ? object.frame
       : { ...object.frame, x: previewX, y: previewY, width: previewWidth, height: previewHeight }
 
-  const corner = CORNER_PX / zoom
-  const thick = CORNER_THICK_PX / zoom
-  const edge = EDGE_PX / zoom
+  /*
+   * The picture ON SCREEN. The brackets are drawn on the apparatus layer, so
+   * every measurement below is a screen pixel and none of it is divided by the
+   * zoom — a 3px bracket inside the world transform was 48 at 1600%.
+   *
+   * `frame` stays in world units for `ChromeSurface`, which takes a world
+   * rectangle and does its own conversion.
+   */
+  const screen = worldRectToScreen(viewport, frame)
+  const corner = CORNER_PX
+  const thick = CORNER_THICK_PX
+  const edge = EDGE_PX
   // The 24px pointer target (WCAG 2.5.8), as for every other handle: the drawn
   // size is a design decision and the target is not.
-  const pad = Math.max(0, HANDLE_HIT_PX / zoom - thick) / 2
+  const pad = Math.max(0, HANDLE_HIT_PX - thick) / 2
 
   const crop: ImageCrop = (object.data as { crop?: ImageCrop | null }).crop ?? FULL_CROP
   const trimmed = crop.x > 0 || crop.y > 0 || crop.width < 1 || crop.height < 1
@@ -117,56 +132,52 @@ export function CropOverlay() {
         </ChromeSurface>
       )}
 
-    <div
-      className="of-crop"
-      data-testid="crop-overlay"
-      style={{
-        transform: `translate(${String(frame.x)}px, ${String(frame.y)}px)`,
-        width: `${String(frame.width)}px`,
-        height: `${String(frame.height)}px`,
-        outlineWidth: `${String(1.5 / zoom)}px`,
-      }}
-    >
-      {HANDLES.map((handle) => {
-        const anchor = handleAnchor(handle)
-        const isCorner = handle.length === 2
-        /*
-         * A bracket is drawn with BORDERS on the two sides it owns, so the
-         * corner piece is an L and an edge piece is a bar. Sized in world
-         * units divided by the zoom, like every other piece of chrome, so it
-         * stays a constant size on screen.
-         */
-        const across = isCorner ? corner : handle === 'n' || handle === 's' ? edge : thick
-        const down = isCorner ? corner : handle === 'e' || handle === 'w' ? edge : thick
+      <div
+        className="of-crop"
+        data-testid="crop-overlay"
+        style={{
+          transform: `translate(${String(screen.x)}px, ${String(screen.y)}px)`,
+          width: `${String(screen.width)}px`,
+          height: `${String(screen.height)}px`,
+        }}
+      >
+        {HANDLES.map((handle) => {
+          const anchor = handleAnchor(handle)
+          const isCorner = handle.length === 2
+          /*
+           * A bracket is drawn with BORDERS on the two sides it owns, so the
+           * corner piece is an L and an edge piece is a bar.
+           */
+          const across = isCorner ? corner : handle === 'n' || handle === 's' ? edge : thick
+          const down = isCorner ? corner : handle === 'e' || handle === 'w' ? edge : thick
 
-        return (
-          <div
-            key={handle}
-            className={`of-crop__grip of-crop__grip--${handle}`}
-            // Read back by the gesture, which does not otherwise know what was
-            // grabbed — the same handshake the resize and divider grips use.
-            data-handle="crop"
-            data-crop-handle={handle}
-            data-testid={`crop-${handle}`}
-            style={{
-              left: `${String(anchor.x * frame.width - across / 2)}px`,
-              top: `${String(anchor.y * frame.height - down / 2)}px`,
-              width: `${String(across)}px`,
-              height: `${String(down)}px`,
-              borderWidth: `${String(thick)}px`,
-              cursor: HANDLE_CURSORS[handle],
-            }}
-          >
-            <span
-              className="of-handle__target"
-              aria-hidden="true"
-              style={{ inset: `${String(-pad)}px`, cursor: HANDLE_CURSORS[handle] }}
-            />
-          </div>
-        )
-      })}
-
-    </div>
+          return (
+            <div
+              key={handle}
+              className={`of-crop__grip of-crop__grip--${handle}`}
+              // Read back by the gesture, which does not otherwise know what was
+              // grabbed — the same handshake the resize and divider grips use.
+              data-handle="crop"
+              data-crop-handle={handle}
+              data-testid={`crop-${handle}`}
+              style={{
+                left: `${String(anchor.x * screen.width - across / 2)}px`,
+                top: `${String(anchor.y * screen.height - down / 2)}px`,
+                width: `${String(across)}px`,
+                height: `${String(down)}px`,
+                borderWidth: `${String(thick)}px`,
+                cursor: HANDLE_CURSORS[handle],
+              }}
+            >
+              <span
+                className="of-handle__target"
+                aria-hidden="true"
+                style={{ inset: `${String(-pad)}px`, cursor: HANDLE_CURSORS[handle] }}
+              />
+            </div>
+          )
+        })}
+      </div>
     </>
   )
 }

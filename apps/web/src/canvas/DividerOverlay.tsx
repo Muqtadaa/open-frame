@@ -1,6 +1,6 @@
 import { useRef } from 'react'
 
-import { setTrackSize, type TableData } from '@openframe/core'
+import { setTrackSize, worldRectToScreen, type TableData } from '@openframe/core'
 
 import { useCommands } from '../hooks/use-commands.js'
 import { fitColumnWidth, fitRowHeight } from '../scene/fit-track.js'
@@ -39,7 +39,7 @@ export function DividerOverlay() {
   const pressed = useRef<{ id: string; at: number } | null>(null)
   const document = useBoardDocument()
   const selection = useInteractionStore((state) => state.selection)
-  const zoom = useInteractionStore((state) => state.viewport.zoom)
+  const viewport = useInteractionStore((state) => state.viewport)
   const dragKind = useInteractionStore((state) => state.drag.kind)
   const editingId = useInteractionStore((state) => state.editingId)
 
@@ -77,8 +77,12 @@ export function DividerOverlay() {
 
     const data = object.data as TableData
     const columns = data.columns.length
-    const cells = [...grid.children].filter((child): child is HTMLElement => child instanceof HTMLElement)
-    const inTrack = cells.filter((_, at) => (across ? at % columns === index : Math.floor(at / columns) === index))
+    const cells = [...grid.children].filter(
+      (child): child is HTMLElement => child instanceof HTMLElement,
+    )
+    const inTrack = cells.filter((_, at) =>
+      across ? at % columns === index : Math.floor(at / columns) === index,
+    )
 
     const wanted = across ? fitColumnWidth(inTrack) : fitRowHeight(inTrack)
     if (wanted === null) return
@@ -106,8 +110,13 @@ export function DividerOverlay() {
     )
   }
 
-  const bounds = runtime.registry.boundsOf(object, document)
-  const grab = GRAB_PX / zoom
+  /*
+   * The table ON SCREEN. The grip is a screen measurement — it is a target for
+   * a pointer, not part of the table — and on the apparatus layer it can
+   * simply be one, with nothing divided by the zoom.
+   */
+  const bounds = worldRectToScreen(viewport, runtime.registry.boundsOf(object, document))
+  const grab = GRAB_PX
 
   return (
     <>
