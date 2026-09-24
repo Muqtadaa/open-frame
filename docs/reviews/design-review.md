@@ -114,4 +114,18 @@ Found by looking at them:
   unchanged stylesheet — and it then showed the change on ten, only at the
   corners that moved.
 
+- **C2.3b — the type ramp.** 106 raw pixel sizes onto seven steps of
+  `--of-type-*` (record 12, ui-small 13, control 14, ui 15, title 17, headline
+  19, display 22), named for what they carry. The goldens did not move: an
+  exact refactor, which is what they were added to prove. The 12px floor test
+  was rewritten to READ the ramp — left as it was, it only checked literal
+  `px` and would have passed on a stylesheet with none left. A new check fails
+  on any literal interface size; `em` (content scaling inside an object) and
+  the format bar's size specimens are the only exemptions. All three checks
+  broken once and watched to fail.
+- **Detector: 56 → 6**, every remaining hit deliberate: the colour picker's
+  spectrum (`#000`, a black-to-transparent wash that IS the definition of
+  value), the two size specimens, Georgia (a content face a user picks), and
+  the ruled ground.
+
 ### Remaining

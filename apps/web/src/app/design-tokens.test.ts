@@ -545,22 +545,65 @@ describe('the twelve pixel floor', () => {
    * size, so the small step's glyph is a specimen of small type rather than a
    * label anyone reads — the button carries its name for assistive tech.
    */
-  const SPECIMENS = new Set(['.of-size--small'])
+  const SPECIMENS = new Set(['.of-size--small', '.of-size--medium', '.of-size--large'])
 
-  it('sets no functional text below 12px', () => {
+  /**
+   * Sizes are ramp tokens now, so the floor has to READ the ramp — a check
+   * that only looked at literal `px` would pass on a stylesheet with no
+   * literals left in it, whatever the ramp said.
+   */
+  const RAMP = new Map<string, number>()
+  for (const [, name = '', value = ''] of CSS.matchAll(/(--of-type-[\w-]+):\s*(\d+)px;/g)) {
+    RAMP.set(name, Number(value))
+  }
+  const sizeOf = (value: string): number | null => {
+    const token = /^var\((--of-type-[\w-]+)\)$/.exec(value)
+    if (token !== null) return RAMP.get(token[1] ?? '') ?? null
+    const literal = /^([\d.]+)px$/.exec(value)
+    return literal === null ? null : Number(literal[1])
+  }
+  const rules = (): [string, string][] => {
     const source = CSS.replace(/\/\*[\s\S]*?\*\//g, '')
-    const below: string[] = []
+    const found: [string, string][] = []
     for (const [, selector = '', body = ''] of source.matchAll(/([^{}]+)\{([^{}]*)\}/g)) {
-      const name = selector.trim()
-      if (SPECIMENS.has(name)) continue
-      for (const [, size = ''] of body.matchAll(/font-size:\s*([\d.]+)px/g)) {
-        if (Number(size) < FLOOR) below.push(`${name}: ${size}px`)
+      for (const [, size = ''] of body.matchAll(/(?<![\w-])font-size:\s*([^;]+);/g)) {
+        found.push([selector.trim(), size.trim()])
       }
     }
+    return found
+  }
+
+  it('sets no functional text below 12px', () => {
+    const below = rules()
+      .filter(([selector]) => !SPECIMENS.has(selector))
+      .filter(([, size]) => {
+        const px = sizeOf(size)
+        return px !== null && px < FLOOR
+      })
+      .map(([selector, size]) => `${selector}: ${size}`)
     expect(below).toEqual([])
   })
 
-  it('exempts only the specimen, and only while it exists', () => {
+  it('puts no step of the ramp below the floor', () => {
+    expect(RAMP.size).toBeGreaterThan(0)
+    expect([...RAMP].filter(([, px]) => px < FLOOR)).toEqual([])
+  })
+
+  /**
+   * The ramp (DESIGN.md, Typography). 114 of 122 sizes were raw pixels, in
+   * nine values, so "the type scale" was whichever number the last rule
+   * happened to use. Every interface size now names a step; content inside an
+   * object scales in `em` from its object and is not on the ramp.
+   */
+  it('draws every interface size from the ramp', () => {
+    const off = rules()
+      .filter(([selector]) => !SPECIMENS.has(selector))
+      .filter(([, size]) => !/^var\(--of-type-[\w-]+\)$/.test(size) && !size.endsWith('em'))
+      .map(([selector, size]) => `${selector}: ${size}`)
+    expect(off).toEqual([])
+  })
+
+  it('exempts only the specimens, and only while they exist', () => {
     for (const selector of SPECIMENS) {
       expect(CSS).toContain(`${selector} {`)
     }

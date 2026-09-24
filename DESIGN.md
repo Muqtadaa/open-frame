@@ -66,6 +66,16 @@ typography:
     fontSize: "13px"
     fontWeight: 400
     lineHeight: 1
+  title:
+    fontFamily: "ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, sans-serif"
+    fontSize: "17px"
+    fontWeight: 600
+    lineHeight: 1.3
+  headline:
+    fontFamily: "ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, sans-serif"
+    fontSize: "19px"
+    fontWeight: 600
+    lineHeight: 1.35
   record:
     fontFamily: "ui-monospace, SFMono-Regular, Menlo, Consolas, Liberation Mono, monospace"
     fontSize: "12px"
@@ -403,6 +413,13 @@ columns rather than as ransom text.
 - **Record** (400, 12px, mono, 0.02em): the record line, the record panel's
   subject and field labels, slider readings, keyboard shortcuts, the wheel-mode
   value. Lowercase, never uppercase-tracked.
+- **Title** (600, 17px): the one heading a gate or a sheet carries — "This board
+  has a password".
+- **Headline** (600, 19px): the wordmark on the front door, beside the mark.
+
+In the stylesheet these are seven steps of `--of-type-*` — `record` 12,
+`ui-small` 13, `control` 14 (buttons, fields and a shape's label), `ui` 15
+(which is also a sticky's body), `title` 17, `headline` 19, `display` 22.
 
 ### Named Rules
 
@@ -416,6 +433,12 @@ It was also written down a week before it was true: this file said twelve while
 floor nothing measures. `design-tokens.test.ts` now reads every absolute
 `font-size` in the stylesheet and fails below 12px. Its one exemption is a
 specimen — the format bar's small-size button, drawn at the size it applies.
+
+**The Ramp Rule.** Every interface size names a step of `--of-type-*`, and
+`design-tokens.test.ts` fails on a literal. Text INSIDE an object scales in `em`
+from the object's own size and is not on the ramp — that is the user's material.
+The only exemptions are the format bar's size specimens, each drawn at the size
+it applies.
 
 **The Mono Is A Record Rule.** Mono marks records and measurement — counts, zoom,
 field values, shortcuts — and nothing else. It is never applied to make something

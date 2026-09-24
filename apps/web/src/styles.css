@@ -81,6 +81,24 @@
   /* A segmented control's selected index, pressed into its bed. */
   --of-pressed-shadow: 0 1px 2px rgb(22 32 43 / 12%);
   /*
+   * THE TYPE RAMP. Seven steps, named for what they carry rather than how big
+   * they are, because the same 15px is a sticky's body and a menu item and the
+   * name has to say which question is being asked.
+   *
+   * The interface uses record, ui-small, control, ui and title. Headline and
+   * display belong to the front door's wordmark and to the user's own text
+   * objects; content INSIDE an object scales in `em` from its object's size
+   * and is not on this ramp at all. 12px is the floor (rule 22).
+   */
+  --of-type-record: 12px; /* mono records: labels, readouts, shortcuts, counts */
+  --of-type-ui-small: 13px; /* secondary lines: a hint, a row's second line */
+  --of-type-control: 14px; /* what you operate: buttons, fields, a shape's label */
+  --of-type-ui: 15px; /* menus, notices, toasts, a sticky's body */
+  --of-type-title: 17px; /* the title of a gate or a sheet */
+  --of-type-headline: 19px; /* the wordmark on the front door */
+  --of-type-display: 22px; /* a text object: the largest type, and the user's */
+
+  /*
    * THE RADIUS SCALE. Corners get smaller the closer a form is to the page:
    * stock laid ON the page is nearly square, apparatus in its margins a little
    * softer, a control you press softer again, and a surface that floats over
@@ -367,7 +385,7 @@
   padding: 0 12px;
   font: inherit;
   font-family: var(--of-font);
-  font-size: 14px;
+  font-size: var(--of-type-control);
   line-height: 1;
   color: var(--of-ink);
   white-space: nowrap;
@@ -554,7 +572,7 @@ body {
   gap: 7px;
   align-items: center;
   padding: 5px 8px;
-  font-size: 12px;
+  font-size: var(--of-type-record);
   line-height: 1;
   color: var(--of-page);
   white-space: nowrap;
@@ -568,7 +586,7 @@ body {
 .of-tool__tip kbd {
   font-family: var(--of-mono);
   /* 12px is the legibility floor for functional text, shortcuts included. */
-  font-size: 12px;
+  font-size: var(--of-type-record);
   color: var(--of-rule-decade);
 }
 
@@ -655,7 +673,7 @@ body {
   align-items: center;
   padding: 6px 10px 6px 7px;
   font: inherit;
-  font-size: 12px;
+  font-size: var(--of-type-record);
   color: var(--of-ink-muted);
   text-transform: capitalize;
   background: transparent;
@@ -709,7 +727,7 @@ body {
  * differing only in which one you happened to press.
  */
 .of-swatch--ink {
-  font-size: 13px;
+  font-size: var(--of-type-ui-small);
   font-weight: 600;
   line-height: 1;
 }
@@ -887,7 +905,7 @@ body {
   flex: 1;
   min-width: 0;
   font-family: var(--of-mono);
-  font-size: 12px;
+  font-size: var(--of-type-record);
   letter-spacing: 0.02em;
 }
 
@@ -917,7 +935,7 @@ body {
 /* 12px is the functional-text floor: this is a readout, not smallprint. */
 .of-picker__contrast {
   margin: 0;
-  font-size: 12px;
+  font-size: var(--of-type-record);
   color: var(--of-ink-muted);
 }
 
@@ -1008,7 +1026,7 @@ body {
  * beside its icon; at body size next to a mouse it looked like a panel title.
  */
 .of-zoom__mode {
-  font-size: 12px;
+  font-size: var(--of-type-record);
   letter-spacing: 0.02em;
 }
 
@@ -1024,7 +1042,7 @@ body {
   height: var(--of-hit-sm);
   padding: 0 4px;
   font: inherit;
-  font-size: 13px;
+  font-size: var(--of-type-ui-small);
   font-variant-numeric: tabular-nums;
   color: var(--of-ink);
   text-align: center;
@@ -1051,7 +1069,7 @@ body {
   gap: 12px;
   align-items: center;
   padding: 9px 12px;
-  font-size: 15px;
+  font-size: var(--of-type-ui);
   background: var(--of-danger-wash);
   border: 1px solid var(--of-danger-edge);
   border-radius: var(--of-radius-surface);
@@ -1121,7 +1139,7 @@ body {
   min-height: 0;
   padding: 4px 6px;
   overflow: hidden;
-  font-size: 12px;
+  font-size: var(--of-type-record);
   /*
    * INHERITED, not set. `color: var(--of-ink)` here won every text colour the
    * table was given, because the ink is applied to the table as a whole and a
@@ -1167,7 +1185,7 @@ body {
 
 .of-table__input {
   font: inherit;
-  font-size: 12px;
+  font-size: var(--of-type-record);
   /* Inherited for the same reason as the cell — and a textarea does not
    * inherit colour on its own, so this is what carries the ink into the one
    * cell being typed in. */
@@ -1336,7 +1354,7 @@ body {
 /* A count is a measurement, so it is set as one. */
 .of-cellbar__count {
   font-family: var(--of-mono);
-  font-size: 12px;
+  font-size: var(--of-type-record);
   font-variant-numeric: tabular-nums;
   letter-spacing: 0.02em;
   color: var(--of-ink-muted);
@@ -1345,7 +1363,7 @@ body {
 
 .of-cellbar__target {
   font-family: var(--of-mono);
-  font-size: 12px;
+  font-size: var(--of-type-record);
   letter-spacing: 0.02em;
 }
 
@@ -1384,7 +1402,7 @@ body {
   width: 24px;
   height: 24px;
   font: inherit;
-  font-size: 14px;
+  font-size: var(--of-type-control);
   line-height: 1;
   color: var(--of-ink);
   cursor: pointer;
@@ -1439,7 +1457,7 @@ body {
 
 .of-grid-pick__readout {
   margin: 6px 0 0;
-  font-size: 12px;
+  font-size: var(--of-type-record);
   color: var(--of-ink-muted);
   text-align: center;
   font-variant-numeric: tabular-nums;
@@ -1469,7 +1487,7 @@ body {
   position: absolute;
   top: 2px;
   right: 6px;
-  font-size: 12px;
+  font-size: var(--of-type-record);
   color: var(--of-ink-muted);
 }
 
@@ -1485,7 +1503,7 @@ body {
 .of-code__code,
 .of-code__input {
   font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
-  font-size: 12px;
+  font-size: var(--of-type-record);
   line-height: 1.5;
   color: var(--of-ink);
   white-space: pre;
@@ -1510,7 +1528,7 @@ body {
 .of-code__picker {
   padding: 4px 6px;
   font: inherit;
-  font-size: 12px;
+  font-size: var(--of-type-record);
   color: var(--of-ink-muted);
 }
 
@@ -1605,7 +1623,7 @@ body {
   min-height: 26px;
   padding: 3px 9px;
   font: inherit;
-  font-size: 12px;
+  font-size: var(--of-type-record);
   color: var(--of-ink-muted);
   cursor: pointer;
   background: none;
@@ -1634,7 +1652,7 @@ body {
  */
 .of-spaces__count {
   font-family: var(--of-mono);
-  font-size: 12px;
+  font-size: var(--of-type-record);
   font-variant-numeric: tabular-nums;
   color: var(--of-ink-muted);
 }
@@ -1655,7 +1673,7 @@ body {
   min-height: 26px;
   padding: 3px 9px 3px 7px;
   font: inherit;
-  font-size: 12px;
+  font-size: var(--of-type-record);
   color: var(--of-ink-muted);
   cursor: pointer;
   background: none;
@@ -1696,7 +1714,7 @@ body {
 .of-mentions__bell {
   padding: 4px 10px;
   font: inherit;
-  font-size: 12px;
+  font-size: var(--of-type-record);
   color: var(--of-panel);
   cursor: pointer;
   background: var(--of-accent);
@@ -1769,18 +1787,18 @@ body {
 }
 
 .of-mentions__who {
-  font-size: 12px;
+  font-size: var(--of-type-record);
   font-weight: 600;
   color: var(--of-ink);
 }
 
 .of-mentions__where {
-  font-size: 12px;
+  font-size: var(--of-type-record);
   color: var(--of-ink-muted);
 }
 
 .of-mentions__what {
-  font-size: 12px;
+  font-size: var(--of-type-record);
   color: var(--of-ink);
   /* Somebody's words, clipped to a line rather than reflowing the whole list. */
   overflow: hidden;
@@ -1857,7 +1875,7 @@ body {
   place-items: center;
   width: 20px;
   height: 20px;
-  font-size: 12px;
+  font-size: var(--of-type-record);
   font-weight: 600;
   color: var(--of-ink);
   border-radius: var(--of-radius-round);
@@ -1865,7 +1883,7 @@ body {
 
 .of-mention-menu__name {
   overflow: hidden;
-  font-size: 12px;
+  font-size: var(--of-type-record);
   color: var(--of-ink);
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -1898,7 +1916,7 @@ body {
   width: 26px;
   height: 26px;
   padding: 0;
-  font-size: 12px;
+  font-size: var(--of-type-record);
   font-weight: 600;
   color: var(--of-panel);
   pointer-events: auto;
@@ -1948,14 +1966,14 @@ body {
 
 .of-comment-panel__title {
   margin: 0;
-  font-size: 14px;
+  font-size: var(--of-type-control);
   font-weight: 600;
   color: var(--of-ink);
 }
 
 .of-comment-panel__gone {
   margin: 0;
-  font-size: 12px;
+  font-size: var(--of-type-record);
   color: var(--of-danger);
 }
 
@@ -1969,7 +1987,7 @@ body {
 
 .of-comment-panel__hint {
   margin: 6px 0 0;
-  font-size: 12px;
+  font-size: var(--of-type-record);
   color: var(--of-ink-muted);
 }
 
@@ -2014,7 +2032,7 @@ body {
 
 .of-comment-panel__resolved-toggle {
   align-self: start;
-  font-size: 12px;
+  font-size: var(--of-type-record);
 }
 
 .of-comment-panel__entry:hover {
@@ -2022,14 +2040,14 @@ body {
 }
 
 .of-comment-panel__who {
-  font-size: 12px;
+  font-size: var(--of-type-record);
   font-weight: 600;
   color: var(--of-ink);
 }
 
 .of-comment-panel__said {
   overflow: hidden;
-  font-size: 12px;
+  font-size: var(--of-type-record);
   color: var(--of-ink-muted);
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -2037,7 +2055,7 @@ body {
 
 .of-comment-panel__invite {
   padding: 0;
-  font-size: 12px;
+  font-size: var(--of-type-record);
   color: var(--of-accent);
   text-decoration: underline;
   vertical-align: baseline;
@@ -2047,7 +2065,7 @@ body {
 
 .of-comment-panel__problem {
   margin: 6px 0 0;
-  font-size: 12px;
+  font-size: var(--of-type-record);
   color: var(--of-danger);
 }
 
@@ -2069,14 +2087,14 @@ body {
   place-items: center;
   width: 22px;
   height: 22px;
-  font-size: 12px;
+  font-size: var(--of-type-record);
   font-weight: 600;
   color: var(--of-panel);
   border-radius: var(--of-radius-round);
 }
 
 .of-comment__name {
-  font-size: 12px;
+  font-size: var(--of-type-record);
   font-weight: 600;
   color: var(--of-ink);
 }
@@ -2084,7 +2102,7 @@ body {
 .of-comment__text {
   /* Somebody else's words, wrapped as written rather than reflowed into one line. */
   margin: 2px 0 0;
-  font-size: 13px;
+  font-size: var(--of-type-ui-small);
   line-height: 1.4;
   color: var(--of-ink);
   white-space: pre-wrap;
@@ -2113,14 +2131,14 @@ body {
 
 .of-gone__title {
   margin: 0 0 8px;
-  font-size: 17px;
+  font-size: var(--of-type-title);
   font-weight: 600;
   color: var(--of-ink);
 }
 
 .of-gone__body {
   margin: 0 0 16px;
-  font-size: 15px;
+  font-size: var(--of-type-ui);
   line-height: 1.45;
   color: var(--of-ink-muted);
 }
@@ -2138,7 +2156,7 @@ body {
 
 .of-gone__problem {
   margin: 0 0 12px;
-  font-size: 13px;
+  font-size: var(--of-type-ui-small);
   color: var(--of-danger);
 }
 
@@ -2182,7 +2200,7 @@ body {
   max-width: calc(100vw - 80px - 420px);
   padding: 5px 10px;
   font-family: var(--of-mono);
-  font-size: 12px;
+  font-size: var(--of-type-record);
   color: var(--of-ink-muted);
   background: var(--of-page);
   border: 1px solid var(--of-panel-border);
@@ -2311,14 +2329,14 @@ body {
   display: block;
   margin-bottom: 5px;
   font-family: var(--of-mono);
-  font-size: 12px;
+  font-size: var(--of-type-record);
   letter-spacing: 0.02em;
   color: var(--of-ink-muted);
 }
 
 .of-account__error {
   margin: 0 0 12px;
-  font-size: 14px;
+  font-size: var(--of-type-control);
   line-height: 1.4;
   color: var(--of-danger);
 }
@@ -2333,7 +2351,7 @@ body {
 .of-account__switch {
   padding: 4px 0;
   font-family: var(--of-font);
-  font-size: 13px;
+  font-size: var(--of-type-ui-small);
   color: var(--of-ink-muted);
   text-decoration: underline;
   text-underline-offset: 2px;
@@ -2461,7 +2479,7 @@ body {
   left: 0;
   padding: 2px 5px;
   font-family: var(--of-font);
-  font-size: 12px;
+  font-size: var(--of-type-record);
   font-weight: 500;
   line-height: 1.3;
   color: var(--of-page);
@@ -2542,7 +2560,7 @@ body {
   overflow: hidden;
   max-width: 14ch;
   font-family: var(--of-font);
-  font-size: 13px;
+  font-size: var(--of-type-ui-small);
   text-overflow: ellipsis;
   white-space: nowrap;
 }
@@ -2574,7 +2592,7 @@ body {
   height: 22px;
   margin-right: -4px;
   font-family: var(--of-font);
-  font-size: 12px;
+  font-size: var(--of-type-record);
   font-weight: 600;
   color: var(--of-page);
   border: 1.5px solid var(--of-page);
@@ -2890,7 +2908,7 @@ body {
   height: 100%;
   padding: 13px;
   overflow: hidden;
-  font-size: 15px;
+  font-size: var(--of-type-ui);
   line-height: 1.35;
   border-radius: var(--of-radius-slip);
   /* A slip laid on the page. Shared token so every placed object sits at the
@@ -2952,7 +2970,7 @@ body {
   flex: 1;
   min-height: 0;
   overflow: hidden;
-  font-size: 15px;
+  font-size: var(--of-type-ui);
   line-height: 1.35;
   overflow-wrap: anywhere;
   white-space: pre-wrap;
@@ -2990,7 +3008,7 @@ body {
   margin-top: 8px;
   font-family: var(--of-mono);
   /* The twelve pixel floor: this is functional text, not decoration. */
-  font-size: 12px;
+  font-size: var(--of-type-record);
   line-height: 1.3;
   letter-spacing: 0.02em;
   /*
@@ -3039,7 +3057,7 @@ body {
   width: 100%;
   height: 100%;
   overflow: hidden;
-  font-size: 22px;
+  font-size: var(--of-type-display);
   line-height: 1.3;
   overflow-wrap: anywhere;
   white-space: pre-wrap;
@@ -3114,7 +3132,7 @@ body {
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 14px;
+  font-size: var(--of-type-control);
   line-height: 1.3;
   overflow-wrap: anywhere;
   white-space: pre-wrap;
@@ -3137,7 +3155,7 @@ body {
   width: 100%;
   height: 100%;
   padding: 8px;
-  font-size: 12px;
+  font-size: var(--of-type-record);
   color: var(--of-ink-muted);
   text-align: center;
   background: repeating-linear-gradient(
@@ -3164,7 +3182,7 @@ body {
 
 .of-unknown__hint,
 .of-fallback__hint {
-  font-size: 12px;
+  font-size: var(--of-type-record);
 }
 
 .of-fatal {
@@ -3183,7 +3201,7 @@ body {
   display: flex;
   gap: 4px;
   align-items: center;
-  font-size: 12px;
+  font-size: var(--of-type-record);
 }
 
 .of-dev__label {
@@ -3244,7 +3262,7 @@ body {
   width: 100%;
   padding: 6px 9px;
   font: inherit;
-  font-size: 15px;
+  font-size: var(--of-type-ui);
   color: var(--of-ink);
   text-align: left;
   background: transparent;
@@ -3263,7 +3281,7 @@ body {
 }
 
 .of-menu__shortcut {
-  font-size: 12px;
+  font-size: var(--of-type-record);
   color: var(--of-ink-muted);
 }
 
@@ -3286,7 +3304,7 @@ body {
   align-items: flex-end;
   max-width: 480px;
   overflow: hidden;
-  font-size: 15px;
+  font-size: var(--of-type-ui);
   line-height: 1;
   color: var(--of-ink-muted);
   white-space: nowrap;
@@ -3332,7 +3350,7 @@ body {
 
 .of-connector__label {
   font-family: inherit;
-  font-size: 12px;
+  font-size: var(--of-type-record);
   fill: var(--of-ink);
   paint-order: stroke;
   stroke: var(--of-bg);
@@ -3360,7 +3378,7 @@ body {
   height: 28px;
   padding: 3px 6px;
   font: inherit;
-  font-size: 12px;
+  font-size: var(--of-type-record);
   text-align: center;
   background: var(--of-panel);
   border-radius: var(--of-radius);
@@ -3404,7 +3422,7 @@ body {
   display: grid;
   place-items: center;
   padding: 8px;
-  font-size: 12px;
+  font-size: var(--of-type-record);
   text-align: center;
   color: var(--of-ink-muted);
   background: var(--of-s-gray);
@@ -3422,7 +3440,7 @@ body {
   height: 100%;
   padding: 8px;
   font: inherit;
-  font-size: 15px;
+  font-size: var(--of-type-ui);
   resize: none;
   background: var(--of-panel);
   border: 1px solid var(--of-accent);
@@ -3436,7 +3454,7 @@ body {
   gap: 12px;
   align-items: center;
   padding: 9px 12px;
-  font-size: 15px;
+  font-size: var(--of-type-ui);
   color: var(--of-danger);
   background: var(--of-danger-wash);
   border: 1px solid var(--of-danger-edge);
@@ -3446,7 +3464,7 @@ body {
 
 .of-toast__dismiss {
   padding: 0 4px;
-  font-size: 16px;
+  font-size: var(--of-type-ui);
   line-height: 1;
   color: inherit;
   background: none;
@@ -3532,7 +3550,7 @@ body {
 /* The subject of the record, named the way a specimen label names its subject. */
 .of-inspector__subject {
   font-family: var(--of-mono);
-  font-size: 12px;
+  font-size: var(--of-type-record);
   color: var(--of-ink);
   text-transform: lowercase;
   letter-spacing: 0.02em;
@@ -3582,7 +3600,7 @@ body {
 .of-field__label {
   overflow: hidden;
   font-family: var(--of-mono);
-  font-size: 12px;
+  font-size: var(--of-type-record);
   color: var(--of-ink-muted);
   text-align: right;
   text-overflow: ellipsis;
@@ -3634,7 +3652,7 @@ body {
   min-height: var(--of-hit-sm);
   padding: 5px 10px;
   font-family: var(--of-font);
-  font-size: 14px;
+  font-size: var(--of-type-control);
   color: var(--of-ink);
   background: var(--of-page);
   border: 1px solid var(--of-control-border);
@@ -3737,7 +3755,7 @@ textarea.of-input {
 
 .of-paint__target {
   font-family: var(--of-mono);
-  font-size: 12px;
+  font-size: var(--of-type-record);
   letter-spacing: 0.02em;
 }
 
@@ -3807,7 +3825,7 @@ textarea.of-input {
 }
 
 .of-face {
-  font-size: 13px;
+  font-size: var(--of-type-ui-small);
   line-height: 1;
 }
 
@@ -3839,7 +3857,7 @@ textarea.of-input {
 .of-inspector__reading {
   min-width: 36px;
   font-family: var(--of-mono);
-  font-size: 12px;
+  font-size: var(--of-type-record);
   color: var(--of-ink-muted);
   text-align: right;
 }
@@ -3973,7 +3991,7 @@ textarea.of-input {
   overflow: hidden;
   font-family: var(--of-font);
   /* Functional text: readable, and on the twelve pixel floor. */
-  font-size: 12px;
+  font-size: var(--of-type-record);
   color: var(--of-ink);
   text-align: left;
   text-overflow: ellipsis;
@@ -4003,7 +4021,7 @@ textarea.of-input {
  */
 .of-insight .of-slip__body,
 .of-insight.of-slip__editor {
-  font-size: 17px;
+  font-size: var(--of-type-title);
   line-height: 1.3;
 }
 
@@ -4162,7 +4180,7 @@ textarea.of-input {
   height: 24px;
   padding: 0 4px;
   font-family: var(--of-font);
-  font-size: 15px;
+  font-size: var(--of-type-ui);
   color: var(--of-ink);
   background: transparent;
   border: none;
@@ -4208,11 +4226,11 @@ textarea.of-input {
  * text — so the pair reads without either label.
  */
 .of-format-bar__button--size {
-  font-size: 12px;
+  font-size: var(--of-type-record);
 }
 
 .of-format-bar__button--bigger {
-  font-size: 15px;
+  font-size: var(--of-type-ui);
 }
 
 /*
@@ -4253,7 +4271,7 @@ textarea.of-input {
   width: 100%;
   padding: 10px 12px;
   font-family: var(--of-font);
-  font-size: 14px;
+  font-size: var(--of-type-control);
   color: var(--of-ink);
   background: transparent;
   border: none;
@@ -4269,7 +4287,7 @@ textarea.of-input {
   padding: 0 12px 7px;
   font-family: var(--of-mono);
   /* The twelve pixel floor: a readout, like the zoom percentage. */
-  font-size: 12px;
+  font-size: var(--of-type-record);
   color: var(--of-ink-muted);
   letter-spacing: 0.02em;
 }
@@ -4296,7 +4314,7 @@ textarea.of-input {
   min-height: 32px;
   padding: 6px 12px;
   font-family: var(--of-font);
-  font-size: 15px;
+  font-size: var(--of-type-ui);
   color: var(--of-ink);
   text-align: left;
   background: transparent;
@@ -4314,7 +4332,7 @@ textarea.of-input {
   flex: none;
   min-width: 56px;
   font-family: var(--of-mono);
-  font-size: 12px;
+  font-size: var(--of-type-record);
   color: var(--of-ink-muted);
   letter-spacing: 0.02em;
 }
@@ -4422,7 +4440,7 @@ textarea.of-input {
 
 .of-home__title {
   margin: 0;
-  font-size: 19px;
+  font-size: var(--of-type-headline);
   font-weight: 600;
   line-height: 1.35;
 }
@@ -4437,7 +4455,7 @@ textarea.of-input {
   height: var(--of-hit);
   padding: 0 14px 0 5px;
   font-family: var(--of-font);
-  font-size: 14px;
+  font-size: var(--of-type-control);
   color: var(--of-ink);
   background: var(--of-page);
   /* Apparatus radius. Fully round is reserved for the rotate handle and
@@ -4464,7 +4482,7 @@ textarea.of-input {
   place-items: center;
   width: var(--of-hit-sm);
   height: var(--of-hit-sm);
-  font-size: 13px;
+  font-size: var(--of-type-ui-small);
   color: var(--of-panel);
   border-radius: var(--of-radius-round);
 }
@@ -4504,7 +4522,7 @@ textarea.of-input {
 .of-home__heading {
   margin: 0 0 12px;
   font-family: var(--of-mono);
-  font-size: 12px;
+  font-size: var(--of-type-record);
   font-weight: 400;
   line-height: 1;
   letter-spacing: 0.02em;
@@ -4513,7 +4531,7 @@ textarea.of-input {
 
 .of-home__note {
   margin: 0 0 16px;
-  font-size: 14px;
+  font-size: var(--of-type-control);
   line-height: 1.5;
   color: var(--of-ink-muted);
 }
@@ -4668,7 +4686,7 @@ textarea.of-input {
   height: var(--of-hit);
   padding: 0 8px;
   font-family: inherit;
-  font-size: 15px;
+  font-size: var(--of-type-ui);
   color: var(--of-ink);
   background: var(--of-accent-soft);
   border: none;
@@ -4690,7 +4708,7 @@ textarea.of-input {
   align-items: center;
   margin: 0;
   padding: 8px 8px 12px 40px;
-  font-size: 13px;
+  font-size: var(--of-type-ui-small);
   color: var(--of-ink);
 }
 
@@ -4705,7 +4723,7 @@ textarea.of-input {
   height: var(--of-hit-sm);
   padding: 0 14px;
   font-family: inherit;
-  font-size: 13px;
+  font-size: var(--of-type-ui-small);
   border-radius: var(--of-radius-apparatus);
   cursor: pointer;
 }
@@ -4756,7 +4774,7 @@ textarea.of-input {
   flex: 1;
   min-width: 14ch;
   margin: 0;
-  font-size: 13px;
+  font-size: var(--of-type-ui-small);
   color: var(--of-ink-muted);
 }
 
@@ -4770,7 +4788,7 @@ textarea.of-input {
   height: var(--of-hit-sm);
   padding: 0 14px;
   font-family: inherit;
-  font-size: 13px;
+  font-size: var(--of-type-ui-small);
   color: var(--of-ink);
   background: var(--of-page);
   border: 1px solid var(--of-control-border);
@@ -4792,7 +4810,7 @@ textarea.of-input {
 .of-home__claim-problem {
   flex-basis: 100%;
   margin: 0;
-  font-size: 13px;
+  font-size: var(--of-type-ui-small);
   color: var(--of-danger);
 }
 
@@ -4811,7 +4829,7 @@ textarea.of-input {
 .of-home__row-problem {
   margin: 0;
   padding: 4px 8px 10px 40px;
-  font-size: 13px;
+  font-size: var(--of-type-ui-small);
   color: var(--of-ink-muted);
 }
 
@@ -4865,7 +4883,7 @@ textarea.of-input {
 
 .of-home__board-title {
   overflow: hidden;
-  font-size: 15px;
+  font-size: var(--of-type-ui);
   text-overflow: ellipsis;
   white-space: nowrap;
 }
@@ -4880,7 +4898,7 @@ textarea.of-input {
   min-width: 13ch;
   font-family: var(--of-mono);
   text-align: right;
-  font-size: 12px;
+  font-size: var(--of-type-record);
   font-variant-numeric: tabular-nums;
   letter-spacing: 0.02em;
   color: var(--of-ink-muted);
@@ -4890,7 +4908,7 @@ textarea.of-input {
   width: 100%;
   height: var(--of-hit-lg);
   font-family: var(--of-font);
-  font-size: 15px;
+  font-size: var(--of-type-ui);
   color: var(--of-panel);
   background: var(--of-accent);
   border: 1px solid var(--of-accent);
@@ -4971,7 +4989,7 @@ textarea.of-input {
 
 .of-share__lead {
   margin: 0 0 14px;
-  font-size: 14px;
+  font-size: var(--of-type-control);
   line-height: 1.4;
   color: var(--of-ink-muted);
 }
@@ -5000,7 +5018,7 @@ textarea.of-input {
 
 .of-share__link-name {
   display: block;
-  font-size: 15px;
+  font-size: var(--of-type-ui);
 }
 
 .of-share__link-what {
@@ -5008,7 +5026,7 @@ textarea.of-input {
   margin-top: 1px;
   /* This line is what stops somebody sending the wrong link, so it sits a
      step above the floor rather than on it. */
-  font-size: 13px;
+  font-size: var(--of-type-ui-small);
   line-height: 1.35;
   color: var(--of-ink-muted);
 }
@@ -5021,7 +5039,7 @@ textarea.of-input {
   width: 320px;
   margin: 0;
   padding: 14px var(--of-gutter);
-  font-size: 14px;
+  font-size: var(--of-type-control);
   line-height: 1.4;
   color: var(--of-danger);
   background: var(--of-danger-wash);
@@ -5040,7 +5058,7 @@ textarea.of-input {
 .of-status__watching {
   padding: 0 9px;
   font-family: var(--of-mono);
-  font-size: 12px;
+  font-size: var(--of-type-record);
   line-height: 28px;
   letter-spacing: 0.02em;
   color: var(--of-ink-muted);
@@ -5069,7 +5087,7 @@ textarea.of-input {
   height: var(--of-hit-sm);
   padding: 0 7px;
   font-family: var(--of-mono);
-  font-size: 12px;
+  font-size: var(--of-type-record);
   letter-spacing: 0.02em;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -5110,7 +5128,7 @@ textarea.of-input {
   justify-self: start;
   padding: 3px 8px;
   font-family: var(--of-mono);
-  font-size: 12px;
+  font-size: var(--of-type-record);
   letter-spacing: 0.02em;
   /* It is one column of a ledger; wrapping turns the row into two. */
   white-space: nowrap;
@@ -5288,7 +5306,7 @@ textarea.of-input {
 
 .of-code__format {
   padding: 0 10px;
-  font-size: 12px;
+  font-size: var(--of-type-record);
   line-height: 24px;
 }
 
@@ -5486,7 +5504,7 @@ textarea.of-input {
    its own — the layer does both. */
 .of-crop__reset {
   padding: 5px 11px;
-  font-size: 12px;
+  font-size: var(--of-type-record);
   color: var(--of-ink-muted);
   background: none;
   border: none;

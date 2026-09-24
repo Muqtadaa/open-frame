@@ -364,6 +364,14 @@
       "record": {
         "displayName": "Record",
         "purpose": "Mono for records and measurement only: record line, panel subject and field labels, slider readings, shortcuts, wheel-mode value. 12px is the functional-text floor."
+      },
+      "title": {
+        "displayName": "Title",
+        "purpose": "The one heading a gate or a sheet carries. `--of-type-title`."
+      },
+      "headline": {
+        "displayName": "Headline",
+        "purpose": "The wordmark on the front door. `--of-type-headline`."
       }
     },
     "shadows": [
@@ -566,6 +574,11 @@
         "section": "typography"
       },
       {
+        "name": "The Ramp Rule",
+        "body": "Every interface size names a step of `--of-type-*`, and `design-tokens.test.ts` fails on a literal. Text INSIDE an object scales in `em` from the object's own size and is not on the ramp — that is the user's material. The only exemptions are the format bar's size specimens, each drawn at the size it applies.",
+        "section": "typography"
+      },
+      {
         "name": "The Mono Is A Record Rule",
         "body": "Mono marks records and measurement — counts, zoom, field values, shortcuts — and nothing else. It is never applied to make something look technical.",
         "section": "typography"
@@ -604,6 +617,11 @@
         "name": "Nothing loops",
         "body": "There is no idle animation anywhere in this product.",
         "section": "motion"
+      },
+      {
+        "name": "The Radius Scale Rule",
+        "body": "Every corner names a step of `--of-radius-*` in `:root`; `design-tokens.test.ts` fails on a literal. The 5–8px band this file used to describe was four different numbers for one idea.",
+        "section": "shapes"
       },
       {
         "name": "The Never-Void Rule",
