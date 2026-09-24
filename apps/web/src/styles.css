@@ -2950,15 +2950,19 @@ body {
   border-top: 1px solid color-mix(in srgb, currentcolor 16%, transparent);
 }
 
-.of-slip__trail,
-.of-slip__tags {
+/*
+ * One row of the record, bounded to a single line.
+ *
+ * There used to be a second class here for an evidence card's tags, a shade
+ * fainter than the provenance above them — and only the evidence card, which
+ * drew its own slip, ever rendered it. The record line is already subordinate
+ * to the body; a second level of subordination inside it did not survive being
+ * glanced at, and the `#` on a tag says what it is.
+ */
+.of-slip__trail {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-}
-
-.of-slip__tags {
-  opacity: 0.72;
 }
 
 /*
@@ -3876,7 +3880,8 @@ textarea.of-input {
  * its own importance with chrome would be arguing the opposite — as well as
  * being the "floating candy" register the direction refuses.
  */
-.of-insight__claim {
+.of-insight .of-slip__body,
+.of-insight.of-slip__editor {
   font-size: 17px;
   line-height: 1.3;
 }
