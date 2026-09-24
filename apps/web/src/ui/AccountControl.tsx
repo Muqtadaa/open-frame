@@ -74,7 +74,7 @@ export function AccountControl() {
           testId="account-surface"
         >
           <div
-            className="of-account"
+            className="of-sheet"
             role="dialog"
             aria-label="Account"
             data-testid="account-dialog"

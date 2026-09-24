@@ -556,9 +556,10 @@ Everything else is feedback or continuity, and there is not much of it:
   edge. Both use the sheet's raise-and-fade, because a surface that simply
   appears beside a control leaves you to work out the relationship yourself.
 
-Timing is `--of-quick` (140ms) for feedback and `--of-settle` (240ms) for the
-ledger, on `cubic-bezier(0.16, 1, 0.3, 1)` — a confident arrival. **No bounce:**
-a ledger entry does not overshoot. The stagger is 28ms and capped at six rows,
+Timing is `--of-quick` (140ms) for feedback, `--of-settle` (240ms) for the
+ledger and `--of-hold` (600ms) for an acknowledgement that stays where the
+click landed, on `cubic-bezier(0.16, 1, 0.3, 1)` — a confident arrival. **No bounce:**
+a ledger entry does not overshoot. The stagger (`--of-stagger`) is 28ms and capped at six rows,
 because an eleventh row arriving eleven beats late is a list that feels slow,
 which is the opposite of what a stagger is for.
 
@@ -625,7 +626,7 @@ slot carries a 16px disclosure that opens a two-column flyout of eight shapes.
 
 The label, not a standing caption: eleven standing captions were most of the old
 rail's height. Ink-filled, page-coloured text at 12px, 6px radius, 10px to the
-right of the tool, fading in over 110ms and suppressed under
+right of the tool, fading in over `--of-quick` (140ms) and suppressed under
 `prefers-reduced-motion`. It appears on **hover and on keyboard focus** — a
 tooltip only a mouse can summon is not a label. The shortcut inside it is 12px
 mono in decade-rule grey.

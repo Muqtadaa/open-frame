@@ -30,7 +30,7 @@ export function Toast() {
   if (toast === null) return null
 
   return (
-    <div className="of-toast" role="status" aria-live="polite">
+    <div className="of-notice of-notice--danger" role="status" aria-live="polite">
       <span>{toast}</span>
       <button
         type="button"

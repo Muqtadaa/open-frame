@@ -599,7 +599,7 @@ body {
   background: var(--of-ink);
   border-radius: var(--of-radius);
   opacity: 0;
-  transition: opacity 110ms ease-out;
+  transition: opacity var(--of-quick) var(--of-ease);
   pointer-events: none;
 }
 
@@ -2328,14 +2328,24 @@ body {
  * bans a modal for a task that needs neither interruption nor protected focus,
  * and this is the clearest possible case.
  */
-.of-account {
+/*
+ * A sheet: what comes out of the record line — the account sheet and the
+ * share sheet. They were two byte-identical rules under two names, which is
+ * how the next one would have become a third.
+ *
+ * The surface radius, not the control one: a sheet floats over the board
+ * rather than sitting in its margin, and everything else that does — menus,
+ * the record panel, the comment panel, a gate — is already 10px. These two
+ * were the only floating surfaces at 6.
+ */
+.of-sheet {
   width: 320px;
   padding: var(--of-gutter);
   font-family: var(--of-font);
   color: var(--of-ink);
   background: var(--of-panel);
   border: 1px solid var(--of-panel-border);
-  border-radius: var(--of-radius);
+  border-radius: var(--of-radius-surface);
   box-shadow: var(--of-shadow);
 }
 
@@ -3469,18 +3479,6 @@ body {
 
 /* Toast ------------------------------------------------------------------- */
 
-.of-toast {
-  display: flex;
-  gap: 12px;
-  align-items: center;
-  padding: 9px 12px;
-  font-size: var(--of-type-ui);
-  color: var(--of-danger);
-  background: var(--of-danger-wash);
-  border: 1px solid var(--of-danger-edge);
-  border-radius: var(--of-radius-surface);
-  box-shadow: var(--of-shadow);
-}
 
 .of-toast__dismiss {
   padding: 0 4px;
@@ -4996,16 +4994,6 @@ textarea.of-input {
  * reason: choosing which link to send needs no interruption and no protected
  * focus, so it must not take the screen.
  */
-.of-share {
-  width: 320px;
-  padding: var(--of-gutter);
-  font-family: var(--of-font);
-  color: var(--of-ink);
-  background: var(--of-panel);
-  border: 1px solid var(--of-panel-border);
-  border-radius: var(--of-radius);
-  box-shadow: var(--of-shadow);
-}
 
 .of-share__lead {
   margin: 0 0 14px;
@@ -5179,6 +5167,10 @@ textarea.of-input {
   --of-ease: cubic-bezier(0.16, 1, 0.3, 1);
   --of-quick: 140ms;
   --of-settle: 240ms;
+  /* How long an acknowledgement stays where the click landed. */
+  --of-hold: 600ms;
+  /* Between one ledger row and the next as they settle. */
+  --of-stagger: 28ms;
 }
 
 @keyframes of-settle {
@@ -5195,13 +5187,13 @@ textarea.of-input {
  */
 .of-home__list li {
   animation: of-settle var(--of-settle) var(--of-ease) backwards;
-  animation-delay: calc(var(--of-row, 0) * 28ms);
+  animation-delay: calc(var(--of-row, 0) * var(--of-stagger));
 }
 
 .of-home__board {
   transition:
-    background-color var(--of-quick) ease-out,
-    box-shadow var(--of-quick) ease-out;
+    background-color var(--of-quick) var(--of-ease),
+    box-shadow var(--of-quick) var(--of-ease);
 }
 
 .of-home__start,
@@ -5209,16 +5201,16 @@ textarea.of-input {
 .of-status__title,
 .of-share__link {
   transition:
-    background-color var(--of-quick) ease-out,
-    border-color var(--of-quick) ease-out,
-    color var(--of-quick) ease-out;
+    background-color var(--of-quick) var(--of-ease),
+    border-color var(--of-quick) var(--of-ease),
+    color var(--of-quick) var(--of-ease);
 }
 
 .of-status__exit,
 .of-status__exit svg {
   transition:
-    background-color var(--of-quick) ease-out,
-    color var(--of-quick) ease-out,
+    background-color var(--of-quick) var(--of-ease),
+    color var(--of-quick) var(--of-ease),
     transform var(--of-quick) var(--of-ease);
 }
 
@@ -5234,10 +5226,9 @@ textarea.of-input {
   }
 }
 
-.of-account,
-.of-share,
+.of-sheet,
 .of-share__error {
-  animation: of-raise 160ms var(--of-ease) backwards;
+  animation: of-raise var(--of-quick) var(--of-ease) backwards;
   transform-origin: bottom left;
 }
 
@@ -5273,7 +5264,7 @@ textarea.of-input {
 }
 
 .of-share__link[data-copied='yes'] {
-  animation: of-took 600ms ease-out;
+  animation: of-took var(--of-hold) var(--of-ease);
 }
 
 /*
@@ -5284,8 +5275,7 @@ textarea.of-input {
  */
 @media (prefers-reduced-motion: reduce) {
   .of-home__list li,
-  .of-account,
-  .of-share,
+  .of-sheet,
   .of-share__error,
   .of-picker,
   .of-cellbar {
@@ -5293,7 +5283,7 @@ textarea.of-input {
   }
 
   .of-share__link[data-copied='yes'] {
-    animation-duration: 900ms;
+    animation-duration: calc(var(--of-hold) * 1.5);
   }
 
   /*

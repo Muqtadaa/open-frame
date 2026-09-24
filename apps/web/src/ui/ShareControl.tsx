@@ -285,7 +285,7 @@ function ShareLinks({ links, onOpen }: { readonly links: SharedBoard; readonly o
   }
 
   return (
-    <div className="of-share" role="dialog" aria-label="Share this board" data-testid="share-links">
+    <div className="of-sheet" role="dialog" aria-label="Share this board" data-testid="share-links">
       {/*
         * Says it MOVED, not that it gained links.
         *

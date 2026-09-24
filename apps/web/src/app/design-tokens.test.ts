@@ -661,6 +661,23 @@ describe('the layers', () => {
 })
 
 /**
+ * Motion (DESIGN.md, Motion). Timing is `--of-quick`, `--of-settle`,
+ * `--of-hold` and `--of-stagger` on `--of-ease`; the tool tip ran its own
+ * 110ms ease-out and the sheets their own 160ms beside a token that already
+ * said 140. A duration anywhere but the token block is a second clock.
+ */
+describe('one clock', () => {
+  it('times nothing outside the motion tokens', () => {
+    const source = CSS.replace(/\/\*[\s\S]*?\*\//g, '')
+    const declarations = [...source.matchAll(/(?<![\w-])(transition|animation)[\w-]*:\s*([^;]+);/g)]
+    const literal = declarations
+      .map((match) => (match[2] ?? '').trim())
+      .filter((value) => /\d+m?s\b|ease-(in|out)|\blinear\b/.test(value))
+    expect(literal).toEqual([])
+  })
+})
+
+/**
  * The stylesheet has to PARSE.
  *
  * This file is only minified by the production build, so a structurally broken

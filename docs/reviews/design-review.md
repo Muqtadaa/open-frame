@@ -139,4 +139,20 @@ Found by looking at them:
   from the top where every other piece of chrome takes the 20px gutter. A
   behaviour change, so it goes to C3 #4 rather than riding a refactor.
 
+- **C2.4 — one clock, one sheet, one notice.** Motion runs on `--of-quick`,
+  `--of-settle`, `--of-hold` and `--of-stagger`: the tool tip's private 110ms
+  ease-out and the sheets' 160ms go to the 140ms token beside them, and a
+  duration outside the token block fails the build. The account and share
+  sheets were byte-identical rules under two names and are one `.of-sheet` —
+  at the surface radius, because they float over the board and were the only
+  floating surfaces at 6px. The toast was the notice's failure pair with
+  every declaration repeated, and is now `of-notice of-notice--danger`.
+- **Two survey findings were false.** `interaction/tool-cursor.ts`'s literal
+  ink is a fallback; the cursor reads the live `--of-ink`/`--of-panel` through
+  `useCursorInk`, so it follows After Hours. `controls/Swatches.tsx`'s
+  `#000000` is the picker's seed before a document has loaded. Neither changed.
+- **QA note:** `brand.spec.ts:72` ("keeps the board out of the tab order while
+  it is covered") fails under four parallel workers on the unchanged branch
+  and passes serially — a timing-sensitive test, for Track B.
+
 ### Remaining
