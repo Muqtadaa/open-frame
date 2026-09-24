@@ -146,7 +146,7 @@ export default tseslint.config(
   {
     // A command-line tool's output IS stdout. The rule is about a stray log
     // left in something that renders or serves.
-    files: ['apps/mcp/src/*-cli.ts'],
+    files: ['apps/mcp/src/cli.ts'],
     rules: { 'no-console': 'off' },
   },
 

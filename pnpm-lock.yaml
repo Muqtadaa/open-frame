@@ -50,6 +50,9 @@ importers:
       '@openframe/core':
         specifier: workspace:*
         version: link:../../packages/core
+      '@supabase/supabase-js':
+        specifier: ^2.116.0
+        version: 2.116.0
     devDependencies:
       '@types/node':
         specifier: ^22.20.3

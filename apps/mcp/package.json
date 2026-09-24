@@ -13,11 +13,12 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "build": "tsc -p tsconfig.json --noEmit",
-    "peer": "tsx src/peer-cli.ts"
+    "cli": "tsx src/cli.ts"
   },
   "dependencies": {
     "@openframe/collab": "workspace:*",
-    "@openframe/core": "workspace:*"
+    "@openframe/core": "workspace:*",
+    "@supabase/supabase-js": "^2.116.0"
   },
   "devDependencies": {
     "@types/node": "^22.20.3",

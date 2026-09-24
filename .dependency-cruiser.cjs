@@ -65,8 +65,10 @@ module.exports = {
         'The identity service exists behind one adapter, for the same reason Yjs and the Durable ' +
         'Object runtime do: a UI component that imports a database client is a UI component that ' +
         'cannot be tested without one, and a provider that reaches the canvas is a provider nobody ' +
-        'can replace. Everything else receives a session, never a client.',
-      from: { pathNot: '^apps/web/src/adapters/supabase' },
+        'can replace. Everything else receives a session, never a client. Two folders, because ' +
+        'there are two clients now — the browser\'s and the MCP server\'s — and each is the only ' +
+        'door in its own app.',
+      from: { pathNot: '^(apps/web/src/adapters/supabase|apps/mcp/src/supabase)' },
       to: { path: '^@supabase($|/)|node_modules/@supabase/' },
     },
     {
