@@ -3598,6 +3598,29 @@ textarea.of-input {
 }
 
 /* Separates what an object IS from how it looks. */
+.of-inspector__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  padding: 0 10px 8px;
+}
+/*
+ * A quiet button, not a loud one. These undo something you did by hand, so
+ * they sit at the weight of a field label rather than of the delete control —
+ * which is the one thing in this panel that is meant to give you pause.
+ */
+.of-inspector__action {
+  border: 1px solid var(--of-control-border);
+  border-radius: 6px;
+  background: var(--of-panel);
+  color: var(--of-ink);
+  font-size: 12px;
+  padding: 4px 8px;
+  cursor: pointer;
+}
+.of-inspector__action:hover {
+  background: var(--of-hover);
+}
 .of-inspector__rule {
   height: 0;
   margin: 7px 0 5px;

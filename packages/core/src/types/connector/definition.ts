@@ -1,13 +1,15 @@
 import { defineObjectType } from '../../domain/registry.js'
-import { boundsOfPoints, inflate, rectFromPoints } from '../../geometry/rect.js'
+import { boundsOfPoints, inflate, rectFromPoints, type Rect } from '../../geometry/rect.js'
 import { distanceToSegment, type Point } from '../../geometry/point.js'
 import { bendToPoints } from './bend-to-points.js'
-import { attachmentAnchor, endpointDependencies, resolveEndpoints } from './geometry.js'
+import { attachmentAnchor, endpointDependencies, resolveEndpoints, type ResolvedEnds } from './geometry.js'
 import type { RouteNormals } from './route.js'
 import {
   bendAt,
   connectorRoute,
   flattenRoute,
+  labelAnchor,
+  labelFrom,
   orthogonalLegs,
   orthogonalNodes,
   pointAt,
@@ -124,9 +126,10 @@ function withoutIdleStops(
   end: Point,
   points: readonly Bend[],
   normals: RouteNormals,
+  avoiding: readonly Rect[],
 ): Bend[] {
   const drawn = (list: readonly Bend[]): readonly Point[] =>
-    connectorRoute(start, end, 'orthogonal', list, normals).points
+    connectorRoute(start, end, 'orthogonal', list, normals, avoiding).points
   const same = (a: readonly Point[], b: readonly Point[]): boolean =>
     a.length === b.length &&
     a.every((point, at) => {
@@ -147,6 +150,22 @@ function legMiddle(leg: RouteLeg): Point {
   return { x: (leg.from.x + leg.to.x) / 2, y: (leg.from.y + leg.to.y) / 2 }
 }
 
+/**
+ * The shapes a route has to get round: the two it joins, and no others.
+ *
+ * Only these two, because those are the ones it is always near. A route that
+ * dodged everything on the board would rearrange itself whenever anything
+ * moved anywhere, which is a worse surprise than a line crossing something
+ * once — and it would make every connector's geometry depend on every object,
+ * which is the O(n) scan rule 10 forbids, once per object, per frame.
+ */
+function around(ends: ResolvedEnds): Rect[] {
+  const boxes: Rect[] = []
+  if (ends.startBox !== null) boxes.push(ends.startBox)
+  if (ends.endBox !== null) boxes.push(ends.endBox)
+  return boxes
+}
+
 export const connectorType = defineObjectType<typeof CONNECTOR_TYPE, ConnectorData>({
   type: CONNECTOR_TYPE,
 
@@ -165,6 +184,9 @@ export const connectorType = defineObjectType<typeof CONNECTOR_TYPE, ConnectorDa
       startArrow: init?.startArrow ?? 'none',
       endArrow: init?.endArrow ?? 'arrow',
       text: init?.text ?? '',
+      // Null, not absent: a new line's label has not been moved, and that is
+      // a thing the data says rather than a thing it leaves out.
+      label: init?.label ?? null,
     },
     // A connector has no meaningful frame — its extent is wherever its ends
     // resolve to. `getBounds` supplies the real answer.
@@ -192,6 +214,36 @@ export const connectorType = defineObjectType<typeof CONNECTOR_TYPE, ConnectorDa
    * why these are `data` and not `style`: which way a connector points is what
    * it MEANS, not how it looks.
    */
+  /**
+   * BACK TO AUTOMATIC. A line you have shaped keeps every stop you gave it,
+   * including once the objects have moved so far that the shape means nothing
+   * any more — and there is no gesture for "forget all of that", because each
+   * handle only knows about its own place on the route.
+   *
+   * Offered only when there is something to forget, so the button is never a
+   * control that does nothing.
+   */
+  actions: [
+    {
+      id: 'reset',
+      label: 'Reset shape',
+      applies: (object) => object.data.points.length > 0,
+      apply: () => ({ points: [] }),
+    },
+    /*
+     * The label is a separate thing to put back, because it is a separate
+     * thing you moved: resetting the route would otherwise drag the text
+     * along with it, and a label parked deliberately out of the way of
+     * something would go back for no reason anybody asked for.
+     */
+    {
+      id: 'centre-label',
+      label: 'Centre label',
+      applies: (object) => object.data.label !== null && object.data.label !== undefined,
+      apply: () => ({ label: null }),
+    },
+  ],
+
   fields: [
     { key: 'routing', label: 'Route', kind: 'select', options: ROUTINGS },
     { key: 'startArrow', label: 'Start', kind: 'select', options: ARROWHEADS },
@@ -206,22 +258,22 @@ export const connectorType = defineObjectType<typeof CONNECTOR_TYPE, ConnectorDa
    * all need the real answer.
    */
   getBounds: (object, doc, { boundsOf }) => {
-    const { start, end, startNormal, endNormal } = resolveEndpoints(
-      doc,
-      object.data.from,
-      object.data.to,
-      boundsOf,
-    )
+    const ends = resolveEndpoints(doc, object.data.from, object.data.to, boundsOf)
+    const { start, end, startNormal, endNormal } = ends
     /*
      * Over the ROUTE, not the straight line. A bent connector leaves the
      * rectangle its two ends describe, and an object whose bounds do not
      * contain it is culled while still on screen and missed by a marquee
      * dragged over it.
      */
-    const route = connectorRoute(start, end, object.data.routing, object.data.points, {
-      start: startNormal,
-      end: endNormal,
-    })
+    const route = connectorRoute(
+      start,
+      end,
+      object.data.routing,
+      object.data.points,
+      { start: startNormal, end: endNormal },
+      around(ends),
+    )
     // A route always has at least its two ends, so the fallback is for a
     // shape that cannot occur rather than one that might.
     const box = boundsOfPoints(routeVertices(route)) ?? rectFromPoints(start, end)
@@ -234,12 +286,8 @@ export const connectorType = defineObjectType<typeof CONNECTOR_TYPE, ConnectorDa
    * connected objects select the connector joining them.
    */
   hitTest: (object, doc, point, { boundsOf }) => {
-    const { start, end, startNormal, endNormal } = resolveEndpoints(
-      doc,
-      object.data.from,
-      object.data.to,
-      boundsOf,
-    )
+    const ends = resolveEndpoints(doc, object.data.from, object.data.to, boundsOf)
+    const { start, end, startNormal, endNormal } = ends
     /*
      * Against the DRAWN route. This used to measure to the straight line
      * between the ends, which for anything but `straight` routing is nowhere
@@ -248,10 +296,14 @@ export const connectorType = defineObjectType<typeof CONNECTOR_TYPE, ConnectorDa
      * nothing at all.
      */
     const points = flattenRoute(
-      connectorRoute(start, end, object.data.routing, object.data.points, {
-        start: startNormal,
-        end: endNormal,
-      }),
+      connectorRoute(
+        start,
+        end,
+        object.data.routing,
+        object.data.points,
+        { start: startNormal, end: endNormal },
+        around(ends),
+      ),
     )
     for (let index = 1; index < points.length; index += 1) {
       const a = points[index - 1]
@@ -267,12 +319,8 @@ export const connectorType = defineObjectType<typeof CONNECTOR_TYPE, ConnectorDa
 
   /** Both ends are draggable, at wherever they currently resolve to. */
   endpoints: (object, doc, { boundsOf }) => {
-    const { start, end, startNormal, endNormal } = resolveEndpoints(
-      doc,
-      object.data.from,
-      object.data.to,
-      boundsOf,
-    )
+    const ends = resolveEndpoints(doc, object.data.from, object.data.to, boundsOf)
+    const { start, end, startNormal, endNormal } = ends
     const stops = routeStops(start, end, object.data.points)
 
     return [
@@ -309,10 +357,13 @@ export const connectorType = defineObjectType<typeof CONNECTOR_TYPE, ConnectorDa
            * offering to move one is a promise that cannot be kept.
            */
           legHandles(
-            orthogonalLegs(start, end, object.data.points, {
-              start: startNormal,
-              end: endNormal,
-            }),
+            orthogonalLegs(
+              start,
+              end,
+              object.data.points,
+              { start: startNormal, end: endNormal },
+              around(ends),
+            ),
           ).map((handle) => ({
             id: handle.id,
             at: legMiddle(handle.leg),
@@ -339,10 +390,14 @@ export const connectorType = defineObjectType<typeof CONNECTOR_TYPE, ConnectorDa
              * the same drag moves that point rather than adding another.
              */
             ...routeSegments(
-              connectorRoute(start, end, object.data.routing, object.data.points, {
-                start: startNormal,
-                end: endNormal,
-              }),
+              connectorRoute(
+                start,
+                end,
+                object.data.routing,
+                object.data.points,
+                { start: startNormal, end: endNormal },
+                around(ends),
+              ),
             ).map((segment, index) => {
               /*
                * WHERE IN THE LIST, not which stretch. The two are the same
@@ -361,6 +416,33 @@ export const connectorType = defineObjectType<typeof CONNECTOR_TYPE, ConnectorDa
                 shownNear: segment.path,
               }
             }),
+          ]),
+      /*
+       * And the LABEL, when there is one. A piece of text with nowhere to be
+       * dragged to is text you cannot move off the thing it is covering — and
+       * a handle for a label that does not exist is a control that does
+       * nothing, so an empty connector offers none.
+       *
+       * LAST, so it is the one that gets pressed. On a straight line the
+       * label starts exactly where the midpoint that adds a stop does, and
+       * the overlay draws these in order — so reaching for the text put a
+       * bend in the line instead, which then moved the text and looked for
+       * all the world like it had worked.
+       */
+      ...(object.data.text.trim() === ''
+        ? []
+        : [
+            {
+              id: 'label',
+              at: labelAnchor(
+                connectorRoute(start, end, object.data.routing, object.data.points, {
+                  start: startNormal,
+                  end: endNormal,
+                }, around(ends)),
+                object.data.label,
+              ),
+              role: 'control' as const,
+            },
           ]),
     ]
   },
@@ -382,6 +464,26 @@ export const connectorType = defineObjectType<typeof CONNECTOR_TYPE, ConnectorDa
    */
   retargetEndpoint: (object, doc, endpointId, target, { boundsOf }) => {
     /*
+     * The LABEL, dropped somewhere along the line.
+     *
+     * Stored as a fraction of the drawn route and an offset across it, for
+     * the same reason a stop is: both ends move, and a coordinate would leave
+     * the text stranded where the line used to be.
+     */
+    if (endpointId === 'label') {
+      const ends = resolveEndpoints(doc, object.data.from, object.data.to, boundsOf)
+      const route = connectorRoute(
+        ends.start,
+        ends.end,
+        object.data.routing,
+        object.data.points,
+        { start: ends.startNormal, end: ends.endNormal },
+        around(ends),
+      )
+      return { label: labelFrom(route, { x: target.x, y: target.y }) }
+    }
+
+    /*
      * A LEG of an orthogonal route, slid sideways.
      *
      * The drop's POINT and nothing else: a leg attaches to nothing. Only the
@@ -391,14 +493,11 @@ export const connectorType = defineObjectType<typeof CONNECTOR_TYPE, ConnectorDa
      */
     if (endpointId.startsWith('leg:')) {
       if (object.data.routing !== 'orthogonal') return {}
-      const { start, end, startNormal, endNormal } = resolveEndpoints(
-        doc,
-        object.data.from,
-        object.data.to,
-        boundsOf,
-      )
+      const ends = resolveEndpoints(doc, object.data.from, object.data.to, boundsOf)
+      const { start, end, startNormal, endNormal } = ends
       const normals = { start: startNormal, end: endNormal }
-      const legs = orthogonalLegs(start, end, object.data.points, normals)
+      const avoiding = around(ends)
+      const legs = orthogonalLegs(start, end, object.data.points, normals, avoiding)
       const handle = legHandles(legs).find((each) => each.id === endpointId)
       if (handle === undefined) return {}
 
@@ -437,7 +536,7 @@ export const connectorType = defineObjectType<typeof CONNECTOR_TYPE, ConnectorDa
        */
       const anchor = handle.leg.moves[0]
       if (anchor === undefined) return {}
-      const nodes = orthogonalNodes(start, end, object.data.points, normals)
+      const nodes = orthogonalNodes(start, end, object.data.points, normals, avoiding)
       const beside = [nodes[anchor.node - 1], nodes[anchor.node + 1]]
       const flush = beside.some(
         (node) => node !== undefined && coordinate(node) === coordinate(handle.leg.from),
@@ -466,7 +565,9 @@ export const connectorType = defineObjectType<typeof CONNECTOR_TYPE, ConnectorDa
         else points[move.stop] = bend
       }
 
-      return { points: target.final ? withoutIdleStops(start, end, points, normals) : points }
+      return {
+        points: target.final ? withoutIdleStops(start, end, points, normals, avoiding) : points,
+      }
     }
 
     /*

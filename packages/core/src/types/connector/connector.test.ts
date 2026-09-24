@@ -4,8 +4,10 @@ import type { ObjectId } from '../../domain/ids.js'
 import type { AnyOpenFrameObject } from '../../domain/object.js'
 import { createTestHarness, type TestHarness } from '../../testing.js'
 import { attachmentAnchor, resolveEndpoints } from './geometry.js'
-import { connectorRoute } from './route.js'
+import { bendAt, connectorRoute, flattenRoute } from './route.js'
 import type { ConnectorData } from './schema.js'
+import type { Point } from '../../geometry/point.js'
+import type { Rect } from '../../geometry/rect.js'
 
 /**
  * The REAL extent of whatever an end is attached to, which is what the
@@ -1421,5 +1423,276 @@ describe('pushing an orthogonal route about by its legs', () => {
     expect(
       slide(h, object, 'leg:x:new:0:1', { x: 100, y: 100 }),
     ).toEqual({})
+  })
+})
+
+/**
+ * GETTING ROUND THE TWO SHAPES IT JOINS.
+ *
+ * The case this exists for is a line that has to double back: attached to the
+ * right edge of something that sits to the RIGHT of what it joins, the route
+ * leaves rightward, turns, and runs straight back through the box it just
+ * left. Only the two shapes the line is attached to — a route that dodged
+ * everything on the board would rearrange itself whenever anything moved.
+ */
+describe('routing around the objects at each end', () => {
+  /** A board with two notes and a line from one's right edge to the other's. */
+  const doubling = (routing: 'orthogonal' | 'curved') => {
+    const h = createTestHarness()
+    // B sits well to the LEFT of A, so leaving A rightward has to come back.
+    const a = create(h, 'sticky', 400, 0)
+    const b = create(h, 'sticky', 0, 260)
+    const id = create(h, 'connector', 0, 0, {
+      from: { kind: 'object', objectId: a, anchor: { kind: 'side', side: 'right' } },
+      to: { kind: 'object', objectId: b, anchor: { kind: 'side', side: 'right' } },
+      routing,
+    })
+    const object = h.store.getObject(id)
+    const noteA = h.store.getObject(a)
+    if (object === undefined || noteA === undefined) throw new Error('missing objects')
+    return { h, object, box: h.registry.boundsOf(noteA, h.store.getDocument()) }
+  }
+
+  /** Every point the drawn route passes through, sampled. */
+  const drawn = (h: TestHarness, object: AnyOpenFrameObject): readonly Point[] => {
+    const doc = h.store.getDocument()
+    const ends = resolveEndpoints(doc, (object.data as ConnectorData).from, (object.data as ConnectorData).to, (other) =>
+      h.registry.boundsOf(other, doc),
+    )
+    return flattenRoute(
+      connectorRoute(
+        ends.start,
+        ends.end,
+        (object.data as ConnectorData).routing,
+        (object.data as ConnectorData).points,
+        { start: ends.startNormal, end: ends.endNormal },
+        [ends.startBox, ends.endBox].filter((box) => box !== null),
+      ),
+      24,
+    )
+  }
+
+  /**
+   * How deep into a box the route goes, at its worst.
+   *
+   * Sampled ALONG each segment, not at its ends. A polyline is a list of
+   * corners, and a run that slices through the middle of a box has both of
+   * its corners outside it — so testing the points alone reported a clean
+   * route through the centre of the thing it was attached to, and every one
+   * of these tests passed with the avoidance deleted.
+   */
+  const intrusion = (path: readonly Point[], box: Rect): number => {
+    let worst = 0
+    for (let index = 1; index < path.length; index += 1) {
+      const a = path[index - 1]
+      const b = path[index]
+      if (a === undefined || b === undefined) continue
+      for (let step = 0; step <= 40; step += 1) {
+        const point = {
+          x: a.x + ((b.x - a.x) * step) / 40,
+          y: a.y + ((b.y - a.y) * step) / 40,
+        }
+        worst = Math.max(
+          worst,
+          Math.min(
+            point.x - box.x,
+            box.x + box.width - point.x,
+            point.y - box.y,
+            box.y + box.height - point.y,
+          ),
+        )
+      }
+    }
+    return worst
+  }
+
+  it.each(['orthogonal', 'curved'] as const)(
+    'keeps a %s route out of the object it leaves',
+    (routing) => {
+      const { h, object, box } = doubling(routing)
+      /*
+       * CLEAR of it, not merely mostly clear. Attaching puts the line's end on
+       * the boundary, which is depth zero; anything more is the route inside
+       * the shape it is joined to. Left to itself this one runs eighty-nine
+       * units into a hundred-and-eighty unit note when squared, and eleven
+       * when curved.
+       */
+      expect(intrusion(drawn(h, object), box)).toBeLessThan(1)
+
+      /*
+       * And asked through the REGISTRY, which is what the board actually
+       * draws and clicks: the middle of the note it leaves has no line in it.
+       * The check above builds its own route and so cannot tell whether the
+       * type passes the shapes along at all — with that wiring deleted it
+       * went on passing.
+       */
+      const centre = { x: box.x + box.width / 2, y: box.y + box.height / 2 }
+      expect(h.registry.hitTestObject(object, h.store.getDocument(), centre)).toBe(false)
+    },
+  )
+
+  it('leaves a route you have shaped exactly where you put it', () => {
+    const { h, object, box } = doubling('orthogonal')
+    /*
+     * A stop straight through the middle of the box it leaves. Nonsense, and
+     * kept: once a line is shaped by hand, moving it to get round something
+     * is answering a question that has already been answered.
+     */
+    const middle = { x: box.x + box.width / 2, y: box.y + box.height / 2 }
+    const doc = h.store.getDocument()
+    const data = object.data as ConnectorData
+    const ends = resolveEndpoints(doc, data.from, data.to, (other) =>
+      h.registry.boundsOf(other, doc),
+    )
+    const shaped = {
+      ...object,
+      data: { ...data, points: [bendAt(ends.start, ends.end, middle)] },
+    }
+    expect(h.registry.hitTestObject(shaped, doc, middle)).toBe(true)
+  })
+
+  it('leaves a line between two free points alone', () => {
+    const h = createTestHarness()
+    const id = create(h, 'connector', 0, 0, {
+      from: { kind: 'point', x: 0, y: 0 },
+      to: { kind: 'point', x: 400, y: 200 },
+      routing: 'orthogonal',
+    })
+    const object = h.store.getObject(id)
+    if (object === undefined) throw new Error('missing connector')
+    // Nothing is attached, so there is nothing to go around: the plain Z.
+    expect(drawn(h, object)).toEqual([
+      { x: 0, y: 0 },
+      { x: 200, y: 0 },
+      { x: 200, y: 200 },
+      { x: 400, y: 200 },
+    ])
+  })
+})
+
+/**
+ * THE LABEL, which is a thing you can move.
+ *
+ * Unplaced it sits on the middle of the route's longest run, so the text lies
+ * along a straight stretch rather than over a corner. Dragged, it stays where
+ * it was put — measured along the route, so it travels with the line rather
+ * than floating loose when the objects move.
+ */
+describe('placing a connector label', () => {
+  const titled = (text: string, label?: unknown) => {
+    const h = createTestHarness()
+    const id = create(h, 'connector', 0, 0, {
+      from: { kind: 'point', x: 0, y: 0 },
+      to: { kind: 'point', x: 400, y: 200 },
+      routing: 'orthogonal',
+      text,
+      ...(label === undefined ? {} : { label }),
+    })
+    const object = h.store.getObject(id)
+    if (object === undefined) throw new Error('missing connector')
+    return { h, object }
+  }
+
+  const handle = (h: TestHarness, object: AnyOpenFrameObject) =>
+    h.registry.endpointsOf(object, h.store.getDocument()).find((point) => point.id === 'label')
+
+  it('offers a handle only once there is something to move', () => {
+    expect(handle(...Object.values(titled('')) as [TestHarness, AnyOpenFrameObject])).toBeUndefined()
+    const named = titled('depends on')
+    expect(handle(named.h, named.object)).toBeDefined()
+  })
+
+  it('starts on the middle of the longest run, not over a corner', () => {
+    const { h, object } = titled('depends on')
+    // Three runs of the same length, so the most central of them wins the tie.
+    expect(handle(h, object)?.at).toEqual({ x: 200, y: 100 })
+
+    /*
+     * And on a route whose runs are NOT equal, where the two answers differ.
+     * (0,0) → (350,0) → (350,200) → (400,200) is 350, 200 and 50 long: the
+     * middle of the longest is (175, 0), while half way along the whole thing
+     * lands at (300, 0), a long way down the same run. Only this case can
+     * tell the rule from the one it replaced — with it written back to half
+     * way along, the symmetric route above went on passing.
+     */
+    const pushed = h.registry.retargetEndpoint(object, h.store.getDocument(), 'leg:x:new:0:1', {
+      kind: 'point',
+      x: 350,
+      y: 100,
+      tolerance: 14,
+      final: true,
+    })
+    const lopsided = { ...object, data: { ...(object.data as object), ...(pushed as object) } }
+    const at = handle(h, lopsided)?.at
+    if (at === undefined) throw new Error('no label handle')
+    // On the long first run, and in the MIDDLE of it rather than three
+    // quarters of the way down it, which is where half way along the whole
+    // route falls.
+    expect(at.y).toBeCloseTo(0, 6)
+    expect(at.x).toBeLessThan(250)
+    expect(at.x).toBeGreaterThan(120)
+  })
+
+  it('goes where it is dropped, and comes back to the same place', () => {
+    const { h, object } = titled('depends on')
+    const patch = h.registry.retargetEndpoint(object, h.store.getDocument(), 'label', {
+      kind: 'point',
+      x: 240,
+      y: 60,
+      tolerance: 14,
+      final: true,
+    })
+    const moved = { ...object, data: { ...(object.data as object), ...(patch as object) } }
+    const at = handle(h, moved)?.at
+    expect(at?.x).toBeCloseTo(240, 6)
+    expect(at?.y).toBeCloseTo(60, 6)
+  })
+
+  it('keeps its place along the line when an end moves', () => {
+    const { h, object } = titled('depends on')
+    const patch = h.registry.retargetEndpoint(object, h.store.getDocument(), 'label', {
+      kind: 'point',
+      x: 200,
+      y: 40,
+      tolerance: 14,
+      final: true,
+    })
+    const placed = (patch as { label: { at: number; off: number } }).label
+
+    // The same placement on a longer line: a fifth of the way along is still a
+    // fifth of the way along, not forty units from the start.
+    const longer = titled('depends on', placed)
+    const stretched = {
+      ...longer.object,
+      data: { ...(longer.object.data as object), to: { kind: 'point', x: 800, y: 400 } },
+    }
+    const at = handle(longer.h, stretched)?.at
+    if (at === undefined) throw new Error('no label handle')
+    expect(at.x).toBeGreaterThan(200)
+  })
+
+  it('offers to put it back, and to reset the shape, only when there is something to undo', () => {
+    const plain = titled('depends on')
+    expect(plain.h.registry.actionsOf(plain.object).map((action) => action.id)).toEqual([])
+
+    const { h, object } = titled('depends on', { at: 0.2, off: 30 })
+    expect(h.registry.actionsOf(object).map((action) => action.id)).toEqual(['centre-label'])
+    expect(h.registry.applyAction(object, 'centre-label')).toEqual({ label: null })
+
+    const bent = {
+      ...object,
+      data: { ...(object.data as object), points: [{ along: 0.3, across: 40 }] },
+    }
+    expect(h.registry.actionsOf(bent).map((action) => action.id)).toEqual([
+      'reset',
+      'centre-label',
+    ])
+    expect(h.registry.applyAction(bent, 'reset')).toEqual({ points: [] })
+  })
+
+  it('refuses an action the object is not offering', () => {
+    const { h, object } = titled('depends on')
+    expect(h.registry.applyAction(object, 'reset')).toBeNull()
+    expect(h.registry.applyAction(object, 'nonsense')).toBeNull()
   })
 })

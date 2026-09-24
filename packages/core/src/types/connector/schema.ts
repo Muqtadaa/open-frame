@@ -76,6 +76,25 @@ export interface Bend {
   readonly across: number
 }
 
+/**
+ * Where a connector's label sits, when it has been moved.
+ *
+ * `at` is a fraction of the DRAWN route's length rather than of the straight
+ * line between the ends, so a label travels with the line it belongs to: on a
+ * staircase it stays on the leg you put it on instead of sliding to a corner
+ * when the objects move. `off` is a distance across the route in world units,
+ * for the same reason a stop's offset is — a fraction has nothing to be a
+ * fraction of.
+ *
+ * Null means "wherever the route would put it", which is the middle of its
+ * longest run. That is not the same as `{ at: 0.5, off: 0 }`: the default
+ * follows the shape as it changes, and a placed label stays where it was put.
+ */
+export interface LabelPlacement {
+  readonly at: number
+  readonly off: number
+}
+
 export interface ConnectorData {
   readonly from: ConnectorEndpoint
   readonly to: ConnectorEndpoint
@@ -94,6 +113,16 @@ export interface ConnectorData {
   readonly startArrow: Arrowhead
   readonly endArrow: Arrowhead
   readonly text: string
+  /**
+   * Where the label was DRAGGED to, or null for wherever the route puts it.
+   *
+   * Optional AND nullable, and deliberately not a migration: an absent value
+   * and a null one mean the same thing here — nobody has moved it — so every
+   * board that predates this reads correctly without being rewritten. That is
+   * exactly the property `points` did not have when it replaced `bend`, which
+   * is why that one WAS a migration (v1 → v2).
+   */
+  readonly label?: LabelPlacement | null
 }
 
 export const CONNECTOR_VERSION = 2
@@ -106,4 +135,8 @@ export const ConnectorDataSchema: ZodType<ConnectorData> = z.object({
   startArrow: z.enum(ARROWHEADS),
   endArrow: z.enum(ARROWHEADS),
   text: z.string(),
+  label: z
+    .object({ at: z.number().finite(), off: z.number().finite() })
+    .nullable()
+    .optional(),
 }) as unknown as ZodType<ConnectorData>

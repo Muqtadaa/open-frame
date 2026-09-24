@@ -1,5 +1,6 @@
 import type { Point } from '../../geometry/point.js'
-import type { Bend, Routing } from './schema.js'
+import type { Rect } from '../../geometry/rect.js'
+import type { Bend, LabelPlacement, Routing } from './schema.js'
 
 /**
  * The shape a connector actually takes between its two ends.
@@ -82,13 +83,14 @@ function defaultCubic(
   start: Point,
   end: Point,
   normals: RouteNormals | null,
+  stretch = 1,
 ): [Point, Point, Point, Point] {
   /*
    * With a normal the control point goes straight out of the edge; without
    * one it falls back to the offset along the run's dominant axis, which is
    * what every curve did before ends knew which way they faced.
    */
-  const reach = reachFor(start, end)
+  const reach = reachFor(start, end) * stretch
   const from = normals?.start ?? null
   const to = normals?.end ?? null
   const dx = (end.x - start.x) * 0.5
@@ -447,14 +449,59 @@ function tidyLegs(legs: readonly RouteLeg[]): RouteLeg[] {
  * edge, across the middle, and in. Dragging either free leg of it turns that
  * midpoint into a real stop.
  */
+/**
+ * How far clear of a shape a route is routed, in world units.
+ *
+ * Less than the stub, deliberately: the stub already stands a connector 16
+ * units off the edge it leaves, so at 12 the run out of an object is clear of
+ * that object's own halo by four and nothing has to make an exception for the
+ * thing the line is attached to.
+ */
+const CLEARANCE = 12
+
+/** The shapes a route is asked to get round: the two it joins, or neither. */
+export type Obstacles = readonly Rect[]
+
+function grown(box: Rect, by: number): Rect {
+  return { x: box.x - by, y: box.y - by, width: box.width + by * 2, height: box.height + by * 2 }
+}
+
+/**
+ * Whether a straight run passes THROUGH a box, rather than touching its edge.
+ *
+ * Strictly inside on both axes, because a route that runs exactly along an
+ * inflated edge is a route that has already been moved clear — counting that
+ * as a crossing would send it round again, and again.
+ */
+function crosses(from: Point, to: Point, box: Rect): boolean {
+  return (
+    Math.max(from.x, to.x) > box.x &&
+    Math.min(from.x, to.x) < box.x + box.width &&
+    Math.max(from.y, to.y) > box.y &&
+    Math.min(from.y, to.y) < box.y + box.height
+  )
+}
+
+/** The nearer side of a box to stand clear of, along one axis. */
+function clearOf(value: number, low: number, high: number): number {
+  return value - low <= high - value ? low : high
+}
+
 export function orthogonalNodes(
   start: Point,
   end: Point,
   points: readonly Bend[],
   normals: RouteNormals | null = null,
+  avoiding: Obstacles = [],
 ): Point[] {
   const [s, e] = stubs(start, end, normals)
+  /*
+   * A route you have SHAPED is yours. Every node is then one you put there,
+   * and moving one to get round something would be answering a question you
+   * have already answered by hand.
+   */
   if (points.length > 0) return [s, ...points.map((bend) => pointAt(start, end, bend)), e]
+
   /*
    * With nothing stored, the middle the route crosses at stands in for a stop
    * — so the default is exactly the route this always drew: out of each edge,
@@ -462,11 +509,59 @@ export function orthogonalNodes(
    * middle into a real stop, and until then it is a node like any other.
    */
   const horizontal = isHorizontal(s, e)
-  return [
-    s,
-    horizontal ? { x: lerp(s.x, e.x, 0.5), y: s.y } : { x: s.x, y: lerp(s.y, e.y, 0.5) },
-    e,
-  ]
+  const middle = horizontal
+    ? { x: lerp(s.x, e.x, 0.5), y: s.y }
+    : { x: s.x, y: lerp(s.y, e.y, 0.5) }
+
+  return [s, roundObstacles(s, middle, e, horizontal, avoiding), e]
+}
+
+/**
+ * The middle, moved until neither run it holds goes through a shape.
+ *
+ * TWO coordinates and two runs, which is more than it sounds: moving the
+ * crossing sideways clears the box it was running down the middle of, and
+ * moving the run that leaves an object up or down takes the whole leg over
+ * the top of it. Between them they handle the case this exists for — a line
+ * joining two objects whose boxes lie between them, most of all one doubling
+ * back over the thing it just left.
+ *
+ * A PASS PER SHAPE, and no more: each move is to the nearer side of whatever
+ * is in the way, so a second look can only find the other shape. Left to
+ * iterate it could push a route back and forth between two boxes for ever.
+ */
+function roundObstacles(
+  s: Point,
+  middle: Point,
+  e: Point,
+  horizontal: boolean,
+  avoiding: Obstacles,
+): Point {
+  let at = middle
+  for (const rect of avoiding) {
+    const box = grown(rect, CLEARANCE)
+    // The run OUT of the start, which this node holds the far coordinate of.
+    const leaving = horizontal
+      ? [{ x: s.x, y: at.y }, { x: at.x, y: at.y }]
+      : [{ x: at.x, y: s.y }, { x: at.x, y: at.y }]
+    const [leaveFrom, leaveTo] = leaving
+    if (leaveFrom !== undefined && leaveTo !== undefined && crosses(leaveFrom, leaveTo, box)) {
+      at = horizontal
+        ? { x: at.x, y: clearOf(at.y, box.y, box.y + box.height) }
+        : { x: clearOf(at.x, box.x, box.x + box.width), y: at.y }
+    }
+    // And the crossing run, between the two.
+    const crossing = horizontal
+      ? [{ x: at.x, y: at.y }, { x: at.x, y: e.y }]
+      : [{ x: at.x, y: at.y }, { x: e.x, y: at.y }]
+    const [crossFrom, crossTo] = crossing
+    if (crossFrom !== undefined && crossTo !== undefined && crosses(crossFrom, crossTo, box)) {
+      at = horizontal
+        ? { x: clearOf(at.x, box.x, box.x + box.width), y: at.y }
+        : { x: at.x, y: clearOf(at.y, box.y, box.y + box.height) }
+    }
+  }
+  return at
 }
 
 export function orthogonalLegs(
@@ -474,6 +569,7 @@ export function orthogonalLegs(
   end: Point,
   points: readonly Bend[],
   normals: RouteNormals | null = null,
+  avoiding: Obstacles = [],
 ): RouteLeg[] {
   const [s, e] = stubs(start, end, normals)
   /*
@@ -483,7 +579,7 @@ export function orthogonalLegs(
    * departure would turn every one of those routes inside out.
    */
   const last: LegAxis = isHorizontal(s, e) ? 'x' : 'y'
-  const nodes = orthogonalNodes(start, end, points, normals)
+  const nodes = orthogonalNodes(start, end, points, normals, avoiding)
 
   const targets = nodes.slice(1).map((at, index) => ({
     at,
@@ -520,6 +616,64 @@ export function orthogonalLegs(
   return tidyLegs(legs)
 }
 
+/**
+ * The plain curve, leaving each end far enough out to clear both shapes.
+ *
+ * A curve has no corners to add, so the only way it gets round anything is by
+ * LEAVING FURTHER before it turns — the control points go out along the same
+ * normals, just further. That is enough for the case this exists for, a line
+ * doubling back over the object it is attached to, and it is honest about the
+ * case it cannot fix: on a tight geometry no amount of bow clears the box, and
+ * the widest attempt is what gets drawn rather than a shape nobody asked for.
+ *
+ * Tried in a few steps rather than solved, because "the smallest reach that
+ * clears" has no closed form worth writing and the curve is sampled to test it
+ * anyway.
+ */
+const STRETCHES = [1, 1.7, 2.6, 3.8]
+
+function clearingCubic(
+  start: Point,
+  end: Point,
+  normals: RouteNormals | null,
+  avoiding: Obstacles,
+): [Point, Point, Point, Point] {
+  const boxes = avoiding.map((rect) => grown(rect, CLEARANCE))
+  const plain = defaultCubic(start, end, normals)
+  /*
+   * A CHEAP REJECT first, because this runs in the cull: a cubic never leaves
+   * the hull of its four control points, so a hull that misses every box means
+   * the curve does too and nothing needs sampling. Most curves on most boards
+   * take this branch.
+   */
+  const hull = {
+    x: Math.min(...plain.map((point) => point.x)),
+    y: Math.min(...plain.map((point) => point.y)),
+    width: Math.max(...plain.map((point) => point.x)) - Math.min(...plain.map((point) => point.x)),
+    height: Math.max(...plain.map((point) => point.y)) - Math.min(...plain.map((point) => point.y)),
+  }
+  if (!boxes.some((box) => crosses({ x: hull.x, y: hull.y }, { x: hull.x + hull.width, y: hull.y + hull.height }, box))) {
+    return plain
+  }
+
+  let widest = plain
+  for (const stretch of STRETCHES) {
+    const cubic = defaultCubic(start, end, normals, stretch)
+    widest = cubic
+    /*
+     * Sampled at the ends EXCLUDED: a curve attached to a box starts on its
+     * edge, so the first and last samples are inside the inflated box by
+     * definition and would condemn every curve there is.
+     */
+    const path = routeSegments({ kind: 'spline', points: cubic }, 24)[0]?.path ?? []
+    const inside = path
+      .slice(2, -2)
+      .some((point) => boxes.some((box) => crosses(point, point, box)))
+    if (!inside) return cubic
+  }
+  return widest
+}
+
 /** The route, as the renderer and everything else sees it. */
 export function connectorRoute(
   start: Point,
@@ -527,6 +681,15 @@ export function connectorRoute(
   routing: Routing,
   points: readonly Bend[],
   normals: RouteNormals | null = null,
+  /**
+   * The shapes to get round: the two this line joins, or neither.
+   *
+   * Only the two it is attached to, because those are the ones it is always
+   * near — a route that dodged everything on the board would rearrange itself
+   * whenever anything moved anywhere, which is a worse surprise than a line
+   * crossing something once.
+   */
+  avoiding: Obstacles = [],
 ): Route {
   switch (routing) {
     case 'straight':
@@ -549,7 +712,7 @@ export function connectorRoute(
        * left — which is the same fault as an arrowhead pointing along an
        * object rather than into it, in a different routing.
        */
-      const legs = orthogonalLegs(start, end, points, normals)
+      const legs = orthogonalLegs(start, end, points, normals, avoiding)
       const first = legs[0]
       if (first === undefined) return { kind: 'polyline', points: [start, end] }
       return {
@@ -573,7 +736,13 @@ export function connectorRoute(
        * would have flattened.
        */
       const nodes = routeStops(start, end, points).map((node) => node.at)
-      if (nodes.length <= 2) return { kind: 'spline', points: defaultCubic(start, end, normals) }
+      /*
+       * A curve you have SHAPED is yours, exactly as a staircase is: the
+       * chain passes through the stops it was given and nothing moves them.
+       */
+      if (nodes.length <= 2) {
+        return { kind: 'spline', points: clearingCubic(start, end, normals, avoiding) }
+      }
       return { kind: 'spline', points: chainThrough(nodes, normals) }
     }
   }
@@ -707,4 +876,123 @@ export function routeMidpoint(route: Route): Point {
     walked += step
   }
   return points[points.length - 1] ?? first
+}
+
+
+/** How long a flattened path is, and how far along each vertex sits. */
+function walkOf(path: readonly Point[]): { total: number; upto: number[] } {
+  const upto: number[] = [0]
+  let total = 0
+  for (let index = 1; index < path.length; index += 1) {
+    const from = path[index - 1]
+    const to = path[index]
+    if (from === undefined || to === undefined) continue
+    total += Math.hypot(to.x - from.x, to.y - from.y)
+    upto.push(total)
+  }
+  return { total, upto }
+}
+
+/** Where a fraction of the way along a path lands, and which way it is going. */
+function alongPath(path: readonly Point[], fraction: number): { at: Point; way: Point } {
+  const { total, upto } = walkOf(path)
+  const first = path[0] ?? { x: 0, y: 0 }
+  if (total === 0) return { at: first, way: { x: 1, y: 0 } }
+  const target = Math.min(Math.max(fraction, 0), 1) * total
+  for (let index = 1; index < path.length; index += 1) {
+    const from = path[index - 1]
+    const to = path[index]
+    const reached = upto[index]
+    const before = upto[index - 1]
+    if (from === undefined || to === undefined || reached === undefined || before === undefined) {
+      continue
+    }
+    if (reached < target && index < path.length - 1) continue
+    const span = reached - before
+    const t = span === 0 ? 0 : (target - before) / span
+    const length = Math.hypot(to.x - from.x, to.y - from.y) || 1
+    return {
+      at: { x: lerp(from.x, to.x, t), y: lerp(from.y, to.y, t) },
+      way: { x: (to.x - from.x) / length, y: (to.y - from.y) / length },
+    }
+  }
+  return { at: first, way: { x: 1, y: 0 } }
+}
+
+/**
+ * Where a connector's label sits.
+ *
+ * UNPLACED, it takes the middle of the route's LONGEST run, so the text lies
+ * along a straight stretch rather than draped over a corner — which is where
+ * half way along puts it on any route that turns in the middle, and most of
+ * them do. On a route with one run the two are the same point, so nothing
+ * moves on a straight line or a plain curve.
+ *
+ * PLACED, it is a fraction of the drawn route's length and an offset across
+ * it, so the label travels with the line: it stays on the leg it was put on
+ * instead of sliding round as the objects move.
+ */
+export function labelAnchor(route: Route, label: LabelPlacement | null | undefined): Point {
+  if (label === null || label === undefined) {
+    /*
+     * The longest run, and on a TIE the most central of them. A plain squared
+     * route is three runs of the same length, so first-past-the-post would
+     * park every label on the stretch leaving the object rather than on the
+     * crossing between the two, which is where a hand would put it.
+     */
+    const segments = routeSegments(route)
+    let best: { at: Point; length: number; offCentre: number } | null = null
+    for (let index = 0; index < segments.length; index += 1) {
+      const segment = segments[index]
+      if (segment === undefined) continue
+      const length = walkOf(segment.path).total
+      const offCentre = Math.abs(index - (segments.length - 1) / 2)
+      const better =
+        best === null || length > best.length || (length === best.length && offCentre < best.offCentre)
+      if (better) best = { at: segment.middle, length, offCentre }
+    }
+    return best === null ? routeMidpoint(route) : best.at
+  }
+
+  const { at, way } = alongPath(flattenRoute(route), label.at)
+  // The left-hand normal, so a positive offset is always the same side of the
+  // line whichever way round the line was drawn.
+  return { x: at.x - way.y * label.off, y: at.y + way.x * label.off }
+}
+
+/**
+ * The placement a label dropped HERE describes — the inverse of `labelAnchor`.
+ *
+ * Nearest point on the drawn route, then how far off it the drop was. Stored
+ * that way rather than as a coordinate for the same reason a stop is: a
+ * fraction and an offset still mean something once both ends have moved, and
+ * a point does not.
+ */
+export function labelFrom(route: Route, point: Point): LabelPlacement {
+  const path = flattenRoute(route)
+  const { total, upto } = walkOf(path)
+  if (total === 0) return { at: 0.5, off: 0 }
+
+  let best: { at: number; off: number; away: number } | null = null
+  for (let index = 1; index < path.length; index += 1) {
+    const from = path[index - 1]
+    const to = path[index]
+    const before = upto[index - 1]
+    if (from === undefined || to === undefined || before === undefined) continue
+    const dx = to.x - from.x
+    const dy = to.y - from.y
+    const span = Math.hypot(dx, dy)
+    if (span === 0) continue
+    const t = Math.min(Math.max(((point.x - from.x) * dx + (point.y - from.y) * dy) / (span * span), 0), 1)
+    const on = { x: from.x + dx * t, y: from.y + dy * t }
+    const away = Math.hypot(point.x - on.x, point.y - on.y)
+    if (best !== null && away >= best.away) continue
+    best = {
+      at: (before + span * t) / total,
+      // Signed against the left-hand normal, matching `labelAnchor`.
+      off: -(point.x - on.x) * (dy / span) + (point.y - on.y) * (dx / span),
+      away,
+    }
+  }
+  return best === null ? { at: 0.5, off: 0 } : { at: best.at, off: best.off }
 }

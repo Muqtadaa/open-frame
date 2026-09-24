@@ -288,6 +288,37 @@ export type FieldKind = 'text' | 'longText' | 'tags' | 'select'
  * story for the nesting; none of the eight structured types needs one, so the
  * flat key stays until something genuinely does.
  */
+/**
+ * Something a type can DO to an object, offered as a button.
+ *
+ * Declared here for the same reason a field is (rule 21): a panel that knew a
+ * connector could be reset would be a second source of truth about what a type
+ * can do, and the next type with something to offer would need the panel
+ * edited rather than itself.
+ *
+ * `applies` is what keeps a button honest. A control that is always there and
+ * usually does nothing teaches people to ignore it — so a line with no stops
+ * on it offers no reset, and the button appears exactly when pressing it would
+ * change something.
+ *
+ * `apply` returns a data patch and nothing else, so the action goes through
+ * the same command, the same validation and the same undo entry as any other
+ * edit (rule 3). An action that reached for the document could not.
+ */
+export interface ActionDefinition<TData> {
+  readonly id: string
+  /** Shown on the button. Sentence case, and a verb: it does something. */
+  readonly label: string
+  readonly applies?: (object: ObjectBase<string, TData>) => boolean
+  readonly apply: (object: ObjectBase<string, TData>) => Partial<TData>
+}
+
+/** An action as the interface sees it, with the type erased away. */
+export interface OfferedAction {
+  readonly id: string
+  readonly label: string
+}
+
 export interface FieldDefinition {
   readonly key: string
   /** Shown beside the control. Sentence case, because it is a label, not a heading. */
@@ -497,6 +528,12 @@ export interface ObjectTypeDefinition<TType extends string, TData> {
   readonly fields?: readonly FieldDefinition[]
 
   /**
+   * What this type can be asked to do to one of its objects, in the order the
+   * buttons appear. See `ActionDefinition`.
+   */
+  readonly actions?: readonly ActionDefinition<TData>[]
+
+  /**
    * Types this one can be PROMOTED to, in the order they are offered.
    *
    * The third registry addition Phase 3 needs: which types can convert into
@@ -592,6 +629,15 @@ export interface ErasedObjectTypeDefinition {
     context: GeometryContext,
   ) => Record<string, unknown>
   readonly cropWindow?: (object: AnyOpenFrameObject) => CropWindow
+  readonly actions?: readonly ErasedAction[]
+}
+
+/** An action with its data type erased, as the registry stores it. */
+interface ErasedAction {
+  readonly id: string
+  readonly label: string
+  readonly applies?: (object: AnyOpenFrameObject) => boolean
+  readonly apply: (object: AnyOpenFrameObject) => Record<string, unknown>
 }
 
 export class ObjectTypeError extends Error {
@@ -670,6 +716,7 @@ export function defineObjectType<TType extends string, TData>(
     cropWindow,
     relation,
     fields,
+    actions,
     promotions,
     derivations,
   } = definition
@@ -729,6 +776,21 @@ export function defineObjectType<TType extends string, TData>(
       : {
           retargetEndpoint: (object, doc, endpointId, target, context) =>
             retargetEndpoint(object as ObjectBase<TType, TData>, doc, endpointId, target, context),
+        }),
+    ...(actions === undefined
+      ? {}
+      : {
+          actions: actions.map((action): ErasedAction => {
+            const applies = action.applies
+            return {
+              id: action.id,
+              label: action.label,
+              ...(applies === undefined
+                ? {}
+                : { applies: (object) => applies(object as ObjectBase<string, TData>) }),
+              apply: (object) => action.apply(object as ObjectBase<string, TData>),
+            }
+          }),
         }),
   }
 }
@@ -833,6 +895,28 @@ export class ObjectTypeRegistry {
    */
   #geometryContext(doc: BoardDocument): GeometryContext {
     return { boundsOf: (other) => this.boundsOf(other, doc) }
+  }
+
+  /**
+   * What this object can be asked to do RIGHT NOW — only the actions whose
+   * type says they would change something. Empty for almost everything.
+   */
+  actionsOf(object: AnyOpenFrameObject): readonly OfferedAction[] {
+    const actions = this.#definitions.get(object.type)?.actions ?? []
+    return actions
+      .filter((action) => action.applies?.(object) !== false)
+      .map((action) => ({ id: action.id, label: action.label }))
+  }
+
+  /**
+   * The data patch one of those actions produces, or `null` when the type does
+   * not offer it. Null rather than an empty patch, so a caller can tell
+   * "nothing to do" from "this type cannot".
+   */
+  applyAction(object: AnyOpenFrameObject, actionId: string): Record<string, unknown> | null {
+    const action = this.#definitions.get(object.type)?.actions?.find((each) => each.id === actionId)
+    if (action === undefined || action.applies?.(object) === false) return null
+    return action.apply(object)
   }
 
   /**

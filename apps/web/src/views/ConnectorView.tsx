@@ -25,12 +25,8 @@ function ConnectorRenderer({
    * its children's, so a line joined to a group used to run to the group's
    * origin instead of to its edge (rule 16).
    */
-  const { start, end, startNormal, endNormal } = resolveEndpoints(
-    doc,
-    object.data.from,
-    object.data.to,
-    boundsOf,
-  )
+  const ends = resolveEndpoints(doc, object.data.from, object.data.to, boundsOf)
+  const { start, end, startNormal, endNormal } = ends
   /*
    * WHICH WAY each end faces, carried into the route so the line leaves and
    * arrives perpendicular to whatever it is attached to. The caps are oriented
@@ -38,13 +34,26 @@ function ConnectorRenderer({
    * without this they pointed along the object rather than into it.
    */
   const normals = { start: startNormal, end: endNormal }
+  /*
+   * And the two shapes it joins, so the route can get round them. The same
+   * list the domain uses to decide the bounds and the hit test — a view that
+   * worked its own out would draw a line somewhere it cannot be clicked.
+   */
+  const avoiding = [ends.startBox, ends.endBox].filter((box) => box !== null)
   const stroke = inkOf(object.style.strokeColor ?? object.style.color)
   const width = strokeWidth(object.style.stroke, 'medium')
   const held = object.data.points
-  const path = connectorPath(start, end, object.data.routing, held, normals)
-  const { departure, arrival } = routeAngles(start, end, object.data.routing, held, normals)
+  const path = connectorPath(start, end, object.data.routing, held, normals, avoiding)
+  const { departure, arrival } = routeAngles(
+    start,
+    end,
+    object.data.routing,
+    held,
+    normals,
+    avoiding,
+  )
   const label = object.data.text
-  const mid = pathMidpoint(start, end, object.data.routing, held, normals)
+  const mid = pathMidpoint(start, end, object.data.routing, held, normals, avoiding, object.data.label)
 
   // Both ends, resolved once. `angle` is the direction of travel as the line
   // arrives, so the near end is the same angle turned around.
@@ -123,16 +132,17 @@ function ConnectorEditor({
 }: ObjectEditorProps<ConnectorData>) {
   // The label's place is the middle of the DRAWN route, which now depends on
   // which way each end leaves — same call as the renderer, same answer.
-  const { start, end, startNormal, endNormal } = resolveEndpoints(
-    doc,
-    object.data.from,
-    object.data.to,
-    boundsOf,
+  const ends = resolveEndpoints(doc, object.data.from, object.data.to, boundsOf)
+  const { start, end, startNormal, endNormal } = ends
+  const mid = pathMidpoint(
+    start,
+    end,
+    object.data.routing,
+    object.data.points,
+    { start: startNormal, end: endNormal },
+    [ends.startBox, ends.endBox].filter((box) => box !== null),
+    object.data.label,
   )
-  const mid = pathMidpoint(start, end, object.data.routing, object.data.points, {
-    start: startNormal,
-    end: endNormal,
-  })
   return (
     <div
       className="of-connector__editor-wrap"

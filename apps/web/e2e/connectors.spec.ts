@@ -526,6 +526,64 @@ test.describe('bending a route', () => {
   })
 })
 
+test.describe('putting a line back', () => {
+  test('offers a reset only once the shape has been changed, and undoes it in one press', async ({
+    page,
+  }) => {
+    await connectedPair(page)
+    await page.locator('.of-connector__line').click({ force: true })
+    await expect(page.getByTestId('endpoint-from')).toBeVisible()
+    await page.getByTestId('field-routing').selectOption('orthogonal')
+
+    /*
+     * Nothing to put back yet, so nothing is offered. A button that is always
+     * there and usually does nothing teaches people to ignore it.
+     */
+    await expect(page.getByTestId('action-reset')).toHaveCount(0)
+
+    const before = await page.locator('.of-connector__line').getAttribute('d')
+    const leg = await legAt(page)
+    await drag(page, leg, { x: leg.x - 90, y: leg.y })
+    expect(await page.locator('.of-connector__line').getAttribute('d')).not.toBe(before)
+
+    await expect(page.getByTestId('action-reset')).toBeVisible()
+    await page.getByTestId('action-reset').click()
+
+    // Back to the route it draws on its own, and the offer is gone with it.
+    expect(await page.locator('.of-connector__line').getAttribute('d')).toBe(before)
+    await expect(page.getByTestId('action-reset')).toHaveCount(0)
+  })
+
+  test('moves a label to where it is dragged, and puts it back on request', async ({ page }) => {
+    await connectedPair(page)
+    await page.locator(CANVAS).click({ position: MIDPOINT })
+    await page.locator(CANVAS).dblclick({ position: MIDPOINT })
+    await expect(page.locator(EDITOR)).toBeFocused()
+    await page.locator(EDITOR).fill('depends on')
+    await page.locator(CANVAS).click({ position: { x: 1180, y: 120 } })
+    await expect(page.locator('.of-connector__label')).toContainText('depends on')
+
+    await page.locator('.of-connector__line').click({ force: true })
+    const grip = await page.getByTestId('endpoint-label').boundingBox()
+    if (grip === null) throw new Error('no label handle')
+    const from = { x: grip.x + grip.width / 2, y: grip.y + grip.height / 2 }
+
+    const before = await page.locator('.of-connector__label').boundingBox()
+    if (before === null) throw new Error('no label')
+    await drag(page, from, { x: from.x + 60, y: from.y - 70 })
+
+    const after = await page.locator('.of-connector__label').boundingBox()
+    if (after === null) throw new Error('no label')
+    // The TEXT moved, not just the handle.
+    expect(Math.hypot(after.x - before.x, after.y - before.y)).toBeGreaterThan(40)
+
+    await page.getByTestId('action-centre-label').click()
+    const back = await page.locator('.of-connector__label').boundingBox()
+    if (back === null) throw new Error('no label')
+    expect(Math.hypot(back.x - before.x, back.y - before.y)).toBeLessThan(2)
+  })
+})
+
 /**
  * WHERE ON THE TARGET a line attaches, which used to be discarded.
  *

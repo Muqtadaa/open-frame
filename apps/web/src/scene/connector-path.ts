@@ -1,7 +1,9 @@
 import {
   connectorRoute,
-  routeMidpoint,
+  labelAnchor,
   type Bend,
+  type LabelPlacement,
+  type Obstacles,
   type Point,
   type RouteNormals,
   type Routing,
@@ -23,8 +25,9 @@ export function connectorPath(
   routing: Routing,
   points: readonly Bend[] = [],
   normals: RouteNormals | null = null,
+  avoiding: Obstacles = [],
 ): string {
-  const route = connectorRoute(start, end, routing, points, normals)
+  const route = connectorRoute(start, end, routing, points, normals, avoiding)
   const [first, ...rest] = route.points
   if (first === undefined) return ''
   const from = `M ${String(first.x)} ${String(first.y)}`
@@ -51,11 +54,12 @@ export function connectorPath(
 }
 
 /**
- * The middle of the DRAWN route, for placing a label.
+ * Where the label sits on the DRAWN route.
  *
  * Read off the route itself rather than worked out a second time, which is the
  * same reason `routeAngles` reads it: two pieces of code answering one
- * question is how a label ends up somewhere the line is not.
+ * question is how a label ends up somewhere the line is not. Unplaced it takes
+ * the middle of the longest run; placed, wherever it was dragged.
  */
 export function pathMidpoint(
   start: Point,
@@ -63,8 +67,10 @@ export function pathMidpoint(
   routing: Routing = 'straight',
   points: readonly Bend[] = [],
   normals: RouteNormals | null = null,
+  avoiding: Obstacles = [],
+  label: LabelPlacement | null | undefined = null,
 ): Point {
-  return routeMidpoint(connectorRoute(start, end, routing, points, normals))
+  return labelAnchor(connectorRoute(start, end, routing, points, normals, avoiding), label)
 }
 
 /**
@@ -119,8 +125,9 @@ export function routeAngles(
   routing: Routing,
   bends: readonly Bend[] = [],
   normals: RouteNormals | null = null,
+  avoiding: Obstacles = [],
 ): RouteAngles {
-  const points = connectorRoute(start, end, routing, bends, normals).points
+  const points = connectorRoute(start, end, routing, bends, normals, avoiding).points
   const straight = Math.atan2(end.y - start.y, end.x - start.x)
 
   const afterStart = distinctFrom(points, 0, 1)

@@ -207,6 +207,16 @@ export interface ResolvedEnds {
   /** Unit vectors pointing OUT of whatever each end is attached to. */
   readonly startNormal: Point | null
   readonly endNormal: Point | null
+  /**
+   * The two shapes the line joins, for a route that has to get round them.
+   *
+   * Resolved HERE because this is already the one place that turns an
+   * endpoint into geometry, and asking twice is how the route comes to avoid
+   * a rectangle the line is not actually attached to. Null for a free end:
+   * a point in space is nothing to go around.
+   */
+  readonly startBox: Rect | null
+  readonly endBox: Rect | null
 }
 
 export function resolveEndpoints(
@@ -221,16 +231,25 @@ export function resolveEndpoints(
   const resolve = (
     endpoint: ConnectorEndpoint,
     towards: Point,
-  ): { at: Point; normal: Point | null } => {
-    if (endpoint.kind === 'point') return { at: { x: endpoint.x, y: endpoint.y }, normal: null }
+  ): { at: Point; normal: Point | null; box: Rect | null } => {
+    if (endpoint.kind === 'point') {
+      return { at: { x: endpoint.x, y: endpoint.y }, normal: null, box: null }
+    }
     const object = doc.objects.get(endpoint.objectId)
     // A dangling reference resolves to the hint rather than throwing: a
     // half-loaded or repaired document must still render.
-    if (object === undefined) return { at: towards, normal: null }
+    if (object === undefined) return { at: towards, normal: null, box: null }
     const placement = anchorPlacement(object, endpoint.anchor, towards, boundsOf)
     return {
       at: pointOnFrame(object, placement.u, placement.v, boundsOf),
       normal: worldNormal(object, placement),
+      /*
+       * The axis-aligned box, which for a TURNED object is the one around it
+       * rather than its edges. A route that cleared the tilted rectangle but
+       * not the box around it would still look like it was cutting a corner,
+       * and going round the larger one is never wrong.
+       */
+      box: boundsOf(object),
     }
   }
 
@@ -241,6 +260,8 @@ export function resolveEndpoints(
     end: end.at,
     startNormal: start.normal,
     endNormal: end.normal,
+    startBox: start.box,
+    endBox: end.box,
   }
 }
 

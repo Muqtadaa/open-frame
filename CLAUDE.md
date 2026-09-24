@@ -446,6 +446,41 @@ table's divider does have one — double-clicking it fits the column, so the
 object underneath must not also open — but a drag-only grip sitting where
 somebody double-clicks to type is just in the way.
 
+### 26. A route gets round the two shapes it joins
+
+Those two and no others. They are the ones a line is always near, and dodging
+everything on the board would rearrange a route whenever anything moved
+anywhere — as well as making every connector's geometry depend on every
+object, which is the O(n) scan rule 10 forbids, once per object, per frame. A squared route moves its automatic middle to the nearer
+side of whatever is in the way; a curve has no corners to add, so it leaves
+FURTHER before it turns, and is honest about the geometries no amount of bow
+clears. A route you have SHAPED is never moved by any of it: every node is
+then one you put there.
+
+**A test that samples a polyline's POINTS cannot see what its segments do.** A
+run slicing through the middle of a box has both of its ends outside it, so
+every avoidance test passed with the avoidance deleted — and so did the one
+that built its own route rather than asking the registry for the one the board
+actually draws.
+
+### 27. What a type can DO is declared, like what it can hold
+
+The inspector reads actions off the registry exactly as it reads fields and
+style props (rule 21): a panel that knew a connector could be reset would be a
+second source of truth about what a type can do, and the next type with
+something to offer would need the panel edited rather than itself.
+
+An action returns a data PATCH and nothing else, so it goes through the same
+command, the same validation and the same undo entry as any other edit
+(rule 3). `applies` is what keeps the button honest — a control that is always
+there and usually does nothing teaches people to ignore it, so a line with no
+stops offers no reset.
+
+**Two handles in the same place: the later one wins.** A connector's label
+starts exactly where the midpoint that adds a stop sits, and the overlay draws
+them in order — so reaching for the text put a bend in the line, which moved
+the text, which looked for all the world like it had worked.
+
 ---
 
 ## Conventions

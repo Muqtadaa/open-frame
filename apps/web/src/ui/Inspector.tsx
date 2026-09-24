@@ -14,6 +14,7 @@ import {
   type DashToken,
   type RadiusToken,
   type FieldDefinition,
+  type OfferedAction,
   type FillToken,
   type FontToken,
   type ObjectStyle,
@@ -152,6 +153,21 @@ export function Inspector() {
     return runtime.registry.get(only.type)?.fields ?? []
   }, [objects, runtime.registry])
 
+  /**
+   * What this object can be asked to DO, from the registry.
+   *
+   * Only what it would change right now — a connector with no stops on it
+   * offers no reset — and only for a single selection, for the same reason
+   * fields are: one command addresses one object, so five at once would be
+   * five undo entries for what somebody did once.
+   */
+  const actions = useMemo<readonly OfferedAction[]>(() => {
+    if (objects.length !== 1) return []
+    const target = objects[0]
+    if (target === undefined) return []
+    return runtime.registry.actionsOf(target)
+  }, [objects, runtime.registry])
+
   /*
    * The relation index answers both directions in O(1) after one pass per
    * document version, so asking it on every render is not the O(n) scan rule 10
@@ -200,7 +216,13 @@ export function Inspector() {
   if (objects.some((object) => object.locked)) return null
   // A type with fields or a trail but no style properties still has a panel
   // worth showing; one with none of the three has nothing to say.
-  if (props.size === 0 && fields.length === 0 && cites.length === 0 && citedBy.length === 0) {
+  if (
+    props.size === 0 &&
+    fields.length === 0 &&
+    actions.length === 0 &&
+    cites.length === 0 &&
+    citedBy.length === 0
+  ) {
     return null
   }
 
@@ -291,6 +313,25 @@ export function Inspector() {
             commands.updateData(id, patch)
           }}
         />
+      )}
+
+      {actions.length > 0 && only !== undefined && (
+        <div className="of-inspector__actions">
+          {actions.map((action) => (
+            <button
+              key={action.id}
+              type="button"
+              className="of-inspector__action"
+              data-testid={`action-${action.id}`}
+              onClick={() => {
+                const patch = runtime.registry.applyAction(only, action.id)
+                if (patch !== null) commands.updateData(only.id, patch)
+              }}
+            >
+              {action.label}
+            </button>
+          ))}
+        </div>
       )}
 
       {/*
