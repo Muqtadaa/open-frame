@@ -237,6 +237,19 @@ export function bendFrom(
   routing: Routing,
   at: Point,
   normals: RouteNormals | null = null,
+  /**
+   * How close, in world units, an elbow has to come to collapse the route to
+   * a single corner. Zero never snaps.
+   *
+   * An orthogonal route turns twice: out of one end, across, and into the
+   * other. Pushed all the way to either end it becomes an L, which is the
+   * shape people actually draw — so the drag finds it rather than requiring
+   * the elbow to be landed on an exact pixel. The caller decides HOW close by
+   * what it passes, which is how the snap can be stickier once it has taken
+   * (a wider number to release than to catch) without this having to remember
+   * anything between one pointer event and the next.
+   */
+  snapWithin = 0,
 ): Bend {
   if (routing === 'orthogonal') {
     const [s, e] = stubs(start, end, normals)
@@ -246,7 +259,19 @@ export function bendFrom(
     // there is no fraction to take, and the middle is as good as anywhere.
     if (span === 0) return NO_BEND
     const from = horizontal ? at.x - s.x : at.y - s.y
-    return { along: from / span, across: 0 }
+    const along = from / span
+    /*
+     * The two L's: the elbow standing at one end of the run or the other.
+     * Measured in world units along that run rather than as a fraction of it,
+     * or a long connector would snap from half a screen away and a short one
+     * would never snap at all.
+     */
+    if (snapWithin > 0) {
+      const reach = Math.abs(snapWithin / span)
+      if (along < reach) return { along: 0, across: 0 }
+      if (along > 1 - reach) return { along: 1, across: 0 }
+    }
+    return { along, across: 0 }
   }
 
   const base =

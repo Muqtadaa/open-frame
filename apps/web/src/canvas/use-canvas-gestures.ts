@@ -311,6 +311,69 @@ function beginDividerDrag(
  * a new connector does, and the object under the pointer highlights for free.
  * Nothing is written until pointer-up (rule 4).
  */
+/**
+ * How close, in SCREEN pixels, an orthogonal elbow has to come to a single
+ * corner before the route collapses to an L.
+ *
+ * Screen pixels because it is a pointer's worth of precision, converted at
+ * use: fourteen world units would be a hand's width at 25% and unhittable at
+ * 400%. How much STICKIER the L is once taken is the connector's own business
+ * and lives in the type.
+ */
+const SNAP_L_PX = 14
+
+/**
+ * What this drag would do to the line it is reshaping, or null if it is not
+ * reshaping one.
+ *
+ * Only a CONTROL point: dragging an END rubber-bands to the pointer, which is
+ * the honest preview of "this end goes there" and highlights what it would
+ * attach to. A bend has nothing to attach to, and rubber-banding it drew a
+ * diagonal to nowhere while the line being bent sat still until the drop.
+ *
+ * The patch is the SAME ONE the pointer-up will dispatch, computed through the
+ * registry, so what is drawn and what is committed cannot disagree. It is also
+ * fed back in: the object is merged with the last preview before being asked
+ * again, which is how the type can make its snap sticky — it sees its own
+ * previous answer as the object's data — without this having to know what a
+ * bend is.
+ */
+function reshapeOf(
+  active: Gesture,
+  at: Point,
+  runtime: { store: { getDocument: () => BoardDocument }; registry: ObjectTypeRegistry },
+  previous: {
+    readonly objectId: ObjectId
+    readonly data: Readonly<Record<string, unknown>>
+  } | null,
+  zoom: number,
+): { objectId: ObjectId; data: Readonly<Record<string, unknown>> } | null {
+  const subject = active.subjects[0]
+  if (active.mode !== 'endpoint' || subject === undefined || active.endpointId === null) return null
+
+  const doc = runtime.store.getDocument()
+  const committed = doc.objects.get(subject.id)
+  if (committed === undefined) return null
+
+  const object =
+    previous !== null && previous.objectId === committed.id
+      ? { ...committed, data: { ...(committed.data as object), ...previous.data } }
+      : committed
+
+  const dragged = runtime.registry
+    .endpointsOf(object, doc)
+    .find((endpoint) => endpoint.id === active.endpointId)
+  if (dragged?.role !== 'control') return null
+
+  const data = runtime.registry.retargetEndpoint(object, doc, active.endpointId, {
+    kind: 'point',
+    x: at.x,
+    y: at.y,
+    tolerance: SNAP_L_PX / Math.max(zoom, 0.0001),
+  })
+  return data === null ? null : { objectId: object.id, data }
+}
+
 function beginEndpointDrag(
   event: ReactPointerEvent<HTMLElement>,
   store: ReturnType<typeof useInteractionStore.getState>,
@@ -895,7 +958,17 @@ export function useCanvasGestures(containerRef: RefObject<HTMLElement | null>) {
         // an end to its own connector is unresolvable, so it would silently
         // become a no-op rather than the free point the drop implied.
         const editing = active.subjects[0]?.id
-        store.updateConnect(free, over === editing ? null : over)
+        store.updateConnect(
+          free,
+          over === editing ? null : over,
+          reshapeOf(
+            active,
+            free,
+            runtime,
+            store.drag.kind === 'connect' ? store.drag.reshaping : null,
+            store.viewport.zoom,
+          ),
+        )
         return
       }
 
@@ -932,7 +1005,7 @@ export function useCanvasGestures(containerRef: RefObject<HTMLElement | null>) {
         )
       }
     },
-    [runtime.registry, runtime.store, toWorld],
+    [runtime, toWorld],
   )
 
   const onPointerUp = useCallback(
@@ -1032,8 +1105,17 @@ export function useCanvasGestures(containerRef: RefObject<HTMLElement | null>) {
         store.drag.kind === 'connect'
       ) {
         const subject = active.subjects[0]
-        const { to, over } = store.drag
-        if (subject !== undefined && active.moved) {
+        const { to, over, reshaping } = store.drag
+        if (subject !== undefined && active.moved && reshaping?.objectId === subject.id) {
+          /*
+           * COMMIT WHAT WAS DRAWN. The preview is already the patch this drop
+           * produces — recomputing it here would ask the type the same
+           * question from the committed data instead of from the shape on
+           * screen, and a snap that holds its shape by reading its own last
+           * answer would then let go at the moment of release.
+           */
+          commands.updateData(subject.id, reshaping.data)
+        } else if (subject !== undefined && active.moved) {
           commands.retargetEndpoint(
             subject.id,
             active.endpointId,
@@ -1044,7 +1126,7 @@ export function useCanvasGestures(containerRef: RefObject<HTMLElement | null>) {
              * actually was, and objects cover most of a working board.
              */
             over === null
-              ? { kind: 'point', x: to.x, y: to.y }
+              ? { kind: 'point', x: to.x, y: to.y, tolerance: anchorReach(store.viewport.zoom) }
               : {
                   kind: 'object',
                   objectId: over,

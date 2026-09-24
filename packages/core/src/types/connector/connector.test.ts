@@ -539,8 +539,60 @@ describe('draggable endpoints', () => {
     })
   })
 
+  /**
+   * The L holds once it has taken.
+   *
+   * Read off the object's own bend rather than remembered by the gesture: the
+   * canvas feeds its preview back in as the object's data on the next move, so
+   * the type sees its own last answer and the caller never has to know what a
+   * bend is.
+   */
+  describe('collapsing an orthogonal route', () => {
+    let line: ObjectId
+
+    beforeEach(() => {
+      line = create(h, 'connector', 0, 0, {
+        from: { kind: 'point', x: 0, y: 0 },
+        to: { kind: 'point', x: 400, y: 200 },
+        routing: 'orthogonal',
+      })
+    })
+
+    const elbowTo = (at: { x: number; y: number }, bend?: unknown) => {
+      const held = h.store.getObject(line)
+      if (held === undefined) throw new Error('the line went missing')
+      const object =
+        bend === undefined ? held : { ...held, data: { ...(held.data as object), bend } }
+      return h.registry.retargetEndpoint(object, h.store.getDocument(), 'bend', {
+        kind: 'point',
+        ...at,
+        tolerance: 14,
+      })
+    }
+
+    it('takes the L when the elbow is dropped near an end', () => {
+      expect(elbowTo({ x: 6, y: 100 })).toEqual({ bend: { along: 0, across: 0 } })
+    })
+
+    it('holds it further out than it took it, once collapsed', () => {
+      const out = { x: 20, y: 100 }
+      // From a route with an elbow in the middle, twenty units is too far.
+      expect(elbowTo(out, { along: 0.5, across: 0 })).not.toEqual({
+        bend: { along: 0, across: 0 },
+      })
+      // From one already collapsed, the same drop keeps the L.
+      expect(elbowTo(out, { along: 0, across: 0 })).toEqual({ bend: { along: 0, across: 0 } })
+    })
+
+    it('lets go when the elbow is pulled well clear', () => {
+      expect(elbowTo({ x: 120, y: 100 }, { along: 0, across: 0 })).not.toEqual({
+        bend: { along: 0, across: 0 },
+      })
+    })
+  })
+
   it('detaches an end dropped on empty space', () => {
-    const patch = h.registry.retargetEndpoint(object(), h.store.getDocument(), 'from', { kind: 'point', x: -40, y: -60 })
+    const patch = h.registry.retargetEndpoint(object(), h.store.getDocument(), 'from', { kind: 'point', x: -40, y: -60, tolerance: REACH })
     if (patch === null) throw new Error('expected a patch')
 
     h.dispatcher.dispatch({ kind: 'UpdateObjectData', id: connector, patch })
@@ -548,7 +600,7 @@ describe('draggable endpoints', () => {
   })
 
   it('leaves the other end untouched', () => {
-    const patch = h.registry.retargetEndpoint(object(), h.store.getDocument(), 'from', { kind: 'point', x: 5, y: 5 })
+    const patch = h.registry.retargetEndpoint(object(), h.store.getDocument(), 'from', { kind: 'point', x: 5, y: 5, tolerance: REACH })
     if (patch === null) throw new Error('expected a patch')
 
     h.dispatcher.dispatch({ kind: 'UpdateObjectData', id: connector, patch })
@@ -572,7 +624,7 @@ describe('draggable endpoints', () => {
   })
 
   it('ignores an endpoint id it does not have', () => {
-    expect(h.registry.retargetEndpoint(object(), h.store.getDocument(), 'middle', { kind: 'point', x: 0, y: 0 })).toEqual(
+    expect(h.registry.retargetEndpoint(object(), h.store.getDocument(), 'middle', { kind: 'point', x: 0, y: 0, tolerance: REACH })).toEqual(
       {},
     )
   })
@@ -606,6 +658,7 @@ describe('draggable endpoints', () => {
         kind: 'point',
         x: 0,
         y: 0,
+        tolerance: REACH,
       }),
     ).toBeNull()
   })

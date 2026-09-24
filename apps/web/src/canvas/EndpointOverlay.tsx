@@ -25,6 +25,13 @@ export function EndpointOverlay() {
   const viewport = useInteractionStore((state) => state.viewport)
   const dragKind = useInteractionStore((state) => state.drag.kind)
   const editingId = useInteractionStore((state) => state.editingId)
+  /*
+   * What the line being reshaped would become. A stable reference from the
+   * store, so it is safe in a selector (rule 9).
+   */
+  const reshaping = useInteractionStore((state) =>
+    state.drag.kind === 'connect' ? (state.drag.reshaping?.data ?? null) : null,
+  )
 
   if (selection.size !== 1 || editingId !== null) return null
   if (dragKind === 'marquee' || dragKind === 'translate') return null
@@ -33,7 +40,17 @@ export function EndpointOverlay() {
   const object = id === undefined ? undefined : document.objects.get(id)
   if (object === undefined || object.locked) return null
 
-  const endpoints = runtime.registry.endpointsOf(object, document)
+  /*
+   * The handles follow the PREVIEW, not the committed data.
+   *
+   * A control point that stayed at the old elbow while the route moved under
+   * it is the same fault as the route not moving at all: the thing you are
+   * dragging has to be where you dragged it. Merged exactly as `ObjectView`
+   * merges it to draw the line, so both read the same pending patch.
+   */
+  const previewed =
+    reshaping === null ? object : { ...object, data: { ...(object.data as object), ...reshaping } }
+  const endpoints = runtime.registry.endpointsOf(previewed, document)
   if (endpoints.length === 0) return null
 
   // A screen measurement on the screen-space layer: nothing here divides by

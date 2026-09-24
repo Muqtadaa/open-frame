@@ -226,6 +226,25 @@ export type DragState =
       readonly to: Point
       /** The object currently under the pointer, highlighted as a drop target. */
       readonly over: ObjectId | null
+      /**
+       * RESHAPING an existing line rather than aiming one of its ends: which
+       * object, and what its data would become if the pointer came up now.
+       *
+       * Dragging a control point used to rubber-band a dashed line from the
+       * far end to the pointer, exactly as dragging an END does — which for a
+       * bend is a diagonal to nowhere, while the line being bent sat still
+       * until the drop. The route previews itself instead, merged in
+       * `ObjectView` like a crop or a divider, so the document stays untouched
+       * until pointer-up (rule 4).
+       *
+       * Null while a new connector is being drawn, and while an end is being
+       * dragged: there the rubber band IS the honest preview of "this end
+       * goes there", and the object under it highlights as a target.
+       */
+      readonly reshaping: {
+        readonly objectId: ObjectId
+        readonly data: Readonly<Record<string, unknown>>
+      } | null
     }
 
 /**
@@ -414,7 +433,14 @@ interface InteractionState {
   beginResize(handle: HandleId): void
   beginRotate(): void
   beginConnect(from: ConnectorEndpoint, at: Point): void
-  updateConnect(to: Point, over: ObjectId | null): void
+  updateConnect(
+    to: Point,
+    over: ObjectId | null,
+    reshaping?: {
+      readonly objectId: ObjectId
+      readonly data: Readonly<Record<string, unknown>>
+    } | null,
+  ): void
   /** Replaces the live preview frames mid-gesture. */
   previewFrames(frames: ReadonlyMap<ObjectId, ObjectFrame>): void
   endDrag(): void
@@ -532,7 +558,9 @@ export const useInteractionStore = create<InteractionState>((set) => ({
   // Writing a new one closes whatever was being read, and vice versa: two
   // panels over the same pin is two places to type into.
   beginDivider: (objectId, dividerId) =>
-    set({ drag: { kind: 'divider', objectId, dividerId, data: null, grow: { width: 0, height: 0 } } }),
+    set({
+      drag: { kind: 'divider', objectId, dividerId, data: null, grow: { width: 0, height: 0 } },
+    }),
   setCropping: (croppingId) =>
     // Cropping and editing are exclusive: entering one leaves the other.
     set({ croppingId, ...(croppingId === null ? {} : { editingId: null }) }),
@@ -583,9 +611,12 @@ export const useInteractionStore = create<InteractionState>((set) => ({
   beginPan: () => set({ drag: { kind: 'pan' } }),
   beginResize: (handle) => set({ drag: { kind: 'resize', handle, frames: new Map() } }),
   beginRotate: () => set({ drag: { kind: 'rotate', frames: new Map() } }),
-  beginConnect: (from, at) => set({ drag: { kind: 'connect', from, to: at, over: null } }),
-  updateConnect: (to, over) =>
-    set((state) => (state.drag.kind === 'connect' ? { drag: { ...state.drag, to, over } } : {})),
+  beginConnect: (from, at) =>
+    set({ drag: { kind: 'connect', from, to: at, over: null, reshaping: null } }),
+  updateConnect: (to, over, reshaping = null) =>
+    set((state) =>
+      state.drag.kind === 'connect' ? { drag: { ...state.drag, to, over, reshaping } } : {},
+    ),
   previewFrames: (frames) =>
     set((state) =>
       state.drag.kind === 'resize' || state.drag.kind === 'rotate'

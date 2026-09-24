@@ -145,22 +145,20 @@ export type EndpointTarget =
    * only which object was under the pointer; a type whose dragged point
    * attaches to nothing — a bend, a control point — needs where the pointer
    * actually was, and objects cover most of a working board.
+   *
+   * `tolerance` is on both for the same reason: it describes the DROP, not
+   * what the drop landed on. It is how close counts, in world units — which
+   * only the view can know, because a pointer is no more precise at 25% than
+   * at 400% while a world unit is sixteen times as far. What "close" is close
+   * TO is the type's business: an anchor to aim at for one end, the shape a
+   * route collapses to for a control point.
    */
-  | { readonly kind: 'point'; readonly x: number; readonly y: number }
+  | { readonly kind: 'point'; readonly x: number; readonly y: number; readonly tolerance: number }
   | {
       readonly kind: 'object'
       readonly objectId: ObjectId
       readonly x: number
       readonly y: number
-      /**
-       * How close, in WORLD units, counts as the same place on screen.
-       *
-       * Not anchor detail either: it is how precise a pointer is at the
-       * current zoom, which only the view can know and which a type cannot
-       * work out from a document. A type is free to ignore it — but one that
-       * offers places to aim at needs it, or "near enough" means something
-       * different at 25% than it does at 400%.
-       */
       readonly tolerance: number
     }
 

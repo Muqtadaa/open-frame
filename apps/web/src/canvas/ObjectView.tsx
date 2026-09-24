@@ -1,4 +1,4 @@
-import type { AnyOpenFrameObject, ObjectId } from '@openframe/core'
+import type { AnyOpenFrameObject, ObjectFrame, ObjectId } from '@openframe/core'
 import { memo, useCallback, useMemo } from 'react'
 
 import { useAssetUrl } from '../hooks/use-asset-url.js'
@@ -116,6 +116,18 @@ function ObjectViewInner({ id, views }: Props) {
   )
   const growHeight = useInteractionStore((state) =>
     state.drag.kind === 'divider' && state.drag.objectId === id ? state.drag.grow.height : 0,
+  )
+  /*
+   * RESHAPING: a line whose control point is being dragged draws itself with
+   * the pending bend, because the bend handle moving on its own says nothing
+   * about the shape the route is taking.
+   *
+   * A stable reference from the store, like the divider preview above.
+   */
+  const reshapePreview = useInteractionStore((state) =>
+    state.drag.kind === 'connect' && state.drag.reshaping?.objectId === id
+      ? state.drag.reshaping.data
+      : null,
   )
   /*
    * A crop previews as DATA and a FRAME together — the window shrinks and the
@@ -248,23 +260,11 @@ function ObjectViewInner({ id, views }: Props) {
              * data, and this is what the object WOULD become if the pointer
              * came up now. Rule 4 in one expression.
              */
-            object={
-              cropPreview !== null
-                ? { ...object, data: { ...(object.data as object), crop: cropPreview }, frame }
-                : dividerPreview === null
-                ? object
-                : {
-                    ...object,
-                    data: { ...(object.data as object), ...dividerPreview },
-                    /*
-                     * The FRAME previews too. Resizing one track takes space
-                     * from nowhere, so the object grows — without this the
-                     * cells redistribute inside a box that is not changing and
-                     * the drag looks like it has hit a limit.
-                     */
-                    frame,
-                  }
-            }
+            object={previewed(object, frame, {
+              crop: cropPreview,
+              divider: dividerPreview,
+              reshape: reshapePreview,
+            })}
             selected={selected}
             zoom={zoom}
             document={runtime.store.getDocument()}
@@ -275,6 +275,39 @@ function ObjectViewInner({ id, views }: Props) {
       </ObjectErrorBoundary>
     </div>
   )
+}
+
+/**
+ * The object as it WOULD be if the pointer came up now.
+ *
+ * Merged, not mutated: the document still holds the committed data (rule 4),
+ * and a gesture that wrote per frame would flood undo, persistence and the
+ * network. One function rather than a ternary chain, because there are three
+ * of these now and a fourth is a matter of time.
+ *
+ * At most one can be in flight — they are different drags — so the order here
+ * is not a precedence, only a search.
+ */
+function previewed(
+  object: AnyOpenFrameObject,
+  frame: ObjectFrame,
+  pending: {
+    readonly crop: unknown
+    readonly divider: Readonly<Record<string, unknown>> | null
+    readonly reshape: Readonly<Record<string, unknown>> | null
+  },
+): AnyOpenFrameObject {
+  const data = object.data as object
+  if (pending.crop !== null) return { ...object, data: { ...data, crop: pending.crop }, frame }
+  /*
+   * The FRAME previews with a divider. Resizing one track takes space from
+   * nowhere, so the object grows — without this the cells redistribute inside
+   * a box that is not changing and the drag looks like it has hit a limit.
+   */
+  if (pending.divider !== null) return { ...object, data: { ...data, ...pending.divider }, frame }
+  // A reshape moves no box: a connector has no meaningful frame at all.
+  if (pending.reshape !== null) return { ...object, data: { ...data, ...pending.reshape } }
+  return object
 }
 
 export const ObjectView = memo(ObjectViewInner)

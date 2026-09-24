@@ -16,6 +16,14 @@ export function ConnectorPreview() {
   const { runtime } = useOpenFrame()
 
   if (drag.kind !== 'connect') return null
+  /*
+   * A line being RESHAPED draws itself, with the pending change merged in —
+   * see `ObjectView`. Rubber-banding to the pointer as well would add the
+   * diagonal to nowhere this replaced: for a bend there is no end travelling
+   * anywhere, so a straight dashed line from the far end says nothing about
+   * the shape the route is taking.
+   */
+  if (drag.reshaping !== null) return null
 
   const document = runtime.store.getDocument()
   const { start } = resolveEndpoints(

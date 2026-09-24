@@ -227,3 +227,75 @@ describe('the bend handle still sits on the line it bends', () => {
     expect(sampled.y).toBeCloseTo(target.y, 6)
   })
 })
+
+/**
+ * THE L, which is the shape people actually draw.
+ *
+ * An orthogonal route turns twice: out of one end, across, and into the other.
+ * Pushed all the way to either end it becomes a single corner — and hitting
+ * that exactly with a pointer is a pixel hunt, so the drag finds it.
+ *
+ * How close counts is the CALLER's number, not a constant here. That is what
+ * lets the snap be stickier once it has taken — a wider distance to release
+ * than to catch — without this having to remember anything between one pointer
+ * event and the next.
+ */
+describe('collapsing an orthogonal route to one corner', () => {
+  const normals = { start: { x: 0, y: -1 }, end: { x: 0, y: 1 } }
+  /** Where the elbow sits, in world units along the run. */
+  const elbowOf = (bend: ReturnType<typeof bendFrom>): number =>
+    bendAnchor(start, end, 'orthogonal', bend, normals).x
+
+  it('takes the L when the elbow is dropped near one end', () => {
+    const near = { x: start.x + 6, y: 50 }
+    expect(bendFrom(start, end, 'orthogonal', near, normals, 14).along).toBe(0)
+
+    const far = { x: end.x - 6, y: 50 }
+    expect(bendFrom(start, end, 'orthogonal', far, normals, 14).along).toBe(1)
+  })
+
+  it('leaves the elbow where it was put when nothing is near', () => {
+    const middle = { x: 100, y: 50 }
+    const bend = bendFrom(start, end, 'orthogonal', middle, normals, 14)
+    expect(bend.along).toBeCloseTo(0.5, 1)
+    expect(elbowOf(bend)).toBeCloseTo(100, 6)
+  })
+
+  it('never snaps when the caller asks for none', () => {
+    const near = { x: start.x + 6, y: 50 }
+    expect(bendFrom(start, end, 'orthogonal', near, normals, 0).along).not.toBe(0)
+  })
+
+  /**
+   * The release is the same call with a bigger number, which is the whole
+   * reason the distance is a parameter: a drag that has already taken the L
+   * asks for a wider one, so the shape does not flicker while a hand hovers
+   * at the threshold.
+   */
+  it('holds the L further out than it took it', () => {
+    const at = { x: start.x + 20, y: 50 }
+    expect(bendFrom(start, end, 'orthogonal', at, normals, 14).along).not.toBe(0)
+    expect(bendFrom(start, end, 'orthogonal', at, normals, 28).along).toBe(0)
+  })
+
+  it('measures in world units, not as a fraction of the run', () => {
+    const longEnd = { x: 1000, y: 100 }
+    // The same six units from the start snaps on a long run as on a short one.
+    expect(bendFrom(start, longEnd, 'orthogonal', { x: 6, y: 50 }, normals, 14).along).toBe(0)
+
+    /*
+     * And the case the two rules DISAGREE about, which is the only one worth
+     * asserting: sixty units out is 6% of this run. A fraction-based snap of
+     * any usable size would take it; fourteen world units does not. A test
+     * that only used points near the very start would pass either way — and
+     * the first version of this one did.
+     */
+    const sixPercent = { x: 60, y: 50 }
+    expect(bendFrom(start, longEnd, 'orthogonal', sixPercent, normals, 14).along).not.toBe(0)
+  })
+
+  it('leaves a curve alone, which has no corner to collapse', () => {
+    const near = { x: start.x + 2, y: 2 }
+    expect(bendFrom(start, end, 'curved', near, normals, 14).along).not.toBe(0)
+  })
+})

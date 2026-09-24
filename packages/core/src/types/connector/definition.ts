@@ -20,6 +20,15 @@ import {
 export const CONNECTOR_TYPE = 'connector'
 
 /** Padding so a thin diagonal line is still comfortably clickable. */
+/**
+ * How much further the elbow must travel to let go of an L than to take one.
+ *
+ * Twice, which reads as deliberate without making the route feel stuck. The
+ * distance itself comes from the drop, because only the view knows how many
+ * world units a pointer's worth of precision is at this zoom.
+ */
+const RELEASE = 2
+
 const HIT_PADDING = 6
 
 export const connectorType = defineObjectType<typeof CONNECTOR_TYPE, ConnectorData>({
@@ -214,6 +223,22 @@ export const connectorType = defineObjectType<typeof CONNECTOR_TYPE, ConnectorDa
         object.data.to,
         boundsOf,
       )
+      /*
+       * The drop's tolerance means "how close collapses this to an L" here,
+       * which is the same question it always asks — how close counts — put to
+       * the part of the type that is being dragged. A curve has no L to find
+       * and ignores it.
+       *
+       * STICKIER once it has taken: a route already collapsed holds its shape
+       * until the elbow is pulled meaningfully away, or the L would flicker on
+       * and off while a hand hovered at the threshold. Read off the object's
+       * own bend rather than remembered by the gesture — which is what lets
+       * the caller stay ignorant of what a bend even is, since the preview it
+       * feeds back IS this object's data a moment later.
+       */
+      const held = object.data.bend
+      const collapsed =
+        held !== null && held !== undefined && (held.along === 0 || held.along === 1)
       return {
         bend: bendFrom(
           start,
@@ -221,6 +246,7 @@ export const connectorType = defineObjectType<typeof CONNECTOR_TYPE, ConnectorDa
           object.data.routing,
           { x: target.x, y: target.y },
           { start: startNormal, end: endNormal },
+          target.tolerance * (collapsed ? RELEASE : 1),
         ),
       }
     }

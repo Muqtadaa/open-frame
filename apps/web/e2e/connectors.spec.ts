@@ -698,3 +698,132 @@ test.describe('joining a line to a container', () => {
     expect(Math.abs(moved.y - after.bottom), 'the line stayed where it was dropped').toBeLessThan(8)
   })
 })
+
+/**
+ * WHAT A BEND DRAG SHOWS WHILE IT IS HAPPENING.
+ *
+ * Dragging a control point used to start the same drag state as dragging an
+ * END, so a dashed line rubber-banded from the far end of the connector to the
+ * pointer — a diagonal to nowhere — while the line being bent sat still until
+ * the drop. The route previews itself instead.
+ */
+test.describe('reshaping a line', () => {
+  async function bendable(page: Page, routing: 'orthogonal' | 'curved') {
+    await sticky(page, A_AT.x, A_AT.y, 'A')
+    await sticky(page, B_AT.x, B_AT.y, 'B')
+    await page.keyboard.press('c')
+    await drag(page, A_AT, B_AT)
+    await page.keyboard.press('v')
+    await page.locator('.of-connector__line').click({ force: true })
+    await page.getByTestId('field-routing').selectOption(routing)
+    await expect(page.getByTestId('endpoint-bend')).toBeVisible()
+  }
+
+  const route = async (page: Page): Promise<string> =>
+    (await page.locator('.of-connector__line').getAttribute('d')) ?? ''
+
+  /** The points of a drawn polyline, in order. */
+  const points = (d: string): { x: number; y: number }[] => {
+    const numbers = [...d.matchAll(/-?\d+(\.\d+)?/g)].map((m) => Number(m[0]))
+    const out: { x: number; y: number }[] = []
+    for (let at = 0; at + 1 < numbers.length; at += 2) {
+      out.push({ x: numbers[at] ?? 0, y: numbers[at + 1] ?? 0 })
+    }
+    return out
+  }
+
+  /**
+   * Where the run that CROSSES between the two ends sits, along the axis it
+   * crosses on.
+   *
+   * Not a count of corners: an orthogonal route leaves each end with a short
+   * stub before it turns, so an L still has two turns in it — what makes it an
+   * L is that the crossing run has gone all the way to one end rather than
+   * standing somewhere in the middle. Counting corners cannot tell those
+   * apart, and the first version of this test tried to.
+   */
+  const crossingAt = (d: string): number => {
+    const run = points(d)
+    for (let at = 1; at < run.length; at += 1) {
+      const a = run[at - 1]
+      const b = run[at]
+      if (a === undefined || b === undefined) continue
+      if (Math.abs(a.x - b.x) < 0.01 && Math.abs(a.y - b.y) > 0.01) return a.x
+    }
+    throw new Error('this route does not cross')
+  }
+
+  const grab = async (page: Page) => {
+    const box = await page.getByTestId('endpoint-bend').boundingBox()
+    if (box === null) throw new Error('no bend handle')
+    return { x: box.x + box.width / 2, y: box.y + box.height / 2 }
+  }
+
+  test('draws the route as it will be, and no line to nowhere', async ({ page }) => {
+    await bendable(page, 'curved')
+    const before = await route(page)
+
+    const from = await grab(page)
+    await page.mouse.move(from.x, from.y)
+    await page.mouse.down()
+    await page.mouse.move(from.x + 90, from.y - 60, { steps: 6 })
+
+    // The line itself has moved, mid-drag, with nothing written to the board.
+    expect(await route(page), 'the route did not preview').not.toBe(before)
+    // And the rubber band that belongs to an END drag is absent.
+    await expect(page.locator('.of-connector--preview')).toHaveCount(0)
+
+    // The handle came with it: what you are dragging is where you dragged it.
+    const held = await grab(page)
+    expect(held.x).toBeCloseTo(from.x + 90, 0)
+
+    const previewed = await route(page)
+    await page.mouse.up()
+    // What was drawn is what was committed.
+    expect(await route(page)).toBe(previewed)
+  })
+
+  test('collapses an orthogonal route to an L, and holds it until pulled clear', async ({
+    page,
+  }) => {
+    await bendable(page, 'orthogonal')
+    const before = await route(page)
+
+    /*
+     * Where the line turns INTO its far end, which is as far as the crossing
+     * run can travel. Read off the path rather than guessed: the stubs put it
+     * a fixed distance in from the endpoint, so aiming at the endpoint itself
+     * would be aiming past it.
+     */
+    const run = points(before)
+    const lastTurn = run[run.length - 2]
+    if (lastTurn === undefined) throw new Error('no turn to aim at')
+    expect(crossingAt(before), 'it starts out standing in the middle').not.toBeCloseTo(
+      lastTurn.x,
+      0,
+    )
+
+    const from = await grab(page)
+    await page.mouse.move(from.x, from.y)
+    await page.mouse.down()
+
+    await page.mouse.move(lastTurn.x - 8, from.y, { steps: 4 })
+    expect(crossingAt(await route(page)), 'it did not take the L').toBeCloseTo(lastTurn.x, 0)
+
+    /*
+     * STICKIER than it was to catch: a distance that would not have snapped it
+     * does not release it either, so the shape does not flicker while a hand
+     * hovers at the threshold. Note the crossing stays put rather than
+     * following the pointer — that is what being snapped means.
+     */
+    await page.mouse.move(lastTurn.x - 20, from.y, { steps: 3 })
+    expect(crossingAt(await route(page)), 'the L let go too easily').toBeCloseTo(lastTurn.x, 0)
+
+    await page.mouse.move(lastTurn.x - 70, from.y, { steps: 4 })
+    const released = crossingAt(await route(page))
+    expect(released, 'the L would not let go').toBeLessThan(lastTurn.x - 40)
+    expect(released, 'and then it follows the pointer again').toBeCloseTo(lastTurn.x - 70, 0)
+
+    await page.mouse.up()
+  })
+})
