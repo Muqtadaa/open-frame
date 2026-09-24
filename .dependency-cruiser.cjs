@@ -109,6 +109,18 @@ module.exports = {
       to: { path: '^cloudflare:' },
     },
     {
+      name: 'mcp-does-not-depend-on-the-web-app',
+      severity: 'error',
+      comment:
+        'The MCP server is a peer, not a headless browser. It may use @openframe/core and ' +
+        '@openframe/collab — the domain and the room protocol — and nothing from apps/web, whose ' +
+        'code assumes a DOM it does not have. An import that reached for one would also be the ' +
+        'first place a tool could change a board without going through the dispatcher, because ' +
+        'that is where the composition root holds the writer.',
+      from: { path: '^apps/mcp' },
+      to: { path: '^apps/web' },
+    },
+    {
       name: 'core-does-not-depend-on-apps',
       severity: 'error',
       comment: 'Dependencies point inward. An application may use the domain; never the reverse.',

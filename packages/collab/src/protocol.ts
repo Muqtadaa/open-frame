@@ -142,9 +142,21 @@ export interface Handled {
    * not, which is the distinction a caller would otherwise have to rediscover.
    */
   readonly broadcast: Uint8Array | null
+  /**
+   * Whether this message carried DOCUMENT content — a sync step 2 or an
+   * update, rather than a question about state or somebody's cursor.
+   *
+   * Reported separately from `broadcast` because presence fans out too, and a
+   * client asking "has the board arrived yet" from the fact of a broadcast
+   * gets the answer `yes` from the first cursor it hears about. A room always
+   * has a state of its own to announce, so that is EVERY join — the headless
+   * peer read an empty board and called it synced, before its own socket had
+   * finished opening.
+   */
+  readonly content: boolean
 }
 
-const NOTHING: Handled = { reply: null, broadcast: null }
+const NOTHING: Handled = { reply: null, broadcast: null, content: false }
 
 /**
  * Applies one incoming message, reporting what to send where.
@@ -207,7 +219,7 @@ export function readMessage(
       const carriesContent =
         messageType === syncProtocol.messageYjsSyncStep2 ||
         messageType === syncProtocol.messageYjsUpdate
-      return { reply, broadcast: carriesContent ? message : null }
+      return { reply, broadcast: carriesContent ? message : null, content: carriesContent }
     }
 
     case MESSAGE_AWARENESS: {
@@ -218,7 +230,7 @@ export function readMessage(
       )
       // Presence is relayed as it arrived: the room holds no opinion about who
       // is where, it only makes sure everyone hears about it.
-      return { reply: null, broadcast: message }
+      return { reply: null, broadcast: message, content: false }
     }
 
     default:

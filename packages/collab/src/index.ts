@@ -66,3 +66,10 @@ export {
   type PeerPresence,
 } from './connect.js'
 export { CollabSession, type CollabSessionDeps } from './session.js'
+export {
+  roomSocketUrl,
+  KEY_PARAM,
+  OWNER_PARAM,
+  TOKEN_PARAM,
+  type RoomCredentials,
+} from './room-url.js'

@@ -12,7 +12,7 @@ one existing. Nothing here is a commitment to a date.
 | [3 · Structured objects](phase-3-structured-objects.md) | The reason OpenFrame exists                                      | ✅ **Done** |
 | [4 · Collaboration](phase-4-collaboration.md)           | Multiplayer, presence, comments                                  | ✅ **Done** |
 | [5 · AI and MCP](phase-5-ai-and-mcp.md)                 | Agents as first-class board participants                         | ▶ Next      |
-| [5a · MCP server](phase-5a-mcp-server.md)               | The execution plan for the MCP half, which goes first            | ▶ Planned   |
+| [5a · MCP server](phase-5a-mcp-server.md)               | The execution plan for the MCP half, which goes first            | ▶ Stage 1   |
 
 ---
 

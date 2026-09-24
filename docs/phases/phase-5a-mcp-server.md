@@ -1,6 +1,6 @@
 # Phase 5a · The MCP server
 
-**Status: Planned** · ← [Roadmap](README.md) · Design: [Phase 5](phase-5-ai-and-mcp.md)
+**Status: In progress — stage 1 done** · ← [Roadmap](README.md) · Design: [Phase 5](phase-5-ai-and-mcp.md)
 
 The execution plan for the MCP half of Phase 5. The *why* is in the phase
 document; this is the order, the decisions taken, and what each stage has to
@@ -87,7 +87,7 @@ reach. Revoking their access revokes the agent.
 Each stage ends with something demonstrable. A stage that cannot be
 demonstrated is not finished, whatever its code says.
 
-### 1 · A headless peer
+### 1 · A headless peer ✅
 
 `apps/mcp` as a workspace depending on `@openframe/core` and
 `@openframe/collab` and **never** on `apps/web` — enforced by a
@@ -99,6 +99,37 @@ returning a connected document and a dispatcher.
 
 **Proves:** a Node process can join a room, read the document, dispatch one
 command, and have it arrive in a browser on the same board.
+
+**Done.** `apps/mcp/src/node-room-socket.ts` is the socket, `board.ts` is
+`openBoard`, and `apps/web/e2e-rooms/mcp-peer.spec.ts` is the proof: a browser
+puts a note on a board, a Node process reads it over a real socket, dispatches
+one command, and the browser sees the object appear carrying
+`createdVia: 'mcp'`. By hand:
+
+```bash
+pnpm --filter @openframe/rooms exec wrangler dev --port 8787 --local
+pnpm --filter @openframe/mcp peer --server ws://127.0.0.1:8787 --board brd_… \
+  [--key <link key>] [--note "text"]
+```
+
+Three things the stage turned up, each now a test:
+
+- **A joining peer must not publish its own empty board.** A browser seeds the
+  room from its local document, because that is where the board came from; a
+  process has no board, and seeding one sets the room's title to `Untitled
+  board`. `connectBoard` takes `seed` for that reason. The test joins eight
+  times, because the seeded title and the real one are CONCURRENT writes and
+  Yjs settles those by client id — one join keeps the right title half the
+  time.
+- **Connected is not synced.** A socket is open a round trip before the board
+  arrives, and a peer that reads the document then reads an empty one and
+  reports an empty board — a wrong answer rather than an error. The provider
+  now says when the room has sent CONTENT, which is not the same as when it has
+  sent something: a room announces its own presence state on every join, and
+  reading the board's arrival off that fires before the peer has even asked.
+- **The room's role reaches the dispatcher.** A viewer connection refuses a
+  write locally as well as at the room, so a tool cannot report success for
+  work the room is about to drop.
 
 ### 2 · Signing in
 
