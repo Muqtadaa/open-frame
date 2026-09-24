@@ -81,6 +81,26 @@
   /* A segmented control's selected index, pressed into its bed. */
   --of-pressed-shadow: 0 1px 2px rgb(22 32 43 / 12%);
   /*
+   * THE LAYERS. What paints over what, named, because ten bare integers from 1
+   * to 100 said nothing about why a search panel sits under a notice or the
+   * handles over a comment.
+   *
+   * The first five order things WITHIN one stacking context — objects and
+   * their apparatus on the board, a tip beside its tool — and only compare
+   * with each other. The last five are the application's own layers.
+   */
+  --of-z-lifted: 1; /* a selected object above its neighbours; a picker's pointer */
+  --of-z-preview: 2; /* a connector being drawn */
+  --of-z-guide: 3; /* alignment guides, table dividers, the crop frame */
+  --of-z-grip: 4; /* connector endpoints, over the guides they snap to */
+  --of-z-tip: 5; /* a tool tip, over the tools below it */
+  --of-z-search: 8; /* find on board: under the chrome layer's notices */
+  --of-z-chrome: 10; /* rail, record line, zoom, notices */
+  --of-z-panel: 40; /* the comment panel */
+  --of-z-apparatus: 60; /* the screen-space layer of an object's own apparatus */
+  --of-z-gate: 100; /* a board that is gone or locked: nothing is usable behind it */
+
+  /*
    * THE TYPE RAMP. Seven steps, named for what they carry rather than how big
    * they are, because the same 15px is a sticky's body and a menu item and the
    * name has to say which question is being asked.
@@ -479,7 +499,7 @@ body {
 /* Overlays float over the canvas and are click-through except where they paint. */
 .of-overlay {
   position: absolute;
-  z-index: 10;
+  z-index: var(--of-z-chrome);
   pointer-events: none;
 }
 
@@ -567,7 +587,7 @@ body {
 .of-tool__tip {
   position: absolute;
   left: calc(100% + 10px);
-  z-index: 5;
+  z-index: var(--of-z-tip);
   display: flex;
   gap: 7px;
   align-items: center;
@@ -818,7 +838,7 @@ body {
 
 .of-picker__pointer {
   position: absolute;
-  z-index: 1;
+  z-index: var(--of-z-lifted);
   width: 12px;
   height: 12px;
   /* Centred on the value it marks, not hanging below and right of it. */
@@ -1224,7 +1244,7 @@ body {
    * which hang half outside the edge and can be caught there. Left on `auto`
    * the cell under the boundary took every press.
    */
-  z-index: 3;
+  z-index: var(--of-z-guide);
   background: transparent;
   pointer-events: auto;
 }
@@ -1298,7 +1318,7 @@ body {
 .of-chrome-layer {
   position: fixed;
   inset: 0;
-  z-index: 60;
+  z-index: var(--of-z-apparatus);
   pointer-events: none;
 }
 
@@ -1943,7 +1963,7 @@ body {
   position: absolute;
   top: 56px;
   right: 12px;
-  z-index: 40;
+  z-index: var(--of-z-panel);
   display: flex;
   flex-direction: column;
   gap: 10px;
@@ -2112,7 +2132,7 @@ body {
 .of-gone {
   position: fixed;
   inset: 0;
-  z-index: 100;
+  z-index: var(--of-z-gate);
   display: grid;
   place-items: center;
   padding: 16px;
@@ -2789,7 +2809,7 @@ body {
  * inside it for as long as it is selected.
  */
 .of-object--selected {
-  z-index: 1;
+  z-index: var(--of-z-lifted);
   /* Selected and draggable, so the cursor says what the next press does. */
   cursor: move;
 }
@@ -3386,7 +3406,7 @@ body {
 }
 
 .of-connector--preview {
-  z-index: 2;
+  z-index: var(--of-z-preview);
 }
 
 .of-canvas--connector {
@@ -3491,7 +3511,7 @@ body {
   position: absolute;
   top: 0;
   left: 0;
-  z-index: 3;
+  z-index: var(--of-z-guide);
   background: var(--of-guide);
   /* Guides are feedback, never a target. */
   pointer-events: none;
@@ -3503,7 +3523,7 @@ body {
   position: absolute;
   top: 0;
   left: 0;
-  z-index: 4;
+  z-index: var(--of-z-grip);
   background: var(--of-panel);
   border: 1.5px solid var(--of-accent);
   border-radius: var(--of-radius-round);
@@ -4255,7 +4275,7 @@ textarea.of-input {
   position: absolute;
   top: 16px;
   left: 50%;
-  z-index: 8;
+  z-index: var(--of-z-search);
   display: flex;
   flex-direction: column;
   width: min(440px, calc(100vw - 32px));
@@ -5455,7 +5475,7 @@ textarea.of-input {
    * paints over them and the west and north handles cannot be pressed at all.
    * The divider handles learned this the same way.
    */
-  z-index: 3;
+  z-index: var(--of-z-guide);
   outline: 1.5px dashed var(--of-accent);
   outline-offset: 0;
   pointer-events: none;

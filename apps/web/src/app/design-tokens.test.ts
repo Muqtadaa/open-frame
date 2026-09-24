@@ -640,6 +640,27 @@ describe('the radius scale', () => {
 })
 
 /**
+ * The layers. Ten bare integers from 1 to 100 said nothing about why one thing
+ * paints over another; every z-index now names a layer in `:root`, which is
+ * where the order is read as one list and has to be argued for.
+ */
+describe('the layers', () => {
+  it('stacks everything on a named layer', () => {
+    const source = CSS.replace(/\/\*[\s\S]*?\*\//g, '')
+    const off = [...source.matchAll(/(?<![\w-])z-index:\s*([^;]+);/g)]
+      .map((match) => (match[1] ?? '').trim())
+      .filter((value) => !/^var\(--of-z-[a-z]+\)$/.test(value) && value !== 'auto' && value !== '0')
+    expect(off).toEqual([])
+  })
+
+  it('defines every layer it asks for', () => {
+    const defined = new Set([...CSS.matchAll(/(--of-z-[a-z]+):/g)].map((m) => m[1]))
+    const used = new Set([...CSS.matchAll(/var\((--of-z-[a-z]+)\)/g)].map((m) => m[1]))
+    expect([...used].filter((name) => !defined.has(name))).toEqual([])
+  })
+})
+
+/**
  * The stylesheet has to PARSE.
  *
  * This file is only minified by the production build, so a structurally broken

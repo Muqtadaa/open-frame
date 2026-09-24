@@ -128,4 +128,15 @@ Found by looking at them:
   value), the two size specimens, Georgia (a content face a user picks), and
   the ruled ground.
 
+- **C2.3c — the layers.** Ten bare z-indexes (1–100) become ten named layers
+  in `:root`, split between the ones that order things within one stacking
+  context (lifted, preview, guide, grip, tip) and the application's own (search,
+  chrome, panel, apparatus, gate). Values unchanged, goldens unchanged; a
+  literal fails the build (broken once with a stray `9`).
+- **Found:** `--of-z-search` (8) sits UNDER `--of-z-chrome` (10), so a top-centre
+  notice — the read-only banner of a quarantined board, say — paints over the
+  search field it shares the top of the screen with. Search also sits 16px
+  from the top where every other piece of chrome takes the 20px gutter. A
+  behaviour change, so it goes to C3 #4 rather than riding a refactor.
+
 ### Remaining
