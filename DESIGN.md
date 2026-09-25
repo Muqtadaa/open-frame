@@ -689,8 +689,10 @@ it needs a file first. Selection actions are not in the rail.
 
 Tools are 50px squares (`--of-hit-lg`, a whole decade of the rule; the AA 2.5.8
 target minimum is 24, and a tool reached for constantly deserves more than the
-floor) with 21px icons, muted ink at rest, ink on an accent wash on hover,
-accent on accent wash when active. The rail is centred in the band between the
+floor) with 21px icons, muted ink at rest, ink on an accent wash on hover, and
+the page's colour on a **filled ink bed** when armed — different in kind from
+hover, not only in hue, so the tool you are holding reads at a glance. The pair
+is measured off the rule in `design-tokens.test.ts`. The rail is centred in the band between the
 top gutter and the record line and never crosses either: as the window
 shortens the tools step down a decade at a time — 40px below 720 tall, 30px
 below 604 — and only below 494 does the rail scroll, because a scrolling box

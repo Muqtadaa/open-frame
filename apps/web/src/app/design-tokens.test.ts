@@ -182,6 +182,22 @@ describe.each(THEMES)('palette contrast — $name', ({ token }) => {
     expect(contrast(token(fg), token(bg))).toBeGreaterThanOrEqual(3)
   })
 
+  /*
+   * The ARMED tool, read off the rule that paints it rather than listed here:
+   * a pair written into this file stays green when the rule moves to another
+   * one. The active tool is a filled ink bed with a page-coloured icon, and
+   * the icon is what says which tool you are holding — 3:1, a graphic you
+   * must perceive to operate the rail.
+   */
+  it('the armed tool’s icon reads on its bed (3:1)', () => {
+    const rule = /\.of-tool--active[^{]*\{([^}]*)\}/.exec(CSS)?.[1] ?? ''
+    const fg = /(?<![\w-])color:\s*var\(--of-([\w-]+)\)/.exec(rule)?.[1]
+    const bg = /(?<![\w-])background:\s*var\(--of-([\w-]+)\)/.exec(rule)?.[1]
+    expect(fg, 'the active tool names its icon colour as a token').toBeDefined()
+    expect(bg, 'the active tool names its bed as a token').toBeDefined()
+    expect(contrast(token(fg ?? ''), token(bg ?? ''))).toBeGreaterThanOrEqual(3)
+  })
+
   /**
    * A shape's stroke and label on its own fill.
    */

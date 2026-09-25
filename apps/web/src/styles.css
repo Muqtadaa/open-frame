@@ -849,9 +849,15 @@ body {
   background: var(--of-accent-soft);
 }
 
-.of-tool--active {
-  color: var(--of-accent);
-  background: var(--of-accent-soft);
+/*
+ * The ARMED tool is a filled ink bed, so it differs from a hovered one in
+ * kind rather than in hue: both used to be the accent wash, told apart only by
+ * the icon's colour. The rail says which tool you are holding at a glance.
+ */
+.of-tool--active,
+.of-tool--active:hover:not(:disabled) {
+  color: var(--of-page);
+  background: var(--of-ink);
 }
 
 .of-tool:disabled {
