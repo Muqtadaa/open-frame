@@ -27,8 +27,6 @@ interface ToolSpec {
   readonly shortcut: string
 }
 
-const mode = (id: Tool, label: string, shortcut: string): ToolSpec => ({ id, label, shortcut })
-
 /**
  * The rail in three runs, with a rule between each: getting around the board,
  * making things on it, and annotating what is there. One run of ten with a
@@ -40,17 +38,23 @@ const GROUPS: readonly {
   readonly label: string
   readonly items: readonly (ToolSpec | 'image')[]
 }[] = [
-  { label: 'Navigate', items: [mode('select', 'Select', 'V'), mode('pan', 'Hand', 'H')] },
+  {
+    label: 'Navigate',
+    items: [
+      { id: 'select', label: 'Select', shortcut: 'V' },
+      { id: 'pan', label: 'Hand', shortcut: 'H' },
+    ],
+  },
   {
     label: 'Make',
     items: [
-      mode('sticky', 'Sticky', 'S'),
-      mode('text', 'Text', 'T'),
-      mode('shape', 'Shape', 'U'),
-      mode('frame', 'Frame', 'F'),
-      mode('connector', 'Connect', 'C'),
-      mode('table', 'Table', 'G'),
-      mode('code', 'Code', 'K'),
+      { id: 'sticky', label: 'Sticky', shortcut: 'S' },
+      { id: 'text', label: 'Text', shortcut: 'T' },
+      { id: 'shape', label: 'Shape', shortcut: 'U' },
+      { id: 'frame', label: 'Frame', shortcut: 'F' },
+      { id: 'connector', label: 'Connect', shortcut: 'C' },
+      { id: 'table', label: 'Table', shortcut: 'G' },
+      { id: 'code', label: 'Code', shortcut: 'K' },
       'image',
     ],
   },
@@ -58,7 +62,7 @@ const GROUPS: readonly {
   // page — and it belongs with the other modes rather than hidden in a menu,
   // because a comment you cannot find a way to leave is a comment nobody
   // leaves.
-  { label: 'Annotate', items: [mode('comment', 'Comment', 'M')] },
+  { label: 'Annotate', items: [{ id: 'comment', label: 'Comment', shortcut: 'M' }] },
 ]
 
 /**
