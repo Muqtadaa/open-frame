@@ -167,3 +167,39 @@ test.describe('the keyboard on the bar', () => {
     expect(source?.height ?? 0).toBeGreaterThanOrEqual(24)
   })
 })
+
+/**
+ * The zoom readout says what it does (C3 #3). Its tip promised "Reset to
+ * 100%" and a click opened a field; reset had no pointer route at all; and a
+ * zoom it could not take was quietly thrown away or clamped.
+ */
+test.describe('the zoom readout', () => {
+  test('says a click is for typing a zoom', async ({ page }) => {
+    await board(page)
+    await expect(page.getByTestId('zoom-percent')).toHaveAttribute('data-tip', /Type a zoom/)
+  })
+
+  test('offers the common zooms to a pointer', async ({ page }) => {
+    await board(page)
+    await page.getByTestId('zoom-in').click()
+    await expect(page.getByTestId('zoom-percent')).not.toHaveText('100%')
+    await page.getByTestId('zoom-percent').click()
+    await page.getByTestId('zoom-preset-100').click()
+    await expect(page.getByTestId('zoom-percent')).toHaveText('100%')
+  })
+
+  test('says why it will not take a zoom, and keeps the field open', async ({ page }) => {
+    await board(page)
+    await page.getByTestId('zoom-percent').click()
+    await page.keyboard.type('5000')
+    await page.keyboard.press('Enter')
+    await expect(page.getByRole('alert')).toHaveText(/5–1600%/)
+    await expect(page.getByTestId('zoom-input')).toBeFocused()
+    await page.keyboard.press('ControlOrMeta+a')
+    await page.keyboard.type('abc')
+    await page.keyboard.press('Enter')
+    await expect(page.getByRole('alert')).toHaveText(/number/)
+    await page.keyboard.press('Escape')
+    await expect(page.getByTestId('zoom-percent')).toHaveText('100%')
+  })
+})

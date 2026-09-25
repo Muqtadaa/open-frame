@@ -1,6 +1,8 @@
 import { MAX_ZOOM, MIN_ZOOM, clampZoom } from '@openframe/core'
 import { useEffect, useRef, useState } from 'react'
 
+import { AnchoredSurface } from '../controls/AnchoredSurface.js'
+import { useAnchoredTo } from '../controls/use-anchor.js'
 import { useOpenFrame } from '../runtime/context.js'
 import {
   fitToDocument,
@@ -15,6 +17,24 @@ import { FitIcon, GridIcon, MinusIcon, MouseIcon, PlusIcon } from '../controls/i
 import { MOD_KEY } from '../interaction/keymap.js'
 
 const mod = MOD_KEY
+
+/** The zooms most often wanted, offered to a pointer while the field is open. */
+const PRESETS = [0.5, 1, 2] as const
+
+/**
+ * Why a typed zoom was refused, in the product's own words, or `null` for a
+ * zoom it will take. Refused rather than clamped: 5000 quietly becoming 1600
+ * is a zoom nobody asked for, arrived at without a word.
+ */
+export function refusalOf(typed: string): string | null {
+  const parsed = Number.parseFloat(typed.replace('%', '').trim())
+  if (!Number.isFinite(parsed)) return 'Type a number, like 150'
+  const zoom = parsed / 100
+  if (zoom < MIN_ZOOM || zoom > MAX_ZOOM) {
+    return `Zoom is ${String(Math.round(MIN_ZOOM * 100))}–${String(Math.round(MAX_ZOOM * 100))}%`
+  }
+  return null
+}
 
 /**
  * Zoom slider, percentage entry and fit, plus the scroll-behaviour toggle.
@@ -35,6 +55,8 @@ export function ZoomControl() {
 
   const [editing, setEditing] = useState(false)
   const [draft, setDraft] = useState('')
+  const [refused, setRefused] = useState<string | null>(null)
+  const { ref: field, anchor, surface } = useAnchoredTo<HTMLDivElement>(editing)
   const inputRef = useRef<HTMLInputElement>(null)
   const readout = useRef<HTMLButtonElement>(null)
   // Enter and Escape hand the keyboard back to the readout, as the board's
@@ -53,10 +75,26 @@ export function ZoomControl() {
     setViewport(zoomAtCentre(viewport, width, height, zoom))
   }
 
-  const commitDraft = (): void => {
-    const parsed = Number.parseFloat(draft.replace('%', '').trim())
-    if (Number.isFinite(parsed) && parsed > 0) applyZoom(clampZoom(parsed / 100))
+  const close = (): void => {
+    setRefused(null)
     setEditing(false)
+  }
+
+  /**
+   * Takes the typed zoom, or says why not. `leaving` is a blur: the person has
+   * gone elsewhere, so a zoom that cannot be taken is simply not taken —
+   * holding the field open behind their back would trap the next click.
+   */
+  const commitDraft = (leaving = false): boolean => {
+    const why = refusalOf(draft)
+    if (why === null) {
+      applyZoom(clampZoom(Number.parseFloat(draft.replace('%', '').trim()) / 100))
+      close()
+      return true
+    }
+    if (leaving) close()
+    else setRefused(why)
+    return false
   }
 
   const percent = Math.round(viewport.zoom * 100)
@@ -133,44 +171,97 @@ export function ZoomControl() {
       </button>
 
       {editing ? (
-        <input
-          ref={inputRef}
-          className="of-zoom__input"
-          value={draft}
-          aria-label="Zoom percentage"
-          data-testid="zoom-input"
-          onChange={(event) => setDraft(event.target.value)}
-          onBlur={commitDraft}
-          onKeyDown={(event) => {
-            /*
-             * Both PREVENTED: focus goes back to the readout inside this very
-             * keydown, and an Enter left to its default then presses the
-             * readout it landed on — which opens the field again.
-             */
-            if (event.key === 'Enter') {
-              event.preventDefault()
-              returnFocus.current = true
-              commitDraft()
-            }
-            if (event.key === 'Escape') {
-              event.preventDefault()
-              returnFocus.current = true
-              setEditing(false)
-            }
-            event.stopPropagation()
-          }}
-        />
+        <div ref={field} className="of-zoom__field">
+          <input
+            ref={inputRef}
+            className="of-zoom__input"
+            value={draft}
+            aria-label="Zoom percentage"
+            aria-invalid={refused !== null}
+            aria-errormessage={refused === null ? undefined : 'zoom-refused'}
+            data-testid="zoom-input"
+            onChange={(event) => {
+              setDraft(event.target.value)
+              setRefused(null)
+            }}
+            onBlur={() => {
+              commitDraft(true)
+            }}
+            onKeyDown={(event) => {
+              /*
+               * Both PREVENTED: focus goes back to the readout inside this very
+               * keydown, and an Enter left to its default then presses the
+               * readout it landed on — which opens the field again.
+               */
+              if (event.key === 'Enter') {
+                event.preventDefault()
+                // Only a zoom that was taken hands the keyboard back; a refused
+                // one keeps it in the field, beside the reason.
+                returnFocus.current = true
+                if (!commitDraft()) returnFocus.current = false
+              }
+              if (event.key === 'Escape') {
+                event.preventDefault()
+                returnFocus.current = true
+                close()
+              }
+              event.stopPropagation()
+            }}
+          />
+          {/*
+           * The common zooms, for a pointer, while the field is open — reset had
+           * no pointer route at all, only a shortcut named in a tip that said
+           * the click would do it. And the reason a typed zoom was refused,
+           * where it was typed.
+           */}
+          <AnchoredSurface
+            anchor={anchor}
+            surface={surface}
+            prefer={['above', 'below']}
+            testId="zoom-presets-surface"
+          >
+            <div className="of-zoom__presets of-surface" role="group" aria-label="Zoom to">
+              {refused !== null && (
+                <p className="of-zoom__refused" id="zoom-refused" role="alert">
+                  {refused}
+                </p>
+              )}
+              <div className="of-zoom__preset-row">
+                {PRESETS.map((zoom) => (
+                  <button
+                    key={zoom}
+                    type="button"
+                    className="of-zoom__preset"
+                    data-testid={`zoom-preset-${String(zoom * 100)}`}
+                    // The field keeps focus, so choosing is not also a blur.
+                    onMouseDown={(event) => {
+                      event.preventDefault()
+                    }}
+                    onClick={() => {
+                      applyZoom(zoom)
+                      close()
+                    }}
+                  >
+                    {zoom * 100}%
+                  </button>
+                ))}
+              </div>
+            </div>
+          </AnchoredSurface>
+        </div>
       ) : (
         <button
           ref={readout}
           type="button"
           className="of-zoom__percent"
           aria-label={`Zoom ${String(percent)}%`}
-          data-tip={`Reset to 100% (${mod}0)`}
-          aria-description={`Reset to 100% (${mod}0)`}
+          // What a press does, and the shortcut for the zoom people most want.
+          data-tip={`Type a zoom level · ${mod}0 for 100%`}
+          aria-description={`Type a zoom level · ${mod}0 for 100%`}
           data-testid="zoom-percent"
           onClick={() => {
             setDraft(String(percent))
+            setRefused(null)
             setEditing(true)
           }}
         >
