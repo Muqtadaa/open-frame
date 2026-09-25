@@ -118,6 +118,16 @@ export interface ObjectEditorProps<TData = unknown> {
     readonly prefer?: readonly ('right' | 'left' | 'below' | 'above' | 'over')[] | undefined
     readonly children: ReactNode
   }>
+  /**
+   * Apparatus drawn exactly ON the object, in screen space: `place` turns a
+   * fraction of the object's extent into a screen rectangle in the chrome
+   * layer. For what must line up with the object's own geometry — a table's
+   * column letters, a selection ring round some of its cells — where `Chrome`
+   * would float a surface beside it instead.
+   */
+  readonly Overlay: ComponentType<{
+    readonly children: (place: (fraction: Rect) => Rect) => ReactNode
+  }>
   readonly onCommit: (patch: Partial<TData>) => void
   readonly onCancel: () => void
 }

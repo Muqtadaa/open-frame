@@ -1,6 +1,13 @@
 import { type ZodType, z } from 'zod'
 
-import { isColorValue, type ColorValue } from '../../domain/object.js'
+import {
+  DASH_TOKENS,
+  STROKE_TOKENS,
+  isColorValue,
+  type ColorValue,
+  type DashToken,
+  type StrokeToken,
+} from '../../domain/object.js'
 import { RichTextSchema, type RichText } from '../../domain/rich-text.js'
 
 /**
@@ -20,7 +27,7 @@ import { RichTextSchema, type RichText } from '../../domain/rich-text.js'
 /**
  * One cell's contents, and what it is dressed in.
  *
- * The three colours are OPTIONAL and absent means "the table's own" — the same
+ * The two colours are OPTIONAL and absent means "the table's own" — the same
  * sparse convention `ObjectStyle` uses, for the same reason: a cell that
  * recorded the table's current colour would stop following it the moment the
  * table changed, and a grid of 400 cells each carrying three tokens is a lot
@@ -30,7 +37,13 @@ import { RichTextSchema, type RichText } from '../../domain/rich-text.js'
  * of its own (a table's type is the table's), no opacity, no alignment, and
  * giving it a style record would invite every one of those to be honoured
  * here — a capability declared and ignored, which is what rule 21 is about.
- * Three colours are what a cell can wear, and the type says so.
+ * Two colours are what a cell can wear, and the type says so.
+ *
+ * A cell has no border of its own (ADR 0015). The line between two cells
+ * belongs to BOTH of them, so a colour stored on one cell had to lose to, or
+ * beat, the one stored on its neighbour — and a cell that could colour only
+ * its right and bottom sides looked, to anyone setting it, like the table
+ * ignoring half of what they asked. Lines live on the grid instead.
  */
 export interface TableCell {
   readonly text: RichText
@@ -38,28 +51,74 @@ export interface TableCell {
   readonly fill?: ColorValue
   /** The ink of this cell's text, overriding the table's. */
   readonly textColor?: ColorValue
-  /** The colour of this cell's rules. */
-  readonly border?: ColorValue
 }
 
 /** The colours a cell may carry, as a patch. Absent keys are left alone. */
 export interface CellStyle {
   readonly fill?: ColorValue
   readonly textColor?: ColorValue
-  readonly border?: ColorValue
 }
 
 /**
  * The colour keys, at runtime.
  *
  * A `Record<keyof CellStyle, true>` for the reason `EVERY_STYLE_PROP` is one:
- * it does not compile until every key is present, so a fourth colour added to
+ * it does not compile until every key is present, so a third colour added to
  * `CellStyle` cannot be forgotten by the code that clears or copies them.
  */
 export const CELL_STYLE_KEYS: Readonly<Record<keyof CellStyle, true>> = {
   fill: true,
   textColor: true,
-  border: true,
+}
+
+/**
+ * How ONE stretch of grid line is drawn. Every key optional: absent is the
+ * table's own — its `strokeColor`, its `stroke` — so a table recoloured as a
+ * whole recolours every line nobody chose separately.
+ *
+ * The same tokens an object's own line uses, so a table's "thick" is a
+ * shape's "thick" and a weight of `none` is how a line is taken away.
+ */
+export interface TableLine {
+  readonly color?: ColorValue
+  readonly weight?: StrokeToken
+  readonly dash?: DashToken
+}
+
+/**
+ * One stretch of line, where it sits on the grid.
+ *
+ * A HORIZONTAL line at `row` runs along the TOP of that row, under column
+ * `col` — so `row` goes up to the row count, which is the bottom edge. A
+ * VERTICAL one at `col` runs down the LEFT of that column, beside row `row`,
+ * and `col` goes up to the column count. A cell's four sides are therefore
+ * four addresses, and the cell next to it names the same line from the other
+ * side: there is one line, not two opinions about it.
+ */
+export interface LineAt {
+  readonly row: number
+  readonly col: number
+  readonly line: TableLine
+}
+
+/** Every line anybody set, sparse: a table nobody has ruled holds none. */
+export interface TableLines {
+  readonly h: readonly LineAt[]
+  readonly v: readonly LineAt[]
+}
+
+/**
+ * A block of cells drawn as one, anchored at its top-left.
+ *
+ * The cells it covers KEEP their contents and are simply not drawn, so undoing
+ * a merge by unmerging brings back what was there rather than asking whether
+ * to throw it away.
+ */
+export interface Merge {
+  readonly row: number
+  readonly col: number
+  readonly rows: number
+  readonly cols: number
 }
 
 export interface TableData {
@@ -90,9 +149,14 @@ export interface TableData {
   readonly cells: readonly TableCell[]
   /** Whether the first row is a header. Presentation, not structure. */
   readonly headerRow: boolean
+  /** The grid's lines that differ from the table's own. Absent is none. */
+  readonly lines?: TableLines
+  /** Blocks of cells drawn as one. Absent is none. */
+  readonly merges?: readonly Merge[]
 }
 
-export const TABLE_VERSION = 1
+/** v2: lines on the grid rather than borders on cells, and merges (ADR 0015). */
+export const TABLE_VERSION = 2
 
 /** The most a table may hold. Past this it is a spreadsheet, not a board. */
 export const MAX_COLUMNS = 26
@@ -128,12 +192,34 @@ const ColorValueSchema = z.custom<ColorValue>(isColorValue, {
  * two describe the same runtime values and disagree about a type that never
  * exists — a parsed cell either has the key or does not.
  */
-const TableCellSchema = z.object({
-  text: RichTextSchema,
-  fill: ColorValueSchema.optional(),
-  textColor: ColorValueSchema.optional(),
-  border: ColorValueSchema.optional(),
-}) as unknown as ZodType<TableCell>
+/*
+ * `.strict()` so a cell still carrying a v1 `border` is REFUSED rather than
+ * quietly losing it: the migration is what moves it onto the grid, and a
+ * payload that skipped the migration should say so (rule 23's `z.object({})`).
+ */
+const TableCellSchema = z
+  .object({
+    text: RichTextSchema,
+    fill: ColorValueSchema.optional(),
+    textColor: ColorValueSchema.optional(),
+  })
+  .strict() as unknown as ZodType<TableCell>
+
+const TableLineSchema = z
+  .object({
+    color: ColorValueSchema.optional(),
+    weight: z.enum(STROKE_TOKENS).optional(),
+    dash: z.enum(DASH_TOKENS).optional(),
+  })
+  .strict()
+
+const Index = z.number().int().min(0)
+
+const LineAtSchema = z.object({ row: Index, col: Index, line: TableLineSchema }).strict()
+
+const MergeSchema = z
+  .object({ row: Index, col: Index, rows: Index.min(1), cols: Index.min(1) })
+  .strict()
 
 export const TableDataSchema: ZodType<TableData> = z
   .object({
@@ -141,6 +227,8 @@ export const TableDataSchema: ZodType<TableData> = z
     rows: z.array(WeightSchema).min(1).max(MAX_ROWS),
     cells: z.array(TableCellSchema),
     headerRow: z.boolean(),
+    lines: z.object({ h: z.array(LineAtSchema), v: z.array(LineAtSchema) }).strict().optional(),
+    merges: z.array(MergeSchema).optional(),
   })
   /*
    * The one invariant that cannot be expressed field by field: the cell count
@@ -151,6 +239,69 @@ export const TableDataSchema: ZodType<TableData> = z
   .refine((data) => data.cells.length === data.columns.length * data.rows.length, {
     message: 'A table holds exactly one cell per column per row',
   })
+  /*
+   * Every line on the grid, and each one ONCE. Two entries for one stretch
+   * of line would be the "whose border wins" question this model exists to
+   * make unaskable, back in through the side door.
+   */
+  .refine((data) => linesFit(data), {
+    message: 'Each line sits on the grid, once',
+  })
+  /*
+   * Merges inside the grid and apart from one another. Two that overlap would
+   * each claim the cells they share, and the grid would have to draw one
+   * cell in two places.
+   */
+  .refine((data) => mergesFit(data), {
+    message: 'Merges lie inside the grid and never overlap',
+  }) as unknown as ZodType<TableData>
+
+function linesFit(data: {
+  columns: readonly unknown[]
+  rows: readonly unknown[]
+  lines?: { h: readonly { row: number; col: number }[]; v: readonly { row: number; col: number }[] } | undefined
+}): boolean {
+  if (data.lines === undefined) return true
+  const width = data.columns.length
+  const height = data.rows.length
+  const once = (
+    entries: readonly { row: number; col: number }[],
+    maxRow: number,
+    maxCol: number,
+  ): boolean => {
+    const seen = new Set<string>()
+    for (const { row, col } of entries) {
+      if (row > maxRow || col > maxCol) return false
+      const key = `${String(row)}:${String(col)}`
+      if (seen.has(key)) return false
+      seen.add(key)
+    }
+    return true
+  }
+  return once(data.lines.h, height, width - 1) && once(data.lines.v, height - 1, width)
+}
+
+function mergesFit(data: {
+  columns: readonly unknown[]
+  rows: readonly unknown[]
+  merges?: readonly Merge[] | undefined
+}): boolean {
+  if (data.merges === undefined) return true
+  const taken = new Set<number>()
+  const width = data.columns.length
+  for (const merge of data.merges) {
+    if (merge.rows * merge.cols < 2) return false
+    if (merge.row + merge.rows > data.rows.length || merge.col + merge.cols > width) return false
+    for (let row = merge.row; row < merge.row + merge.rows; row++) {
+      for (let col = merge.col; col < merge.col + merge.cols; col++) {
+        const index = row * width + col
+        if (taken.has(index)) return false
+        taken.add(index)
+      }
+    }
+  }
+  return true
+}
 
 /** Where a cell sits in the flat list. */
 export function cellIndex(data: TableData, column: number, row: number): number {
@@ -161,72 +312,6 @@ export function cellIndex(data: TableData, column: number, row: number): number 
 export function emptyCells(count: number): TableCell[] {
   return Array.from({ length: count }, () => ({ text: [{ text: '' }] }))
 }
-
-/**
- * A table with a column or row added or removed, cells and weights together.
- *
- * ONE function for all four operations, because they are one operation with a
- * sign and an axis — and because the cell list and the weights must change in
- * the same breath. Two functions that each moved half of it is how a table
- * ends up disagreeing with its own shape.
- *
- * Returns the table unchanged when the change is not allowed: past the
- * maximum, or below the last column or row. A table with no columns is not a
- * smaller table, it is not a table.
- */
-export function resizeGrid(
-  data: TableData,
-  axis: 'column' | 'row',
-  delta: 1 | -1,
-): TableData {
-  const columns = [...data.columns]
-  const rows = [...data.rows]
-  const width = columns.length
-  const height = rows.length
-
-  if (axis === 'column') {
-    if (delta === 1 && width >= MAX_COLUMNS) return data
-    if (delta === -1 && width <= 1) return data
-  } else {
-    if (delta === 1 && height >= MAX_ROWS) return data
-    if (delta === -1 && height <= 1) return data
-  }
-
-  /*
-   * A new column takes the AVERAGE of the existing weights rather than 1.
-   * On a table whose columns have been resized, a weight of 1 beside weights
-   * of 40 is a column too thin to see — technically added, practically not.
-   */
-  const average = (weights: readonly number[]): number =>
-    weights.reduce((sum, weight) => sum + weight, 0) / weights.length
-
-  if (axis === 'column') {
-    if (delta === 1) columns.push(average(columns))
-    else columns.pop()
-  } else if (delta === 1) {
-    rows.push(average(rows))
-  } else {
-    rows.pop()
-  }
-
-  /*
-   * The cells are rebuilt by READING the old grid at each new position, which
-   * is what keeps existing content where it was. Slicing the flat list would
-   * be right for a row — rows are contiguous — and wrong for a column, where
-   * removing one means dropping every width-th entry. Doing both the same way
-   * removes the chance of getting the second one wrong.
-   */
-  const cells: TableCell[] = []
-  for (let row = 0; row < rows.length; row++) {
-    for (let column = 0; column < columns.length; column++) {
-      const old = row < height && column < width ? data.cells[row * width + column] : undefined
-      cells.push(old ?? { text: [{ text: '' }] })
-    }
-  }
-
-  return { ...data, columns, rows, cells }
-}
-
 
 /**
  * Where a table's internal divisions fall, as fractions of its extent.

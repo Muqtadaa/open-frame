@@ -12,9 +12,9 @@ import {
   MIN_TRACK,
   resizeTrackAt,
   setTrackSize,
-  resizeGrid,
   type TableData,
 } from './schema.js'
+import { resizeGrid } from './grid.js'
 import { plainTextOf } from '../../domain/rich-text.js'
 
 /**
@@ -171,14 +171,15 @@ describe('changing a table’s shape', () => {
   })
 
   /**
-   * A new column takes the AVERAGE of the existing weights. On a table whose
-   * columns have been resized, a weight of 1 beside weights of 40 is a column
-   * too thin to see — added in the data and not on the board.
+   * A new column is as wide as the one beside it (ADR 0015). On a table whose
+   * columns have been resized, a weight of 1 beside weights of 40 would be a
+   * column too thin to see — and copying the neighbour is what a spreadsheet
+   * does, like the rest of what a new track inherits.
    */
-  it('gives a new column a width somebody can see', () => {
+  it('gives a new column the width of the one beside it', () => {
     const uneven: TableData = { ...filled(2, 1), columns: [40, 20] }
     const after = resizeGrid(uneven, 'column', 1)
-    expect(after.columns[2]).toBe(30)
+    expect(after.columns[2]).toBe(20)
   })
 
   it('always produces a table its own schema accepts', () => {
@@ -250,13 +251,12 @@ describe('styleCells', () => {
   })
 
   it('leaves the colours it was not asked about', () => {
-    const first = styleCells(three, [0], { fill: 'blue', textColor: 'red' })
-    const second = styleCells(first, [0], { border: '#123456' })
+    const first = styleCells(three, [0], { fill: 'blue' })
+    const second = styleCells(first, [0], { textColor: '#123456' })
     expect(second.cells[0]).toEqual({
       text: [{ text: '' }],
       fill: 'blue',
-      textColor: 'red',
-      border: '#123456',
+      textColor: '#123456',
     })
   })
 

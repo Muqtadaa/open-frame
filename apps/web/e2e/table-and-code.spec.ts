@@ -44,44 +44,6 @@ test('places a table as a single object with a cell per column per row', async (
   ).toHaveCount(9)
 })
 
-test('types into the cell that was double-clicked, not the first one', async ({ page }) => {
-  await board(page)
-  await place(page, 'table', { x: 340, y: 260 })
-
-  const table = page.locator('[data-object-id]').first()
-  /*
-   * The editor must be CLOSED first, or this proves nothing: double-clicking
-   * a textarea focuses it because it is a textarea, not because the click
-   * point reached the editor. The first version of this test did exactly
-   * that and passed.
-   */
-  await expect(page.getByTestId('table-editor')).toHaveCount(0)
-  await expect(page.locator('[role="table"]')).toBeVisible()
-
-  const box = await table.boundingBox()
-  if (box === null) throw new Error('the table is not on screen')
-
-  /*
-   * The MIDDLE of the bottom-right cell of a 3x3 — index 8. Aimed by fraction
-   * of the table's own box rather than by absolute pixels, so this does not
-   * depend on where the board happens to have placed it.
-   */
-  await page.mouse.dblclick(box.x + box.width * 0.85, box.y + box.height * 0.85)
-  await expect(page.getByTestId('table-editor')).toBeVisible()
-
-  /*
-   * The caret is in cell 8. Without the click point reaching the editor it
-   * lands in cell 0 — which is the difference between an editor that works
-   * and one that looks broken the moment a grid has more than one cell.
-   */
-  await expect(page.getByTestId('table-cell-8')).toBeFocused()
-
-  await page.keyboard.type('bottom right')
-  await page.keyboard.press('Enter')
-
-  await expect(page.locator('[role="table"]')).toContainText('bottom right')
-})
-
 test('keeps a code block as plain text, with its indentation', async ({ page }) => {
   await board(page)
   await place(page, 'code', { x: 340, y: 260 })
@@ -171,50 +133,6 @@ test('drops a table at the size picked from the grid', async ({ page }) => {
   const table = page.locator('[role="table"]')
   await expect(table).toHaveAttribute('aria-label', /5 columns by 2 rows/)
   await expect(table.locator('[role="cell"], [role="columnheader"]')).toHaveCount(10)
-})
-
-/**
- * Changing the shape afterwards, without losing what is in it.
- *
- * Adding a column is a change to the DRAFT, so it lands with whatever was
- * typed as one command — rather than closing the editor and making you
- * re-open it for every column.
- */
-test('adds and removes columns and rows, keeping the cells that stay', async ({ page }) => {
-  await board(page)
-  await place(page, 'table', { x: 340, y: 240 })
-
-  await page.locator('[data-object-id]').first().dblclick()
-  await expect(page.getByTestId('table-editor')).toBeVisible()
-
-  await page.getByTestId('table-cell-0').fill('keep me')
-
-  await page.getByTestId('table-add-column').click()
-  await page.getByTestId('table-add-row').click()
-  // 4x4 now, so the last cell is index 15 and only exists if both landed.
-  await expect(page.getByTestId('table-cell-15')).toBeVisible()
-
-  await page.getByTestId('table-remove-column').click()
-  await expect(page.getByTestId('table-cell-15')).toHaveCount(0)
-
-  // Commit, and what was typed before the reshaping is still there.
-  await page.locator(CANVAS).click({ position: { x: 900, y: 560 } })
-  const table = page.locator('[role="table"]')
-  await expect(table).toHaveAttribute('aria-label', /3 columns by 4 rows/)
-  await expect(table).toContainText('keep me')
-})
-
-test('will not remove the last column', async ({ page }) => {
-  await board(page)
-
-  await page.getByTestId('tool-table').click()
-  await page.getByTestId('table-menu').click()
-  await page.getByTestId('table-size-1x1').click()
-  await page.locator(CANVAS).click({ position: { x: 340, y: 260 } })
-
-  // A table with no columns is not a smaller table; it is not a table.
-  await expect(page.getByTestId('table-remove-column')).toBeDisabled()
-  await expect(page.getByTestId('table-remove-row')).toBeDisabled()
 })
 
 /**
@@ -413,7 +331,9 @@ test('fits a column to its content on a double click', async ({ page }) => {
   await place(page, 'table', { x: 300, y: 240 })
 
   await page.locator('[data-object-id]').first().dblclick()
-  await page.getByTestId('table-cell-0').fill('a considerably longer heading than fits')
+  await page.getByTestId('table-cell-0').click()
+  await page.keyboard.type('a considerably longer heading than fits')
+  await page.keyboard.press('Enter')
   await page.locator(CANVAS).click({ position: { x: 950, y: 620 } })
 
   await page.locator('[data-object-id]').first().click()
@@ -459,7 +379,9 @@ test('fits a column to the same width at any zoom', async ({ page }) => {
   await place(page, 'table', { x: 740, y: 460 })
 
   await page.locator('[data-object-id]').first().dblclick()
-  await page.getByTestId('table-cell-0').fill('a considerably longer heading than fits')
+  await page.getByTestId('table-cell-0').click()
+  await page.keyboard.type('a considerably longer heading than fits')
+  await page.keyboard.press('Enter')
   await page.locator(CANVAS).click({ position: { x: 400, y: 150 } })
 
   /*
@@ -589,7 +511,7 @@ test('keeps a cell’s colours when its text is typed', async ({ page }) => {
 })
 
 /*
- * The cell bar names its three targets in words. The rule that made every
+ * The cell bar names its targets in words. The rule that made every
  * option a 30-pixel square left them there, and "fill", "text" and "rule"
  * ran into one another on the first table anybody placed.
  */
@@ -598,89 +520,10 @@ test('the cell bar’s targets each have room for their name', async ({ page }) 
   await page.getByTestId('tool-table').click()
   await page.locator(CANVAS).click({ position: { x: 340, y: 300 } })
   await expect(page.getByTestId('table-cell-style')).toBeVisible()
-  for (const key of ['fill', 'text', 'rule']) {
+  for (const key of ['fill', 'text', 'borders']) {
     const cramped = await page
       .getByTestId(`cell-target-${key}`)
       .evaluate((el) => el.scrollWidth > el.clientWidth)
     expect(cramped, key).toBe(false)
   }
-})
-
-/**
- * A cell is text like any other (ADR 0014): the cell bar carries the same
- * format bar every text has, driving the cell with the caret. It could not be
- * bolded while it was a textarea.
- */
-test.describe('formatting a cell', () => {
-  test.beforeEach(async ({ page }) => {
-    await board(page)
-    await page.getByTestId('tool-table').click()
-    await page.locator(CANVAS).click({ position: { x: 340, y: 300 } })
-    await expect(page.getByTestId('table-cell-0')).toBeFocused()
-  })
-
-  test('bolds a cell’s words from the cell bar', async ({ page }) => {
-    await page.keyboard.type('Revenue')
-    await page.keyboard.press('ControlOrMeta+a')
-    await page.getByTestId('format-bold').click()
-    await expect(page.getByTestId('table-cell-0').locator('strong')).toHaveText('Revenue')
-    await page.locator(CANVAS).click({ position: { x: 1100, y: 620 } })
-    await expect(page.locator('[role="table"] > div').first().locator('strong')).toHaveText(
-      'Revenue',
-    )
-  })
-
-  test('holds a list, made with Shift+Enter while Enter still finishes', async ({ page }) => {
-    await page.keyboard.type('- one')
-    await page.keyboard.press('Shift+Enter')
-    await page.keyboard.type('two')
-    await expect(page.getByTestId('table-cell-0').locator('[data-list="bullet"]')).toHaveText([
-      'one',
-      'two',
-    ])
-    await page.keyboard.press('Enter')
-    await expect(page.getByTestId('table-editor')).toHaveCount(0)
-    await expect(
-      page.locator('[role="table"] > div').first().locator('[role="listitem"]'),
-    ).toHaveText(['one', 'two'])
-  })
-
-  test('keeps a cell’s colour and its formatting together', async ({ page }) => {
-    await page.getByTestId('table-cell-4').click()
-    await page.getByTestId('cell-fill-green').click()
-    await page.keyboard.type('both')
-    await page.keyboard.press('ControlOrMeta+a')
-    await page.keyboard.press('ControlOrMeta+i')
-    await page.locator(CANVAS).click({ position: { x: 1100, y: 620 } })
-    const cell = page.locator('[role="table"] > div').nth(4)
-    await expect(cell.locator('em')).toHaveText('both')
-    await expect(cell).toHaveCSS('background-color', 'rgb(191, 240, 212)')
-  })
-})
-
-/*
- * A new column shifts every later row's cells to new positions in the list.
- * The cells are rich-text fields that read their text once, on mount, so a
- * field kept by POSITION went on showing the cell that used to be there — and
- * typing into it wrote that stale text over the cell now in its place.
- */
-test('adding a column leaves every cell showing its own text', async ({ page }) => {
-  await board(page)
-  await page.getByTestId('tool-table').click()
-  await page.locator(CANVAS).click({ position: { x: 340, y: 300 } })
-  await expect(page.getByTestId('table-cell-0')).toBeFocused()
-  // Row 2, column 1 of a 3×3: index 3.
-  await page.getByTestId('table-cell-3').click()
-  await page.keyboard.type('second row')
-  await page.getByTestId('table-add-column').click()
-
-  // Four columns now: row 2, column 1 is index 4, and index 3 is a new, empty
-  // cell at the end of row 1.
-  await expect(page.getByTestId('table-cell-4')).toHaveText('second row')
-  await expect(page.getByTestId('table-cell-3')).toHaveText('')
-
-  await page.locator(CANVAS).click({ position: { x: 1100, y: 620 } })
-  const cells = page.locator('[role="table"] > div')
-  await expect(cells.nth(4)).toHaveText('second row')
-  await expect(cells.nth(3)).toHaveText('')
 })

@@ -30,13 +30,13 @@ describe('a fresh object is drawn in the colour its view declares', () => {
   const doc = createEmptyDocument('surface-board' as BoardId, 'Surface', 0)
 
   /**
-   * Declares `color` and never paints it: picking a colour for a table changes
-   * nothing on the board. What a table's colour should MEAN is a product
-   * decision, recorded in docs/reviews/design-review.md (C3 #8). The second
-   * test below fails the moment the table starts painting one, so this entry
-   * cannot outlive the bug it stands for.
+   * Types whose unset colour is the PANEL rather than a palette colour — a
+   * table stands on whatever the board's panels stand on, which follows After
+   * Hours, and no swatch is that. They paint a colour once one is chosen
+   * (ADR 0015), and the second test below holds them to both halves: no
+   * palette colour when unset, the chosen one when set.
    */
-  const UNPAINTED = new Set(['table'])
+  const ON_THE_PANEL = new Set(['table'])
 
   const render = (type: string, style: Record<string, unknown>): string => {
     const definition = types.get(type)
@@ -78,7 +78,7 @@ describe('a fresh object is drawn in the colour its view declares', () => {
      */
     const declared = views.get(definition.type)?.defaultColor !== undefined
     if (!definition.capabilities.styleProps.includes('color') && !declared) continue
-    if (UNPAINTED.has(definition.type)) continue
+    if (ON_THE_PANEL.has(definition.type)) continue
 
     it(`${definition.type} declares the colour it is drawn in`, () => {
       const colour = views.get(definition.type)?.defaultColor
@@ -92,14 +92,15 @@ describe('a fresh object is drawn in the colour its view declares', () => {
     })
   }
 
-  it('exempts only a type that really does not paint its colour', () => {
-    for (const type of UNPAINTED) {
-      const drawn = COLOR_TOKENS.some((token) =>
-        [SURFACE_VARS[token], COLOR_VARS[token]].some((drawn) =>
-          render(type, { color: token, fill: 'solid' }).includes(drawn),
-        ),
-      )
-      expect(drawn).toBe(false)
+  it('draws a type on the panel until it is given a colour, and then in that colour', () => {
+    for (const type of ON_THE_PANEL) {
+      expect(views.get(type)?.defaultColor).toBeUndefined()
+      const unset = render(type, {})
+      const palette = COLOR_TOKENS.filter((token) => unset.includes(SURFACE_VARS[token]))
+      expect(palette, `${type} with no colour`).toEqual([])
+      for (const token of COLOR_TOKENS) {
+        expect(render(type, { color: token }), `${type} in ${token}`).toContain(SURFACE_VARS[token])
+      }
     }
   })
 })

@@ -583,3 +583,56 @@ export function NumberListIcon({ className }: IconProps) {
     </svg>
   )
 }
+
+/**
+ * A borders choice, drawn as the edges it reaches.
+ *
+ * A two-by-two block whose every line is shown faint and whose chosen lines
+ * are drawn solid — the picture every spreadsheet uses, because the name of a
+ * preset ("inner vertical") is much slower to read than which lines light up.
+ * `none` crosses the block out and `reset` draws it all dashed: the table's
+ * own lines, whatever they are.
+ */
+export function BorderPresetIcon({ className, preset }: IconProps & { preset: string }) {
+  const lines: Record<string, string> = {
+    top: 'M4 4h16',
+    bottom: 'M4 20h16',
+    left: 'M4 4v16',
+    right: 'M20 4v16',
+    horizontal: 'M4 12h16',
+    vertical: 'M12 4v16',
+  }
+  const lit: Record<string, readonly string[]> = {
+    all: ['top', 'bottom', 'left', 'right', 'horizontal', 'vertical'],
+    outer: ['top', 'bottom', 'left', 'right'],
+    inner: ['horizontal', 'vertical'],
+    horizontal: ['horizontal'],
+    vertical: ['vertical'],
+    top: ['top'],
+    bottom: ['bottom'],
+    left: ['left'],
+    right: ['right'],
+    none: [],
+    reset: [],
+  }
+  const on = lit[preset] ?? []
+  return (
+    <svg {...base} className={className}>
+      {Object.entries(lines).map(([name, d]) =>
+        on.includes(name) ? null : (
+          <path
+            key={name}
+            d={d}
+            opacity={0.35}
+            strokeWidth={1}
+            strokeDasharray={preset === 'reset' ? undefined : '1 2.5'}
+          />
+        ),
+      )}
+      {on.map((name) => (
+        <path key={name} d={lines[name]} strokeWidth={2.2} />
+      ))}
+      {preset === 'none' && <path d="M6 18 18 6" />}
+    </svg>
+  )
+}

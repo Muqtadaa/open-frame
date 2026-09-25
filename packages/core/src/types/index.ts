@@ -48,11 +48,35 @@ export {
   dividerPositions,
   resizeTrackAt,
   setTrackSize,
-  resizeGrid,
   type CellStyle,
+  type LineAt,
+  type Merge,
   type TableCell,
   type TableData,
+  type TableLine,
+  type TableLines,
 } from './table/schema.js'
+export {
+  LINE_PRESETS,
+  clearCells,
+  deleteTracks,
+  expandToMerges,
+  hasMerge,
+  indicesOf,
+  insertTracks,
+  isCovered,
+  lineLookup,
+  mergeAt,
+  mergeRange,
+  rangeBetween,
+  resizeGrid,
+  setLines,
+  unmergeRange,
+  wholeTable,
+  type Axis,
+  type CellRange,
+  type LinePreset,
+} from './table/grid.js'
 
 export { CONNECTOR_TYPE, connectorType } from './connector/definition.js'
 export {

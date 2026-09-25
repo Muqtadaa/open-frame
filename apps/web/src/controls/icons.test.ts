@@ -23,6 +23,7 @@ const DRAWINGS: Record<string, string> = {
   'controls/Swatches.tsx': 'specimens: a rule at outline weight, and the colour wheel itself',
   'views/ConnectorView.tsx': 'a connector',
   'views/ShapeView.tsx': 'a shape',
+  'views/TableView.tsx': "a table's grid lines",
 }
 
 function sources(dir: string): string[] {

@@ -24,6 +24,7 @@ Format: Status · Context · Decision · Alternatives considered · Consequences
 | [0012](0012-rich-text-as-spans.md)                | **Text is a list of spans, not a string**          | Accepted            |
 | [0013](0013-collaboration-transport-durable-objects.md) | **Durable Objects, sync loop written here**  | Accepted            |
 | [0014](0014-paragraphs-lists-and-labels.md)       | **Lists live on the newline, and labels become text** | Accepted       |
+| [0015](0015-tables-as-grids-lines-and-merges.md) | **A table's lines live on its grid, and it edits as a spreadsheet** | Accepted |
 
 ## Writing a new one
 
