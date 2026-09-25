@@ -31,6 +31,7 @@ function TaskEditor(props: ObjectEditorProps<TaskData>) {
 
 export const taskView = defineObjectView<TaskData>({
   type: 'task',
+  defaultColor: 'orange',
   Renderer: TaskRenderer,
   InlineEditor: TaskEditor,
 })

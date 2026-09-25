@@ -64,6 +64,7 @@ function EvidenceEditor(props: ObjectEditorProps<EvidenceData>) {
 
 export const evidenceView = defineObjectView<EvidenceData>({
   type: 'evidence',
+  defaultColor: 'gray',
   Renderer: EvidenceRenderer,
   InlineEditor: EvidenceEditor,
 })

@@ -277,3 +277,14 @@ named record band, all five issues.
   selection reads "2 objects · sticky · shape". Types with a record get
   `record` and `appearance` bands as specimen labels. One e2e test; the
   inspector goldens moved.
+- **P2 — fixed: state, words and keyboard.** A fresh object's colour is marked
+  and seeds the picker (views declare `defaultColor`; a render test holds each
+  declaration to what is drawn, broken once with a wrong one). Labels name one
+  thing each: surface / text / outline / label targets, "dash", "vertical".
+  Delete is last in DOM order, drawn in the corner; radio rows have a roving
+  tabindex and arrow keys, wrapping; options and the slider's hit area are
+  30px. Four e2e tests, two failing with the change reverted.
+- **Found: a table declares `color` and never paints it** — picking one
+  changes nothing (rule 21). What a table's colour should mean is a product
+  decision; exempted by name in `default-colour-coverage.test.tsx`, with a
+  test that fails once the table paints it. For C3 #8.

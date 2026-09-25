@@ -117,6 +117,7 @@ function FrameEditor({ object, zoom, onCommit, onCancel }: ObjectEditorProps<Fra
 
 export const frameView = defineObjectView<FrameData>({
   type: 'frame',
+  defaultColor: 'gray',
   Renderer: FrameRenderer,
   InlineEditor: FrameEditor,
 })

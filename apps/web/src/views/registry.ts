@@ -4,6 +4,7 @@ import type {
   AnyOpenFrameObject,
   AssetRef,
   BoardDocument,
+  ColorToken,
   ObjectBase,
   Point,
   Rect,
@@ -135,6 +136,16 @@ export interface ObjectViewDefinition {
    * to every asset load — ten thousand listeners woken by one image.
    */
   readonly usesAssets?: boolean
+  /**
+   * The colour a fresh object of this type shows before anybody chooses one.
+   *
+   * Declared, because the record panel has to MARK it: a new sticky was
+   * visibly yellow while no swatch said so, and the custom picker opened on
+   * grey. The renderer still draws its own fallback — as a surface for a note,
+   * as ink for a line — and `default-colour-coverage.test` renders every type
+   * that takes a colour with none set and holds the two to the same answer.
+   */
+  readonly defaultColor?: ColorToken
 }
 
 /**
@@ -147,6 +158,7 @@ export function defineObjectView<TData>(definition: {
   Renderer: ComponentType<ObjectViewProps<TData>>
   InlineEditor?: ComponentType<ObjectEditorProps<TData>>
   usesAssets?: boolean
+  defaultColor?: ColorToken
 }): ObjectViewDefinition {
   /*
    * Spread one optional at a time. Every member has to be listed or it is
@@ -158,6 +170,7 @@ export function defineObjectView<TData>(definition: {
     type: definition.type,
     Renderer: definition.Renderer as ComponentType<ObjectViewProps>,
     ...(definition.usesAssets === true ? { usesAssets: true } : {}),
+    ...(definition.defaultColor === undefined ? {} : { defaultColor: definition.defaultColor }),
     ...(definition.InlineEditor === undefined
       ? {}
       : { InlineEditor: definition.InlineEditor as ComponentType<ObjectEditorProps> }),

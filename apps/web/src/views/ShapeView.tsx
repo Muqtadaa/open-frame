@@ -170,6 +170,7 @@ function ShapeEditor({ object, Chrome, onCommit, onCancel }: ObjectEditorProps<S
 
 export const shapeView = defineObjectView<ShapeData>({
   type: 'shape',
+  defaultColor: 'gray',
   Renderer: ShapeRenderer,
   InlineEditor: ShapeEditor,
 })

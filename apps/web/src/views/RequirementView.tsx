@@ -31,6 +31,7 @@ function RequirementEditor(props: ObjectEditorProps<RequirementData>) {
 
 export const requirementView = defineObjectView<RequirementData>({
   type: 'requirement',
+  defaultColor: 'red',
   Renderer: RequirementRenderer,
   InlineEditor: RequirementEditor,
 })

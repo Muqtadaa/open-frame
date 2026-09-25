@@ -34,8 +34,15 @@ import { PANEL_CLEARANCE_PX } from '../scene/connect-points.js'
 import { selectionMakeup, typeTitle } from '../scene/type-noun.js'
 import { useOpenFrame } from '../runtime/context.js'
 import { Swatches, groundOf, type SwatchKind } from '../controls/Swatches.js'
-import { AlignIcon, VAlignIcon, DashIcon,
-  RadiusIcon, FillIcon, StrokeIcon, TrashIcon } from '../controls/icons.js'
+import {
+  AlignIcon,
+  VAlignIcon,
+  DashIcon,
+  RadiusIcon,
+  FillIcon,
+  StrokeIcon,
+  TrashIcon,
+} from '../controls/icons.js'
 import { Provenance } from './Provenance.js'
 import { RecordFields } from './RecordFields.js'
 
@@ -92,9 +99,14 @@ const RAIL_CLEARANCE_PX = 84
 type PaintProp = 'color' | 'textColor' | 'strokeColor' | 'labelFill'
 
 const PAINTABLE: readonly { prop: PaintProp; label: string; name: string }[] = [
-  { prop: 'color', label: 'fill', name: 'Colour' },
+  /*
+   * Each word names ONE thing. The targets were "fill" and "line", beside a
+   * "fill" row (none, tint, solid) and a "line" row (the dash) — two controls
+   * per word, and the panel's reader had to work out which.
+   */
+  { prop: 'color', label: 'surface', name: 'Colour' },
   { prop: 'textColor', label: 'text', name: 'Text colour' },
-  { prop: 'strokeColor', label: 'line', name: 'Line colour' },
+  { prop: 'strokeColor', label: 'outline', name: 'Outline colour' },
   { prop: 'labelFill', label: 'label', name: 'Label background' },
 ]
 
@@ -118,12 +130,15 @@ const PAINT_KIND: Readonly<Record<PaintProp, SwatchKind>> = {
  * control in this panel is a choice of one. Bold and italic together is the
  * commonest pair there is.
  */
-const MARK_PROPS: readonly { prop: 'bold' | 'italic' | 'underline'; name: string; glyph: string }[] =
-  [
-    { prop: 'bold', name: 'Bold', glyph: 'B' },
-    { prop: 'italic', name: 'Italic', glyph: 'I' },
-    { prop: 'underline', name: 'Underline', glyph: 'U' },
-  ]
+const MARK_PROPS: readonly {
+  prop: 'bold' | 'italic' | 'underline'
+  name: string
+  glyph: string
+}[] = [
+  { prop: 'bold', name: 'Bold', glyph: 'B' },
+  { prop: 'italic', name: 'Italic', glyph: 'I' },
+  { prop: 'underline', name: 'Underline', glyph: 'U' },
+]
 
 /** Stable test handles, so a renamed label never renames a selector. */
 const PAINT_PREFIX: Readonly<Record<PaintProp, string>> = {
@@ -134,7 +149,7 @@ const PAINT_PREFIX: Readonly<Record<PaintProp, string>> = {
 }
 
 export function Inspector() {
-  const { runtime } = useOpenFrame()
+  const { runtime, views } = useOpenFrame()
   const document = useBoardDocument()
   const selection = useInteractionStore((state) => state.selection)
   const viewport = useInteractionStore((state) => state.viewport)
@@ -357,13 +372,25 @@ export function Inspector() {
    * object with a different payload. It used to be the type id in 12px muted
    * mono — the faintest text in the panel, on its most important line.
    */
-  const title =
-    only !== undefined ? typeTitle(only.type) : `${String(objects.length)} objects`
+  const title = only !== undefined ? typeTitle(only.type) : `${String(objects.length)} objects`
   const summary = (() => {
     if (only === undefined) return selectionMakeup(objects.map((object) => object.type))
     const said = runtime.registry.describeObject(only).summary.trim()
     return said === only.type ? '' : said
   })()
+  /*
+   * The colour the selection is actually drawn in: the one chosen, or — for
+   * an object nobody has coloured — the one its view declares, when every view
+   * in the selection agrees. Marked in the grid, seeded into the picker, and
+   * what an ink's contrast is measured against.
+   */
+  const surface = (() => {
+    const chosen = value('color')
+    if (chosen !== undefined) return chosen
+    const drawn = new Set(objects.map((object) => views.get(object.type)?.defaultColor))
+    return drawn.size === 1 ? [...drawn][0] : undefined
+  })()
+
   // A type that carries a record gets it named, above how it looks.
   const recorded = only !== undefined && fields.length > 0
 
@@ -383,27 +410,307 @@ export function Inspector() {
       keepClearLeft={RAIL_CLEARANCE_PX}
       testId="inspector-surface"
     >
-    <div
-      className={`of-inspector of-surface${yielding ? ' of-inspector--yielding' : ''}`}
-      data-testid="inspector"
-      role="group"
-      aria-label="Selected object properties"
-      style={{ width: `${String(PANEL_WIDTH)}px` }}
-    >
-      <div className="of-inspector__head">
-        <div className="of-inspector__heading">
-          <h2 className="of-inspector__title" data-testid="inspector-title">
-            {title}
-          </h2>
-          {summary !== '' && (
-            <p className="of-inspector__summary" data-tip={summary} aria-description={summary}>
-              {summary}
-            </p>
-          )}
+      <div
+        className={`of-inspector of-surface${yielding ? ' of-inspector--yielding' : ''}`}
+        data-testid="inspector"
+        role="group"
+        aria-label="Selected object properties"
+        style={{ width: `${String(PANEL_WIDTH)}px` }}
+      >
+        <div className="of-inspector__head">
+          <div className="of-inspector__heading">
+            <h2 className="of-inspector__title" data-testid="inspector-title">
+              {title}
+            </h2>
+            {summary !== '' && (
+              <p className="of-inspector__summary" data-tip={summary} aria-description={summary}>
+                {summary}
+              </p>
+            )}
+          </div>
         </div>
+
+        {recorded && <h3 className="of-inspector__band">record</h3>}
+
+        {fields.length > 0 && only !== undefined && (
+          <RecordFields
+            object={only}
+            fields={fields}
+            onCommit={(id, patch) => {
+              commands.updateData(id, patch)
+            }}
+          />
+        )}
+
+        {actions.length > 0 && only !== undefined && (
+          <div className="of-inspector__actions">
+            {actions.map((action) => (
+              <button
+                key={action.id}
+                type="button"
+                className="of-button"
+                data-testid={`action-${action.id}`}
+                onClick={() => {
+                  const patch = runtime.registry.applyAction(only, action.id)
+                  if (patch !== null) commands.updateData(only.id, patch)
+                }}
+              >
+                {action.label}
+              </button>
+            ))}
+          </div>
+        )}
+
+        {/*
+         * What the object stands on, and what stands on it. Relations have no
+         * appearance on the board by design (ADR 0011), so this is the only
+         * place they are visible at all.
+         */}
+        <Provenance
+          doc={document}
+          registry={runtime.registry}
+          cites={cites}
+          citedBy={citedBy}
+          onReveal={(id) => {
+            commands.reveal(id)
+          }}
+        />
+
+        {props.size > 0 && (fields.length > 0 || cites.length > 0 || citedBy.length > 0) && (
+          <hr className="of-inspector__rule" />
+        )}
+
+        {recorded && props.size > 0 && <h3 className="of-inspector__band">appearance</h3>}
+
+        {/*
+         * ONE palette, and what it paints.
+         *
+         * Two grids of eleven made this panel 68px taller, and a floating panel
+         * that grows covers more board — measured, not guessed: the opacity
+         * slider ended up over an object 350px away, which is a thing you can
+         * no longer pick up. The alignment suite caught it before a person did.
+         *
+         * Still driven by the registry. The targets ARE `styleProps`: a type
+         * that declares only `color` gets the palette with no selector, and one
+         * that declares both gets the choice. This is a presentation of the
+         * same declaration, not a second source of truth about it — and it is
+         * the control a table's cells already use, so the two agree.
+         */}
+        {painting !== undefined && (
+          <Field name="colour">
+            <div className="of-paint">
+              {paintTargets.length > 1 && (
+                <div
+                  className="of-choice of-choice--text of-paint__target"
+                  role="group"
+                  aria-label="What to colour"
+                >
+                  {paintTargets.map((option) => (
+                    <button
+                      key={option.prop}
+                      type="button"
+                      className={`of-choice__item${paint === option.prop ? ' of-choice__item--on' : ''}`}
+                      aria-pressed={paint === option.prop}
+                      data-testid={`paint-${option.prop}`}
+                      onClick={() => {
+                        setPaint(option.prop)
+                      }}
+                    >
+                      {option.label}
+                    </button>
+                  ))}
+                </div>
+              )}
+              <Swatches
+                kind={PAINT_KIND[painting.prop]}
+                label={painting.name}
+                testPrefix={PAINT_PREFIX[painting.prop]}
+                /*
+                 * `none` reads as nothing selected, because that is what it
+                 * means — the swatch marked on is the one for no background.
+                 */
+                current={(() => {
+                  const picked = value(painting.prop)
+                  if (picked === 'none') return undefined
+                  /*
+                   * An object whose colour was never chosen is still drawn in
+                   * one — a new note is yellow — and the grid has to say which,
+                   * or it reads as "no colour" beside a visibly yellow note.
+                   * Only when every view in the selection agrees on it.
+                   */
+                  if (picked === undefined && painting.prop === 'color') return surface
+                  return picked
+                })()}
+                /*
+                 * An ink is read against what it will sit on: the object's own
+                 * surface when the selection agrees on one, the board otherwise.
+                 */
+                against={painting.prop === 'textColor' ? groundOf(surface) : null}
+                onPick={(colour) => apply({ [painting.prop]: colour })}
+                onPreview={(colour) =>
+                  preview(colour === null ? null : { [painting.prop]: colour })
+                }
+                /*
+                 * Only a label's background can be nothing at all. Cleared by
+                 * being SET to none rather than to undefined, which a style
+                 * command drops (see `sanitizeStyle`).
+                 */
+                {...(painting.prop === 'labelFill'
+                  ? { onNone: () => apply({ labelFill: 'none' }) }
+                  : {})}
+              />
+            </div>
+          </Field>
+        )}
+
+        {props.has('fill') && (
+          <Field name="fill">
+            <Choice<FillToken>
+              options={FILL_TOKENS}
+              current={value('fill') ?? 'tint'}
+              name="fill"
+              onPick={(fill) => apply({ fill })}
+              render={(token) => <FillIcon variant={token} />}
+            />
+          </Field>
+        )}
+
+        {props.has('stroke') && (
+          <Field name="stroke">
+            <Choice<StrokeToken>
+              options={STROKE_TOKENS}
+              current={value('stroke') ?? 'medium'}
+              name="stroke"
+              onPick={(stroke) => apply({ stroke })}
+              render={(token) => <StrokeIcon variant={token} />}
+            />
+          </Field>
+        )}
+
+        {props.has('dash') && (
+          <Field name="dash">
+            <Choice<DashToken>
+              options={DASH_TOKENS}
+              current={value('dash') ?? 'solid'}
+              name="line"
+              onPick={(dash) => apply({ dash })}
+              render={(token) => <DashIcon variant={token} />}
+            />
+          </Field>
+        )}
+
+        {(props.has('bold') || props.has('italic') || props.has('underline')) && (
+          <Field name="text">
+            <div className="of-choice" role="group" aria-label="Text style">
+              {MARK_PROPS.filter((mark) => props.has(mark.prop)).map((mark) => {
+                const on = value(mark.prop) === true
+                return (
+                  <button
+                    key={mark.prop}
+                    type="button"
+                    aria-pressed={on}
+                    aria-label={mark.name}
+                    data-tip={mark.name}
+                    aria-description={mark.name}
+                    data-testid={`mark-${mark.prop}`}
+                    className={`of-choice__item${on ? ' of-choice__item--on' : ''}`}
+                    onClick={() => apply({ [mark.prop]: !on })}
+                  >
+                    <span className={`of-mark of-mark--${mark.prop}`}>{mark.glyph}</span>
+                  </button>
+                )
+              })}
+            </div>
+          </Field>
+        )}
+
+        {props.has('textSize') && (
+          <Field name="size">
+            <Choice<TextSizeToken>
+              options={TEXT_SIZE_TOKENS}
+              current={value('textSize') ?? 'medium'}
+              name="size"
+              onPick={(textSize) => apply({ textSize })}
+              render={(token) => <span className={`of-size of-size--${token}`}>A</span>}
+            />
+          </Field>
+        )}
+
+        {props.has('font') && (
+          <Field name="face">
+            <Choice<FontToken>
+              options={FONT_TOKENS}
+              current={value('font') ?? 'sans'}
+              name="face"
+              onPick={(font) => apply({ font })}
+              render={(token) => <span className={`of-face of-face--${token}`}>Aa</span>}
+            />
+          </Field>
+        )}
+
+        {props.has('align') && (
+          <Field name="align">
+            <Choice<AlignToken>
+              options={ALIGN_TOKENS}
+              current={value('align') ?? 'start'}
+              name="align"
+              onPick={(align) => apply({ align })}
+              render={(token) => <AlignIcon variant={token} />}
+            />
+          </Field>
+        )}
+
+        {props.has('verticalAlign') && (
+          <Field name="vertical">
+            <Choice<VAlignToken>
+              options={VALIGN_TOKENS}
+              current={value('verticalAlign') ?? 'top'}
+              name="verticalAlign"
+              onPick={(verticalAlign) => apply({ verticalAlign })}
+              render={(token) => <VAlignIcon variant={token} />}
+            />
+          </Field>
+        )}
+
+        {props.has('radius') && (
+          <Field name="corners">
+            <Choice<RadiusToken>
+              options={RADIUS_TOKENS}
+              current={value('radius') ?? 'none'}
+              name="corners"
+              onPick={(radius) => apply({ radius })}
+              render={(token) => <RadiusIcon variant={token} />}
+            />
+          </Field>
+        )}
+
+        {props.has('opacity') && (
+          <Field name="opacity">
+            <div className="of-inspector__slider">
+              <input
+                type="range"
+                min={10}
+                max={100}
+                step={5}
+                value={Math.round((value('opacity') ?? 1) * 100)}
+                aria-label="Opacity"
+                data-testid="opacity"
+                onChange={(event) => preview({ opacity: Number(event.target.value) / 100 })}
+                // Released, or left with the keyboard: one undo entry either way.
+                onPointerUp={settle}
+                onBlur={settle}
+              />
+              <span className="of-inspector__reading">
+                {Math.round((value('opacity') ?? 1) * 100)}%
+              </span>
+            </div>
+          </Field>
+        )}
+
+        {/* Last in order, first in the corner: see `.of-inspector__delete`. */}
         <button
           type="button"
-          className="of-icon-button of-icon-button--destructive"
+          className="of-icon-button of-icon-button--destructive of-inspector__delete"
           data-tip="Delete (Del)"
           aria-description="Delete (Del)"
           aria-label="Delete selection"
@@ -413,274 +720,6 @@ export function Inspector() {
           <TrashIcon />
         </button>
       </div>
-
-      {recorded && <h3 className="of-inspector__band">record</h3>}
-
-      {fields.length > 0 && only !== undefined && (
-        <RecordFields
-          object={only}
-          fields={fields}
-          onCommit={(id, patch) => {
-            commands.updateData(id, patch)
-          }}
-        />
-      )}
-
-      {actions.length > 0 && only !== undefined && (
-        <div className="of-inspector__actions">
-          {actions.map((action) => (
-            <button
-              key={action.id}
-              type="button"
-              className="of-button"
-              data-testid={`action-${action.id}`}
-              onClick={() => {
-                const patch = runtime.registry.applyAction(only, action.id)
-                if (patch !== null) commands.updateData(only.id, patch)
-              }}
-            >
-              {action.label}
-            </button>
-          ))}
-        </div>
-      )}
-
-      {/*
-       * What the object stands on, and what stands on it. Relations have no
-       * appearance on the board by design (ADR 0011), so this is the only
-       * place they are visible at all.
-       */}
-      <Provenance
-        doc={document}
-        registry={runtime.registry}
-        cites={cites}
-        citedBy={citedBy}
-        onReveal={(id) => {
-          commands.reveal(id)
-        }}
-      />
-
-      {props.size > 0 && (fields.length > 0 || cites.length > 0 || citedBy.length > 0) && (
-        <hr className="of-inspector__rule" />
-      )}
-
-      {recorded && props.size > 0 && <h3 className="of-inspector__band">appearance</h3>}
-
-      {/*
-        * ONE palette, and what it paints.
-        *
-        * Two grids of eleven made this panel 68px taller, and a floating panel
-        * that grows covers more board — measured, not guessed: the opacity
-        * slider ended up over an object 350px away, which is a thing you can
-        * no longer pick up. The alignment suite caught it before a person did.
-        *
-        * Still driven by the registry. The targets ARE `styleProps`: a type
-        * that declares only `color` gets the palette with no selector, and one
-        * that declares both gets the choice. This is a presentation of the
-        * same declaration, not a second source of truth about it — and it is
-        * the control a table's cells already use, so the two agree.
-        */}
-      {painting !== undefined && (
-        <Field name="colour">
-          <div className="of-paint">
-            {paintTargets.length > 1 && (
-              <div
-                className="of-choice of-choice--text of-paint__target"
-                role="group"
-                aria-label="What to colour"
-              >
-                {paintTargets.map((option) => (
-                  <button
-                    key={option.prop}
-                    type="button"
-                    className={`of-choice__item${paint === option.prop ? ' of-choice__item--on' : ''}`}
-                    aria-pressed={paint === option.prop}
-                    data-testid={`paint-${option.prop}`}
-                    onClick={() => {
-                      setPaint(option.prop)
-                    }}
-                  >
-                    {option.label}
-                  </button>
-                ))}
-              </div>
-            )}
-            <Swatches
-              kind={PAINT_KIND[painting.prop]}
-              label={painting.name}
-              testPrefix={PAINT_PREFIX[painting.prop]}
-              /*
-               * `none` reads as nothing selected, because that is what it
-               * means — the swatch marked on is the one for no background.
-               */
-              current={(() => {
-                const picked = value(painting.prop)
-                return picked === 'none' ? undefined : picked
-              })()}
-              /*
-               * An ink is read against what it will sit on: the object's own
-               * surface when the selection agrees on one, the board otherwise.
-               */
-              against={painting.prop === 'textColor' ? groundOf(value('color')) : null}
-              onPick={(colour) => apply({ [painting.prop]: colour })}
-              onPreview={(colour) => preview(colour === null ? null : { [painting.prop]: colour })}
-              /*
-               * Only a label's background can be nothing at all. Cleared by
-               * being SET to none rather than to undefined, which a style
-               * command drops (see `sanitizeStyle`).
-               */
-              {...(painting.prop === 'labelFill'
-                ? { onNone: () => apply({ labelFill: 'none' }) }
-                : {})}
-            />
-          </div>
-        </Field>
-      )}
-
-      {props.has('fill') && (
-        <Field name="fill">
-          <Choice<FillToken>
-            options={FILL_TOKENS}
-            current={value('fill') ?? 'tint'}
-            name="fill"
-            onPick={(fill) => apply({ fill })}
-            render={(token) => <FillIcon variant={token} />}
-          />
-        </Field>
-      )}
-
-      {props.has('stroke') && (
-        <Field name="stroke">
-          <Choice<StrokeToken>
-            options={STROKE_TOKENS}
-            current={value('stroke') ?? 'medium'}
-            name="stroke"
-            onPick={(stroke) => apply({ stroke })}
-            render={(token) => <StrokeIcon variant={token} />}
-          />
-        </Field>
-      )}
-
-      {props.has('dash') && (
-        <Field name="line">
-          <Choice<DashToken>
-            options={DASH_TOKENS}
-            current={value('dash') ?? 'solid'}
-            name="line"
-            onPick={(dash) => apply({ dash })}
-            render={(token) => <DashIcon variant={token} />}
-          />
-        </Field>
-      )}
-
-      {(props.has('bold') || props.has('italic') || props.has('underline')) && (
-        <Field name="text">
-          <div className="of-choice" role="group" aria-label="Text style">
-            {MARK_PROPS.filter((mark) => props.has(mark.prop)).map((mark) => {
-              const on = value(mark.prop) === true
-              return (
-                <button
-                  key={mark.prop}
-                  type="button"
-                  aria-pressed={on}
-                  aria-label={mark.name}
-                  data-tip={mark.name}
-                  aria-description={mark.name}
-                  data-testid={`mark-${mark.prop}`}
-                  className={`of-choice__item${on ? ' of-choice__item--on' : ''}`}
-                  onClick={() => apply({ [mark.prop]: !on })}
-                >
-                  <span className={`of-mark of-mark--${mark.prop}`}>{mark.glyph}</span>
-                </button>
-              )
-            })}
-          </div>
-        </Field>
-      )}
-
-      {props.has('textSize') && (
-        <Field name="size">
-          <Choice<TextSizeToken>
-            options={TEXT_SIZE_TOKENS}
-            current={value('textSize') ?? 'medium'}
-            name="size"
-            onPick={(textSize) => apply({ textSize })}
-            render={(token) => <span className={`of-size of-size--${token}`}>A</span>}
-          />
-        </Field>
-      )}
-
-      {props.has('font') && (
-        <Field name="face">
-          <Choice<FontToken>
-            options={FONT_TOKENS}
-            current={value('font') ?? 'sans'}
-            name="face"
-            onPick={(font) => apply({ font })}
-            render={(token) => <span className={`of-face of-face--${token}`}>Aa</span>}
-          />
-        </Field>
-      )}
-
-      {props.has('align') && (
-        <Field name="align">
-          <Choice<AlignToken>
-            options={ALIGN_TOKENS}
-            current={value('align') ?? 'start'}
-            name="align"
-            onPick={(align) => apply({ align })}
-            render={(token) => <AlignIcon variant={token} />}
-          />
-        </Field>
-      )}
-
-      {props.has('verticalAlign') && (
-        <Field name="down">
-          <Choice<VAlignToken>
-            options={VALIGN_TOKENS}
-            current={value('verticalAlign') ?? 'top'}
-            name="verticalAlign"
-            onPick={(verticalAlign) => apply({ verticalAlign })}
-            render={(token) => <VAlignIcon variant={token} />}
-          />
-        </Field>
-      )}
-
-      {props.has('radius') && (
-        <Field name="corners">
-          <Choice<RadiusToken>
-            options={RADIUS_TOKENS}
-            current={value('radius') ?? 'none'}
-            name="corners"
-            onPick={(radius) => apply({ radius })}
-            render={(token) => <RadiusIcon variant={token} />}
-          />
-        </Field>
-      )}
-
-      {props.has('opacity') && (
-        <Field name="opacity">
-          <div className="of-inspector__slider">
-            <input
-              type="range"
-              min={10}
-              max={100}
-              step={5}
-              value={Math.round((value('opacity') ?? 1) * 100)}
-              aria-label="Opacity"
-              data-testid="opacity"
-              onChange={(event) => preview({ opacity: Number(event.target.value) / 100 })}
-              // Released, or left with the keyboard: one undo entry either way.
-              onPointerUp={settle}
-              onBlur={settle}
-            />
-            <span className="of-inspector__reading">
-              {Math.round((value('opacity') ?? 1) * 100)}%
-            </span>
-          </div>
-        </Field>
-      )}
-    </div>
     </AnchoredSurface>
   )
 }
@@ -703,16 +742,40 @@ interface ChoiceProps<T extends string> {
   readonly render: (value: T) => React.ReactNode
 }
 
-/** A segmented row of mutually exclusive options, as a real radio group. */
+/**
+ * A segmented row of mutually exclusive options, as a real radio group — which
+ * means the keyboard contract of one, too.
+ *
+ * Every option was its own Tab stop and the arrows did nothing, so the record
+ * panel's three rows of three cost nine presses to cross and ~35 to reach
+ * opacity. A radio group is ONE stop (the chosen option) and the arrows move
+ * the choice, wrapping at the ends, the way every platform's does.
+ */
 function Choice<T extends string>({ options, current, name, onPick, render }: ChoiceProps<T>) {
+  const step = (event: React.KeyboardEvent<HTMLDivElement>): void => {
+    const forward = event.key === 'ArrowRight' || event.key === 'ArrowDown'
+    const back = event.key === 'ArrowLeft' || event.key === 'ArrowUp'
+    const edge = event.key === 'Home' ? 0 : event.key === 'End' ? options.length - 1 : null
+    if (!forward && !back && edge === null) return
+    event.preventDefault()
+    const at = options.indexOf(current)
+    const to = edge ?? (at + (forward ? 1 : -1) + options.length) % options.length
+    const next = options[to]
+    if (next === undefined) return
+    onPick(next)
+    const buttons = event.currentTarget.querySelectorAll<HTMLButtonElement>('[role="radio"]')
+    buttons[to]?.focus()
+  }
+
   return (
-    <div className="of-choice" role="radiogroup" aria-label={name}>
+    <div className="of-choice" role="radiogroup" aria-label={name} onKeyDown={step}>
       {options.map((option) => (
         <button
           key={option}
           type="button"
           role="radio"
           aria-checked={option === current}
+          tabIndex={option === current ? 0 : -1}
           aria-label={option}
           data-tip={option}
           aria-description={option}

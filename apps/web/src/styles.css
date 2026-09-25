@@ -3676,10 +3676,27 @@ body {
   pointer-events: none;
 }
 
+/*
+ * Delete is LAST in the panel's order and drawn in its top corner. It was the
+ * first thing Tab reached from the board — one Enter from removing the
+ * selection — while the place it is drawn is right where people look for it.
+ */
+.of-inspector {
+  position: relative;
+}
+
+.of-inspector__delete {
+  position: absolute;
+  top: var(--of-step);
+  right: var(--of-step);
+}
+
 .of-inspector__head {
   display: flex;
   gap: var(--of-space-8);
   align-items: flex-start;
+  /* Clear of the delete button drawn over this corner. */
+  padding-right: calc(var(--of-hit-sm) + var(--of-space-8));
   justify-content: space-between;
   padding-bottom: var(--of-space-8);
   margin-bottom: var(--of-space-6);
@@ -3950,8 +3967,11 @@ textarea.of-input {
 .of-choice__item {
   display: grid;
   place-items: center;
-  width: 28px;
-  height: 26px;
+  /* The secondary-control target: these were 28×26, under the floor. */
+  width: var(--of-hit-sm);
+  height: var(--of-hit-sm);
+  font: inherit;
+  font-size: var(--of-type-control);
   color: var(--of-ink-muted);
   background: transparent;
   border: none;
@@ -3969,7 +3989,7 @@ textarea.of-input {
  */
 .of-choice--text .of-choice__item {
   width: auto;
-  min-width: 28px;
+  min-width: var(--of-hit-sm);
   padding: 0 var(--of-step);
 }
 
@@ -4082,7 +4102,10 @@ textarea.of-input {
 .of-zoom__slider,
 .of-inspector__slider input[type='range'] {
   appearance: none;
-  height: 18px;
+  /* The track stays a hairline; what you can press is a full control's height. */
+  height: var(--of-hit-sm);
+  /* The browser's own margin would push the zoom cluster past its 30px row. */
+  margin: 0;
   background: transparent;
   cursor: pointer;
 }

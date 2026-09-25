@@ -772,6 +772,17 @@ such as "participant" is never clipped into a different word, and what is
 left must still take a full row of the swatch grid. `design-tokens.test.ts`
 does that sum on every build.
 
+**Each word names one thing.** The colour targets are surface, text, outline
+and label; "fill" is only the none / tint / solid row and "dash" the line's
+pattern — they used to share "fill" and "line" between two controls each —
+and vertical alignment is "vertical", not "down". A new object's colour is
+marked even though nobody chose it: each view declares the colour it is drawn
+in (`defaultColor`), and a test renders every one to hold it to that.
+
+**A keyboard crosses it.** Delete is last in the panel's order, drawn in its
+top corner; each radio row is one Tab stop whose arrows move the choice; every
+option is at the 30px secondary target.
+
 **It gets out of the way.** A menu sits over it (`--of-z-menu`), and holding
 Shift — building a selection — makes it step aside, faint and letting the
 pointer through, because the next object is usually under it. Colour and

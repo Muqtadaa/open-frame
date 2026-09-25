@@ -407,3 +407,59 @@ test.describe('the panel is not in the way', () => {
     await expect(page.getByTestId('inspector')).toContainText('2 objects')
   })
 })
+
+/**
+ * What the record panel's critique found in its state, words and keyboard:
+ * a new note was visibly yellow while no swatch said so, Delete was the first
+ * thing Tab reached from the board, the radio rows ignored the arrow keys, and
+ * their options were 28×26 — under the target this world sets.
+ */
+test.describe('the panel says what is set, and a keyboard can cross it', () => {
+  test.beforeEach(async ({ page }) => {
+    await freshBoard(page)
+    await place(page, 's', 340, 260, 'Note')
+    await page.locator(CANVAS).click({ position: { x: 340, y: 260 } })
+  })
+
+  test('marks the colour a fresh note is drawn in', async ({ page }) => {
+    await expect(page.getByTestId('swatch-yellow')).toHaveAttribute('aria-pressed', 'true')
+  })
+
+  test('reaches Delete last, not first', async ({ page }) => {
+    await page.keyboard.press('Tab')
+    await expect(page.getByTestId('inspector-delete')).not.toBeFocused()
+    const stops = await page
+      .getByTestId('inspector')
+      .locator('button:not([tabindex="-1"]), input')
+      .evaluateAll((elements) => elements.map((element) => element.getAttribute('data-testid')))
+    expect(stops.at(-1)).toBe('inspector-delete')
+  })
+
+  test('moves a radio row with the arrows, as one stop', async ({ page }) => {
+    const start = page.getByTestId('align-start')
+    await expect(start).toHaveAttribute('tabindex', '0')
+    await expect(page.getByTestId('align-center')).toHaveAttribute('tabindex', '-1')
+
+    await start.focus()
+    await page.keyboard.press('ArrowRight')
+    await expect(page.getByTestId('align-center')).toBeFocused()
+    await expect(page.getByTestId('align-center')).toHaveAttribute('aria-checked', 'true')
+    await page.keyboard.press('ArrowRight')
+    await page.keyboard.press('ArrowRight')
+    // Wraps, the way every platform's radio group does.
+    await expect(page.getByTestId('align-start')).toHaveAttribute('aria-checked', 'true')
+  })
+
+  test('holds every option at the secondary-control target', async ({ page }) => {
+    const small = await page
+      .getByTestId('inspector')
+      .locator('[role="radio"], [aria-pressed]')
+      .evaluateAll(
+        (elements) =>
+          elements
+            .map((element) => element.getBoundingClientRect())
+            .filter((box) => box.width < 30 || box.height < 30).length,
+      )
+    expect(small).toBe(0)
+  })
+})

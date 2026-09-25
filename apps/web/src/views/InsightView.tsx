@@ -49,6 +49,7 @@ function InsightEditor(props: ObjectEditorProps<InsightData>) {
 
 export const insightView = defineObjectView<InsightData>({
   type: 'insight',
+  defaultColor: 'blue',
   Renderer: InsightRenderer,
   InlineEditor: InsightEditor,
 })

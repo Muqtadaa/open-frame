@@ -240,6 +240,7 @@ function ConnectorEditor({
 
 export const connectorView = defineObjectView<ConnectorData>({
   type: 'connector',
+  defaultColor: 'gray',
   Renderer: ConnectorRenderer,
   InlineEditor: ConnectorEditor,
 })
