@@ -118,3 +118,23 @@ test('the rail is grouped into getting around, making and annotating', async ({ 
   ])
   expect(await ids(2)).toEqual(['tool-comment'])
 })
+
+test('each tool announces its key, and nothing on the rail is nameless', async ({ page }) => {
+  await board(page)
+  await expect(page.getByTestId('tool-sticky')).toHaveAttribute('aria-keyshortcuts', 'S')
+  await expect(page.getByTestId('tool-shape')).toHaveAttribute('aria-keyshortcuts', 'U')
+  // axe's one finding on the rail: the image input had no accessible name.
+  await expect(page.locator('.of-rail input[type="file"]')).toHaveAccessibleName('Image file')
+})
+
+test('a tip waits for a pointer, but not for the keyboard', async ({ page }) => {
+  await board(page)
+  const tip = page.getByTestId('tool-text').locator('.of-tool__tip')
+  const delay = (): Promise<string> => tip.evaluate((el) => getComputedStyle(el).transitionDelay)
+
+  await page.getByTestId('tool-text').hover()
+  expect(await delay()).not.toBe('0s')
+  await page.mouse.move(700, 400)
+  await page.getByTestId('tool-text').focus()
+  expect(await delay()).toBe('0s')
+})

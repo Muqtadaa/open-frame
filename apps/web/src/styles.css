@@ -746,6 +746,15 @@ body {
   opacity: 1;
 }
 
+/*
+ * A pointer passing over the rail waits the same dwell as every other tip
+ * before one appears, so sweeping down to a tool does not flash a label per
+ * tool. Focus shows it at once: a keyboard arriving on a tool asked for it.
+ */
+.of-tool:hover:not(:focus-visible) .of-tool__tip {
+  transition-delay: var(--of-dwell);
+}
+
 @media (prefers-reduced-motion: reduce) {
   .of-tool__tip {
     transition: none;

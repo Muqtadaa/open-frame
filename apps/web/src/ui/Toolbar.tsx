@@ -186,6 +186,9 @@ export function Toolbar() {
         className={`of-tool${tool === spec.id ? ' of-tool--active' : ''}`}
         aria-pressed={tool === spec.id}
         aria-label={spec.label}
+        // The tip that shows the key is hidden from assistive tech, so
+        // without this the letter keys were never announced.
+        aria-keyshortcuts={spec.shortcut}
         data-testid={`tool-${spec.id}`}
         onClick={(event) => {
           /*
@@ -333,6 +336,9 @@ export function Toolbar() {
       <input
         ref={fileInput}
         type="file"
+        // Never focused (tabIndex -1), but it is a form control, and one
+        // with no name is an error however it is reached.
+        aria-label="Image file"
         className="of-visually-hidden"
         accept={ALLOWED_IMAGE_TYPES.join(',')}
         multiple
