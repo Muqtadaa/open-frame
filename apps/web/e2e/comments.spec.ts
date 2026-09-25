@@ -29,7 +29,7 @@ test('drops a comment where you click, and shows it as a pin', async ({ page }) 
   // Nothing before anybody says anything.
   await expect(page.getByTestId('comment-panel')).toHaveCount(0)
 
-  await page.getByRole('button', { name: /comment/i }).first().click()
+  await page.getByTestId('tool-comment').click()
   await page.locator('[data-testid="canvas"]').click({ position: { x: 320, y: 240 } })
 
   // The composer opens where the click landed, with a pin marking the spot.
@@ -47,7 +47,7 @@ test('replies count on the pin, and resolving takes it off the board', async ({ 
   await signedIn(page, [{ id: BOARD, title: 'Shared', role: 'owner' }])
   await openBoard(page)
 
-  await page.getByRole('button', { name: /comment/i }).first().click()
+  await page.getByTestId('tool-comment').click()
   await page.locator('[data-testid="canvas"]').click({ position: { x: 300, y: 200 } })
   await page.getByTestId('comment-input').fill('First thought')
   await page.getByTestId('comment-post').click()
@@ -93,7 +93,7 @@ test('keeps a comment whose element was deleted, and says what happened', async 
   await page.keyboard.press('Escape')
 
   // Comment ON it, rather than on empty board.
-  await page.getByRole('button', { name: /comment/i }).first().click()
+  await page.getByTestId('tool-comment').click()
   await page.locator('[data-object-id]').first().click()
   await page.getByTestId('comment-input').fill('This note is wrong')
   await page.getByTestId('comment-post').click()
@@ -130,7 +130,7 @@ test('sends a mention for a name that is on the board', async ({ page }) => {
   const account = await signedIn(page, [{ id: BOARD, title: 'Shared', role: 'owner' }])
   await openBoard(page)
 
-  await page.getByRole('button', { name: /comment/i }).first().click()
+  await page.getByTestId('tool-comment').click()
   await page.locator('[data-testid="canvas"]').click({ position: { x: 280, y: 220 } })
   await page.getByTestId('comment-input').fill('@Rowan does this look right to you?')
   await page.getByTestId('comment-post').click()
@@ -225,7 +225,7 @@ test('a pin follows the element it was dropped on', async ({ page }) => {
   await expect(page.locator('[data-object-id]')).toHaveCount(1)
   await page.keyboard.press('Escape')
 
-  await page.getByRole('button', { name: /comment/i }).first().click()
+  await page.getByTestId('tool-comment').click()
   await page.locator('[data-object-id]').first().click()
   await page.getByTestId('comment-input').fill('About this note')
   await page.getByTestId('comment-post').click()
@@ -273,7 +273,7 @@ test('offers the board link when you name somebody who is not here', async ({ pa
   await page.context().grantPermissions(['clipboard-read', 'clipboard-write'])
   await openBoard(page)
 
-  await page.getByRole('button', { name: /comment/i }).first().click()
+  await page.getByTestId('tool-comment').click()
   await page.locator('[data-testid="canvas"]').click({ position: { x: 320, y: 240 } })
 
   // Somebody who IS here raises nothing.
@@ -310,7 +310,7 @@ test('stays quiet while a name that is here is still being typed', async ({ page
   await signedIn(page, [{ id: BOARD, title: 'Shared', role: 'owner' }])
   await openBoard(page)
 
-  await page.getByRole('button', { name: /comment/i }).first().click()
+  await page.getByTestId('tool-comment').click()
   await page.locator('[data-testid="canvas"]').click({ position: { x: 320, y: 240 } })
 
   const input = page.getByTestId('comment-input')
@@ -332,7 +332,7 @@ test('names a few people and counts the rest', async ({ page }) => {
   await signedIn(page, [{ id: BOARD, title: 'Shared', role: 'owner' }])
   await openBoard(page)
 
-  await page.getByRole('button', { name: /comment/i }).first().click()
+  await page.getByTestId('tool-comment').click()
   await page.locator('[data-testid="canvas"]').click({ position: { x: 320, y: 240 } })
 
   const hint = page.getByTestId('comment-people-hint')
@@ -364,7 +364,7 @@ test('offers the people on the board when you type @, and mentions the one you p
   const account = await signedIn(page, [{ id: BOARD, title: 'Shared', role: 'owner' }])
   await openBoard(page)
 
-  await page.getByRole('button', { name: /comment/i }).first().click()
+  await page.getByTestId('tool-comment').click()
   await page.locator('[data-testid="canvas"]').click({ position: { x: 280, y: 220 } })
 
   const input = page.getByTestId('comment-input')
@@ -401,7 +401,7 @@ test('shows a picked mention as a name, never as the token it is stored as', asy
   await signedIn(page, [{ id: BOARD, title: 'Shared', role: 'owner' }])
   await openBoard(page)
 
-  await page.getByRole('button', { name: /comment/i }).first().click()
+  await page.getByTestId('tool-comment').click()
   await page.locator('[data-testid="canvas"]').click({ position: { x: 300, y: 240 } })
 
   const input = page.getByTestId('comment-input')
@@ -430,7 +430,7 @@ test('the menu takes Enter and Escape only while it is open', async ({ page }) =
   await signedIn(page, [{ id: BOARD, title: 'Shared', role: 'owner' }])
   await openBoard(page)
 
-  await page.getByRole('button', { name: /comment/i }).first().click()
+  await page.getByTestId('tool-comment').click()
   await page.locator('[data-testid="canvas"]').click({ position: { x: 260, y: 200 } })
 
   const input = page.getByTestId('comment-input')
@@ -574,7 +574,7 @@ test('shuts the menu when you choose, and offers it again if you edit', async ({
   await signedIn(page, [{ id: BOARD, title: 'Shared', role: 'owner' }])
   await openBoard(page)
 
-  await page.getByRole('button', { name: /comment/i }).first().click()
+  await page.getByTestId('tool-comment').click()
   await page.locator('[data-testid="canvas"]').click({ position: { x: 300, y: 260 } })
 
   const input = page.getByTestId('comment-input')
@@ -604,7 +604,7 @@ test('a mention link opens the thread it names, not just the board', async ({ pa
   await openBoard(page)
 
   // A real remark, so the id is one the board actually holds.
-  await page.getByRole('button', { name: /comment/i }).first().click()
+  await page.getByTestId('tool-comment').click()
   await page.locator('[data-testid="canvas"]').click({ position: { x: 300, y: 240 } })
   await page.getByTestId('comment-input').fill('the bit I wanted you to see')
   await page.getByTestId('comment-post').click()
@@ -719,7 +719,7 @@ test('arriving from a link puts the remark in the middle, not at the edge', asyn
    * the board back at its default view, where this pin is already visible, so
    * `panToReveal` would not move at all.
    */
-  await page.getByRole('button', { name: /comment/i }).first().click()
+  await page.getByTestId('tool-comment').click()
   await page.locator('[data-testid="canvas"]').click({ position: { x: 240, y: 560 } })
   await page.getByTestId('comment-input').fill('over here')
   await page.getByTestId('comment-post').click()
@@ -764,7 +764,7 @@ test('a notification for this board goes to the remark without reloading', async
   )
   await openBoard(page)
 
-  await page.getByRole('button', { name: /comment/i }).first().click()
+  await page.getByTestId('tool-comment').click()
   await page.locator('[data-testid="canvas"]').click({ position: { x: 240, y: 560 } })
   await page.getByTestId('comment-input').fill('the one you were sent')
   await page.getByTestId('comment-post').click()
@@ -862,7 +862,7 @@ test('keeps a resolved thread findable, and lets it be reopened', async ({ page 
   await signedIn(page, [{ id: BOARD, title: 'Shared', role: 'owner' }])
   await openBoard(page)
 
-  await page.getByRole('button', { name: /comment/i }).first().click()
+  await page.getByTestId('tool-comment').click()
   await page.locator('[data-testid="canvas"]').click({ position: { x: 320, y: 260 } })
   await page.getByTestId('comment-input').fill('are we agreed on this?')
   await page.getByTestId('comment-post').click()
@@ -877,7 +877,7 @@ test('keeps a resolved thread findable, and lets it be reopened', async ({ page 
   // Off the board, as before. That part was never the complaint.
   await expect(page.locator('[data-testid^="comment-pin-cmt_"]')).toHaveCount(0)
 
-  await page.getByRole('button', { name: /comment/i }).first().click()
+  await page.getByTestId('tool-comment').click()
   await expect(page.getByTestId('comment-list')).toBeVisible()
   await expect(page.getByTestId(`comment-entry-${id}`)).toHaveCount(0)
 
@@ -902,7 +902,7 @@ test('offers nothing to reveal when nothing has been resolved', async ({ page })
   await signedIn(page, [{ id: BOARD, title: 'Shared', role: 'owner' }])
   await openBoard(page)
 
-  await page.getByRole('button', { name: /comment/i }).first().click()
+  await page.getByTestId('tool-comment').click()
   await page.locator('[data-testid="canvas"]').click({ position: { x: 320, y: 260 } })
   await page.getByTestId('comment-input').fill('still open')
   await page.getByTestId('comment-post').click()
@@ -910,7 +910,14 @@ test('offers nothing to reveal when nothing has been resolved', async ({ page })
   // Off the tool and back on, so the press below selects it rather than
   // toggling off the one that is already active.
   await page.keyboard.press('v')
-  await page.getByRole('button', { name: /comment/i }).first().click()
+  /*
+   * The TOOL, by its id. This was `getByRole('button', { name: /comment/i })
+   * .first()`, and the comment just posted puts a pin named "Comment from …"
+   * ahead of the rail in the page — so whether this pressed the tool or the
+   * pin depended on whether the pin had rendered yet. It was the suite's
+   * known flake, and became a steady failure once the pin was always there.
+   */
+  await page.getByTestId('tool-comment').click()
   await expect(page.getByTestId('comment-list')).toBeVisible()
   // A control that reveals nothing is one people press once and distrust.
   await expect(page.getByTestId('comment-show-resolved')).toHaveCount(0)

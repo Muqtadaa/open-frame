@@ -229,10 +229,7 @@ for (const world of WORLDS) {
 
     test('comment composer', async ({ page }) => {
       await openSharedBoard(page)
-      await page
-        .getByRole('button', { name: /comment/i })
-        .first()
-        .click()
+      await page.getByTestId('tool-comment').click()
       await page.locator('[data-testid="canvas"]').click({ position: { x: 420, y: 260 } })
       await expect(page.getByTestId('comment-panel')).toBeVisible()
       await snap(page, `${world}-comment-composer`)
