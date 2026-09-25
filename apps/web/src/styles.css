@@ -99,6 +99,7 @@
   --of-z-chrome: 10; /* rail, record line, zoom, notices */
   --of-z-panel: 40; /* the comment panel */
   --of-z-apparatus: 60; /* the screen-space layer of an object's own apparatus */
+  --of-z-reached: 70; /* chrome the pointer or keyboard is IN, so its tips read over apparatus */
   --of-z-gate: 100; /* a board that is gone or locked: nothing is usable behind it */
 
   /*
@@ -592,6 +593,19 @@ body {
 
 .of-overlay > * {
   pointer-events: auto;
+}
+
+/*
+ * The rail rises over the apparatus layer while it is being reached for.
+ *
+ * Its tips are the rail's, and the rail sat under the layer the record panel
+ * floats in — so with a selection near the left edge the panel opened beside
+ * the rail and every tip slid out UNDER it. Raised only while the pointer or
+ * the keyboard is in the rail: then nothing it covers is being reached for.
+ */
+.of-overlay--left:hover,
+.of-overlay--left:focus-within {
+  z-index: var(--of-z-reached);
 }
 
 /*

@@ -394,3 +394,32 @@ regroup only):
   - structured types have no entry point on the rail (a product call)
 - **Contract:** `apps/web/.impeccable/surfaces/apps-web-src-ui-toolbar-tsx.md`.
   Full e2e: 368/368. `pnpm verify` green.
+
+### After the rail — owner's testing, and the text and navigation rework
+
+The owner chose to merge everything together. They reported bugs, asked for
+formatting and lists on every text surface (labels included), and asked for
+the record line to become a top navigation bar with bolder text.
+
+- **Bugs fixed** (`35d6c54`):
+  - **The table's cell bar tabs overlapped.** This review caused it, through
+    the fixed 30px option-button rule; a golden for the cell bar now exists.
+  - **A connector label's colour never rendered.** A CSS `fill` outranked the
+    SVG attribute.
+  - **Typing in a coloured cell wiped its colours.** Found by the code survey.
+  - **Floating surfaces measured themselves mid-animation.**
+- **Lists and rich labels** (`72bcd46`, ADR 0014):
+  - lists live on the newline that ends a paragraph, so no body-text migration
+  - connector labels (v3, whole-label marks moved into spans) and frame titles
+    (v2) became rich text, with frozen fixtures
+  - one editor for all of them
+  - the size-specimen exemption from the 12px floor is gone with its control
+- **Table cells** (`21d6baa`): rich text through `RichTextField`, with the
+  format bar as the cell bar's first row.
+- **Navigation bar** (`a1527bf`):
+  - the record line runs along the top; the board's name is 15px sans at 600
+  - floating surfaces keep clear of furniture at both edges; menus keep clear
+    of none
+  - a table's row and column controls merged into one control on its right
+- **Rail tips** now read over a record panel beside the rail: the rail rises to
+  `--of-z-reached` while it is being reached for.

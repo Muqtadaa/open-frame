@@ -49,13 +49,13 @@ NOT: a palette of every object type; a place for selection actions or
 history; a menu hidden behind a right-click; a control whose second press
 means something different on different tools.
 
-OPEN: the record panel and editor chrome paint over rail tips (the chrome
-layer is above the rail's); raising the rail would put it over apparatus near
-the left edge. Structured types have no entry point on the rail — a product
-call, deferred by the owner.
+LAYER: the rail rises over the apparatus layer (`--of-z-reached`) while the
+pointer or the keyboard is in it, so its tips read over a record panel that
+opened beside it; at rest it stays under apparatus near the left edge.
 
 FINISH: `rail-keyboard.spec.ts` holds keyboard pressing, the pan hold after a
-click, grouping, key announcement and tip dwell; `rail-menus.spec.ts` holds
+click, grouping, key announcement, tip dwell and its tips reading over the
+record panel; `rail-menus.spec.ts` holds
 opening by second press, Escape and outside press, keyboard walking, target
 sizes, and the rail fitting 720/640/560-tall and 760-wide windows; the
 screenshot goldens hold its look in both worlds.
