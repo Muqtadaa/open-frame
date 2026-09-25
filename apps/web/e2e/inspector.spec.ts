@@ -341,3 +341,69 @@ test.describe('continuous controls write once', () => {
     await expect(page.locator('.of-sticky')).toHaveCSS('opacity', '1')
   })
 })
+
+/**
+ * The panel floats beside the selection, which is also where people reach
+ * next. It painted over an open context menu — whichever of the two mounted
+ * later won, and "Promote to evidence" was clipped out of the only place it
+ * lives — and it swallowed the shift-click aimed at the object beside the
+ * first one, so a selection could not be built by hand.
+ */
+test.describe('the panel is not in the way', () => {
+  test.beforeEach(async ({ page }) => {
+    await freshBoard(page)
+  })
+
+  test('an open context menu paints over it', async ({ page }) => {
+    await place(page, 's', 340, 260, 'Note')
+    await page.locator(CANVAS).click({ position: { x: 340, y: 260 } })
+    await expect(page.getByTestId('inspector')).toBeVisible()
+    await page.locator(CANVAS).click({ position: { x: 340, y: 260 }, button: 'right' })
+    await expect(page.getByTestId('context-menu')).toBeVisible()
+
+    const panel = await page.getByTestId('inspector').boundingBox()
+    const menu = await page.getByTestId('context-menu').boundingBox()
+    expect(panel).not.toBeNull()
+    expect(menu).not.toBeNull()
+    if (panel === null || menu === null) return
+    // A point inside both: whatever is drawn there is what gets clicked.
+    const x = Math.max(panel.x, menu.x) + 4
+    const y = Math.max(panel.y, menu.y) + 4
+    expect(x).toBeLessThan(Math.min(panel.x + panel.width, menu.x + menu.width))
+    const onTop = await page.evaluate(
+      ([px, py]) =>
+        document
+          .elementFromPoint(px ?? 0, py ?? 0)
+          ?.closest('[data-testid]')
+          ?.getAttribute('data-testid'),
+      [x, y],
+    )
+    expect(onTop).not.toBe('inspector')
+    expect(
+      await page.evaluate(
+        ([px, py]) =>
+          document.elementFromPoint(px ?? 0, py ?? 0)?.closest('[data-testid="context-menu"]') !==
+          null,
+        [x, y],
+      ),
+    ).toBe(true)
+  })
+
+  test('steps aside while Shift builds a selection', async ({ page }) => {
+    // The second note is placed where the panel beside the first one will be.
+    await place(page, 's', 640, 300, 'Beside')
+    await place(page, 's', 300, 300, 'First')
+    await page.locator(CANVAS).click({ position: { x: 300, y: 300 } })
+    const panel = await page.getByTestId('inspector').boundingBox()
+    expect(panel).not.toBeNull()
+    if (panel === null) return
+    expect(panel.x).toBeLessThan(640)
+    expect(panel.x + panel.width).toBeGreaterThan(640)
+
+    await page.keyboard.down('Shift')
+    await page.mouse.click(640, 300)
+    await page.keyboard.up('Shift')
+
+    await expect(page.getByTestId('inspector')).toContainText('2 objects')
+  })
+})

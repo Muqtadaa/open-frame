@@ -231,6 +231,7 @@ export function ContextMenu() {
       gap={0}
       margin={8}
       testId="context-menu-surface"
+      layer="menu"
     >
       <div ref={ref} className="of-menu of-surface" role="menu" data-testid="context-menu">
         {/*

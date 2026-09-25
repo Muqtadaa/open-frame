@@ -30,6 +30,7 @@ export function AnchoredSurface({
   keepClearLeft,
   avoid,
   testId,
+  layer,
   children,
 }: {
   /** What this belongs beside, in screen pixels. */
@@ -44,6 +45,13 @@ export function AnchoredSurface({
   /** Another floating surface to stay off, if any side avoids it. */
   readonly avoid?: Rect | null | undefined
   readonly testId?: string | undefined
+  /**
+   * `menu` paints over every other surface in the layer. Surfaces otherwise
+   * stack in the order they mounted, which put the record panel over an open
+   * context menu whenever the panel was the later of the two to render —
+   * clipping "Promote to evidence" out of the only place it lives.
+   */
+  readonly layer?: 'menu' | undefined
   readonly children: ReactNode
 }) {
   const element = useRef<HTMLDivElement>(null)
@@ -101,7 +109,7 @@ export function AnchoredSurface({
        * the object — and every one presented as a control that was visible and
        * could not be used.
        */
-      className="of-chrome of-editor-chrome"
+      className={`of-chrome of-editor-chrome${layer === 'menu' ? ' of-chrome--menu' : ''}`}
       data-testid={testId ?? 'object-chrome'}
       data-side={placed.side}
       style={{ transform: `translate(${String(placed.x)}px, ${String(placed.y)}px)` }}

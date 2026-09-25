@@ -94,6 +94,7 @@
   --of-z-guide: 3; /* alignment guides, table dividers, the crop frame */
   --of-z-grip: 4; /* connector endpoints, over the guides they snap to */
   --of-z-tip: 5; /* a tool tip, over the tools below it */
+  --of-z-menu: 6; /* a menu, over every other surface beside the selection */
   --of-z-search: 8; /* find on board: under the chrome layer's notices */
   --of-z-chrome: 10; /* rail, record line, zoom, notices */
   --of-z-panel: 40; /* the comment panel */
@@ -1495,6 +1496,18 @@ body {
   top: 0;
   left: 0;
   pointer-events: auto;
+}
+
+.of-chrome--menu {
+  z-index: var(--of-z-menu);
+}
+
+/*
+ * A panel that has stepped aside lets the pointer through its whole box —
+ * the shell it is placed in as well as the panel itself.
+ */
+.of-chrome:has(> .of-inspector--yielding) {
+  pointer-events: none;
 }
 
 /*
@@ -3646,6 +3659,21 @@ body {
   flex-direction: column;
   gap: var(--of-space-2);
   padding: var(--of-step);
+}
+
+/*
+ * Holding Shift is building a selection, and the panel beside the first
+ * object is usually over the next one: the shift-click landed on the panel
+ * and the selection never grew. It steps aside while Shift is held — faint,
+ * and with the pointer passing through — and comes back when it is let go.
+ */
+.of-inspector {
+  transition: opacity var(--of-quick) var(--of-ease);
+}
+
+.of-inspector--yielding {
+  opacity: 0.25;
+  pointer-events: none;
 }
 
 .of-inspector__head {

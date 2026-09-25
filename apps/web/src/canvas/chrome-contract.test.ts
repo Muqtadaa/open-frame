@@ -66,7 +66,9 @@ describe('the chrome layer', () => {
    */
   it('marks itself as editor chrome, so a press on it does not end the edit', () => {
     expect(GESTURES).toContain(".of-editor-chrome")
-    expect(LAYER).toMatch(/className="of-chrome of-editor-chrome"/)
+    // A literal or a template that STARTS with both markers — a menu adds a
+    // layer modifier after them, and must not be able to drop either.
+    expect(LAYER).toMatch(/className=\{?[`"]of-chrome of-editor-chrome[$` "]/)
   })
 
   /**

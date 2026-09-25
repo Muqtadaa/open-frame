@@ -253,3 +253,13 @@ named record band, all five issues.
   data rather than style, so their picker settles once at the end without a
   live preview on the cells; noted for #8. Three e2e tests, two of which fail
   with the old per-move write restored.
+- **P1 — fixed: the panel was in the way.** Surfaces in the apparatus layer
+  stacked in mount order, so the record panel painted over an open context
+  menu whenever it rendered later — "Promote to evidence" was clipped out of
+  the only place it lives. `AnchoredSurface` takes `layer="menu"` and menus
+  sit on `--of-z-menu`. And holding Shift, which means "add to the
+  selection", makes the panel step aside — faint, pointer passing through —
+  because the next object is usually under it; not while focus is in the
+  panel or any editor, where Shift is a capital letter. Two e2e tests, both
+  failing with the change removed; the context-menu goldens moved and show
+  every item.

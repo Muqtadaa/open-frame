@@ -165,6 +165,42 @@ export function Inspector() {
   // A panel that closes mid-gesture still lands what was aimed at.
   useEffect(() => settle, [settle])
 
+  /*
+   * Shift held on the board means "add to the selection", and the next object
+   * is usually under this panel. Not while typing or tabbing inside the panel
+   * (Shift is a capital letter there), nor in any other editor.
+   */
+  const [yielding, setYielding] = useState(false)
+  useEffect(() => {
+    const busy = (): boolean => {
+      const focused = window.document.activeElement
+      if (!(focused instanceof HTMLElement)) return false
+      return (
+        focused.closest('[data-testid="inspector"]') !== null ||
+        focused.isContentEditable ||
+        focused instanceof HTMLInputElement ||
+        focused instanceof HTMLTextAreaElement
+      )
+    }
+    const down = (event: KeyboardEvent): void => {
+      if (event.key === 'Shift' && !busy()) setYielding(true)
+    }
+    const up = (event: KeyboardEvent): void => {
+      if (event.key === 'Shift') setYielding(false)
+    }
+    const away = (): void => {
+      setYielding(false)
+    }
+    window.addEventListener('keydown', down)
+    window.addEventListener('keyup', up)
+    window.addEventListener('blur', away)
+    return () => {
+      window.removeEventListener('keydown', down)
+      window.removeEventListener('keyup', up)
+      window.removeEventListener('blur', away)
+    }
+  }, [])
+
   const objects = useMemo<AnyOpenFrameObject[]>(
     () =>
       [...selection]
@@ -334,7 +370,7 @@ export function Inspector() {
       testId="inspector-surface"
     >
     <div
-      className="of-inspector of-surface"
+      className={`of-inspector of-surface${yielding ? ' of-inspector--yielding' : ''}`}
       data-testid="inspector"
       role="group"
       aria-label="Selected object properties"
