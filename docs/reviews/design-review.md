@@ -355,3 +355,42 @@ Enter and Space). P1: flyouts unreachable by keyboard, undismissable, 16px
 targets, and painting over the record panel; the fixed 599px rail runs off
 short windows and into the record line. P2: grouping and tool set; weak active
 state. Fix order pending the owner's answers.
+
+Rail fix pass — **P0, both P1s and both P2s fixed** (owner's answers: all
+of it; options by pressing the armed tool again; bolder = filled ink bed;
+regroup only):
+
+- **P0 keyboard** (`8fa01ce`): a control the keyboard focused keeps Space and
+  Enter. Focus is tracked by input source, because `:focus-visible` turns on for
+  a clicked button as soon as any key goes down, which would have eaten the pan
+  hold. The first attempt got this wrong and the e2e caught it.
+- **P1 menus** (`4edddb4`):
+  - pressing the armed Shape or Table opens its options, and the second press
+    no longer cycles the shape
+  - the options strip sits in the rail's padding, beside the tool
+  - focus moves in when a menu opens; Escape or a press elsewhere closes it and
+    returns focus
+  - the shape menu takes arrows, Home and End
+  - the size grid is one Tab stop of 24px cells, and the readout is in words
+- **P1 short windows** (`421c826`):
+  - the rail sits in the band above the record line
+  - tools step down 50 → 40 → 30 as the window shortens, and the rail scrolls
+    only below 494px tall
+  - the rail's footprint is one shared constant instead of two stale copies
+- **P2 groups** (`087080d`, and `a55b9e9` for the keymap tests that read the tool
+  list): the three groups are navigate, make and annotate; Image joins make.
+- **P2 armed state** (`d895280`): a filled ink bed, with the contrast pair
+  measured off the rule itself.
+- **Minors** (`6d50bb3`):
+  - `aria-keyshortcuts` on each tool
+  - the file input has a name (axe's one finding)
+  - rail tips wait the shared dwell for a pointer
+- **Kept, on purpose:** the shape menu marks the current kind even when Shape
+  is not armed. The rail's own icon already shows the remembered kind, and
+  the mark answers "what will Shape make".
+- **Backlog:**
+  - rail tips lose to the record panel, because the chrome layer sits above the
+    rail's and raising the rail would cover apparatus
+  - structured types have no entry point on the rail (a product call)
+- **Contract:** `apps/web/.impeccable/surfaces/apps-web-src-ui-toolbar-tsx.md`.
+  Full e2e: 368/368. `pnpm verify` green.
