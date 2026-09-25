@@ -428,10 +428,22 @@ export function LinkIcon({ className }: IconProps) {
   )
 }
 
-export function GridIcon({ className }: IconProps) {
+/**
+ * Snapping: a square set down on the points of a grid.
+ *
+ * Points, not lines. The grid drawn as lines was nearly the Frame tool's own
+ * glyph, 700 pixels away on the rail — and what a snap does is land corners
+ * on points, which is what this shows.
+ */
+export function SnapIcon({ className }: IconProps) {
   return (
     <svg {...base} className={className}>
-      <path d="M3 9h18M3 15h18M9 3v18M15 3v18" />
+      {[5, 12, 19].flatMap((x) =>
+        [5, 12, 19].map((y) => (
+          <circle key={`${String(x)}.${String(y)}`} cx={x} cy={y} r={1.1} fill="currentColor" stroke="none" />
+        )),
+      )}
+      <rect x="5" y="5" width="7" height="7" rx="1" />
     </svg>
   )
 }

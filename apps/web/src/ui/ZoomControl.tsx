@@ -13,7 +13,7 @@ import {
   zoomToSlider,
 } from '../scene/zoom.js'
 import { useInteractionStore } from '../interaction/interaction-store.js'
-import { FitIcon, GridIcon, MinusIcon, MouseIcon, PlusIcon } from '../controls/icons.js'
+import { FitIcon, MinusIcon, MouseIcon, PlusIcon, SnapIcon } from '../controls/icons.js'
 import { MOD_KEY } from '../interaction/keymap.js'
 
 const mod = MOD_KEY
@@ -104,32 +104,44 @@ export function ZoomControl() {
       <button
         type="button"
         className="of-icon-button"
-        aria-label={`Scroll wheel currently ${wheelMode === 'zoom' ? 'zooms' : 'pans'}. Click to switch.`}
-        data-tip={`Scroll wheel: ${wheelMode === 'zoom' ? 'zoom' : 'pan'} — click to switch`}
-        aria-description={`Scroll wheel: ${wheelMode === 'zoom' ? 'zoom' : 'pan'} — click to switch`}
+        // A name, not an instruction: what the wheel does now. The tip says
+        // what a press changes it to.
+        aria-label={`Scroll wheel ${wheelMode === 'zoom' ? 'zooms' : 'pans'}`}
+        data-tip={`Scroll wheel: ${wheelMode} — click to ${wheelMode === 'zoom' ? 'pan' : 'zoom'} instead`}
+        aria-description={`Click to ${wheelMode === 'zoom' ? 'pan' : 'zoom'} instead`}
         data-testid="wheel-mode"
         data-mode={wheelMode}
         onClick={() => toggleWheelMode()}
       >
         <MouseIcon />
-        <span className="of-zoom__mode">{wheelMode}</span>
+        {/*
+         * "wheel: zoom", not "zoom": beside the zoom controls, the bare word
+         * read as the cluster's heading rather than as the setting it is.
+         */}
+        <span className="of-zoom__mode">wheel: {wheelMode}</span>
       </button>
 
       <button
         type="button"
         className={`of-icon-button${snapToGrid ? ' of-icon-button--on' : ''}`}
         aria-pressed={snapToGrid}
-        aria-label={`Snap to grid ${snapToGrid ? 'on' : 'off'}. Hold ${mod} while dragging to override.`}
+        // Named once; `aria-pressed` says whether it is on. The label said
+        // "on" as well, so it was announced twice.
+        aria-label="Snap to grid"
         data-tip={`Snap to grid: ${snapToGrid ? 'on' : 'off'} — hold ${mod} while dragging to override`}
-        aria-description={`Snap to grid: ${snapToGrid ? 'on' : 'off'} — hold ${mod} while dragging to override`}
+        aria-description={`Hold ${mod} while dragging to override`}
         data-testid="snap-toggle"
         data-snap={snapToGrid ? 'on' : 'off'}
         onClick={() => toggleSnapToGrid()}
       >
-        <GridIcon />
+        <SnapIcon />
       </button>
 
-      <span className="of-zoom__sep" />
+      {/*
+       * The rule between how the board is HANDLED and how close you are to
+       * it: the two settings to its left, zoom itself to its right.
+       */}
+      <span className="of-zoom__sep" aria-hidden="true" />
 
       <button
         type="button"
@@ -152,6 +164,8 @@ export function ZoomControl() {
         step={0.001}
         value={zoomToSlider(viewport.zoom)}
         aria-label="Zoom level"
+        // Read as the zoom it sets, not as the slider's raw position.
+        aria-valuetext={`${String(percent)}%`}
         data-testid="zoom-slider"
         // Logarithmic: a linear slider would put half its travel above 8x.
         onChange={(event) => applyZoom(sliderToZoom(Number(event.target.value)))}

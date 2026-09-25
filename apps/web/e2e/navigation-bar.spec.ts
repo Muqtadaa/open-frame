@@ -259,3 +259,37 @@ test.describe('what the bar carries', () => {
     await expect(sheet.getByRole('button', { name: 'Sign out' })).toBeVisible()
   })
 })
+
+/**
+ * The zoom cluster's two settings say what they are (C3 #3). "🖱 zoom" read
+ * as the cluster's heading; snap wore nearly the Frame tool's glyph; both
+ * announced whole instruction sentences as their names, and the slider read
+ * its raw position, "0.519".
+ */
+test.describe('the zoom cluster', () => {
+  test('labels the wheel setting as the wheel’s', async ({ page }) => {
+    await board(page)
+    await expect(page.getByTestId('wheel-mode')).toHaveText('wheel: zoom')
+    await expect(
+      page.getByRole('button', { name: 'Scroll wheel zooms', exact: true }),
+    ).toBeVisible()
+    await page.getByTestId('wheel-mode').click()
+    await expect(page.getByTestId('wheel-mode')).toHaveText('wheel: pan')
+  })
+
+  test('names snap once, and lets its pressed state say whether it is on', async ({ page }) => {
+    await board(page)
+    const snap = page.getByRole('button', { name: 'Snap to grid', exact: true })
+    await expect(snap).toHaveAttribute('aria-pressed', 'true')
+  })
+
+  test('draws snap as points to land on, not as a frame’s lines', async ({ page }) => {
+    await board(page)
+    await expect(page.getByTestId('snap-toggle').locator('svg circle')).not.toHaveCount(0)
+  })
+
+  test('reads the slider as a zoom', async ({ page }) => {
+    await board(page)
+    await expect(page.getByTestId('zoom-slider')).toHaveAttribute('aria-valuetext', '100%')
+  })
+})
