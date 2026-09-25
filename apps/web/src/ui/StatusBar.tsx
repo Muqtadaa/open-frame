@@ -42,11 +42,12 @@ const SAVE_WORDS: Readonly<Record<SaveState, { label: string; tip: string }>> = 
 }
 
 /**
- * The record line: what is on the page, and the corrections made to it.
+ * The board's navigation: the way out, the board's name, what has happened to
+ * it and whether it is safe, then the app's own apparatus.
  *
  * History lives here rather than in the tool rail because undo is not something
- * you create — it is an account of what happened, which is what this line is
- * for. Counts are mono and tabular so they change without the row reflowing.
+ * you create — it is an account of what happened. Readouts are mono and
+ * tabular so they change without the bar reflowing.
  */
 export function StatusBar() {
   const document = useBoardDocument()
@@ -54,7 +55,13 @@ export function StatusBar() {
   const commands = useCommands()
   const { runtime } = useOpenFrame()
   const save = useSyncExternalStore(runtime.saveStatus.subscribe, runtime.saveStatus.get)
-  const { canUndo, canRedo, undoLabel } = useUndoState()
+  const { canUndo, canRedo, undoLabel: label } = useUndoState()
+  /*
+   * In sentence case where it follows "Undo": the command's own label is a
+   * title ("Restyle 1 object"), and "Undo Restyle 1 object" put a capital in
+   * the middle of a sentence.
+   */
+  const undoLabel = label === null ? null : label.charAt(0).toLowerCase() + label.slice(1)
   /*
    * The only piece of local state on this line, and it is a mirror rather than
    * a source: the document element already holds the truth, and localStorage

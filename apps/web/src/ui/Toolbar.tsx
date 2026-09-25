@@ -72,7 +72,7 @@ const GROUPS: readonly {
  * ran two-thirds of the window height and why the swatches ended up as 12px
  * dots wrapping in its tail. Those act on a SELECTION, so they belong with the
  * selection — colour and the rest are in the inspector, history is on the
- * record line. What is left is one column of things you create.
+ * navigation bar. What is left is one column of things you create.
  *
  * Labels are tooltips rather than standing text: eleven always-on captions were
  * most of the old height, and the icons carry their own meaning once the rail

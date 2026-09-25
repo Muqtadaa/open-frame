@@ -452,3 +452,49 @@ After more hands-on testing, the owner asked for three things:
   the per-cell field keyed by index. The stale-field bug that key caused
   cannot recur, because only the cell being typed in is a field.
 - **Contract:** `.impeccable/surfaces/apps-web-src-views-tableview-tsx.md`.
+
+### C3 #3 · Navigation bar and zoom cluster (critique 24/40)
+
+A dual-agent critique scored the bar and cluster 24/40. It found:
+- **P1:** a hidden board name and no tab title.
+- **P1:** keyboard and screen-reader defects.
+- **P1:** a zoom readout whose tip described a different action from what a
+  click did.
+- **P2:** the bar's contents and order.
+- **P2:** the zoom cluster mixing in its two settings.
+
+The owner chose everything, minors included; the name taking the free width;
+a save state in place of the object count; and wheel and snap staying in the
+cluster, clarified.
+
+- **Name** (`e0ace8a`): up to 48ch, shown whole in its tip when cut off. The
+  tab reads "<name> — OpenFrame". The bar is marked up as `nav` with the name
+  as its `h1`. The dev bench panel gives its width first.
+- **Keyboard and assistive tech** (`1e263eb`):
+  - Focus returns after every inline edit and after the last undo.
+  - Focus handed back by the keyboard takes Enter.
+  - A new guard requires every tipped control to name itself; it found 13
+    across the app.
+  - Theme toggle back to 30px; the Source link is a 30px target.
+- **Zoom readout** (`6d9737d`): an honest tip, 50/100/200% presets while the
+  field is open, and a refused zoom says why.
+- **Contents** (`96d4d49`):
+  - The runtime exposes a save state, and a failed write is no longer
+    console-only.
+  - "N selected" appears only when something is selected.
+  - Source moved to the end.
+  - Pressing your name opens an account sheet instead of signing you out.
+  - Sign in lost its outline.
+- **Zoom cluster** (`48d63bb`): "wheel: zoom", a snap glyph of its own, one
+  name per control, and the slider read as a percentage.
+- **Minors:**
+  - "Ctrl+Z" shortcut formatting
+  - "Undo restyle 1 object" in sentence case
+  - a crescent moon for After Hours
+  - a 1px accent ring on pressed toggles, guarded at 3:1
+  - the rail's gutter at every width
+  - narrow-window give-way at 640 and 480 with nothing overflowing
+  - stale "record line" wording replaced in DESIGN.md and the code comments
+- **Contract:** `apps/web/.impeccable/surfaces/apps-web-src-ui-statusbar-tsx.md`.
+- **Left for later:** the front door's account chip still signs out on a press
+  (C3 #9, Home).

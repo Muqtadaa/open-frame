@@ -328,11 +328,13 @@ export function CloseIcon({ className }: IconProps) {
  * moon every theme toggle in the category already uses.
  */
 export function AfterHoursIcon({ className }: IconProps) {
+  /*
+   * A crescent: the evening the world is named for. The sun going down behind
+   * a horizon read, at 16 pixels, as a hat or a lamp.
+   */
   return (
     <svg {...base} className={className}>
-      <path d="M6 14a6 6 0 0112 0" />
-      <path d="M3 17.5h18" />
-      <path d="M7.5 11h9M6.4 14h11.2" />
+      <path d="M19.5 14.2A7.6 7.6 0 1 1 9.8 4.5a6.1 6.1 0 0 0 9.7 9.7z" />
     </svg>
   )
 }

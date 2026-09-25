@@ -176,8 +176,12 @@ export function resolveKeyAction(ctx: KeyContext): KeyAction | null {
 }
 
 /** Human-readable accelerator for tooltips, using the platform's modifier glyph. */
+/*
+ * "Ctrl+Z", not "CtrlZ": the Mac's glyphs read as one symbol with the key and
+ * need nothing between them, but a word run into a letter reads as a word.
+ */
 export function formatShortcut(keys: string, isMac: boolean): string {
-  return keys.replace('Mod', isMac ? '⌘' : 'Ctrl')
+  return keys.replace('Mod', isMac ? '⌘' : 'Ctrl+')
 }
 
 /**

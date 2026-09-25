@@ -96,7 +96,7 @@
   --of-z-tip: 5; /* a tool tip, over the tools below it */
   --of-z-menu: 6; /* a menu, over every other surface beside the selection */
   --of-z-search: 8; /* find on board: under the chrome layer's notices */
-  --of-z-chrome: 10; /* rail, record line, zoom, notices */
+  --of-z-chrome: 10; /* rail, navigation bar, zoom, notices */
   --of-z-panel: 40; /* the comment panel */
   --of-z-apparatus: 60; /* the screen-space layer of an object's own apparatus */
   --of-z-reached: 70; /* chrome the pointer or keyboard is IN, so its tips read over apparatus */
@@ -538,6 +538,12 @@
 .of-icon-button--on {
   color: var(--of-accent);
   background: var(--of-accent-soft);
+  /*
+   * Its own boundary: the wash alone is 1.13:1 against the bar, so only the
+   * icon's colour said the toggle was on (design-tokens.test holds the ring
+   * to 3:1 in both worlds).
+   */
+  box-shadow: inset 0 0 0 1px var(--of-accent);
 }
 
 .of-icon-button--destructive:hover:not(:disabled) {
@@ -2758,13 +2764,13 @@ body {
 /* ---------- account ---------- */
 
 /*
- * A small sheet above the record line, not a modal. Signing in is never
+ * A small sheet under the navigation bar, not a modal. Signing in is never
  * required to use a board, so it must never take the screen — the craft floor
  * bans a modal for a task that needs neither interruption nor protected focus,
  * and this is the clearest possible case.
  */
 /*
- * A sheet: what comes out of the record line — the account sheet and the
+ * A sheet: what comes out of the navigation bar — the account sheet and the
  * share sheet. They were two byte-identical rules under two names, which is
  * how the next one would have become a third.
  *
@@ -2916,6 +2922,38 @@ body {
 /* Development instrumentation clips rather than pushes. */
 .of-dev {
   overflow: hidden;
+}
+
+/*
+ * A NARROW window: what the bar gives up, in order, when it truly runs out of
+ * room. The selection count first (the record panel says it too), then the
+ * exit's words (its arrow stays: it is the one control with no other route),
+ * then — on a phone-width window — the save state's word, leaving its state
+ * to the tip. Nothing ever runs out of the bar.
+ */
+@media (width < 640px) {
+  .of-status__counts {
+    display: none;
+  }
+
+  .of-status__exit-label {
+    display: none;
+  }
+}
+
+@media (width < 480px) {
+  .of-status {
+    gap: var(--of-space-4);
+    padding: var(--of-space-6);
+  }
+
+  .of-status__save {
+    display: none;
+  }
+
+  .of-status__rule {
+    display: none;
+  }
 }
 
 /* ---------- other people ---------- */
@@ -4517,22 +4555,12 @@ textarea.of-input {
  * controls that remain are the ones with no other route.
  */
 @media (width < 820px) {
-  .of-overlay--nav {
-    left: 12px;
-  }
-
-  .of-status__counts {
-    display: none;
-  }
-
   /*
-   * The exit keeps its arrow and loses its words. It is the one control here
-   * with no other route, so it is never the thing that goes — but at this
-   * width the label is what it can afford to give.
+   * The exit keeps its words and the bar keeps the rail's gutter at this
+   * width. Both went at 820 once, with a quarter of the bar still empty — and
+   * the bar stepped in to 12px from the edge while the rail stayed at 20, so
+   * the two left edges no longer lined up.
    */
-  .of-status__exit-label {
-    display: none;
-  }
 
   .of-zoom__slider {
     display: none;

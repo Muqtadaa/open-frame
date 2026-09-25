@@ -198,6 +198,19 @@ describe.each(THEMES)('palette contrast — $name', ({ token }) => {
     expect(contrast(token(fg ?? ''), token(bg ?? ''))).toBeGreaterThanOrEqual(3)
   })
 
+  /*
+   * A PRESSED toggle — snap, in the zoom cluster — draws its own boundary.
+   * Its bed alone was 1.13:1 against the bar in the notebook world, so only
+   * the icon's colour said it was on. The ring is read off the rule, and must
+   * reach 3:1 against the bar's own stock in both worlds.
+   */
+  it('a pressed toggle draws a boundary you can see (3:1)', () => {
+    const rule = /\.of-icon-button--on\s*\{([^}]*)\}/.exec(CSS)?.[1] ?? ''
+    const ring = /box-shadow:[^;]*var\(--of-([\w-]+)\)/.exec(rule)?.[1]
+    expect(ring, 'a pressed toggle rings itself in a token').toBeDefined()
+    expect(contrast(token(ring ?? ''), token('page'))).toBeGreaterThanOrEqual(3)
+  })
+
   /**
    * A shape's stroke and label on its own fill.
    */

@@ -293,3 +293,33 @@ test.describe('the zoom cluster', () => {
     await expect(page.getByTestId('zoom-slider')).toHaveAttribute('aria-valuetext', '100%')
   })
 })
+
+/**
+ * A narrow window (C3 #3). At 420 pixels "Sign in" and the theme toggle ran
+ * out of the bar's own box; under 820 the bar stepped in to 12px from the edge
+ * while the rail stayed at 20.
+ */
+test.describe('a narrow window', () => {
+  for (const width of [390, 560, 760]) {
+    test(`keeps every control inside the bar at ${String(width)}px`, async ({ page }) => {
+      await page.setViewportSize({ width, height: 720 })
+      await board(page)
+      const escaped = await page.getByTestId('status-bar').evaluate((bar) => {
+        const edge = bar.getBoundingClientRect().right
+        return [...bar.children]
+          .filter((child) => child.getBoundingClientRect().width > 0)
+          .filter((child) => child.getBoundingClientRect().right > edge + 0.5)
+          .map((child) => child.getAttribute('data-testid') ?? child.className)
+      })
+      expect(escaped).toEqual([])
+    })
+  }
+
+  test('lines the bar up with the rail', async ({ page }) => {
+    await page.setViewportSize({ width: 760, height: 720 })
+    await board(page)
+    const bar = await page.getByTestId('status-bar').boundingBox()
+    const rail = await page.getByRole('toolbar', { name: 'Board tools' }).boundingBox()
+    expect(Math.abs((bar?.x ?? 0) - (rail?.x ?? 0))).toBeLessThan(1)
+  })
+})
