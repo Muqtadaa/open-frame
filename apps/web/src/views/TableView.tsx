@@ -47,6 +47,7 @@ import {
   type ObjectStyle,
   type Rect,
   type RichText,
+  type SizeToken,
   type StrokeToken,
   type TableCell,
   type TableData,
@@ -591,7 +592,7 @@ function TableEditor({
         },
   )
   const field = useRef<RichTextFieldHandle | null>(null)
-  const [format, setFormat] = useState<FormatState>({ marks: [], list: undefined })
+  const [format, setFormat] = useState<FormatState>({ marks: [], list: undefined, size: undefined })
 
   const [menu, setMenu] = useState<{ x: number; y: number } | null>(null)
   const [target, setTarget] = useState<CellTarget>('fill')
@@ -811,9 +812,15 @@ function TableEditor({
     const first = kinds[0]
     return kinds.every((kind) => kind === first) ? first : undefined
   }
+  const sized = (): SizeToken | undefined => {
+    const sizes = rangeCells().map((cell) => sizeOfRange(cell.text, 0, whole(cell.text)))
+    const first = sizes[0]
+    return sizes.every((size) => size === first) ? first : undefined
+  }
   const rangeFormat: FormatState = {
     marks: hasText ? MARKS.filter((mark) => covers(mark)) : [],
     list: listed(),
+    size: sized(),
   }
   const toggleRangeMark = (mark: Mark): void => {
     const on = !covers(mark)
@@ -1520,6 +1527,9 @@ function TableEditor({
           <FormatBar
             embedded
             state={editing === null ? rangeFormat : format}
+            onReturn={() => {
+              if (editing !== null) field.current?.focus()
+            }}
             onToggle={(mark) => {
               if (editing !== null) field.current?.toggleMark(mark)
               else toggleRangeMark(mark)
@@ -1584,7 +1594,7 @@ function TableEditor({
               <button
                 type="button"
                 className="of-button of-button--ghost of-cellbar__clear"
-              aria-label="Reset"
+                aria-label="Reset"
                 data-tip="Use the table's own colours"
                 aria-description="Use the table's own colours"
                 data-testid="cell-clear"

@@ -136,10 +136,13 @@ test.describe('formatting selected text', () => {
   test('stops at the ends rather than running off them', async ({ page }) => {
     await noteSaying(page, 'Pricing is unclear')
     await selectFirst(page, 7)
-    for (let i = 0; i < 6; i++) await page.getByTestId('format-smaller').click()
+    for (let i = 0; i < 2; i++) await page.getByTestId('format-smaller').click()
     await expect(page.locator(`${EDITOR} [data-size="xs"]`)).toHaveText('Pricing')
-    for (let i = 0; i < 12; i++) await page.getByTestId('format-bigger').click()
+    // The end of the ladder switches its button off rather than doing nothing.
+    await expect(page.getByTestId('format-smaller')).toHaveAttribute('aria-disabled', 'true')
+    for (let i = 0; i < 8; i++) await page.getByTestId('format-bigger').click()
     await expect(page.locator(`${EDITOR} [data-size="5xl"]`)).toHaveText('Pricing')
+    await expect(page.getByTestId('format-bigger')).toHaveAttribute('aria-disabled', 'true')
   })
 
   /**
@@ -165,7 +168,8 @@ test.describe('formatting selected text', () => {
         )
 
     const base = await measure()
-    for (let i = 0; i < 12; i++) await page.getByTestId('format-bigger').click()
+    // To the top of the ladder: six steps above the object's own size.
+    for (let i = 0; i < 6; i++) await page.getByTestId('format-bigger').click()
     // Comfortably past the old 1.9× ceiling, which is the whole point.
     expect(await measure()).toBeGreaterThan(base * 4)
   })

@@ -157,6 +157,12 @@
   --of-step: 10px;
   /* A secondary control inside apparatus — the AA 2.5.8 floor is 24. */
   --of-hit-sm: 30px;
+  /*
+   * How far an unavailable control fades — ONE value. The menu used 0.38 and
+   * the icon buttons 0.35, so the same state looked different across a gap
+   * of a few pixels.
+   */
+  --of-disabled: 0.38;
   /* Anything you operate. */
   --of-hit: 40px;
   /* A row, or a primary action. Clears the 44px AAA target with room over. */
@@ -448,7 +454,7 @@
 }
 
 .of-button:disabled {
-  opacity: 0.35;
+  opacity: var(--of-disabled);
   cursor: default;
 }
 
@@ -524,13 +530,14 @@
   height: 16px;
 }
 
-.of-icon-button:hover:not(:disabled) {
+.of-icon-button:hover:not(:disabled, [aria-disabled='true']) {
   color: var(--of-ink);
   background: var(--of-hover);
 }
 
-.of-icon-button:disabled {
-  opacity: 0.35;
+.of-icon-button:disabled,
+.of-icon-button[aria-disabled='true'] {
+  opacity: var(--of-disabled);
   cursor: default;
 }
 
@@ -916,7 +923,7 @@ body {
 }
 
 .of-tool:disabled {
-  opacity: 0.35;
+  opacity: var(--of-disabled);
   cursor: default;
 }
 
@@ -1293,7 +1300,7 @@ body {
 }
 
 .of-swatch:disabled {
-  opacity: 0.35;
+  opacity: var(--of-disabled);
   cursor: default;
 }
 
@@ -3876,7 +3883,7 @@ body {
 }
 
 .of-menu__item[aria-disabled='true'] {
-  opacity: 0.38;
+  opacity: var(--of-disabled);
   cursor: default;
 }
 
@@ -5037,6 +5044,16 @@ textarea.of-input {
 
 .of-format-bar__button--bigger {
   font-size: var(--of-type-ui);
+}
+
+/* A readout, so the mono every readout is set in; wide enough for ×7.6. */
+.of-format-bar__size {
+  min-width: 36px;
+  font-family: var(--of-mono);
+  font-size: var(--of-type-record);
+  font-variant-numeric: tabular-nums;
+  color: var(--of-ink-muted);
+  text-align: center;
 }
 
 /*

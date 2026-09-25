@@ -44,7 +44,7 @@ export function RichTextEditor({
   const field = useRef<RichTextFieldHandle>(null)
   // Escape commits and the unmount that follows blurs the field: one commit.
   const done = useRef(false)
-  const [state, setState] = useState<FormatState>({ marks: [], list: undefined })
+  const [state, setState] = useState<FormatState>({ marks: [], list: undefined, size: undefined })
 
   const commit = (): void => {
     if (done.current) return
@@ -60,6 +60,11 @@ export function RichTextEditor({
           onToggle={(mark) => field.current?.toggleMark(mark)}
           onResize={(by) => field.current?.resize(by)}
           onList={(kind) => field.current?.toggleList(kind)}
+          onReturn={() => field.current?.focus()}
+          // Out of the bar and not back to the text: the edit is over.
+          onLeave={(to) => {
+            if ((to?.closest('[contenteditable="true"]') ?? null) === null) commit()
+          }}
         />
       </Chrome>
       <RichTextField
@@ -70,9 +75,17 @@ export function RichTextEditor({
         ariaLabel={ariaLabel}
         focusOnMount="select-all"
         onFormatState={setState}
-        onBlur={commit}
+        onBlur={(event) => {
+          // Into the format bar (Alt+F10) is not leaving the edit.
+          const to = event.relatedTarget
+          if (to instanceof Element && to.closest('[data-testid="format-bar"]') !== null) return
+          commit()
+        }}
         onKeyDown={(event) => {
-          if (event.key === 'Escape' || (event.key === 'Enter' && (event.metaKey || event.ctrlKey))) {
+          if (
+            event.key === 'Escape' ||
+            (event.key === 'Enter' && (event.metaKey || event.ctrlKey))
+          ) {
             event.preventDefault()
             commit()
           }
