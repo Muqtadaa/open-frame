@@ -234,7 +234,6 @@ export function ColorPicker({ current, against, onPick, onPreview, onClose }: Co
             // The label lives here rather than in the button: as text it wrapped
             // onto three lines beside the field and dominated the panel.
             data-tip="Pick a colour from the screen"
-            aria-description="Pick a colour from the screen"
             aria-label="Pick a colour from the screen"
             data-testid="picker-eyedropper"
             onClick={() => {

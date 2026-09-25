@@ -91,6 +91,14 @@ test.describe('inspector', () => {
     await expect(page.locator('.of-shape__svg path')).toHaveAttribute('fill', 'transparent')
   })
 
+  // The row is keyed `line` for its ids, but it is LABELLED dash, and a
+  // screen reader should hear what a sighted user reads.
+  test('announces the dash row by the name it is shown under', async ({ page }) => {
+    await place(page, 'u', 340, 300, 'Box')
+    await page.locator(CANVAS).click({ position: { x: 340, y: 300 } })
+    await expect(page.getByRole('radiogroup', { name: 'dash' })).toBeVisible()
+  })
+
   test('sets opacity', async ({ page }) => {
     await place(page, 's', 340, 260, 'Note')
     await page.locator(CANVAS).click({ position: { x: 340, y: 260 } })
@@ -325,6 +333,28 @@ test.describe('continuous controls write once', () => {
     await expect.poll(() => surfaceOf(page)).toBe(before)
     await page.locator(CANVAS).click({ position: EMPTY })
     await expect.poll(() => surfaceOf(page)).toBe(before)
+  })
+
+  /*
+   * The slider's Escape reached the board, which deselected — and the panel
+   * settling on its way out committed exactly the value Escape meant to drop.
+   */
+  test('Escape on the opacity slider takes the steps back and keeps the panel', async ({
+    page,
+  }) => {
+    await place(page, 's', 340, 260, 'Note')
+    await page.locator(CANVAS).click({ position: { x: 340, y: 260 } })
+
+    await page.getByTestId('opacity').focus()
+    for (let step = 0; step < 3; step++) await page.keyboard.press('ArrowLeft')
+    await expect(page.locator('.of-sticky')).toHaveCSS('opacity', '0.85')
+
+    await page.keyboard.press('Escape')
+    await expect(page.locator('.of-sticky')).toHaveCSS('opacity', '1')
+    await expect(page.getByTestId('inspector')).toBeVisible()
+    // Leaving now settles nothing: there is nothing aimed at any more.
+    await page.locator(CANVAS).click({ position: EMPTY })
+    await expect(page.locator('.of-sticky')).toHaveCSS('opacity', '1')
   })
 
   test('six steps of the opacity slider are one undo entry', async ({ page }) => {

@@ -162,7 +162,6 @@ export function Swatches({
           aria-pressed={current === undefined}
           aria-label="none"
           data-tip="none"
-          aria-description="none"
           data-testid={`${testPrefix}-none`}
           onClick={onNone}
         />
@@ -189,7 +188,6 @@ export function Swatches({
           aria-label={token}
           aria-pressed={current === token}
           data-tip={token}
-          aria-description={token}
           data-testid={`${testPrefix}-${token}`}
           onClick={() => {
             setPicking(false)
@@ -217,7 +215,6 @@ export function Swatches({
         aria-label="Custom colour"
         aria-expanded={picking}
         data-tip="Custom colour"
-        aria-description="Custom colour"
         data-testid={`${testPrefix}-custom`}
         onClick={() => {
           setPicking((open) => !open)

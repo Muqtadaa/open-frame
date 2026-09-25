@@ -421,6 +421,7 @@ export function Inspector() {
   const recordFields = fields.filter((field) => field.meaning === 'record')
   const shapeFields = fields.filter((field) => field.meaning === 'shape')
   const recorded = only !== undefined && recordFields.length > 0
+  const blanks = only === undefined ? 0 : recordFields.filter((field) => blank(only, field)).length
 
   return (
     <AnchoredSurface
@@ -458,7 +459,22 @@ export function Inspector() {
           </div>
         </div>
 
-        {recorded && <h3 className="of-inspector__band">record</h3>}
+        {/*
+         * The record band says how much of the record is still to fill, so a
+         * slip whose source nobody wrote down shows it before anyone scrolls:
+         * structure is earned, never demanded (PRODUCT.md principle 2), but
+         * what is missing is worth being able to see.
+         */}
+        {recorded && (
+          <h3 className="of-inspector__band of-inspector__band--record">
+            record
+            {blanks > 0 && (
+              <span className="of-inspector__blanks" data-testid="inspector-blanks">
+                {blanks} blank
+              </span>
+            )}
+          </h3>
+        )}
 
         {recordFields.length > 0 && only !== undefined && (
           <RecordFields
@@ -653,6 +669,7 @@ export function Inspector() {
                   options={DASH_TOKENS}
                   current={value('dash') ?? 'solid'}
                   name="line"
+                  label="dash"
                   onPick={(dash) => apply({ dash })}
                   render={(token) => <DashIcon variant={token} />}
                 />
@@ -671,7 +688,6 @@ export function Inspector() {
                         aria-pressed={on}
                         aria-label={mark.name}
                         data-tip={mark.name}
-                        aria-description={mark.name}
                         data-testid={`mark-${mark.prop}`}
                         className={`of-choice__item${on ? ' of-choice__item--on' : ''}`}
                         onClick={() => apply({ [mark.prop]: !on })}
@@ -759,6 +775,16 @@ export function Inspector() {
                     // Released, or left with the keyboard: one undo entry either way.
                     onPointerUp={settle}
                     onBlur={settle}
+                    /*
+                     * Escape takes the aimed value back, as it does in the
+                     * picker. Left to the board it deselected, and the panel
+                     * closing on the way out SETTLED what Escape meant to drop.
+                     */
+                    onKeyDown={(event) => {
+                      if (event.key !== 'Escape') return
+                      event.stopPropagation()
+                      clearStylePreview()
+                    }}
                   />
                   <span className="of-inspector__reading">
                     {Math.round((value('opacity') ?? 1) * 100)}%
@@ -799,7 +825,14 @@ function Field({ name, children }: { name: string; children: React.ReactNode }) 
 interface ChoiceProps<T extends string> {
   readonly options: readonly T[]
   readonly current: T
+  /** Keys the test ids. */
   readonly name: string
+  /**
+   * What the group is ANNOUNCED as, when that is not its key: the dash row is
+   * keyed `line` (and its ids `line-dashed` are what tests hold on to) but a
+   * screen reader was told "line" for a row whose label says "dash".
+   */
+  readonly label?: string
   readonly onPick: (value: T) => void
   readonly render: (value: T) => React.ReactNode
 }
@@ -813,7 +846,14 @@ interface ChoiceProps<T extends string> {
  * opacity. A radio group is ONE stop (the chosen option) and the arrows move
  * the choice, wrapping at the ends, the way every platform's does.
  */
-function Choice<T extends string>({ options, current, name, onPick, render }: ChoiceProps<T>) {
+function Choice<T extends string>({
+  options,
+  current,
+  name,
+  label,
+  onPick,
+  render,
+}: ChoiceProps<T>) {
   const step = (event: React.KeyboardEvent<HTMLDivElement>): void => {
     const forward = event.key === 'ArrowRight' || event.key === 'ArrowDown'
     const back = event.key === 'ArrowLeft' || event.key === 'ArrowUp'
@@ -836,7 +876,7 @@ function Choice<T extends string>({ options, current, name, onPick, render }: Ch
   }
 
   return (
-    <div className="of-choice" role="radiogroup" aria-label={name} onKeyDown={step}>
+    <div className="of-choice" role="radiogroup" aria-label={label ?? name} onKeyDown={step}>
       {options.map((option) => (
         <button
           key={option}
@@ -846,7 +886,6 @@ function Choice<T extends string>({ options, current, name, onPick, render }: Ch
           tabIndex={option === current ? 0 : -1}
           aria-label={option}
           data-tip={option}
-          aria-description={option}
           data-testid={`${name}-${option}`}
           className={`of-choice__item${option === current ? ' of-choice__item--on' : ''}`}
           onClick={() => onPick(option)}
@@ -856,4 +895,13 @@ function Choice<T extends string>({ options, current, name, onPick, render }: Ch
       ))}
     </div>
   )
+}
+
+/** Nothing written yet: an absent value, whitespace, or an empty list. */
+function blank(object: AnyOpenFrameObject, field: FieldDefinition): boolean {
+  const stored = (object.data as Record<string, unknown>)[field.key]
+  if (stored === undefined || stored === null) return true
+  if (typeof stored === 'string') return stored.trim() === ''
+  if (Array.isArray(stored)) return stored.length === 0
+  return false
 }

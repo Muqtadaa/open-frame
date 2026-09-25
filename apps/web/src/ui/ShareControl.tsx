@@ -234,7 +234,6 @@ export function ShareControl() {
                 className="of-status__person"
                 style={{ background: hueVar(person.hue) }}
                 data-tip={person.name}
-                aria-description={person.name}
                 role="img"
                 aria-label={person.name}
               >
@@ -252,7 +251,6 @@ export function ShareControl() {
               }`}
               style={{ background: hueVar(person.hue) }}
               data-tip={label}
-              aria-description={label}
               aria-label={label}
               aria-pressed={isFollowed}
               data-testid={`follow-${person.key}`}

@@ -1158,7 +1158,14 @@ body {
 
 .of-swatch--on {
   border-color: var(--of-ink);
-  box-shadow: inset 0 0 0 2px var(--of-panel);
+  /*
+   * A ring OUTSIDE the chip as well as the panel-coloured gap inside it: an
+   * ink border alone read as one more outlined chip among twelve, and on the
+   * pale tokens nobody could say which colour the object was.
+   */
+  box-shadow:
+    inset 0 0 0 2px var(--of-panel),
+    0 0 0 2px var(--of-accent);
 }
 
 .of-swatch:disabled {
@@ -3384,6 +3391,13 @@ body {
 
 .of-menu {
   min-width: 196px;
+  /*
+   * A menu opened near the foot of a short window, or on an object with every
+   * section to offer, ran off the bottom: its last items were unreachable.
+   */
+  max-height: calc(100dvh - 2 * var(--of-gutter));
+  overflow-y: auto;
+  overscroll-behavior: contain;
   padding: var(--of-space-6);
 }
 
@@ -3746,6 +3760,24 @@ body {
   color: var(--of-ink-muted);
   text-transform: lowercase;
   letter-spacing: 0.02em;
+}
+
+/*
+ * The record is the half of the panel that MEANS something, so its band is
+ * ink over a rule rather than one more muted label: the first critique found
+ * the panel's two halves indistinguishable at a glance.
+ */
+.of-inspector__band--record {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  padding-bottom: var(--of-space-4);
+  color: var(--of-ink);
+  border-bottom: 1px solid var(--of-rule);
+}
+
+.of-inspector__blanks {
+  color: var(--of-ink-muted);
 }
 
 /*

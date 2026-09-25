@@ -9,7 +9,7 @@ import { describe, expect, it } from 'vitest'
  * The browser's `title` never appears on focus, so forty-two controls had a
  * label only a mouse could reach. They carry `data-tip` — drawn by the
  * stylesheet on hover and on `:focus-visible` — and the same text as an
- * `aria-description`. `title` survives only where it reveals CONTENT rather
+ * `aria-description`, unless the tip IS the control's name. `title` survives only where it reveals CONTENT rather
  * than naming a control, and each of those says why here.
  */
 const SRC = resolve(process.cwd(), 'src')
@@ -41,12 +41,49 @@ describe('tips a keyboard can summon', () => {
     expect(titled).toEqual([])
   })
 
-  it('gives every tip to assistive tech as well', () => {
-    const silent = files.flatMap(({ path, source }) => {
-      const tips = source.match(/data-tip=/g)?.length ?? 0
-      const described = source.match(/aria-description=/g)?.length ?? 0
-      return tips > described ? [path] : []
-    })
-    expect(silent).toEqual([])
+  /*
+   * Per ELEMENT, not per file: a count of `data-tip` against a count of
+   * `aria-description` passed a file whose descriptions sat on the wrong
+   * controls. A tip reaches assistive tech as a description, or as the name
+   * when it IS the name — a swatch tipped "red" and labelled "red" was read
+   * out "red, red" when it carried both, which is noise, not access.
+   */
+  it('gives every tip to assistive tech once', () => {
+    const faults = files.flatMap(({ path, source }) =>
+      tipped(source).flatMap((tag) => {
+        const tip = attribute(tag, 'data-tip')
+        const name = attribute(tag, 'aria-label')
+        const description = attribute(tag, 'aria-description')
+        if (description === null && tip !== name) return [`${path}: ${tip ?? ''} is never announced`]
+        if (description !== null && description === name)
+          return [`${path}: ${description} is announced twice`]
+        return []
+      }),
+    )
+    expect(faults).toEqual([])
   })
 })
+
+/** Every JSX opening tag carrying a `data-tip`, braces and arrows included. */
+function tipped(source: string): string[] {
+  const tags: string[] = []
+  for (let at = source.indexOf('data-tip='); at !== -1; at = source.indexOf('data-tip=', at + 1)) {
+    const start = source.lastIndexOf('<', at)
+    let depth = 0
+    let end = start
+    for (; end < source.length; end++) {
+      const char = source[end]
+      if (char === '{') depth++
+      else if (char === '}') depth--
+      else if (char === '>' && depth === 0) break
+    }
+    tags.push(source.slice(start, end))
+  }
+  return tags
+}
+
+/** An attribute's value as written — `"red"` or `{token}` — or null when absent. */
+function attribute(tag: string, name: string): string | null {
+  const match = new RegExp(`\\s${name}=("[^"]*"|\\{[^}]*\\})`).exec(tag)
+  return match?.[1] ?? null
+}

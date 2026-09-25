@@ -328,7 +328,6 @@ function FormatBar({
           aria-label={label}
           aria-pressed={active.includes(mark)}
           data-tip={label}
-          aria-description={label}
           data-testid={`format-${mark}`}
           onMouseDown={keepFocus}
           onClick={() => {

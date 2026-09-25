@@ -111,6 +111,22 @@ test.describe('structured objects', () => {
     await expect(page.locator(CANVAS)).toContainText('#pricing #comprehension')
   })
 
+  test('the record band counts what is still blank', async ({ page }) => {
+    await placeNote(page, 'Could not find the price')
+    await promote(page, NOTE)
+    await page.locator(CANVAS).click({ position: NOTE })
+    await expect(page.getByTestId('inspector-blanks')).toHaveText('3 blank')
+
+    await page.getByTestId('field-source').fill('September usability study')
+    await page.getByTestId('field-participant').click()
+    await expect(page.getByTestId('inspector-blanks')).toHaveText('2 blank')
+
+    await page.getByTestId('field-participant').fill('P07')
+    await page.getByTestId('field-tags').fill('pricing')
+    await page.getByTestId('field-source').click()
+    await expect(page.getByTestId('inspector-blanks')).toHaveCount(0)
+  })
+
   /**
    * One promotion is one undo entry. If the conversion were a delete and a
    * create, or three separate writes, this would take several presses and the
@@ -455,7 +471,7 @@ test('the panel names what the object is, and puts its record first', async ({ p
   await page.locator(CANVAS).click({ position: NOTE })
   await expect(page.getByTestId('inspector-title')).toHaveText('Evidence')
   const bands = page.getByTestId('inspector').locator('.of-inspector__band')
-  await expect(bands).toHaveText(['record', 'appearance'])
+  await expect(bands).toHaveText([/^record(\d+ blank)?$/, 'appearance'])
 })
 
 /**

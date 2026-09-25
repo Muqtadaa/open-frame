@@ -111,7 +111,6 @@ export function ArrangeBar() {
             type="button"
             className="of-icon-button"
             data-tip={label}
-            aria-description={label}
             aria-label={label}
             data-testid={`align-${edge}`}
             onClick={() => {

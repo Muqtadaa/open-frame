@@ -48,7 +48,6 @@ export function BoardExit() {
       data-testid="board-exit"
       aria-label="All boards"
       data-tip="All boards"
-      aria-description="All boards"
       aria-busy={leaving}
       onClick={leave}
     >
