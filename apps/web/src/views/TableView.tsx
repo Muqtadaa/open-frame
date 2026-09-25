@@ -485,69 +485,79 @@ function TableEditor({ object, at, zoom, Chrome, onCommit, onCancel }: ObjectEdi
       </Chrome>
 
       {/*
-        * The shape controls, beside the axis each one changes: columns on the
-        * right, rows underneath. A row of four identical buttons in a corner
-        * would make you read every label to find the one you want.
+        * The shape controls, ONE surface on the table's right: a named row
+        * for each axis, so four identical buttons never have to be read one by
+        * one to find the right one.
+        *
+        * Rows used to sit underneath the table, beside the axis they change.
+        * Below the table is also where the cell bar goes whenever there is no
+        * room above it — under the navigation bar, a table near the top has
+        * none — and the two landed on each other. The right side is the
+        * table's alone.
         */}
       <Chrome anchor={{ x: 1, y: 0, width: 0, height: 1 }} prefer={['right', 'left']}>
-      <div className="of-table-edit__columns of-surface" role="group" aria-label="Columns">
-        <button
-          type="button"
-          className="of-icon-button"
-          aria-label="Add a column"
-          data-testid="table-add-column"
-          onMouseDown={keepFocus}
-          onClick={() => {
-            reshape('column', 1)
-          }}
-        >
-          <PlusIcon />
-        </button>
-        <button
-          type="button"
-          className="of-icon-button"
-          aria-label="Remove the last column"
-          disabled={width <= 1}
-          data-testid="table-remove-column"
-          onMouseDown={keepFocus}
-          onClick={() => {
-            reshape('column', -1)
-          }}
-        >
-          <MinusIcon />
-        </button>
-      </div>
-
-      </Chrome>
-
-      <Chrome anchor={{ x: 0, y: 1, width: 1, height: 0 }} prefer={['below', 'above']}>
-      <div className="of-table-edit__rows of-surface" role="group" aria-label="Rows">
-        <button
-          type="button"
-          className="of-icon-button"
-          aria-label="Add a row"
-          data-testid="table-add-row"
-          onMouseDown={keepFocus}
-          onClick={() => {
-            reshape('row', 1)
-          }}
-        >
-          <PlusIcon />
-        </button>
-        <button
-          type="button"
-          className="of-icon-button"
-          aria-label="Remove the last row"
-          disabled={draft.rows.length <= 1}
-          data-testid="table-remove-row"
-          onMouseDown={keepFocus}
-          onClick={() => {
-            reshape('row', -1)
-          }}
-        >
-          <MinusIcon />
-        </button>
-      </div>
+        <div className="of-table-edit__shape of-surface">
+          <div className="of-table-edit__axis" role="group" aria-label="Columns">
+            <span className="of-table-edit__axis-name" aria-hidden="true">
+              cols
+            </span>
+            <button
+              type="button"
+              className="of-icon-button"
+              aria-label="Add a column"
+              data-testid="table-add-column"
+              onMouseDown={keepFocus}
+              onClick={() => {
+                reshape('column', 1)
+              }}
+            >
+              <PlusIcon />
+            </button>
+            <button
+              type="button"
+              className="of-icon-button"
+              aria-label="Remove the last column"
+              disabled={width <= 1}
+              data-testid="table-remove-column"
+              onMouseDown={keepFocus}
+              onClick={() => {
+                reshape('column', -1)
+              }}
+            >
+              <MinusIcon />
+            </button>
+          </div>
+          <div className="of-table-edit__axis" role="group" aria-label="Rows">
+            <span className="of-table-edit__axis-name" aria-hidden="true">
+              rows
+            </span>
+            <button
+              type="button"
+              className="of-icon-button"
+              aria-label="Add a row"
+              data-testid="table-add-row"
+              onMouseDown={keepFocus}
+              onClick={() => {
+                reshape('row', 1)
+              }}
+            >
+              <PlusIcon />
+            </button>
+            <button
+              type="button"
+              className="of-icon-button"
+              aria-label="Remove the last row"
+              disabled={draft.rows.length <= 1}
+              data-testid="table-remove-row"
+              onMouseDown={keepFocus}
+              onClick={() => {
+                reshape('row', -1)
+              }}
+            >
+              <MinusIcon />
+            </button>
+          </div>
+        </div>
       </Chrome>
     </div>
   )

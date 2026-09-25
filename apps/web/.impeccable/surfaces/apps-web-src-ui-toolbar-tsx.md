@@ -19,7 +19,7 @@ screen reader — navigate (select, hand), make (sticky, text, shape, frame,
 connect, table, code, image), annotate (comment). Image is made like the rest
 of its run; it is a button only because it needs a file first. Selection
 actions are never here: they live with the selection (the record panel) and
-history lives on the record line.
+history lives on the navigation bar.
 
 STATES: muted ink at rest; ink on the accent wash on hover; the page's colour
 on a FILLED INK BED when armed, measured off the rule in
@@ -38,7 +38,7 @@ control the keyboard focused, and to the board's pan hold and edit otherwise.
 Each tool carries `aria-keyshortcuts`; its tip shows the key on hover (after
 the shared dwell) and at once on keyboard focus.
 
-PLACEMENT: centred in the band between the top gutter and the record line,
+PLACEMENT: centred in the band between the navigation bar and the bottom gutter,
 never crossing either. Tools step down a decade of the rule as the window
 shortens — 50, 40 below 720 tall, 30 below 604 — and only below 494 does the
 rail scroll, because a scrolling box clips the tips. Its footprint is one

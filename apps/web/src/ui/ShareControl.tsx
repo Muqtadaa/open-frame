@@ -113,7 +113,8 @@ export function ShareControl() {
         {sharing ? 'Sharing…' : 'Share'}
       </button>
       {/*
-        * Both hang ABOVE the button and are clamped, rather than pinned with
+        * Both hang from the button — BELOW it, now the bar runs along the
+        * top — and are clamped, rather than pinned with
         * `bottom: calc(100% + 10px)` against whichever ancestor happened to be
         * positioned. Same 320px panel, same bar on the bottom edge, same way
         * of leaving the window sideways that the mentions list left it
@@ -123,7 +124,7 @@ export function ShareControl() {
         <AnchoredSurface
           anchor={shareAnchor}
           surface={surface}
-          prefer={['above', 'below']}
+          prefer={['below', 'above']}
           testId="share-error-surface"
         >
           <p className="of-share__error" role="alert" data-testid="share-error">
@@ -135,7 +136,7 @@ export function ShareControl() {
         <AnchoredSurface
           anchor={shareAnchor}
           surface={surface}
-          prefer={['above', 'below']}
+          prefer={['below', 'above']}
           testId="share-links-surface"
         >
           <ShareLinks links={links} onOpen={() => window.location.assign(links.editLink)} />

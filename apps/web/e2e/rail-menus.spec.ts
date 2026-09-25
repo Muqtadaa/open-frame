@@ -202,7 +202,8 @@ test.describe('opening, walking and leaving a rail menu', () => {
 /**
  * The rail itself on a short window. It was a fixed 599 pixels, centred on
  * the WINDOW: at 640 tall it met the record line, at 560 it began 19 pixels
- * above the top, with Select and Image cut off and nothing to scroll.
+ * above the top, with Select and Image cut off and nothing to scroll. The
+ * record line is the navigation bar at the top now, and the rail sits under it.
  */
 for (const viewport of [
   { width: 1280, height: 720 },
@@ -219,9 +220,9 @@ for (const viewport of [
     const line = await page.getByTestId('status-bar').boundingBox()
     if (rail === null || line === null) throw new Error('rail or record line is not on screen')
 
-    expect(rail.y).toBeGreaterThanOrEqual(0)
-    // Above the record line, never under it.
-    expect(rail.y + rail.height).toBeLessThanOrEqual(line.y)
+    // Below the navigation bar, never under it, and inside the window.
+    expect(rail.y).toBeGreaterThanOrEqual(line.y + line.height)
+    expect(rail.y + rail.height).toBeLessThanOrEqual(viewport.height)
     // Every tool whole, without scrolling to it.
     for (const id of ['tool-select', 'tool-comment', 'tool-image']) {
       const tool = await page.getByTestId(id).boundingBox()

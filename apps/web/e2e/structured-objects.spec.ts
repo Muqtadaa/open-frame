@@ -477,7 +477,8 @@ test('the panel names what the object is, and puts its record first', async ({ p
 /**
  * The record IS the panel for a type that carries one. With nine rows of
  * appearance under it an evidence panel was 539px tall with nothing that
- * scrolled, and painted over the record line and the zoom cluster.
+ * scrolled, and painted over the record line and the zoom cluster — the
+ * navigation bar, now it runs along the top.
  */
 test('folds appearance away on evidence, and opens it on request', async ({ page }) => {
   await freshBoard(page)
@@ -494,7 +495,8 @@ test('folds appearance away on evidence, and opens it on request', async ({ page
   expect(panel).not.toBeNull()
   expect(line).not.toBeNull()
   if (panel === null || line === null) return
-  expect(panel.y + panel.height).toBeLessThan(line.y)
+  // Clear of the navigation bar, which runs along the top of the window now.
+  expect(panel.y).toBeGreaterThanOrEqual(line.y + line.height)
 
   await toggle.click()
   await expect(toggle).toHaveAttribute('aria-expanded', 'true')

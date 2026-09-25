@@ -504,18 +504,21 @@ no font fetch; the stacks above are the faces.
 The board is edge to edge and owns the viewport; chrome is a set of absolutely
 positioned overlays that are click-through except where they paint.
 
-- **Left margin gutter** — the creation rail, vertically centred, 20px
-  (`--of-gutter`) from the edge, 50px square tools in a rail with 5px of
-  padding and a hairline.
-- **Top centre** — notices and toasts, 20px from the top, capped at
+- **Top left** — the navigation bar: the way out, the board's name, history
+  and the rest of the record line, 20px from both edges. Everything else
+  anchored to the top starts under it, at `--of-nav-band` (80px).
+- **Left margin gutter** — the creation rail, centred in the band from under
+  the navigation bar to the bottom gutter, 50px square tools in a rail with
+  a hairline.
+- **Top centre** — notices and toasts, under the navigation bar, capped at
   `min(720px, 100vw - 140px)`.
-- **Bottom left** — the record line, offset 80px to clear the rail's real
-  footprint and its margin, 20px from the bottom.
 - **Bottom right** — the zoom cluster, 20px from both edges.
 - **Floating** — the record panel, placed beside the selection with a 42px gap
   (clear of the connection points, which reach 38px out from the edge),
   preferring the selection's right edge, falling back to its left, then above or
-  below, always clamped inside the viewport and clear of the rail (84px).
+  below, always clamped inside the viewport, clear of the rail (100px) and
+  clear of the furniture along both edges — the navigation bar at the top and
+  the zoom cluster at the bottom — unless it hangs from that furniture.
 
 **The interface sits on the page's own rule.** `GRID_SIZE` is 10 world units and
 the quadrille draws it, so the chrome measures itself in the same steps — every
@@ -553,11 +556,9 @@ a size, not rhythm. Tool icons are 21px inside a 50px target; secondary icons ar
 on it, and the decade rule marks the line the user is aiming at.
 
 **Responsive.** Two breakpoints, both structural rather than cosmetic. Below
-**820px** the two bottom clusters would collide, so the record line un-offsets to
-12px and drops its counts, and the zoom cluster drops its slider — both are
-readouts and coarse controls the canvas itself already provides; the controls
-with no other route stay. Below **560px** the record line moves above the rail
-entirely (64px from the bottom).
+**820px** the navigation bar moves to 12px from the edge and drops its counts,
+and the zoom cluster drops its slider — both are readouts and coarse controls
+the canvas itself already provides; the controls with no other route stay.
 
 ### Named Rules
 
@@ -690,7 +691,7 @@ floor) with 21px icons, muted ink at rest, ink on an accent wash on hover, and
 the page's colour on a **filled ink bed** when armed — different in kind from
 hover, not only in hue, so the tool you are holding reads at a glance. The pair
 is measured off the rule in `design-tokens.test.ts`. The rail is centred in the band between the
-top gutter and the record line and never crosses either: as the window
+navigation bar and the bottom gutter and never crosses either: as the window
 shortens the tools step down a decade at a time — 40px below 720 tall, 30px
 below 604 — and only below 494 does the rail scroll, because a scrolling box
 clips the tips.
@@ -736,13 +737,17 @@ assistive tech while showing sighted keyboard users nothing, on forty-two
 controls. `title` survives only where it reveals content: an ellipsised field
 label and a comment pin's excerpt.
 
-### Record Line
+### Navigation Bar (the Record Line)
 
-The bottom-left readout: undo/redo actions, ruled dividers, object and selection
-counts, zoom percentage, and the AGPL source link (underlined by a 1px
-`currentcolor` border, going accent on hover). All 12px mono, muted ink, with
-counts bolded to 600 in full ink. Its counts are the first thing dropped on a
-narrow viewport.
+Along the top, where a page's heading is looked for: "All boards" and the
+board's name lead it, then undo/redo, ruled dividers, object and selection
+counts, the AGPL source link (underlined by a 1px `currentcolor` border, going
+accent on hover), sharing, mentions, account and theme. The name is the page's
+heading, so it is set in the interface's own voice — 15px sans at 600 in full
+ink — and "All boards" at the control size and 500; everything that is a
+readout stays a record, 12px mono and muted, with counts bolded to 600 in full
+ink. Its tips and sheets open downward. Its counts are the first thing dropped
+on a narrow viewport.
 
 ### Zoom Cluster
 
@@ -874,7 +879,7 @@ sees. Ruling it and collapsing the panels into one sheet is what made it belong.
 
 ### Sharing
 
-A sheet above the record line, the same shape as the account sheet. Two link
+A sheet under its button in the navigation bar, the same shape as the account sheet. Two link
 rows at 50px (`--of-hit-lg`) — the largest target, because this is the one
 control in the product where hitting the wrong one has a consequence — each
 naming what it gives away in the second line, at the 12px functional floor.

@@ -1,7 +1,8 @@
 /**
- * How far up from the bottom of the window the board's furniture reaches.
+ * How far in from the top and bottom of the window the board's furniture
+ * reaches.
  *
- * The zoom control and the status bar are anchored to the WINDOW rather than to
+ * The zoom control and the navigation bar are anchored to the WINDOW rather than to
  * anything on the board, so they cannot move out of the way of a surface that
  * lands on them — and between them they run nearly the full width of the bottom
  * edge. The options panel on a selection low on the board was clamped to the
@@ -23,23 +24,32 @@
  * deliberately not marked: `keepClearLeft` is already its band, and two answers
  * for one piece of chrome is one too many.
  */
-export function bottomBand(): number {
-  if (typeof window === 'undefined') return 0
-  let band = 0
-  for (const element of window.document.querySelectorAll<HTMLElement>(
-    '[data-keep-clear="bottom"]',
-  )) {
+export interface Bands {
+  /** How far down from the top of the window the furniture there reaches. */
+  readonly top: number
+  /** How far up from the bottom. */
+  readonly bottom: number
+}
+
+const NONE: Bands = { top: 0, bottom: 0 }
+
+export function furnitureBands(): Bands {
+  if (typeof window === 'undefined') return NONE
+  let top = 0
+  let bottom = 0
+  for (const element of window.document.querySelectorAll<HTMLElement>('[data-keep-clear]')) {
     const box = element.getBoundingClientRect()
-    // An element with nothing in it measures zero AT the bottom of the window,
+    // An element with nothing in it measures zero AT its edge of the window,
     // which would reserve the gutter for furniture that is not showing.
     if (box.width === 0 || box.height === 0) continue
-    band = Math.max(band, window.innerHeight - box.top)
+    if (element.dataset.keepClear === 'bottom') bottom = Math.max(bottom, window.innerHeight - box.top)
+    if (element.dataset.keepClear === 'top') top = Math.max(top, box.bottom)
   }
-  return band
+  return { top, bottom }
 }
 
 /**
- * Watch the band, and say so when it changes.
+ * Watch the bands, and say so when they change.
  *
  * A SUBSCRIPTION rather than a measurement per render, because furniture moves
  * when the window is resized and at no other time — while a surface anchored to
@@ -47,18 +57,22 @@ export function bottomBand(): number {
  * makes the browser flush one sixty times a second for an answer that has not
  * changed since the last.
  *
- * Observed as well as listened for: the status bar grows when a board is given
- * a longer title, which no window event reports.
+ * Observed as well as listened for: the navigation bar grows when a board is
+ * given a longer title, which no window event reports.
  */
-export function watchBottomBand(changed: (band: number) => void): () => void {
+export function watchFurnitureBands(changed: (bands: Bands) => void): () => void {
   if (typeof window === 'undefined') return () => undefined
 
+  let last = furnitureBands()
   const tell = (): void => {
-    changed(bottomBand())
+    const next = furnitureBands()
+    if (next.top === last.top && next.bottom === last.bottom) return
+    last = next
+    changed(next)
   }
 
   // Once at the start, in case a surface mounted before the furniture did.
-  tell()
+  changed(last)
   window.addEventListener('resize', tell)
 
   // jsdom has no ResizeObserver, and a test that renders a surface must not
@@ -70,7 +84,7 @@ export function watchBottomBand(changed: (band: number) => void): () => void {
           tell()
         })
   if (observer !== null) {
-    for (const element of window.document.querySelectorAll('[data-keep-clear="bottom"]')) {
+    for (const element of window.document.querySelectorAll('[data-keep-clear]')) {
       observer.observe(element)
     }
   }

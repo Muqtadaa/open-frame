@@ -13,7 +13,7 @@ trusting.
 
 MODE: Operate. One decision, made once per board, in the middle of other work.
 
-FORM: A sheet above the record line, cut from panel white with the contact
+FORM: A sheet under its button in the navigation bar, cut from panel white with the contact
 shadow, matching the account sheet exactly — the same shape for the same kind
 of moment. NOT a modal: the craft floor bans one for a task that needs neither
 interruption nor protected focus, and this is the clearest case of that in the

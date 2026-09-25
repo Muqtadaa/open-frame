@@ -2,7 +2,7 @@ import { useEffect, useLayoutEffect, useRef, useState, type ReactNode } from 're
 import { createPortal } from 'react-dom'
 
 import { placeAnchored, type Rect, type Side, type Size } from '../scene/anchoring.js'
-import { bottomBand, watchBottomBand } from './screen-furniture.js'
+import { furnitureBands, watchFurnitureBands } from './screen-furniture.js'
 
 /**
  * Anything that floats beside something else, placed once and placed the same.
@@ -61,8 +61,8 @@ export function AnchoredSurface({
    * The board's screen-edge furniture, which nothing anchored to a selection
    * may be clamped onto: it is anchored to the window and moves for nobody.
    */
-  const [band, setBand] = useState(bottomBand)
-  useEffect(() => watchBottomBand(setBand), [])
+  const [band, setBand] = useState(furnitureBands)
+  useEffect(() => watchFurnitureBands(setBand), [])
 
   /*
    * MEASURED, not estimated. A bar whose width depends on how many controls a
@@ -108,7 +108,14 @@ export function AnchoredSurface({
     gap,
     margin,
     keepClearLeft,
-    keepClearBottom: band,
+    /*
+     * A MENU is momentary and paints over everything, the furniture included,
+     * so it keeps clear of nothing: made to dodge the navigation bar as well
+     * as the zoom cluster, a context menu on a laptop-height window had less
+     * room than it is tall and ran off the bottom.
+     */
+    keepClearBottom: layer === 'menu' ? 0 : band.bottom,
+    keepClearTop: layer === 'menu' ? 0 : band.top,
     avoid,
   })
 

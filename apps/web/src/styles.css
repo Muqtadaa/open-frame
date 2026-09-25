@@ -162,6 +162,12 @@
   --of-hit-lg: 50px;
   /* From the viewport edge, and between a cluster and what it clears. */
   --of-gutter: 20px;
+  /*
+   * How far down the navigation bar reaches, and so where everything else
+   * anchored to the top of the window starts: the gutter, a bar no taller
+   * than a tool, and a step of air.
+   */
+  --of-nav-band: calc(var(--of-gutter) + var(--of-hit-lg) + var(--of-step));
 
   /*
    * THE SPACING SCALE, below the rule. The quadrille sets the big rhythm —
@@ -589,22 +595,32 @@ body {
 }
 
 /*
- * The rail's BAND: from the top gutter down to the record line, and the rail
- * centred in it. It was centred on the WINDOW at a fixed 599 pixels, so at 640
- * tall it met the record line and at 560 it started above the top of the
- * window with Select cut off. The record line is under 50 pixels tall, so the
- * band stops a tool's height and a step above the bottom gutter.
+ * The rail's BAND: from under the navigation bar down to the bottom gutter,
+ * and the rail centred in it. It was centred on the WINDOW at a fixed 599
+ * pixels, so at 640 tall it met the record line and at 560 it started above
+ * the top of the window with Select cut off.
  */
 .of-overlay--left {
-  top: var(--of-gutter);
-  bottom: calc(var(--of-gutter) + var(--of-hit-lg) + var(--of-step));
+  top: var(--of-nav-band);
+  bottom: var(--of-gutter);
   left: var(--of-gutter);
   display: flex;
   align-items: center;
 }
 
-.of-overlay--top {
+/*
+ * The board's navigation, along the top: the way out, the board's name,
+ * history and the rest of the record line. It was at the bottom, where nothing
+ * reads as a page's heading.
+ */
+.of-overlay--nav {
   top: var(--of-gutter);
+  left: var(--of-gutter);
+}
+
+/* Notices come in under the navigation, never over it. */
+.of-overlay--top {
+  top: var(--of-nav-band);
   left: 50%;
   transform: translateX(-50%);
   max-width: min(720px, calc(100vw - 140px));
@@ -613,12 +629,6 @@ body {
 .of-overlay--bottom-right {
   right: var(--of-gutter);
   bottom: var(--of-gutter);
-}
-
-.of-overlay--bottom-left {
-  bottom: var(--of-gutter);
-  /* Clears the rail's real footprint (58px + a 20px margin), not a guess. */
-  left: 80px;
 }
 
 /* ---------- tool rail ---------- */
@@ -823,9 +833,25 @@ body {
   transform: translate(-50%, 0);
 }
 
-[data-tip-side='below']::after {
+[data-tip-side='below']::after,
+.of-overlay--nav [data-tip]::after {
   top: calc(100% + var(--of-space-6));
   bottom: auto;
+}
+
+/*
+ * Along the top the tips hang DOWN, and from their control's leading edge:
+ * the first control sits at the window's edge, where a centred tip would run
+ * off it.
+ */
+.of-overlay--nav [data-tip]::after {
+  left: 0;
+  transform: translateY(calc(-1 * var(--of-space-2)));
+}
+
+.of-overlay--nav [data-tip]:hover::after,
+.of-overlay--nav [data-tip]:focus-visible::after {
+  transform: none;
 }
 
 .of-zoom [data-tip]::after {
@@ -1660,19 +1686,29 @@ body {
 /* The ring itself is set inline, in screen pixels: see `TableView`. */
 
 /*
- * Beside the axis each one changes: columns to the right, rows underneath.
- * WHERE that is on screen is the chrome layer's decision now; these only say
- * which way they stack.
+ * A table's shape: a named row per axis, on the table's right. WHERE that is
+ * on screen is the chrome layer's decision; this only says how it reads.
  */
-.of-table-edit__columns,
-.of-table-edit__rows {
-  display: flex;
+.of-table-edit__shape {
+  display: grid;
   gap: var(--of-space-2);
   padding: var(--of-space-4);
 }
 
-.of-table-edit__columns {
-  flex-direction: column;
+.of-table-edit__axis {
+  display: flex;
+  gap: var(--of-space-2);
+  align-items: center;
+}
+
+/* The axis a row of buttons changes, named as a record: mono, muted, small. */
+.of-table-edit__axis-name {
+  width: 4ch;
+  padding-left: var(--of-space-4);
+  font-family: var(--of-mono);
+  font-size: var(--of-type-record);
+  letter-spacing: 0.02em;
+  color: var(--of-ink-muted);
 }
 
 /*
@@ -2201,7 +2237,7 @@ body {
 
 .of-comment-panel {
   position: absolute;
-  top: 56px;
+  top: var(--of-nav-band);
   right: 12px;
   z-index: var(--of-z-panel);
   display: flex;
@@ -2439,25 +2475,15 @@ body {
   gap: var(--of-step);
   align-items: center;
   /*
-   * The line yields rather than growing into the zoom cluster.
-   *
-   * It is bottom-left and the zoom cluster is bottom-right, so the only thing
-   * keeping them apart was that the line happened to be short enough. Adding
-   * the board's name to it left 31px of clearance in a bench build, and then
-   * took it: the dev panel's button ended up over the zoom controls, where it
-   * silently swallowed the clicks aimed at them.
-   *
-   * 80px is this cluster's own offset (the rail plus its margin) and 420px
-   * reserves the widest the zoom cluster gets plus the gutter. Both moved when
-   * the interface scale did, which is exactly the kind of arithmetic that goes
-   * stale silently — `nothing covers the zoom controls` is the test that says
-   * so.
+   * The line yields rather than running off the window. It shared the bottom
+   * edge with the zoom cluster once, and reserved the cluster's width; along
+   * the top it has the whole width to itself, less the gutters.
    *
    * The title is the part that absorbs the difference, because it is the only
    * thing here that can be shortened without losing information the canvas
    * does not otherwise show.
    */
-  max-width: calc(100vw - 80px - 420px);
+  max-width: calc(100vw - 2 * var(--of-gutter));
   padding: var(--of-space-6) var(--of-step);
   font-family: var(--of-mono);
   font-size: var(--of-type-record);
@@ -2487,7 +2513,11 @@ body {
   align-items: center;
   height: var(--of-hit-sm);
   padding: 0 var(--of-step) 0 var(--of-space-8);
-  color: var(--of-ink-muted);
+  /* Navigation, so the interface's voice at a control's weight, not a readout. */
+  font-family: var(--of-font);
+  font-size: var(--of-type-control);
+  font-weight: 500;
+  color: var(--of-ink);
   text-decoration: none;
   border-radius: var(--of-radius);
 }
@@ -4214,18 +4244,16 @@ textarea.of-input {
 /* Narrow viewports ---------------------------------------------------------- */
 
 /*
- * The two bottom clusters are anchored to opposite corners, which collide and
- * overflow once the window is narrower than they are together — at 390px they
- * overlapped and both ran off the right edge.
+ * A narrow window has less room along each edge than the chrome wants.
  *
  * Touch interaction is out of scope for now, but a chrome layout that breaks is
  * not the same thing as one that is merely not optimised. Below this width the
- * record line drops its counts and the zoom cluster drops its slider: both are
+ * navigation drops its counts and the zoom cluster drops its slider: both are
  * readouts and coarse controls that the canvas itself already provides, and the
  * controls that remain are the ones with no other route.
  */
 @media (width < 820px) {
-  .of-overlay--bottom-left {
+  .of-overlay--nav {
     left: 12px;
   }
 
@@ -4244,13 +4272,6 @@ textarea.of-input {
 
   .of-zoom__slider {
     display: none;
-  }
-}
-
-/* Below the rail's own footprint the record line moves above it entirely. */
-@media (width < 560px) {
-  .of-overlay--bottom-left {
-    bottom: 64px;
   }
 }
 
@@ -4701,7 +4722,7 @@ textarea.of-input {
  */
 .of-search {
   position: absolute;
-  top: 16px;
+  top: var(--of-nav-band);
   left: 50%;
   z-index: var(--of-z-search);
   display: flex;
@@ -5477,9 +5498,13 @@ textarea.of-input {
   overflow: hidden;
   height: var(--of-hit-sm);
   padding: 0 var(--of-space-8);
-  font-family: var(--of-mono);
-  font-size: var(--of-type-record);
-  letter-spacing: 0.02em;
+  /*
+   * The PAGE's name, in the interface's own voice — it heads the page now,
+   * where it was one more mono readout in a line at the foot of it.
+   */
+  font-family: var(--of-font);
+  font-size: var(--of-type-ui);
+  font-weight: 600;
   text-overflow: ellipsis;
   white-space: nowrap;
   color: var(--of-ink);

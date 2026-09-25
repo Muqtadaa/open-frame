@@ -62,7 +62,8 @@ export function AccountControl() {
       </button>
 
       {/*
-        * Above the button, and clamped. It used to be `bottom: calc(100% +
+        * Under the button (the bar runs along the top), and clamped. It used
+        * to be `bottom: calc(100% +
         * 10px); left: 0` against whichever ancestor happened to be positioned
         * — which was the BAR, not the button, so a 320px dialog was aligned to
         * the left edge of the screen rather than to the control that opened
@@ -72,7 +73,7 @@ export function AccountControl() {
         <AnchoredSurface
           anchor={anchor}
           surface={surface}
-          prefer={['above', 'below']}
+          prefer={['below', 'above']}
           testId="account-surface"
         >
           <div
