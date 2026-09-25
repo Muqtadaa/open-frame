@@ -5066,11 +5066,18 @@ textarea.of-input {
   flex-direction: column;
   width: min(440px, calc(100vw - 32px));
   overflow: hidden;
-  background: var(--of-panel);
-  border: 1px solid var(--of-panel-border);
-  border-radius: var(--of-radius);
-  box-shadow: var(--of-shadow);
   transform: translateX(-50%);
+}
+
+/*
+ * The box's focus is the PANEL's ring. The input had `outline: none` and
+ * nothing in its place — the one text field in the product with no sign it
+ * had the keyboard. On the panel rather than the input, whose edges are the
+ * panel's own and would draw a ring inside a ring.
+ */
+.of-search:has(.of-search__input:focus-visible) {
+  outline: 2px solid var(--of-accent);
+  outline-offset: 2px;
 }
 
 .of-search__input {
@@ -5112,12 +5119,10 @@ textarea.of-input {
 
 .of-search__result {
   display: flex;
-  min-height: var(--of-hit);
+  min-height: var(--of-hit-sm);
   gap: var(--of-step);
   align-items: baseline;
   width: 100%;
-  /* The AA 2.5.8 target minimum, like every other control in the system. */
-  min-height: 32px;
   padding: var(--of-space-6) var(--of-space-12);
   font-family: var(--of-font);
   font-size: var(--of-type-ui);
@@ -5128,9 +5133,10 @@ textarea.of-input {
   cursor: pointer;
 }
 
+/* The same wash as the menu's: one look for "the one you are about to choose". */
 .of-search__result--on,
 .of-search__result:hover {
-  background: var(--of-hover);
+  background: var(--of-accent-soft);
 }
 
 /* Mono marks the record — here, which KIND of thing was found. */

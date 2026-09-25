@@ -136,7 +136,9 @@ test.describe('finding things on a board', () => {
     await note(page, AT, 'Something')
     await openSearch(page)
     await page.getByTestId('search-input').fill('xyzzy')
-    await expect(page.getByTestId('search-count')).toHaveText('nothing found')
+    // With a way forward, not only a dead end.
+    await expect(page.getByTestId('search-count')).toContainText('nothing found')
+    await expect(page.getByTestId('search-count')).toContainText('type:')
   })
 
   /**
@@ -167,6 +169,60 @@ test.describe('finding things on a board', () => {
     await expect(page.locator('.of-search__result--on')).toContainText('Alpha')
     await page.keyboard.press('ArrowDown')
     await expect(page.locator('.of-search__result--on')).toContainText('Beta')
+  })
+
+  /*
+   * A combobox: the keyboard stays in the box and the list says which result
+   * it is on. The highlight used to be a class only a sighted user could see.
+   */
+  test('tells assistive technology which result the arrows are on', async ({ page }) => {
+    await note(page, AT, 'Alpha pricing')
+    await note(page, { x: 340, y: 500 }, 'Beta pricing')
+    await openSearch(page)
+    const input = page.getByTestId('search-input')
+    await input.fill('pricing')
+    await expect(input).toHaveAttribute('role', 'combobox')
+    await page.keyboard.press('ArrowDown')
+    const id = await input.getAttribute('aria-activedescendant')
+    expect(id).not.toBeNull()
+    const current = page.locator(`[id="${String(id)}"]`)
+    await expect(current).toHaveAttribute('role', 'option')
+    await expect(current).toHaveAttribute('aria-selected', 'true')
+    await expect(current).toContainText('Beta')
+    await expect(input).toBeFocused()
+  })
+
+  test('shows it has the keyboard', async ({ page }) => {
+    await openSearch(page)
+    const outline = await page
+      .getByTestId('search-panel')
+      .evaluate((panel) => getComputedStyle(panel).outlineStyle)
+    expect(outline).toBe('solid')
+  })
+
+  test('closes on a press elsewhere', async ({ page }) => {
+    await openSearch(page)
+    await page.locator(CANVAS).click({ position: CLEAR })
+    await expect(page.getByTestId('search-panel')).toHaveCount(0)
+  })
+
+  test('hands the keyboard back to where it was', async ({ page }) => {
+    await page.getByTestId('tool-sticky').focus()
+    await page.keyboard.press('Control+f')
+    await expect(page.getByTestId('search-input')).toBeFocused()
+    await page.keyboard.press('Escape')
+    await expect(page.getByTestId('tool-sticky')).toBeFocused()
+  })
+
+  // The type column already names the kind; the line beside it is the content.
+  test("does not name a result's type twice", async ({ page }) => {
+    await page.keyboard.press('u')
+    await page.locator(CANVAS).click({ position: AT })
+    await page.locator(EDITOR).fill('Checkout box')
+    await page.locator(CANVAS).click({ position: CLEAR })
+    await openSearch(page)
+    await page.getByTestId('search-input').fill('checkout')
+    await expect(page.locator('.of-search__summary')).toHaveText('Checkout box')
   })
 
   /**
