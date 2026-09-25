@@ -3394,8 +3394,10 @@ body {
   /*
    * A menu opened near the foot of a short window, or on an object with every
    * section to offer, ran off the bottom: its last items were unreachable.
+   * The margin is the one AnchoredSurface places it within, so a menu that
+   * fits is never made to scroll.
    */
-  max-height: calc(100dvh - 2 * var(--of-gutter));
+  max-height: calc(100dvh - 2 * var(--of-space-12));
   overflow-y: auto;
   overscroll-behavior: contain;
   padding: var(--of-space-6);

@@ -327,3 +327,22 @@ Inspector P1s from the re-critique — **all three fixed** (owner's call):
   `record` or `shape` — so a connector's route and ends are filed with its
   appearance rather than as a "record". Evidence panel clears the record line;
   one e2e test, plus the connector test asserting no record band.
+
+Inspector P2s — **fixed** (one commit):
+
+- **Spoken once.** Swatches, marks and radio options, plus six controls
+  outside the panel, carried an `aria-description` equal to their name. The
+  tips guard now reads each element and fails on a tip that is never announced
+  OR is announced twice (it was broken both ways and watched fail).
+- **The dash row** is announced "dash", the label it is shown under.
+- **Escape on opacity** takes the aimed steps back and keeps the panel open.
+- **The "on" swatch** carries a 2px accent ring outside the chip.
+- **The context menu** is capped at the window, less the 12px margin it is
+  placed within, and scrolls instead of running off a short window.
+- **The record band** is ink over a rule and counts the fields still blank
+  ("3 blank"). `FieldDefinition.essential` is still consumed by nothing; the
+  count uses every record field until a type says which ones matter.
+- **Not changed, on purpose: the text colour's default is left unmarked.** An
+  unset text colour inherits the board ink, which in After Hours is not one of
+  the palette tokens, so marking a swatch would claim a choice nobody made.
+  The outline default is marked because it is a token.
