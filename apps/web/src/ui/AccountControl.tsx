@@ -62,6 +62,10 @@ export function AccountControl() {
               setOpen(false)
               ref.current?.focus()
             }}
+            onSignOut={() => {
+              setOpen(false)
+              void signOut()
+            }}
           />
         )}
       </>
@@ -129,12 +133,14 @@ function AccountSheet({
   name,
   email,
   onClose,
+  onSignOut,
 }: {
   readonly anchor: DOMRect | null
   readonly surface: Size
   readonly name: string
   readonly email: string | null
   readonly onClose: () => void
+  readonly onSignOut: () => void
 }) {
   const sheet = useRef<HTMLDivElement>(null)
 
@@ -145,15 +151,24 @@ function AccountSheet({
         return
       onClose()
     }
+    /*
+     * Escape is the SHEET's, and only the sheet's: the board's keymap also
+     * listens on the window and reads Escape as "clear the selection", so one
+     * press closed the sheet and changed the board. Taken in the capture
+     * phase and stopped there.
+     */
     const escape = (event: KeyboardEvent): void => {
-      if (event.key === 'Escape') onClose()
+      if (event.key !== 'Escape') return
+      event.preventDefault()
+      event.stopPropagation()
+      onClose()
     }
     // Capture phase: the canvas would otherwise consume the press first.
     window.addEventListener('pointerdown', dismiss, true)
-    window.addEventListener('keydown', escape)
+    window.addEventListener('keydown', escape, true)
     return () => {
       window.removeEventListener('pointerdown', dismiss, true)
-      window.removeEventListener('keydown', escape)
+      window.removeEventListener('keydown', escape, true)
     }
   }, [onClose])
 
@@ -176,7 +191,12 @@ function AccountSheet({
             type="button"
             className="of-button of-button--ghost"
             onClick={() => {
-              void signOut()
+              /*
+               * Closed FIRST. Signing out swaps this control for "Sign in",
+               * and an `open` left true opened the sign-in form in its place
+               * — signing out landed somebody in a login they did not ask for.
+               */
+              onSignOut()
             }}
           >
             Sign out

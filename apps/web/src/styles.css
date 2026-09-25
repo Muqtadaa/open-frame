@@ -2947,7 +2947,12 @@ body {
     padding: var(--of-space-6);
   }
 
-  .of-status__save {
+  /*
+   * The word goes, but never a FAILURE: `display: none` also removes the live
+   * region, so a phone-width window would be the one place a failed save said
+   * nothing at all.
+   */
+  .of-status__save:not(.of-status__save--failed) {
     display: none;
   }
 

@@ -251,14 +251,26 @@ function subscribeAutosave(
    */
   let inFlight: Promise<void> = Promise.resolve()
 
+  /*
+   * Which write is the LATEST. Two can be in flight at once — a slow disk and
+   * an edit made after the debounce — and only the newest one writes what is
+   * on screen, so only its outcome may set the state. Letting whichever
+   * finished last decide meant an older write landing after a newer one had
+   * failed reported "Saved" over a change that was not on disk.
+   */
+  let generation = 0
   const save = (): Promise<void> => {
+    const mine = ++generation
     become('saving')
     inFlight = repository.saveBoard(store.getDocument()).then(
-      // A change made while this was writing is still pending, not saved.
-      () => become(timer === undefined ? 'saved' : 'pending'),
+      () => {
+        if (mine !== generation) return
+        // A change made while this was writing is still pending, not saved.
+        become(timer === undefined ? 'saved' : 'pending')
+      },
       (error: unknown) => {
         console.error('[openframe] failed to save board', error)
-        become('failed')
+        if (mine === generation) become('failed')
       },
     )
     return inFlight

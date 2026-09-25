@@ -247,6 +247,31 @@ test.describe('what the bar carries', () => {
     expect(source).toBeGreaterThan(order.indexOf('sign-in'))
   })
 
+  test('closes the account sheet on Escape without touching the board', async ({ page }) => {
+    await signedIn(page, [])
+    await board(page)
+    await page.keyboard.press('s')
+    await page.locator(CANVAS).click({ position: { x: 500, y: 400 } })
+    await page.locator(CANVAS).click({ position: { x: 900, y: 600 } })
+    await page.keyboard.press('v')
+    await page.locator(CANVAS).click({ position: { x: 510, y: 410 } })
+    await expect(page.getByTestId('selection-count')).toHaveText('1 selected')
+    await page.getByTestId('account').click()
+    await page.keyboard.press('Escape')
+    await expect(page.getByTestId('account-sheet')).toHaveCount(0)
+    // One press, one thing: the selection is still there.
+    await expect(page.getByTestId('selection-count')).toHaveText('1 selected')
+  })
+
+  test('signs out back to the board, not into the sign-in form', async ({ page }) => {
+    await signedIn(page, [])
+    await board(page)
+    await page.getByTestId('account').click()
+    await page.getByTestId('account-sheet').getByRole('button', { name: 'Sign out' }).click()
+    await expect(page.getByTestId('sign-in')).toBeVisible()
+    await expect(page.getByTestId('account-dialog')).toHaveCount(0)
+  })
+
   test('opens the account instead of signing out when the name is pressed', async ({ page }) => {
     await signedIn(page, [])
     await board(page)

@@ -786,3 +786,19 @@ describe('the stylesheet is well formed', () => {
     expect(/^(<{7}|={7}|>{7})/m.test(CSS)).toBe(false)
   })
 })
+
+/*
+ * A narrow window drops the save state's word to make room — but never a
+ * FAILURE. `display: none` also takes the live region out of the tree, so a
+ * phone-width window was the one place a failed save said nothing at all.
+ */
+describe('a failed save survives a narrow window', () => {
+  it('hides the save state below 480px only when it has not failed', () => {
+    const css = readFileSync(resolve(process.cwd(), 'src/styles.css'), 'utf8')
+    const narrow = /@media \(width < 480px\)\s*\{([\s\S]*?)\n\}/.exec(css)?.[1] ?? ''
+    expect(narrow, 'the narrow block is found, so this is not vacuous').toContain('of-status__save')
+    const hides = [...narrow.matchAll(/([^{}]*of-status__save[^{}]*)\{[^}]*display:\s*none/g)].map((m) => m[1] ?? '')
+    expect(hides.length).toBeGreaterThan(0)
+    for (const selector of hides) expect(selector).toContain(':not(.of-status__save--failed)')
+  })
+})
