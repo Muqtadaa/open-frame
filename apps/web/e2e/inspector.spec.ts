@@ -450,6 +450,20 @@ test.describe('the panel says what is set, and a keyboard can cross it', () => {
     await expect(page.getByTestId('align-start')).toHaveAttribute('aria-checked', 'true')
   })
 
+  /*
+   * The board's keymap listens on the window, where an arrow is a nudge. An
+   * arrow inside a radio row is the row's, and must not also walk the object.
+   */
+  test('an arrow in a radio row does not nudge the object', async ({ page }) => {
+    const note = page.locator('[data-object-type="sticky"]')
+    const before = await note.boundingBox()
+    await page.getByTestId('align-start').focus()
+    await page.keyboard.press('ArrowRight')
+    await page.keyboard.press('ArrowRight')
+    await expect(page.getByTestId('align-end')).toHaveAttribute('aria-checked', 'true')
+    expect(await note.boundingBox()).toEqual(before)
+  })
+
   test('holds every option at the secondary-control target', async ({ page }) => {
     const small = await page
       .getByTestId('inspector')

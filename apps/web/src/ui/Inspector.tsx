@@ -758,6 +758,12 @@ function Choice<T extends string>({ options, current, name, onPick, render }: Ch
     const edge = event.key === 'Home' ? 0 : event.key === 'End' ? options.length - 1 : null
     if (!forward && !back && edge === null) return
     event.preventDefault()
+    /*
+     * The board's own keymap listens on the window, and to it an arrow is a
+     * nudge: without this, stepping through a row of alignments also walked
+     * the selected object across the board, and each press wrote twice.
+     */
+    event.stopPropagation()
     const at = options.indexOf(current)
     const to = edge ?? (at + (forward ? 1 : -1) + options.length) % options.length
     const next = options[to]
