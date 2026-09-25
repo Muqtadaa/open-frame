@@ -57,7 +57,7 @@ export function ZoomControl() {
     <div className="of-zoom" data-testid="zoom-control">
       <button
         type="button"
-        className="of-zoom__button"
+        className="of-icon-button"
         aria-label={`Scroll wheel currently ${wheelMode === 'zoom' ? 'zooms' : 'pans'}. Click to switch.`}
         title={`Scroll wheel: ${wheelMode === 'zoom' ? 'zoom' : 'pan'} — click to switch`}
         data-testid="wheel-mode"
@@ -70,7 +70,7 @@ export function ZoomControl() {
 
       <button
         type="button"
-        className={`of-zoom__button${snapToGrid ? ' of-zoom__button--on' : ''}`}
+        className={`of-icon-button${snapToGrid ? ' of-icon-button--on' : ''}`}
         aria-pressed={snapToGrid}
         aria-label={`Snap to grid ${snapToGrid ? 'on' : 'off'}. Hold ${mod} while dragging to override.`}
         title={`Snap to grid: ${snapToGrid ? 'on' : 'off'} — hold ${mod} while dragging to override`}
@@ -85,7 +85,7 @@ export function ZoomControl() {
 
       <button
         type="button"
-        className="of-zoom__button"
+        className="of-icon-button"
         aria-label="Zoom out"
         title={`Zoom out (${mod}−)`}
         data-testid="zoom-out"
@@ -110,7 +110,7 @@ export function ZoomControl() {
 
       <button
         type="button"
-        className="of-zoom__button"
+        className="of-icon-button"
         aria-label="Zoom in"
         title={`Zoom in (${mod}+)`}
         data-testid="zoom-in"
@@ -152,7 +152,7 @@ export function ZoomControl() {
 
       <button
         type="button"
-        className="of-zoom__button"
+        className="of-icon-button"
         aria-label="Zoom to fit"
         title={`Zoom to fit (${mod}1)`}
         data-testid="zoom-fit"

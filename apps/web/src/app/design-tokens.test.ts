@@ -704,6 +704,30 @@ describe('the spacing scale', () => {
 })
 
 /**
+ * The icon button. Six private versions at four sizes became one, and the
+ * ones under 30px were under this world's target for a secondary control.
+ * Nothing may bring a private one back beside it at a smaller size.
+ */
+describe('one icon button', () => {
+  it('holds the secondary target at its smallest', () => {
+    const rule = /\.of-icon-button \{([^}]*)\}/.exec(CSS)?.[1] ?? ''
+    expect(rule).toContain('min-width: var(--of-hit-sm);')
+    expect(rule).toContain('height: var(--of-hit-sm);')
+  })
+
+  it('leaves none of the private versions behind', () => {
+    const retired = [
+      '.of-status__action',
+      '.of-home__row-action ',
+      '.of-inspector__remove',
+      '.of-arrange__button',
+      '.of-zoom__button',
+    ]
+    expect(retired.filter((selector) => CSS.includes(selector))).toEqual([])
+  })
+})
+
+/**
  * The stylesheet has to PARSE.
  *
  * This file is only minified by the production build, so a structurally broken

@@ -167,4 +167,13 @@ Found by looking at them:
   shortcuts are clipped under it. Two floating surfaces on the same layer, the
   later one winning. Goes to C3 #1/#4.
 
+- **C2.6 — one icon button.** Six private versions (record line, front-door
+  row actions and pin, record-panel remove, arrange bar, format bar, zoom
+  cluster) at 24/26/28/30px, two hover grounds and three disabled opacities
+  become `.of-icon-button` with `--on`/`aria-pressed` and `--destructive`. The
+  three under 30px rise to the secondary-control target. The record line's
+  exit stays its own control: a labelled navigation link with its own motion
+  is a different intent. Guarded: the primitive holds 30px and the retired
+  classes stay retired (broken once at 24px).
+
 ### Remaining

@@ -315,7 +315,7 @@ export function Inspector() {
         <span className="of-inspector__subject">{label}</span>
         <button
           type="button"
-          className="of-inspector__remove"
+          className="of-icon-button of-icon-button--destructive"
           title="Delete (Del)"
           aria-label="Delete selection"
           data-testid="inspector-delete"

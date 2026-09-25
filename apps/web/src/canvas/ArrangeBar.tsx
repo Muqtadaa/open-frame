@@ -109,7 +109,7 @@ export function ArrangeBar() {
           <button
             key={edge}
             type="button"
-            className="of-arrange__button"
+            className="of-icon-button"
             title={label}
             aria-label={label}
             data-testid={`align-${edge}`}
@@ -127,7 +127,7 @@ export function ArrangeBar() {
           <button
             key={axis}
             type="button"
-            className="of-arrange__button"
+            className="of-icon-button"
             /*
              * DISABLED below three, not hidden. Two objects have no space
              * between the ends to even out, and a control that disappears as

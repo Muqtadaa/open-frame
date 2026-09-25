@@ -76,7 +76,7 @@ export function StatusBar() {
       <div className="of-status__history">
         <button
           type="button"
-          className="of-status__action"
+          className="of-icon-button"
           // Never disabled while editing: the field has its own history, and
           // the board's emptiness says nothing about whether it does.
           disabled={!canUndo && editingId === null}
@@ -92,7 +92,7 @@ export function StatusBar() {
         </button>
         <button
           type="button"
-          className="of-status__action"
+          className="of-icon-button"
           disabled={!canRedo && editingId === null}
           aria-label="Redo"
           title={`Redo (${mod}⇧Z)`}
@@ -161,7 +161,7 @@ export function StatusBar() {
        */}
       <button
         type="button"
-        className="of-status__action"
+        className="of-icon-button"
         aria-pressed={afterHours}
         aria-label="After Hours theme"
         title={afterHours ? 'After Hours — on' : 'After Hours — off'}

@@ -324,7 +324,7 @@ function FormatBar({
         <button
           key={mark}
           type="button"
-          className={`of-format-bar__button of-format-bar__button--${mark}`}
+          className={`of-icon-button of-format-bar__button of-format-bar__button--${mark}`}
           aria-label={label}
           aria-pressed={active.includes(mark)}
           title={label}
@@ -351,7 +351,7 @@ function FormatBar({
        */}
       <button
         type="button"
-        className="of-format-bar__button of-format-bar__button--size"
+        className="of-icon-button of-format-bar__button of-format-bar__button--size"
         aria-label="Smaller text"
         title="Smaller"
         data-testid="format-smaller"
@@ -364,7 +364,7 @@ function FormatBar({
       </button>
       <button
         type="button"
-        className="of-format-bar__button of-format-bar__button--size of-format-bar__button--bigger"
+        className="of-icon-button of-format-bar__button of-format-bar__button--size of-format-bar__button--bigger"
         aria-label="Bigger text"
         title="Bigger"
         data-testid="format-bigger"

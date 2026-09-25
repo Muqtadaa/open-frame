@@ -472,6 +472,71 @@
   padding: 0 var(--of-gutter);
 }
 
+/*
+ * The icon button: a glyph on no ground that takes a bed when you reach for it.
+ *
+ * There were six, at 24, 26, 28 and 30px — the record line's history, the
+ * front door's row actions and pin, the record panel's remove, the arrange
+ * bar, the format bar and the zoom cluster — with two hover grounds and three
+ * disabled opacities. The three below 30px were under the target this world
+ * sets for a secondary control, so folding them in is an accessibility fix
+ * as much as a tidy one.
+ *
+ * - pressed (`aria-pressed` or `--on`): accent on the accent wash, the same
+ *   state an active tool takes in the rail
+ * - destructive: correction red, on hover only — a row of permanently red
+ *   buttons reads as a list of warnings
+ *
+ * It holds a label as well as a glyph (the zoom cluster's wheel mode): the
+ * minimum width keeps an icon square and lets words widen it.
+ */
+.of-icon-button {
+  display: inline-flex;
+  flex: none;
+  gap: var(--of-space-6);
+  align-items: center;
+  justify-content: center;
+  min-width: var(--of-hit-sm);
+  height: var(--of-hit-sm);
+  padding: 0 var(--of-space-6);
+  font: inherit;
+  color: var(--of-ink-muted);
+  background: transparent;
+  border: none;
+  border-radius: var(--of-radius);
+  cursor: pointer;
+  transition:
+    background-color var(--of-quick) var(--of-ease),
+    color var(--of-quick) var(--of-ease);
+}
+
+.of-icon-button svg {
+  flex: none;
+  width: 16px;
+  height: 16px;
+}
+
+.of-icon-button:hover:not(:disabled) {
+  color: var(--of-ink);
+  background: var(--of-hover);
+}
+
+.of-icon-button:disabled {
+  opacity: 0.35;
+  cursor: default;
+}
+
+.of-icon-button[aria-pressed='true'],
+.of-icon-button--on {
+  color: var(--of-accent);
+  background: var(--of-accent-soft);
+}
+
+.of-icon-button--destructive:hover:not(:disabled) {
+  color: var(--of-danger);
+  background: var(--of-danger-wash);
+}
+
 /* Numerals in any record read as columns, never as ransom text. */
 .of-status,
 .of-zoom__value,
@@ -1024,37 +1089,6 @@ body {
   background: var(--of-panel-border);
 }
 
-.of-zoom__button {
-  display: flex;
-  gap: var(--of-space-6);
-  align-items: center;
-  /* Square where it holds only an icon, and the same height when it does not. */
-  min-width: var(--of-hit-sm);
-  height: var(--of-hit-sm);
-  padding: 0 var(--of-space-8);
-  justify-content: center;
-  font: inherit;
-  color: var(--of-ink-muted);
-  background: transparent;
-  border: none;
-  border-radius: var(--of-radius);
-  cursor: pointer;
-}
-
-.of-zoom__button svg {
-  width: 16px;
-  height: 16px;
-}
-
-.of-zoom__button:hover:not(:disabled) {
-  color: var(--of-ink);
-  background: var(--of-hover);
-}
-
-.of-zoom__button:disabled {
-  opacity: 0.35;
-  cursor: default;
-}
 
 /*
  * The wheel-mode VALUE, not a heading. Mono and small so it reads as a setting
@@ -2303,37 +2337,6 @@ body {
   gap: var(--of-space-2);
 }
 
-.of-status__action {
-  display: grid;
-  place-items: center;
-  width: var(--of-hit-sm);
-  height: var(--of-hit-sm);
-  color: var(--of-ink-muted);
-  background: transparent;
-  border: none;
-  border-radius: var(--of-radius);
-  cursor: pointer;
-}
-
-.of-status__action svg {
-  width: 16px;
-  height: 16px;
-}
-
-.of-status__action:hover:not(:disabled) {
-  color: var(--of-ink);
-  background: var(--of-bg);
-}
-
-.of-status__action:disabled {
-  opacity: 0.3;
-  cursor: default;
-}
-
-/* A toggle that is ON reads as on without needing a second glyph. */
-.of-status__action[aria-pressed='true'] {
-  color: var(--of-accent);
-}
 
 /* ---------- account ---------- */
 
@@ -3438,10 +3441,6 @@ body {
   cursor: crosshair;
 }
 
-.of-zoom__button--on {
-  color: var(--of-accent);
-  background: var(--of-accent-soft);
-}
 
 /* Images ------------------------------------------------------------------ */
 
@@ -3589,28 +3588,6 @@ body {
   letter-spacing: 0.02em;
 }
 
-.of-inspector__remove {
-  display: grid;
-  place-items: center;
-  width: 26px;
-  height: 26px;
-  color: var(--of-ink-muted);
-  background: transparent;
-  border: none;
-  border-radius: var(--of-radius);
-  cursor: pointer;
-}
-
-.of-inspector__remove svg {
-  width: 16px;
-  height: 16px;
-}
-
-/* Correction red, used only where something is being removed. */
-.of-inspector__remove:hover {
-  color: var(--of-danger);
-  background: var(--of-danger-wash);
-}
 
 /*
  * A record row: label column, value column.
@@ -4205,29 +4182,11 @@ textarea.of-input {
   padding: var(--of-space-4);
 }
 
+/* The glyphs are letters in the text's own face, in full ink: they SHOW the mark. */
 .of-format-bar__button {
-  display: grid;
-  place-items: center;
-  /* The AA 2.5.8 target minimum, like every other control in the system. */
-  min-width: 24px;
-  height: 24px;
-  padding: 0 var(--of-space-4);
   font-family: var(--of-font);
   font-size: var(--of-type-ui);
   color: var(--of-ink);
-  background: transparent;
-  border: none;
-  border-radius: var(--of-radius-apparatus);
-  cursor: pointer;
-}
-
-.of-format-bar__button:hover {
-  background: var(--of-hover);
-}
-
-.of-format-bar__button[aria-pressed='true'] {
-  color: var(--of-accent);
-  background: var(--of-accent-soft);
 }
 
 /* The glyphs SHOW the formatting, so the button is legible without its label. */
@@ -4606,34 +4565,18 @@ textarea.of-input {
  * board has to READ as pinned when nobody is pointing at it, and a control
  * that only exists under the cursor cannot be found on a touch screen.
  */
+/* Faint at rest, so a column of pins does not read as a column of warnings. */
 .of-home__pin {
-  display: grid;
-  flex: none;
-  place-items: center;
-  width: var(--of-hit-sm);
-  height: var(--of-hit-sm);
-  color: var(--of-ink-muted);
-  background: none;
-  border: none;
-  border-radius: var(--of-radius);
-  cursor: pointer;
   opacity: 0.35;
-}
-
-.of-home__pin svg {
-  width: 16px;
-  height: 16px;
 }
 
 .of-home__pin:hover,
 .of-home__pin:focus-visible {
   opacity: 1;
-  background: var(--of-bg);
 }
 
 /* Pinned reads as pinned without the cursor anywhere near it. */
 .of-home__pin[aria-pressed='true'] {
-  color: var(--of-accent);
   opacity: 1;
 }
 
@@ -4681,37 +4624,6 @@ textarea.of-input {
   }
 }
 
-.of-home__row-action {
-  display: grid;
-  place-items: center;
-  width: var(--of-hit-sm);
-  height: var(--of-hit-sm);
-  color: var(--of-ink-muted);
-  background: none;
-  border: none;
-  border-radius: var(--of-radius);
-  cursor: pointer;
-}
-
-.of-home__row-action svg {
-  width: 16px;
-  height: 16px;
-}
-
-.of-home__row-action:hover {
-  color: var(--of-ink);
-  background: var(--of-bg);
-}
-
-/*
- * The one correction red this world reserves for destructive meaning, and it
- * appears on hover rather than at rest: a row of permanently red buttons reads
- * as a list of warnings rather than a list of boards.
- */
-.of-home__row-action--destructive:hover {
-  color: var(--of-danger);
-  background: var(--of-danger-wash);
-}
 
 .of-home__rename {
   flex: 1;
@@ -5349,30 +5261,6 @@ textarea.of-input {
   padding: var(--of-space-4);
 }
 
-.of-arrange__button {
-  display: grid;
-  place-items: center;
-  width: 28px;
-  height: 28px;
-  padding: 0;
-  color: var(--of-ink-muted);
-  background: none;
-  border: none;
-  border-radius: var(--of-radius);
-  cursor: pointer;
-}
-
-.of-arrange__button:hover:not(:disabled),
-.of-arrange__button:focus-visible {
-  color: var(--of-ink);
-  background: var(--of-hover);
-}
-
-.of-arrange__button:disabled {
-  /* Still legible, so it reads as unavailable rather than as missing. */
-  opacity: 0.35;
-  cursor: default;
-}
 
 .of-arrange__glyph {
   width: 17px;

@@ -149,7 +149,7 @@ export function BoardRow({
       <div className="of-home__row-main">
         <button
           type="button"
-          className="of-home__pin"
+          className="of-icon-button of-home__pin"
           aria-pressed={pinned}
           data-testid="pin-board"
           title={pinned ? 'Unpin this board' : 'Pin this board to the top'}
@@ -219,7 +219,7 @@ export function BoardRow({
             {board.viewKey !== null && (
               <button
                 type="button"
-                className="of-home__row-action"
+                className="of-icon-button"
                 data-testid="copy-view-link"
                 title={`Copy a view-only link to ${board.title}. They can open it, not change it.`}
                 onClick={() => {
@@ -254,7 +254,7 @@ export function BoardRow({
             {board.viewKey !== null && (
               <button
                 type="button"
-                className="of-home__row-action"
+                className="of-icon-button"
                 data-testid="set-password"
                 title={`Require a password for ${board.title}. Both links ask for it.`}
                 onClick={() => {
@@ -270,7 +270,7 @@ export function BoardRow({
 
             <button
               type="button"
-              className="of-home__row-action"
+              className="of-icon-button"
               data-testid="rename-board"
               title={`Rename ${board.title}`}
               onClick={() => {
@@ -292,7 +292,7 @@ export function BoardRow({
             {canLeave(board) ? (
               <button
                 type="button"
-                className="of-home__row-action"
+                className="of-icon-button"
                 data-testid="leave-board"
                 title={`Leave ${board.title}. It carries on without you.`}
                 onClick={() => setMode('confirming')}
@@ -304,7 +304,7 @@ export function BoardRow({
               canDelete(board) && (
                 <button
                   type="button"
-                  className="of-home__row-action of-home__row-action--destructive"
+                  className="of-icon-button of-icon-button--destructive"
                   data-testid="delete-board"
                   title={`Delete ${board.title}. This cannot be undone.`}
                   onClick={() => setMode('confirming')}

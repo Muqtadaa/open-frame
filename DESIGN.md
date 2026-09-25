@@ -655,6 +655,17 @@ as a *setting* beside its icon, not a panel title), a 104px measurement slider
 and a 60px, 13px tabular-numeral percentage that becomes an inline editor on an accent-soft bed with a 1px accent
 outline.
 
+### Icon Buttons
+
+A glyph on no ground that takes a bed when you reach for it: 30px
+(`--of-hit-sm`) at its smallest, muted ink at rest, ink on the hover wash,
+accent on the accent wash when pressed (the state an active tool takes), and
+correction red on hover only when it removes something. The record line's
+history, the zoom cluster, the arrange and format bars, the record panel's
+remove and the front door's row actions are all this one control; six private
+versions at 24, 26, 28 and 30px were folded into it, and the three under 30
+were under this world's own target.
+
 ### Measurement Sliders
 
 Instruments, not consumer volume controls. A 3px square-ended decade-rule track
