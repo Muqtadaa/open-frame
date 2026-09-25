@@ -224,7 +224,23 @@ function TableEditor({ object, at, zoom, Chrome, onCommit, onCancel }: ObjectEdi
   }
 
   const reshape = (axis: 'column' | 'row', delta: 1 | -1): void => {
-    setDraft((current) => resizeGrid(current, axis, delta))
+    const next = resizeGrid(draft, axis, delta)
+    if (next === draft) return
+    setDraft(next)
+    /*
+     * Columns change at the END of every row, so every later row's cells
+     * move to new positions in the list. The caret's cell moves with its row
+     * and column — it is where the fields remount (they are keyed by width,
+     * below) and so where the caret goes back to.
+     */
+    const was = draft.columns.length
+    const now = next.columns.length
+    const row = Math.floor(editingCell / was)
+    const column = Math.min(editingCell % was, now - 1)
+    const moved = Math.min(row, next.rows.length - 1) * now + column
+    setEditingCell(moved)
+    setAnchor(moved)
+    setFocus(moved)
   }
 
   /*
@@ -285,7 +301,15 @@ function TableEditor({ object, at, zoom, Chrome, onCommit, onCancel }: ObjectEdi
       >
         {draft.cells.map((cell, index) => (
           <RichTextField
-            key={index}
+            /*
+             * Keyed by the WIDTH as well as the position. A field reads its
+             * text once, on mount, and a new column moves every later row's
+             * cells to new positions — so a field kept by position alone went
+             * on showing the cell that used to be there, and typing into it
+             * wrote that stale text over the cell now in its place. A change
+             * of width remounts the grid from the draft.
+             */
+            key={`${String(width)}:${String(index)}`}
             handle={(field) => {
               fields.current[index] = field
             }}
@@ -293,7 +317,7 @@ function TableEditor({ object, at, zoom, Chrome, onCommit, onCancel }: ObjectEdi
             className={`of-table__cell of-table__input${
               draft.headerRow && Math.floor(index / width) === 0 ? ' of-table__cell--head' : ''
             }`}
-            focusOnMount={index === started ? 'end' : false}
+            focusOnMount={index === editingCell ? 'end' : false}
             ariaLabel={`Row ${String(Math.floor(index / width) + 1)}, column ${String(
               (index % width) + 1,
             )}`}

@@ -180,8 +180,6 @@ test.describe('formatting selected text', () => {
     await expect(page.locator(`${EDITOR} [data-size]`)).toHaveCount(0)
   })
 
-
-
   test('the keyboard shortcut does the same thing', async ({ page }) => {
     await noteSaying(page, 'Pricing is unclear')
     await selectFirst(page, 7)
@@ -402,4 +400,36 @@ test('a frame title takes formatting and a list', async ({ page }) => {
   await page.getByTestId('format-bold').click()
   await page.locator(CANVAS).click({ position: CLEAR })
   await expect(page.locator('.of-frame__title strong')).toHaveText('Findings')
+})
+
+/*
+ * Pasted markup is READ for its words, marks and lists, in a document that is
+ * never rendered. A document with no browsing context fetches nothing, so an
+ * image in someone's clipboard must not become a request to wherever it
+ * points — which is what inserting that markup into the page would do.
+ */
+test('pasting markup with images fetches none of them', async ({ page }) => {
+  await freshBoard(page)
+  const fetched: string[] = []
+  await page.route('**/paste-probe-*', async (route) => {
+    fetched.push(route.request().url())
+    await route.fulfill({ status: 200, body: '' })
+  })
+  await page.keyboard.press('s')
+  await page.locator(CANVAS).click({ position: AT })
+  await expect(page.locator(EDITOR)).toBeFocused()
+  await page.locator(EDITOR).evaluate((element) => {
+    const data = new DataTransfer()
+    data.setData(
+      'text/html',
+      '<ul><li><b>kept</b></li></ul><img src="/paste-probe-img.png"><iframe src="/paste-probe-frame"></iframe><img srcset="/paste-probe-srcset.png 1x">',
+    )
+    data.setData('text/plain', 'kept')
+    element.dispatchEvent(
+      new ClipboardEvent('paste', { clipboardData: data, bubbles: true, cancelable: true }),
+    )
+  })
+  await expect(page.locator(`${EDITOR} [data-list="bullet"] strong`)).toHaveText('kept')
+  await page.waitForTimeout(500)
+  expect(fetched).toEqual([])
 })

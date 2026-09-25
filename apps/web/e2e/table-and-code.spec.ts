@@ -657,3 +657,30 @@ test.describe('formatting a cell', () => {
     await expect(cell).toHaveCSS('background-color', 'rgb(191, 240, 212)')
   })
 })
+
+/*
+ * A new column shifts every later row's cells to new positions in the list.
+ * The cells are rich-text fields that read their text once, on mount, so a
+ * field kept by POSITION went on showing the cell that used to be there — and
+ * typing into it wrote that stale text over the cell now in its place.
+ */
+test('adding a column leaves every cell showing its own text', async ({ page }) => {
+  await board(page)
+  await page.getByTestId('tool-table').click()
+  await page.locator(CANVAS).click({ position: { x: 340, y: 300 } })
+  await expect(page.getByTestId('table-cell-0')).toBeFocused()
+  // Row 2, column 1 of a 3×3: index 3.
+  await page.getByTestId('table-cell-3').click()
+  await page.keyboard.type('second row')
+  await page.getByTestId('table-add-column').click()
+
+  // Four columns now: row 2, column 1 is index 4, and index 3 is a new, empty
+  // cell at the end of row 1.
+  await expect(page.getByTestId('table-cell-4')).toHaveText('second row')
+  await expect(page.getByTestId('table-cell-3')).toHaveText('')
+
+  await page.locator(CANVAS).click({ position: { x: 1100, y: 620 } })
+  const cells = page.locator('[role="table"] > div')
+  await expect(cells.nth(4)).toHaveText('second row')
+  await expect(cells.nth(3)).toHaveText('')
+})
