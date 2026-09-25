@@ -97,3 +97,19 @@ test('leaving the bar for the board ends the edit and keeps it', async ({ page }
   await expect(page.locator(EDITOR)).toHaveCount(0)
   await expect(page.locator('[data-object-type="sticky"] strong')).toHaveText('Kept from the bar')
 })
+
+// The same field is every text's, so a table cell reaches its bar the same way.
+test('Alt+F10 reaches the bar from a table cell and Escape comes back to it', async ({ page }) => {
+  await page.goto(BOARD_URL)
+  await expect(page.getByTestId('tool-select')).toBeVisible()
+  await page.getByTestId('tool-table').click()
+  await page.locator(CANVAS).click({ position: { x: 340, y: 300 } })
+  await page.keyboard.type('cell')
+  await page.keyboard.press('Alt+F10')
+  await expect(page.getByTestId('format-bold')).toBeFocused()
+  await page.keyboard.press('Enter')
+  await expect(page.getByTestId('format-bold')).toHaveAttribute('aria-pressed', 'true')
+  await page.keyboard.press('Escape')
+  await expect(page.getByTestId('table-editor')).toHaveAttribute('data-mode', 'edit')
+  await expect(page.locator(EDITOR)).toBeFocused()
+})

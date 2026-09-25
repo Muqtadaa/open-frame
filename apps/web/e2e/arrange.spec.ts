@@ -35,7 +35,9 @@ async function note(page: Page, at: { x: number; y: number }): Promise<void> {
 }
 
 /** Every object's box on screen, left to right. */
-async function boxes(page: Page): Promise<{ x: number; y: number; width: number; height: number }[]> {
+async function boxes(
+  page: Page,
+): Promise<{ x: number; y: number; width: number; height: number }[]> {
   const count = await page.locator('[data-object-id]').count()
   const found = []
   for (let index = 0; index < count; index += 1) {
@@ -134,6 +136,35 @@ test('will not distribute fewer than three', async ({ page }) => {
    */
   await expect(page.getByTestId('distribute-x')).toBeDisabled()
   await expect(page.getByTestId('align-left')).toBeEnabled()
+  // And says why to someone who cannot see the tip: reachable, and described.
+  await page.getByTestId('distribute-x').focus()
+  await expect(page.getByTestId('distribute-x')).toBeFocused()
+  await expect(page.getByTestId('distribute-x')).toHaveAttribute(
+    'aria-description',
+    'Needs three or more',
+  )
+})
+
+test('groups the alignments across and down', async ({ page }) => {
+  await board(page)
+  await note(page, { x: 420, y: 260 })
+  await note(page, { x: 700, y: 400 })
+  await selectAll(page)
+  const bar = page.locator('.of-arrange')
+  await expect(bar.locator('.of-arrange__rule')).toHaveCount(2)
+  // The first rule sits between "right" and "top".
+  const order = await bar.evaluate((node) =>
+    [...node.children].map((child) => child.getAttribute('data-testid') ?? 'rule'),
+  )
+  expect(order.slice(0, 7)).toEqual([
+    'align-left',
+    'align-centerX',
+    'align-right',
+    'rule',
+    'align-top',
+    'align-middleY',
+    'align-bottom',
+  ])
 })
 
 test('is one undo, however many objects moved', async ({ page }) => {
@@ -154,9 +185,7 @@ test('is one undo, however many objects moved', async ({ page }) => {
    * and leave the board half aligned in between.
    */
   await page.keyboard.press('ControlOrMeta+z')
-  await expect
-    .poll(async () => (await boxes(page))[1]?.y ?? 0)
-    .toBeCloseTo(before[1]!.y, 0)
+  await expect.poll(async () => (await boxes(page))[1]?.y ?? 0).toBeCloseTo(before[1]!.y, 0)
 })
 
 /**

@@ -722,9 +722,17 @@ underline and strike as letters that show the mark; A− and A+ stepping the
 size; then bulleted and numbered lists, drawn as icons. It floats above the
 text being edited, and inside a table it is the first row of the cell bar,
 driving the cell with the caret. Its shortcuts are every document editor's:
-Mod+B/I/U, Mod+Shift+8 and Mod+Shift+7; "- ", "* " and "1. " start a list as
-you type, Tab nests an item and Enter on an empty one ends the list. Lists are
-drawn by the stylesheet — •, ◦, ▪ and 1., a., i. by depth — never typed.
+Mod+B/I/U, Mod+Shift+X for strike, Mod+Shift+> and < for size, Mod+Shift+8
+and Mod+Shift+7; every tip names its shortcut. "- ", "* " and "1. " start a
+list as you type, Tab nests an item and Enter on an empty one ends the list.
+Lists are drawn by the stylesheet — •, ◦, ▪ and 1., a., i. by depth — never
+typed.
+
+Between A− and A+ sits the size, in 12px mono: the multiple of the object's
+own size (×1, ×1.4 … ×7.6), from the same ladder the `.of-size` rules draw. The
+ends switch their button off. It is a toolbar a keyboard reaches: Alt+F10 from
+the text goes in, the arrows move along it, Escape comes back to the text with
+the selection it had. Going to the bar is not leaving the edit.
 
 ### Tables (a lightweight spreadsheet)
 
@@ -935,9 +943,28 @@ pressed-index shadow.
 
 ### Context Menu
 
-Panel white, 10px radius, 196px minimum. Items are 15px UI text in 40px
-(`--of-hit`) rows at 6px radius, taking the accent wash on hover, with shortcuts
-at 12px mono in muted ink. Groups are separated by a hairline margin rule.
+Panel white, 10px radius, 196px minimum. Items are 15px UI text in 30px
+(`--of-hit-sm`) rows at 6px radius, taking the accent wash on hover and on
+keyboard focus, with shortcuts at 12px mono in muted ink, one notation per
+platform. Groups are separated by a hairline margin rule.
+
+A selection's menu leads with what it can become — Derive, Promote — then
+clipboard, grouping with the stacking order folded into "Arrange ›", lock and
+hide, and Delete alone, which turns danger when aimed at. Empty board gets its
+own: Paste here, Add a note here, Select all, Zoom to fit. It is an ARIA menu:
+focus goes in, the arrows walk it, Escape closes only it and hands focus back,
+unavailable items stay reachable. From the keyboard (Shift+F10) it hangs from
+the selection.
+
+### Search
+
+Mod+F, top centre under the navigation bar: a surface 440px wide holding one
+box and, once there is a query, a mono count and the results. Each result is
+its kind in 12px mono, then what the object says — never its kind a second
+time. It is a combobox: the keyboard stays in the box, the arrows move the
+highlighted result and say so to assistive tech, Enter reveals it. The panel
+takes the focus ring while the box has the keyboard. A press elsewhere or
+Escape closes it and hands focus back; nothing found suggests `type:`.
 
 ### The Front Door
 
@@ -1019,8 +1046,10 @@ things selected, not to the board or to a frame. Distribute equalises the
 **gaps**, leaving the outermost two exactly where they are, so it reads as
 tidying rather than moving.
 
-Distribution is disabled below three rather than hidden, the same call the code
-box's format button makes. Icons are a rule plus bars that have landed on it,
+Alignments come in two groups of three — across, then down — with a rule
+between. Distribution is disabled below three rather than hidden, the same
+call the code box's format button makes, and stays reachable so its reason
+("Needs three or more") is heard. Icons are a rule plus bars that have landed on it,
 at two different lengths: the shape that separates "left" from "centre" is the
 same shape that separates the operations.
 
@@ -1129,6 +1158,10 @@ time presenting as a control that was visible and could not be used.
 `chrome-contract.test.ts` reads it off the source now.
 
 ### Editors and Focus
+
+No key throws words away. Every way out of an editor — Escape included —
+commits; undo is how an edit is taken back, and an edit that changed nothing
+commits nothing.
 
 Every in-place editor inherits the object's own type and drops its border,
 carrying a 2px accent outline instead. Global `:focus-visible` is a 2px accent
