@@ -50,6 +50,7 @@ export const decisionType = defineObjectType<typeof DECISION_TYPE, DecisionData>
     return {
       searchText: [text, rationale, status].filter(Boolean).join(' '),
       summary: text.trim() === '' ? 'Empty decision' : text.slice(0, 120),
+      gist: text.trim().slice(0, 120),
       fields: { text, rationale, status },
     }
   },

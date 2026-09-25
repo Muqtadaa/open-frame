@@ -83,6 +83,40 @@ test.describe('inspector', () => {
     await expect(page.getByTestId('stroke-thick')).toBeVisible()
   })
 
+  /*
+   * The head names the type; the line under it says what the object holds.
+   * It used to repeat the type — "Frame" over "Frame: Frame", "Shape" over
+   * "rectangle: Box" — because it printed the summary search and agents read.
+   */
+  test('says what an object holds under its name, without naming its type again', async ({
+    page,
+  }) => {
+    const summary = page.locator('.of-inspector__summary')
+
+    await page.keyboard.press('f')
+    await page.locator(CANVAS).click({ position: { x: 500, y: 350 } })
+    await expect(page.locator(EDITOR)).toBeFocused()
+    await page.locator(EDITOR).fill('Discovery')
+    await page.locator(CANVAS).click({ position: { x: 1150, y: 130 } })
+    await page.keyboard.press('v')
+    await page.locator('.of-frame__title').click()
+    await expect(summary).toHaveText('Discovery')
+
+    // A frame called "Frame" has nothing to add to a head that says Frame.
+    await page.keyboard.press('Enter')
+    await expect(page.locator(EDITOR)).toBeFocused()
+    await page.locator(EDITOR).fill('Frame')
+    await page.locator(CANVAS).click({ position: { x: 1150, y: 130 } })
+    await page.locator('.of-frame__title').click()
+    await expect(page.getByTestId('inspector')).toBeVisible()
+    await expect(summary).toHaveCount(0)
+
+    await page.locator(CANVAS).click({ position: { x: 1150, y: 130 } })
+    await place(page, 'u', 340, 160, 'Box')
+    await page.locator(CANVAS).click({ position: { x: 340, y: 160 } })
+    await expect(summary).toHaveText('Box')
+  })
+
   test('sets fill on a shape, which nothing could reach before', async ({ page }) => {
     await place(page, 'u', 340, 300, 'Box')
     await page.locator(CANVAS).click({ position: { x: 340, y: 300 } })

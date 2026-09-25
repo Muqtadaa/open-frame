@@ -232,6 +232,7 @@ describe('when two types spell a key the same way and mean different things', ()
     describe: (object) => ({
       searchText: String(object.data.text),
       summary: `Counted ${String(object.data.text)}`,
+      gist: String(object.data.text),
       fields: { text: object.data.text },
     }),
   })

@@ -276,6 +276,32 @@ describe('object type registry contract', () => {
         expect(description.summary.length).toBeGreaterThan(0)
         expect(typeof description.fields).toBe('object')
       })
+
+      /*
+       * The gist is what the record panel prints UNDER the type's name, so a
+       * type label in it is printed twice — "Frame" over "Frame: Frame" — and
+       * a placeholder like "Empty sticky note" speaks for content that is not
+       * there. Asked of a fresh instance, because that is when a type is most
+       * tempted to fill the line with something about itself.
+       */
+      it('gives a gist that says what it holds, not what it is', () => {
+        const { data, frame } = definition.create()
+        const { gist } = definition.describe({
+          id: asObjectId('obj_1'),
+          type: definition.type,
+          dataVersion: definition.currentVersion,
+          frame: { x: 0, y: 0, ...frame, rotation: 0 },
+          parentId: null,
+          order: asOrderKey('a0'),
+          style: { color: COLOR_TOKENS[0] },
+          locked: false,
+          hidden: false,
+          data,
+          meta: { createdAt: 0, createdBy: null, createdVia: 'user' },
+        })
+        expect(gist).not.toMatch(/^[\w -]+: /)
+        expect(gist).not.toMatch(/^empty\b/i)
+      })
     })
   }
 })

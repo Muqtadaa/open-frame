@@ -50,6 +50,7 @@ export const relationType = defineObjectType<typeof RELATION_TYPE, RelationData>
   describe: (object) => ({
     searchText: object.data.predicate,
     summary: `Relation: ${object.data.predicate}`,
+    gist: object.data.predicate.trim(),
     fields: { from: object.data.from, to: object.data.to, predicate: object.data.predicate },
   }),
 })

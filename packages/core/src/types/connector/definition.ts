@@ -693,6 +693,7 @@ export const connectorType = defineObjectType<typeof CONNECTOR_TYPE, ConnectorDa
       plainTextOf(object.data.text).trim() === ''
         ? 'Connector'
         : `Connector: ${plainTextOf(object.data.text)}`,
+    gist: plainTextOf(object.data.text).trim(),
     fields: {
       text: plainTextOf(object.data.text),
       routing: object.data.routing,

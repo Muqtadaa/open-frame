@@ -45,6 +45,7 @@ export const journeystageType = defineObjectType<typeof JOURNEY_STAGE_TYPE, Jour
     return {
       searchText: [text, sentiment].filter(Boolean).join(' '),
       summary: text.trim() === '' ? 'Empty journey stage' : text.slice(0, 120),
+      gist: text.trim().slice(0, 120),
       fields: { text, sentiment },
     }
   },

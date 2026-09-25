@@ -49,6 +49,7 @@ export const textType = defineObjectType<typeof TEXT_TYPE, TextData>({
     return {
       searchText: text,
       summary: text.trim() === '' ? 'Empty text' : text.slice(0, 120),
+      gist: text.trim().slice(0, 120),
       fields: { text },
     }
   },

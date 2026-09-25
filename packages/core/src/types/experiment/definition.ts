@@ -50,6 +50,7 @@ export const experimentType = defineObjectType<typeof EXPERIMENT_TYPE, Experimen
     return {
       searchText: [text, method, status].filter(Boolean).join(' '),
       summary: text.trim() === '' ? 'Empty experiment' : text.slice(0, 120),
+      gist: text.trim().slice(0, 120),
       fields: { text, method, status },
     }
   },

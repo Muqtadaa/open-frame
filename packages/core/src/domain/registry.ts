@@ -261,6 +261,15 @@ export interface ObjectDescription {
   readonly searchText: string
   /** One line, for AI context and list views. */
   readonly summary: string
+  /**
+   * What the object SAYS, and nothing about what it is: no "Frame:" or
+   * "Image:" in front, no "Empty sticky note" standing in for nothing. The
+   * summary carries its type because a reader of it has nothing else to go
+   * on; anywhere that already names the type — the record panel's head — would
+   * otherwise print it twice ("Frame" over "Frame: Frame"). Empty when there
+   * is nothing to say.
+   */
+  readonly gist: string
   /** Named semantic fields, for structured consumers. */
   readonly fields: Readonly<Record<string, string | number | readonly string[]>>
 }
@@ -885,6 +894,7 @@ export class ObjectTypeRegistry {
         // Its type is the only true thing available about an object whose
         // definition is missing.
         summary: object.type,
+        gist: '',
         fields: {},
       }
     )

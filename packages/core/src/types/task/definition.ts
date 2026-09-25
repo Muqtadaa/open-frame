@@ -42,6 +42,7 @@ export const taskType = defineObjectType<typeof TASK_TYPE, TaskData>({
     return {
       searchText: [text, assignee, status].filter(Boolean).join(' '),
       summary: text.trim() === '' ? 'Empty task' : text.slice(0, 120),
+      gist: text.trim().slice(0, 120),
       fields: { text, assignee, status },
     }
   },

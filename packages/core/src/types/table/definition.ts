@@ -169,6 +169,7 @@ export const tableType = defineObjectType<typeof TABLE_TYPE, TableData>({
         filled.length === 0
           ? `Empty ${shape} table`
           : `${shape} table: ${filled.slice(0, 6).join(', ').slice(0, 120)}`,
+      gist: filled.slice(0, 6).join(', ').slice(0, 120),
       fields: { shape, text: filled.join(' ') },
     }
   },

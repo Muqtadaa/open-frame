@@ -71,6 +71,7 @@ export const evidenceType = defineObjectType<typeof EVIDENCE_TYPE, EvidenceData>
             ? 'Empty evidence'
             : `Evidence from ${source}`
           : text.slice(0, 120),
+      gist: text.trim().slice(0, 120),
       fields: { text, source, participant, tags },
     }
   },

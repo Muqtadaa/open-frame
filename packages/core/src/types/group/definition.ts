@@ -67,5 +67,5 @@ export const groupType = defineObjectType<typeof GROUP_TYPE, GroupData>({
    * search and AI context care about the members themselves, each of which
    * describes itself.
    */
-  describe: () => ({ searchText: '', summary: 'Group', fields: {} }),
+  describe: () => ({ searchText: '', summary: 'Group', gist: '', fields: {} }),
 })

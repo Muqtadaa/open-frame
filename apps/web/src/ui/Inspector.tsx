@@ -376,8 +376,14 @@ export function Inspector() {
   const title = only !== undefined ? typeTitle(only.type) : `${String(objects.length)} objects`
   const summary = (() => {
     if (only === undefined) return selectionMakeup(objects.map((object) => object.type))
-    const said = runtime.registry.describeObject(only).summary.trim()
-    return said === only.type ? '' : said
+    /*
+     * The GIST, not the summary: the head already names the type, and the
+     * summary names it again for readers that have nothing else — so a frame
+     * called "Frame" read "Frame" over "Frame: Frame". A line that only
+     * repeats the title says nothing either.
+     */
+    const said = runtime.registry.describeObject(only).gist.trim()
+    return said.toLowerCase() === title.toLowerCase() ? '' : said
   })()
   /*
    * The colour the selection is actually drawn in: the one chosen, or — for
