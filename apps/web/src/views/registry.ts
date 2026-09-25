@@ -128,7 +128,16 @@ export interface ObjectEditorProps<TData = unknown> {
   readonly Overlay: ComponentType<{
     readonly children: (place: (fraction: Rect) => Rect) => ReactNode
   }>
-  readonly onCommit: (patch: Partial<TData>) => void
+  /**
+   * Ends the edit with ONE command. `size`, when given, is the object's new
+   * width and height, committed with the data as one undo entry — a table
+   * whose column was fitted to its text while it was being edited grows to
+   * hold it, exactly as it does when the column is fitted from outside.
+   */
+  readonly onCommit: (
+    patch: Partial<TData>,
+    size?: { readonly width: number; readonly height: number },
+  ) => void
   readonly onCancel: () => void
 }
 

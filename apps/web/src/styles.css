@@ -1775,6 +1775,51 @@ body {
   background: var(--of-accent);
 }
 
+/*
+ * The boundary between two letters or two numbers, grabbed to size the track
+ * before it. Invisible until reached for, then a single accent rule, like a
+ * divider on the board — and over the letters, so it wins the press there.
+ */
+.of-table-strip__grip {
+  position: absolute;
+  pointer-events: auto;
+  touch-action: none;
+}
+
+.of-table-strip__grip--column {
+  cursor: col-resize;
+}
+
+.of-table-strip__grip--row {
+  cursor: row-resize;
+}
+
+.of-table-strip__grip::after {
+  position: absolute;
+  background: var(--of-accent);
+  opacity: 0;
+  transition: opacity var(--of-quick) var(--of-ease);
+  content: '';
+}
+
+.of-table-strip__grip--column::after {
+  top: 0;
+  bottom: 0;
+  left: calc(50% - 1px);
+  width: 2px;
+}
+
+.of-table-strip__grip--row::after {
+  top: calc(50% - 1px);
+  right: 0;
+  left: 0;
+  height: 2px;
+}
+
+.of-table-strip__grip:hover::after {
+  opacity: 1;
+}
+
 /* A borders choice: which lines, then how they are drawn. */
 .of-borders {
   display: grid;

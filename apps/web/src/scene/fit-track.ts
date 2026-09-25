@@ -136,3 +136,26 @@ export function fitRowHeight(cells: readonly HTMLElement[]): number | null {
 
   return Math.min(CEILING, Math.max(FLOOR, Math.ceil(tallest)))
 }
+
+/**
+ * The drawn cells of one column or row, found by what they SAY they are.
+ *
+ * Counting the grid's children stopped working with merges: a covered cell is
+ * not drawn, so every cell after the first merge sat one place further along
+ * than its index said, and fitting a column measured its neighbour. Each cell
+ * carries its own address and span, and one that spans several tracks is left
+ * out — its width is shared, so it says nothing about any one of them, which
+ * is what a spreadsheet does with a merged cell when it fits a column.
+ */
+export function cellsInTrack(
+  grid: Element,
+  axis: 'row' | 'column',
+  index: number,
+): HTMLElement[] {
+  return [...grid.children].filter((cell): cell is HTMLElement => {
+    if (!(cell instanceof HTMLElement)) return false
+    const at = axis === 'column' ? cell.dataset.col : cell.dataset.row
+    const span = axis === 'column' ? cell.dataset.cols : cell.dataset.rows
+    return at === String(index) && span === '1'
+  })
+}

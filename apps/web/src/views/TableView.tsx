@@ -32,6 +32,7 @@ import {
   mergeRange,
   rangeBetween,
   setLines,
+  setTrackSize,
   styleCells,
   unmergeRange,
   type Axis,
@@ -63,6 +64,7 @@ import {
 } from './RichTextField.js'
 import { RichTextView } from './RichTextView.js'
 import { cellAt, tracks } from '../scene/table-grid.js'
+import { cellsInTrack, fitColumnWidth, fitRowHeight } from '../scene/fit-track.js'
 import {
   STROKE_WIDTHS,
   dashArray,
@@ -310,6 +312,7 @@ function TableGrid({
   label,
   content,
   cellProps,
+  sized = false,
 }: {
   readonly data: TableData
   readonly style: ObjectStyle
@@ -321,6 +324,11 @@ function TableGrid({
   readonly cellProps?:
     | ((index: number) => HTMLAttributes<HTMLDivElement> & Record<`data-${string}`, string>)
     | undefined
+  /**
+   * Drawn at `width` by `height` rather than filling the object: the editor's
+   * draft can be a different size from the object until the edit commits.
+   */
+  readonly sized?: boolean | undefined
 }) {
   const { columns, rows, cells, headerRow } = data
   const width_ = columns.length
@@ -329,7 +337,10 @@ function TableGrid({
   const placed = merges.anchors.size > 0
 
   return (
-    <div className="of-table-wrap">
+    <div
+      className="of-table-wrap"
+      style={sized ? { width: `${String(width)}px`, height: `${String(height)}px` } : undefined}
+    >
       <div
         className="of-table"
         style={{
@@ -373,6 +384,13 @@ function TableGrid({
               key={index}
               className={`of-table__cell${head ? ' of-table__cell--head' : ''}`}
               role={head ? 'columnheader' : 'cell'}
+              // Where it is and how far it reaches, read back by fitting a
+              // track: with merges, a cell's position among its siblings no
+              // longer says which column it is in.
+              data-row={row}
+              data-col={col}
+              data-rows={merge?.rows ?? 1}
+              data-cols={merge?.cols ?? 1}
               {...(cellProps?.(index) ?? {})}
               style={
                 placed
@@ -505,6 +523,8 @@ const DASHES: readonly DashToken[] = ['solid', 'dashed', 'dotted']
 
 /** The screen size of the letter and number strips, in pixels. */
 const STRIP = 22
+/** How wide a boundary between two letters is to grab, in screen pixels. */
+const GRIP = 10
 
 /**
  * Editing the grid as a spreadsheet, committing ONE command.
@@ -528,6 +548,12 @@ function TableEditor({
   onCommit,
 }: ObjectEditorProps<TableData>) {
   const [draft, setDraft] = useState<TableData>(object.data)
+  /*
+   * The draft's SIZE, in world units. Fitting or dragging a track changes one
+   * track and leaves the rest as they are, so the table grows or shrinks to
+   * hold it — and that lands with the rest of the edit, as one undo entry.
+   */
+  const [size, setSize] = useState({ width: object.frame.width, height: object.frame.height })
   const root = useRef<HTMLDivElement>(null)
 
   /*
@@ -616,15 +642,18 @@ function TableEditor({
   }, [menu])
 
   const commit = (data: TableData = draft): void => {
-    onCommit({
-      columns: data.columns,
-      rows: data.rows,
-      cells: data.cells,
-      // Written out even when empty, so a merge or a line taken away in this
-      // edit is taken away in the document too rather than merged back in.
-      lines: data.lines ?? { h: [], v: [] },
-      merges: data.merges ?? [],
-    })
+    onCommit(
+      {
+        columns: data.columns,
+        rows: data.rows,
+        cells: data.cells,
+        // Written out even when empty, so a merge or a line taken away in this
+        // edit is taken away in the document too rather than merged back in.
+        lines: data.lines ?? { h: [], v: [] },
+        merges: data.merges ?? [],
+      },
+      size,
+    )
   }
 
   /** The keyboard back on the grid, so navigation keys keep arriving. */
@@ -918,8 +947,60 @@ function TableEditor({
   }
 
   const editingIndex = editing === null ? -1 : editing.cell.row * width + editing.cell.col
-  const xs = fractionsOf(draft.columns)
-  const ys = fractionsOf(draft.rows)
+  /*
+   * Fractions of the OBJECT, which is what apparatus is placed against —
+   * so a draft grown past it runs past 1, and the letters stay over their
+   * columns while the table is wider than the object it will become.
+   */
+  const sx = size.width / Math.max(1, object.frame.width)
+  const sy = size.height / Math.max(1, object.frame.height)
+  const xs = fractionsOf(draft.columns).map((at) => at * sx)
+  const ys = fractionsOf(draft.rows).map((at) => at * sy)
+
+  /**
+   * One track set to an exact size, in world units, into the draft. The same
+   * arithmetic as a boundary dragged from outside the editor (`setTrackSize`):
+   * this track changes, every other keeps its size, and the table grows.
+   */
+  const sizeTrack = (
+    axis: Axis,
+    index: number,
+    wanted: number,
+    from: { readonly weights: readonly number[]; readonly extent: number } = {
+      weights: axis === 'column' ? draft.columns : draft.rows,
+      extent: axis === 'column' ? size.width : size.height,
+    },
+  ): void => {
+    const sized = setTrackSize(from.weights, index, wanted, from.extent)
+    if (sized === null) return
+    setDraft((current) =>
+      axis === 'column'
+        ? { ...current, columns: sized.weights }
+        : { ...current, rows: sized.weights },
+    )
+    setSize((current) =>
+      axis === 'column' ? { ...current, width: sized.total } : { ...current, height: sized.total },
+    )
+  }
+
+  /** Double-clicking a boundary: the track before it fitted to what is in it. */
+  const fit = (axis: Axis, index: number): void => {
+    const grid = root.current?.querySelector('[role="table"]')
+    if (grid === null || grid === undefined) return
+    const cells = cellsInTrack(grid, axis, index)
+    const wanted = axis === 'column' ? fitColumnWidth(cells) : fitRowHeight(cells)
+    if (wanted !== null) sizeTrack(axis, index, wanted)
+  }
+
+  // A boundary being dragged, and what it started from.
+  const resizing = useRef<{
+    readonly axis: Axis
+    readonly index: number
+    readonly start: number
+    readonly track: number
+    readonly weights: readonly number[]
+    readonly extent: number
+  } | null>(null)
   const region = (area: CellRange): Rect => ({
     x: xs[area.left] ?? 0,
     y: ys[area.top] ?? 0,
@@ -1010,8 +1091,9 @@ function TableEditor({
       <TableGrid
         data={draft}
         style={object.style}
-        width={object.frame.width}
-        height={object.frame.height}
+        width={size.width}
+        height={size.height}
+        sized
         label={describeShape(draft)}
         cellProps={(index) => {
           const row = Math.floor(index / width)
@@ -1049,8 +1131,8 @@ function TableEditor({
               if (grid === null) return
               const box = grid.getBoundingClientRect()
               setMenu({
-                x: (event.clientX - box.left) / box.width,
-                y: (event.clientY - box.top) / box.height,
+                x: ((event.clientX - box.left) / box.width) * sx,
+                y: ((event.clientY - box.top) / box.height) * sy,
               })
             },
           }
@@ -1091,7 +1173,7 @@ function TableEditor({
        */}
       <Overlay>
         {(place) => {
-          const table = place({ x: 0, y: 0, width: 1, height: 1 })
+          const table = place({ x: 0, y: 0, width: sx, height: sy })
           const ring = place(region(range))
           const cursor = place(
             region(expandToMerges(draft, rangeBetween(selection.anchor, selection.anchor))),
@@ -1253,6 +1335,91 @@ function TableEditor({
                     }
                   }),
                 )}
+                {/*
+                 * The boundaries between the letters and between the
+                 * numbers, where a spreadsheet puts them: drag one to size
+                 * the track before it, double-click it to fit that track to
+                 * its content. After every track, the last included — the
+                 * table's own edge is how the last column is sized.
+                 */}
+                {(['column', 'row'] as const).flatMap((axis) =>
+                  (axis === 'column' ? draft.columns : draft.rows).map((_, index) => {
+                    const edge =
+                      axis === 'column'
+                        ? place({ x: xs[index + 1] ?? sx, y: 0, width: 0, height: 0 })
+                        : place({ x: 0, y: ys[index + 1] ?? sy, width: 0, height: 0 })
+                    const name =
+                      axis === 'column' ? `column ${letter(index)}` : `row ${String(index + 1)}`
+                    return (
+                      <div
+                        key={`${axis}-grip-${String(index)}`}
+                        className={`of-table-strip__grip of-table-strip__grip--${axis}`}
+                        role="separator"
+                        aria-orientation={axis === 'column' ? 'vertical' : 'horizontal'}
+                        aria-label={`Edge of ${name}`}
+                        data-tip={`Drag to resize ${name}, double-click to fit`}
+                        aria-description={`Drag to resize ${name}, double-click to fit`}
+                        data-testid={
+                          axis === 'column'
+                            ? `table-column-edge-${letter(index)}`
+                            : `table-row-edge-${String(index + 1)}`
+                        }
+                        style={
+                          axis === 'column'
+                            ? {
+                                left: edge.x - GRIP / 2,
+                                top: table.y - STRIP - 2,
+                                width: GRIP,
+                                height: STRIP,
+                              }
+                            : {
+                                left: table.x - STRIP - 10,
+                                top: edge.y - GRIP / 2,
+                                width: STRIP + 8,
+                                height: GRIP,
+                              }
+                        }
+                        onMouseDown={(event) => {
+                          event.preventDefault()
+                        }}
+                        onPointerDown={(event) => {
+                          if (event.button !== 0) return
+                          event.stopPropagation()
+                          if (editing !== null) finishEditing()
+                          else home()
+                          const weights = axis === 'column' ? draft.columns : draft.rows
+                          const extent = axis === 'column' ? size.width : size.height
+                          const total = weights.reduce((sum, weight) => sum + weight, 0)
+                          resizing.current = {
+                            axis,
+                            index,
+                            start: axis === 'column' ? event.clientX : event.clientY,
+                            track: ((weights[index] ?? 0) / Math.max(total, 1e-9)) * extent,
+                            weights,
+                            extent,
+                          }
+                          event.currentTarget.setPointerCapture(event.pointerId)
+                        }}
+                        onPointerMove={(event) => {
+                          const drag = resizing.current
+                          if (drag?.axis !== axis || drag.index !== index) return
+                          const now = axis === 'column' ? event.clientX : event.clientY
+                          // Screen pixels to world units: the grip is apparatus, the track is not.
+                          const moved = (now - drag.start) / zoom
+                          if (moved === 0) return
+                          sizeTrack(axis, index, drag.track + moved, drag)
+                        }}
+                        onPointerUp={(event) => {
+                          resizing.current = null
+                          event.currentTarget.releasePointerCapture(event.pointerId)
+                        }}
+                        onDoubleClick={() => {
+                          fit(axis, index)
+                        }}
+                      />
+                    )
+                  }),
+                )}
               </div>
             </>
           )
@@ -1325,8 +1492,8 @@ function TableEditor({
         anchor={{
           x: -(STRIP + 10) / Math.max(1, object.frame.width * zoom),
           y: -(STRIP + 4) / Math.max(1, object.frame.height * zoom),
-          width: 1 + (STRIP + 10) / Math.max(1, object.frame.width * zoom),
-          height: 1 + (STRIP + 4) / Math.max(1, object.frame.height * zoom),
+          width: sx + (STRIP + 10) / Math.max(1, object.frame.width * zoom),
+          height: sy + (STRIP + 4) / Math.max(1, object.frame.height * zoom),
         }}
         /*
          * Beside the table when neither above nor below has the room — a

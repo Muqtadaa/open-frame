@@ -265,10 +265,17 @@ function ObjectViewInner({ id, views }: Props) {
             at={editingAt}
             Chrome={chrome}
             Overlay={overlay}
-            onCommit={(patch) => {
+            onCommit={(patch, size) => {
               // Types name their editable field differently (`text`, `name`),
               // so the patch is passed through rather than picked apart here.
-              commands.updateData(id, patch)
+              if (
+                size === undefined ||
+                (size.width === object.frame.width && size.height === object.frame.height)
+              ) {
+                commands.updateData(id, patch)
+              } else {
+                commands.updateDataAndSize(id, patch, { ...object.frame, ...size })
+              }
               setEditing(null)
             }}
             onCancel={() => setEditing(null)}

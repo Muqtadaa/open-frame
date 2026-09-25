@@ -23,7 +23,9 @@ commits the whole draft.
 
 APPARATUS: column letters over the columns and row numbers beside the rows,
 exactly aligned, 12px mono on panel stock at the apparatus radius; pressed,
-they select what they name and shift extends. The selection is a 2px accent
+they select what they name and shift extends. The edges BETWEEN them are
+grips — drag to size the track before, double-click to fit it to its content —
+and the table grows to hold the change, committed with the edit. The selection is a 2px accent
 ring, a range a 10% accent wash with the starting cell's 1px ring. All drawn
 in SCREEN space through the editor's `Overlay` slot — never divided by the
 zoom (rule 24).

@@ -750,6 +750,13 @@ and moves down, Escape puts that one cell back.
   as the lines they reach (all, outer, inner, inner horizontal, inner
   vertical, top, bottom, left, right, none, and the table's own), then the
   pen — weight, pattern, colour — they draw with.
+- **Sizing a track is done where a spreadsheet does it.** The edge between two
+  letters or two numbers is a grip: drag it to size the track before it, or
+  double-click it to fit that track to its content. The table grows to hold
+  the change rather than squeezing its other tracks, and the new size lands
+  with the rest of the edit. From outside the editor the board's own dividers
+  do the same. Either way a merged cell is left out of the measurement: its
+  width is shared, so it says nothing about any one column.
 - **Rows, columns and merging** live on the table's menu: right-click a cell or
   a letter, or the `···` in the cell bar. Inserting takes as many rows or
   columns as are selected and dresses them like their neighbour.

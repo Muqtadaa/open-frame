@@ -434,6 +434,88 @@ test.describe('formatting a range', () => {
   })
 })
 
+test.describe('sizing tracks', () => {
+  const width = async (locator: Locator): Promise<number> =>
+    (await locator.boundingBox())?.width ?? 0
+
+  test('fits a column to its content from the letters, while editing', async ({ page }) => {
+    await newTable(page)
+    await page.keyboard.type('a considerably longer heading than fits')
+    await page.keyboard.press('Enter')
+    const before = await width(cell(page, 0))
+    const tableBefore = await width(page.locator('[data-object-id]').first())
+
+    await page.getByTestId('table-column-edge-A').dblclick()
+    // Still editing: fitting is part of the draft, not a separate command.
+    await expect(page.getByTestId('table-editor')).toBeVisible()
+    await expect.poll(() => width(cell(page, 0))).toBeGreaterThan(before + 40)
+    // The letter stays over its column as it grows.
+    const letter = await page.getByTestId('table-column-A').boundingBox()
+    const column = await cell(page, 0).boundingBox()
+    expect(Math.abs((letter?.width ?? 0) - (column?.width ?? 0))).toBeLessThan(2)
+
+    await leave(page)
+    // The table grew to hold it, rather than squeezing the other columns.
+    await expect
+      .poll(() => width(page.locator('[data-object-id]').first()))
+      .toBeGreaterThan(tableBefore + 40)
+    expect(await width(drawn(page).nth(0))).toBeGreaterThan(before + 40)
+
+    // The text, the fit and the new size are one undo entry.
+    await page.keyboard.press('ControlOrMeta+z')
+    await expect
+      .poll(() => width(page.locator('[data-object-id]').first()))
+      .toBeCloseTo(tableBefore, 0)
+    await expect(drawn(page).nth(0)).toHaveText('')
+  })
+
+  test('sizes a row by dragging the edge under its number', async ({ page }) => {
+    await newTable(page)
+    const height = async (): Promise<number> => (await cell(page, 3).boundingBox())?.height ?? 0
+    const before = await height()
+    const edge = await page.getByTestId('table-row-edge-2').boundingBox()
+    if (edge === null) throw new Error('no edge')
+    const x = edge.x + edge.width / 2
+    const y = edge.y + edge.height / 2
+    await page.mouse.move(x, y)
+    await page.mouse.down()
+    await page.mouse.move(x, y + 40, { steps: 5 })
+    await page.mouse.up()
+    await expect.poll(height).toBeGreaterThan(before + 30)
+    // Only that row: the one under it keeps its height.
+    const below = (await cell(page, 6).boundingBox())?.height ?? 0
+    expect(Math.abs(below - before)).toBeLessThan(2)
+    await leave(page)
+    expect((await drawn(page).nth(3).boundingBox())?.height ?? 0).toBeGreaterThan(before + 30)
+  })
+
+  /*
+   * A merged cell's width is shared, so it says nothing about any one column.
+   * Counting the grid's children to find a column measured the wrong cells
+   * once a merge had hidden one: here, the long merged heading, which made
+   * column A enormous for the sake of a cell that is not in it alone.
+   */
+  test('fits a column by its own cells, not a merge across it', async ({ page }) => {
+    await newTable(page)
+    await page.keyboard.type('a heading merged across two columns and very long')
+    await page.keyboard.press('Enter')
+    await page.keyboard.type('x')
+    await page.keyboard.press('Enter')
+    await cell(page, 0).click()
+    await cell(page, 1).click({ modifiers: ['Shift'] })
+    await cell(page, 0).click({ button: 'right' })
+    await page.getByTestId('table-menu-merge').click()
+    await leave(page)
+
+    await page.locator('[data-object-id]').first().click()
+    const grip = await page.getByTestId('divider-c0').boundingBox()
+    if (grip === null) throw new Error('the boundary is not on screen')
+    await page.mouse.dblclick(grip.x + grip.width / 2, grip.y + grip.height / 2)
+    // Fitted to "x" — narrow — not to the merged heading.
+    await expect.poll(() => width(drawn(page).nth(2))).toBeLessThan(80)
+  })
+})
+
 test('builds a table in one undo entry', async ({ page }) => {
   await newTable(page)
   await fill(page, ['a', 'b'])
