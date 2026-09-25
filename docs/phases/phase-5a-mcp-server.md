@@ -1,6 +1,6 @@
 # Phase 5a · The MCP server
 
-**Status: Planned** · ← [Roadmap](README.md) · Design: [Phase 5](phase-5-ai-and-mcp.md)
+**Status: In progress — stages 1 to 4 done** · ← [Roadmap](README.md) · Design: [Phase 5](phase-5-ai-and-mcp.md)
 
 The execution plan for the MCP half of Phase 5. The *why* is in the phase
 document; this is the order, the decisions taken, and what each stage has to
@@ -65,7 +65,13 @@ on a mutation, and a read-only server would leave the architectural claim
 untested.
 
 **Signed in as the user, through Supabase.** Not a share-link key pasted into a
-config, and not a new token type.
+config, and not a new token type. **With an email and a password**, typed into
+the terminal and never echoed: every account on this project is an email one,
+the web app signs in the same way, and a loopback OAuth flow would have meant
+enabling a provider nobody uses — and an account signed in through Google is a
+different user row from the email account of the same name unless identity
+linking says otherwise, so the boards would not have lined up. The loopback
+half of the plan belongs to stage 5, where a browser is already involved.
 
 That third one looked like the expensive choice and is not, because of a
 property the room already has:
@@ -87,7 +93,7 @@ reach. Revoking their access revokes the agent.
 Each stage ends with something demonstrable. A stage that cannot be
 demonstrated is not finished, whatever its code says.
 
-### 1 · A headless peer
+### 1 · A headless peer ✅
 
 `apps/mcp` as a workspace depending on `@openframe/core` and
 `@openframe/collab` and **never** on `apps/web` — enforced by a
@@ -100,12 +106,47 @@ returning a connected document and a dispatcher.
 **Proves:** a Node process can join a room, read the document, dispatch one
 command, and have it arrive in a browser on the same board.
 
-### 2 · Signing in
+**Done.** `apps/mcp/src/node-room-socket.ts` is the socket, `board.ts` is
+`openBoard`, and `apps/web/e2e-rooms/mcp-peer.spec.ts` is the proof: a browser
+puts a note on a board, a Node process reads it over a real socket, dispatches
+one command, and the browser sees the object appear carrying
+`createdVia: 'mcp'`. By hand:
 
-A loopback OAuth flow: open the browser, Supabase authenticates, the callback
-lands on `127.0.0.1`, the refresh token is stored in the user's config
-directory with `0600`. `login`, `logout`, `whoami` as subcommands, which is the
-pattern every CLI that does this uses.
+```bash
+pnpm --filter @openframe/rooms exec wrangler dev --port 8787 --local
+pnpm --filter @openframe/mcp cli peer --server ws://127.0.0.1:8787 --board brd_… \
+  [--note "text"]
+```
+
+(Stage 2 folded this into one command with subcommands, and took the key off
+the command line: it comes from the account now. A local room takes no key,
+which is why this still works signed out.)
+
+Three things the stage turned up, each now a test:
+
+- **A joining peer must not publish its own empty board.** A browser seeds the
+  room from its local document, because that is where the board came from; a
+  process has no board, and seeding one sets the room's title to `Untitled
+  board`. `connectBoard` takes `seed` for that reason. The test joins eight
+  times, because the seeded title and the real one are CONCURRENT writes and
+  Yjs settles those by client id — one join keeps the right title half the
+  time.
+- **Connected is not synced.** A socket is open a round trip before the board
+  arrives, and a peer that reads the document then reads an empty one and
+  reports an empty board — a wrong answer rather than an error. The provider
+  now says when the room has sent CONTENT, which is not the same as when it has
+  sent something: a room announces its own presence state on every join, and
+  reading the board's arrival off that fires before the peer has even asked.
+- **The room's role reaches the dispatcher.** A viewer connection refuses a
+  write locally as well as at the room, so a tool cannot report success for
+  work the room is about to drop.
+
+### 2 · Signing in ✅
+
+An email and a password, read from the terminal without echoing, and the
+refresh token stored in the user's config directory with `0600`. `login`,
+`logout`, `whoami` as subcommands, which is the pattern every CLI that does
+this uses.
 
 Board discovery is a Supabase query scoped by RLS, and the access key comes off
 the same row.
@@ -114,7 +155,41 @@ the same row.
 others. **Guard:** no token, key or session ever appears in a tool response or
 a log line.
 
-### 3 · Read tools
+**Done.** `apps/mcp/src/supabase/account.ts` is the only module that names
+Supabase — the same shape as the web app's adapter, and the dependency rule now
+names both folders. `session-store.ts` owns the file; `format.ts` owns
+everything the tool prints, which is what makes the standing guard testable at
+all. By hand:
+
+```bash
+pnpm --filter @openframe/mcp cli login          # asks for the password, never echoes it
+pnpm --filter @openframe/mcp cli whoami
+pnpm --filter @openframe/mcp cli boards         # ids, roles and names — never a key
+pnpm --filter @openframe/mcp cli peer --board brd_…   # the key comes off the account now
+```
+
+What the stage turned up:
+
+- **A refresh token is rotated on every use**, so the one in the file is spent
+  the moment the session refreshes — which it does by itself, on a timer, for
+  as long as the process runs. Unwritten, a server up for an hour leaves behind
+  a token that signs nobody in.
+- **A token from another project is never sent anywhere.** Refresh tokens carry
+  no note of where they came from, so a build pointed elsewhere would hand a
+  credential to a service that never issued it, for an answer that was going to
+  be "signed out" either way.
+- **`writeFileSync`'s mode applies only when it CREATES the file**, so a second
+  sign-in over a file somebody had loosened kept the loose permissions. The
+  first test of this passed with the fix deleted, because loosening the file
+  the same way did nothing either.
+- **A blocked host is not a wrong password.** A proxy that refuses the service
+  answers with HTML, the library throws about JSON, and the first version of
+  the message mapping called that a bad password — sending somebody to check a
+  credential that was never consulted. The web app learned the same lesson in a
+  different disguise, which is why its version of this table starts the same
+  way.
+
+### 3 · Read tools ✅
 
 `list_boards`, `get_board`, `get_objects`, `search_board` — all served from
 `describe()`, because a second serialization path is a second answer to
@@ -127,7 +202,55 @@ One seam, one delimiter, done at the start rather than retrofitted.
 
 **Proves:** an agent can answer a question about a real board.
 
-### 4 · Write tools
+**Done.** `tools/read.ts` holds the four, `tools/respond.ts` holds the
+delimiting, `tools/context.ts` is what they are handed, and `server.ts` is the
+stdio transport and nothing else — the tools name no transport at all, which is
+what stage 5 rests on.
+
+The delimiting is two things of different kinds. **The structure is the
+delimiter**: every response is one JSON document, so board text is always a
+string VALUE and there is no sequence a person can type that ends it early.
+**The framing says what it is**: one line, in the same message as the content,
+because a sentence in a tool description is read once when the tools are listed
+and is a long way away by the time a board arrives. A tool's own words — "no
+such board", "not signed in" — are NOT framed, because marking them as content
+would teach an agent that the marker means nothing.
+
+`get_board` answers with the shape of a board rather than the board: title,
+counts by type, and the frames and groups that hold the rest. `get_objects`
+pages, with the last id of a page as the cursor — an index would name a
+different object the moment somebody added a note. `search_board` reads
+`searchText`, so a piece of evidence matches on its source and its participant
+as well as its body, which is how *"what did we learn in the September study?"*
+is answered with no query language existing.
+
+Try it with an agent:
+
+```bash
+pnpm --filter @openframe/mcp cli login        # stage 2; the tools need a session
+claude mcp add openframe -- node --import tsx <repo>/apps/mcp/src/server.ts
+```
+
+What the stage turned up:
+
+- **A guard that reads source text reads its own prose.** The check that the
+  stdio server never writes to stdout failed on the docstring explaining why —
+  the sentence warning about a stray `console.log` contains one. It strips
+  comments now, or it would have been a guard against writing things down.
+- **A held board must not remember a failed join.** Left in the pool, a room
+  that was briefly unreachable answers every later question with the same
+  rejected promise for the life of the process.
+- **`not.toContain('one')`** passes on a payload holding the word "none". The
+  fixtures say `kumquat`.
+
+What a signed-in session adds — an agent reading a real board over a real
+socket — is the one part that cannot run in CI without somebody's password, so
+it is demonstrated by hand with the two commands above. The protocol half is
+covered by `server.stdio.test.ts`, which spawns the server and talks to it with
+a real MCP client; the tool half is covered against a real `BoardRoom` in
+`tools/read.test.ts`.
+
+### 4 · Write tools ✅
 
 `create_objects`, `update_object`, `move_objects`, `delete_objects`,
 `create_connector`, `create_frame`, `add_comment`.
@@ -141,6 +264,42 @@ twenty notes must be revertible in one press, not twenty.
 step, and a viewer-level session is refused. **Guards:** a test that no tool
 reaches the document except through `dispatch`; a test that a read-only session
 cannot write.
+
+**Done.** `tools/write.ts` holds the seven; `tools/definition.ts` holds the one
+place a call is validated, a board resolved and a refusal decided, so "is this
+board mine" is answered once rather than fourteen times.
+
+Decisions taken here, by the project owner:
+
+- **One undo entry per TOOL CALL**, not per object. Every tool goes through
+  `transact`, including the one that issues two commands — a frame and the
+  reparenting of what goes into it — because undoing a frame that swallowed six
+  notes has to give back the six notes as well.
+- **A view-only board is refused outright**, by the tool, before a command
+  exists. The room re-authorizes every write and the dispatcher's capability
+  check would refuse it first, so all three would stop it; only this one tells
+  the agent, and an agent told nothing tries again.
+
+`add_comment` is the exception to both, and deliberately: a comment is not part
+of the document (it is not in undo, in export or in the registry), it goes to
+the database through the same function the web app's composer calls, and a
+viewer MAY leave one — `readOnlyCapabilities` has granted `comment` since phase
+1.
+
+`move_objects` takes ABSOLUTE coordinates and converts them to the deltas the
+command wants. An agent reads positions rather than feeling them, so asking it
+to subtract would be asking it to re-derive a number it already has, against a
+board that may have moved since.
+
+`apps/web/e2e-rooms/mcp-peer.spec.ts` is the proof over a real socket: a tool
+creates three notes, a browser on the same board sees all three arrive marked
+`createdVia: 'mcp'`, and ONE undo on the peer takes all three away again.
+
+**Still open, and worth a decision before stage 5:** the entry lives on the
+agent's own undo stack. A person watching in a browser cannot press undo to
+reverse it — remote changes are applied with `skipUndo`, which is what keeps
+undo meaning "reverse MY last change" — so today "revertible in one press"
+means asking the agent to revert it, and no tool offers that yet.
 
 ### 5 · Remote transport
 

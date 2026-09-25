@@ -76,6 +76,17 @@ export interface RoomProviderOptions {
    * the room is the only thing that checked it.
    */
   readonly onRole?: (role: RoomRole) => void
+  /**
+   * The room has answered with the board.
+   *
+   * Called once, when the first sync message CARRYING CONTENT arrives — which
+   * an empty board sends too, so a peer waiting on this is not waiting on
+   * there being something to see. `connected` cannot stand in for it: a socket
+   * is open a round trip before the document is there, and a headless peer
+   * that read the document then would read an empty one and be right about
+   * nothing.
+   */
+  readonly onSynced?: () => void
   /** Injected so tests do not wait in real time. */
   readonly setTimer?: (run: () => void, ms: number) => unknown
   readonly clearTimer?: (handle: unknown) => void
@@ -97,6 +108,7 @@ export class RoomProvider {
   readonly #connect: () => RoomSocket
   readonly #onStatus: (status: ConnectionStatus) => void
   readonly #onRole: (role: RoomRole) => void
+  readonly #onSynced: () => void
   readonly #setTimer: (run: () => void, ms: number) => unknown
   readonly #clearTimer: (handle: unknown) => void
 
@@ -111,6 +123,14 @@ export class RoomProvider {
    * what the interface OFFERS, and the room enforces the truth regardless.
    */
   #role: RoomRole = 'editor'
+  /**
+   * Whether the room has sent the board.
+   *
+   * Latched rather than reset on a reconnection: the document is in hand from
+   * then on, and a peer that had it does not stop having it because a socket
+   * blinked.
+   */
+  #synced = false
 
   constructor(options: RoomProviderOptions) {
     this.#doc = options.doc
@@ -118,6 +138,7 @@ export class RoomProvider {
     this.#connect = options.connect
     this.#onStatus = options.onStatus ?? noop
     this.#onRole = options.onRole ?? noop
+    this.#onSynced = options.onSynced ?? noop
     this.#setTimer = options.setTimer ?? ((run, ms) => setTimeout(run, ms))
     this.#clearTimer = options.clearTimer ?? ((handle) => {
       clearTimeout(handle as ReturnType<typeof setTimeout>)
@@ -133,6 +154,10 @@ export class RoomProvider {
 
   get role(): RoomRole {
     return this.#role
+  }
+
+  get synced(): boolean {
+    return this.#synced
   }
 
   /** Opens the connection, and keeps reopening it until `destroy` is called. */
@@ -174,8 +199,19 @@ export class RoomProvider {
        * `readMessage` is about what a CLIENT may send to a room; a client that
        * refused what the room sent it would be refusing the board.
        */
-      const { reply } = readMessage(this.#doc, this.#awareness, data, FROM_ROOM, true)
+      const { reply, content } = readMessage(this.#doc, this.#awareness, data, FROM_ROOM, true)
       if (reply !== null) socket.send(reply)
+
+      /*
+       * `content` rather than `broadcast`: presence fans out too, and a room
+       * announces its own awareness state on every join — so a peer reading
+       * the board's arrival off `broadcast` was told the board was here before
+       * it had asked for it.
+       */
+      if (content && !this.#synced) {
+        this.#synced = true
+        this.#onSynced()
+      }
     })
 
     socket.onClose((code) => {

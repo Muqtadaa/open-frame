@@ -138,16 +138,6 @@ a frame — so a flat frame time on them said nothing about connectors, which
 resolve endpoints through the document, or groups, which union their children's.
 `board-mixed-*` exists for that reason.
 
-### 11. `OPENFRAME_BENCH` decides what a deployment ships
-
-`vercel.json` runs `build:bench` when `OPENFRAME_BENCH=1` and the clean `build`
-otherwise. A bench build carries the dev panel and ~4.7MB of benchmark boards.
-
-**This guard is manual.** While that variable is set in Vercel, _every_
-deployment in that environment carries the bench payload — production included.
-Remove it once the renderer question (ADR 0002) is settled, and do not set it on
-an environment real users reach.
-
 ### 12. Nothing goes in `apps/web/public/`
 
 Vite copies that directory into every production build. Benchmark fixtures once

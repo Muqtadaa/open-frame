@@ -38,11 +38,17 @@ export function App() {
           <Toast />
         </div>
 
-        <div className="of-overlay of-overlay--bottom-right">
+        {/*
+          `data-keep-clear`: furniture anchored to the WINDOW, which anything
+          anchored to a selection has to stay clear of because it cannot move
+          out of the way itself. The value names the edge it holds. See
+          controls/screen-furniture.ts.
+        */}
+        <div className="of-overlay of-overlay--bottom-right" data-keep-clear="bottom">
           <ZoomControl />
         </div>
 
-        <div className="of-overlay of-overlay--bottom-left">
+        <div className="of-overlay of-overlay--bottom-left" data-keep-clear="bottom">
           <StatusBar />
         </div>
 

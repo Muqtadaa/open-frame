@@ -1,3 +1,4 @@
+import { roomSocketUrl as roomUrl, KEY_PARAM as ROOM_KEY_PARAM } from '@openframe/collab'
 import { asBoardId, type BoardId } from '@openframe/core'
 
 /**
@@ -33,24 +34,6 @@ export const COLLAB_ENABLED = COLLAB_URL !== null
 export const ROOM_PARAM = 'room'
 
 /**
- * `?t=<token>` — proof that this browser knows the board's password.
- *
- * On the SOCKET only, never in a link anybody sends. A shareable URL carrying
- * the token would undo the whole feature: the password exists so that passing
- * the link on is not enough by itself.
- */
-export const TOKEN_PARAM = 't'
-
-/**
- * `?o=<key>` — the owner's key, on the SOCKET only.
- *
- * Deliberately not `k`. Were it a link it would sit in the page URL, and a URL
- * copied out of the address bar and passed on would carry the board's password
- * with it — which is the one thing the password exists to prevent.
- */
-export const OWNER_PARAM = 'o'
-
-/**
  * `?k=<key>` — which of a board's two links this is.
  *
  * The key IS the credential. It is in the URL rather than anywhere safer
@@ -58,8 +41,14 @@ export const OWNER_PARAM = 'o'
  * somebody can send is the product requirement, and a link that carries a
  * secret is what that means. It never reaches storage and never reaches the
  * document.
+ *
+ * The same name the socket uses, taken from `@openframe/collab` rather than
+ * written out again: the web app is no longer the only client that opens these
+ * rooms, and the two spellings of a credential must not be able to drift.
+ * The token and the owner key have no link form at all, so they live there
+ * alone.
  */
-export const KEY_PARAM = 'k'
+export const KEY_PARAM = ROOM_KEY_PARAM
 
 /**
  * A workspace invitation, which opens no board.
@@ -211,11 +200,10 @@ export function roomSocketUrl(
   /** The owner's key, for the person whose board it is. */
   ownerKey?: string | null,
 ): string {
-  const url = new URL(`${socketBase()}/room/${boardId}`)
-  if (key !== null && key !== undefined) url.searchParams.set(KEY_PARAM, key)
-  if (token !== null && token !== undefined) url.searchParams.set(TOKEN_PARAM, token)
-  if (ownerKey !== null && ownerKey !== undefined) url.searchParams.set(OWNER_PARAM, ownerKey)
-  return url.toString()
+  // The query itself is `@openframe/collab`'s, because the MCP server opens
+  // the same rooms with the same credentials; what stays here is where this
+  // build's server is and the conversion the platform forces.
+  return roomUrl(socketBase(), boardId, { key, token, ownerKey })
 }
 
 /** Where one of a board's images is read or written. */

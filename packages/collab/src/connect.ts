@@ -33,6 +33,17 @@ export interface BoardConnection {
    * client believes.
    */
   readonly role: RoomRole
+  /**
+   * Whether the room has sent the board yet.
+   *
+   * `status` cannot answer this: a socket is open a round trip before the
+   * document arrives. A browser does not care — it renders what it has and
+   * re-renders when more lands — but a process that reads the document once
+   * and answers a question with it does.
+   */
+  readonly synced: boolean
+  /** Called when the board arrives, or immediately if it already has. */
+  onSynced(listener: () => void): () => void
   /** This client's presence. Replaces the previous state wholesale. */
   setPresence(state: Record<string, unknown> | null): void
   /** Everyone else in the room, whenever that changes. Returns an unsubscribe. */
@@ -65,6 +76,17 @@ export interface ConnectBoardOptions {
    * it just works the way it did before this existed, which is the bug below.
    */
   readonly persistence?: CrdtStore
+  /**
+   * Whether this client publishes its local board into the room when it has
+   * never held the room's CRDT.
+   *
+   * True for a browser, which is where the board came FROM. False for a peer
+   * that has no board of its own and is joining to read one: seeding an empty
+   * document does not merely add nothing, it sets the room's title to whatever
+   * an empty document is called — so a headless peer joining to answer a
+   * question would rename the board on its way in.
+   */
+  readonly seed?: boolean
 }
 
 /**
@@ -103,7 +125,7 @@ export async function connectBoard(options: ConnectBoardOptions): Promise<BoardC
    * resurrect everything anyone else had deleted, because such a doc carries
    * no deletion history — a persisted one does, which is what makes this safe.
    */
-  if (stored === null) seedDoc(doc, options.store.getDocument())
+  if (stored === null && (options.seed ?? true)) seedDoc(doc, options.store.getDocument())
 
   if (options.persistence !== undefined) {
     const persistence = options.persistence
@@ -122,6 +144,7 @@ export async function connectBoard(options: ConnectBoardOptions): Promise<BoardC
   })
 
   const statusListeners = new Set<(status: ConnectionStatus) => void>()
+  const syncedListeners = new Set<() => void>()
   const roleListeners = new Set<(role: RoomRole) => void>()
   const peerListeners = new Set<(peers: readonly PeerPresence[]) => void>()
 
@@ -134,6 +157,10 @@ export async function connectBoard(options: ConnectBoardOptions): Promise<BoardC
     },
     onRole: (role) => {
       for (const listener of [...roleListeners]) listener(role)
+    },
+    onSynced: () => {
+      for (const listener of [...syncedListeners]) listener()
+      syncedListeners.clear()
     },
   })
 
@@ -166,6 +193,21 @@ export async function connectBoard(options: ConnectBoardOptions): Promise<BoardC
     get role() {
       return provider.role
     },
+    get synced() {
+      return provider.synced
+    },
+    onSynced(listener) {
+      // Immediately when the board is already here, like `onStatus`: a
+      // subscriber that arrived after the answer would otherwise wait forever
+      // for a message that has been and gone. Listeners are one-shot, because
+      // the event is.
+      if (provider.synced) {
+        listener()
+        return () => undefined
+      }
+      syncedListeners.add(listener)
+      return () => syncedListeners.delete(listener)
+    },
     setPresence(state) {
       awareness.setLocalState(state)
     },
@@ -191,6 +233,7 @@ export async function connectBoard(options: ConnectBoardOptions): Promise<BoardC
       awareness.off('change', onAwareness)
       peerListeners.clear()
       statusListeners.clear()
+      syncedListeners.clear()
       roleListeners.clear()
       provider.destroy()
       session.stop()

@@ -1,7 +1,8 @@
-import { useLayoutEffect, useRef, useState, type ReactNode } from 'react'
+import { useEffect, useLayoutEffect, useRef, useState, type ReactNode } from 'react'
 import { createPortal } from 'react-dom'
 
 import { placeAnchored, type Rect, type Side, type Size } from '../scene/anchoring.js'
+import { bottomBand, watchBottomBand } from './screen-furniture.js'
 
 /**
  * Anything that floats beside something else, placed once and placed the same.
@@ -56,6 +57,12 @@ export function AnchoredSurface({
 }) {
   const element = useRef<HTMLDivElement>(null)
   const [size, setSize] = useState({ width: 260, height: 100 })
+  /*
+   * The board's screen-edge furniture, which nothing anchored to a selection
+   * may be clamped onto: it is anchored to the window and moves for nobody.
+   */
+  const [band, setBand] = useState(bottomBand)
+  useEffect(() => watchBottomBand(setBand), [])
 
   /*
    * MEASURED, not estimated. A bar whose width depends on how many controls a
@@ -94,6 +101,7 @@ export function AnchoredSurface({
     gap,
     margin,
     keepClearLeft,
+    keepClearBottom: band,
     avoid,
   })
 

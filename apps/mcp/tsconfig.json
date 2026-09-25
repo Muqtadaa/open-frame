@@ -1,0 +1,10 @@
+{
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": {
+    "rootDir": "src",
+    // Node, and only Node. This process has no DOM and never will: the whole
+    // point of the package is that a board can be joined without a browser.
+    "types": ["node"]
+  },
+  "include": ["src/**/*.ts"]
+}
