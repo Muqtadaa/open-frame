@@ -278,7 +278,6 @@ function ObjectViewInner({ id, views }: Props) {
               }
               setEditing(null)
             }}
-            onCancel={() => setEditing(null)}
           />
         ) : (
           <Renderer

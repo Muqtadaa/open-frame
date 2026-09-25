@@ -20,15 +20,18 @@ interface Props {
    */
   readonly Chrome: ObjectEditorProps['Chrome']
   readonly onCommit: (text: RichText) => void
-  readonly onCancel: () => void
 }
 
 /**
  * The inline editor for one object's text: a `RichTextField` and the format
  * bar that drives it, with an object's commit rules.
  *
- * Committed on blur, discarded on Escape, never dispatched per keystroke. One
- * command per edit, one undo entry.
+ * Committed on blur AND on Escape, never dispatched per keystroke. One command
+ * per edit, one undo entry — which is what takes an edit back.
+ *
+ * Escape used to DISCARD: a note somebody had just written went back to what
+ * it said before, silently and beyond undo, from the key people press to mean
+ * "done". Losing words is the one failure this product does not accept.
  */
 export function RichTextEditor({
   initialText,
@@ -37,13 +40,15 @@ export function RichTextEditor({
   ariaLabel,
   Chrome,
   onCommit,
-  onCancel,
 }: Props) {
   const field = useRef<RichTextFieldHandle>(null)
-  const cancelled = useRef(false)
+  // Escape commits and the unmount that follows blurs the field: one commit.
+  const done = useRef(false)
   const [state, setState] = useState<FormatState>({ marks: [], list: undefined })
 
   const commit = (): void => {
+    if (done.current) return
+    done.current = true
     onCommit(field.current?.read() ?? initialText)
   }
 
@@ -65,18 +70,9 @@ export function RichTextEditor({
         ariaLabel={ariaLabel}
         focusOnMount="select-all"
         onFormatState={setState}
-        onBlur={() => {
-          if (cancelled.current) return
-          commit()
-        }}
+        onBlur={commit}
         onKeyDown={(event) => {
-          if (event.key === 'Escape') {
-            event.preventDefault()
-            cancelled.current = true
-            onCancel()
-            return
-          }
-          if (event.key === 'Enter' && (event.metaKey || event.ctrlKey)) {
+          if (event.key === 'Escape' || (event.key === 'Enter' && (event.metaKey || event.ctrlKey))) {
             event.preventDefault()
             commit()
           }

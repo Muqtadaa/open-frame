@@ -57,7 +57,7 @@ function FrameRenderer({ object, zoom }: ObjectViewProps<FrameData>) {
   )
 }
 
-function FrameEditor({ object, zoom, Chrome, onCommit, onCancel }: ObjectEditorProps<FrameData>) {
+function FrameEditor({ object, zoom, Chrome, onCommit }: ObjectEditorProps<FrameData>) {
   const filled = (object.style.fill ?? 'solid') !== 'none'
   return (
     /*
@@ -103,7 +103,6 @@ function FrameEditor({ object, zoom, Chrome, onCommit, onCancel }: ObjectEditorP
         onCommit={(name) => {
           onCommit({ name })
         }}
-        onCancel={onCancel}
       />
     </div>
   )

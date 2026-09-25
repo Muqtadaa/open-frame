@@ -100,19 +100,20 @@ test.describe('the keyboard', () => {
     await expect(drawn(page).nth(0)).toHaveText('draft two')
   })
 
-  test('puts back only the cell being typed in on Escape', async ({ page }) => {
+  test('keeps the cell being typed in on Escape, and a second Escape leaves', async ({
+    page,
+  }) => {
     await newTable(page)
     await fill(page, ['kept'])
-    await page.keyboard.type('thrown away')
+    await page.keyboard.type('also kept')
     await page.keyboard.press('Escape')
-    // Still editing the table, navigating.
+    // Still editing the table, navigating — with the words still there.
     await expect(page.getByTestId('table-editor')).toHaveAttribute('data-mode', 'navigate')
-    await expect(cell(page, 1)).toHaveText('')
-    // A second Escape leaves, keeping everything else.
+    await expect(cell(page, 1)).toHaveText('also kept')
     await page.keyboard.press('Escape')
     await expect(page.getByTestId('table-editor')).toHaveCount(0)
     await expect(drawn(page).nth(0)).toHaveText('kept')
-    await expect(drawn(page).nth(1)).toHaveText('')
+    await expect(drawn(page).nth(1)).toHaveText('also kept')
   })
 
   test('clears a block with Delete, and leaves its colours', async ({ page }) => {

@@ -239,7 +239,8 @@ test.describe('formatting selected text', () => {
     await expect(page.locator('.of-sticky')).toContainText('A plain note')
   })
 
-  test('Escape abandons the formatting along with the edit', async ({ page }) => {
+  // Escape ends the edit and keeps it, formatting included; undo takes it back.
+  test('Escape keeps the formatting, and one undo takes it back', async ({ page }) => {
     await noteSaying(page, 'A plain note')
     await page.locator(CANVAS).click({ position: CLEAR })
     await page.locator(CANVAS).dblclick({ position: AT })
@@ -247,6 +248,8 @@ test.describe('formatting selected text', () => {
     await page.getByTestId('format-bold').click()
     await page.keyboard.press('Escape')
 
+    await expect(page.locator('.of-sticky strong')).toHaveCount(1)
+    await page.keyboard.press('Control+z')
     await expect(page.locator('.of-sticky strong')).toHaveCount(0)
     await expect(page.locator('.of-sticky')).toContainText('A plain note')
   })

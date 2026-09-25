@@ -158,7 +158,7 @@ for (const world of WORLDS) {
       await page.keyboard.press('Shift+Tab')
       await page.keyboard.press('Enter')
       await page.keyboard.type('- bullet')
-      // Committed by leaving: Escape would discard the edit.
+      // Committed by leaving.
       await page.mouse.click(1100, 600)
       await expect(page.locator('[data-object-type="sticky"] [role="listitem"]')).toHaveCount(4)
       await snap(page, `${world}-note-lists`)

@@ -172,7 +172,6 @@ function ConnectorEditor({
   boundsOf,
   Chrome,
   onCommit,
-  onCancel,
 }: ObjectEditorProps<ConnectorData>) {
   // The label's place is the middle of the DRAWN route, which now depends on
   // which way each end leaves — same call as the renderer, same answer.
@@ -200,7 +199,6 @@ function ConnectorEditor({
         onCommit={(text) => {
           onCommit({ text })
         }}
-        onCancel={onCancel}
       />
     </div>
   )

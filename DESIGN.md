@@ -734,7 +734,8 @@ under the pointer with a caret; otherwise a cell is SELECTED rather than
 typed in, and the keyboard moves it — arrows, Shift to extend, Tab along the
 row and on to the next, Enter or F2 to type, Delete to clear, Mod+A for
 everything. Typing over a selected cell replaces it; Enter finishes a cell
-and moves down, Escape puts that one cell back.
+and moves down, Escape stops typing and keeps what was typed — no key on the
+board throws words away; undo does that.
 
 - **The apparatus lines up with the grid.** Column letters and row numbers sit
   exactly over the tracks they name, in 12px mono at the apparatus radius,
