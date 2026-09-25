@@ -711,6 +711,18 @@ right of the tool, fading in over `--of-quick` (140ms) and suppressed under
 tooltip only a mouse can summon is not a label. The shortcut inside it is 12px
 mono in decade-rule grey.
 
+### Format Bar
+
+One bar for every text — a note, a text box, a shape's label, a slip, a
+connector's label, a frame's title and a table cell (ADR 0014). Bold, italic,
+underline and strike as letters that show the mark; A− and A+ stepping the
+size; then bulleted and numbered lists, drawn as icons. It floats above the
+text being edited, and inside a table it is the first row of the cell bar,
+driving the cell with the caret. Its shortcuts are every document editor's:
+Mod+B/I/U, Mod+Shift+8 and Mod+Shift+7; "- ", "* " and "1. " start a list as
+you type, Tab nests an item and Enter on an empty one ends the list. Lists are
+drawn by the stylesheet — •, ◦, ▪ and 1., a., i. by depth — never typed.
+
 ### Tips on Everything Else
 
 Every other control that needs a word says it the same way: the label in ink,

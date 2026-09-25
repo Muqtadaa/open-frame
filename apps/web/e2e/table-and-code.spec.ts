@@ -605,3 +605,55 @@ test('the cell bar’s targets each have room for their name', async ({ page }) 
     expect(cramped, key).toBe(false)
   }
 })
+
+/**
+ * A cell is text like any other (ADR 0014): the cell bar carries the same
+ * format bar every text has, driving the cell with the caret. It could not be
+ * bolded while it was a textarea.
+ */
+test.describe('formatting a cell', () => {
+  test.beforeEach(async ({ page }) => {
+    await board(page)
+    await page.getByTestId('tool-table').click()
+    await page.locator(CANVAS).click({ position: { x: 340, y: 300 } })
+    await expect(page.getByTestId('table-cell-0')).toBeFocused()
+  })
+
+  test('bolds a cell’s words from the cell bar', async ({ page }) => {
+    await page.keyboard.type('Revenue')
+    await page.keyboard.press('ControlOrMeta+a')
+    await page.getByTestId('format-bold').click()
+    await expect(page.getByTestId('table-cell-0').locator('strong')).toHaveText('Revenue')
+    await page.locator(CANVAS).click({ position: { x: 1100, y: 620 } })
+    await expect(page.locator('[role="table"] > div').first().locator('strong')).toHaveText(
+      'Revenue',
+    )
+  })
+
+  test('holds a list, made with Shift+Enter while Enter still finishes', async ({ page }) => {
+    await page.keyboard.type('- one')
+    await page.keyboard.press('Shift+Enter')
+    await page.keyboard.type('two')
+    await expect(page.getByTestId('table-cell-0').locator('[data-list="bullet"]')).toHaveText([
+      'one',
+      'two',
+    ])
+    await page.keyboard.press('Enter')
+    await expect(page.getByTestId('table-editor')).toHaveCount(0)
+    await expect(
+      page.locator('[role="table"] > div').first().locator('[role="listitem"]'),
+    ).toHaveText(['one', 'two'])
+  })
+
+  test('keeps a cell’s colour and its formatting together', async ({ page }) => {
+    await page.getByTestId('table-cell-4').click()
+    await page.getByTestId('cell-fill-green').click()
+    await page.keyboard.type('both')
+    await page.keyboard.press('ControlOrMeta+a')
+    await page.keyboard.press('ControlOrMeta+i')
+    await page.locator(CANVAS).click({ position: { x: 1100, y: 620 } })
+    const cell = page.locator('[role="table"] > div').nth(4)
+    await expect(cell.locator('em')).toHaveText('both')
+    await expect(cell).toHaveCSS('background-color', 'rgb(191, 240, 212)')
+  })
+})

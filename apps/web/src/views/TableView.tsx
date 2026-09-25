@@ -1,9 +1,8 @@
-import { useState, type CSSProperties } from 'react'
+import { useRef, useState, type CSSProperties } from 'react'
 
 import {
   cellRange,
   cellRegion,
-  plainTextOf,
   resizeGrid,
   styleCells,
   type CellStyle,
@@ -13,6 +12,8 @@ import {
 } from '@openframe/core'
 
 import { defineObjectView, type ObjectEditorProps, type ObjectViewProps } from './registry.js'
+import { FormatBar } from './FormatBar.js'
+import { RichTextField, type FormatState, type RichTextFieldHandle } from './RichTextField.js'
 import { RichTextView } from './RichTextView.js'
 import { cellAt, tracks } from '../scene/table-grid.js'
 import {
@@ -191,6 +192,16 @@ function TableEditor({ object, at, zoom, Chrome, onCommit, onCancel }: ObjectEdi
   const selected = cellRange(draft, anchor, focus)
   const inRange = new Set(selected)
 
+  /*
+   * The cell being TYPED in, and its field, for the format bar in the cell
+   * bar. Formatting is text, so it acts on the one cell with the caret; the
+   * colours below act on the whole range.
+   */
+  const fields = useRef<(RichTextFieldHandle | null)[]>([])
+  const [editingCell, setEditingCell] = useState(started)
+  const [format, setFormat] = useState<FormatState>({ marks: [], list: undefined })
+  const typing = (): RichTextFieldHandle | null => fields.current[editingCell] ?? null
+
   const commit = (): void => {
     onCommit({ columns: draft.columns, rows: draft.rows, cells: draft.cells })
   }
@@ -273,18 +284,27 @@ function TableEditor({ object, at, zoom, Chrome, onCommit, onCancel }: ObjectEdi
         }}
       >
         {draft.cells.map((cell, index) => (
-          <textarea
+          <RichTextField
             key={index}
+            handle={(field) => {
+              fields.current[index] = field
+            }}
+            initialText={cell.text}
             className={`of-table__cell of-table__input${
               draft.headerRow && Math.floor(index / width) === 0 ? ' of-table__cell--head' : ''
             }`}
-            value={plainTextOf(cell.text)}
-            autoFocus={index === started}
-            aria-label={`Row ${String(Math.floor(index / width) + 1)}, column ${String(
+            focusOnMount={index === started ? 'end' : false}
+            ariaLabel={`Row ${String(Math.floor(index / width) + 1)}, column ${String(
               (index % width) + 1,
             )}`}
-            data-testid={`table-cell-${String(index)}`}
-            data-selected={inRange.has(index) ? 'true' : undefined}
+            testId={`table-cell-${String(index)}`}
+            attributes={{ 'data-selected': inRange.has(index) ? 'true' : undefined }}
+            /*
+             * Enter finishes, as it did in the textarea: a table holds short
+             * values, so finishing is the common case. A new line — and a new
+             * list item — is Shift+Enter.
+             */
+            newParagraph="Shift+Enter"
             /*
              * The ring is 2px ON SCREEN, so it is divided by the zoom like
              * every other piece of chrome here — at 400% a 2px inset ring is
@@ -297,6 +317,10 @@ function TableEditor({ object, at, zoom, Chrome, onCommit, onCancel }: ObjectEdi
                 ? { boxShadow: `inset 0 0 0 ${String(2 / zoom)}px var(--of-accent)` }
                 : {}),
             }}
+            onFocus={() => {
+              setEditingCell(index)
+            }}
+            onFormatState={setFormat}
             onPointerDown={(event) => {
               /*
                * Shift EXTENDS from the anchor; a plain press starts a new
@@ -313,8 +337,7 @@ function TableEditor({ object, at, zoom, Chrome, onCommit, onCancel }: ObjectEdi
               setAnchor(index)
               setFocus(index)
             }}
-            onChange={(event) => {
-              const text = event.target.value
+            onChange={(text) => {
               setDraft((current) => ({
                 ...current,
                 /*
@@ -323,22 +346,16 @@ function TableEditor({ object, at, zoom, Chrome, onCommit, onCancel }: ObjectEdi
                  * wiped a coloured cell's colours on the first keystroke.
                  */
                 cells: current.cells.map((old, other) =>
-                  other === index ? { ...old, text: [{ text }] } : old,
+                  other === index ? { ...old, text } : old,
                 ),
               }))
             }}
             onKeyDown={(event) => {
-              // The board's own shortcuts must not fire while typing in a cell.
-              event.stopPropagation()
               if (event.key === 'Escape') {
+                event.preventDefault()
                 onCancel()
                 return
               }
-              /*
-               * Enter commits; Shift+Enter is a line inside the cell. A table
-               * holds short values, so finishing is the common case and the
-               * plain key is what makes it quick.
-               */
               if (event.key === 'Enter' && !event.shiftKey) {
                 event.preventDefault()
                 commit()
@@ -370,9 +387,43 @@ function TableEditor({ object, at, zoom, Chrome, onCommit, onCancel }: ObjectEdi
         * anchored to the table's top edge, which is off the window as soon as
         * you zoom into a large table — and it pointed at the table rather than
         * at the selection, which is not what it changes.
+        *
+        * Lined up with the selection ACROSS, but outside the table UP AND
+        * DOWN. Anchored to the cells themselves, a bar that found no room
+        * above them dropped onto the rows below — the very cells a shift-click
+        * was reaching for — and with the format row in it, it is tall enough
+        * that it usually did.
         */}
-      <Chrome anchor={cellRegion(draft, selected)} prefer={['above', 'below']}>
-      <div className="of-cellbar of-surface" data-testid="table-cell-style">
+      <Chrome
+        anchor={across(cellRegion(draft, selected))}
+        prefer={['above', 'below']}
+      >
+      <div
+        className="of-cellbar of-surface"
+        data-testid="table-cell-style"
+        /*
+         * A press on any BUTTON here leaves the caret in the cell: pick a
+         * colour, keep typing. Only buttons — the custom colour's hex field
+         * has to be able to take focus to be typed in.
+         */
+        onMouseDown={(event) => {
+          if (event.target instanceof Element && event.target.closest('button') !== null) {
+            event.preventDefault()
+          }
+        }}
+      >
+        {/*
+          * The same format bar every text has, driving the cell with the
+          * caret: a cell is text like any other, and it could not be bolded
+          * while it was a textarea.
+          */}
+        <FormatBar
+          embedded
+          state={format}
+          onToggle={(mark) => typing()?.toggleMark(mark)}
+          onResize={(by) => typing()?.resize(by)}
+          onList={(kind) => typing()?.toggleList(kind)}
+        />
         <div className="of-cellbar__head">
           <span className="of-cellbar__count">
             {selected.length === 1 ? '1 cell' : `${String(selected.length)} cells`}
@@ -500,6 +551,13 @@ function TableEditor({ object, at, zoom, Chrome, onCommit, onCancel }: ObjectEdi
       </Chrome>
     </div>
   )
+}
+
+/** A region's span across the table, and the table's whole height. */
+function across(
+  region: { x: number; width: number } | null,
+): { x: number; y: number; width: number; height: number } | null {
+  return region === null ? null : { x: region.x, y: 0, width: region.width, height: 1 }
 }
 
 export const tableView = defineObjectView<TableData>({

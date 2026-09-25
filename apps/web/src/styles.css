@@ -1442,6 +1442,11 @@ body {
    * inherit colour on its own, so this is what carries the ink into the one
    * cell being typed in. */
   color: inherit;
+  /* A rich-text field now, not a textarea: it wraps and scrolls as one did. */
+  overflow: auto;
+  overflow-wrap: anywhere;
+  white-space: pre-wrap;
+  cursor: text;
   resize: none;
   background: transparent;
   border-top: none;
@@ -1607,6 +1612,14 @@ body {
   display: grid;
   gap: var(--of-space-8);
   padding: var(--of-space-8);
+}
+
+/* The format bar inside the cell bar: its row, on the bar's own stock. */
+.of-format-bar.of-format-bar--embedded {
+  padding: 0;
+  background: none;
+  border: none;
+  box-shadow: none;
 }
 
 .of-cellbar__head {
