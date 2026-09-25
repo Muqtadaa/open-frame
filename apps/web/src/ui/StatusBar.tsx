@@ -13,7 +13,7 @@ import { BoardTitle } from './BoardTitle.js'
 import { Mentions } from './Mentions.js'
 import { DevPanel } from './DevPanel.js'
 import { ShareControl } from './ShareControl.js'
-import { AfterHoursIcon, RedoIcon, UndoIcon } from './icons.js'
+import { AfterHoursIcon, RedoIcon, UndoIcon } from '../controls/icons.js'
 
 const isMac = typeof navigator !== 'undefined' && /Mac|iPhone|iPad/.test(navigator.platform)
 const mod = isMac ? '⌘' : 'Ctrl'

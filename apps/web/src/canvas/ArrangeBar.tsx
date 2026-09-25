@@ -16,7 +16,7 @@ import {
   AlignTopIcon,
   DistributeXIcon,
   DistributeYIcon,
-} from '../ui/icons.js'
+} from '../controls/icons.js'
 
 /** The six edges, in the order every tool that has this puts them. */
 const ALIGNMENTS: readonly {

@@ -24,6 +24,7 @@ import {
   surfaceOf,
 } from '../scene/style-tokens.js'
 import { Swatches, groundOf, type SwatchKind } from '../controls/Swatches.js'
+import { MinusIcon, PlusIcon } from '../controls/icons.js'
 
 /**
  * What a colour lands on, named in the order somebody reaches for them.
@@ -442,7 +443,7 @@ function TableEditor({ object, at, zoom, Chrome, onCommit, onCancel }: ObjectEdi
       <div className="of-table-edit__columns of-surface" role="group" aria-label="Columns">
         <button
           type="button"
-          className="of-table-edit__step"
+          className="of-icon-button"
           aria-label="Add a column"
           data-testid="table-add-column"
           onMouseDown={keepFocus}
@@ -450,11 +451,11 @@ function TableEditor({ object, at, zoom, Chrome, onCommit, onCancel }: ObjectEdi
             reshape('column', 1)
           }}
         >
-          +
+          <PlusIcon />
         </button>
         <button
           type="button"
-          className="of-table-edit__step"
+          className="of-icon-button"
           aria-label="Remove the last column"
           disabled={width <= 1}
           data-testid="table-remove-column"
@@ -463,7 +464,7 @@ function TableEditor({ object, at, zoom, Chrome, onCommit, onCancel }: ObjectEdi
             reshape('column', -1)
           }}
         >
-          −
+          <MinusIcon />
         </button>
       </div>
 
@@ -473,7 +474,7 @@ function TableEditor({ object, at, zoom, Chrome, onCommit, onCancel }: ObjectEdi
       <div className="of-table-edit__rows of-surface" role="group" aria-label="Rows">
         <button
           type="button"
-          className="of-table-edit__step"
+          className="of-icon-button"
           aria-label="Add a row"
           data-testid="table-add-row"
           onMouseDown={keepFocus}
@@ -481,11 +482,11 @@ function TableEditor({ object, at, zoom, Chrome, onCommit, onCancel }: ObjectEdi
             reshape('row', 1)
           }}
         >
-          +
+          <PlusIcon />
         </button>
         <button
           type="button"
-          className="of-table-edit__step"
+          className="of-icon-button"
           aria-label="Remove the last row"
           disabled={draft.rows.length <= 1}
           data-testid="table-remove-row"
@@ -494,7 +495,7 @@ function TableEditor({ object, at, zoom, Chrome, onCommit, onCancel }: ObjectEdi
             reshape('row', -1)
           }}
         >
-          −
+          <MinusIcon />
         </button>
       </div>
       </Chrome>

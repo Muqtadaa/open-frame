@@ -304,6 +304,15 @@ export function DisclosureIcon({ className }: IconProps) {
   )
 }
 
+/** The eyedropper: pick a colour from anywhere on the screen. */
+export function DropperIcon({ className }: IconProps) {
+  return (
+    <svg {...base} className={className}>
+      <path d="M17.5 3.5a2.6 2.6 0 0 1 3 3l-2.4 2.4 1 1-2 2-1-1-6.6 6.6-3.4.9.9-3.4 6.6-6.6-1-1 2-2 1 1Z" />
+    </svg>
+  )
+}
+
 /** Replaces a `\u00d7` text glyph, for the same reason. */
 export function CloseIcon({ className }: IconProps) {
   return (

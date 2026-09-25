@@ -1027,6 +1027,11 @@ body {
   border-radius: var(--of-radius);
 }
 
+.of-picker__dropper svg {
+  width: 17px;
+  height: 17px;
+}
+
 .of-picker__dropper:hover {
   color: var(--of-ink);
   background: var(--of-hover);
@@ -1467,29 +1472,6 @@ body {
   flex-direction: column;
 }
 
-.of-table-edit__step {
-  width: 24px;
-  height: 24px;
-  font: inherit;
-  font-size: var(--of-type-control);
-  line-height: 1;
-  color: var(--of-ink);
-  cursor: pointer;
-  background: var(--of-panel);
-  border: 1px solid var(--of-control-border);
-  border-radius: var(--of-radius);
-}
-
-.of-table-edit__step:disabled {
-  color: var(--of-ink-muted);
-  cursor: default;
-  opacity: 0.5;
-}
-
-.of-table-edit__step:hover:not(:disabled) {
-  background: var(--of-hover);
-}
-
 /*
  * CHOOSING A TABLE'S SIZE by pointing at it.
  *
@@ -1751,6 +1733,11 @@ body {
   transition:
     background var(--of-quick) var(--of-ease),
     color var(--of-quick) var(--of-ease);
+}
+
+.of-spaces__new svg {
+  width: 14px;
+  height: 14px;
 }
 
 .of-spaces__new:hover {

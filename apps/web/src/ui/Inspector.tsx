@@ -34,7 +34,7 @@ import { PANEL_CLEARANCE_PX } from '../scene/connect-points.js'
 import { useOpenFrame } from '../runtime/context.js'
 import { Swatches, groundOf, type SwatchKind } from '../controls/Swatches.js'
 import { AlignIcon, VAlignIcon, DashIcon,
-  RadiusIcon, FillIcon, StrokeIcon, TrashIcon } from './icons.js'
+  RadiusIcon, FillIcon, StrokeIcon, TrashIcon } from '../controls/icons.js'
 import { Provenance } from './Provenance.js'
 import { RecordFields } from './RecordFields.js'
 

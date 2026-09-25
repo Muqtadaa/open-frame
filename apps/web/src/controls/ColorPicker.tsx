@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState, type PointerEvent as ReactPointer
 import { parseHexColor, type ColorValue, type HexColor } from '@openframe/core'
 
 import { contrastRatio, hexToHsv, hsvToHex, type Hsv } from '../scene/color.js'
+import { DropperIcon } from './icons.js'
 
 /**
  * The eyedropper, where it exists.
@@ -19,26 +20,6 @@ interface EyeDropperApi {
 function eyeDropper(): EyeDropperApi | null {
   const ctor = (window as unknown as { EyeDropper?: new () => EyeDropperApi }).EyeDropper
   return ctor === undefined ? null : new ctor()
-}
-
-/** Drawn on the 24x24 grid at 1.6, like every icon in this product. */
-function DropperMark() {
-  return (
-    <svg
-      viewBox="0 0 24 24"
-      width="17"
-      height="17"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="1.6"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      aria-hidden="true"
-      focusable="false"
-    >
-      <path d="M17.5 3.5a2.6 2.6 0 0 1 3 3l-2.4 2.4 1 1-2 2-1-1-6.6 6.6-3.4.9.9-3.4 6.6-6.6-1-1 2-2 1 1Z" />
-    </svg>
-  )
 }
 
 /** AA for text. A ratio below this is the one worth saying out loud. */
@@ -217,7 +198,7 @@ export function ColorPicker({ current, against, onPick, onClose }: ColorPickerPr
               )
             }}
           >
-            <DropperMark />
+            <DropperIcon />
           </button>
         )}
       </div>

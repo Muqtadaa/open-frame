@@ -11,7 +11,7 @@ import {
   zoomToSlider,
 } from '../scene/zoom.js'
 import { useInteractionStore } from '../interaction/interaction-store.js'
-import { FitIcon, GridIcon, MinusIcon, MouseIcon, PlusIcon } from './icons.js'
+import { FitIcon, GridIcon, MinusIcon, MouseIcon, PlusIcon } from '../controls/icons.js'
 
 const isMac = typeof navigator !== 'undefined' && /Mac|iPhone|iPad/.test(navigator.platform)
 const mod = isMac ? '⌘' : 'Ctrl'

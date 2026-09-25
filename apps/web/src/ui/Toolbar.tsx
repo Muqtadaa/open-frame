@@ -19,7 +19,7 @@ import {
   StickyIcon,
   TableIcon,
   TextIcon,
-} from './icons.js'
+} from '../controls/icons.js'
 
 interface ToolSpec {
   readonly id: Tool

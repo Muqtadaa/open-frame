@@ -2,179 +2,179 @@
 name: OpenFrame
 description: An engineering quadrille page that treats every mark on it as a record, with a second world for after hours.
 colors:
-  bg: "#eef2f6"
-  page: "#f7f9fb"
-  rule: "#e4ebf2"
-  rule-decade: "#c9d6e4"
-  panel: "#ffffff"
-  panel-border: "#c7d2de"
-  control-border: "#758596"
-  ink: "#16202b"
-  ink-muted: "#4e6070"
-  accent: "#1450b5"
-  accent-soft: "#e4ecfa"
-  guide: "#b0197a"
-  danger: "#a3231b"
-  danger-wash: "#f9ebea"
-  danger-edge: "#e0bcb8"
-  hover: "#e8edf3"
-  c-yellow: "#7a5c00"
-  c-green: "#146045"
-  c-blue: "#17529e"
-  c-red: "#8a4038"
-  c-violet: "#5b3ba8"
-  c-orange: "#8c4715"
-  c-gray: "#3f5163"
-  c-pink: "#8f2a67"
-  c-brown: "#6a4a2a"
-  c-black: "#16202b"
-  c-white: "#ffffff"
-  s-yellow: "#ffe9a3"
-  s-green: "#bff0d4"
-  s-blue: "#cfe2ff"
-  s-red: "#ffd5d0"
-  s-violet: "#e3daff"
-  s-orange: "#ffddb8"
-  s-gray: "#dfe5ec"
-  s-pink: "#ffd4ef"
-  s-brown: "#e8dcc6"
-  s-black: "#16202b"
-  s-white: "#ffffff"
+  bg: '#eef2f6'
+  page: '#f7f9fb'
+  rule: '#e4ebf2'
+  rule-decade: '#c9d6e4'
+  panel: '#ffffff'
+  panel-border: '#c7d2de'
+  control-border: '#758596'
+  ink: '#16202b'
+  ink-muted: '#4e6070'
+  accent: '#1450b5'
+  accent-soft: '#e4ecfa'
+  guide: '#b0197a'
+  danger: '#a3231b'
+  danger-wash: '#f9ebea'
+  danger-edge: '#e0bcb8'
+  hover: '#e8edf3'
+  c-yellow: '#7a5c00'
+  c-green: '#146045'
+  c-blue: '#17529e'
+  c-red: '#8a4038'
+  c-violet: '#5b3ba8'
+  c-orange: '#8c4715'
+  c-gray: '#3f5163'
+  c-pink: '#8f2a67'
+  c-brown: '#6a4a2a'
+  c-black: '#16202b'
+  c-white: '#ffffff'
+  s-yellow: '#ffe9a3'
+  s-green: '#bff0d4'
+  s-blue: '#cfe2ff'
+  s-red: '#ffd5d0'
+  s-violet: '#e3daff'
+  s-orange: '#ffddb8'
+  s-gray: '#dfe5ec'
+  s-pink: '#ffd4ef'
+  s-brown: '#e8dcc6'
+  s-black: '#16202b'
+  s-white: '#ffffff'
 typography:
   display:
-    fontFamily: "ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, sans-serif"
-    fontSize: "22px"
+    fontFamily: 'ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, sans-serif'
+    fontSize: '22px'
     fontWeight: 400
     lineHeight: 1.3
   body:
-    fontFamily: "ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, sans-serif"
-    fontSize: "15px"
+    fontFamily: 'ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, sans-serif'
+    fontSize: '15px'
     fontWeight: 400
     lineHeight: 1.35
   shape-label:
-    fontFamily: "ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, sans-serif"
-    fontSize: "14px"
+    fontFamily: 'ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, sans-serif'
+    fontSize: '14px'
     fontWeight: 400
     lineHeight: 1.3
   ui:
-    fontFamily: "ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, sans-serif"
-    fontSize: "15px"
+    fontFamily: 'ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, sans-serif'
+    fontSize: '15px'
     fontWeight: 400
     lineHeight: 1.3
   ui-small:
-    fontFamily: "ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, sans-serif"
-    fontSize: "13px"
+    fontFamily: 'ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, sans-serif'
+    fontSize: '13px'
     fontWeight: 400
     lineHeight: 1
   title:
-    fontFamily: "ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, sans-serif"
-    fontSize: "17px"
+    fontFamily: 'ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, sans-serif'
+    fontSize: '17px'
     fontWeight: 600
     lineHeight: 1.3
   headline:
-    fontFamily: "ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, sans-serif"
-    fontSize: "19px"
+    fontFamily: 'ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, sans-serif'
+    fontSize: '19px'
     fontWeight: 600
     lineHeight: 1.35
   record:
-    fontFamily: "ui-monospace, SFMono-Regular, Menlo, Consolas, Liberation Mono, monospace"
-    fontSize: "12px"
+    fontFamily: 'ui-monospace, SFMono-Regular, Menlo, Consolas, Liberation Mono, monospace'
+    fontSize: '12px'
     fontWeight: 400
     lineHeight: 1
-    letterSpacing: "0.02em"
+    letterSpacing: '0.02em'
 rounded:
-  hair: "1px"
-  slip: "2px"
-  apparatus: "4px"
-  control: "6px"
-  surface: "10px"
-  grip: "25%"
-  round: "50%"
-  capsule: "999px"
+  hair: '1px'
+  slip: '2px'
+  apparatus: '4px'
+  control: '6px'
+  surface: '10px'
+  grip: '25%'
+  round: '50%'
+  capsule: '999px'
 spacing:
-  space-2: "2px"
-  space-4: "4px"
-  space-6: "6px"
-  space-8: "8px"
-  step: "10px"
-  space-12: "12px"
-  space-16: "16px"
-  gutter: "20px"
+  space-2: '2px'
+  space-4: '4px'
+  space-6: '6px'
+  space-8: '8px'
+  step: '10px'
+  space-12: '12px'
+  space-16: '16px'
+  gutter: '20px'
 components:
   tool:
-    backgroundColor: "transparent"
-    textColor: "{colors.ink-muted}"
-    rounded: "{rounded.control}"
-    size: "50px"
+    backgroundColor: 'transparent'
+    textColor: '{colors.ink-muted}'
+    rounded: '{rounded.control}'
+    size: '50px'
   tool-hover:
-    backgroundColor: "{colors.accent-soft}"
-    textColor: "{colors.ink}"
+    backgroundColor: '{colors.accent-soft}'
+    textColor: '{colors.ink}'
   tool-active:
-    backgroundColor: "{colors.accent-soft}"
-    textColor: "{colors.accent}"
+    backgroundColor: '{colors.accent-soft}'
+    textColor: '{colors.accent}'
   tool-tip:
-    backgroundColor: "{colors.ink}"
-    textColor: "{colors.page}"
-    typography: "{typography.ui-small}"
-    rounded: "{rounded.control}"
-    padding: "5px 8px"
+    backgroundColor: '{colors.ink}'
+    textColor: '{colors.page}'
+    typography: '{typography.ui-small}'
+    rounded: '{rounded.control}'
+    padding: '5px 8px'
   rail:
-    backgroundColor: "{colors.page}"
-    rounded: "{rounded.apparatus}"
-    padding: "5px"
+    backgroundColor: '{colors.page}'
+    rounded: '{rounded.apparatus}'
+    padding: '5px'
   status:
-    backgroundColor: "{colors.page}"
-    textColor: "{colors.ink-muted}"
-    typography: "{typography.record}"
-    rounded: "{rounded.apparatus}"
-    padding: "5px 10px"
+    backgroundColor: '{colors.page}'
+    textColor: '{colors.ink-muted}'
+    typography: '{typography.record}'
+    rounded: '{rounded.apparatus}'
+    padding: '5px 10px'
   zoom:
-    backgroundColor: "{colors.page}"
-    textColor: "{colors.ink-muted}"
-    rounded: "{rounded.apparatus}"
-    padding: "5px"
+    backgroundColor: '{colors.page}'
+    textColor: '{colors.ink-muted}'
+    rounded: '{rounded.apparatus}'
+    padding: '5px'
   inspector:
-    backgroundColor: "{colors.panel}"
-    textColor: "{colors.ink}"
-    rounded: "{rounded.surface}"
-    padding: "10px"
-    width: "360px"
+    backgroundColor: '{colors.panel}'
+    textColor: '{colors.ink}'
+    rounded: '{rounded.surface}'
+    padding: '10px'
+    width: '360px'
   field-label:
-    textColor: "{colors.ink-muted}"
-    typography: "{typography.record}"
-    width: "82px"
+    textColor: '{colors.ink-muted}'
+    typography: '{typography.record}'
+    width: '82px'
   swatch:
-    rounded: "{rounded.slip}"
-    size: "30px"
-    layout: "6-column grid"
+    rounded: '{rounded.slip}'
+    size: '30px'
+    layout: '6-column grid'
   choice-item:
-    backgroundColor: "transparent"
-    textColor: "{colors.ink-muted}"
-    rounded: "{rounded.apparatus}"
-    width: "28px"
-    height: "26px"
+    backgroundColor: 'transparent'
+    textColor: '{colors.ink-muted}'
+    rounded: '{rounded.apparatus}'
+    width: '28px'
+    height: '26px'
   choice-item-on:
-    backgroundColor: "{colors.panel}"
-    textColor: "{colors.accent}"
+    backgroundColor: '{colors.panel}'
+    textColor: '{colors.accent}'
   menu:
-    backgroundColor: "{colors.panel}"
-    rounded: "{rounded.surface}"
-    padding: "5px"
+    backgroundColor: '{colors.panel}'
+    rounded: '{rounded.surface}'
+    padding: '5px'
   menu-item:
-    backgroundColor: "transparent"
-    textColor: "{colors.ink}"
-    typography: "{typography.ui}"
-    rounded: "{rounded.control}"
-    padding: "6px 9px"
+    backgroundColor: 'transparent'
+    textColor: '{colors.ink}'
+    typography: '{typography.ui}'
+    rounded: '{rounded.control}'
+    padding: '6px 9px'
   menu-item-hover:
-    backgroundColor: "{colors.accent-soft}"
+    backgroundColor: '{colors.accent-soft}'
   sticky:
-    typography: "{typography.body}"
-    rounded: "{rounded.slip}"
-    padding: "13px"
+    typography: '{typography.body}'
+    rounded: '{rounded.slip}'
+    padding: '13px'
   frame:
-    backgroundColor: "transparent"
-    rounded: "{rounded.slip}"
+    backgroundColor: 'transparent'
+    rounded: '{rounded.slip}'
 ---
 
 # Design System: OpenFrame
@@ -187,7 +187,7 @@ The board is a laboratory record, not a drawing surface. The register is the
 engineering computation pad: cold blue-grey stock, a cyan-grey quadrille ruling
 at world scale, blue-black ink that is never pure black, and one correction red
 that appears only where something is being undone or removed. Content arrives as
-coloured index slips laid *on* the page — the one place in the system that is
+coloured index slips laid _on_ the page — the one place in the system that is
 allowed real physical depth.
 
 It refuses two things explicitly. The first is the canvas-app default: a neutral
@@ -370,7 +370,7 @@ the panel is not entitled to overrule.
 ### Named Rules
 
 **The Ground Is Not A Control Rule.** The quadrille is ruled below the 3:1
-non-text floor on purpose, and the build asserts a *ceiling* as well as a floor:
+non-text floor on purpose, and the build asserts a _ceiling_ as well as a floor:
 the fine rule stays under 2:1 against the page and the decade rule between 1.2:1
 and 2.5:1. Ground you cannot ignore is a cage the content has to fight. A future
 "improve contrast" pass must not raise it.
@@ -380,7 +380,7 @@ Content red is held more than 30 units of sRGB distance away from it, because
 when the two sat close a red slip on the page read as a correction mark and the
 record panel offered the correction hue as an ordinary choice.
 
-**The Token Name Rule.** Documents store token *names*, never colour values. The
+**The Token Name Rule.** Documents store token _names_, never colour values. The
 one place a name becomes a CSS variable is `scene/style-tokens.ts`. This is
 load-bearing: a theme can change without touching a single saved board, and any
 restyle must preserve it.
@@ -472,13 +472,13 @@ height and offset is a multiple of ten. A control's edge lands where a rule
 does, and the apparatus shares the rhythm of the thing it sits on instead of
 floating at sizes nobody chose.
 
-| Token | Size | What it is |
-| --- | --- | --- |
-| `--of-step` | 10px | the rule, and the gap between things on a line |
-| `--of-hit-sm` | 30px | a secondary control inside apparatus |
-| `--of-hit` | 40px | anything you operate: a field, a button, a record row |
-| `--of-hit-lg` | 50px | a list row, a primary action, and a creation tool |
-| `--of-gutter` | 20px | from the viewport edge |
+| Token         | Size | What it is                                            |
+| ------------- | ---- | ----------------------------------------------------- |
+| `--of-step`   | 10px | the rule, and the gap between things on a line        |
+| `--of-hit-sm` | 30px | a secondary control inside apparatus                  |
+| `--of-hit`    | 40px | anything you operate: a field, a button, a record row |
+| `--of-hit-lg` | 50px | a list row, a primary action, and a creation tool     |
+| `--of-gutter` | 20px | from the viewport edge                                |
 
 `--of-hit-lg` clears the 44px AAA target with room over; `--of-hit-sm` is
 comfortably past the 24px AA floor rather than sitting on it. **Board content
@@ -518,7 +518,7 @@ something is selected.
 
 Almost flat. Depth is carried by tonal layering — desk, page, panel — and by
 hairline margin rules. There are exactly two elevations, and they mean different
-things: apparatus is *printed near* the page, and content slips *sit on* it.
+things: apparatus is _printed near_ the page, and content slips _sit on_ it.
 
 ### Shadow Vocabulary
 
@@ -597,7 +597,7 @@ its row is tight, which is what a long name did to one.
 ## Shapes
 
 Corners are small and get smaller the closer a form is to the page. Anything that
-reads as *stock laid on the page* — sticky notes, frames, colour swatches — is cut
+reads as _stock laid on the page_ — sticky notes, frames, colour swatches — is cut
 at **2px**, essentially square. Apparatus that lives in the margins — rail, record
 line, zoom cluster — is **4px**. A control you press — a button, a field, a
 menu item, a segmented bed — is **6px**, and an item nested inside a bed takes
@@ -617,7 +617,11 @@ absent or unreadable content over a 45° hatched fill. The selection frame is a
 
 Icons are drawn, not typed: an inline 24×24 set at a single 1.6 stroke weight,
 round caps and joins, inheriting `currentColor` so active and hover states are
-pure CSS. There is no icon font and no icon library.
+pure CSS. There is no icon font and no icon library. The set is `controls/icons.tsx` —
+a leaf, so a view can reach it — and an `<svg>` anywhere else must be drawing
+content (a shape, a line, a pointer, a specimen), which `controls/icons.test.ts`
+holds. Letters that ARE the subject stay letters: the format bar's A− and A+
+are type specimens, and "3 × 4" is a readout.
 
 ## Components
 
@@ -651,7 +655,7 @@ narrow viewport.
 
 Bottom-right, mono throughout. 30px buttons (`--of-hit-sm`) carrying 16px
 icons, a ruled separator, a wheel-mode value at 12px (mono and small so it reads
-as a *setting* beside its icon, not a panel title), a 104px measurement slider
+as a _setting_ beside its icon, not a panel title), a 104px measurement slider
 and a 60px, 13px tabular-numeral percentage that becomes an inline editor on an accent-soft bed with a 1px accent
 outline.
 
@@ -769,7 +773,7 @@ next surface inherits automatically — it has to be applied.
 - **Text** — transparent, 22px/1.3, 0.4 opacity while empty.
 - **Shape** — SVG stroke and fill from the content pair, with a centred 14px label
   inset per shape geometry.
-- **Frame** — a 1px `panel-border` rectangle at 2px radius with its title *above*
+- **Frame** — a 1px `panel-border` rectangle at 2px radius with its title _above_
   it in 13px muted ink, counter-scaled and never clipped.
 - **Connector** — a drawn path with a 12px label that knocks itself out of the
   ground with a 4px desk-coloured paint-order stroke.
@@ -942,7 +946,7 @@ an enormous area when zoomed out — and offset by the viewport modulo the cell.
 Three weights, because the zoom steps reach 5%:
 
 - **Fine rule** (`rule`, 10 world units) appears at **zoom ≥ 0.7**. At 100% it
-  lands every 10 screen pixels. That density is what quadrille *is*; the answer to
+  lands every 10 screen pixels. That density is what quadrille _is_; the answer to
   it being too busy was ink, not spacing, so every weight is faint.
 - **Decade rule** (`rule-decade`, 100 world units) appears at **zoom ≥ 0.12**. It
   marks the line snapping actually lands on.
@@ -960,7 +964,7 @@ ground must survive every step of the zoom ladder.
 
 - **Do** cut chrome from the page's own stock (`page`) with a 1px `panel-border`
   margin rule and the contact shadow. Apparatus, never a floating card.
-- **Do** store token *names* in documents and resolve them through
+- **Do** store token _names_ in documents and resolve them through
   `scene/style-tokens.ts`. A restyle must never require touching a saved board.
 - **Do** keep the quadrille below the 3:1 floor, and keep the build test that
   asserts that ceiling.

@@ -176,4 +176,14 @@ Found by looking at them:
   is a different intent. Guarded: the primitive holds 30px and the retired
   classes stay retired (broken once at 24px).
 
+- **C2.7 — icons drawn once.** The set moves from `ui/` to `controls/icons.tsx`,
+  a leaf every layer may use — which also retires two of Track A's layering
+  leaks (canvas importing `ui/` for icons). The workspace bar's private plus
+  (1.8 stroke) and the colour picker's dropper join the set; the table's typed
+  `+`/`−` steppers become drawn icons on the icon button, rising from 24px
+  bordered buttons to the 30px target. Specimens stay what they are: the
+  swatch rule mark and colour wheel, the format bar's A−/A+, "3 × 4". A test
+  holds that any other `<svg>` is on a named list of content drawings (broken
+  once by restoring the private plus).
+
 ### Remaining

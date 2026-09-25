@@ -1,7 +1,7 @@
 import { useEffect } from 'react'
 
 import { useInteractionStore } from '../interaction/interaction-store.js'
-import { CloseIcon } from './icons.js'
+import { CloseIcon } from '../controls/icons.js'
 
 /** How long a message stays up. Long enough to read a sentence, not to nag. */
 const TOAST_MS = 5000

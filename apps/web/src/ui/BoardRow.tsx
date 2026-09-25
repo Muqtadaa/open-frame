@@ -8,7 +8,7 @@ import { shareLink } from '../app/collab-config.js'
 import { setBoardPassword } from '../app/board-password.js'
 import { setBoardPinned } from '../app/remote-boards.js'
 import { boardHref } from '../app/route.js'
-import { KeyIcon, LeaveIcon, LinkIcon, PinIcon, RenameIcon, TrashIcon } from './icons.js'
+import { KeyIcon, LeaveIcon, LinkIcon, PinIcon, RenameIcon, TrashIcon } from '../controls/icons.js'
 
 /**
  * One board, and the things you can do to it without opening it.

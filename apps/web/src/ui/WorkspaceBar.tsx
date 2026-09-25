@@ -1,5 +1,6 @@
 import { useState } from 'react'
 
+import { PlusIcon } from '../controls/icons.js'
 import type { Workspace } from '../hooks/use-workspaces.js'
 
 /**
@@ -88,20 +89,7 @@ export function WorkspaceBar({
             setNaming((was) => !was)
           }}
         >
-          {/* Drawn on the 24x24 grid at 1.6, like every icon in this product. */}
-          <svg
-            viewBox="0 0 24 24"
-            width="14"
-            height="14"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="1.8"
-            strokeLinecap="round"
-            aria-hidden="true"
-            focusable="false"
-          >
-            <path d="M12 5v14M5 12h14" />
-          </svg>
+          <PlusIcon />
           New workspace
         </button>
       </div>

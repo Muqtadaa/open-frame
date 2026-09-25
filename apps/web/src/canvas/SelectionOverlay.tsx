@@ -14,7 +14,7 @@ import {
   handleAnchor,
 } from '../scene/resize.js'
 import { unionAll, worldRectToScreen, type Rect } from '@openframe/core'
-import { LockIcon, RotateIcon } from '../ui/icons.js'
+import { LockIcon, RotateIcon } from '../controls/icons.js'
 import { fitToText } from '../scene/fit-text.js'
 import { useCommands } from '../hooks/use-commands.js'
 
