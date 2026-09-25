@@ -1285,6 +1285,14 @@ function TableEditor({
                     disabled={item.disabled === true}
                     data-testid={`table-menu-${item.testId}`}
                     onClick={() => {
+                      /*
+                       * The cell being typed in is finished FIRST. Its text is
+                       * already in the draft; left open, the field stayed
+                       * pinned to its old coordinates while an insert above or
+                       * to the left moved the cells under it, and showed one
+                       * cell's words over another.
+                       */
+                      if (editing !== null) finishEditing()
                       item.run()
                       setMenu(null)
                       home()

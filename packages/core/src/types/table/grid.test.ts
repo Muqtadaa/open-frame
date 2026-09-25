@@ -413,6 +413,17 @@ describe('a board from before lines lived on the grid (v1 → v2)', () => {
   })
 
   it('leaves what it cannot read for validation to refuse', () => {
+    const malformed = {
+      columns: [1],
+      rows: [1],
+      cells: [{ text: [{ text: '' }], border: 42 }],
+      headerRow: false,
+    }
+    // The border stays, so the strict schema refuses the table rather than
+    // accepting one the migration silently edited.
+    const migrated = borderToLines(malformed)
+    expect(migrated).toEqual(malformed)
+    expect(TableDataSchema.safeParse(migrated).success).toBe(false)
     expect(borderToLines('nonsense')).toBe('nonsense')
     const odd = { columns: 'x', cells: [] }
     expect(borderToLines(odd)).toBe(odd)

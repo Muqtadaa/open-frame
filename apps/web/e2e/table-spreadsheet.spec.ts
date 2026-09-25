@@ -257,6 +257,20 @@ test.describe('rows and columns, anywhere', () => {
     await expect(drawn(page).nth(2)).toHaveText('b')
   })
 
+  test('finishes the cell being typed in before a menu action moves it', async ({ page }) => {
+    await newTable(page)
+    await page.keyboard.type('typed')
+    await expect(page.getByTestId('table-editor')).toHaveAttribute('data-mode', 'edit')
+    await page.getByTestId('cell-table-menu').click()
+    await page.getByTestId('table-menu-row-above').click()
+    await expect(page.getByTestId('table-editor')).toHaveAttribute('data-mode', 'navigate')
+    // The keyboard still works: the grid has it, not a field left behind.
+    await page.keyboard.press('ArrowDown')
+    await leave(page)
+    await expect(drawn(page).nth(0)).toHaveText('')
+    await expect(drawn(page).nth(3)).toHaveText('typed')
+  })
+
   test('inserts as many as are selected', async ({ page }) => {
     await newTable(page)
     await page.getByTestId('table-row-1').click()

@@ -42,7 +42,11 @@ export function borderToLines(data: unknown): unknown {
   const cells = (v1.cells as unknown[]).map((cell, index) => {
     if (typeof cell !== 'object' || cell === null) return cell
     const { border, ...rest } = cell as V1Cell
-    if (typeof border !== 'string') return border === undefined ? cell : rest
+    // Only a string is a colour this can move. Anything else stays on the cell,
+    // where the strict v2 schema refuses it and the board is quarantined —
+    // dropping it would be the migration quietly editing a document it could
+    // not read (rule 7).
+    if (typeof border !== 'string') return cell
     const row = Math.floor(index / width)
     const col = index % width
     v.push({ row, col: col + 1, line: { color: border } })
