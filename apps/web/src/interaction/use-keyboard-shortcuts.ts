@@ -52,10 +52,28 @@ export function useKeyboardShortcuts(setSpaceHeld: (held: boolean) => void): voi
   const { runtime } = useOpenFrame()
 
   useEffect(() => {
-    // Whether focus last moved by pointer. Tab hands it to the keyboard.
+    /*
+     * Whether the control with focus got it from the POINTER. A focus move
+     * takes its source from the last input: a click leaves focus pointer-led,
+     * so the Space held to pan a moment later is the board's; focus that the
+     * interface hands back after a keyboard edit — Enter on the board's name —
+     * is the keyboard's, so Enter presses what it lands on. That handed-back
+     * focus used to inherit the click that opened the field, and Enter on it
+     * did nothing.
+     */
     let pointerLed = false
+    let lastInput: 'pointer' | 'keyboard' = 'keyboard'
     const onPointerDown = (): void => {
       pointerLed = true
+      lastInput = 'pointer'
+    }
+    // Capture phase: a field that stops its keys (the board's name does)
+    // must still count as the keyboard having been used.
+    const onAnyKey = (): void => {
+      lastInput = 'keyboard'
+    }
+    const onFocusIn = (): void => {
+      pointerLed = lastInput === 'pointer'
     }
 
     const onKeyDown = (event: KeyboardEvent): void => {
@@ -211,10 +229,14 @@ export function useKeyboardShortcuts(setSpaceHeld: (held: boolean) => void): voi
     }
 
     window.addEventListener('pointerdown', onPointerDown, true)
+    window.addEventListener('keydown', onAnyKey, true)
+    window.addEventListener('focusin', onFocusIn)
     window.addEventListener('keydown', onKeyDown)
     window.addEventListener('keyup', onKeyUp)
     return () => {
       window.removeEventListener('pointerdown', onPointerDown, true)
+      window.removeEventListener('keydown', onAnyKey, true)
+      window.removeEventListener('focusin', onFocusIn)
       window.removeEventListener('keydown', onKeyDown)
       window.removeEventListener('keyup', onKeyUp)
     }

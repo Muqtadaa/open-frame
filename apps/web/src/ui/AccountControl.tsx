@@ -27,6 +27,7 @@ export function AccountControl() {
       <button
         type="button"
         className="of-status__share"
+        aria-label={identity.displayName}
         data-testid="account"
         data-tip={`Signed in as ${identity.displayName}${identity.email === null ? '' : ` (${identity.email})`}. Click to sign out.`}
         aria-description={`Signed in as ${identity.displayName}${identity.email === null ? '' : ` (${identity.email})`}. Click to sign out.`}
@@ -53,6 +54,7 @@ export function AccountControl() {
         type="button"
         className="of-status__share"
         data-testid="sign-in"
+        aria-label="Sign in"
         aria-expanded={open}
         data-tip="Sign in to keep a list of your boards"
         aria-description="Sign in to keep a list of your boards"

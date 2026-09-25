@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 
 import { useBoardDocument } from '../hooks/use-document-object.js'
 import { useCommands } from '../hooks/use-commands.js'
@@ -66,10 +66,25 @@ export function StatusBar() {
    * field's undo stack. There is no replacement; browsers keep it working
    * because editors depend on it.
    */
+  const undoButton = useRef<HTMLButtonElement>(null)
+  const redoButton = useRef<HTMLButtonElement>(null)
   const history = (step: 'undo' | 'redo'): void => {
     if (editingId !== null && window.document.execCommand(step)) return
+    const self = step === 'undo' ? undoButton.current : redoButton.current
+    const other = step === 'undo' ? redoButton.current : undoButton.current
+    const pressedByKeyboard = window.document.activeElement === self
     if (step === 'undo') commands.undo()
     else commands.redo()
+    /*
+     * The last undo disables the button it was pressed on, and a disabled
+     * button loses focus to the page. The keyboard moves to the other one —
+     * which that very step has just enabled — rather than back to the start.
+     */
+    if (pressedByKeyboard) {
+      requestAnimationFrame(() => {
+        if (self?.disabled === true) other?.focus()
+      })
+    }
   }
 
   /*
@@ -96,6 +111,7 @@ export function StatusBar() {
       <span className="of-status__rule" aria-hidden="true" />
       <div className="of-status__history">
         <button
+          ref={undoButton}
           type="button"
           className="of-icon-button"
           // Never disabled while editing: the field has its own history, and
@@ -113,6 +129,7 @@ export function StatusBar() {
           <UndoIcon />
         </button>
         <button
+          ref={redoButton}
           type="button"
           className="of-icon-button"
           disabled={!canRedo && editingId === null}

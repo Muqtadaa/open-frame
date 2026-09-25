@@ -84,6 +84,7 @@ export function ShareControl() {
         type="button"
         className="of-status__share"
         disabled={sharing || runtime.readOnly}
+        aria-label={sharing ? 'Sharing…' : 'Share'}
         data-testid="share-board"
         data-tip={shareHint}
         aria-description={shareHint}
@@ -178,6 +179,7 @@ export function ShareControl() {
         type="button"
         className="of-status__share"
         data-testid="room-status"
+        aria-label={copied !== null ? 'Link copied' : roomLabel(status)}
         data-status={status}
         data-tip={roomHint}
         aria-description={roomHint}

@@ -2586,10 +2586,19 @@ body {
   width: 100%;
 }
 
+/*
+ * A 12px word is a 15px-tall target, so the link keeps its size of type and
+ * takes the bar's height to be pressed (WCAG 2.5.8). Underlined as TEXT, with
+ * a set offset, rather than with a bottom border — a border sits at the foot
+ * of the box, which is now the foot of the bar.
+ */
 .of-status__source {
+  display: inline-flex;
+  align-items: center;
+  min-height: var(--of-hit-sm);
   color: inherit;
-  text-decoration: none;
-  border-bottom: 1px solid currentcolor;
+  text-decoration: underline 1px;
+  text-underline-offset: 3px;
 }
 
 .of-status__source:hover {
@@ -2795,6 +2804,15 @@ body {
 .of-status__title,
 .of-status__heading {
   flex: 0 1 auto;
+}
+
+/*
+ * An icon button keeps its 30px floor on the bar. The rule above lets every
+ * child shrink, which squeezed the theme toggle to 28 — under the target the
+ * rest of the product keeps (DESIGN.md, Icon Buttons).
+ */
+.of-status > .of-icon-button {
+  min-width: var(--of-hit-sm);
 }
 
 /*

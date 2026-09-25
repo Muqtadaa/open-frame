@@ -45,8 +45,20 @@ export function BoardTitle({ title }: { readonly title: string }) {
     }
   }, [title, editing])
 
+  /*
+   * Where the keyboard goes when the field closes. Enter and Escape hand it
+   * back to the name, so the next Tab continues from here; it used to fall to
+   * the page when the field unmounted, and a keyboard user started again from
+   * the top after every rename (WCAG 2.4.3). A click elsewhere keeps it
+   * wherever the click put it.
+   */
+  const returnFocus = useRef(false)
   useEffect(() => {
     if (editing) input.current?.select()
+    else if (returnFocus.current) {
+      returnFocus.current = false
+      shown.current?.focus()
+    }
   }, [editing])
 
   const open = (): void => {
@@ -79,6 +91,9 @@ export function BoardTitle({ title }: { readonly title: string }) {
         type="button"
         className="of-status__title"
         data-testid="board-title"
+        // Named by the name alone: the tip is drawn by `::after`, and generated
+        // content is otherwise read INTO a name taken from the contents.
+        aria-label={title}
         // The whole name when the bar has cut it off; otherwise, what a press does.
         data-tip={clipped ? title : 'Rename this board'}
         aria-description="Rename this board"
@@ -105,10 +120,12 @@ export function BoardTitle({ title }: { readonly title: string }) {
         event.stopPropagation()
         if (event.key === 'Enter') {
           event.preventDefault()
+          returnFocus.current = true
           commit()
         }
         if (event.key === 'Escape') {
           event.preventDefault()
+          returnFocus.current = true
           setDraft(title)
           setEditing(false)
         }

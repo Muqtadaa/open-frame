@@ -1588,6 +1588,7 @@ function TableEditor({
               <button
                 type="button"
                 className="of-button of-button--ghost of-cellbar__clear"
+              aria-label="Reset"
                 data-tip="Use the table's own colours"
                 aria-description="Use the table's own colours"
                 data-testid="cell-clear"

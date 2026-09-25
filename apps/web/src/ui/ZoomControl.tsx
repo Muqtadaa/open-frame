@@ -36,9 +36,17 @@ export function ZoomControl() {
   const [editing, setEditing] = useState(false)
   const [draft, setDraft] = useState('')
   const inputRef = useRef<HTMLInputElement>(null)
+  const readout = useRef<HTMLButtonElement>(null)
+  // Enter and Escape hand the keyboard back to the readout, as the board's
+  // name does: the field unmounting used to drop it on the page.
+  const returnFocus = useRef(false)
 
   useEffect(() => {
     if (editing) inputRef.current?.select()
+    else if (returnFocus.current) {
+      returnFocus.current = false
+      readout.current?.focus()
+    }
   }, [editing])
 
   const applyZoom = (zoom: number): void => {
@@ -134,15 +142,30 @@ export function ZoomControl() {
           onChange={(event) => setDraft(event.target.value)}
           onBlur={commitDraft}
           onKeyDown={(event) => {
-            if (event.key === 'Enter') commitDraft()
-            if (event.key === 'Escape') setEditing(false)
+            /*
+             * Both PREVENTED: focus goes back to the readout inside this very
+             * keydown, and an Enter left to its default then presses the
+             * readout it landed on — which opens the field again.
+             */
+            if (event.key === 'Enter') {
+              event.preventDefault()
+              returnFocus.current = true
+              commitDraft()
+            }
+            if (event.key === 'Escape') {
+              event.preventDefault()
+              returnFocus.current = true
+              setEditing(false)
+            }
             event.stopPropagation()
           }}
         />
       ) : (
         <button
+          ref={readout}
           type="button"
           className="of-zoom__percent"
+          aria-label={`Zoom ${String(percent)}%`}
           data-tip={`Reset to 100% (${mod}0)`}
           aria-description={`Reset to 100% (${mod}0)`}
           data-testid="zoom-percent"

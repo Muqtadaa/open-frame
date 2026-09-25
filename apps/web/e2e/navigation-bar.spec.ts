@@ -110,3 +110,60 @@ test.describe('the board’s name', () => {
     await expect(nav.getByRole('heading', { level: 1 })).toHaveText('Untitled board')
   })
 })
+
+/**
+ * The keyboard is never dropped (C3 #3, WCAG 2.4.3). Finishing an edit on the
+ * bar unmounted the field and focus fell to the page, so a keyboard user was
+ * sent back to the start after every rename, every typed zoom and the last
+ * undo.
+ */
+test.describe('the keyboard on the bar', () => {
+  test('comes back to the name after renaming, and can rename again', async ({ page }) => {
+    await board(page)
+    await page.getByTestId('board-title').click()
+    await page.keyboard.type('Renamed')
+    await page.keyboard.press('Enter')
+    await expect(page.getByTestId('board-title')).toBeFocused()
+    // Handed back by the keyboard, so Enter presses it rather than the board.
+    await page.keyboard.press('Enter')
+    await expect(page.getByTestId('board-title-input')).toBeFocused()
+    await page.keyboard.press('Escape')
+    await expect(page.getByTestId('board-title')).toBeFocused()
+  })
+
+  test('comes back to the zoom readout after typing a zoom', async ({ page }) => {
+    await board(page)
+    await page.getByTestId('zoom-percent').click()
+    await page.keyboard.type('150')
+    await page.keyboard.press('Enter')
+    await expect(page.getByTestId('zoom-percent')).toBeFocused()
+    await expect(page.getByTestId('zoom-percent')).toHaveText('150%')
+  })
+
+  test('moves to redo when the last undo leaves nothing to undo', async ({ page }) => {
+    await board(page)
+    await page.keyboard.press('s')
+    await page.locator(CANVAS).click({ position: { x: 500, y: 400 } })
+    await page.keyboard.press('Escape')
+    await page.getByTestId('undo').focus()
+    await page.keyboard.press('Tab')
+    await page.keyboard.press('Shift+Tab')
+    await page.keyboard.press('Enter')
+    await expect(page.getByTestId('undo')).toBeDisabled()
+    await expect(page.getByTestId('redo')).toBeFocused()
+  })
+
+  test('names each control by what it is, never by its tip', async ({ page }) => {
+    await board(page)
+    await expect(page.getByRole('button', { name: 'Untitled board', exact: true })).toBeVisible()
+    await expect(page.getByRole('button', { name: 'Zoom 100%', exact: true })).toBeVisible()
+  })
+
+  test('gives every control a target a pointer can find', async ({ page }) => {
+    await board(page)
+    const theme = await page.getByTestId('theme-toggle').boundingBox()
+    const source = await page.getByTestId('source-link').boundingBox()
+    expect(theme?.width ?? 0).toBeGreaterThanOrEqual(30)
+    expect(source?.height ?? 0).toBeGreaterThanOrEqual(24)
+  })
+})
