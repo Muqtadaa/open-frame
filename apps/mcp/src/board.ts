@@ -17,6 +17,7 @@ import {
   type BoardId,
   type CommandError,
   type DocumentStore,
+  type ObjectTypeRegistry,
 } from '@openframe/core'
 
 import { nodeRoomSocket } from './node-room-socket.js'
@@ -68,6 +69,14 @@ export interface BoardPeer {
   readonly dispatcher: CommandDispatcher
   /** What the ROOM decided this connection may do, not what it asked for. */
   readonly role: RoomRole
+  /**
+   * What each type on this board can say about itself.
+   *
+   * Handed out rather than rebuilt by the caller, for the reason rule 5 gives:
+   * the registry is where behaviour lives, and a tool that built its own would
+   * be a second answer to "what is this object" the moment a type changed.
+   */
+  readonly registry: ObjectTypeRegistry
   close(): void
 }
 
@@ -135,6 +144,7 @@ export async function openBoard(options: OpenBoardOptions): Promise<BoardPeer> {
     boardId,
     store,
     dispatcher,
+    registry,
     get role() {
       return role
     },

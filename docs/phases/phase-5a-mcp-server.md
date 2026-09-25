@@ -1,6 +1,6 @@
 # Phase 5a · The MCP server
 
-**Status: In progress — stages 1 and 2 done** · ← [Roadmap](README.md) · Design: [Phase 5](phase-5-ai-and-mcp.md)
+**Status: In progress — stages 1 to 3 done** · ← [Roadmap](README.md) · Design: [Phase 5](phase-5-ai-and-mcp.md)
 
 The execution plan for the MCP half of Phase 5. The *why* is in the phase
 document; this is the order, the decisions taken, and what each stage has to
@@ -189,7 +189,7 @@ What the stage turned up:
   different disguise, which is why its version of this table starts the same
   way.
 
-### 3 · Read tools
+### 3 · Read tools ✅
 
 `list_boards`, `get_board`, `get_objects`, `search_board` — all served from
 `describe()`, because a second serialization path is a second answer to
@@ -201,6 +201,54 @@ object"* is something a user typed and it is heading for an agent's context.
 One seam, one delimiter, done at the start rather than retrofitted.
 
 **Proves:** an agent can answer a question about a real board.
+
+**Done.** `tools/read.ts` holds the four, `tools/respond.ts` holds the
+delimiting, `tools/context.ts` is what they are handed, and `server.ts` is the
+stdio transport and nothing else — the tools name no transport at all, which is
+what stage 5 rests on.
+
+The delimiting is two things of different kinds. **The structure is the
+delimiter**: every response is one JSON document, so board text is always a
+string VALUE and there is no sequence a person can type that ends it early.
+**The framing says what it is**: one line, in the same message as the content,
+because a sentence in a tool description is read once when the tools are listed
+and is a long way away by the time a board arrives. A tool's own words — "no
+such board", "not signed in" — are NOT framed, because marking them as content
+would teach an agent that the marker means nothing.
+
+`get_board` answers with the shape of a board rather than the board: title,
+counts by type, and the frames and groups that hold the rest. `get_objects`
+pages, with the last id of a page as the cursor — an index would name a
+different object the moment somebody added a note. `search_board` reads
+`searchText`, so a piece of evidence matches on its source and its participant
+as well as its body, which is how *"what did we learn in the September study?"*
+is answered with no query language existing.
+
+Try it with an agent:
+
+```bash
+pnpm --filter @openframe/mcp cli login        # stage 2; the tools need a session
+claude mcp add openframe -- node --import tsx <repo>/apps/mcp/src/server.ts
+```
+
+What the stage turned up:
+
+- **A guard that reads source text reads its own prose.** The check that the
+  stdio server never writes to stdout failed on the docstring explaining why —
+  the sentence warning about a stray `console.log` contains one. It strips
+  comments now, or it would have been a guard against writing things down.
+- **A held board must not remember a failed join.** Left in the pool, a room
+  that was briefly unreachable answers every later question with the same
+  rejected promise for the life of the process.
+- **`not.toContain('one')`** passes on a payload holding the word "none". The
+  fixtures say `kumquat`.
+
+What a signed-in session adds — an agent reading a real board over a real
+socket — is the one part that cannot run in CI without somebody's password, so
+it is demonstrated by hand with the two commands above. The protocol half is
+covered by `server.stdio.test.ts`, which spawns the server and talks to it with
+a real MCP client; the tool half is covered against a real `BoardRoom` in
+`tools/read.test.ts`.
 
 ### 4 · Write tools
 

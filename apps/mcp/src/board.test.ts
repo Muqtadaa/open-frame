@@ -1,8 +1,8 @@
-import { BoardRoom, type RoomPeer, type RoomRole, type RoomSocket } from '@openframe/collab'
-import { asBoardId, type BoardId } from '@openframe/core'
+import { BoardRoom } from '@openframe/collab'
 import { describe, expect, it } from 'vitest'
 
 import { openBoard, type BoardPeer } from './board.js'
+import { peerOn, settles, TEST_BOARD } from './testing.js'
 
 /**
  * A headless peer against a real `BoardRoom`, joined by a fake socket.
@@ -17,73 +17,10 @@ import { openBoard, type BoardPeer } from './board.js'
  * web app makes and the reason `yjs-lives-only-in-collab` is a build failure.
  */
 
-/** A socket pair: one end the peer's, the other the room's. */
-class Wire {
-  #messageListeners: ((data: Uint8Array) => void)[] = []
-  #room: BoardRoom | null = null
-  #peer: RoomPeer | null = null
+const BOARD = TEST_BOARD
 
-  readonly client: RoomSocket = {
-    send: (data) => {
-      if (this.#room === null || this.#peer === null) return
-      this.#room.receive(this.#peer, data)
-    },
-    close: () => {
-      if (this.#room !== null && this.#peer !== null) this.#room.leave(this.#peer)
-      this.#room = null
-    },
-    onOpen: (listener) => {
-      // On the next turn, not now: `connect()` is called during `start()` and
-      // a socket that opened synchronously would call back into a provider
-      // that has not finished starting.
-      setTimeout(listener, 0)
-    },
-    onMessage: (listener) => this.#messageListeners.push(listener),
-    onClose: () => undefined,
-    onError: () => undefined,
-  }
-
-  connectTo(room: BoardRoom, id: string, role: RoomRole): void {
-    this.#room = room
-    this.#peer = {
-      id,
-      role,
-      send: (data) => {
-        for (const listener of this.#messageListeners) listener(data)
-      },
-    }
-    room.join(this.#peer)
-  }
-}
-
-const BOARD = asBoardId('brd_mcpstage1test')
-
-let joined = 0
-
-/** A peer on the room, connected the way the socket adapter would connect it. */
-async function peer(
-  room: BoardRoom,
-  role: RoomRole = 'editor',
-  boardId: BoardId = BOARD,
-): Promise<BoardPeer> {
-  const id = `peer-${String(++joined)}`
-  return openBoard({
-    boardId,
-    server: 'ws://room.test',
-    connect: () => {
-      const wire = new Wire()
-      /*
-       * After the provider has its listeners on, which is what a real upgrade
-       * gives for free: the room speaks first, so a join that ran inside
-       * `connect()` would send the board to nobody.
-       */
-      setTimeout(() => {
-        wire.connectTo(room, id, role)
-      }, 0)
-      return wire.client
-    },
-  })
-}
+const peer = async (room: BoardRoom, role: 'editor' | 'viewer' = 'editor'): Promise<BoardPeer> =>
+  peerOn(room, { role })
 
 function titleOf(held: BoardPeer): string {
   return held.store.getDocument().meta.title
@@ -93,11 +30,6 @@ function stickyCount(held: BoardPeer): number {
   return [...held.store.getDocument().objects.values()].filter(
     (object) => object.type === 'sticky',
   ).length
-}
-
-async function settles(): Promise<void> {
-  // Two turns: the room answers on one and the session applies on the next.
-  await new Promise((resolve) => setTimeout(resolve, 10))
 }
 
 describe('a headless peer', () => {
