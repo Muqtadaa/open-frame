@@ -324,6 +324,17 @@ export interface FieldDefinition {
   /** Shown beside the control. Sentence case, because it is a label, not a heading. */
   readonly label: string
   readonly kind: FieldKind
+  /**
+   * What the field is ABOUT, and required so every type has to say.
+   *
+   * `record` is what the object says — a source, a participant, a status, an
+   * image's alt text. `shape` is how it is drawn — a connector's route and its
+   * arrowheads. The record panel names the first as the object's record and
+   * files the second with its appearance: filing a line's arrowheads under
+   * "record" made the one section meant to show what an object MEANS hold
+   * geometry, and made a connector fold its styling away like evidence does.
+   */
+  readonly meaning: 'record' | 'shape'
   /** Only for `select`, and the only values its schema accepts. */
   readonly options?: readonly string[]
   /**
@@ -365,8 +376,15 @@ export interface ObjectTypeDefinition<TType extends string, TData> {
    * Keyed by TARGET version: `migrations[2]` takes v1 data to v2 data.
    * Operates on `unknown` — never on the current `TData` — because a migration
    * that imports today's type silently changes meaning when that type changes.
+   *
+   * The object's stored style comes second, READ-ONLY: a migration may move
+   * something out of style into data (a connector's whole-label bold became
+   * marks on its label, ADR 0014), but never writes style, which has always
+   * passed keys it does not know straight through.
    */
-  readonly migrations: Readonly<Record<number, (data: unknown) => unknown>>
+  readonly migrations: Readonly<
+    Record<number, (data: unknown, style: Readonly<Record<string, unknown>>) => unknown>
+  >
 
   /** The one place defaults live, shared by the UI, AI, importers and the API. */
   readonly create: (init?: Partial<TData>) => {
@@ -588,7 +606,11 @@ export interface ErasedObjectTypeDefinition {
   /** Erased form of the definition's own narrowing. */
   readonly stylePropsFor?: (object: AnyOpenFrameObject) => readonly StyleProp[]
   readonly validate: (data: unknown) => ValidationResult
-  readonly migrate: (data: unknown, fromVersion: number) => unknown
+  readonly migrate: (
+    data: unknown,
+    fromVersion: number,
+    style?: Readonly<Record<string, unknown>>,
+  ) => unknown
   readonly create: (init?: Record<string, unknown>) => {
     data: unknown
     frame: { width: number; height: number }
@@ -681,7 +703,7 @@ export function defineObjectType<TType extends string, TData>(
         : { ok: false, issues: result.error.issues.map((i) => `${i.path.join('.')}: ${i.message}`) }
     },
 
-    migrate: (data, fromVersion) => {
+    migrate: (data, fromVersion, style = {}) => {
       if (fromVersion > definition.currentVersion) {
         throw new ObjectTypeError(
           `Object type "${definition.type}" data is version ${fromVersion}, newer than the supported ${definition.currentVersion}`,
@@ -695,7 +717,7 @@ export function defineObjectType<TType extends string, TData>(
             `Object type "${definition.type}" is missing a migration to version ${target}`,
           )
         }
-        current = migration(current)
+        current = migration(current, style)
       }
       return current
     },

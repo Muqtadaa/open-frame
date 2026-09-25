@@ -51,7 +51,18 @@ export default defineConfig({
     {
       // The functional suite. Fast, deterministic, runs in CI.
       name: 'chromium',
-      testIgnore: '**/*.bench.spec.ts',
+      testIgnore: ['**/*.bench.spec.ts', '**/*.visual.spec.ts'],
+      use: { ...devices['Desktop Chrome'], ...launchOverrides },
+    },
+    {
+      /*
+       * Screenshot goldens of the chrome, in both worlds. Separate because
+       * goldens are platform-specific and these were taken in the development
+       * container; they are the regression net for the design review's
+       * stylesheet-wide passes, not yet a CI gate (review plan, B4).
+       */
+      name: 'visual',
+      testMatch: '**/*.visual.spec.ts',
       use: { ...devices['Desktop Chrome'], ...launchOverrides },
     },
     {

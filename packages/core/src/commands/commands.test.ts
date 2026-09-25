@@ -176,15 +176,29 @@ describe('command dispatch', () => {
       const result = h.dispatcher.dispatch({
         kind: 'UpdateObjectData',
         id,
-        // A plain string is no longer valid text, which is the point of the
-        // boundary: an AI or an importer sending the old shape is rejected
-        // rather than silently written.
-        patch: { text: 'a plain string' },
+        patch: { text: 42 },
       })
       expect(result.ok).toBe(false)
       if (result.ok) return
       expect(result.error.code).toBe('invalid-data')
       expect(h.store.getObject(id)?.data).toEqual({ text: [{ text: '' }] })
+    })
+
+    /*
+     * A plain string IS text, with no formatting, and is stored as that
+     * (ADR 0014). It used to be refused so that an AI or an importer sending
+     * the old shape could not have it written as-is; it is not written as-is
+     * now either — what is stored is the one-span list the schema parsed it to.
+     */
+    it('stores a plain string as unformatted text, never as a string', () => {
+      const id = createSticky(h)
+      const result = h.dispatcher.dispatch({
+        kind: 'UpdateObjectData',
+        id,
+        patch: { text: 'a plain string' },
+      })
+      expect(result.ok).toBe(true)
+      expect(h.store.getObject(id)?.data).toEqual({ text: [{ text: 'a plain string' }] })
     })
   })
 

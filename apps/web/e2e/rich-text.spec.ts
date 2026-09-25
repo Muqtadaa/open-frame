@@ -41,7 +41,9 @@ async function noteSaying(page: Page, text: string): Promise<void> {
 /** Selects the first `count` characters, as a user dragging across them would. */
 async function selectFirst(page: Page, count: number): Promise<void> {
   await page.locator(EDITOR).evaluate((element, n) => {
-    const node = element.firstChild
+    // The first TEXT, wherever it sits: each paragraph is a block now
+    // (ADR 0014), so the editor's first child is a paragraph, not the words.
+    const node = document.createTreeWalker(element, NodeFilter.SHOW_TEXT).nextNode()
     if (node === null) return
     const range = document.createRange()
     range.setStart(node, 0)
@@ -155,7 +157,12 @@ test.describe('formatting selected text', () => {
     const measure = async (): Promise<number> =>
       page
         .locator(`${EDITOR}`)
-        .evaluate((el) => Number.parseFloat(getComputedStyle(el.firstElementChild ?? el).fontSize))
+        .evaluate((el) =>
+          Number.parseFloat(
+            getComputedStyle(el.querySelector('[data-size]') ?? el.querySelector('.of-p') ?? el)
+              .fontSize,
+          ),
+        )
 
     const base = await measure()
     for (let i = 0; i < 12; i++) await page.getByTestId('format-bigger').click()
@@ -172,8 +179,6 @@ test.describe('formatting selected text', () => {
     await page.getByTestId('format-smaller').click()
     await expect(page.locator(`${EDITOR} [data-size]`)).toHaveCount(0)
   })
-
-
 
   test('the keyboard shortcut does the same thing', async ({ page }) => {
     await noteSaying(page, 'Pricing is unclear')
@@ -277,4 +282,154 @@ test.describe('formatting selected text', () => {
     await page.locator(CANVAS).click({ position: CLEAR })
     await expect(page.locator('.of-sticky [data-size="lg"]')).toHaveText('Pricing is unclear')
   })
+})
+
+/**
+ * Lists (ADR 0014), in the editor every text uses.
+ *
+ * The browser splits a list item on Enter and copies its attributes, so most
+ * of this is the platform's own behaviour; what these hold is the handful of
+ * keys that are the editor's, and that what is drawn is what is stored.
+ */
+test.describe('lists', () => {
+  test.beforeEach(async ({ page }) => {
+    await freshBoard(page)
+    await page.keyboard.press('s')
+    await page.locator(CANVAS).click({ position: AT })
+    await expect(page.locator(EDITOR)).toBeFocused()
+    await page.keyboard.press('Delete')
+  })
+
+  const items = (page: Page) => page.locator(`${EDITOR} .of-p[data-list]`)
+
+  test('"- " starts a bulleted list, and Enter continues it', async ({ page }) => {
+    await page.keyboard.type('- first')
+    await page.keyboard.press('Enter')
+    await page.keyboard.type('second')
+    await expect(items(page)).toHaveText(['first', 'second'])
+    await expect(items(page).first()).toHaveAttribute('data-list', 'bullet')
+    // The dash was the command, not the text.
+    await expect(page.locator(EDITOR)).not.toContainText('-')
+  })
+
+  /*
+   * The numbers themselves are drawn by CSS counters, which no computed style
+   * will report — `content` comes back as the counter expression. The golden
+   * of a note with a nested list (surfaces.visual.spec.ts) is what holds 1, 2,
+   * a, b; this holds that they are the items the counters count.
+   */
+  test('"1. " starts a numbered list that Enter continues', async ({ page }) => {
+    await page.keyboard.type('1. one')
+    await page.keyboard.press('Enter')
+    await page.keyboard.type('two')
+    await expect(items(page)).toHaveText(['one', 'two'])
+    for (const index of [0, 1]) {
+      await expect(items(page).nth(index)).toHaveAttribute('data-list', 'number')
+    }
+  })
+
+  test('"- " on the empty line after a list starts an item there', async ({ page }) => {
+    await page.keyboard.type('- first')
+    await page.keyboard.press('Enter')
+    await page.keyboard.press('Enter')
+    await page.keyboard.type('- again')
+    await expect(items(page)).toHaveText(['first', 'again'])
+  })
+
+  test('Enter on an empty item ends the list', async ({ page }) => {
+    await page.keyboard.type('- only')
+    await page.keyboard.press('Enter')
+    await page.keyboard.press('Enter')
+    await page.keyboard.type('after')
+    await expect(items(page)).toHaveText(['only'])
+    await expect(page.locator(`${EDITOR} .of-p:not([data-list])`).last()).toHaveText('after')
+  })
+
+  test('Tab nests an item and Shift+Tab brings it back', async ({ page }) => {
+    await page.keyboard.type('- outer')
+    await page.keyboard.press('Enter')
+    await page.keyboard.type('inner')
+    await page.keyboard.press('Tab')
+    await expect(items(page).nth(1)).toHaveAttribute('data-indent', '1')
+    // Still editing: Tab in a list is the list's, not the way out.
+    await expect(page.locator(EDITOR)).toBeFocused()
+    await page.keyboard.press('Shift+Tab')
+    await expect(items(page).nth(1)).not.toHaveAttribute('data-indent', /.*/)
+  })
+
+  test('Backspace at the start of an item takes the bullet, not the words', async ({ page }) => {
+    await page.keyboard.type('- kept')
+    await page.keyboard.press('Home')
+    await page.keyboard.press('Backspace')
+    await expect(items(page)).toHaveCount(0)
+    await expect(page.locator(EDITOR)).toHaveText('kept')
+  })
+
+  test('the shortcut and the button toggle a list', async ({ page }) => {
+    await page.keyboard.type('line')
+    await page.keyboard.press('ControlOrMeta+Shift+8')
+    await expect(items(page)).toHaveCount(1)
+    await expect(page.getByTestId('format-bullet')).toHaveAttribute('aria-pressed', 'true')
+    await page.getByTestId('format-number').click()
+    await expect(items(page).first()).toHaveAttribute('data-list', 'number')
+    await page.getByTestId('format-number').click()
+    await expect(items(page)).toHaveCount(0)
+  })
+
+  test('a list survives the commit and a reload, and reads as a list', async ({ page }) => {
+    await page.keyboard.type('- alpha')
+    await page.keyboard.press('Enter')
+    await page.keyboard.type('beta')
+    await page.locator(CANVAS).click({ position: CLEAR })
+
+    const drawn = page.locator('[data-object-type="sticky"] [role="list"] [role="listitem"]')
+    await expect(drawn).toHaveText(['alpha', 'beta'])
+    await page.waitForTimeout(800) // autosave
+    await page.reload()
+    await expect(drawn).toHaveText(['alpha', 'beta'])
+  })
+})
+
+test('a frame title takes formatting and a list', async ({ page }) => {
+  await freshBoard(page)
+  await page.keyboard.press('f')
+  await page.locator(CANVAS).click({ position: AT })
+  await expect(page.locator(EDITOR)).toBeFocused()
+  await page.keyboard.type('Findings')
+  await page.keyboard.press('ControlOrMeta+a')
+  await page.getByTestId('format-bold').click()
+  await page.locator(CANVAS).click({ position: CLEAR })
+  await expect(page.locator('.of-frame__title strong')).toHaveText('Findings')
+})
+
+/*
+ * Pasted markup is READ for its words, marks and lists, in a document that is
+ * never rendered. A document with no browsing context fetches nothing, so an
+ * image in someone's clipboard must not become a request to wherever it
+ * points — which is what inserting that markup into the page would do.
+ */
+test('pasting markup with images fetches none of them', async ({ page }) => {
+  await freshBoard(page)
+  const fetched: string[] = []
+  await page.route('**/paste-probe-*', async (route) => {
+    fetched.push(route.request().url())
+    await route.fulfill({ status: 200, body: '' })
+  })
+  await page.keyboard.press('s')
+  await page.locator(CANVAS).click({ position: AT })
+  await expect(page.locator(EDITOR)).toBeFocused()
+  await page.locator(EDITOR).evaluate((element) => {
+    const data = new DataTransfer()
+    data.setData(
+      'text/html',
+      '<ul><li><b>kept</b></li></ul><img src="/paste-probe-img.png"><iframe src="/paste-probe-frame"></iframe><img srcset="/paste-probe-srcset.png 1x">',
+    )
+    data.setData('text/plain', 'kept')
+    element.dispatchEvent(
+      new ClipboardEvent('paste', { clipboardData: data, bubbles: true, cancelable: true }),
+    )
+  })
+  await expect(page.locator(`${EDITOR} [data-list="bullet"] strong`)).toHaveText('kept')
+  await page.waitForTimeout(500)
+  expect(fetched).toEqual([])
 })

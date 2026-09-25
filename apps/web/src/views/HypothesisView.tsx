@@ -31,6 +31,7 @@ function HypothesisEditor(props: ObjectEditorProps<HypothesisData>) {
 
 export const hypothesisView = defineObjectView<HypothesisData>({
   type: 'hypothesis',
+  defaultColor: 'violet',
   Renderer: HypothesisRenderer,
   InlineEditor: HypothesisEditor,
 })

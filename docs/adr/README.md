@@ -23,6 +23,7 @@ Format: Status · Context · Decision · Alternatives considered · Consequences
 | [0011](0011-relations-as-objects.md)              | **Relations are objects, not fields**              | Accepted            |
 | [0012](0012-rich-text-as-spans.md)                | **Text is a list of spans, not a string**          | Accepted            |
 | [0013](0013-collaboration-transport-durable-objects.md) | **Durable Objects, sync loop written here**  | Accepted            |
+| [0014](0014-paragraphs-lists-and-labels.md)       | **Lists live on the newline, and labels become text** | Accepted       |
 
 ## Writing a new one
 

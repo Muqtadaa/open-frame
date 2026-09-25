@@ -64,9 +64,9 @@ its first refusal, and panel white is reserved for surfaces that overlay the
 board. Nothing here overlays anything.
 
 The board list is a LEDGER — rows divided by the margin rule, title in 13px UI
-sans, "how long ago" in 11px mono with tabular numerals, because a time is a
+sans, "how long ago" in 12px mono with tabular numerals, because a time is a
 measurement and this world sets measurements in mono. Section names are
-specimen labels: 11px mono, lowercase, tracked 0.02em, the way the record panel
+specimen labels: 12px mono, lowercase, tracked 0.02em, the way the record panel
 names its subject.
 
 BRAND: The third surface brand paints, after the boot splash and the tab icon,

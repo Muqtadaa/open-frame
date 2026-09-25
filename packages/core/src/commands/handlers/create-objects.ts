@@ -79,7 +79,14 @@ export function createObjects(
       )
     }
 
-    patches.push({ op: 'add', id: object.id, object })
+    // What was VALIDATED is what is stored: a schema may normalise at the
+    // boundary (a plain string given for rich text becomes one span), and the
+    // factory's own output is what went in, not what came out.
+    patches.push({
+      op: 'add',
+      id: object.id,
+      object: { ...object, data: validated.data },
+    })
   }
   return patches
 }

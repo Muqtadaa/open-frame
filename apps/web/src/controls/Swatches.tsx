@@ -128,6 +128,7 @@ export function Swatches({
   current,
   against,
   onPick,
+  onPreview,
   onNone,
 }: {
   readonly kind: SwatchKind
@@ -136,6 +137,8 @@ export function Swatches({
   readonly current: ColorValue | undefined
   readonly against: HexColor | null
   readonly onPick: (color: ColorValue) => void
+  /** A colour being aimed at in the picker, not yet chosen; `null` takes it back. */
+  readonly onPreview?: (color: ColorValue | null) => void
   /**
    * What "no colour at all" does, for a property that has such a state.
    *
@@ -158,7 +161,7 @@ export function Swatches({
           className={`of-swatch of-swatch--none${current === undefined ? ' of-swatch--on' : ''}`}
           aria-pressed={current === undefined}
           aria-label="none"
-          title="none"
+          data-tip="none"
           data-testid={`${testPrefix}-none`}
           onClick={onNone}
         />
@@ -184,7 +187,7 @@ export function Swatches({
           }
           aria-label={token}
           aria-pressed={current === token}
-          title={token}
+          data-tip={token}
           data-testid={`${testPrefix}-${token}`}
           onClick={() => {
             setPicking(false)
@@ -211,7 +214,7 @@ export function Swatches({
         style={custom === null ? undefined : { background: custom }}
         aria-label="Custom colour"
         aria-expanded={picking}
-        title="Custom colour"
+        data-tip="Custom colour"
         data-testid={`${testPrefix}-custom`}
         onClick={() => {
           setPicking((open) => !open)
@@ -247,6 +250,7 @@ export function Swatches({
             current={custom ?? seedOf(kind, current)}
             against={against}
             onPick={onPick}
+            {...(onPreview === undefined ? {} : { onPreview })}
             onClose={() => {
               setPicking(false)
             }}

@@ -29,6 +29,17 @@ export function App() {
       <div className="of-app">
         <Canvas />
 
+        {/*
+          The board's navigation, along the top — the way out, the name, the
+          history. `data-keep-clear` marks furniture anchored to the WINDOW,
+          which anything anchored to a selection has to stay clear of because
+          it cannot move out of the way itself; the value names the edge it
+          holds. See controls/screen-furniture.ts.
+        */}
+        <div className="of-overlay of-overlay--nav" data-keep-clear="top">
+          <StatusBar />
+        </div>
+
         <div className="of-overlay of-overlay--left">
           <Toolbar />
         </div>
@@ -38,18 +49,8 @@ export function App() {
           <Toast />
         </div>
 
-        {/*
-          `data-keep-clear`: furniture anchored to the WINDOW, which anything
-          anchored to a selection has to stay clear of because it cannot move
-          out of the way itself. The value names the edge it holds. See
-          controls/screen-furniture.ts.
-        */}
         <div className="of-overlay of-overlay--bottom-right" data-keep-clear="bottom">
           <ZoomControl />
-        </div>
-
-        <div className="of-overlay of-overlay--bottom-left" data-keep-clear="bottom">
-          <StatusBar />
         </div>
 
         <Inspector />

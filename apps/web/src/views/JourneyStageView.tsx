@@ -31,6 +31,7 @@ function JourneyStageEditor(props: ObjectEditorProps<JourneyStageData>) {
 
 export const journeyStageView = defineObjectView<JourneyStageData>({
   type: 'journey-stage',
+  defaultColor: 'yellow',
   Renderer: JourneyStageRenderer,
   InlineEditor: JourneyStageEditor,
 })

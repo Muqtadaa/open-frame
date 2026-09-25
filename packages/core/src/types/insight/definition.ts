@@ -46,6 +46,7 @@ export const insightType = defineObjectType<typeof INSIGHT_TYPE, InsightData>({
   fields: [
     {
       key: 'confidence',
+      meaning: 'record',
       label: 'Confidence',
       kind: 'select',
       options: CONFIDENCE_LEVELS,

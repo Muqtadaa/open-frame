@@ -14,7 +14,7 @@ import {
   handleAnchor,
 } from '../scene/resize.js'
 import { unionAll, worldRectToScreen, type Rect } from '@openframe/core'
-import { LockIcon, RotateIcon } from '../ui/icons.js'
+import { LockIcon, RotateIcon } from '../controls/icons.js'
 import { fitToText } from '../scene/fit-text.js'
 import { useCommands } from '../hooks/use-commands.js'
 
@@ -204,7 +204,8 @@ export function SelectionOverlay() {
           className="of-lock"
           data-testid="selection-lock"
           aria-label="Locked"
-          title="Locked — unlock it to move or resize it"
+          data-tip="Locked — unlock it to move or resize it"
+          aria-description="Locked — unlock it to move or resize it"
           style={{
             left: `${String(-LOCK_PX)}px`,
             top: `${String(-LOCK_PX)}px`,

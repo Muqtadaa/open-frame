@@ -1,6 +1,7 @@
 import { type ZodType, z } from 'zod'
 
 import type { ObjectId } from '../../domain/ids.js'
+import { RichTextSchema, type RichText } from '../../domain/rich-text.js'
 
 /**
  * Where a connector end attaches.
@@ -114,7 +115,8 @@ export interface ConnectorData {
   readonly points: readonly Bend[]
   readonly startArrow: Arrowhead
   readonly endArrow: Arrowhead
-  readonly text: string
+  /** Rich text since v3 (ADR 0014): the label takes marks, sizes and lists. */
+  readonly text: RichText
   /**
    * Where the label was DRAGGED to, or null for wherever the route puts it.
    *
@@ -127,7 +129,7 @@ export interface ConnectorData {
   readonly label?: LabelPlacement | null
 }
 
-export const CONNECTOR_VERSION = 2
+export const CONNECTOR_VERSION = 3
 
 export const ConnectorDataSchema: ZodType<ConnectorData> = z.object({
   from: EndpointSchema,
@@ -136,7 +138,7 @@ export const ConnectorDataSchema: ZodType<ConnectorData> = z.object({
   points: z.array(z.object({ along: z.number().finite(), across: z.number().finite() })),
   startArrow: z.enum(ARROWHEADS),
   endArrow: z.enum(ARROWHEADS),
-  text: z.string(),
+  text: RichTextSchema,
   /*
    * An `off` from the first version of this reads as an unknown key and Zod
    * strips it, so a label that had been dragged off the line comes back onto

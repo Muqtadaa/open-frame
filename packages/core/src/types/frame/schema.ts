@@ -1,5 +1,7 @@
 import { type ZodType, z } from 'zod'
 
+import { RichTextSchema, type RichText } from '../../domain/rich-text.js'
+
 /**
  * A named region that holds other objects.
  *
@@ -12,11 +14,12 @@ import { type ZodType, z } from 'zod'
  * names are what users and developers actually say.
  */
 export interface FrameData {
-  readonly name: string
+  /** Rich text since v2 (ADR 0014): a title takes marks, sizes and lists like a note. */
+  readonly name: RichText
 }
 
-export const FRAME_VERSION = 1
+export const FRAME_VERSION = 2
 
 export const FrameDataSchema: ZodType<FrameData> = z.object({
-  name: z.string(),
+  name: RichTextSchema,
 })

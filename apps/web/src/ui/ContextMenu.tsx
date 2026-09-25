@@ -5,9 +5,9 @@ import { useViewportSize } from '../controls/use-viewport-size.js'
 import { useCommands } from '../hooks/use-commands.js'
 import { useOpenFrame } from '../runtime/context.js'
 import { useInteractionStore } from '../interaction/interaction-store.js'
+import { MOD_KEY } from '../interaction/keymap.js'
 
-const isMac = typeof navigator !== 'undefined' && /Mac|iPhone|iPad/.test(navigator.platform)
-const mod = isMac ? '⌘' : 'Ctrl'
+const mod = MOD_KEY
 
 interface Item {
   readonly label: string
@@ -231,39 +231,40 @@ export function ContextMenu() {
       gap={0}
       margin={8}
       testId="context-menu-surface"
+      layer="menu"
     >
-    <div ref={ref} className="of-menu of-surface" role="menu" data-testid="context-menu">
-      {/*
-       * Empty groups are dropped, not rendered. A group carries a separator
-       * rule, so a selection with no promotions on offer would otherwise show
-       * a divider with nothing under it.
-       */}
-      {groups
-        .filter((group) => group.length > 0)
-        .map((group, index) => (
-          <div key={index} className="of-menu__group">
-            {group.map((item) => (
-              <button
-                key={item.label}
-                type="button"
-                role="menuitem"
-                className="of-menu__item"
-                disabled={item.disabled === true}
-                data-testid={`menu-${item.label.toLowerCase().replace(/ /g, '-')}`}
-                onClick={() => {
-                  item.run()
-                  close()
-                }}
-              >
-                <span>{item.label}</span>
-                {item.shortcut !== undefined && (
-                  <span className="of-menu__shortcut">{item.shortcut}</span>
-                )}
-              </button>
-            ))}
-          </div>
-        ))}
-    </div>
+      <div ref={ref} className="of-menu of-surface" role="menu" data-testid="context-menu">
+        {/*
+         * Empty groups are dropped, not rendered. A group carries a separator
+         * rule, so a selection with no promotions on offer would otherwise show
+         * a divider with nothing under it.
+         */}
+        {groups
+          .filter((group) => group.length > 0)
+          .map((group, index) => (
+            <div key={index} className="of-menu__group">
+              {group.map((item) => (
+                <button
+                  key={item.label}
+                  type="button"
+                  role="menuitem"
+                  className="of-menu__item"
+                  disabled={item.disabled === true}
+                  data-testid={`menu-${item.label.toLowerCase().replace(/ /g, '-')}`}
+                  onClick={() => {
+                    item.run()
+                    close()
+                  }}
+                >
+                  <span>{item.label}</span>
+                  {item.shortcut !== undefined && (
+                    <span className="of-menu__shortcut">{item.shortcut}</span>
+                  )}
+                </button>
+              ))}
+            </div>
+          ))}
+      </div>
     </AnchoredSurface>
   )
 }

@@ -1,23 +1,20 @@
-import { useLayoutEffect, useRef, useState } from 'react'
-
-import { resolveEndpoints, type ConnectorData } from '@openframe/core'
+import { plainTextOf, resolveEndpoints, type ConnectorData } from '@openframe/core'
 
 import { connectorPath, pathMidpoint, routeAngles } from '../scene/connector-path.js'
 import { capPath } from '../scene/connector-caps.js'
-import {
-  dashArray,
-  inkColor,
-  inkOf,
-  strokeWidth,
-  surfaceColor,
-  textSizePx,
-} from '../scene/style-tokens.js'
+import { dashArray, inkColor, inkOf, strokeWidth, surfaceColor } from '../scene/style-tokens.js'
 import { defineObjectView, type ObjectEditorProps, type ObjectViewProps } from './registry.js'
-import { InlineTextEditor } from './shared-editor.js'
+import { RichTextEditor } from './RichTextEditor.js'
+import { RichTextView } from './RichTextView.js'
 
-
-/** How far a label's plate stands clear of the text on it, in screen pixels. */
-const PLATE_PAD = 4
+/**
+ * The room a label is laid out in, in screen pixels either side of its middle.
+ *
+ * A `foreignObject` needs a box, and the label's own size is only known once
+ * it is laid out; so it gets a generous one and centres itself in it. The box
+ * takes no pointer events, so its size is never a target.
+ */
+const LABEL_ROOM = 1000
 
 /**
  * A connector draws itself in ABSOLUTE world coordinates.
@@ -64,52 +61,21 @@ function ConnectorRenderer({
     normals,
     avoiding,
   )
-  const label = object.data.text
-  const mid = pathMidpoint(start, end, object.data.routing, held, normals, avoiding, object.data.label)
+  const label = plainTextOf(object.data.text)
+  const mid = pathMidpoint(
+    start,
+    end,
+    object.data.routing,
+    held,
+    normals,
+    avoiding,
+    object.data.label,
+  )
 
   // `none` is a colour property's way of saying there is nothing there, which
   // is how a background that has been turned off is stored (see `sanitizeStyle`).
   const chosen = object.style.labelFill
   const ground = chosen === undefined || chosen === 'none' ? undefined : surfaceColor(chosen)
-  /*
-   * The label's own box, MEASURED.
-   *
-   * A plate has to be the size of the text on it, and only the browser knows
-   * that: it depends on the face, the size, the weight and the string. Taken
-   * in a layout effect so the rect is drawn on the frame after the text
-   * appears — one frame without a background is not worth the arithmetic of
-   * predicting glyph widths, which is wrong for every font.
-   *
-   * Guarded, because `getBBox` is SVG's and jsdom has no layout: under test
-   * the plate is simply absent rather than the view throwing.
-   */
-  const text = useRef<SVGTextElement | null>(null)
-  const [plate, setPlate] = useState<{
-    x: number
-    y: number
-    width: number
-    height: number
-  } | null>(null)
-  useLayoutEffect(() => {
-    const element = text.current
-    if (element === null || typeof element.getBBox !== 'function') return
-    const box = element.getBBox()
-    setPlate((was) =>
-      was !== null &&
-      was.x === box.x &&
-      was.y === box.y &&
-      was.width === box.width &&
-      was.height === box.height
-        ? was
-        : { x: box.x, y: box.y, width: box.width, height: box.height },
-    )
-    /*
-     * NOT on the zoom. The group this sits in is counter-scaled, so the box is
-     * the same at every zoom — re-measuring on each wheel notch would be a
-     * layout read per frame for an answer that never changes.
-     */
-  }, [label, object.style.textSize, object.style.bold, object.style.italic, object.style.font])
-
   // Both ends, resolved once. `angle` is the direction of travel as the line
   // arrives, so the near end is the same angle turned around.
   const caps = [
@@ -164,38 +130,36 @@ function ConnectorRenderer({
       {label.trim() !== '' && (
         <g transform={`translate(${String(mid.x)} ${String(mid.y)}) scale(${String(1 / zoom)})`}>
           {/*
-           * The PLATE, when one has been asked for. Sized from the text it
-           * covers rather than guessed at from the character count, because a
-           * guess is wrong for every face and every size — and drawn first,
-           * since SVG paints in document order and a background drawn after
-           * its text is not a background.
+           * HTML, in the SVG, so the label is rich text like every other
+           * (ADR 0014): an SVG `<text>` has no paragraphs and no `<strong>`.
+           * Counter-scaled by the group, so it is the same size on the glass
+           * at every zoom (rule 24).
+           *
+           * The PLATE, when one has been asked for, is the label's own
+           * background — sized by the text because it IS the text's box, where
+           * an SVG rect had to be measured on the frame after and drawn behind.
            */}
-          {ground !== undefined && plate !== null && (
-            <rect
-              x={plate.x - PLATE_PAD}
-              y={plate.y - PLATE_PAD}
-              width={plate.width + PLATE_PAD * 2}
-              height={plate.height + PLATE_PAD * 2}
-              rx={3}
-              fill={ground}
-            />
-          )}
-          <text
-            ref={text}
-            className={`of-connector__label${ground === undefined ? '' : ' of-connector__label--plated'}`}
-            textAnchor="middle"
-            dominantBaseline="middle"
-            // `fill`, not `color`: an SVG glyph is painted, not inked.
-            fill={inkColor(object.style.textColor)}
-            style={{
-              fontSize: `${String(textSizePx(object.style.textSize))}px`,
-              ...(object.style.bold === true ? { fontWeight: 700 } : {}),
-              ...(object.style.italic === true ? { fontStyle: 'italic' } : {}),
-              ...(object.style.underline === true ? { textDecoration: 'underline' } : {}),
-            }}
+          <foreignObject
+            x={-LABEL_ROOM}
+            y={-LABEL_ROOM}
+            width={LABEL_ROOM * 2}
+            height={LABEL_ROOM * 2}
+            className="of-connector__label-room"
           >
-            {label}
-          </text>
+            <div className="of-connector__label-centre">
+              <div
+                className={`of-connector__label${ground === undefined ? '' : ' of-connector__label--plated'}`}
+                style={{
+                  ...(object.style.textColor === undefined
+                    ? {}
+                    : { color: inkColor(object.style.textColor) }),
+                  ...(ground === undefined ? {} : { background: ground }),
+                }}
+              >
+                <RichTextView value={object.data.text} />
+              </div>
+            </div>
+          </foreignObject>
         </g>
       )}
     </svg>
@@ -206,6 +170,7 @@ function ConnectorEditor({
   object,
   document: doc,
   boundsOf,
+  Chrome,
   onCommit,
   onCancel,
 }: ObjectEditorProps<ConnectorData>) {
@@ -227,11 +192,14 @@ function ConnectorEditor({
       className="of-connector__editor-wrap"
       style={{ transform: `translate(${String(mid.x)}px, ${String(mid.y)}px)` }}
     >
-      <InlineTextEditor
+      <RichTextEditor
         initialText={object.data.text}
         className="of-connector__editor"
         ariaLabel="Edit connector label"
-        onCommit={(text) => onCommit({ text })}
+        Chrome={Chrome}
+        onCommit={(text) => {
+          onCommit({ text })
+        }}
         onCancel={onCancel}
       />
     </div>
@@ -240,6 +208,7 @@ function ConnectorEditor({
 
 export const connectorView = defineObjectView<ConnectorData>({
   type: 'connector',
+  defaultColor: 'gray',
   Renderer: ConnectorRenderer,
   InlineEditor: ConnectorEditor,
 })

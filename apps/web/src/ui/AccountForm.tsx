@@ -42,6 +42,7 @@ export function AccountForm({
         <label className="of-account__field">
           <span>Name</span>
           <input
+            className="of-input of-input--large"
             type="text"
             value={displayName}
             autoComplete="name"
@@ -54,6 +55,7 @@ export function AccountForm({
       <label className="of-account__field">
         <span>Email</span>
         <input
+          className="of-input of-input--large"
           type="email"
           required
           value={email}
@@ -65,6 +67,7 @@ export function AccountForm({
       <label className="of-account__field">
         <span>Password</span>
         <input
+          className="of-input of-input--large"
           type="password"
           required
           minLength={6}
@@ -93,7 +96,7 @@ export function AccountForm({
         >
           {mode === 'in' ? 'Create an account' : 'I already have one'}
         </button>
-        <button type="submit" className="of-account__submit" disabled={busy}>
+        <button type="submit" className="of-button of-button--primary of-button--large" disabled={busy}>
           {busy ? (mode === 'in' ? 'Signing in…' : 'Creating…') : mode === 'in' ? 'Sign in' : 'Create account'}
         </button>
       </div>

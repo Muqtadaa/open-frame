@@ -6,6 +6,7 @@ import {
   type ImageCrop,
   type ObjectFrame,
   type ObjectId,
+  type ObjectStyle,
   type Point,
   type ShapeKind,
   type Viewport,
@@ -372,6 +373,24 @@ interface InteractionState {
   readonly said: number
   readonly drag: DragState
   /**
+   * A style being aimed at in the record panel — a colour dragged across the
+   * picker, an opacity slid — drawn on the selection and written NOWHERE.
+   *
+   * These are gestures like any drag, and they were writing like none of
+   * them: every pointer move in the picker dispatched `UpdateStyle`, so one
+   * drag left about twenty undo entries (rule 4, rule 14). The panel previews
+   * here and dispatches once when the gesture ends; `ObjectView` merges this
+   * into what it draws, exactly as it merges a crop or a divider.
+   *
+   * Beside `drag` rather than inside it: the canvas is not dragging, and a
+   * style preview must survive the canvas starting or ending a gesture of
+   * its own.
+   */
+  readonly stylePreview: {
+    readonly ids: ReadonlySet<ObjectId>
+    readonly style: ObjectStyle
+  } | null
+  /**
    * Size of the canvas element. Transient view state, but several things
    * outside the canvas need it — zoom-to-fit, centred zoom, the zoom slider —
    * and threading a ref through the tree for a number is worse than storing it.
@@ -414,6 +433,8 @@ interface InteractionState {
   setCropping(id: ObjectId | null): void
   beginCrop(objectId: ObjectId, handle: string): void
   previewCrop(frame: ObjectFrame, crop: ImageCrop): void
+  previewStyle(ids: ReadonlySet<ObjectId>, style: ObjectStyle): void
+  clearStylePreview(): void
   setLockedByOthers(ids: ReadonlySet<ObjectId>): void
   setViewport(viewport: Viewport): void
   setFollowing(clientId: number | null): void
@@ -485,6 +506,7 @@ export const useInteractionStore = create<InteractionState>((set) => ({
   openThreadId: null,
   said: 0,
   drag: { kind: 'idle' },
+  stylePreview: null,
   canvasSize: { width: 0, height: 0 },
   clipboard: [],
   contextMenu: null,
@@ -585,6 +607,8 @@ export const useInteractionStore = create<InteractionState>((set) => ({
     set({ drag: { kind: 'crop', objectId, handle, frame: null, crop: null } }),
   previewCrop: (frame, crop) =>
     set((state) => (state.drag.kind === 'crop' ? { drag: { ...state.drag, frame, crop } } : {})),
+  previewStyle: (ids, style) => set({ stylePreview: { ids, style } }),
+  clearStylePreview: () => set({ stylePreview: null }),
   previewDivider: (data, grow) =>
     set((state) =>
       // Guarded: a preview arriving after the gesture ended would resurrect a

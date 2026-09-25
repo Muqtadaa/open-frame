@@ -55,7 +55,8 @@ export function BoardTitle({ title }: { readonly title: string }) {
         type="button"
         className="of-status__title"
         data-testid="board-title"
-        title="Rename this board"
+        data-tip="Rename this board"
+        aria-description="Rename this board"
         onClick={open}
       >
         {title}

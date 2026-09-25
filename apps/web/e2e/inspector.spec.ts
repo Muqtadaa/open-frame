@@ -91,6 +91,14 @@ test.describe('inspector', () => {
     await expect(page.locator('.of-shape__svg path')).toHaveAttribute('fill', 'transparent')
   })
 
+  // The row is keyed `line` for its ids, but it is LABELLED dash, and a
+  // screen reader should hear what a sighted user reads.
+  test('announces the dash row by the name it is shown under', async ({ page }) => {
+    await place(page, 'u', 340, 300, 'Box')
+    await page.locator(CANVAS).click({ position: { x: 340, y: 300 } })
+    await expect(page.getByRole('radiogroup', { name: 'dash' })).toBeVisible()
+  })
+
   test('sets opacity', async ({ page }) => {
     await place(page, 's', 340, 260, 'Note')
     await page.locator(CANVAS).click({ position: { x: 340, y: 260 } })
@@ -121,9 +129,9 @@ test.describe('inspector', () => {
     await place(page, 's', 340, 260, 'Note')
     await page.locator(CANVAS).click({ position: { x: 340, y: 260 } })
 
-    const paper = await page.locator('.of-sticky').evaluate(
-      (note) => getComputedStyle(note).backgroundColor,
-    )
+    const paper = await page
+      .locator('.of-sticky')
+      .evaluate((note) => getComputedStyle(note).backgroundColor)
 
     await page.getByTestId('paint-textColor').click()
     await page.getByTestId('ink-red').click()
@@ -199,10 +207,7 @@ test.describe('inspector', () => {
      * The custom swatch now shows what it holds, so the row still answers
      * "what is this set to" when the answer is not in the palette.
      */
-    await expect(page.getByTestId('ink-custom')).toHaveCSS(
-      'background-color',
-      'rgb(58, 123, 213)',
-    )
+    await expect(page.getByTestId('ink-custom')).toHaveCSS('background-color', 'rgb(58, 123, 213)')
   })
 
   /**
@@ -273,5 +278,248 @@ test.describe('inspector', () => {
 
     await page.getByTestId('inspector-delete').click()
     await expect(page.locator('[data-object-type="sticky"]')).toHaveCount(0)
+  })
+})
+
+/**
+ * Aiming is a gesture, and a gesture writes nothing until it ends (rules 4
+ * and 14). The picker dispatched a style command on every pointer move and the
+ * opacity slider on every step, so one drag across the colour area left about
+ * twenty undo entries. They preview on the selection now and write once.
+ */
+test.describe('continuous controls write once', () => {
+  test.beforeEach(async ({ page }) => {
+    await freshBoard(page)
+  })
+
+  const surfaceOf = (page: Page) =>
+    page.locator('.of-sticky').evaluate((element) => getComputedStyle(element).backgroundColor)
+
+  test('a drag across the colour picker is one undo entry', async ({ page }) => {
+    await place(page, 's', 340, 260, 'Note')
+    await page.locator(CANVAS).click({ position: { x: 340, y: 260 } })
+    const before = await surfaceOf(page)
+
+    await page.getByTestId('swatch-custom').click()
+    const area = await page.getByTestId('picker-area').boundingBox()
+    expect(area).not.toBeNull()
+    if (area === null) return
+    await page.mouse.move(area.x + 4, area.y + 4)
+    await page.mouse.down()
+    for (let step = 1; step <= 20; step++) {
+      await page.mouse.move(area.x + (area.width * step) / 21, area.y + (area.height * step) / 42)
+    }
+    await page.mouse.up()
+    const after = await surfaceOf(page)
+    expect(after).not.toBe(before)
+
+    await page.locator(CANVAS).click({ position: EMPTY })
+    await page.keyboard.press('ControlOrMeta+z')
+    await expect.poll(() => surfaceOf(page)).toBe(before)
+  })
+
+  test('Escape takes back a colour that was only aimed at', async ({ page }) => {
+    await place(page, 's', 340, 260, 'Note')
+    await page.locator(CANVAS).click({ position: { x: 340, y: 260 } })
+    const before = await surfaceOf(page)
+
+    await page.getByTestId('swatch-custom').click()
+    await page.getByTestId('picker-hex').fill('#c0ffee')
+    // Previewed on the note while it is being chosen…
+    await expect.poll(() => surfaceOf(page)).toBe('rgb(192, 255, 238)')
+
+    // …and gone again without a trace when it is not.
+    await page.keyboard.press('Escape')
+    await expect.poll(() => surfaceOf(page)).toBe(before)
+    await page.locator(CANVAS).click({ position: EMPTY })
+    await expect.poll(() => surfaceOf(page)).toBe(before)
+  })
+
+  /*
+   * The slider's Escape reached the board, which deselected — and the panel
+   * settling on its way out committed exactly the value Escape meant to drop.
+   */
+  test('Escape on the opacity slider takes the steps back and keeps the panel', async ({
+    page,
+  }) => {
+    await place(page, 's', 340, 260, 'Note')
+    await page.locator(CANVAS).click({ position: { x: 340, y: 260 } })
+
+    await page.getByTestId('opacity').focus()
+    for (let step = 0; step < 3; step++) await page.keyboard.press('ArrowLeft')
+    await expect(page.locator('.of-sticky')).toHaveCSS('opacity', '0.85')
+
+    await page.keyboard.press('Escape')
+    await expect(page.locator('.of-sticky')).toHaveCSS('opacity', '1')
+    await expect(page.getByTestId('inspector')).toBeVisible()
+    // Leaving now settles nothing: there is nothing aimed at any more.
+    await page.locator(CANVAS).click({ position: EMPTY })
+    await expect(page.locator('.of-sticky')).toHaveCSS('opacity', '1')
+  })
+
+  test('six steps of the opacity slider are one undo entry', async ({ page }) => {
+    await place(page, 's', 340, 260, 'Note')
+    await page.locator(CANVAS).click({ position: { x: 340, y: 260 } })
+
+    await page.getByTestId('opacity').focus()
+    for (let step = 0; step < 6; step++) await page.keyboard.press('ArrowLeft')
+    await expect(page.locator('.of-sticky')).toHaveCSS('opacity', '0.7')
+
+    await page.locator(CANVAS).click({ position: EMPTY })
+    await expect(page.locator('.of-sticky')).toHaveCSS('opacity', '0.7')
+    await page.keyboard.press('ControlOrMeta+z')
+    await expect(page.locator('.of-sticky')).toHaveCSS('opacity', '1')
+  })
+})
+
+/**
+ * The panel floats beside the selection, which is also where people reach
+ * next. It painted over an open context menu — whichever of the two mounted
+ * later won, and "Promote to evidence" was clipped out of the only place it
+ * lives — and it swallowed the shift-click aimed at the object beside the
+ * first one, so a selection could not be built by hand.
+ */
+test.describe('the panel is not in the way', () => {
+  test.beforeEach(async ({ page }) => {
+    await freshBoard(page)
+  })
+
+  test('an open context menu paints over it', async ({ page }) => {
+    await place(page, 's', 340, 260, 'Note')
+    await page.locator(CANVAS).click({ position: { x: 340, y: 260 } })
+    await expect(page.getByTestId('inspector')).toBeVisible()
+    await page.locator(CANVAS).click({ position: { x: 340, y: 260 }, button: 'right' })
+    await expect(page.getByTestId('context-menu')).toBeVisible()
+
+    const panel = await page.getByTestId('inspector').boundingBox()
+    const menu = await page.getByTestId('context-menu').boundingBox()
+    expect(panel).not.toBeNull()
+    expect(menu).not.toBeNull()
+    if (panel === null || menu === null) return
+    // A point inside both: whatever is drawn there is what gets clicked.
+    const x = Math.max(panel.x, menu.x) + 4
+    const y = Math.max(panel.y, menu.y) + 4
+    expect(x).toBeLessThan(Math.min(panel.x + panel.width, menu.x + menu.width))
+    const onTop = await page.evaluate(
+      ([px, py]) =>
+        document
+          .elementFromPoint(px ?? 0, py ?? 0)
+          ?.closest('[data-testid]')
+          ?.getAttribute('data-testid'),
+      [x, y],
+    )
+    expect(onTop).not.toBe('inspector')
+    expect(
+      await page.evaluate(
+        ([px, py]) =>
+          document.elementFromPoint(px ?? 0, py ?? 0)?.closest('[data-testid="context-menu"]') !==
+          null,
+        [x, y],
+      ),
+    ).toBe(true)
+  })
+
+  test('steps aside while Shift builds a selection', async ({ page }) => {
+    // The second note is placed where the panel beside the first one will be.
+    await place(page, 's', 640, 300, 'Beside')
+    await place(page, 's', 300, 300, 'First')
+    await page.locator(CANVAS).click({ position: { x: 300, y: 300 } })
+    const panel = await page.getByTestId('inspector').boundingBox()
+    expect(panel).not.toBeNull()
+    if (panel === null) return
+    expect(panel.x).toBeLessThan(640)
+    expect(panel.x + panel.width).toBeGreaterThan(640)
+
+    await page.keyboard.down('Shift')
+    await page.mouse.click(640, 300)
+    await page.keyboard.up('Shift')
+
+    await expect(page.getByTestId('inspector')).toContainText('2 objects')
+  })
+
+  // The commonest flow: recolour this one, then add the next. Focus is left on
+  // the swatch, which is not typing, so Shift must still clear the way.
+  test('steps aside after a swatch was clicked, too', async ({ page }) => {
+    await place(page, 's', 640, 300, 'Beside')
+    await place(page, 's', 300, 300, 'First')
+    await page.locator(CANVAS).click({ position: { x: 300, y: 300 } })
+    await page.getByTestId('swatch-blue').click()
+    await expect(page.getByTestId('swatch-blue')).toBeFocused()
+
+    await page.keyboard.down('Shift')
+    await page.mouse.click(640, 300)
+    await page.keyboard.up('Shift')
+
+    await expect(page.getByTestId('inspector')).toContainText('2 objects')
+  })
+})
+
+/**
+ * What the record panel's critique found in its state, words and keyboard:
+ * a new note was visibly yellow while no swatch said so, Delete was the first
+ * thing Tab reached from the board, the radio rows ignored the arrow keys, and
+ * their options were 28×26 — under the target this world sets.
+ */
+test.describe('the panel says what is set, and a keyboard can cross it', () => {
+  test.beforeEach(async ({ page }) => {
+    await freshBoard(page)
+    await place(page, 's', 340, 260, 'Note')
+    await page.locator(CANVAS).click({ position: { x: 340, y: 260 } })
+  })
+
+  test('marks the colour a fresh note is drawn in', async ({ page }) => {
+    await expect(page.getByTestId('swatch-yellow')).toHaveAttribute('aria-pressed', 'true')
+  })
+
+  test('reaches Delete last, not first', async ({ page }) => {
+    await page.keyboard.press('Tab')
+    await expect(page.getByTestId('inspector-delete')).not.toBeFocused()
+    const stops = await page
+      .getByTestId('inspector')
+      .locator('button:not([tabindex="-1"]), input')
+      .evaluateAll((elements) => elements.map((element) => element.getAttribute('data-testid')))
+    expect(stops.at(-1)).toBe('inspector-delete')
+  })
+
+  test('moves a radio row with the arrows, as one stop', async ({ page }) => {
+    const start = page.getByTestId('align-start')
+    await expect(start).toHaveAttribute('tabindex', '0')
+    await expect(page.getByTestId('align-center')).toHaveAttribute('tabindex', '-1')
+
+    await start.focus()
+    await page.keyboard.press('ArrowRight')
+    await expect(page.getByTestId('align-center')).toBeFocused()
+    await expect(page.getByTestId('align-center')).toHaveAttribute('aria-checked', 'true')
+    await page.keyboard.press('ArrowRight')
+    await page.keyboard.press('ArrowRight')
+    // Wraps, the way every platform's radio group does.
+    await expect(page.getByTestId('align-start')).toHaveAttribute('aria-checked', 'true')
+  })
+
+  /*
+   * The board's keymap listens on the window, where an arrow is a nudge. An
+   * arrow inside a radio row is the row's, and must not also walk the object.
+   */
+  test('an arrow in a radio row does not nudge the object', async ({ page }) => {
+    const note = page.locator('[data-object-type="sticky"]')
+    const before = await note.boundingBox()
+    await page.getByTestId('align-start').focus()
+    await page.keyboard.press('ArrowRight')
+    await page.keyboard.press('ArrowRight')
+    await expect(page.getByTestId('align-end')).toHaveAttribute('aria-checked', 'true')
+    expect(await note.boundingBox()).toEqual(before)
+  })
+
+  test('holds every option at the secondary-control target', async ({ page }) => {
+    const small = await page
+      .getByTestId('inspector')
+      .locator('[role="radio"], [aria-pressed]')
+      .evaluateAll(
+        (elements) =>
+          elements
+            .map((element) => element.getBoundingClientRect())
+            .filter((box) => box.width < 30 || box.height < 30).length,
+      )
+    expect(small).toBe(0)
   })
 })

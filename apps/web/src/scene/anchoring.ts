@@ -75,6 +75,11 @@ export interface AnchorRequest {
    */
   readonly keepClearBottom?: number | undefined
   /**
+   * The same at the TOP: the board's navigation bar, which is anchored to the
+   * window and runs along the top edge.
+   */
+  readonly keepClearTop?: number | undefined
+  /**
    * A rectangle the surface must not land on, when any preferred side avoids
    * it — the options panel, which is the one other thing that floats beside a
    * selection and is placed by its own arithmetic.
@@ -99,9 +104,29 @@ function clamp(value: number, low: number, high: number): number {
   return Math.min(Math.max(value, low), Math.max(low, high))
 }
 
+/**
+ * The bands this surface keeps clear of — except one its anchor is IN.
+ *
+ * A surface hung from the furniture itself (the share sheet from its button in
+ * the navigation bar) belongs beside that button, and treating the bar it came
+ * from as an obstacle would push it a band's height away from it.
+ */
+function bands(request: AnchorRequest): { top: number; bottom: number } {
+  const { anchor, within } = request
+  const top = request.keepClearTop ?? 0
+  const bottom = request.keepClearBottom ?? 0
+  // WHOLLY inside, not merely overlapping: an object half under the bar is
+  // still on the board, and its panel must still keep clear of the bar.
+  return {
+    top: top > 0 && anchor.y + anchor.height <= top ? 0 : top,
+    bottom: bottom > 0 && anchor.y >= within.height - bottom ? 0 : bottom,
+  }
+}
+
 function fits(side: Side, request: AnchorRequest): boolean {
   const { anchor, surface, within, gap, margin } = request
   const left = request.keepClearLeft ?? 0
+  const band = bands(request)
   switch (side) {
     case 'right':
       return anchor.x + anchor.width + gap + surface.width <= within.width - margin
@@ -110,10 +135,10 @@ function fits(side: Side, request: AnchorRequest): boolean {
     case 'below':
       return (
         anchor.y + anchor.height + gap + surface.height <=
-        within.height - margin - (request.keepClearBottom ?? 0)
+        within.height - margin - band.bottom
       )
     case 'above':
-      return anchor.y - gap - surface.height >= margin
+      return anchor.y - gap - surface.height >= margin + band.top
     case 'over':
       return true
   }
@@ -167,8 +192,9 @@ export function placeAnchored(request: AnchorRequest): Placement {
   const { surface, within, margin } = request
   const leftBound = Math.max(margin, request.keepClearLeft ?? 0)
   const rightBound = within.width - surface.width - margin
-  const topBound = margin
-  const bottomBound = within.height - surface.height - margin - (request.keepClearBottom ?? 0)
+  const band = bands(request)
+  const topBound = margin + band.top
+  const bottomBound = within.height - surface.height - margin - band.bottom
 
   const settle = (side: Side): Rect => {
     const raw = positionOn(side, request)

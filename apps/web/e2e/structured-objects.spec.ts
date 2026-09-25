@@ -111,6 +111,22 @@ test.describe('structured objects', () => {
     await expect(page.locator(CANVAS)).toContainText('#pricing #comprehension')
   })
 
+  test('the record band counts what is still blank', async ({ page }) => {
+    await placeNote(page, 'Could not find the price')
+    await promote(page, NOTE)
+    await page.locator(CANVAS).click({ position: NOTE })
+    await expect(page.getByTestId('inspector-blanks')).toHaveText('3 blank')
+
+    await page.getByTestId('field-source').fill('September usability study')
+    await page.getByTestId('field-participant').click()
+    await expect(page.getByTestId('inspector-blanks')).toHaveText('2 blank')
+
+    await page.getByTestId('field-participant').fill('P07')
+    await page.getByTestId('field-tags').fill('pricing')
+    await page.getByTestId('field-source').click()
+    await expect(page.getByTestId('inspector-blanks')).toHaveCount(0)
+  })
+
   /**
    * One promotion is one undo entry. If the conversion were a delete and a
    * create, or three separate writes, this would take several presses and the
@@ -415,4 +431,74 @@ test.describe('the synthesis spine', () => {
       'Move pricing above the fold',
     )
   })
+})
+
+/**
+ * An unsourced slip must not look sourced (PRODUCT.md: provenance intact).
+ * The evidence type's placeholders are realistic examples, and set in muted
+ * ink beside real values they read as data somebody had entered.
+ */
+test('an empty record field reads as an example, not as a value', async ({ page }) => {
+  await freshBoard(page)
+  await placeNote(page, 'Three of five could not find the annual price')
+  await promote(page, NOTE)
+  await page.locator(CANVAS).click({ position: NOTE })
+
+  const participant = page.getByTestId('field-participant')
+  await expect(participant).toHaveAttribute('placeholder', 'e.g. P07')
+  await expect(participant).toHaveCSS('border-top-style', 'dashed')
+
+  await participant.fill('P03')
+  await participant.press('Enter')
+  await expect(participant).toHaveCSS('border-top-style', 'solid')
+})
+
+/**
+ * The record panel's head names the thing, and a type that carries a record
+ * gets it named above how it looks: the one place the panel shows that a
+ * note and a piece of evidence are the same object with a different payload.
+ */
+test('the panel names what the object is, and puts its record first', async ({ page }) => {
+  await freshBoard(page)
+  await placeNote(page, 'Three of five could not find the annual price')
+  await page.locator(CANVAS).click({ position: NOTE })
+  await expect(page.getByTestId('inspector-title')).toHaveText('Sticky')
+  await expect(page.getByTestId('inspector')).toContainText('Three of five could not find')
+  // A note has no record, so nothing is named as one.
+  await expect(page.getByTestId('inspector').getByText('record', { exact: true })).toHaveCount(0)
+
+  await promote(page, NOTE)
+  await page.locator(CANVAS).click({ position: NOTE })
+  await expect(page.getByTestId('inspector-title')).toHaveText('Evidence')
+  const bands = page.getByTestId('inspector').locator('.of-inspector__band')
+  await expect(bands).toHaveText([/^record(\d+ blank)?$/, 'appearance'])
+})
+
+/**
+ * The record IS the panel for a type that carries one. With nine rows of
+ * appearance under it an evidence panel was 539px tall with nothing that
+ * scrolled, and painted over the record line and the zoom cluster — the
+ * navigation bar, now it runs along the top.
+ */
+test('folds appearance away on evidence, and opens it on request', async ({ page }) => {
+  await freshBoard(page)
+  await placeNote(page, 'Three of five could not find the annual price')
+  await promote(page, NOTE)
+  await page.locator(CANVAS).click({ position: NOTE })
+
+  const toggle = page.getByTestId('inspector-appearance')
+  await expect(toggle).toHaveAttribute('aria-expanded', 'false')
+  await expect(page.getByTestId('swatch-gray')).toHaveCount(0)
+
+  const panel = await page.getByTestId('inspector').boundingBox()
+  const line = await page.getByTestId('status-bar').boundingBox()
+  expect(panel).not.toBeNull()
+  expect(line).not.toBeNull()
+  if (panel === null || line === null) return
+  // Clear of the navigation bar, which runs along the top of the window now.
+  expect(panel.y).toBeGreaterThanOrEqual(line.y + line.height)
+
+  await toggle.click()
+  await expect(toggle).toHaveAttribute('aria-expanded', 'true')
+  await expect(page.getByTestId('swatch-gray')).toBeVisible()
 })

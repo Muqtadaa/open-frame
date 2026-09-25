@@ -193,7 +193,8 @@ function CodeEditor({ object, Chrome, onCommit, onCancel }: ObjectEditorProps<Co
         className="of-button of-button--ghost of-surface of-code__format"
         disabled={!canFormat(language)}
         aria-label="Pretty print"
-        title="Pretty print (Shift+Alt+F)"
+        data-tip="Pretty print (Shift+Alt+F)"
+        aria-description="Pretty print (Shift+Alt+F)"
         data-testid="code-format"
         onClick={prettyPrint}
       >

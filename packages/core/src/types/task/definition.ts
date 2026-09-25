@@ -32,8 +32,8 @@ export const taskType = defineObjectType<typeof TASK_TYPE, TaskData>({
   },
 
   fields: [
-    { key: 'assignee', label: 'Assignee', kind: 'text' },
-    { key: 'status', label: 'Status', kind: 'select', options: TASK_STATUS },
+    { key: 'assignee', meaning: 'record', label: 'Assignee', kind: 'text' },
+    { key: 'status', meaning: 'record', label: 'Status', kind: 'select', options: TASK_STATUS },
   ],
 
   describe: (object) => {

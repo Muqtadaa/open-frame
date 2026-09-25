@@ -28,7 +28,8 @@ export function AccountControl() {
         type="button"
         className="of-status__share"
         data-testid="account"
-        title={`Signed in as ${identity.displayName}${identity.email === null ? '' : ` (${identity.email})`}. Click to sign out.`}
+        data-tip={`Signed in as ${identity.displayName}${identity.email === null ? '' : ` (${identity.email})`}. Click to sign out.`}
+        aria-description={`Signed in as ${identity.displayName}${identity.email === null ? '' : ` (${identity.email})`}. Click to sign out.`}
         onClick={() => {
           void signOut()
         }}
@@ -53,14 +54,16 @@ export function AccountControl() {
         className="of-status__share"
         data-testid="sign-in"
         aria-expanded={open}
-        title="Sign in to keep a list of your boards"
+        data-tip="Sign in to keep a list of your boards"
+        aria-description="Sign in to keep a list of your boards"
         onClick={() => setOpen((was) => !was)}
       >
         <span className="of-status__share-label">Sign in</span>
       </button>
 
       {/*
-        * Above the button, and clamped. It used to be `bottom: calc(100% +
+        * Under the button (the bar runs along the top), and clamped. It used
+        * to be `bottom: calc(100% +
         * 10px); left: 0` against whichever ancestor happened to be positioned
         * — which was the BAR, not the button, so a 320px dialog was aligned to
         * the left edge of the screen rather than to the control that opened
@@ -70,11 +73,11 @@ export function AccountControl() {
         <AnchoredSurface
           anchor={anchor}
           surface={surface}
-          prefer={['above', 'below']}
+          prefer={['below', 'above']}
           testId="account-surface"
         >
           <div
-            className="of-account"
+            className="of-sheet"
             role="dialog"
             aria-label="Account"
             data-testid="account-dialog"

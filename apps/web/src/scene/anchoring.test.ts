@@ -222,4 +222,52 @@ describe('keeping clear of the screen-edge furniture', () => {
   it('is unchanged by a band of nothing', () => {
     expect(placeAnchored({ ...request, keepClearBottom: 0 })).toEqual(placeAnchored(request))
   })
+
+  /*
+   * The navigation bar runs along the TOP now, so a selection high on the
+   * board must not have its panel clamped up onto the board's own name.
+   */
+  it('keeps a surface clear of a band at the top as well', () => {
+    // Its top edge UNDER the bar, which is where the panel would clamp to.
+    const high = { ...request, anchor: { x: 210, y: 40, width: 180, height: 100 } }
+    const free = placeAnchored(high)
+    const kept = placeAnchored({ ...high, keepClearTop: 70 })
+    expect(free.side).toBe('right')
+    expect(kept.side).toBe('right')
+    expect(free.y).toBeLessThan(70 + 12)
+    expect(kept.y).toBeGreaterThanOrEqual(70 + 12)
+  })
+
+  it('does not call a side above the anchor a fit when the top band takes the room', () => {
+    const tight = {
+      ...request,
+      anchor: { x: 210, y: 300, width: 180, height: 100 },
+      surface: { width: 360, height: 260 },
+      prefer: ['above', 'below'] as const,
+    }
+    expect(placeAnchored(tight).side).toBe('above')
+    expect(placeAnchored({ ...tight, keepClearTop: 70 }).side).toBe('below')
+  })
+
+  /*
+   * A surface hung from the furniture itself — the share sheet from its
+   * button in the bar — belongs beside that button; the bar it came from is
+   * not an obstacle to it.
+   */
+  it('ignores the band its own anchor is in', () => {
+    const fromBar = {
+      ...request,
+      anchor: { x: 600, y: 20, width: 30, height: 30 },
+      prefer: ['below'] as const,
+    }
+    expect(placeAnchored({ ...fromBar, keepClearTop: 64 })).toEqual(placeAnchored(fromBar))
+    const fromBottom = {
+      ...request,
+      anchor: { x: 600, y: 670, width: 30, height: 30 },
+      prefer: ['above'] as const,
+    }
+    expect(placeAnchored({ ...fromBottom, keepClearBottom: 64 })).toEqual(
+      placeAnchored(fromBottom),
+    )
+  })
 })

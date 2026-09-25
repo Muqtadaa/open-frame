@@ -31,6 +31,7 @@ function DecisionEditor(props: ObjectEditorProps<DecisionData>) {
 
 export const decisionView = defineObjectView<DecisionData>({
   type: 'decision',
+  defaultColor: 'green',
   Renderer: DecisionRenderer,
   InlineEditor: DecisionEditor,
 })

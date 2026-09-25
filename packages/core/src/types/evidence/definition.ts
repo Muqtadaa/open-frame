@@ -46,9 +46,9 @@ export const evidenceType = defineObjectType<typeof EVIDENCE_TYPE, EvidenceData>
    * same string in a panel two hundred pixels away is a way to lose an edit.
    */
   fields: [
-    { key: 'source', label: 'Source', kind: 'text', placeholder: 'September usability study' },
-    { key: 'participant', label: 'Participant', kind: 'text', placeholder: 'P07' },
-    { key: 'tags', label: 'Tags', kind: 'tags', placeholder: 'pricing' },
+    { key: 'source', meaning: 'record', label: 'Source', kind: 'text', placeholder: 'September usability study' },
+    { key: 'participant', meaning: 'record', label: 'Participant', kind: 'text', placeholder: 'P07' },
+    { key: 'tags', meaning: 'record', label: 'Tags', kind: 'tags', placeholder: 'pricing' },
   ],
 
   /*

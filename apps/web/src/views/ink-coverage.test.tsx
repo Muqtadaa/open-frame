@@ -43,11 +43,8 @@ describe('every type that declares textColor paints it', () => {
    * quietly cover a type it does not fit.
    */
   const SAID: Record<string, Record<string, unknown>> = {
-    // A plain string for the connector, spans for everything with rich text —
-    // the difference is the type's, and a test that smoothed it over would be
-    // testing a shape of data the app does not have.
-    connector: { text: 'Ink' },
-    frame: { name: 'Ink' },
+    // Every text is spans now (ADR 0014); the frame's is only named differently.
+    frame: { name: [{ text: 'Ink' }] },
   }
   const RICH = { text: [{ text: 'Ink' }] }
 

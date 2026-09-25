@@ -37,8 +37,8 @@ export const experimentType = defineObjectType<typeof EXPERIMENT_TYPE, Experimen
   },
 
   fields: [
-    { key: 'method', label: 'Method', kind: 'text' },
-    { key: 'status', label: 'Status', kind: 'select', options: EXPERIMENT_STATUS },
+    { key: 'method', meaning: 'record', label: 'Method', kind: 'text' },
+    { key: 'status', meaning: 'record', label: 'Status', kind: 'select', options: EXPERIMENT_STATUS },
   ],
 
   // What a result is FOR: deciding something.

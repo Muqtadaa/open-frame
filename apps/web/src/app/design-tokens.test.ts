@@ -182,6 +182,22 @@ describe.each(THEMES)('palette contrast — $name', ({ token }) => {
     expect(contrast(token(fg), token(bg))).toBeGreaterThanOrEqual(3)
   })
 
+  /*
+   * The ARMED tool, read off the rule that paints it rather than listed here:
+   * a pair written into this file stays green when the rule moves to another
+   * one. The active tool is a filled ink bed with a page-coloured icon, and
+   * the icon is what says which tool you are holding — 3:1, a graphic you
+   * must perceive to operate the rail.
+   */
+  it('the armed tool’s icon reads on its bed (3:1)', () => {
+    const rule = /\.of-tool--active[^{]*\{([^}]*)\}/.exec(CSS)?.[1] ?? ''
+    const fg = /(?<![\w-])color:\s*var\(--of-([\w-]+)\)/.exec(rule)?.[1]
+    const bg = /(?<![\w-])background:\s*var\(--of-([\w-]+)\)/.exec(rule)?.[1]
+    expect(fg, 'the active tool names its icon colour as a token').toBeDefined()
+    expect(bg, 'the active tool names its bed as a token').toBeDefined()
+    expect(contrast(token(fg ?? ''), token(bg ?? ''))).toBeGreaterThanOrEqual(3)
+  })
+
   /**
    * A shape's stroke and label on its own fill.
    */
@@ -459,12 +475,16 @@ describe('no colour literals outside the token block', () => {
 /**
  * The record panel's columns have to add up.
  *
- * Its width was chosen so all seven colour swatches sit on ONE row, and the
- * swatches live in the control column — so the label column is spending the
- * same budget. Widening labels (which had to happen: they come from the
- * registry now, and "participant" was being clipped to "participa") silently
- * takes space from the swatches, and a wrapped 5 + 2 swatch row reads as an
- * accident rather than a grid.
+ * Its width was chosen so a full row of the swatch grid fits, and the swatches
+ * live in the control column — so the label column is spending the same
+ * budget. Widening labels (which had to happen: they come from the registry
+ * now, and "participant" was being clipped to "participa") silently takes
+ * space from the swatches, and a grid that wraps short of its own column count
+ * reads as an accident rather than a palette.
+ *
+ * The column count is read from the grid rather than written here. This test
+ * was named for SEVEN swatches after the palette had become a 6×2 grid, so it
+ * went on proving room for a row that no longer existed.
  *
  * The numbers live in two files — the panel's width in `Inspector.tsx`, the
  * columns in the stylesheet — so nothing but arithmetic connects them. This is
@@ -496,7 +516,7 @@ describe('the record panel fits what it promises to show', () => {
     return literal
   }
 
-  it('leaves room for seven swatches on one row', () => {
+  it('leaves room for a full row of the swatch grid', () => {
     const inspector = readFileSync(resolve(process.cwd(), 'src/ui/Inspector.tsx'), 'utf8')
     const widthMatch = /const PANEL_WIDTH = (\d+)/.exec(inspector)
     expect(widthMatch?.[1]).toBeDefined()
@@ -508,16 +528,210 @@ describe('the record panel fits what it promises to show', () => {
 
     const labelColumn = read(String.raw`\.of-field \{[^}]*grid-template-columns:\s*SIZE`)
     const columnGap = read(String.raw`\.of-field \{[^}]*\n\s*gap:\s*SIZE`)
-    const swatch = read(String.raw`\.of-swatch \{[^}]*\n\s*width:\s*SIZE`)
+    const columns = /\.of-swatches \{[^}]*grid-template-columns:\s*repeat\((\d+),/.exec(CSS)?.[1]
+    expect(columns).toBeDefined()
+    const perRow = Number(columns)
+    const swatch = read(String.raw`\.of-swatches \{[^}]*grid-template-columns:\s*repeat\(\d+,\s*SIZE`)
     const swatchGap = read(String.raw`\.of-swatches \{[^}]*gap:\s*SIZE`)
     const sidePadding = read(String.raw`\.of-inspector \{[^}]*\n\s*padding:\s*SIZE`)
     // The panel's own 1px border, both sides.
     const border = 2
 
     const control = panelWidth - border - sidePadding * 2 - labelColumn - columnGap
-    const swatchRow = swatch * 7 + swatchGap * 6
+    const swatchRow = swatch * perRow + swatchGap * (perRow - 1)
 
     expect(swatchRow).toBeLessThanOrEqual(control)
+  })
+})
+
+/**
+ * The Twelve Pixel Floor (DESIGN.md, CLAUDE.md rule 22).
+ *
+ * Nothing a user must read is set below 12px — shortcuts, field labels,
+ * readouts, counts. The floor was written down at 12 while 27 rules sat at 11,
+ * because a floor that lives only in prose is a floor nothing measures.
+ *
+ * Relative sizes (`em`) are the rich-text scale inside an object and belong to
+ * the user's content, so only absolute pixel sizes are read here.
+ */
+describe('the twelve pixel floor', () => {
+  const FLOOR = 12
+  /*
+   * No exemptions. There was one — the record panel's size choice drew each
+   * step at its own size, so "small" was a specimen of 10px type — and it
+   * went with the control when a connector's label became rich text
+   * (ADR 0014).
+   */
+  /**
+   * Sizes are ramp tokens now, so the floor has to READ the ramp — a check
+   * that only looked at literal `px` would pass on a stylesheet with no
+   * literals left in it, whatever the ramp said.
+   */
+  const RAMP = new Map<string, number>()
+  for (const [, name = '', value = ''] of CSS.matchAll(/(--of-type-[\w-]+):\s*(\d+)px;/g)) {
+    RAMP.set(name, Number(value))
+  }
+  const sizeOf = (value: string): number | null => {
+    const token = /^var\((--of-type-[\w-]+)\)$/.exec(value)
+    if (token !== null) return RAMP.get(token[1] ?? '') ?? null
+    const literal = /^([\d.]+)px$/.exec(value)
+    return literal === null ? null : Number(literal[1])
+  }
+  const rules = (): [string, string][] => {
+    const source = CSS.replace(/\/\*[\s\S]*?\*\//g, '')
+    const found: [string, string][] = []
+    for (const [, selector = '', body = ''] of source.matchAll(/([^{}]+)\{([^{}]*)\}/g)) {
+      for (const [, size = ''] of body.matchAll(/(?<![\w-])font-size:\s*([^;]+);/g)) {
+        found.push([selector.trim(), size.trim()])
+      }
+    }
+    return found
+  }
+
+  it('sets no functional text below 12px', () => {
+    const below = rules()
+      .filter(([, size]) => {
+        const px = sizeOf(size)
+        return px !== null && px < FLOOR
+      })
+      .map(([selector, size]) => `${selector}: ${size}`)
+    expect(below).toEqual([])
+  })
+
+  it('puts no step of the ramp below the floor', () => {
+    expect(RAMP.size).toBeGreaterThan(0)
+    expect([...RAMP].filter(([, px]) => px < FLOOR)).toEqual([])
+  })
+
+  /**
+   * The ramp (DESIGN.md, Typography). 114 of 122 sizes were raw pixels, in
+   * nine values, so "the type scale" was whichever number the last rule
+   * happened to use. Every interface size now names a step; content inside an
+   * object scales in `em` from its object and is not on the ramp.
+   */
+  it('draws every interface size from the ramp', () => {
+    const off = rules()
+      .filter(([, size]) => !/^var\(--of-type-[\w-]+\)$/.test(size) && !size.endsWith('em'))
+      .map(([selector, size]) => `${selector}: ${size}`)
+    expect(off).toEqual([])
+  })
+
+})
+
+/**
+ * The radius scale (DESIGN.md, Shapes).
+ *
+ * Seventeen radii were in use against one token, so "corners get smaller the
+ * closer a form is to the page" was a sentence rather than a property of the
+ * stylesheet. Every corner now names its step; a new one either takes a step
+ * or adds one to the scale in `:root`, where it has to say what it is for.
+ */
+describe('the radius scale', () => {
+  it('draws every corner from a step of the scale', () => {
+    const source = CSS.replace(/\/\*[\s\S]*?\*\//g, '')
+    const off: string[] = []
+    for (const [, value = ''] of source.matchAll(/(?<![\w-])border-radius:\s*([^;]+);/g)) {
+      const parts = value.trim().split(/\s+(?![^(]*\))/)
+      const onScale = parts.every(
+        (part) => part === '0' || part === 'inherit' || /^var\(--of-radius(-[a-z]+)?\)$/.test(part),
+      )
+      if (!onScale) off.push(value.trim())
+    }
+    expect(off).toEqual([])
+  })
+
+  it('defines the scale it asks for', () => {
+    const defined = new Set([...CSS.matchAll(/(--of-radius(?:-[a-z]+)?):/g)].map((m) => m[1]))
+    const used = new Set([...CSS.matchAll(/var\((--of-radius(?:-[a-z]+)?)\)/g)].map((m) => m[1]))
+    expect([...used].filter((name) => !defined.has(name))).toEqual([])
+  })
+})
+
+/**
+ * The layers. Ten bare integers from 1 to 100 said nothing about why one thing
+ * paints over another; every z-index now names a layer in `:root`, which is
+ * where the order is read as one list and has to be argued for.
+ */
+describe('the layers', () => {
+  it('stacks everything on a named layer', () => {
+    const source = CSS.replace(/\/\*[\s\S]*?\*\//g, '')
+    const off = [...source.matchAll(/(?<![\w-])z-index:\s*([^;]+);/g)]
+      .map((match) => (match[1] ?? '').trim())
+      .filter((value) => !/^var\(--of-z-[a-z]+\)$/.test(value) && value !== 'auto' && value !== '0')
+    expect(off).toEqual([])
+  })
+
+  it('defines every layer it asks for', () => {
+    const defined = new Set([...CSS.matchAll(/(--of-z-[a-z]+):/g)].map((m) => m[1]))
+    const used = new Set([...CSS.matchAll(/var\((--of-z-[a-z]+)\)/g)].map((m) => m[1]))
+    expect([...used].filter((name) => !defined.has(name))).toEqual([])
+  })
+})
+
+/**
+ * Motion (DESIGN.md, Motion). Timing is `--of-quick`, `--of-settle`,
+ * `--of-hold` and `--of-stagger` on `--of-ease`; the tool tip ran its own
+ * 110ms ease-out and the sheets their own 160ms beside a token that already
+ * said 140. A duration anywhere but the token block is a second clock.
+ */
+describe('one clock', () => {
+  it('times nothing outside the motion tokens', () => {
+    const source = CSS.replace(/\/\*[\s\S]*?\*\//g, '')
+    const declarations = [...source.matchAll(/(?<![\w-])(transition|animation)[\w-]*:\s*([^;]+);/g)]
+    const literal = declarations
+      .map((match) => (match[2] ?? '').trim())
+      .filter((value) => /\d+m?s\b|ease-(in|out)|\blinear\b/.test(value))
+    expect(literal).toEqual([])
+  })
+})
+
+/**
+ * The spacing scale. Sixteen values were in use for padding, margins and gaps,
+ * with a 3, 5, 7 and 9 beside the 2, 4, 6 and 8 they were meant to be. Every
+ * space from 2px to 20px now names a step; above that a length is a size, not
+ * rhythm, and a 1px hairline offset or a negative pull stays as written.
+ */
+describe('the spacing scale', () => {
+  it('spaces everything from 2px to 20px on a step of the scale', () => {
+    const source = CSS.replace(/\/\*[\s\S]*?\*\//g, '')
+    const off: string[] = []
+    const property = /(?<![\w-])((?:padding|margin)[\w-]*|gap|row-gap|column-gap):\s*([^;]+);/g
+    for (const [, name = '', value = ''] of source.matchAll(property)) {
+      for (const [, px = ''] of value.matchAll(/(?<![\w.(-])(\d+)px/g)) {
+        if (Number(px) >= 2 && Number(px) <= 20) off.push(`${name}: ${value.trim()}`)
+      }
+    }
+    expect(off).toEqual([])
+  })
+
+  it('defines every step it asks for', () => {
+    const defined = new Set([...CSS.matchAll(/(--of-space-\d+):/g)].map((m) => m[1]))
+    const used = new Set([...CSS.matchAll(/var\((--of-space-\d+)\)/g)].map((m) => m[1]))
+    expect([...used].filter((name) => !defined.has(name))).toEqual([])
+  })
+})
+
+/**
+ * The icon button. Six private versions at four sizes became one, and the
+ * ones under 30px were under this world's target for a secondary control.
+ * Nothing may bring a private one back beside it at a smaller size.
+ */
+describe('one icon button', () => {
+  it('holds the secondary target at its smallest', () => {
+    const rule = /\.of-icon-button \{([^}]*)\}/.exec(CSS)?.[1] ?? ''
+    expect(rule).toContain('min-width: var(--of-hit-sm);')
+    expect(rule).toContain('height: var(--of-hit-sm);')
+  })
+
+  it('leaves none of the private versions behind', () => {
+    const retired = [
+      '.of-status__action',
+      '.of-home__row-action ',
+      '.of-inspector__remove',
+      '.of-arrange__button',
+      '.of-zoom__button',
+    ]
+    expect(retired.filter((selector) => CSS.includes(selector))).toEqual([])
   })
 })
 

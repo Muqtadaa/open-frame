@@ -1,7 +1,7 @@
 import { useEffect } from 'react'
 
 import { useInteractionStore } from '../interaction/interaction-store.js'
-import { CloseIcon } from './icons.js'
+import { CloseIcon } from '../controls/icons.js'
 
 /** How long a message stays up. Long enough to read a sentence, not to nag. */
 const TOAST_MS = 5000
@@ -30,7 +30,7 @@ export function Toast() {
   if (toast === null) return null
 
   return (
-    <div className="of-toast" role="status" aria-live="polite">
+    <div className="of-notice of-notice--danger" role="status" aria-live="polite">
       <span>{toast}</span>
       <button
         type="button"

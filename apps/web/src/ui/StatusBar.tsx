@@ -13,10 +13,10 @@ import { BoardTitle } from './BoardTitle.js'
 import { Mentions } from './Mentions.js'
 import { DevPanel } from './DevPanel.js'
 import { ShareControl } from './ShareControl.js'
-import { AfterHoursIcon, RedoIcon, UndoIcon } from './icons.js'
+import { AfterHoursIcon, RedoIcon, UndoIcon } from '../controls/icons.js'
+import { MOD_KEY } from '../interaction/keymap.js'
 
-const isMac = typeof navigator !== 'undefined' && /Mac|iPhone|iPad/.test(navigator.platform)
-const mod = isMac ? '⌘' : 'Ctrl'
+const mod = MOD_KEY
 
 /**
  * The record line: what is on the page, and the corrections made to it.
@@ -76,12 +76,13 @@ export function StatusBar() {
       <div className="of-status__history">
         <button
           type="button"
-          className="of-status__action"
+          className="of-icon-button"
           // Never disabled while editing: the field has its own history, and
           // the board's emptiness says nothing about whether it does.
           disabled={!canUndo && editingId === null}
           aria-label={undoLabel === null ? 'Undo' : `Undo ${undoLabel}`}
-          title={undoLabel === null ? `Undo (${mod}Z)` : `Undo ${undoLabel} (${mod}Z)`}
+          data-tip={undoLabel === null ? `Undo (${mod}Z)` : `Undo ${undoLabel} (${mod}Z)`}
+          aria-description={undoLabel === null ? `Undo (${mod}Z)` : `Undo ${undoLabel} (${mod}Z)`}
           data-testid="undo"
           onMouseDown={keepFocus}
           onClick={() => {
@@ -92,10 +93,11 @@ export function StatusBar() {
         </button>
         <button
           type="button"
-          className="of-status__action"
+          className="of-icon-button"
           disabled={!canRedo && editingId === null}
           aria-label="Redo"
-          title={`Redo (${mod}⇧Z)`}
+          data-tip={`Redo (${mod}⇧Z)`}
+          aria-description={`Redo (${mod}⇧Z)`}
           data-testid="redo"
           onMouseDown={keepFocus}
           onClick={() => {
@@ -161,10 +163,11 @@ export function StatusBar() {
        */}
       <button
         type="button"
-        className="of-status__action"
+        className="of-icon-button"
         aria-pressed={afterHours}
         aria-label="After Hours theme"
-        title={afterHours ? 'After Hours — on' : 'After Hours — off'}
+        data-tip={afterHours ? 'After Hours — on' : 'After Hours — off'}
+        aria-description={afterHours ? 'After Hours — on' : 'After Hours — off'}
         data-testid="theme-toggle"
         onClick={() => {
           const next: Theme = afterHours ? 'notebook' : 'after-hours'

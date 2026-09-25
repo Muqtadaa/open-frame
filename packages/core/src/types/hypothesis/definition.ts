@@ -35,7 +35,7 @@ export const hypothesisType = defineObjectType<typeof HYPOTHESIS_TYPE, Hypothesi
     styleProps: ['color', 'textColor', 'font', 'align', 'verticalAlign', 'opacity'],
   },
 
-  fields: [{ key: 'status', label: 'Status', kind: 'select', options: HYPOTHESIS_STATUS }],
+  fields: [{ key: 'status', meaning: 'record', label: 'Status', kind: 'select', options: HYPOTHESIS_STATUS }],
 
   // A prediction is settled by running something against it.
   derivations: [{ type: 'experiment', predicate: 'tests' }],

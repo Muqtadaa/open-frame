@@ -80,7 +80,65 @@
   --of-slip-shadow: 0 1px 1px rgb(22 32 43 / 18%), 0 3px 7px rgb(22 32 43 / 14%);
   /* A segmented control's selected index, pressed into its bed. */
   --of-pressed-shadow: 0 1px 2px rgb(22 32 43 / 12%);
-  --of-radius: 6px;
+  /*
+   * THE LAYERS. What paints over what, named, because ten bare integers from 1
+   * to 100 said nothing about why a search panel sits under a notice or the
+   * handles over a comment.
+   *
+   * The first five order things WITHIN one stacking context — objects and
+   * their apparatus on the board, a tip beside its tool — and only compare
+   * with each other. The last five are the application's own layers.
+   */
+  --of-z-lifted: 1; /* a selected object above its neighbours; a picker's pointer */
+  --of-z-preview: 2; /* a connector being drawn */
+  --of-z-guide: 3; /* alignment guides, table dividers, the crop frame */
+  --of-z-grip: 4; /* connector endpoints, over the guides they snap to */
+  --of-z-tip: 5; /* a tool tip, over the tools below it */
+  --of-z-menu: 6; /* a menu, over every other surface beside the selection */
+  --of-z-search: 8; /* find on board: under the chrome layer's notices */
+  --of-z-chrome: 10; /* rail, record line, zoom, notices */
+  --of-z-panel: 40; /* the comment panel */
+  --of-z-apparatus: 60; /* the screen-space layer of an object's own apparatus */
+  --of-z-reached: 70; /* chrome the pointer or keyboard is IN, so its tips read over apparatus */
+  --of-z-gate: 100; /* a board that is gone or locked: nothing is usable behind it */
+
+  /*
+   * THE TYPE RAMP. Seven steps, named for what they carry rather than how big
+   * they are, because the same 15px is a sticky's body and a menu item and the
+   * name has to say which question is being asked.
+   *
+   * The interface uses record, ui-small, control, ui and title. Headline and
+   * display belong to the front door's wordmark and to the user's own text
+   * objects; content INSIDE an object scales in `em` from its object's size
+   * and is not on this ramp at all. 12px is the floor (rule 22).
+   */
+  --of-type-record: 12px; /* mono records: labels, readouts, shortcuts, counts */
+  --of-type-ui-small: 13px; /* secondary lines: a hint, a row's second line */
+  --of-type-control: 14px; /* what you operate: buttons, fields, a shape's label */
+  --of-type-ui: 15px; /* menus, notices, toasts, a sticky's body */
+  --of-type-title: 17px; /* the title of a gate or a sheet */
+  --of-type-headline: 19px; /* the wordmark on the front door */
+  --of-type-display: 22px; /* a text object: the largest type, and the user's */
+
+  /*
+   * THE RADIUS SCALE. Corners get smaller the closer a form is to the page:
+   * stock laid ON the page is nearly square, apparatus in its margins a little
+   * softer, a control you press softer again, and a surface that floats over
+   * the board the softest. Round means "grab me" and is spent on grab points.
+   *
+   * Seventeen values were in use against one token, and the 5–8px band of
+   * "interactive beds" was four different numbers for one idea. A nested bed
+   * takes the next step down from the one that holds it, so the curves stay
+   * concentric: a 6px segmented bed with 2px of padding holds 4px items.
+   */
+  --of-radius-hair: 1px; /* the index on a measurement slider */
+  --of-radius-slip: 2px; /* stock on the page: notes, frames, swatches, handles */
+  --of-radius-apparatus: 4px; /* margin chrome, chips, a focus ring, a nested bed */
+  --of-radius: 6px; /* a control: buttons, fields, menu items, segmented beds */
+  --of-radius-surface: 10px; /* what floats over the board: menus, panels, notices */
+  --of-radius-grip: 25%; /* the rotate grip and the lock badge */
+  --of-radius-round: 50%; /* grab points, presence dots, faces */
+  --of-radius-capsule: 999px; /* a grab point that is longer than it is wide */
 
   /*
    * THE INTERFACE SCALE, on the page's own rule.
@@ -105,6 +163,27 @@
   --of-hit-lg: 50px;
   /* From the viewport edge, and between a cluster and what it clears. */
   --of-gutter: 20px;
+  /*
+   * How far down the navigation bar reaches, and so where everything else
+   * anchored to the top of the window starts: the gutter, a bar no taller
+   * than a tool, and a step of air.
+   */
+  --of-nav-band: calc(var(--of-gutter) + var(--of-hit-lg) + var(--of-step));
+
+  /*
+   * THE SPACING SCALE, below the rule. The quadrille sets the big rhythm —
+   * `--of-step` between things on a line, `--of-gutter` from the edge — and
+   * these are the small steps inside a control or a row. Even pixels only:
+   * sixteen values were in use, and a 3, a 5, a 7 and a 9 beside the 2, 4, 6
+   * and 8 they were meant to be was the drift, not a decision. Named for their
+   * size, because what they space is written where they are used.
+   */
+  --of-space-2: 2px;
+  --of-space-4: 4px;
+  --of-space-6: 6px;
+  --of-space-8: 8px;
+  --of-space-12: 12px;
+  --of-space-16: 16px;
 
   --of-font: ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
   /*
@@ -317,7 +396,153 @@
 :focus-visible {
   outline: 2px solid var(--of-accent);
   outline-offset: 2px;
-  border-radius: 3px;
+  border-radius: var(--of-radius-apparatus);
+}
+
+/*
+ * The button. One, with three weights.
+ *
+ * `.of-button` was used twelve times — the notice's Dismiss, the comment
+ * composer's Close and Comment, the password gate, workspaces, the code and
+ * table bars — and had no rule anywhere, so every one of them was a browser
+ * default in a world that claims its browser surfaces. Meanwhile the account
+ * and share sheets each drew their own identical accent button and the record
+ * panel drew a third, bordered one. Same intent, four implementations, one of
+ * them missing.
+ *
+ * - default: a bordered control on panel white — "do this", not the main act
+ * - primary: the accent fill — the one thing a sheet or gate exists to do
+ * - ghost:   text on no ground — dismissals and secondary moves beside a primary
+ *
+ * Layout (width, alignment in a row) stays with the surface that places the
+ * button; what a button LOOKS like is decided here. Declared before
+ * `.of-surface` on purpose: a ghost button that is also a surface (the code
+ * block's format button) takes the surface's stock.
+ */
+.of-button {
+  display: inline-flex;
+  gap: var(--of-space-6);
+  align-items: center;
+  justify-content: center;
+  min-height: var(--of-hit-sm);
+  padding: 0 var(--of-space-12);
+  font: inherit;
+  font-family: var(--of-font);
+  font-size: var(--of-type-control);
+  line-height: 1;
+  color: var(--of-ink);
+  white-space: nowrap;
+  text-decoration: none;
+  background: var(--of-panel);
+  border: 1px solid var(--of-control-border);
+  border-radius: var(--of-radius);
+  cursor: pointer;
+  transition:
+    background-color var(--of-quick) var(--of-ease),
+    border-color var(--of-quick) var(--of-ease),
+    color var(--of-quick) var(--of-ease);
+}
+
+.of-button:hover:not(:disabled) {
+  background: var(--of-hover);
+}
+
+.of-button:disabled {
+  opacity: 0.35;
+  cursor: default;
+}
+
+.of-button--primary {
+  color: var(--of-panel);
+  background: var(--of-accent);
+  border-color: var(--of-accent);
+}
+
+/* Toward the ink, in either world: deeper blue on the page, paler cyan at night. */
+.of-button--primary:hover:not(:disabled) {
+  background: color-mix(in srgb, var(--of-accent) 84%, var(--of-ink));
+  border-color: color-mix(in srgb, var(--of-accent) 84%, var(--of-ink));
+}
+
+.of-button--ghost {
+  color: var(--of-ink-muted);
+  background: transparent;
+  border-color: transparent;
+}
+
+.of-button--ghost:hover:not(:disabled) {
+  color: var(--of-ink);
+}
+
+/* The one act a sheet or a gate exists for, at the operating height. */
+.of-button--large {
+  min-height: var(--of-hit);
+  padding: 0 var(--of-gutter);
+}
+
+/*
+ * The icon button: a glyph on no ground that takes a bed when you reach for it.
+ *
+ * There were six, at 24, 26, 28 and 30px — the record line's history, the
+ * front door's row actions and pin, the record panel's remove, the arrange
+ * bar, the format bar and the zoom cluster — with two hover grounds and three
+ * disabled opacities. The three below 30px were under the target this world
+ * sets for a secondary control, so folding them in is an accessibility fix
+ * as much as a tidy one.
+ *
+ * - pressed (`aria-pressed` or `--on`): accent on the accent wash, the same
+ *   state an active tool takes in the rail
+ * - destructive: correction red, on hover only — a row of permanently red
+ *   buttons reads as a list of warnings
+ *
+ * It holds a label as well as a glyph (the zoom cluster's wheel mode): the
+ * minimum width keeps an icon square and lets words widen it.
+ */
+.of-icon-button {
+  display: inline-flex;
+  flex: none;
+  gap: var(--of-space-6);
+  align-items: center;
+  justify-content: center;
+  min-width: var(--of-hit-sm);
+  height: var(--of-hit-sm);
+  padding: 0 var(--of-space-6);
+  font: inherit;
+  color: var(--of-ink-muted);
+  background: transparent;
+  border: none;
+  border-radius: var(--of-radius);
+  cursor: pointer;
+  transition:
+    background-color var(--of-quick) var(--of-ease),
+    color var(--of-quick) var(--of-ease);
+}
+
+.of-icon-button svg {
+  flex: none;
+  width: 16px;
+  height: 16px;
+}
+
+.of-icon-button:hover:not(:disabled) {
+  color: var(--of-ink);
+  background: var(--of-hover);
+}
+
+.of-icon-button:disabled {
+  opacity: 0.35;
+  cursor: default;
+}
+
+.of-icon-button[aria-pressed='true'],
+.of-icon-button--on {
+  color: var(--of-accent);
+  background: var(--of-accent-soft);
+}
+
+.of-icon-button--destructive:hover:not(:disabled) {
+  color: var(--of-danger);
+  background: var(--of-danger-wash);
 }
 
 /* Numerals in any record read as columns, never as ransom text. */
@@ -362,7 +587,7 @@ body {
 /* Overlays float over the canvas and are click-through except where they paint. */
 .of-overlay {
   position: absolute;
-  z-index: 10;
+  z-index: var(--of-z-chrome);
   pointer-events: none;
 }
 
@@ -370,14 +595,46 @@ body {
   pointer-events: auto;
 }
 
-.of-overlay--left {
-  top: 50%;
-  left: var(--of-gutter);
-  transform: translateY(-50%);
+/*
+ * The rail rises over the apparatus layer while it is being reached for.
+ *
+ * Its tips are the rail's, and the rail sat under the layer the record panel
+ * floats in — so with a selection near the left edge the panel opened beside
+ * the rail and every tip slid out UNDER it. Raised only while the pointer or
+ * the keyboard is in the rail: then nothing it covers is being reached for.
+ */
+.of-overlay--left:hover,
+.of-overlay--left:focus-within {
+  z-index: var(--of-z-reached);
 }
 
-.of-overlay--top {
+/*
+ * The rail's BAND: from under the navigation bar down to the bottom gutter,
+ * and the rail centred in it. It was centred on the WINDOW at a fixed 599
+ * pixels, so at 640 tall it met the record line and at 560 it started above
+ * the top of the window with Select cut off.
+ */
+.of-overlay--left {
+  top: var(--of-nav-band);
+  bottom: var(--of-gutter);
+  left: var(--of-gutter);
+  display: flex;
+  align-items: center;
+}
+
+/*
+ * The board's navigation, along the top: the way out, the board's name,
+ * history and the rest of the record line. It was at the bottom, where nothing
+ * reads as a page's heading.
+ */
+.of-overlay--nav {
   top: var(--of-gutter);
+  left: var(--of-gutter);
+}
+
+/* Notices come in under the navigation, never over it. */
+.of-overlay--top {
+  top: var(--of-nav-band);
   left: 50%;
   transform: translateX(-50%);
   max-width: min(720px, calc(100vw - 140px));
@@ -388,25 +645,60 @@ body {
   bottom: var(--of-gutter);
 }
 
-.of-overlay--bottom-left {
-  bottom: var(--of-gutter);
-  /* Clears the rail's real footprint (58px + a 20px margin), not a guess. */
-  left: 80px;
-}
-
 /* ---------- tool rail ---------- */
 
 .of-rail {
   display: flex;
   flex-direction: column;
-  gap: 2px;
-  padding: 5px;
+  max-height: 100%;
+  gap: var(--of-space-2);
+  /* The right-hand padding is where a tool's options strip lives. */
+  padding: var(--of-space-6) var(--of-space-12) var(--of-space-6) var(--of-space-6);
   /* The page's own stock, with a margin rule down its inner edge — the way a
      ruled pad prints its margin — rather than a white card hovering over it. */
   background: var(--of-page);
   border: 1px solid var(--of-panel-border);
-  border-radius: 4px;
+  border-radius: var(--of-radius-apparatus);
   box-shadow: var(--of-shadow);
+}
+
+/*
+ * The tools step down a decade of the rule at a time as the window shortens —
+ * 50, then 40, then 30, which is still the secondary-control target — rather
+ * than shrinking continuously to sizes off the quadrille. Each threshold is
+ * the height at which the larger rail stops fitting its band.
+ */
+.of-app {
+  --of-tool: var(--of-hit-lg);
+}
+
+@media (max-height: 719px) {
+  .of-app {
+    --of-tool: var(--of-hit);
+  }
+}
+
+@media (max-height: 603px) {
+  .of-app {
+    --of-tool: var(--of-hit-sm);
+  }
+}
+
+/*
+ * The last resort, for a window too short for even the smallest tools: the
+ * rail scrolls. Only here, because a scrolling box clips everything that hangs
+ * outside it, and every tool's tip does.
+ */
+@media (max-height: 493px) {
+  .of-rail {
+    overflow-y: auto;
+  }
+}
+
+.of-rail__group {
+  display: flex;
+  flex-direction: column;
+  gap: var(--of-space-2);
 }
 
 .of-rail__slot {
@@ -415,7 +707,7 @@ body {
 
 .of-rail__rule {
   height: 1px;
-  margin: 6px 4px;
+  margin: var(--of-space-6) var(--of-space-4);
   background: var(--of-panel-border);
 }
 
@@ -427,13 +719,13 @@ body {
    * The largest target in the product, and the one reached for most. The AA
    * 2.5.8 minimum is 24; this is a whole decade of the rule.
    */
-  width: var(--of-hit-lg);
-  height: var(--of-hit-lg);
+  width: var(--of-tool);
+  height: var(--of-tool);
   font: inherit;
   color: var(--of-ink-muted);
   background: transparent;
   border: none;
-  border-radius: 8px;
+  border-radius: var(--of-radius);
   cursor: pointer;
 }
 
@@ -450,26 +742,26 @@ body {
 .of-tool__tip {
   position: absolute;
   left: calc(100% + 10px);
-  z-index: 5;
+  z-index: var(--of-z-tip);
   display: flex;
-  gap: 7px;
+  gap: var(--of-space-8);
   align-items: center;
-  padding: 5px 8px;
-  font-size: 12px;
+  padding: var(--of-space-6) var(--of-space-8);
+  font-size: var(--of-type-record);
   line-height: 1;
   color: var(--of-page);
   white-space: nowrap;
   background: var(--of-ink);
-  border-radius: 6px;
+  border-radius: var(--of-radius);
   opacity: 0;
-  transition: opacity 110ms ease-out;
+  transition: opacity var(--of-quick) var(--of-ease);
   pointer-events: none;
 }
 
 .of-tool__tip kbd {
   font-family: var(--of-mono);
-  /* 11px is the legibility floor for functional text, shortcuts included. */
-  font-size: 11px;
+  /* 12px is the legibility floor for functional text, shortcuts included. */
+  font-size: var(--of-type-record);
   color: var(--of-rule-decade);
 }
 
@@ -478,9 +770,126 @@ body {
   opacity: 1;
 }
 
+/*
+ * A pointer passing over the rail waits the same dwell as every other tip
+ * before one appears, so sweeping down to a tool does not flash a label per
+ * tool. Focus shows it at once: a keyboard arriving on a tool asked for it.
+ */
+.of-tool:hover:not(:focus-visible) .of-tool__tip {
+  transition-delay: var(--of-dwell);
+}
+
 @media (prefers-reduced-motion: reduce) {
   .of-tool__tip {
     transition: none;
+  }
+}
+
+/*
+ * THE TIP, for every control that is not a rail tool. The rail's tips are the
+ * pattern: the label, in ink, on hover AND on keyboard focus. Everything else
+ * used the browser's `title`, which only a mouse can summon, never appears on
+ * focus, waits a second and a half, and is drawn in the operating system's
+ * chrome rather than this world's — so DESIGN.md's own rule that "a tooltip
+ * only a mouse can summon is not a label" was broken forty-two times.
+ *
+ * `data-tip` carries the text and `aria-description` carries the same text to
+ * assistive tech, which is what `title` had been doing. Above by default,
+ * because most of the chrome that has tips lives at the bottom of the screen;
+ * `data-tip-side` turns it, and the zoom cluster — flush with the right edge —
+ * hangs its tips from their right-hand side so none leaves the window.
+ *
+ * A pointer dwells before the tip answers; keyboard focus gets it at once,
+ * because tabbing to a control IS asking what it is.
+ */
+:where([data-tip]) {
+  position: relative;
+}
+
+[data-tip]::after {
+  position: absolute;
+  bottom: calc(100% + var(--of-space-6));
+  left: 50%;
+  z-index: var(--of-z-tip);
+  width: max-content;
+  max-width: 280px;
+  padding: var(--of-space-6) var(--of-space-8);
+  font-family: var(--of-font);
+  font-size: var(--of-type-record);
+  font-style: normal;
+  font-weight: 400;
+  line-height: 1.35;
+  color: var(--of-page);
+  text-align: left;
+  text-decoration: none;
+  text-transform: none;
+  letter-spacing: normal;
+  white-space: normal;
+  content: attr(data-tip);
+  background: var(--of-ink);
+  border-radius: var(--of-radius);
+  opacity: 0;
+  transform: translate(-50%, var(--of-space-2));
+  transition:
+    opacity var(--of-quick) var(--of-ease),
+    transform var(--of-quick) var(--of-ease);
+  pointer-events: none;
+}
+
+[data-tip]:hover::after {
+  opacity: 1;
+  transform: translate(-50%, 0);
+  transition-delay: var(--of-dwell);
+}
+
+[data-tip]:focus-visible::after {
+  opacity: 1;
+  transform: translate(-50%, 0);
+}
+
+[data-tip-side='below']::after,
+.of-overlay--nav [data-tip]::after {
+  top: calc(100% + var(--of-space-6));
+  bottom: auto;
+}
+
+/*
+ * Along the top the tips hang DOWN, and from their control's leading edge:
+ * the first control sits at the window's edge, where a centred tip would run
+ * off it.
+ */
+.of-overlay--nav [data-tip]::after {
+  left: 0;
+  transform: translateY(calc(-1 * var(--of-space-2)));
+}
+
+.of-overlay--nav [data-tip]:hover::after,
+.of-overlay--nav [data-tip]:focus-visible::after {
+  transform: none;
+}
+
+.of-zoom [data-tip]::after {
+  right: 0;
+  left: auto;
+  transform: translateY(var(--of-space-2));
+}
+
+.of-zoom [data-tip]:hover::after,
+.of-zoom [data-tip]:focus-visible::after {
+  transform: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  [data-tip]::after,
+  [data-tip]:hover::after,
+  [data-tip]:focus-visible::after {
+    transform: translate(-50%, 0);
+  }
+
+  .of-zoom [data-tip]::after,
+  .of-zoom [data-tip]:hover::after,
+  .of-zoom [data-tip]:focus-visible::after {
+    transform: none;
   }
 }
 
@@ -489,9 +898,15 @@ body {
   background: var(--of-accent-soft);
 }
 
-.of-tool--active {
-  color: var(--of-accent);
-  background: var(--of-accent-soft);
+/*
+ * The ARMED tool is a filled ink bed, so it differs from a hovered one in
+ * kind rather than in hue: both used to be the accent wash, told apart only by
+ * the icon's colour. The rail says which tool you are holding at a glance.
+ */
+.of-tool--active,
+.of-tool--active:hover:not(:disabled) {
+  color: var(--of-page);
+  background: var(--of-ink);
 }
 
 .of-tool:disabled {
@@ -499,27 +914,39 @@ body {
   cursor: default;
 }
 
+/*
+ * A tool's options, as a strip down its OUTER edge, in the rail's padding.
+ *
+ * It was a 16-pixel chevron inside the tool's own corner: too small to aim at,
+ * and a press a few pixels off opened a menu instead of arming the tool. The
+ * tool itself is now the full-size way in (press it again once armed), so this
+ * strip is the mouse's shortcut beside it, never on top of it.
+ */
 .of-rail__more {
   position: absolute;
-  right: 0;
-  bottom: 0;
+  top: 0;
+  right: calc(-1 * var(--of-space-12));
   display: grid;
   place-items: center;
-  width: 16px;
-  height: 16px;
+  width: var(--of-space-12);
+  height: 100%;
+  padding: 0;
   color: var(--of-ink-muted);
   background: transparent;
   border: none;
+  border-radius: var(--of-radius-slip);
   cursor: pointer;
 }
 
 .of-rail__more svg {
-  width: 12px;
-  height: 12px;
+  width: 10px;
+  height: 10px;
 }
 
-.of-rail__more:hover {
-  color: var(--of-accent);
+.of-rail__more:hover,
+.of-rail__more[aria-expanded='true'] {
+  color: var(--of-ink);
+  background: var(--of-hover);
 }
 
 /*
@@ -542,26 +969,27 @@ body {
   display: grid;
   grid-template-columns: repeat(2, max-content);
   width: max-content;
-  gap: 2px;
-  padding: 6px;
+  gap: var(--of-space-2);
+  padding: var(--of-space-6);
   background: var(--of-panel);
   border: 1px solid var(--of-panel-border);
-  border-radius: 10px;
+  border-radius: var(--of-radius-surface);
   box-shadow: var(--of-shadow);
 }
 
 .of-flyout__item {
   display: flex;
-  gap: 8px;
+  gap: var(--of-space-8);
   align-items: center;
-  padding: 6px 10px 6px 7px;
+  min-height: var(--of-hit-sm);
+  padding: var(--of-space-6) var(--of-step) var(--of-space-6) var(--of-space-8);
   font: inherit;
-  font-size: 12px;
+  font-size: var(--of-type-record);
   color: var(--of-ink-muted);
   text-transform: capitalize;
   background: transparent;
   border: none;
-  border-radius: 7px;
+  border-radius: var(--of-radius);
   cursor: pointer;
 }
 
@@ -597,7 +1025,7 @@ body {
    * app" — and the stylesheet had them at 50% anyway. The document was right
    * and the code had drifted.
    */
-  border-radius: 2px;
+  border-radius: var(--of-radius-slip);
   cursor: pointer;
 }
 
@@ -610,7 +1038,7 @@ body {
  * differing only in which one you happened to press.
  */
 .of-swatch--ink {
-  font-size: 13px;
+  font-size: var(--of-type-ui-small);
   font-weight: 600;
   line-height: 1;
 }
@@ -665,9 +1093,9 @@ body {
  */
 .of-picker {
   display: grid;
-  gap: 8px;
+  gap: var(--of-space-8);
   width: 212px;
-  padding: 10px;
+  padding: var(--of-step);
 }
 
 /*
@@ -701,14 +1129,14 @@ body {
 
 .of-picker__pointer {
   position: absolute;
-  z-index: 1;
+  z-index: var(--of-z-lifted);
   width: 12px;
   height: 12px;
   /* Centred on the value it marks, not hanging below and right of it. */
   margin: -6px 0 0 -6px;
   pointer-events: none;
   border: 2px solid #fff;
-  border-radius: 50%;
+  border-radius: var(--of-radius-round);
   box-shadow: 0 0 0 1px rgb(0 0 0 / 45%);
 }
 
@@ -741,7 +1169,7 @@ body {
     #f00 100%
   );
   border: 1px solid var(--of-control-border);
-  border-radius: 1px;
+  border-radius: var(--of-radius-hair);
 }
 
 .of-picker__hue::-moz-range-track {
@@ -757,7 +1185,7 @@ body {
     #f00 100%
   );
   border: 1px solid var(--of-control-border);
-  border-radius: 1px;
+  border-radius: var(--of-radius-hair);
 }
 
 .of-picker__hue::-webkit-slider-thumb {
@@ -780,7 +1208,7 @@ body {
 
 .of-picker__row {
   display: flex;
-  gap: 6px;
+  gap: var(--of-space-6);
   align-items: center;
 }
 
@@ -788,7 +1216,7 @@ body {
   flex: 1;
   min-width: 0;
   font-family: var(--of-mono);
-  font-size: 12px;
+  font-size: var(--of-type-record);
   letter-spacing: 0.02em;
 }
 
@@ -810,15 +1238,20 @@ body {
   border-radius: var(--of-radius);
 }
 
+.of-picker__dropper svg {
+  width: 17px;
+  height: 17px;
+}
+
 .of-picker__dropper:hover {
   color: var(--of-ink);
   background: var(--of-hover);
 }
 
-/* 11px is the functional-text floor: this is a readout, not smallprint. */
+/* 12px is the functional-text floor: this is a readout, not smallprint. */
 .of-picker__contrast {
   margin: 0;
-  font-size: 11px;
+  font-size: var(--of-type-record);
   color: var(--of-ink-muted);
 }
 
@@ -843,7 +1276,14 @@ body {
 
 .of-swatch--on {
   border-color: var(--of-ink);
-  box-shadow: inset 0 0 0 2px var(--of-panel);
+  /*
+   * A ring OUTSIDE the chip as well as the panel-coloured gap inside it: an
+   * ink border alone read as one more outlined chip among twelve, and on the
+   * pale tokens nobody could say which colour the object was.
+   */
+  box-shadow:
+    inset 0 0 0 2px var(--of-panel),
+    0 0 0 2px var(--of-accent);
 }
 
 .of-swatch:disabled {
@@ -855,61 +1295,30 @@ body {
 
 .of-zoom {
   display: flex;
-  gap: 2px;
+  gap: var(--of-space-2);
   align-items: center;
-  padding: 5px;
+  padding: var(--of-space-6);
   font-family: var(--of-mono);
   background: var(--of-page);
   border: 1px solid var(--of-panel-border);
-  border-radius: 4px;
+  border-radius: var(--of-radius-apparatus);
   box-shadow: var(--of-shadow);
 }
 
 .of-zoom__sep {
   width: 1px;
   height: 14px;
-  margin: 0 4px;
+  margin: 0 var(--of-space-4);
   background: var(--of-panel-border);
 }
 
-.of-zoom__button {
-  display: flex;
-  gap: 6px;
-  align-items: center;
-  /* Square where it holds only an icon, and the same height when it does not. */
-  min-width: var(--of-hit-sm);
-  height: var(--of-hit-sm);
-  padding: 0 7px;
-  justify-content: center;
-  font: inherit;
-  color: var(--of-ink-muted);
-  background: transparent;
-  border: none;
-  border-radius: 7px;
-  cursor: pointer;
-}
-
-.of-zoom__button svg {
-  width: 16px;
-  height: 16px;
-}
-
-.of-zoom__button:hover:not(:disabled) {
-  color: var(--of-ink);
-  background: var(--of-hover);
-}
-
-.of-zoom__button:disabled {
-  opacity: 0.35;
-  cursor: default;
-}
 
 /*
  * The wheel-mode VALUE, not a heading. Mono and small so it reads as a setting
  * beside its icon; at body size next to a mouse it looked like a panel title.
  */
 .of-zoom__mode {
-  font-size: 11px;
+  font-size: var(--of-type-record);
   letter-spacing: 0.02em;
 }
 
@@ -923,15 +1332,15 @@ body {
 .of-zoom__input {
   width: 60px;
   height: var(--of-hit-sm);
-  padding: 0 4px;
+  padding: 0 var(--of-space-4);
   font: inherit;
-  font-size: 13px;
+  font-size: var(--of-type-ui-small);
   font-variant-numeric: tabular-nums;
   color: var(--of-ink);
   text-align: center;
   background: transparent;
   border: none;
-  border-radius: 7px;
+  border-radius: var(--of-radius);
   cursor: pointer;
 }
 
@@ -949,13 +1358,13 @@ body {
 
 .of-notice {
   display: flex;
-  gap: 12px;
+  gap: var(--of-space-12);
   align-items: center;
-  padding: 9px 12px;
-  font-size: 15px;
+  padding: var(--of-step) var(--of-space-12);
+  font-size: var(--of-type-ui);
   background: var(--of-danger-wash);
   border: 1px solid var(--of-danger-edge);
-  border-radius: 10px;
+  border-radius: var(--of-radius-surface);
   box-shadow: var(--of-shadow);
 }
 
@@ -1020,9 +1429,9 @@ body {
 .of-table__cell {
   min-width: 0;
   min-height: 0;
-  padding: 4px 6px;
+  padding: var(--of-space-4) var(--of-space-6);
   overflow: hidden;
-  font-size: 12px;
+  font-size: var(--of-type-record);
   /*
    * INHERITED, not set. `color: var(--of-ink)` here won every text colour the
    * table was given, because the ink is applied to the table as a whole and a
@@ -1068,11 +1477,16 @@ body {
 
 .of-table__input {
   font: inherit;
-  font-size: 12px;
+  font-size: var(--of-type-record);
   /* Inherited for the same reason as the cell — and a textarea does not
    * inherit colour on its own, so this is what carries the ink into the one
    * cell being typed in. */
   color: inherit;
+  /* A rich-text field now, not a textarea: it wraps and scrolls as one did. */
+  overflow: auto;
+  overflow-wrap: anywhere;
+  white-space: pre-wrap;
+  cursor: text;
   resize: none;
   background: transparent;
   border-top: none;
@@ -1107,7 +1521,7 @@ body {
    * which hang half outside the edge and can be caught there. Left on `auto`
    * the cell under the boundary took every press.
    */
-  z-index: 3;
+  z-index: var(--of-z-guide);
   background: transparent;
   pointer-events: auto;
 }
@@ -1181,7 +1595,7 @@ body {
 .of-chrome-layer {
   position: fixed;
   inset: 0;
-  z-index: 60;
+  z-index: var(--of-z-apparatus);
   pointer-events: none;
 }
 
@@ -1203,7 +1617,7 @@ body {
 .of-surface {
   background: var(--of-panel);
   border: 1px solid var(--of-panel-border);
-  border-radius: 10px;
+  border-radius: var(--of-radius-surface);
   box-shadow: var(--of-shadow);
 }
 
@@ -1212,6 +1626,18 @@ body {
   top: 0;
   left: 0;
   pointer-events: auto;
+}
+
+.of-chrome--menu {
+  z-index: var(--of-z-menu);
+}
+
+/*
+ * A panel that has stepped aside lets the pointer through its whole box —
+ * the shell it is placed in as well as the panel itself.
+ */
+.of-chrome:has(> .of-inspector--yielding) {
+  pointer-events: none;
 }
 
 /*
@@ -1224,8 +1650,16 @@ body {
  */
 .of-cellbar {
   display: grid;
-  gap: 7px;
-  padding: 7px;
+  gap: var(--of-space-8);
+  padding: var(--of-space-8);
+}
+
+/* The format bar inside the cell bar: its row, on the bar's own stock. */
+.of-format-bar.of-format-bar--embedded {
+  padding: 0;
+  background: none;
+  border: none;
+  box-shadow: none;
 }
 
 .of-cellbar__head {
@@ -1237,7 +1671,7 @@ body {
 /* A count is a measurement, so it is set as one. */
 .of-cellbar__count {
   font-family: var(--of-mono);
-  font-size: 12px;
+  font-size: var(--of-type-record);
   font-variant-numeric: tabular-nums;
   letter-spacing: 0.02em;
   color: var(--of-ink-muted);
@@ -1246,7 +1680,7 @@ body {
 
 .of-cellbar__target {
   font-family: var(--of-mono);
-  font-size: 12px;
+  font-size: var(--of-type-record);
   letter-spacing: 0.02em;
 }
 
@@ -1266,42 +1700,29 @@ body {
 /* The ring itself is set inline, in screen pixels: see `TableView`. */
 
 /*
- * Beside the axis each one changes: columns to the right, rows underneath.
- * WHERE that is on screen is the chrome layer's decision now; these only say
- * which way they stack.
+ * A table's shape: a named row per axis, on the table's right. WHERE that is
+ * on screen is the chrome layer's decision; this only says how it reads.
  */
-.of-table-edit__columns,
-.of-table-edit__rows {
+.of-table-edit__shape {
+  display: grid;
+  gap: var(--of-space-2);
+  padding: var(--of-space-4);
+}
+
+.of-table-edit__axis {
   display: flex;
-  gap: 2px;
-  padding: 3px;
+  gap: var(--of-space-2);
+  align-items: center;
 }
 
-.of-table-edit__columns {
-  flex-direction: column;
-}
-
-.of-table-edit__step {
-  width: 24px;
-  height: 24px;
-  font: inherit;
-  font-size: 14px;
-  line-height: 1;
-  color: var(--of-ink);
-  cursor: pointer;
-  background: var(--of-panel);
-  border: 1px solid var(--of-control-border);
-  border-radius: var(--of-radius);
-}
-
-.of-table-edit__step:disabled {
+/* The axis a row of buttons changes, named as a record: mono, muted, small. */
+.of-table-edit__axis-name {
+  width: 4ch;
+  padding-left: var(--of-space-4);
+  font-family: var(--of-mono);
+  font-size: var(--of-type-record);
+  letter-spacing: 0.02em;
   color: var(--of-ink-muted);
-  cursor: default;
-  opacity: 0.5;
-}
-
-.of-table-edit__step:hover:not(:disabled) {
-  background: var(--of-hover);
 }
 
 /*
@@ -1311,26 +1732,27 @@ body {
  * reading two numbers and imagining it.
  */
 .of-grid-pick {
-  padding: 6px;
+  padding: var(--of-space-6);
 }
 
 .of-grid-pick__row {
   display: flex;
-  gap: 2px;
+  gap: var(--of-space-2);
 }
 
 .of-grid-pick__row + .of-grid-pick__row {
-  margin-top: 2px;
+  margin-top: var(--of-space-2);
 }
 
 .of-grid-pick__cell {
-  width: 16px;
-  height: 16px;
+  /* The AA 2.5.8 minimum: at 16 on an 18-pixel pitch a hand hit its neighbour. */
+  width: 24px;
+  height: 24px;
   padding: 0;
   cursor: pointer;
   background: var(--of-panel);
   border: 1px solid var(--of-control-border);
-  border-radius: 2px;
+  border-radius: var(--of-radius-slip);
 }
 
 .of-grid-pick__cell--on {
@@ -1339,8 +1761,8 @@ body {
 }
 
 .of-grid-pick__readout {
-  margin: 6px 0 0;
-  font-size: 11px;
+  margin: var(--of-space-6) 0 0;
+  font-size: var(--of-type-record);
   color: var(--of-ink-muted);
   text-align: center;
   font-variant-numeric: tabular-nums;
@@ -1370,14 +1792,14 @@ body {
   position: absolute;
   top: 2px;
   right: 6px;
-  font-size: 11px;
+  font-size: var(--of-type-record);
   color: var(--of-ink-muted);
 }
 
 .of-code__pre {
   width: 100%;
   height: 100%;
-  padding: 8px 10px;
+  padding: var(--of-space-8) var(--of-step);
   margin: 0;
   overflow: auto;
   tab-size: 2;
@@ -1386,7 +1808,7 @@ body {
 .of-code__code,
 .of-code__input {
   font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
-  font-size: 12px;
+  font-size: var(--of-type-record);
   line-height: 1.5;
   color: var(--of-ink);
   white-space: pre;
@@ -1395,7 +1817,7 @@ body {
 .of-code__input {
   width: 100%;
   height: 100%;
-  padding: 8px 10px;
+  padding: var(--of-space-8) var(--of-step);
   resize: none;
   background: transparent;
   border: none;
@@ -1409,9 +1831,9 @@ body {
 
 /* Placement and shell are shared; this only says how the control looks. */
 .of-code__picker {
-  padding: 4px 6px;
+  padding: var(--of-space-4) var(--of-space-6);
   font: inherit;
-  font-size: 12px;
+  font-size: var(--of-type-record);
   color: var(--of-ink-muted);
 }
 
@@ -1466,8 +1888,8 @@ body {
  */
 .of-spaces {
   display: grid;
-  gap: 6px;
-  margin: 0 0 10px;
+  gap: var(--of-space-6);
+  margin: 0 0 var(--of-step);
 }
 
 /*
@@ -1493,25 +1915,25 @@ body {
 .of-spaces__tabs {
   display: flex;
   flex-wrap: wrap;
-  gap: 2px;
-  padding: 2px;
+  gap: var(--of-space-2);
+  padding: var(--of-space-2);
   background: var(--of-bg);
-  border-radius: 7px;
+  border-radius: var(--of-radius);
 }
 
 .of-spaces__tab {
   display: inline-flex;
-  gap: 6px;
+  gap: var(--of-space-6);
   align-items: baseline;
   min-height: 26px;
-  padding: 3px 9px;
+  padding: var(--of-space-4) var(--of-step);
   font: inherit;
-  font-size: 12px;
+  font-size: var(--of-type-record);
   color: var(--of-ink-muted);
   cursor: pointer;
   background: none;
   border: 1px solid transparent;
-  border-radius: 5px;
+  border-radius: var(--of-radius-apparatus);
   transition:
     background var(--of-quick) var(--of-ease),
     color var(--of-quick) var(--of-ease);
@@ -1535,7 +1957,7 @@ body {
  */
 .of-spaces__count {
   font-family: var(--of-mono);
-  font-size: 11px;
+  font-size: var(--of-type-record);
   font-variant-numeric: tabular-nums;
   color: var(--of-ink-muted);
 }
@@ -1551,20 +1973,25 @@ body {
 .of-spaces__new {
   display: inline-flex;
   flex: none;
-  gap: 5px;
+  gap: var(--of-space-6);
   align-items: center;
   min-height: 26px;
-  padding: 3px 9px 3px 7px;
+  padding: var(--of-space-4) var(--of-step) var(--of-space-4) var(--of-space-8);
   font: inherit;
-  font-size: 12px;
+  font-size: var(--of-type-record);
   color: var(--of-ink-muted);
   cursor: pointer;
   background: none;
   border: 1px solid transparent;
-  border-radius: 5px;
+  border-radius: var(--of-radius);
   transition:
     background var(--of-quick) var(--of-ease),
     color var(--of-quick) var(--of-ease);
+}
+
+.of-spaces__new svg {
+  width: 14px;
+  height: 14px;
 }
 
 .of-spaces__new:hover {
@@ -1574,25 +2001,18 @@ body {
 
 .of-spaces__naming {
   display: flex;
-  gap: 6px;
+  gap: var(--of-space-6);
 }
 
 .of-spaces__name,
 .of-spaces__link {
   flex: 1 1 auto;
   min-width: 0;
-  padding: 4px 8px;
-  font: inherit;
-  font-size: 12px;
-  color: var(--of-ink);
-  background: var(--of-panel);
-  border: 1px solid var(--of-control-border);
-  border-radius: var(--of-radius);
 }
 
 .of-spaces__share {
   display: flex;
-  gap: 6px;
+  gap: var(--of-space-6);
   align-items: center;
 }
 
@@ -1602,14 +2022,14 @@ body {
 }
 
 .of-mentions__bell {
-  padding: 4px 10px;
+  padding: var(--of-space-4) var(--of-step);
   font: inherit;
-  font-size: 12px;
+  font-size: var(--of-type-record);
   color: var(--of-panel);
   cursor: pointer;
   background: var(--of-accent);
   border: 1px solid transparent;
-  border-radius: 999px;
+  border-radius: var(--of-radius-apparatus);
 }
 
 /*
@@ -1637,7 +2057,7 @@ body {
 
 .of-mentions__item:not(.is-read) {
   border-left: 2px solid var(--of-accent);
-  padding-left: 6px;
+  padding-left: var(--of-space-6);
 }
 
 /*
@@ -1653,20 +2073,20 @@ body {
 .of-mentions__list {
   width: 280px;
   max-height: 320px;
-  padding: 4px;
+  padding: var(--of-space-4);
   margin: 0;
   overflow-y: auto;
   list-style: none;
   background: var(--of-panel);
   border: 1px solid var(--of-panel-border);
-  border-radius: 10px;
+  border-radius: var(--of-radius-surface);
   box-shadow: var(--of-shadow);
 }
 
 .of-mentions__item {
   display: grid;
   gap: 1px;
-  padding: 8px;
+  padding: var(--of-space-8);
   color: inherit;
   text-decoration: none;
   border-radius: var(--of-radius);
@@ -1677,18 +2097,18 @@ body {
 }
 
 .of-mentions__who {
-  font-size: 12px;
+  font-size: var(--of-type-record);
   font-weight: 600;
   color: var(--of-ink);
 }
 
 .of-mentions__where {
-  font-size: 11px;
+  font-size: var(--of-type-record);
   color: var(--of-ink-muted);
 }
 
 .of-mentions__what {
-  font-size: 12px;
+  font-size: var(--of-type-record);
   color: var(--of-ink);
   /* Somebody's words, clipped to a line rather than reflowing the whole list. */
   overflow: hidden;
@@ -1708,11 +2128,11 @@ body {
  * is the difference between "somebody was named here" and "you were".
  */
 .of-mention {
-  padding: 0 3px;
+  padding: 0 var(--of-space-4);
   font-weight: 600;
   color: var(--of-accent);
   background: var(--of-accent-soft);
-  border-radius: 3px;
+  border-radius: var(--of-radius-apparatus);
 }
 
 .of-mention.is-me {
@@ -1730,21 +2150,21 @@ body {
  */
 .of-mention-menu {
   max-height: 168px;
-  padding: 4px;
-  margin: 4px 0 0;
+  padding: var(--of-space-4);
+  margin: var(--of-space-4) 0 0;
   overflow-y: auto;
   list-style: none;
   background: var(--of-panel);
   border: 1px solid var(--of-panel-border);
-  border-radius: 10px;
+  border-radius: var(--of-radius-surface);
   box-shadow: var(--of-shadow);
 }
 
 .of-mention-menu__item {
   display: flex;
-  gap: 8px;
+  gap: var(--of-space-8);
   align-items: center;
-  padding: 6px 8px;
+  padding: var(--of-space-6) var(--of-space-8);
   cursor: pointer;
   border-radius: var(--of-radius);
 }
@@ -1765,15 +2185,15 @@ body {
   place-items: center;
   width: 20px;
   height: 20px;
-  font-size: 11px;
+  font-size: var(--of-type-record);
   font-weight: 600;
   color: var(--of-ink);
-  border-radius: 999px;
+  border-radius: var(--of-radius-round);
 }
 
 .of-mention-menu__name {
   overflow: hidden;
-  font-size: 12px;
+  font-size: var(--of-type-record);
   color: var(--of-ink);
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -1806,7 +2226,7 @@ body {
   width: 26px;
   height: 26px;
   padding: 0;
-  font-size: 11px;
+  font-size: var(--of-type-record);
   font-weight: 600;
   color: var(--of-panel);
   pointer-events: auto;
@@ -1814,7 +2234,8 @@ body {
   background: var(--of-accent);
   border: 2px solid var(--of-panel);
   /* A speech-bubble tail: round but for the corner that points at the spot. */
-  border-radius: 50% 50% 50% 2px;
+  border-radius: var(--of-radius-round) var(--of-radius-round) var(--of-radius-round)
+    var(--of-radius-slip);
   box-shadow: var(--of-slip-shadow);
   transform-origin: top left;
 }
@@ -1830,72 +2251,60 @@ body {
 
 .of-comment-panel {
   position: absolute;
-  top: 56px;
+  top: var(--of-nav-band);
   right: 12px;
-  z-index: 40;
+  z-index: var(--of-z-panel);
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  gap: var(--of-step);
   width: 300px;
   max-height: calc(100vh - 120px);
-  padding: 14px;
+  padding: var(--of-space-16);
   overflow-y: auto;
   background: var(--of-panel);
   border: 1px solid var(--of-panel-border);
-  border-radius: 10px;
+  border-radius: var(--of-radius-surface);
   box-shadow: var(--of-shadow);
 }
 
 .of-comment-panel__head {
   display: flex;
-  gap: 8px;
+  gap: var(--of-space-8);
   align-items: center;
   justify-content: space-between;
 }
 
 .of-comment-panel__title {
   margin: 0;
-  font-size: 14px;
+  font-size: var(--of-type-control);
   font-weight: 600;
   color: var(--of-ink);
 }
 
 .of-comment-panel__gone {
   margin: 0;
-  font-size: 12px;
+  font-size: var(--of-type-record);
   color: var(--of-danger);
 }
 
 .of-comment-panel__thread {
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  gap: var(--of-step);
   max-height: 320px;
   overflow-y: auto;
 }
 
-.of-comment-panel__input {
-  width: 100%;
-  padding: 8px;
-  font: inherit;
-  font-size: 13px;
-  color: var(--of-ink);
-  resize: vertical;
-  background: var(--of-page);
-  border: 1px solid var(--of-control-border);
-  border-radius: var(--of-radius);
-}
-
 .of-comment-panel__hint {
-  margin: 6px 0 0;
-  font-size: 11px;
+  margin: var(--of-space-6) 0 0;
+  font-size: var(--of-type-record);
   color: var(--of-ink-muted);
 }
 
 /*
  * The invite sits INSIDE the sentence that explains it, so it reads as part
  * of the offer rather than as a second control competing with Post. Inline,
- * and sized to the 11px functional floor like the hint around it.
+ * and sized to the 12px functional floor like the hint around it.
  */
 /*
  * BROWSING: the board's open threads, when the panel is showing but nothing
@@ -1903,7 +2312,7 @@ body {
  */
 .of-comment-panel__list {
   display: grid;
-  gap: 2px;
+  gap: var(--of-space-2);
   max-height: 320px;
   overflow-y: auto;
 }
@@ -1911,7 +2320,7 @@ body {
 .of-comment-panel__entry {
   display: grid;
   gap: 1px;
-  padding: 6px 8px;
+  padding: var(--of-space-6) var(--of-space-8);
   font: inherit;
   text-align: left;
   cursor: pointer;
@@ -1933,7 +2342,7 @@ body {
 
 .of-comment-panel__resolved-toggle {
   align-self: start;
-  font-size: 11px;
+  font-size: var(--of-type-record);
 }
 
 .of-comment-panel__entry:hover {
@@ -1941,14 +2350,14 @@ body {
 }
 
 .of-comment-panel__who {
-  font-size: 12px;
+  font-size: var(--of-type-record);
   font-weight: 600;
   color: var(--of-ink);
 }
 
 .of-comment-panel__said {
   overflow: hidden;
-  font-size: 12px;
+  font-size: var(--of-type-record);
   color: var(--of-ink-muted);
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -1956,7 +2365,7 @@ body {
 
 .of-comment-panel__invite {
   padding: 0;
-  font-size: 11px;
+  font-size: var(--of-type-record);
   color: var(--of-accent);
   text-decoration: underline;
   vertical-align: baseline;
@@ -1965,20 +2374,20 @@ body {
 }
 
 .of-comment-panel__problem {
-  margin: 6px 0 0;
-  font-size: 12px;
+  margin: var(--of-space-6) 0 0;
+  font-size: var(--of-type-record);
   color: var(--of-danger);
 }
 
 .of-comment-panel__actions {
   display: flex;
-  gap: 8px;
-  margin-top: 10px;
+  gap: var(--of-space-8);
+  margin-top: var(--of-step);
 }
 
 .of-comment {
   display: flex;
-  gap: 8px;
+  gap: var(--of-space-8);
   align-items: flex-start;
 }
 
@@ -1988,22 +2397,22 @@ body {
   place-items: center;
   width: 22px;
   height: 22px;
-  font-size: 11px;
+  font-size: var(--of-type-record);
   font-weight: 600;
   color: var(--of-panel);
-  border-radius: 50%;
+  border-radius: var(--of-radius-round);
 }
 
 .of-comment__name {
-  font-size: 12px;
+  font-size: var(--of-type-record);
   font-weight: 600;
   color: var(--of-ink);
 }
 
 .of-comment__text {
   /* Somebody else's words, wrapped as written rather than reflowed into one line. */
-  margin: 2px 0 0;
-  font-size: 13px;
+  margin: var(--of-space-2) 0 0;
+  font-size: var(--of-type-ui-small);
   line-height: 1.4;
   color: var(--of-ink);
   white-space: pre-wrap;
@@ -2013,33 +2422,33 @@ body {
 .of-gone {
   position: fixed;
   inset: 0;
-  z-index: 100;
+  z-index: var(--of-z-gate);
   display: grid;
   place-items: center;
-  padding: 16px;
+  padding: var(--of-space-16);
   background: var(--of-scrim);
 }
 
 .of-gone__panel {
   max-width: 360px;
-  padding: 20px;
+  padding: var(--of-gutter);
   text-align: left;
   background: var(--of-panel);
   border: 1px solid var(--of-panel-border);
-  border-radius: 10px;
+  border-radius: var(--of-radius-surface);
   box-shadow: var(--of-slip-shadow);
 }
 
 .of-gone__title {
-  margin: 0 0 8px;
-  font-size: 17px;
+  margin: 0 0 var(--of-space-8);
+  font-size: var(--of-type-title);
   font-weight: 600;
   color: var(--of-ink);
 }
 
 .of-gone__body {
-  margin: 0 0 16px;
-  font-size: 15px;
+  margin: 0 0 var(--of-space-16);
+  font-size: var(--of-type-ui);
   line-height: 1.45;
   color: var(--of-ink-muted);
 }
@@ -2052,12 +2461,12 @@ body {
 
 .of-gone__input {
   width: 100%;
-  margin-bottom: 12px;
+  margin-bottom: var(--of-space-12);
 }
 
 .of-gone__problem {
-  margin: 0 0 12px;
-  font-size: 13px;
+  margin: 0 0 var(--of-space-12);
+  font-size: var(--of-type-ui-small);
   color: var(--of-danger);
 }
 
@@ -2080,32 +2489,22 @@ body {
   gap: var(--of-step);
   align-items: center;
   /*
-   * The line yields rather than growing into the zoom cluster.
-   *
-   * It is bottom-left and the zoom cluster is bottom-right, so the only thing
-   * keeping them apart was that the line happened to be short enough. Adding
-   * the board's name to it left 31px of clearance in a bench build, and then
-   * took it: the dev panel's button ended up over the zoom controls, where it
-   * silently swallowed the clicks aimed at them.
-   *
-   * 80px is this cluster's own offset (the rail plus its margin) and 420px
-   * reserves the widest the zoom cluster gets plus the gutter. Both moved when
-   * the interface scale did, which is exactly the kind of arithmetic that goes
-   * stale silently — `nothing covers the zoom controls` is the test that says
-   * so.
+   * The line yields rather than running off the window. It shared the bottom
+   * edge with the zoom cluster once, and reserved the cluster's width; along
+   * the top it has the whole width to itself, less the gutters.
    *
    * The title is the part that absorbs the difference, because it is the only
    * thing here that can be shortened without losing information the canvas
    * does not otherwise show.
    */
-  max-width: calc(100vw - 80px - 420px);
-  padding: 5px 10px;
+  max-width: calc(100vw - 2 * var(--of-gutter));
+  padding: var(--of-space-6) var(--of-step);
   font-family: var(--of-mono);
-  font-size: 12px;
+  font-size: var(--of-type-record);
   color: var(--of-ink-muted);
   background: var(--of-page);
   border: 1px solid var(--of-panel-border);
-  border-radius: 4px;
+  border-radius: var(--of-radius-apparatus);
   box-shadow: var(--of-shadow);
 }
 
@@ -2124,13 +2523,17 @@ body {
  */
 .of-status__exit {
   display: flex;
-  gap: 6px;
+  gap: var(--of-space-6);
   align-items: center;
   height: var(--of-hit-sm);
-  padding: 0 9px 0 7px;
-  color: var(--of-ink-muted);
+  padding: 0 var(--of-step) 0 var(--of-space-8);
+  /* Navigation, so the interface's voice at a control's weight, not a readout. */
+  font-family: var(--of-font);
+  font-size: var(--of-type-control);
+  font-weight: 500;
+  color: var(--of-ink);
   text-decoration: none;
-  border-radius: 6px;
+  border-radius: var(--of-radius);
 }
 
 .of-status__exit svg {
@@ -2166,40 +2569,9 @@ body {
  */
 .of-status__history {
   display: flex;
-  gap: 2px;
+  gap: var(--of-space-2);
 }
 
-.of-status__action {
-  display: grid;
-  place-items: center;
-  width: var(--of-hit-sm);
-  height: var(--of-hit-sm);
-  color: var(--of-ink-muted);
-  background: transparent;
-  border: none;
-  border-radius: 6px;
-  cursor: pointer;
-}
-
-.of-status__action svg {
-  width: 16px;
-  height: 16px;
-}
-
-.of-status__action:hover:not(:disabled) {
-  color: var(--of-ink);
-  background: var(--of-bg);
-}
-
-.of-status__action:disabled {
-  opacity: 0.3;
-  cursor: default;
-}
-
-/* A toggle that is ON reads as on without needing a second glyph. */
-.of-status__action[aria-pressed='true'] {
-  color: var(--of-accent);
-}
 
 /* ---------- account ---------- */
 
@@ -2209,64 +2581,60 @@ body {
  * bans a modal for a task that needs neither interruption nor protected focus,
  * and this is the clearest possible case.
  */
-.of-account {
+/*
+ * A sheet: what comes out of the record line — the account sheet and the
+ * share sheet. They were two byte-identical rules under two names, which is
+ * how the next one would have become a third.
+ *
+ * The surface radius, not the control one: a sheet floats over the board
+ * rather than sitting in its margin, and everything else that does — menus,
+ * the record panel, the comment panel, a gate — is already 10px. These two
+ * were the only floating surfaces at 6.
+ */
+.of-sheet {
   width: 320px;
   padding: var(--of-gutter);
   font-family: var(--of-font);
   color: var(--of-ink);
   background: var(--of-panel);
   border: 1px solid var(--of-panel-border);
-  border-radius: var(--of-radius);
+  border-radius: var(--of-radius-surface);
   box-shadow: var(--of-shadow);
 }
 
 .of-account__field {
   display: block;
-  margin-bottom: 12px;
+  margin-bottom: var(--of-space-12);
 }
 
 /* A field label, set the way the record panel sets one. */
 .of-account__field span {
   display: block;
-  margin-bottom: 5px;
+  margin-bottom: var(--of-space-6);
   font-family: var(--of-mono);
-  font-size: 12px;
+  font-size: var(--of-type-record);
   letter-spacing: 0.02em;
   color: var(--of-ink-muted);
 }
 
-.of-account__field input {
-  width: 100%;
-  /* A text field is a control you must be able to hit, and the mono label
-     above it is at the functional-text floor rather than below it. */
-  height: var(--of-hit);
-  padding: 0 12px;
-  font-family: var(--of-font);
-  font-size: 15px;
-  color: var(--of-ink);
-  background: var(--of-page);
-  border: 1px solid var(--of-control-border);
-  border-radius: 4px;
-}
-
 .of-account__error {
-  margin: 0 0 12px;
-  font-size: 14px;
+  margin: 0 0 var(--of-space-12);
+  font-size: var(--of-type-control);
   line-height: 1.4;
   color: var(--of-danger);
 }
 
 .of-account__actions {
   display: flex;
-  gap: 8px;
+  gap: var(--of-space-8);
   align-items: center;
   justify-content: space-between;
 }
 
 .of-account__switch {
-  padding: 4px 0;
+  padding: var(--of-space-4) 0;
   font-family: var(--of-font);
-  font-size: 13px;
+  font-size: var(--of-type-ui-small);
   color: var(--of-ink-muted);
   text-decoration: underline;
   text-underline-offset: 2px;
@@ -2279,22 +2647,7 @@ body {
   color: var(--of-ink);
 }
 
-.of-account__submit {
-  height: var(--of-hit);
-  padding: 0 18px;
-  font-family: var(--of-font);
-  font-size: 14px;
-  color: var(--of-panel);
-  background: var(--of-accent);
-  border: 1px solid var(--of-accent);
-  border-radius: 4px;
-  cursor: pointer;
-}
 
-.of-account__submit:disabled {
-  opacity: 0.55;
-  cursor: default;
-}
 
 /* The status line is the dialog's positioning context. */
 .of-status {
@@ -2363,7 +2716,7 @@ body {
 .of-presence__outline {
   position: absolute;
   border: 2px dashed currentcolor;
-  border-radius: 2px;
+  border-radius: var(--of-radius-slip);
 }
 
 /*
@@ -2407,15 +2760,15 @@ body {
   position: absolute;
   top: 0;
   left: 0;
-  padding: 2px 5px;
+  padding: var(--of-space-2) var(--of-space-6);
   font-family: var(--of-font);
-  font-size: 11px;
+  font-size: var(--of-type-record);
   font-weight: 500;
   line-height: 1.3;
   color: var(--of-page);
   white-space: nowrap;
   background: var(--of-presence-hue);
-  border-radius: 3px;
+  border-radius: var(--of-radius-apparatus);
   transform-origin: top left;
 }
 
@@ -2452,15 +2805,15 @@ body {
  */
 .of-status__share {
   display: flex;
-  gap: 6px;
+  gap: var(--of-space-6);
   align-items: center;
   height: var(--of-hit-sm);
-  padding: 0 10px;
+  padding: 0 var(--of-step);
   font: inherit;
   color: var(--of-ink-muted);
   background: transparent;
   border: 1px solid var(--of-panel-border);
-  border-radius: 4px;
+  border-radius: var(--of-radius-apparatus);
   cursor: pointer;
 }
 
@@ -2490,14 +2843,14 @@ body {
   overflow: hidden;
   max-width: 14ch;
   font-family: var(--of-font);
-  font-size: 13px;
+  font-size: var(--of-type-ui-small);
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 
 .of-status__room {
   display: flex;
-  gap: 6px;
+  gap: var(--of-space-6);
   align-items: center;
 }
 
@@ -2522,11 +2875,11 @@ body {
   height: 22px;
   margin-right: -4px;
   font-family: var(--of-font);
-  font-size: 11px;
+  font-size: var(--of-type-record);
   font-weight: 600;
   color: var(--of-page);
   border: 1.5px solid var(--of-page);
-  border-radius: 50%;
+  border-radius: var(--of-radius-round);
 }
 
 .of-status__person:last-child {
@@ -2541,7 +2894,7 @@ body {
 .of-status__dot {
   width: 7px;
   height: 7px;
-  border-radius: 50%;
+  border-radius: var(--of-radius-round);
 }
 
 .of-status__dot--connected {
@@ -2719,7 +3072,7 @@ body {
  * inside it for as long as it is selected.
  */
 .of-object--selected {
-  z-index: 1;
+  z-index: var(--of-z-lifted);
   /* Selected and draggable, so the cursor says what the next press does. */
   cursor: move;
 }
@@ -2740,7 +3093,7 @@ body {
   position: absolute;
   background: var(--of-panel);
   border: 1px solid var(--of-accent);
-  border-radius: 2px;
+  border-radius: var(--of-radius-slip);
   pointer-events: auto;
 }
 
@@ -2779,7 +3132,7 @@ body {
   display: grid;
   place-items: center;
   border: none;
-  border-radius: 25%;
+  border-radius: var(--of-radius-grip);
   cursor: grab;
   box-shadow: 0 0 0 1px var(--of-accent);
 }
@@ -2836,11 +3189,11 @@ body {
 .of-sticky {
   width: 100%;
   height: 100%;
-  padding: 13px;
+  padding: var(--of-space-12);
   overflow: hidden;
-  font-size: 15px;
+  font-size: var(--of-type-ui);
   line-height: 1.35;
-  border-radius: 2px;
+  border-radius: var(--of-radius-slip);
   /* A slip laid on the page. Shared token so every placed object sits at the
      same height above the rule. */
   box-shadow: var(--of-slip-shadow);
@@ -2890,9 +3243,9 @@ body {
   flex-direction: column;
   width: 100%;
   height: 100%;
-  padding: 13px;
+  padding: var(--of-space-12);
   overflow: hidden;
-  border-radius: 2px;
+  border-radius: var(--of-radius-slip);
   box-shadow: var(--of-slip-shadow);
 }
 
@@ -2900,7 +3253,7 @@ body {
   flex: 1;
   min-height: 0;
   overflow: hidden;
-  font-size: 15px;
+  font-size: var(--of-type-ui);
   line-height: 1.35;
   overflow-wrap: anywhere;
   white-space: pre-wrap;
@@ -2933,12 +3286,12 @@ body {
    * Bounded at one line each, the record stays subordinate to the content.
    */
   flex-direction: column;
-  gap: 2px;
-  padding-top: 6px;
-  margin-top: 8px;
+  gap: var(--of-space-2);
+  padding-top: var(--of-space-6);
+  margin-top: var(--of-space-8);
   font-family: var(--of-mono);
-  /* The eleven pixel floor: this is functional text, not decoration. */
-  font-size: 11px;
+  /* The twelve pixel floor: this is functional text, not decoration. */
+  font-size: var(--of-type-record);
   line-height: 1.3;
   letter-spacing: 0.02em;
   /*
@@ -2987,7 +3340,7 @@ body {
   width: 100%;
   height: 100%;
   overflow: hidden;
-  font-size: 22px;
+  font-size: var(--of-type-display);
   line-height: 1.3;
   overflow-wrap: anywhere;
   white-space: pre-wrap;
@@ -3062,7 +3415,7 @@ body {
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 14px;
+  font-size: var(--of-type-control);
   line-height: 1.3;
   overflow-wrap: anywhere;
   white-space: pre-wrap;
@@ -3079,13 +3432,13 @@ body {
 .of-render-error {
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  gap: var(--of-space-4);
   align-items: center;
   justify-content: center;
   width: 100%;
   height: 100%;
-  padding: 8px;
-  font-size: 12px;
+  padding: var(--of-space-8);
+  font-size: var(--of-type-record);
   color: var(--of-ink-muted);
   text-align: center;
   background: repeating-linear-gradient(
@@ -3096,7 +3449,7 @@ body {
     var(--of-bg) 16px
   );
   border: 1px dashed var(--of-panel-border);
-  border-radius: 6px;
+  border-radius: var(--of-radius);
 }
 
 .of-render-error {
@@ -3112,7 +3465,7 @@ body {
 
 .of-unknown__hint,
 .of-fallback__hint {
-  font-size: 11px;
+  font-size: var(--of-type-record);
 }
 
 .of-fatal {
@@ -3129,9 +3482,9 @@ body {
 
 .of-dev {
   display: flex;
-  gap: 4px;
+  gap: var(--of-space-4);
   align-items: center;
-  font-size: 11px;
+  font-size: var(--of-type-record);
 }
 
 .of-dev__label {
@@ -3141,12 +3494,12 @@ body {
 }
 
 .of-dev__button {
-  padding: 1px 6px;
+  padding: 1px var(--of-space-6);
   font: inherit;
   color: var(--of-ink-muted);
   background: var(--of-panel);
   border: 1px solid var(--of-panel-border);
-  border-radius: 4px;
+  border-radius: var(--of-radius-apparatus);
   cursor: pointer;
 }
 
@@ -3174,30 +3527,39 @@ body {
 
 .of-menu {
   min-width: 196px;
-  padding: 5px;
+  /*
+   * A menu opened near the foot of a short window, or on an object with every
+   * section to offer, ran off the bottom: its last items were unreachable.
+   * The margin is the one AnchoredSurface places it within, so a menu that
+   * fits is never made to scroll.
+   */
+  max-height: calc(100dvh - 2 * var(--of-space-12));
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  padding: var(--of-space-6);
 }
 
 .of-menu__group + .of-menu__group {
-  margin-top: 4px;
-  padding-top: 4px;
+  margin-top: var(--of-space-4);
+  padding-top: var(--of-space-4);
   border-top: 1px solid var(--of-panel-border);
 }
 
 .of-menu__item {
   display: flex;
   min-height: var(--of-hit);
-  gap: 16px;
+  gap: var(--of-space-16);
   align-items: center;
   justify-content: space-between;
   width: 100%;
-  padding: 6px 9px;
+  padding: var(--of-space-6) var(--of-step);
   font: inherit;
-  font-size: 15px;
+  font-size: var(--of-type-ui);
   color: var(--of-ink);
   text-align: left;
   background: transparent;
   border: none;
-  border-radius: 6px;
+  border-radius: var(--of-radius);
   cursor: pointer;
 }
 
@@ -3211,7 +3573,7 @@ body {
 }
 
 .of-menu__shortcut {
-  font-size: 11px;
+  font-size: var(--of-type-record);
   color: var(--of-ink-muted);
 }
 
@@ -3222,27 +3584,34 @@ body {
   width: 100%;
   height: 100%;
   border: 1px solid var(--of-panel-border);
-  border-radius: 2px;
+  border-radius: var(--of-radius-slip);
   /* The title sits ABOVE the frame, so it must not be clipped. */
   overflow: visible;
 }
 
+/*
+ * A frame's title, which is rich text (ADR 0014): it can wrap, take a list and
+ * carry a larger size, so it is anchored by its BOTTOM edge to the frame's top
+ * and grows upward, rather than living in a fixed 18-pixel band that clipped
+ * anything taller than one line.
+ */
 .of-frame__title {
   position: absolute;
+  bottom: 100%;
   left: 0;
-  display: flex;
-  align-items: flex-end;
   max-width: 480px;
+  padding-bottom: var(--of-space-2);
   overflow: hidden;
-  font-size: 15px;
-  line-height: 1;
+  font-size: var(--of-type-ui);
+  line-height: 1.2;
   color: var(--of-ink-muted);
-  white-space: nowrap;
-  text-overflow: ellipsis;
+  overflow-wrap: anywhere;
+  white-space: pre-wrap;
 }
 
 .of-frame__editor {
   width: 300px;
+  min-height: 18px;
   padding: 0;
   background: var(--of-panel);
   outline: 1px solid var(--of-accent);
@@ -3278,23 +3647,44 @@ body {
   pointer-events: none;
 }
 
-.of-connector__label {
-  font-family: inherit;
-  font-size: 12px;
-  fill: var(--of-ink);
-  paint-order: stroke;
-  stroke: var(--of-bg);
-  stroke-width: 4px;
-  stroke-linejoin: round;
+.of-connector__label-room {
+  overflow: visible;
+  pointer-events: none;
 }
+
+.of-connector__label-centre {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  height: 100%;
+}
+
 /*
- * With a plate behind it the halo is worse than useless: it is a second,
- * board-coloured background drawn on top of the chosen one, fringing every
- * glyph. The label sits ON the line now, so one of the two has to be there —
- * and when a colour has been picked, that is the one.
+ * The label, in HTML (ADR 0014), so it takes marks, sizes and lists. With no
+ * plate it wears a board-coloured halo, so it reads where it crosses the line
+ * it names; with one, the halo would be a second background fringing every
+ * glyph, so the plate alone.
  */
+.of-connector__label {
+  max-width: 240px;
+  font-family: inherit;
+  font-size: var(--of-type-record);
+  line-height: 1.3;
+  color: var(--of-ink);
+  text-align: center;
+  overflow-wrap: anywhere;
+  white-space: pre-wrap;
+  text-shadow:
+    0 0 2px var(--of-bg),
+    0 0 2px var(--of-bg),
+    0 0 3px var(--of-bg);
+}
+
 .of-connector__label--plated {
-  stroke: none;
+  padding: var(--of-space-4);
+  text-shadow: none;
+  border-radius: var(--of-radius-slip);
 }
 
 .of-connector__editor-wrap {
@@ -3304,29 +3694,27 @@ body {
 }
 
 .of-connector__editor {
-  width: 160px;
-  height: 28px;
-  padding: 3px 6px;
+  width: max-content;
+  min-width: 160px;
+  max-width: 320px;
+  min-height: 28px;
+  padding: var(--of-space-4) var(--of-space-6);
   font: inherit;
-  font-size: 12px;
+  font-size: var(--of-type-record);
   text-align: center;
   background: var(--of-panel);
-  border-radius: 5px;
+  border-radius: var(--of-radius);
   transform: translate(-50%, -50%);
 }
 
 .of-connector--preview {
-  z-index: 2;
+  z-index: var(--of-z-preview);
 }
 
 .of-canvas--connector {
   cursor: crosshair;
 }
 
-.of-zoom__button--on {
-  color: var(--of-accent);
-  background: var(--of-accent-soft);
-}
 
 /* Images ------------------------------------------------------------------ */
 
@@ -3334,7 +3722,7 @@ body {
   display: block;
   width: 100%;
   height: 100%;
-  border-radius: 4px;
+  border-radius: var(--of-radius-apparatus);
   /*
    * `fill`, not `contain`. The frame IS the placed size and a user who resizes
    * an image off its aspect ratio meant to; letterboxing would leave dead space
@@ -3351,8 +3739,8 @@ body {
 .of-image--missing {
   display: grid;
   place-items: center;
-  padding: 8px;
-  font-size: 12px;
+  padding: var(--of-space-8);
+  font-size: var(--of-type-record);
   text-align: center;
   color: var(--of-ink-muted);
   background: var(--of-s-gray);
@@ -3368,33 +3756,21 @@ body {
 .of-image__alt-editor {
   width: 100%;
   height: 100%;
-  padding: 8px;
+  padding: var(--of-space-8);
   font: inherit;
-  font-size: 15px;
+  font-size: var(--of-type-ui);
   resize: none;
   background: var(--of-panel);
   border: 1px solid var(--of-accent);
-  border-radius: 4px;
+  border-radius: var(--of-radius-apparatus);
 }
 
 /* Toast ------------------------------------------------------------------- */
 
-.of-toast {
-  display: flex;
-  gap: 12px;
-  align-items: center;
-  padding: 9px 12px;
-  font-size: 15px;
-  color: var(--of-danger);
-  background: var(--of-danger-wash);
-  border: 1px solid var(--of-danger-edge);
-  border-radius: 10px;
-  box-shadow: var(--of-shadow);
-}
 
 .of-toast__dismiss {
-  padding: 0 4px;
-  font-size: 16px;
+  padding: 0 var(--of-space-4);
+  font-size: var(--of-type-ui);
   line-height: 1;
   color: inherit;
   background: none;
@@ -3421,7 +3797,7 @@ body {
   position: absolute;
   top: 0;
   left: 0;
-  z-index: 3;
+  z-index: var(--of-z-guide);
   background: var(--of-guide);
   /* Guides are feedback, never a target. */
   pointer-events: none;
@@ -3433,10 +3809,10 @@ body {
   position: absolute;
   top: 0;
   left: 0;
-  z-index: 4;
+  z-index: var(--of-z-grip);
   background: var(--of-panel);
   border: 1.5px solid var(--of-accent);
-  border-radius: 50%;
+  border-radius: var(--of-radius-round);
   cursor: crosshair;
   /*
    * Stated, not inherited. The apparatus layer is glass — `pointer-events:
@@ -3463,59 +3839,157 @@ body {
 .of-inspector {
   display: flex;
   flex-direction: column;
-  gap: 2px;
-  padding: 10px;
+  gap: var(--of-space-2);
+  padding: var(--of-step);
+}
+
+/*
+ * Holding Shift is building a selection, and the panel beside the first
+ * object is usually over the next one: the shift-click landed on the panel
+ * and the selection never grew. It steps aside while Shift is held — faint,
+ * and with the pointer passing through — and comes back when it is let go.
+ */
+.of-inspector {
+  transition: opacity var(--of-quick) var(--of-ease);
+}
+
+.of-inspector--yielding {
+  opacity: 0.25;
+  pointer-events: none;
+}
+
+/*
+ * Delete is LAST in the panel's order and drawn in its top corner. It was the
+ * first thing Tab reached from the board — one Enter from removing the
+ * selection — while the place it is drawn is right where people look for it.
+ */
+.of-inspector {
+  position: relative;
+}
+
+.of-inspector__delete {
+  position: absolute;
+  top: var(--of-step);
+  right: var(--of-step);
 }
 
 .of-inspector__head {
   display: flex;
-  gap: 8px;
-  align-items: center;
+  gap: var(--of-space-8);
+  align-items: flex-start;
+  /* Clear of the delete button drawn over this corner. */
+  padding-right: calc(var(--of-hit-sm) + var(--of-space-8));
   justify-content: space-between;
-  padding-bottom: 7px;
-  margin-bottom: 5px;
+  padding-bottom: var(--of-space-8);
+  margin-bottom: var(--of-space-6);
   border-bottom: 1px solid var(--of-panel-border);
 }
 
-/* The subject of the record, named the way a specimen label names its subject. */
-.of-inspector__subject {
-  font-family: var(--of-mono);
-  font-size: 11px;
+/*
+ * THE HEAD names the thing: its type as a title in the interface's own voice,
+ * and what it says beneath, one line. It was the type id in 12px muted mono —
+ * the faintest text in the panel, on the line that should carry the most.
+ */
+.of-inspector__heading {
+  display: flex;
+  flex-direction: column;
+  gap: var(--of-space-2);
+  min-width: 0;
+}
+
+.of-inspector__title {
+  margin: 0;
+  font-size: var(--of-type-ui);
+  font-weight: 600;
+  line-height: 1.25;
   color: var(--of-ink);
+}
+
+.of-inspector__summary {
+  overflow: hidden;
+  margin: 0;
+  font-size: var(--of-type-record);
+  line-height: 1.35;
+  color: var(--of-ink-muted);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/*
+ * A band's name — "record", "appearance" — as a specimen label, the register
+ * the front door names its sections in. It is what separates the half of the
+ * panel that MEANS something from the half that dresses it.
+ */
+.of-inspector__band {
+  margin: var(--of-space-6) 0 var(--of-space-2);
+  font-family: var(--of-mono);
+  font-size: var(--of-type-record);
+  font-weight: 400;
+  color: var(--of-ink-muted);
   text-transform: lowercase;
   letter-spacing: 0.02em;
 }
 
-.of-inspector__remove {
-  display: grid;
-  place-items: center;
-  width: 26px;
-  height: 26px;
+/*
+ * The record is the half of the panel that MEANS something, so its band is
+ * ink over a rule rather than one more muted label: the first critique found
+ * the panel's two halves indistinguishable at a glance.
+ */
+.of-inspector__band--record {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  padding-bottom: var(--of-space-4);
+  color: var(--of-ink);
+  border-bottom: 1px solid var(--of-rule);
+}
+
+.of-inspector__blanks {
   color: var(--of-ink-muted);
-  background: transparent;
+}
+
+/*
+ * The appearance band is a disclosure on a type that carries a record: the
+ * name is the control, and the arrow turns to say which way it is.
+ */
+.of-inspector__disclosure {
+  display: inline-flex;
+  gap: var(--of-space-4);
+  align-items: center;
+  min-height: var(--of-hit-sm);
+  padding: 0 var(--of-space-4) 0 0;
+  font: inherit;
+  color: inherit;
+  text-transform: inherit;
+  letter-spacing: inherit;
+  background: none;
   border: none;
-  border-radius: 6px;
+  border-radius: var(--of-radius);
   cursor: pointer;
 }
 
-.of-inspector__remove svg {
-  width: 16px;
-  height: 16px;
+.of-inspector__disclosure:hover {
+  color: var(--of-ink);
 }
 
-/* Correction red, used only where something is being removed. */
-.of-inspector__remove:hover {
-  color: var(--of-danger);
-  background: var(--of-danger-wash);
+.of-inspector__disclosure svg {
+  width: 12px;
+  height: 12px;
+  transition: transform var(--of-quick) var(--of-ease);
 }
+
+.of-inspector__disclosure[aria-expanded='true'] svg {
+  transform: rotate(90deg);
+}
+
 
 /*
  * A record row: label column, value column.
  *
- * The label column is 76px, not the 52px that fitted the six hardcoded style
+ * The label column is 82px, not the 52px that fitted the six hardcoded style
  * labels. Labels now come from the REGISTRY — a type declares them — so they
  * can be any length, and "participant" rendered as "participa": a panel
- * clipped into telling the user the wrong field name. 76px holds eleven mono
+ * clipped into telling the user the wrong field name. 82px holds eleven mono
  * characters; anything longer ellipsises and keeps its full text in a title,
  * which is honest in a way a silent truncation is not.
  */
@@ -3530,7 +4004,7 @@ body {
 .of-field__label {
   overflow: hidden;
   font-family: var(--of-mono);
-  font-size: 11px;
+  font-size: var(--of-type-record);
   color: var(--of-ink-muted);
   text-align: right;
   text-overflow: ellipsis;
@@ -3561,33 +4035,57 @@ body {
 }
 
 .of-field--tall .of-field__label {
-  padding-top: 7px;
+  padding-top: var(--of-space-8);
 }
 
 /*
- * A written value, as opposed to a chosen one. 12px rather than the 11px
- * functional floor because this is text the user AUTHORS and will re-read, not
- * a shortcut hint or a readout.
+ * A written value, as opposed to a chosen one. One field, everywhere.
+ *
+ * There were four: this one at 28px and 12px, the account sheet's at 40px and
+ * 15px, the comment composer's textarea, and the workspace bar's name and link
+ * fields — three radii, two grounds. This one was also drawn with the MARGIN
+ * rule, about 1.5:1 on the page, when its edge is a boundary you must see to
+ * operate the control: that is `control-border` and 3:1 (WCAG 1.4.11), which
+ * the other three already used.
+ *
+ * 30px in a panel row; `--large` is the 40px operating height for a sheet or a
+ * gate, where the field is the whole task.
  */
 .of-input {
   width: 100%;
-  min-height: 28px;
-  padding: 5px 7px;
+  min-height: var(--of-hit-sm);
+  padding: var(--of-space-6) var(--of-step);
   font-family: var(--of-font);
-  font-size: 12px;
+  font-size: var(--of-type-control);
   color: var(--of-ink);
   background: var(--of-page);
-  border: 1px solid var(--of-panel-border);
-  border-radius: 5px;
+  border: 1px solid var(--of-control-border);
+  border-radius: var(--of-radius);
+}
+
+.of-input--large {
+  min-height: var(--of-hit);
+  padding: var(--of-space-8) var(--of-space-12);
 }
 
 .of-input::placeholder {
   /*
    * Muted, and it must stay above 4.5:1 on the field background — a placeholder
    * that says what a field MEANS ("P07") is the only explanation of the field
-   * there is, so it is content, not decoration.
+   * there is, so it is content, not decoration. Italic, so an example is never
+   * read as a value somebody entered.
    */
+  font-style: italic;
   color: var(--of-ink-muted);
+}
+
+/*
+ * A field with nothing in it looks like a blank to be filled: a dashed edge,
+ * the way this world already draws absent content. A returning collaborator
+ * can then see at a glance which evidence has been sourced and which has not.
+ */
+.of-inspector .of-input:placeholder-shown {
+  border-style: dashed;
 }
 
 .of-input:focus-visible {
@@ -3597,7 +4095,7 @@ body {
 }
 
 textarea.of-input {
-  min-height: 56px;
+  min-height: 60px;
   line-height: 1.45;
   resize: vertical;
 }
@@ -3606,31 +4104,6 @@ textarea.of-input {
   cursor: pointer;
 }
 
-/* Separates what an object IS from how it looks. */
-/*
- * The mark buttons show what they DO — a bold B, an italic I, an underlined U
- * — because three letters that all look the same are three buttons nobody can
- * tell apart.
- */
-.of-mark--bold {
-  font-weight: 700;
-}
-.of-mark--italic {
-  font-style: italic;
-}
-.of-mark--underline {
-  text-decoration: underline;
-}
-/* And the size steps are shown at their own size, for the same reason. */
-.of-size--small {
-  font-size: 10px;
-}
-.of-size--medium {
-  font-size: 13px;
-}
-.of-size--large {
-  font-size: 16px;
-}
 /* No background at all, drawn as the absence it is. */
 .of-swatch--none {
   background:
@@ -3646,29 +4119,17 @@ textarea.of-input {
 .of-inspector__actions {
   display: flex;
   flex-wrap: wrap;
-  gap: 6px;
-  padding: 0 10px 8px;
+  gap: var(--of-space-6);
+  padding: 0 var(--of-step) var(--of-space-8);
 }
 /*
  * A quiet button, not a loud one. These undo something you did by hand, so
  * they sit at the weight of a field label rather than of the delete control —
  * which is the one thing in this panel that is meant to give you pause.
  */
-.of-inspector__action {
-  border: 1px solid var(--of-control-border);
-  border-radius: 6px;
-  background: var(--of-panel);
-  color: var(--of-ink);
-  font-size: 12px;
-  padding: 4px 8px;
-  cursor: pointer;
-}
-.of-inspector__action:hover {
-  background: var(--of-hover);
-}
 .of-inspector__rule {
   height: 0;
-  margin: 7px 0 5px;
+  margin: var(--of-space-8) 0 var(--of-space-6);
   border: none;
   border-top: 1px solid var(--of-panel-border);
 }
@@ -3678,13 +4139,13 @@ textarea.of-input {
  */
 .of-paint {
   display: grid;
-  gap: 6px;
+  gap: var(--of-space-6);
   justify-items: start;
 }
 
 .of-paint__target {
   font-family: var(--of-mono);
-  font-size: 12px;
+  font-size: var(--of-type-record);
   letter-spacing: 0.02em;
 }
 
@@ -3700,27 +4161,30 @@ textarea.of-input {
   position: relative;
   display: grid;
   grid-template-columns: repeat(6, var(--of-hit-sm));
-  gap: 4px;
+  gap: var(--of-space-4);
   justify-content: start;
 }
 
 .of-choice {
   display: flex;
-  gap: 2px;
-  padding: 2px;
+  gap: var(--of-space-2);
+  padding: var(--of-space-2);
   background: var(--of-bg);
-  border-radius: 7px;
+  border-radius: var(--of-radius);
 }
 
 .of-choice__item {
   display: grid;
   place-items: center;
-  width: 28px;
-  height: 26px;
+  /* The secondary-control target: these were 28×26, under the floor. */
+  width: var(--of-hit-sm);
+  height: var(--of-hit-sm);
+  font: inherit;
+  font-size: var(--of-type-control);
   color: var(--of-ink-muted);
   background: transparent;
   border: none;
-  border-radius: 5px;
+  border-radius: var(--of-radius-apparatus);
   cursor: pointer;
 }
 
@@ -3734,8 +4198,8 @@ textarea.of-input {
  */
 .of-choice--text .of-choice__item {
   width: auto;
-  min-width: 28px;
-  padding: 0 9px;
+  min-width: var(--of-hit-sm);
+  padding: 0 var(--of-step);
 }
 
 .of-choice__item svg {
@@ -3754,7 +4218,7 @@ textarea.of-input {
 }
 
 .of-face {
-  font-size: 13px;
+  font-size: var(--of-type-ui-small);
   line-height: 1;
 }
 
@@ -3772,7 +4236,7 @@ textarea.of-input {
 
 .of-inspector__slider {
   display: flex;
-  gap: 8px;
+  gap: var(--of-space-8);
   align-items: center;
   width: 100%;
 }
@@ -3786,7 +4250,7 @@ textarea.of-input {
 .of-inspector__reading {
   min-width: 36px;
   font-family: var(--of-mono);
-  font-size: 11px;
+  font-size: var(--of-type-record);
   color: var(--of-ink-muted);
   text-align: right;
 }
@@ -3794,18 +4258,16 @@ textarea.of-input {
 /* Narrow viewports ---------------------------------------------------------- */
 
 /*
- * The two bottom clusters are anchored to opposite corners, which collide and
- * overflow once the window is narrower than they are together — at 390px they
- * overlapped and both ran off the right edge.
+ * A narrow window has less room along each edge than the chrome wants.
  *
  * Touch interaction is out of scope for now, but a chrome layout that breaks is
  * not the same thing as one that is merely not optimised. Below this width the
- * record line drops its counts and the zoom cluster drops its slider: both are
+ * navigation drops its counts and the zoom cluster drops its slider: both are
  * readouts and coarse controls that the canvas itself already provides, and the
  * controls that remain are the ones with no other route.
  */
 @media (width < 820px) {
-  .of-overlay--bottom-left {
+  .of-overlay--nav {
     left: 12px;
   }
 
@@ -3827,13 +4289,6 @@ textarea.of-input {
   }
 }
 
-/* Below the rail's own footprint the record line moves above it entirely. */
-@media (width < 560px) {
-  .of-overlay--bottom-left {
-    bottom: 64px;
-  }
-}
-
 /* Measurement controls ------------------------------------------------------ */
 
 /*
@@ -3847,7 +4302,10 @@ textarea.of-input {
 .of-zoom__slider,
 .of-inspector__slider input[type='range'] {
   appearance: none;
-  height: 18px;
+  /* The track stays a hairline; what you can press is a full control's height. */
+  height: var(--of-hit-sm);
+  /* The browser's own margin would push the zoom cluster past its 30px row. */
+  margin: 0;
   background: transparent;
   cursor: pointer;
 }
@@ -3874,7 +4332,7 @@ textarea.of-input {
   margin-top: -5px;
   background: var(--of-ink);
   border: none;
-  border-radius: 1px;
+  border-radius: var(--of-radius-hair);
 }
 
 .of-zoom__slider::-moz-range-thumb,
@@ -3883,7 +4341,7 @@ textarea.of-input {
   height: 14px;
   background: var(--of-ink);
   border: none;
-  border-radius: 1px;
+  border-radius: var(--of-radius-hair);
 }
 
 /*
@@ -3892,7 +4350,7 @@ textarea.of-input {
  * language.
  */
 .of-swatch {
-  border-radius: 2px;
+  border-radius: var(--of-radius-slip);
 }
 
 /*
@@ -3916,18 +4374,18 @@ textarea.of-input {
 .of-trail__item {
   display: block;
   width: 100%;
-  padding: 4px 6px;
+  padding: var(--of-space-4) var(--of-space-6);
   overflow: hidden;
   font-family: var(--of-font);
-  /* Functional text: readable, and above the eleven pixel floor. */
-  font-size: 12px;
+  /* Functional text: readable, and on the twelve pixel floor. */
+  font-size: var(--of-type-record);
   color: var(--of-ink);
   text-align: left;
   text-overflow: ellipsis;
   white-space: nowrap;
   background: transparent;
   border: none;
-  border-radius: 4px;
+  border-radius: var(--of-radius-apparatus);
   cursor: pointer;
 }
 
@@ -3950,7 +4408,7 @@ textarea.of-input {
  */
 .of-insight .of-slip__body,
 .of-insight.of-slip__editor {
-  font-size: 17px;
+  font-size: var(--of-type-title);
   line-height: 1.3;
 }
 
@@ -4008,7 +4466,7 @@ textarea.of-input {
   left: 0;
   background: var(--of-panel);
   border: 1px solid var(--of-accent);
-  border-radius: 50%;
+  border-radius: var(--of-radius-round);
   cursor: crosshair;
   pointer-events: auto;
 }
@@ -4034,7 +4492,7 @@ textarea.of-input {
 .of-connect-point__target {
   position: absolute;
   background: transparent;
-  border-radius: 50%;
+  border-radius: var(--of-radius-round);
 }
 
 /*
@@ -4086,6 +4544,120 @@ textarea.of-input {
 }
 
 /*
+ * Paragraphs and lists (ADR 0014).
+ *
+ * Every paragraph is a block, and a list item says so in data attributes —
+ * which a browser copies when Enter splits a block, so the editor continues a
+ * list by itself. The bullet or number is drawn here rather than typed, so it
+ * renumbers, never reaches search, and cannot be selected and deleted as if it
+ * were a character.
+ *
+ * A HANGING indent, not an absolutely placed marker: a centred shape label
+ * with a list in it keeps the bullet beside its words rather than stranded at
+ * the far edge of the box.
+ */
+.of-p[data-list] {
+  --of-depth: 0;
+
+  padding-inline-start: calc(1.4em * (var(--of-depth) + 1));
+  text-indent: -1.4em;
+}
+
+.of-p[data-indent='1'] {
+  --of-depth: 1;
+}
+
+.of-p[data-indent='2'] {
+  --of-depth: 2;
+}
+
+.of-p[data-indent='3'] {
+  --of-depth: 3;
+}
+
+.of-p[data-list]::before {
+  display: inline-block;
+  width: 1.4em;
+  text-indent: 0;
+  font-variant-numeric: tabular-nums;
+}
+
+.of-p[data-list='bullet']::before {
+  content: '•';
+}
+
+.of-p[data-list='bullet'][data-indent='1']::before {
+  content: '◦';
+}
+
+.of-p[data-list='bullet'][data-indent='2']::before {
+  content: '▪';
+}
+
+/*
+ * Numbering, one counter per level, and the paragraphs are SIBLINGS rather
+ * than nested lists — the shape the editor can keep while a browser splits
+ * and merges blocks under it. So each paragraph resets what should restart
+ * after it: a plain paragraph every level, an item every level deeper than
+ * itself, and a bullet its own level too, so a numbered list after bullets
+ * starts again at one.
+ */
+.of-p:not([data-list]) {
+  counter-reset: of-l0 of-l1 of-l2 of-l3;
+}
+
+.of-p[data-list='bullet']:not([data-indent]) {
+  counter-reset: of-l0 of-l1 of-l2 of-l3;
+}
+
+.of-p[data-list='bullet'][data-indent='1'] {
+  counter-reset: of-l1 of-l2 of-l3;
+}
+
+.of-p[data-list='bullet'][data-indent='2'] {
+  counter-reset: of-l2 of-l3;
+}
+
+.of-p[data-list='bullet'][data-indent='3'] {
+  counter-reset: of-l3;
+}
+
+.of-p[data-list='number']:not([data-indent]) {
+  counter-increment: of-l0;
+  counter-reset: of-l1 of-l2 of-l3;
+}
+
+.of-p[data-list='number']:not([data-indent])::before {
+  content: counter(of-l0) '.';
+}
+
+.of-p[data-list='number'][data-indent='1'] {
+  counter-increment: of-l1;
+  counter-reset: of-l2 of-l3;
+}
+
+.of-p[data-list='number'][data-indent='1']::before {
+  content: counter(of-l1, lower-alpha) '.';
+}
+
+.of-p[data-list='number'][data-indent='2'] {
+  counter-increment: of-l2;
+  counter-reset: of-l3;
+}
+
+.of-p[data-list='number'][data-indent='2']::before {
+  content: counter(of-l2, lower-roman) '.';
+}
+
+.of-p[data-list='number'][data-indent='3'] {
+  counter-increment: of-l3;
+}
+
+.of-p[data-list='number'][data-indent='3']::before {
+  content: counter(of-l3) '.';
+}
+
+/*
  * The format bar, shown only while text is being edited.
  *
  * Above the object rather than in the record panel: the panel is hidden during
@@ -4096,34 +4668,16 @@ textarea.of-input {
 /* Placement and shell are shared; this only says how the controls sit. */
 .of-format-bar {
   display: flex;
-  gap: 2px;
+  gap: var(--of-space-2);
   align-items: center;
-  padding: 3px;
+  padding: var(--of-space-4);
 }
 
+/* The glyphs are letters in the text's own face, in full ink: they SHOW the mark. */
 .of-format-bar__button {
-  display: grid;
-  place-items: center;
-  /* The AA 2.5.8 target minimum, like every other control in the system. */
-  min-width: 24px;
-  height: 24px;
-  padding: 0 4px;
   font-family: var(--of-font);
-  font-size: 15px;
+  font-size: var(--of-type-ui);
   color: var(--of-ink);
-  background: transparent;
-  border: none;
-  border-radius: 4px;
-  cursor: pointer;
-}
-
-.of-format-bar__button:hover {
-  background: var(--of-hover);
-}
-
-.of-format-bar__button[aria-pressed='true'] {
-  color: var(--of-accent);
-  background: var(--of-accent-soft);
 }
 
 /* The glyphs SHOW the formatting, so the button is legible without its label. */
@@ -4146,7 +4700,7 @@ textarea.of-input {
 .of-format-bar__rule {
   width: 1px;
   height: 16px;
-  margin: 0 2px;
+  margin: 0 var(--of-space-2);
   background: var(--of-panel-border);
 }
 
@@ -4155,11 +4709,11 @@ textarea.of-input {
  * text — so the pair reads without either label.
  */
 .of-format-bar__button--size {
-  font-size: 11px;
+  font-size: var(--of-type-record);
 }
 
 .of-format-bar__button--bigger {
-  font-size: 15px;
+  font-size: var(--of-type-ui);
 }
 
 /*
@@ -4182,9 +4736,9 @@ textarea.of-input {
  */
 .of-search {
   position: absolute;
-  top: 16px;
+  top: var(--of-nav-band);
   left: 50%;
-  z-index: 8;
+  z-index: var(--of-z-search);
   display: flex;
   flex-direction: column;
   width: min(440px, calc(100vw - 32px));
@@ -4198,9 +4752,9 @@ textarea.of-input {
 
 .of-search__input {
   width: 100%;
-  padding: 10px 12px;
+  padding: var(--of-step) var(--of-space-12);
   font-family: var(--of-font);
-  font-size: 14px;
+  font-size: var(--of-type-control);
   color: var(--of-ink);
   background: transparent;
   border: none;
@@ -4213,10 +4767,10 @@ textarea.of-input {
 }
 
 .of-search__count {
-  padding: 0 12px 7px;
+  padding: 0 var(--of-space-12) var(--of-space-8);
   font-family: var(--of-mono);
-  /* The eleven pixel floor: a readout, like the zoom percentage. */
-  font-size: 11px;
+  /* The twelve pixel floor: a readout, like the zoom percentage. */
+  font-size: var(--of-type-record);
   color: var(--of-ink-muted);
   letter-spacing: 0.02em;
 }
@@ -4236,14 +4790,14 @@ textarea.of-input {
 .of-search__result {
   display: flex;
   min-height: var(--of-hit);
-  gap: 10px;
+  gap: var(--of-step);
   align-items: baseline;
   width: 100%;
   /* The AA 2.5.8 target minimum, like every other control in the system. */
   min-height: 32px;
-  padding: 6px 12px;
+  padding: var(--of-space-6) var(--of-space-12);
   font-family: var(--of-font);
-  font-size: 15px;
+  font-size: var(--of-type-ui);
   color: var(--of-ink);
   text-align: left;
   background: transparent;
@@ -4261,7 +4815,7 @@ textarea.of-input {
   flex: none;
   min-width: 56px;
   font-family: var(--of-mono);
-  font-size: 11px;
+  font-size: var(--of-type-record);
   color: var(--of-ink-muted);
   letter-spacing: 0.02em;
 }
@@ -4329,7 +4883,7 @@ textarea.of-input {
 .of-home__column {
   display: flex;
   flex-direction: column;
-  gap: 20px;
+  gap: var(--of-gutter);
   width: 100%;
   /*
    * 680, up from 560 on 2026-09-19.
@@ -4348,12 +4902,12 @@ textarea.of-input {
 .of-home__head {
   display: flex;
   flex-direction: column;
-  gap: 6px;
+  gap: var(--of-space-6);
 }
 
 .of-home__lockup {
   display: flex;
-  gap: 10px;
+  gap: var(--of-step);
   align-items: center;
 }
 
@@ -4369,28 +4923,28 @@ textarea.of-input {
 
 .of-home__title {
   margin: 0;
-  font-size: 19px;
+  font-size: var(--of-type-headline);
   font-weight: 600;
   line-height: 1.35;
 }
 
 .of-home__account {
   display: flex;
-  gap: 7px;
+  gap: var(--of-space-8);
   align-items: center;
   /* Pushed to the far edge rather than floated, so a long name cannot collide
      with the wordmark block. */
   margin-left: auto;
   height: var(--of-hit);
-  padding: 0 14px 0 5px;
+  padding: 0 var(--of-space-16) 0 var(--of-space-6);
   font-family: var(--of-font);
-  font-size: 14px;
+  font-size: var(--of-type-control);
   color: var(--of-ink);
   background: var(--of-page);
   /* Apparatus radius. Fully round is reserved for the rotate handle and
      connector endpoints, where it signals a grab point. */
   border: 1px solid var(--of-panel-border);
-  border-radius: 4px;
+  border-radius: var(--of-radius-apparatus);
   cursor: pointer;
 }
 
@@ -4411,9 +4965,9 @@ textarea.of-input {
   place-items: center;
   width: var(--of-hit-sm);
   height: var(--of-hit-sm);
-  font-size: 13px;
+  font-size: var(--of-type-ui-small);
   color: var(--of-panel);
-  border-radius: 50%;
+  border-radius: var(--of-radius-round);
 }
 
 /*
@@ -4431,7 +4985,7 @@ textarea.of-input {
 .of-home__body {
   background: var(--of-page);
   border: 1px solid var(--of-panel-border);
-  border-radius: 4px;
+  border-radius: var(--of-radius-apparatus);
   box-shadow: var(--of-shadow);
 }
 
@@ -4449,9 +5003,9 @@ textarea.of-input {
  * tracked, muted. It says what this block IS rather than shouting a heading.
  */
 .of-home__heading {
-  margin: 0 0 12px;
+  margin: 0 0 var(--of-space-12);
   font-family: var(--of-mono);
-  font-size: 12px;
+  font-size: var(--of-type-record);
   font-weight: 400;
   line-height: 1;
   letter-spacing: 0.02em;
@@ -4459,15 +5013,15 @@ textarea.of-input {
 }
 
 .of-home__note {
-  margin: 0 0 16px;
-  font-size: 14px;
+  margin: 0 0 var(--of-space-16);
+  font-size: var(--of-type-control);
   line-height: 1.5;
   color: var(--of-ink-muted);
 }
 
 /* A ledger: rows on a page, divided by the margin rule. */
 .of-home__list {
-  margin: 0 0 16px;
+  margin: 0 0 var(--of-space-16);
   padding: 0;
   list-style: none;
   border-top: 1px solid var(--of-panel-border);
@@ -4487,9 +5041,9 @@ textarea.of-input {
  */
 .of-home__row-main {
   display: flex;
-  gap: 4px;
+  gap: var(--of-space-4);
   align-items: center;
-  padding-right: 6px;
+  padding-right: var(--of-space-6);
 }
 
 .of-home__row-main .of-home__board {
@@ -4502,34 +5056,18 @@ textarea.of-input {
  * board has to READ as pinned when nobody is pointing at it, and a control
  * that only exists under the cursor cannot be found on a touch screen.
  */
+/* Faint at rest, so a column of pins does not read as a column of warnings. */
 .of-home__pin {
-  display: grid;
-  flex: none;
-  place-items: center;
-  width: var(--of-hit-sm);
-  height: var(--of-hit-sm);
-  color: var(--of-ink-muted);
-  background: none;
-  border: none;
-  border-radius: 6px;
-  cursor: pointer;
   opacity: 0.35;
-}
-
-.of-home__pin svg {
-  width: 16px;
-  height: 16px;
 }
 
 .of-home__pin:hover,
 .of-home__pin:focus-visible {
   opacity: 1;
-  background: var(--of-bg);
 }
 
 /* Pinned reads as pinned without the cursor anywhere near it. */
 .of-home__pin[aria-pressed='true'] {
-  color: var(--of-accent);
   opacity: 1;
 }
 
@@ -4561,7 +5099,7 @@ textarea.of-input {
    */
   justify-content: flex-end;
   width: 126px;
-  gap: 2px;
+  gap: var(--of-space-2);
   opacity: 0;
 }
 
@@ -4577,49 +5115,18 @@ textarea.of-input {
   }
 }
 
-.of-home__row-action {
-  display: grid;
-  place-items: center;
-  width: var(--of-hit-sm);
-  height: var(--of-hit-sm);
-  color: var(--of-ink-muted);
-  background: none;
-  border: none;
-  border-radius: 6px;
-  cursor: pointer;
-}
-
-.of-home__row-action svg {
-  width: 16px;
-  height: 16px;
-}
-
-.of-home__row-action:hover {
-  color: var(--of-ink);
-  background: var(--of-bg);
-}
-
-/*
- * The one correction red this world reserves for destructive meaning, and it
- * appears on hover rather than at rest: a row of permanently red buttons reads
- * as a list of warnings rather than a list of boards.
- */
-.of-home__row-action--destructive:hover {
-  color: var(--of-danger);
-  background: var(--of-danger-wash);
-}
 
 .of-home__rename {
   flex: 1;
   min-width: 0;
   height: var(--of-hit);
-  padding: 0 8px;
+  padding: 0 var(--of-space-8);
   font-family: inherit;
-  font-size: 15px;
+  font-size: var(--of-type-ui);
   color: var(--of-ink);
   background: var(--of-accent-soft);
   border: none;
-  border-radius: 3px;
+  border-radius: var(--of-radius-apparatus);
   outline: 1px solid var(--of-accent);
 }
 
@@ -4636,8 +5143,8 @@ textarea.of-input {
   gap: var(--of-step);
   align-items: center;
   margin: 0;
-  padding: 8px 8px 12px 40px;
-  font-size: 13px;
+  padding: var(--of-space-8) var(--of-space-8) var(--of-space-12) 40px;
+  font-size: var(--of-type-ui-small);
   color: var(--of-ink);
 }
 
@@ -4650,10 +5157,10 @@ textarea.of-input {
 .of-home__confirm-no {
   flex: none;
   height: var(--of-hit-sm);
-  padding: 0 14px;
+  padding: 0 var(--of-space-16);
   font-family: inherit;
-  font-size: 13px;
-  border-radius: 4px;
+  font-size: var(--of-type-ui-small);
+  border-radius: var(--of-radius-apparatus);
   cursor: pointer;
 }
 
@@ -4696,14 +5203,14 @@ textarea.of-input {
   gap: var(--of-step);
   align-items: center;
   flex-wrap: wrap;
-  margin: 0 0 16px;
+  margin: 0 0 var(--of-space-16);
 }
 
 .of-home__claim-what {
   flex: 1;
   min-width: 14ch;
   margin: 0;
-  font-size: 13px;
+  font-size: var(--of-type-ui-small);
   color: var(--of-ink-muted);
 }
 
@@ -4715,13 +5222,13 @@ textarea.of-input {
 .of-home__claim-go {
   flex: none;
   height: var(--of-hit-sm);
-  padding: 0 14px;
+  padding: 0 var(--of-space-16);
   font-family: inherit;
-  font-size: 13px;
+  font-size: var(--of-type-ui-small);
   color: var(--of-ink);
   background: var(--of-page);
   border: 1px solid var(--of-control-border);
-  border-radius: 4px;
+  border-radius: var(--of-radius-apparatus);
   cursor: pointer;
 }
 
@@ -4739,7 +5246,7 @@ textarea.of-input {
 .of-home__claim-problem {
   flex-basis: 100%;
   margin: 0;
-  font-size: 13px;
+  font-size: var(--of-type-ui-small);
   color: var(--of-danger);
 }
 
@@ -4757,8 +5264,8 @@ textarea.of-input {
 .of-home__row-note,
 .of-home__row-problem {
   margin: 0;
-  padding: 4px 8px 10px 40px;
-  font-size: 13px;
+  padding: var(--of-space-4) var(--of-space-8) var(--of-step) 40px;
+  font-size: var(--of-type-ui-small);
   color: var(--of-ink-muted);
 }
 
@@ -4801,7 +5308,7 @@ textarea.of-input {
   /* 36px rather than the 24px AA floor: a list row is a large target that costs
      nothing to make comfortable. */
   min-height: var(--of-hit-lg);
-  padding: 0 8px;
+  padding: 0 var(--of-space-8);
   color: inherit;
   text-decoration: none;
 }
@@ -4812,7 +5319,7 @@ textarea.of-input {
 
 .of-home__board-title {
   overflow: hidden;
-  font-size: 15px;
+  font-size: var(--of-type-ui);
   text-overflow: ellipsis;
   white-space: nowrap;
 }
@@ -4827,7 +5334,7 @@ textarea.of-input {
   min-width: 13ch;
   font-family: var(--of-mono);
   text-align: right;
-  font-size: 12px;
+  font-size: var(--of-type-record);
   font-variant-numeric: tabular-nums;
   letter-spacing: 0.02em;
   color: var(--of-ink-muted);
@@ -4837,11 +5344,11 @@ textarea.of-input {
   width: 100%;
   height: var(--of-hit-lg);
   font-family: var(--of-font);
-  font-size: 15px;
+  font-size: var(--of-type-ui);
   color: var(--of-panel);
   background: var(--of-accent);
   border: 1px solid var(--of-accent);
-  border-radius: 4px;
+  border-radius: var(--of-radius-apparatus);
   cursor: pointer;
 }
 
@@ -4858,11 +5365,11 @@ textarea.of-input {
 /* Below the rail's own breakpoint, the page stops being a margin exercise. */
 @media (width <= 560px) {
   .of-home {
-    padding: 24px 16px;
+    padding: 24px var(--of-space-16);
   }
 
   .of-home__column {
-    gap: 16px;
+    gap: var(--of-space-16);
   }
 
   /*
@@ -4880,8 +5387,8 @@ textarea.of-input {
     grid-template-areas:
       'title title'
       'tag when';
-    row-gap: 2px;
-    padding: 10px 8px;
+    row-gap: var(--of-space-2);
+    padding: var(--of-step) var(--of-space-8);
   }
 
   .of-home__board-title {
@@ -4905,20 +5412,10 @@ textarea.of-input {
  * reason: choosing which link to send needs no interruption and no protected
  * focus, so it must not take the screen.
  */
-.of-share {
-  width: 320px;
-  padding: var(--of-gutter);
-  font-family: var(--of-font);
-  color: var(--of-ink);
-  background: var(--of-panel);
-  border: 1px solid var(--of-panel-border);
-  border-radius: var(--of-radius);
-  box-shadow: var(--of-shadow);
-}
 
 .of-share__lead {
-  margin: 0 0 14px;
-  font-size: 14px;
+  margin: 0 0 var(--of-space-16);
+  font-size: var(--of-type-control);
   line-height: 1.4;
   color: var(--of-ink-muted);
 }
@@ -4926,17 +5423,18 @@ textarea.of-input {
 .of-share__link {
   display: block;
   width: 100%;
-  /* 44px, not 28: two links that differ only in a word are the one control in
-     this product where hitting the wrong one has a consequence. */
+  /* The largest target, not a secondary one: two links that differ only in a
+     word are the one control in this product where hitting the wrong one has a
+     consequence. */
   min-height: var(--of-hit-lg);
-  margin-bottom: 10px;
-  padding: 8px 14px;
+  margin-bottom: var(--of-step);
+  padding: var(--of-space-8) var(--of-space-16);
   font-family: var(--of-font);
   text-align: left;
   color: var(--of-ink);
   background: var(--of-page);
   border: 1px solid var(--of-control-border);
-  border-radius: 4px;
+  border-radius: var(--of-radius-apparatus);
   cursor: pointer;
 }
 
@@ -4946,7 +5444,7 @@ textarea.of-input {
 
 .of-share__link-name {
   display: block;
-  font-size: 15px;
+  font-size: var(--of-type-ui);
 }
 
 .of-share__link-what {
@@ -4954,28 +5452,20 @@ textarea.of-input {
   margin-top: 1px;
   /* This line is what stops somebody sending the wrong link, so it sits a
      step above the floor rather than on it. */
-  font-size: 13px;
+  font-size: var(--of-type-ui-small);
   line-height: 1.35;
   color: var(--of-ink-muted);
 }
 
 .of-share__open {
   width: 100%;
-  height: var(--of-hit);
-  font-family: var(--of-font);
-  font-size: 14px;
-  color: var(--of-panel);
-  background: var(--of-accent);
-  border: 1px solid var(--of-accent);
-  border-radius: 4px;
-  cursor: pointer;
 }
 
 .of-share__error {
   width: 320px;
   margin: 0;
-  padding: 14px var(--of-gutter);
-  font-size: 14px;
+  padding: var(--of-space-16) var(--of-gutter);
+  font-size: var(--of-type-control);
   line-height: 1.4;
   color: var(--of-danger);
   background: var(--of-danger-wash);
@@ -4992,15 +5482,15 @@ textarea.of-input {
  * means "grab me".
  */
 .of-status__watching {
-  padding: 0 9px;
+  padding: 0 var(--of-step);
   font-family: var(--of-mono);
-  font-size: 12px;
+  font-size: var(--of-type-record);
   line-height: 28px;
   letter-spacing: 0.02em;
   color: var(--of-ink-muted);
   background: var(--of-page);
   border: 1px solid var(--of-panel-border);
-  border-radius: 4px;
+  border-radius: var(--of-radius-apparatus);
 }
 
 /* ---------- the board's name ---------- */
@@ -5021,16 +5511,20 @@ textarea.of-input {
   max-width: 22ch;
   overflow: hidden;
   height: var(--of-hit-sm);
-  padding: 0 7px;
-  font-family: var(--of-mono);
-  font-size: 12px;
-  letter-spacing: 0.02em;
+  padding: 0 var(--of-space-8);
+  /*
+   * The PAGE's name, in the interface's own voice — it heads the page now,
+   * where it was one more mono readout in a line at the foot of it.
+   */
+  font-family: var(--of-font);
+  font-size: var(--of-type-ui);
+  font-weight: 600;
   text-overflow: ellipsis;
   white-space: nowrap;
   color: var(--of-ink);
   background: none;
   border: none;
-  border-radius: 3px;
+  border-radius: var(--of-radius-apparatus);
   cursor: text;
 }
 
@@ -5062,15 +5556,15 @@ textarea.of-input {
  */
 .of-home__board-tag {
   justify-self: start;
-  padding: 3px 8px;
+  padding: var(--of-space-4) var(--of-space-8);
   font-family: var(--of-mono);
-  font-size: 12px;
+  font-size: var(--of-type-record);
   letter-spacing: 0.02em;
   /* It is one column of a ledger; wrapping turns the row into two. */
   white-space: nowrap;
   color: var(--of-ink-muted);
   background: var(--of-bg);
-  border-radius: 3px;
+  border-radius: var(--of-radius-apparatus);
 }
 
 /* ---------- motion ---------- */
@@ -5095,6 +5589,12 @@ textarea.of-input {
   --of-ease: cubic-bezier(0.16, 1, 0.3, 1);
   --of-quick: 140ms;
   --of-settle: 240ms;
+  /* How long an acknowledgement stays where the click landed. */
+  --of-hold: 600ms;
+  /* Between one ledger row and the next as they settle. */
+  --of-stagger: 28ms;
+  /* How long a pointer rests on a control before its tip answers. */
+  --of-dwell: 400ms;
 }
 
 @keyframes of-settle {
@@ -5111,31 +5611,30 @@ textarea.of-input {
  */
 .of-home__list li {
   animation: of-settle var(--of-settle) var(--of-ease) backwards;
-  animation-delay: calc(var(--of-row, 0) * 28ms);
+  animation-delay: calc(var(--of-row, 0) * var(--of-stagger));
 }
 
 .of-home__board {
   transition:
-    background-color var(--of-quick) ease-out,
-    box-shadow var(--of-quick) ease-out;
+    background-color var(--of-quick) var(--of-ease),
+    box-shadow var(--of-quick) var(--of-ease);
 }
 
 .of-home__start,
 .of-home__account,
 .of-status__title,
-.of-share__link,
-.of-share__open {
+.of-share__link {
   transition:
-    background-color var(--of-quick) ease-out,
-    border-color var(--of-quick) ease-out,
-    color var(--of-quick) ease-out;
+    background-color var(--of-quick) var(--of-ease),
+    border-color var(--of-quick) var(--of-ease),
+    color var(--of-quick) var(--of-ease);
 }
 
 .of-status__exit,
 .of-status__exit svg {
   transition:
-    background-color var(--of-quick) ease-out,
-    color var(--of-quick) ease-out,
+    background-color var(--of-quick) var(--of-ease),
+    color var(--of-quick) var(--of-ease),
     transform var(--of-quick) var(--of-ease);
 }
 
@@ -5151,10 +5650,9 @@ textarea.of-input {
   }
 }
 
-.of-account,
-.of-share,
+.of-sheet,
 .of-share__error {
-  animation: of-raise 160ms var(--of-ease) backwards;
+  animation: of-raise var(--of-quick) var(--of-ease) backwards;
   transform-origin: bottom left;
 }
 
@@ -5190,7 +5688,7 @@ textarea.of-input {
 }
 
 .of-share__link[data-copied='yes'] {
-  animation: of-took 600ms ease-out;
+  animation: of-took var(--of-hold) var(--of-ease);
 }
 
 /*
@@ -5201,8 +5699,7 @@ textarea.of-input {
  */
 @media (prefers-reduced-motion: reduce) {
   .of-home__list li,
-  .of-account,
-  .of-share,
+  .of-sheet,
   .of-share__error,
   .of-picker,
   .of-cellbar {
@@ -5210,7 +5707,7 @@ textarea.of-input {
   }
 
   .of-share__link[data-copied='yes'] {
-    animation-duration: 900ms;
+    animation-duration: calc(var(--of-hold) * 1.5);
   }
 
   /*
@@ -5237,13 +5734,13 @@ textarea.of-input {
  */
 .of-code__bar {
   display: flex;
-  gap: 6px;
+  gap: var(--of-space-6);
   align-items: center;
 }
 
 .of-code__format {
-  padding: 0 10px;
-  font-size: 11px;
+  padding: 0 var(--of-step);
+  font-size: var(--of-type-record);
   line-height: 24px;
 }
 
@@ -5256,35 +5753,11 @@ textarea.of-input {
  */
 .of-arrange {
   display: flex;
-  gap: 2px;
+  gap: var(--of-space-2);
   align-items: center;
-  padding: 4px;
+  padding: var(--of-space-4);
 }
 
-.of-arrange__button {
-  display: grid;
-  place-items: center;
-  width: 28px;
-  height: 28px;
-  padding: 0;
-  color: var(--of-ink-muted);
-  background: none;
-  border: none;
-  border-radius: 6px;
-  cursor: pointer;
-}
-
-.of-arrange__button:hover:not(:disabled),
-.of-arrange__button:focus-visible {
-  color: var(--of-ink);
-  background: var(--of-hover);
-}
-
-.of-arrange__button:disabled {
-  /* Still legible, so it reads as unavailable rather than as missing. */
-  opacity: 0.35;
-  cursor: default;
-}
 
 .of-arrange__glyph {
   width: 17px;
@@ -5295,7 +5768,7 @@ textarea.of-input {
 .of-arrange__rule {
   width: 1px;
   height: 18px;
-  margin: 0 4px;
+  margin: 0 var(--of-space-4);
   background: var(--of-panel-border);
 }
 
@@ -5310,7 +5783,7 @@ textarea.of-input {
  */
 .of-endpoint--control {
   background: var(--of-panel);
-  border-radius: 2px;
+  border-radius: var(--of-radius-slip);
 }
 /*
  * A LEG of an orthogonal route: grabbed anywhere along its length, because
@@ -5325,7 +5798,7 @@ textarea.of-input {
 .of-endpoint--leg {
   background: var(--of-accent);
   border: none;
-  border-radius: 999px;
+  border-radius: var(--of-radius-capsule);
   opacity: 0.55;
 }
 .of-endpoint--leg:hover {
@@ -5345,7 +5818,7 @@ textarea.of-input {
   place-items: center;
   color: var(--of-panel);
   background: var(--of-ink-muted);
-  border-radius: 25%;
+  border-radius: var(--of-radius-grip);
   pointer-events: none;
 }
 
@@ -5369,7 +5842,7 @@ textarea.of-input {
   overflow: hidden;
   border-style: solid;
   border-color: transparent;
-  border-radius: 4px;
+  border-radius: var(--of-radius-apparatus);
 }
 
 .of-image-frame .of-image {
@@ -5392,7 +5865,7 @@ textarea.of-input {
    * paints over them and the west and north handles cannot be pressed at all.
    * The divider handles learned this the same way.
    */
-  z-index: 3;
+  z-index: var(--of-z-guide);
   outline: 1.5px dashed var(--of-accent);
   outline-offset: 0;
   pointer-events: none;
@@ -5440,12 +5913,12 @@ textarea.of-input {
 /* On the chrome layer now, so it needs no counter-scale and no placement of
    its own — the layer does both. */
 .of-crop__reset {
-  padding: 5px 11px;
-  font-size: 11px;
+  padding: var(--of-space-6) var(--of-space-12);
+  font-size: var(--of-type-record);
   color: var(--of-ink-muted);
   background: none;
   border: none;
-  border-radius: 7px;
+  border-radius: var(--of-radius);
   cursor: pointer;
 }
 

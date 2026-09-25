@@ -11,10 +11,10 @@ import {
   zoomToSlider,
 } from '../scene/zoom.js'
 import { useInteractionStore } from '../interaction/interaction-store.js'
-import { FitIcon, GridIcon, MinusIcon, MouseIcon, PlusIcon } from './icons.js'
+import { FitIcon, GridIcon, MinusIcon, MouseIcon, PlusIcon } from '../controls/icons.js'
+import { MOD_KEY } from '../interaction/keymap.js'
 
-const isMac = typeof navigator !== 'undefined' && /Mac|iPhone|iPad/.test(navigator.platform)
-const mod = isMac ? '⌘' : 'Ctrl'
+const mod = MOD_KEY
 
 /**
  * Zoom slider, percentage entry and fit, plus the scroll-behaviour toggle.
@@ -57,9 +57,10 @@ export function ZoomControl() {
     <div className="of-zoom" data-testid="zoom-control">
       <button
         type="button"
-        className="of-zoom__button"
+        className="of-icon-button"
         aria-label={`Scroll wheel currently ${wheelMode === 'zoom' ? 'zooms' : 'pans'}. Click to switch.`}
-        title={`Scroll wheel: ${wheelMode === 'zoom' ? 'zoom' : 'pan'} — click to switch`}
+        data-tip={`Scroll wheel: ${wheelMode === 'zoom' ? 'zoom' : 'pan'} — click to switch`}
+        aria-description={`Scroll wheel: ${wheelMode === 'zoom' ? 'zoom' : 'pan'} — click to switch`}
         data-testid="wheel-mode"
         data-mode={wheelMode}
         onClick={() => toggleWheelMode()}
@@ -70,10 +71,11 @@ export function ZoomControl() {
 
       <button
         type="button"
-        className={`of-zoom__button${snapToGrid ? ' of-zoom__button--on' : ''}`}
+        className={`of-icon-button${snapToGrid ? ' of-icon-button--on' : ''}`}
         aria-pressed={snapToGrid}
         aria-label={`Snap to grid ${snapToGrid ? 'on' : 'off'}. Hold ${mod} while dragging to override.`}
-        title={`Snap to grid: ${snapToGrid ? 'on' : 'off'} — hold ${mod} while dragging to override`}
+        data-tip={`Snap to grid: ${snapToGrid ? 'on' : 'off'} — hold ${mod} while dragging to override`}
+        aria-description={`Snap to grid: ${snapToGrid ? 'on' : 'off'} — hold ${mod} while dragging to override`}
         data-testid="snap-toggle"
         data-snap={snapToGrid ? 'on' : 'off'}
         onClick={() => toggleSnapToGrid()}
@@ -85,9 +87,10 @@ export function ZoomControl() {
 
       <button
         type="button"
-        className="of-zoom__button"
+        className="of-icon-button"
         aria-label="Zoom out"
-        title={`Zoom out (${mod}−)`}
+        data-tip={`Zoom out (${mod}−)`}
+        aria-description={`Zoom out (${mod}−)`}
         data-testid="zoom-out"
         disabled={viewport.zoom <= MIN_ZOOM + 1e-6}
         onClick={() => applyZoom(nextZoomOut(viewport.zoom))}
@@ -110,9 +113,10 @@ export function ZoomControl() {
 
       <button
         type="button"
-        className="of-zoom__button"
+        className="of-icon-button"
         aria-label="Zoom in"
-        title={`Zoom in (${mod}+)`}
+        data-tip={`Zoom in (${mod}+)`}
+        aria-description={`Zoom in (${mod}+)`}
         data-testid="zoom-in"
         disabled={viewport.zoom >= MAX_ZOOM - 1e-6}
         onClick={() => applyZoom(nextZoomIn(viewport.zoom))}
@@ -139,7 +143,8 @@ export function ZoomControl() {
         <button
           type="button"
           className="of-zoom__percent"
-          title={`Reset to 100% (${mod}0)`}
+          data-tip={`Reset to 100% (${mod}0)`}
+          aria-description={`Reset to 100% (${mod}0)`}
           data-testid="zoom-percent"
           onClick={() => {
             setDraft(String(percent))
@@ -152,9 +157,10 @@ export function ZoomControl() {
 
       <button
         type="button"
-        className="of-zoom__button"
+        className="of-icon-button"
         aria-label="Zoom to fit"
-        title={`Zoom to fit (${mod}1)`}
+        data-tip={`Zoom to fit (${mod}1)`}
+        aria-description={`Zoom to fit (${mod}1)`}
         data-testid="zoom-fit"
         onClick={() => {
           const next = fitToDocument(runtime.store.getDocument(), runtime.registry, width, height)

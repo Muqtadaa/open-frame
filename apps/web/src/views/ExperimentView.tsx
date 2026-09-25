@@ -41,6 +41,7 @@ function ExperimentEditor(props: ObjectEditorProps<ExperimentData>) {
 
 export const experimentView = defineObjectView<ExperimentData>({
   type: 'experiment',
+  defaultColor: 'gray',
   Renderer: ExperimentRenderer,
   InlineEditor: ExperimentEditor,
 })

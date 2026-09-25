@@ -317,8 +317,12 @@ rule is neither, so it sits below 3:1 on purpose and the test asserts that
 CEILING as well: a later "improve contrast" pass would otherwise turn the ground
 into a cage the content has to fight.
 
-Functional text has an 11px floor. That covers shortcuts, field labels and
-readouts; only non-interactive legal smallprint gets less.
+Functional text has a 12px floor. That covers shortcuts, field labels and
+readouts, and the same file measures it: no absolute `font-size` in the
+stylesheet goes below 12px, with no exemptions — the one there was, a size
+specimen in the record panel, went with the control. The floor was eleven until the
+interface scale moved onto the quadrille, and DESIGN.md said twelve for a week
+while 27 rules still said eleven, because nothing read the stylesheet.
 
 ### 23. Break a new architectural rule once, and watch it fail
 
@@ -477,12 +481,18 @@ background that could be turned on could never be turned off again. `none` is
 a value, and the boundary that checks colours lets it through for exactly that
 reason.
 
-**Text takes its marks per SPAN or per OBJECT, and no type takes both.** A
-paragraph has words worth emphasising, so a sticky's body text carries marks
-on its rich-text spans (ADR 0012); a connector's label is two words naming a
-relationship, so the whole of it takes `bold`, `italic`, `underline` and
-`textSize` as style properties. A type that declared both would have two
-controls for one question, and the second would silently win.
+**Text takes its marks per SPAN, and every text is edited in one editor.**
+Body text, connector labels, frame titles and table cells are all rich text
+(ADR 0012, ADR 0014), formatted in the format bar — marks, size and lists. A
+connector's label used to take whole-object `bold`/`italic`/`underline`/
+`textSize` style props instead; those are gone, because a type with both would
+have two controls for one question and the second would silently win.
+
+**A list lives on the newline that ends its paragraph** (ADR 0014), so text
+written before lists existed means what it always meant. Change a PARAGRAPH
+through `updateParagraph`/`setList`, never as a character edit: deleting the
+last character of an empty line after a list leaves text ending in the list's
+newline, which reads as no line at all.
 
 ---
 
@@ -497,7 +507,7 @@ that hold functions use property syntax (`readonly create: (…) => …`) rather
 method shorthand, because methods are bivariant and properties are not.
 
 **Files** — one object type per folder in `core/src/types/` and
-`web/src/canvas/views/`. A new registry entry is justified by different
+`web/src/views/`. A new registry entry is justified by different
 BEHAVIOUR, not different appearance: the four shape variants are one `shape`
 type with a discriminant, while `text` and `sticky` are separate because they
 mean different things. Components stay small; if `Canvas.tsx` starts growing
@@ -516,8 +526,8 @@ specific failure. Do not narrate what the code already says.
 1. `packages/core/src/types/<name>/schema.ts` — Zod schema and TS type
 2. `packages/core/src/types/<name>/definition.ts` — `defineObjectType({...})`
 3. Register in `packages/core/src/types/index.ts` — one line
-4. `apps/web/src/canvas/views/<Name>View.tsx` — `defineObjectView({...})`
-5. Register in `apps/web/src/canvas/views/index.ts` — one line
+4. `apps/web/src/views/<Name>View.tsx` — `defineObjectView({...})`
+5. Register in `apps/web/src/views/index.ts` — one line
 
 Nothing else should need to change. If it does, that is the bug — fix the
 registry, not the caller. See

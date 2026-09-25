@@ -583,19 +583,22 @@ test.describe('putting a line back', () => {
     if (after === null) throw new Error('no label')
     expect(Math.abs(after.x - before.x), 'the label did not move along').toBeGreaterThan(40)
 
-    const away = await page.locator('.of-connector__line').evaluate((element, at: number) => {
-      const path = element as unknown as SVGPathElement
-      const matrix = path.getScreenCTM()
-      if (matrix === null) throw new Error('the line is not on screen')
-      let nearest = Number.POSITIVE_INFINITY
-      const total = path.getTotalLength()
-      for (let step = 0; step <= 200; step += 1) {
-        const point = path.getPointAtLength((total * step) / 200)
-        const screen = new DOMPoint(point.x, point.y).matrixTransform(matrix)
-        nearest = Math.min(nearest, Math.abs(screen.y - at))
-      }
-      return nearest
-    }, after.y + after.height / 2)
+    const away = await page.locator('.of-connector__line').evaluate(
+      (element, at: number) => {
+        const path = element as unknown as SVGPathElement
+        const matrix = path.getScreenCTM()
+        if (matrix === null) throw new Error('the line is not on screen')
+        let nearest = Number.POSITIVE_INFINITY
+        const total = path.getTotalLength()
+        for (let step = 0; step <= 200; step += 1) {
+          const point = path.getPointAtLength((total * step) / 200)
+          const screen = new DOMPoint(point.x, point.y).matrixTransform(matrix)
+          nearest = Math.min(nearest, Math.abs(screen.y - at))
+        }
+        return nearest
+      },
+      after.y + after.height / 2,
+    )
     expect(away, 'the label came off the line').toBeLessThan(8)
 
     await page.getByTestId('action-centre-label').click()
@@ -606,40 +609,79 @@ test.describe('putting a line back', () => {
 })
 
 test.describe('formatting a connector label', () => {
-  test('takes bold, a size and a background of its own', async ({ page }) => {
+  /** A label written in the editor, and the connector selected again. */
+  async function labelled(page: Page, words: string): Promise<void> {
     await connectedPair(page)
     await page.locator(CANVAS).click({ position: MIDPOINT })
     await page.locator(CANVAS).dblclick({ position: MIDPOINT })
     await expect(page.locator(EDITOR)).toBeFocused()
-    await page.locator(EDITOR).fill('depends on')
+    await page.locator(EDITOR).fill(words)
+  }
+
+  /*
+   * The label is rich text (ADR 0014): its marks and size are set in the
+   * editor's format bar, like a note's, where they used to be whole-label
+   * switches in the record panel.
+   */
+  test('takes marks and a size from the format bar', async ({ page }) => {
+    await labelled(page, 'depends on')
+    await page.keyboard.press('ControlOrMeta+a')
+    await page.getByTestId('format-bold').click()
+    await page.getByTestId('format-bigger').click()
+    await page.locator(CANVAS).click({ position: { x: 1180, y: 120 } })
+
+    const label = page.locator('.of-connector__label')
+    await expect(label.locator('strong')).toHaveText('depends on')
+    await expect(label.locator('[data-size="lg"]')).toHaveText('depends on')
+  })
+
+  test('holds a list', async ({ page }) => {
+    await labelled(page, 'first')
+    await page.getByTestId('format-bullet').click()
+    await page.keyboard.press('End')
+    await page.keyboard.press('Enter')
+    await page.keyboard.type('second')
+    await page.locator(CANVAS).click({ position: { x: 1180, y: 120 } })
+
+    const items = page.locator('.of-connector__label [role="listitem"]')
+    await expect(items).toHaveText(['first', 'second'])
+  })
+
+  /*
+   * A background is the label's own box, so it is exactly the size of the
+   * text; it only exists once one has been chosen, and turned off it is gone.
+   */
+  test('takes a background of its own, and loses it again', async ({ page }) => {
+    await labelled(page, 'depends on')
     await page.locator(CANVAS).click({ position: { x: 1180, y: 120 } })
     await page.locator('.of-connector__line').click({ force: true })
 
     const label = page.locator('.of-connector__label')
-    await expect(label).toBeVisible()
-
-    await page.getByTestId('mark-bold').click()
-    await expect(label).toHaveCSS('font-weight', '700')
-    await page.getByTestId('mark-italic').click()
-    await expect(label).toHaveCSS('font-style', 'italic')
-
-    await page.getByTestId('size-large').click()
-    await expect(label).toHaveCSS('font-size', '16px')
-
-    /*
-     * A background is a PLATE behind the text, sized from the text itself —
-     * so it only exists once one has been chosen, and it is drawn before the
-     * label so it is behind it rather than over it.
-     */
-    await expect(page.locator('.of-connector svg rect, .of-connector rect')).toHaveCount(0)
+    await expect(label).toHaveCSS('background-color', 'rgba(0, 0, 0, 0)')
     await page.getByTestId('paint-labelFill').click()
     await page.getByTestId('label-white').click()
-    await expect(page.locator('.of-connector rect')).toHaveCount(1)
+    await expect(label).not.toHaveCSS('background-color', 'rgba(0, 0, 0, 0)')
 
-    // And turned off again, because a background is the one colour on this
+    // Turned off again, because a background is the one colour on this
     // object that can genuinely be nothing.
     await page.getByTestId('label-none').click()
-    await expect(page.locator('.of-connector rect')).toHaveCount(0)
+    await expect(label).toHaveCSS('background-color', 'rgba(0, 0, 0, 0)')
+  })
+
+  /*
+   * The colour was stored and never seen: the stylesheet gave the SVG label a
+   * `fill`, and ANY CSS rule outranks an SVG presentation attribute, so every
+   * choice rendered as the board's ink. Nothing asserted the label's colour,
+   * only that the panel offered one.
+   */
+  test('takes a text colour', async ({ page }) => {
+    await labelled(page, 'depends on')
+    await page.locator(CANVAS).click({ position: { x: 1180, y: 120 } })
+    await page.locator('.of-connector__line').click({ force: true })
+
+    await page.getByTestId('paint-textColor').click()
+    await page.getByTestId('ink-red').click()
+    await expect(page.locator('.of-connector__label')).toHaveCSS('color', 'rgb(138, 64, 56)')
   })
 })
 
@@ -886,7 +928,6 @@ test.describe('reshaping a line', () => {
     await expect(page.getByTestId('endpoint-from')).toBeVisible()
   }
 
-
   const route = async (page: Page): Promise<string> =>
     (await page.locator('.of-connector__line').getAttribute('d')) ?? ''
 
@@ -1079,10 +1120,9 @@ test.describe('reshaping a line', () => {
       const a = run[at - 1]
       const b = run[at]
       if (a === undefined || b === undefined) continue
-      expect(
-        Math.abs(a.x - b.x) < 0.01 || Math.abs(a.y - b.y) < 0.01,
-        'a leg ran diagonally',
-      ).toBe(true)
+      expect(Math.abs(a.x - b.x) < 0.01 || Math.abs(a.y - b.y) < 0.01, 'a leg ran diagonally').toBe(
+        true,
+      )
     }
   })
 
@@ -1129,4 +1169,31 @@ test.describe('reshaping a line', () => {
 
     await page.mouse.up()
   })
+})
+
+/**
+ * A connector IS a line. It declared a surface colour as well, which painted
+ * the same line through a fallback — so the record panel offered "surface"
+ * and "outline" for one stroke, overflowed its own width doing it, and marked
+ * no swatch for a line visibly drawn in grey.
+ */
+test('offers its line one colour, and marks the one it is drawn in', async ({ page }) => {
+  await connectedPair(page)
+  await page.locator(CANVAS).click({ position: MIDPOINT })
+  await expect(page.getByTestId('inspector-title')).toHaveText('Connector')
+
+  // Its route and arrowheads are how it is drawn, not a record of anything.
+  await expect(page.locator('.of-inspector__band')).toHaveCount(0)
+  await expect(page.getByTestId('field-routing')).toBeVisible()
+  await expect(page.getByTestId('paint-color')).toHaveCount(0)
+  await expect(page.getByTestId('paint-strokeColor')).toHaveText('line')
+  await page.getByTestId('paint-strokeColor').click()
+  await expect(page.getByTestId('line-gray')).toHaveAttribute('aria-pressed', 'true')
+
+  const panel = await page.getByTestId('inspector').boundingBox()
+  const targets = await page.locator('.of-paint__target').boundingBox()
+  expect(panel).not.toBeNull()
+  expect(targets).not.toBeNull()
+  if (panel === null || targets === null) return
+  expect(targets.x + targets.width).toBeLessThanOrEqual(panel.x + panel.width)
 })

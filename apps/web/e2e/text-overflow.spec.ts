@@ -243,6 +243,8 @@ test('a structured slip aligns its text down', async ({ page }) => {
   await page.locator('[data-object-id]').first().click()
   const atTop = await top()
 
+  // A slip carries a record, so its appearance starts folded away.
+  await page.getByTestId('inspector-appearance').click()
   await page.getByTestId('verticalAlign-bottom').click()
   expect(await top()).toBeGreaterThan(atTop + 40)
 })

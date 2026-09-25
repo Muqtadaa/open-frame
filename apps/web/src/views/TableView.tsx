@@ -1,9 +1,8 @@
-import { useState, type CSSProperties } from 'react'
+import { useRef, useState, type CSSProperties } from 'react'
 
 import {
   cellRange,
   cellRegion,
-  plainTextOf,
   resizeGrid,
   styleCells,
   type CellStyle,
@@ -13,6 +12,8 @@ import {
 } from '@openframe/core'
 
 import { defineObjectView, type ObjectEditorProps, type ObjectViewProps } from './registry.js'
+import { FormatBar } from './FormatBar.js'
+import { RichTextField, type FormatState, type RichTextFieldHandle } from './RichTextField.js'
 import { RichTextView } from './RichTextView.js'
 import { cellAt, tracks } from '../scene/table-grid.js'
 import {
@@ -24,6 +25,7 @@ import {
   surfaceOf,
 } from '../scene/style-tokens.js'
 import { Swatches, groundOf, type SwatchKind } from '../controls/Swatches.js'
+import { MinusIcon, PlusIcon } from '../controls/icons.js'
 
 /**
  * What a colour lands on, named in the order somebody reaches for them.
@@ -190,6 +192,16 @@ function TableEditor({ object, at, zoom, Chrome, onCommit, onCancel }: ObjectEdi
   const selected = cellRange(draft, anchor, focus)
   const inRange = new Set(selected)
 
+  /*
+   * The cell being TYPED in, and its field, for the format bar in the cell
+   * bar. Formatting is text, so it acts on the one cell with the caret; the
+   * colours below act on the whole range.
+   */
+  const fields = useRef<(RichTextFieldHandle | null)[]>([])
+  const [editingCell, setEditingCell] = useState(started)
+  const [format, setFormat] = useState<FormatState>({ marks: [], list: undefined })
+  const typing = (): RichTextFieldHandle | null => fields.current[editingCell] ?? null
+
   const commit = (): void => {
     onCommit({ columns: draft.columns, rows: draft.rows, cells: draft.cells })
   }
@@ -212,7 +224,23 @@ function TableEditor({ object, at, zoom, Chrome, onCommit, onCancel }: ObjectEdi
   }
 
   const reshape = (axis: 'column' | 'row', delta: 1 | -1): void => {
-    setDraft((current) => resizeGrid(current, axis, delta))
+    const next = resizeGrid(draft, axis, delta)
+    if (next === draft) return
+    setDraft(next)
+    /*
+     * Columns change at the END of every row, so every later row's cells
+     * move to new positions in the list. The caret's cell moves with its row
+     * and column — it is where the fields remount (they are keyed by width,
+     * below) and so where the caret goes back to.
+     */
+    const was = draft.columns.length
+    const now = next.columns.length
+    const row = Math.floor(editingCell / was)
+    const column = Math.min(editingCell % was, now - 1)
+    const moved = Math.min(row, next.rows.length - 1) * now + column
+    setEditingCell(moved)
+    setAnchor(moved)
+    setFocus(moved)
   }
 
   /*
@@ -272,18 +300,35 @@ function TableEditor({ object, at, zoom, Chrome, onCommit, onCancel }: ObjectEdi
         }}
       >
         {draft.cells.map((cell, index) => (
-          <textarea
-            key={index}
+          <RichTextField
+            /*
+             * Keyed by the WIDTH as well as the position. A field reads its
+             * text once, on mount, and a new column moves every later row's
+             * cells to new positions — so a field kept by position alone went
+             * on showing the cell that used to be there, and typing into it
+             * wrote that stale text over the cell now in its place. A change
+             * of width remounts the grid from the draft.
+             */
+            key={`${String(width)}:${String(index)}`}
+            handle={(field) => {
+              fields.current[index] = field
+            }}
+            initialText={cell.text}
             className={`of-table__cell of-table__input${
               draft.headerRow && Math.floor(index / width) === 0 ? ' of-table__cell--head' : ''
             }`}
-            value={plainTextOf(cell.text)}
-            autoFocus={index === started}
-            aria-label={`Row ${String(Math.floor(index / width) + 1)}, column ${String(
+            focusOnMount={index === editingCell ? 'end' : false}
+            ariaLabel={`Row ${String(Math.floor(index / width) + 1)}, column ${String(
               (index % width) + 1,
             )}`}
-            data-testid={`table-cell-${String(index)}`}
-            data-selected={inRange.has(index) ? 'true' : undefined}
+            testId={`table-cell-${String(index)}`}
+            attributes={{ 'data-selected': inRange.has(index) ? 'true' : undefined }}
+            /*
+             * Enter finishes, as it did in the textarea: a table holds short
+             * values, so finishing is the common case. A new line — and a new
+             * list item — is Shift+Enter.
+             */
+            newParagraph="Shift+Enter"
             /*
              * The ring is 2px ON SCREEN, so it is divided by the zoom like
              * every other piece of chrome here — at 400% a 2px inset ring is
@@ -296,6 +341,10 @@ function TableEditor({ object, at, zoom, Chrome, onCommit, onCancel }: ObjectEdi
                 ? { boxShadow: `inset 0 0 0 ${String(2 / zoom)}px var(--of-accent)` }
                 : {}),
             }}
+            onFocus={() => {
+              setEditingCell(index)
+            }}
+            onFormatState={setFormat}
             onPointerDown={(event) => {
               /*
                * Shift EXTENDS from the anchor; a plain press starts a new
@@ -312,34 +361,25 @@ function TableEditor({ object, at, zoom, Chrome, onCommit, onCancel }: ObjectEdi
               setAnchor(index)
               setFocus(index)
             }}
-            onChange={(event) => {
-              const text = event.target.value
+            onChange={(text) => {
               setDraft((current) => ({
                 ...current,
                 /*
-                 * Only the edited cell is rebuilt. Cells hold plain text
-                 * today so nothing is lost either way — but the moment one
-                 * holds a formatted span, rebuilding every cell on every
-                 * keystroke would flatten the table because somebody
-                 * corrected a typo in one corner.
+                 * Only the edited cell is rebuilt, and only its TEXT: the
+                 * cell's fill, ink and rule stay. Rebuilding it as bare text
+                 * wiped a coloured cell's colours on the first keystroke.
                  */
                 cells: current.cells.map((old, other) =>
-                  other === index ? { text: [{ text }] } : old,
+                  other === index ? { ...old, text } : old,
                 ),
               }))
             }}
             onKeyDown={(event) => {
-              // The board's own shortcuts must not fire while typing in a cell.
-              event.stopPropagation()
               if (event.key === 'Escape') {
+                event.preventDefault()
                 onCancel()
                 return
               }
-              /*
-               * Enter commits; Shift+Enter is a line inside the cell. A table
-               * holds short values, so finishing is the common case and the
-               * plain key is what makes it quick.
-               */
               if (event.key === 'Enter' && !event.shiftKey) {
                 event.preventDefault()
                 commit()
@@ -371,14 +411,48 @@ function TableEditor({ object, at, zoom, Chrome, onCommit, onCancel }: ObjectEdi
         * anchored to the table's top edge, which is off the window as soon as
         * you zoom into a large table — and it pointed at the table rather than
         * at the selection, which is not what it changes.
+        *
+        * Lined up with the selection ACROSS, but outside the table UP AND
+        * DOWN. Anchored to the cells themselves, a bar that found no room
+        * above them dropped onto the rows below — the very cells a shift-click
+        * was reaching for — and with the format row in it, it is tall enough
+        * that it usually did.
         */}
-      <Chrome anchor={cellRegion(draft, selected)} prefer={['above', 'below']}>
-      <div className="of-cellbar of-surface" data-testid="table-cell-style">
+      <Chrome
+        anchor={across(cellRegion(draft, selected))}
+        prefer={['above', 'below']}
+      >
+      <div
+        className="of-cellbar of-surface"
+        data-testid="table-cell-style"
+        /*
+         * A press on any BUTTON here leaves the caret in the cell: pick a
+         * colour, keep typing. Only buttons — the custom colour's hex field
+         * has to be able to take focus to be typed in.
+         */
+        onMouseDown={(event) => {
+          if (event.target instanceof Element && event.target.closest('button') !== null) {
+            event.preventDefault()
+          }
+        }}
+      >
+        {/*
+          * The same format bar every text has, driving the cell with the
+          * caret: a cell is text like any other, and it could not be bolded
+          * while it was a textarea.
+          */}
+        <FormatBar
+          embedded
+          state={format}
+          onToggle={(mark) => typing()?.toggleMark(mark)}
+          onResize={(by) => typing()?.resize(by)}
+          onList={(kind) => typing()?.toggleList(kind)}
+        />
         <div className="of-cellbar__head">
           <span className="of-cellbar__count">
             {selected.length === 1 ? '1 cell' : `${String(selected.length)} cells`}
           </span>
-          <div className="of-choice of-cellbar__target" role="group" aria-label="What to colour">
+          <div className="of-choice of-choice--text of-cellbar__target" role="group" aria-label="What to colour">
             {CELL_TARGETS.map((option) => (
               <button
                 key={option.key}
@@ -399,7 +473,8 @@ function TableEditor({ object, at, zoom, Chrome, onCommit, onCancel }: ObjectEdi
             type="button"
             className="of-button of-button--ghost of-cellbar__clear"
             // Says what it puts back, not just that it removes something.
-            title="Use the table's own colours"
+            data-tip="Use the table's own colours"
+            aria-description="Use the table's own colours"
             data-testid="cell-clear"
             onMouseDown={keepFocus}
             onClick={() => {
@@ -434,72 +509,89 @@ function TableEditor({ object, at, zoom, Chrome, onCommit, onCancel }: ObjectEdi
       </Chrome>
 
       {/*
-        * The shape controls, beside the axis each one changes: columns on the
-        * right, rows underneath. A row of four identical buttons in a corner
-        * would make you read every label to find the one you want.
+        * The shape controls, ONE surface on the table's right: a named row
+        * for each axis, so four identical buttons never have to be read one by
+        * one to find the right one.
+        *
+        * Rows used to sit underneath the table, beside the axis they change.
+        * Below the table is also where the cell bar goes whenever there is no
+        * room above it — under the navigation bar, a table near the top has
+        * none — and the two landed on each other. The right side is the
+        * table's alone.
         */}
       <Chrome anchor={{ x: 1, y: 0, width: 0, height: 1 }} prefer={['right', 'left']}>
-      <div className="of-table-edit__columns of-surface" role="group" aria-label="Columns">
-        <button
-          type="button"
-          className="of-table-edit__step"
-          aria-label="Add a column"
-          data-testid="table-add-column"
-          onMouseDown={keepFocus}
-          onClick={() => {
-            reshape('column', 1)
-          }}
-        >
-          +
-        </button>
-        <button
-          type="button"
-          className="of-table-edit__step"
-          aria-label="Remove the last column"
-          disabled={width <= 1}
-          data-testid="table-remove-column"
-          onMouseDown={keepFocus}
-          onClick={() => {
-            reshape('column', -1)
-          }}
-        >
-          −
-        </button>
-      </div>
-
-      </Chrome>
-
-      <Chrome anchor={{ x: 0, y: 1, width: 1, height: 0 }} prefer={['below', 'above']}>
-      <div className="of-table-edit__rows of-surface" role="group" aria-label="Rows">
-        <button
-          type="button"
-          className="of-table-edit__step"
-          aria-label="Add a row"
-          data-testid="table-add-row"
-          onMouseDown={keepFocus}
-          onClick={() => {
-            reshape('row', 1)
-          }}
-        >
-          +
-        </button>
-        <button
-          type="button"
-          className="of-table-edit__step"
-          aria-label="Remove the last row"
-          disabled={draft.rows.length <= 1}
-          data-testid="table-remove-row"
-          onMouseDown={keepFocus}
-          onClick={() => {
-            reshape('row', -1)
-          }}
-        >
-          −
-        </button>
-      </div>
+        <div className="of-table-edit__shape of-surface">
+          <div className="of-table-edit__axis" role="group" aria-label="Columns">
+            <span className="of-table-edit__axis-name" aria-hidden="true">
+              cols
+            </span>
+            <button
+              type="button"
+              className="of-icon-button"
+              aria-label="Add a column"
+              data-testid="table-add-column"
+              onMouseDown={keepFocus}
+              onClick={() => {
+                reshape('column', 1)
+              }}
+            >
+              <PlusIcon />
+            </button>
+            <button
+              type="button"
+              className="of-icon-button"
+              aria-label="Remove the last column"
+              disabled={width <= 1}
+              data-testid="table-remove-column"
+              onMouseDown={keepFocus}
+              onClick={() => {
+                reshape('column', -1)
+              }}
+            >
+              <MinusIcon />
+            </button>
+          </div>
+          <div className="of-table-edit__axis" role="group" aria-label="Rows">
+            <span className="of-table-edit__axis-name" aria-hidden="true">
+              rows
+            </span>
+            <button
+              type="button"
+              className="of-icon-button"
+              aria-label="Add a row"
+              data-testid="table-add-row"
+              onMouseDown={keepFocus}
+              onClick={() => {
+                reshape('row', 1)
+              }}
+            >
+              <PlusIcon />
+            </button>
+            <button
+              type="button"
+              className="of-icon-button"
+              aria-label="Remove the last row"
+              disabled={draft.rows.length <= 1}
+              data-testid="table-remove-row"
+              onMouseDown={keepFocus}
+              onClick={() => {
+                reshape('row', -1)
+              }}
+            >
+              <MinusIcon />
+            </button>
+          </div>
+        </div>
       </Chrome>
     </div>
   )
+}
+
+/** A region's span across the table, and the table's whole height. */
+function across(
+  region: { x: number; width: number } | null,
+): { x: number; y: number; width: number; height: number } | null {
+  return region === null ? null : { x: region.x, y: 0, width: region.width, height: 1 }
 }
 
 export const tableView = defineObjectView<TableData>({

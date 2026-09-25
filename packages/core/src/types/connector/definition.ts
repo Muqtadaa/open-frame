@@ -1,7 +1,9 @@
 import { defineObjectType } from '../../domain/registry.js'
 import { boundsOfPoints, inflate, rectFromPoints, type Rect } from '../../geometry/rect.js'
 import { distanceToSegment, type Point } from '../../geometry/point.js'
+import { plainTextOf } from '../../domain/rich-text.js'
 import { bendToPoints } from './bend-to-points.js'
+import { labelToText } from './label-to-text.js'
 import { attachmentAnchor, endpointDependencies, resolveEndpoints, type ResolvedEnds } from './geometry.js'
 import type { RouteNormals } from './route.js'
 import {
@@ -171,7 +173,7 @@ export const connectorType = defineObjectType<typeof CONNECTOR_TYPE, ConnectorDa
 
   schema: ConnectorDataSchema,
   currentVersion: CONNECTOR_VERSION,
-  migrations: { 2: bendToPoints },
+  migrations: { 2: bendToPoints, 3: labelToText },
 
   create: (init) => ({
     data: {
@@ -183,7 +185,7 @@ export const connectorType = defineObjectType<typeof CONNECTOR_TYPE, ConnectorDa
       points: init?.points ?? [],
       startArrow: init?.startArrow ?? 'none',
       endArrow: init?.endArrow ?? 'arrow',
-      text: init?.text ?? '',
+      text: init?.text ?? [{ text: '' }],
       // Null, not absent: a new line's label has not been moved, and that is
       // a thing the data says rather than a thing it leaves out.
       label: init?.label ?? null,
@@ -203,22 +205,24 @@ export const connectorType = defineObjectType<typeof CONNECTOR_TYPE, ConnectorDa
     selectsAsUnit: false,
     connectable: false,
     /*
-     * The line's, then the LABEL's. A connector is the one type whose text is
-     * a caption on something rather than its content, so it takes the
-     * whole-object marks — a sticky's body text takes its own per span,
-     * through the rich-text editor, and no type declares both.
+     * The line's, then the LABEL's colour and plate. Its bold, italic,
+     * underline and size are the label's own spans now (ADR 0014), set in the
+     * editor like every other text — declaring them here as well would be two
+     * controls for one question.
+     */
+    /*
+     * `strokeColor` IS the line. It also declared `color`, which painted the
+     * same line through a fallback — two controls for one question, the second
+     * silently winning, and a record panel offering "surface" for something
+     * that has none. Boards that set `color` on a connector still draw it:
+     * the view falls back to it, it simply is not offered any more.
      */
     styleProps: [
-      'color',
       'textColor',
       'strokeColor',
       'stroke',
       'dash',
       'opacity',
-      'bold',
-      'italic',
-      'underline',
-      'textSize',
       'labelFill',
     ],
   },
@@ -263,9 +267,9 @@ export const connectorType = defineObjectType<typeof CONNECTOR_TYPE, ConnectorDa
   ],
 
   fields: [
-    { key: 'routing', label: 'Route', kind: 'select', options: ROUTINGS },
-    { key: 'startArrow', label: 'Start', kind: 'select', options: ARROWHEADS },
-    { key: 'endArrow', label: 'End', kind: 'select', options: ARROWHEADS },
+    { key: 'routing', meaning: 'shape', label: 'Route', kind: 'select', options: ROUTINGS },
+    { key: 'startArrow', meaning: 'shape', label: 'Start', kind: 'select', options: ARROWHEADS },
+    { key: 'endArrow', meaning: 'shape', label: 'End', kind: 'select', options: ARROWHEADS },
   ],
 
   /**
@@ -447,7 +451,7 @@ export const connectorType = defineObjectType<typeof CONNECTOR_TYPE, ConnectorDa
        * bend in the line instead, which then moved the text and looked for
        * all the world like it had worked.
        */
-      ...(object.data.text.trim() === ''
+      ...(plainTextOf(object.data.text).trim() === ''
         ? []
         : [
             {
@@ -684,10 +688,13 @@ export const connectorType = defineObjectType<typeof CONNECTOR_TYPE, ConnectorDa
   },
 
   describe: (object) => ({
-    searchText: object.data.text,
-    summary: object.data.text.trim() === '' ? 'Connector' : `Connector: ${object.data.text}`,
+    searchText: plainTextOf(object.data.text),
+    summary:
+      plainTextOf(object.data.text).trim() === ''
+        ? 'Connector'
+        : `Connector: ${plainTextOf(object.data.text)}`,
     fields: {
-      text: object.data.text,
+      text: plainTextOf(object.data.text),
       routing: object.data.routing,
       // Declared, so described. The contract test refuses a field a type
       // offers but never reports — the guard that stops a declaration being

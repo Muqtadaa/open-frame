@@ -2,7 +2,7 @@ import { useState, type MouseEvent } from 'react'
 
 import { HOME_HREF } from '../app/route.js'
 import { useOpenFrame } from '../runtime/context.js'
-import { BackIcon } from './icons.js'
+import { BackIcon } from '../controls/icons.js'
 
 /**
  * The way out of a board.
@@ -47,7 +47,7 @@ export function BoardExit() {
       href={HOME_HREF}
       data-testid="board-exit"
       aria-label="All boards"
-      title="All boards"
+      data-tip="All boards"
       aria-busy={leaving}
       onClick={leave}
     >

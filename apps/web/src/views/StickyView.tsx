@@ -60,6 +60,7 @@ function StickyEditor({ object, Chrome, onCommit, onCancel }: ObjectEditorProps<
 
 export const stickyView = defineObjectView<StickyData>({
   type: 'sticky',
+  defaultColor: 'yellow',
   Renderer: StickyRenderer,
   InlineEditor: StickyEditor,
 })

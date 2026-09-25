@@ -304,6 +304,15 @@ export function DisclosureIcon({ className }: IconProps) {
   )
 }
 
+/** The eyedropper: pick a colour from anywhere on the screen. */
+export function DropperIcon({ className }: IconProps) {
+  return (
+    <svg {...base} className={className}>
+      <path d="M17.5 3.5a2.6 2.6 0 0 1 3 3l-2.4 2.4 1 1-2 2-1-1-6.6 6.6-3.4.9.9-3.4 6.6-6.6-1-1 2-2 1 1Z" />
+    </svg>
+  )
+}
+
 /** Replaces a `\u00d7` text glyph, for the same reason. */
 export function CloseIcon({ className }: IconProps) {
   return (
@@ -547,6 +556,30 @@ export function LockIcon({ className }: IconProps) {
     <svg {...base} className={className}>
       <rect x={5} y={10.5} width={14} height={9.5} rx={2} />
       <path d="M8.2 10.5V7.8a3.8 3.8 0 0 1 7.6 0v2.7" />
+    </svg>
+  )
+}
+
+/** Three items, each with a dot: a bulleted list. */
+export function BulletListIcon({ className }: IconProps) {
+  return (
+    <svg {...base} className={className}>
+      <path d="M10 6h10M10 12h10M10 18h10" />
+      <circle cx="5" cy="6" r="1" fill="currentColor" />
+      <circle cx="5" cy="12" r="1" fill="currentColor" />
+      <circle cx="5" cy="18" r="1" fill="currentColor" />
+    </svg>
+  )
+}
+
+/** Three items, counted: a numbered list. Drawn, not typed, like every glyph here. */
+export function NumberListIcon({ className }: IconProps) {
+  return (
+    <svg {...base} className={className}>
+      <path d="M10 6h10M10 12h10M10 18h10" />
+      <path d="M4 4.5l1.2-.8V8" />
+      <path d="M3.6 10.6a1.2 1.2 0 0 1 2.2.6c0 .9-2.2 1.9-2.2 2.8h2.4" />
+      <path d="M3.6 16.2h2.2l-1.2 1.5a1.1 1.1 0 1 1-1 1.7" />
     </svg>
   )
 }

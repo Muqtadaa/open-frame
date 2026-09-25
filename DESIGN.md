@@ -2,165 +2,233 @@
 name: OpenFrame
 description: An engineering quadrille page that treats every mark on it as a record, with a second world for after hours.
 colors:
-  bg: "#eef2f6"
-  page: "#f7f9fb"
-  rule: "#e4ebf2"
-  rule-decade: "#c9d6e4"
-  panel: "#ffffff"
-  panel-border: "#c7d2de"
-  control-border: "#758596"
-  ink: "#16202b"
-  ink-muted: "#4e6070"
-  accent: "#1450b5"
-  accent-soft: "#e4ecfa"
-  guide: "#b0197a"
-  danger: "#a3231b"
-  danger-wash: "#f9ebea"
-  danger-edge: "#e0bcb8"
-  hover: "#e8edf3"
-  c-yellow: "#7a5c00"
-  c-green: "#146045"
-  c-blue: "#17529e"
-  c-red: "#8a4038"
-  c-violet: "#5b3ba8"
-  c-orange: "#8c4715"
-  c-gray: "#3f5163"
-  c-pink: "#8f2a67"
-  c-brown: "#6a4a2a"
-  c-black: "#16202b"
-  c-white: "#ffffff"
-  s-yellow: "#ffe9a3"
-  s-green: "#bff0d4"
-  s-blue: "#cfe2ff"
-  s-red: "#ffd5d0"
-  s-violet: "#e3daff"
-  s-orange: "#ffddb8"
-  s-gray: "#dfe5ec"
-  s-pink: "#ffd4ef"
-  s-brown: "#e8dcc6"
-  s-black: "#16202b"
-  s-white: "#ffffff"
+  bg: '#eef2f6'
+  page: '#f7f9fb'
+  rule: '#e4ebf2'
+  rule-decade: '#c9d6e4'
+  panel: '#ffffff'
+  panel-border: '#c7d2de'
+  control-border: '#758596'
+  ink: '#16202b'
+  ink-muted: '#4e6070'
+  accent: '#1450b5'
+  accent-soft: '#e4ecfa'
+  guide: '#b0197a'
+  danger: '#a3231b'
+  danger-wash: '#f9ebea'
+  danger-edge: '#e0bcb8'
+  hover: '#e8edf3'
+  c-yellow: '#7a5c00'
+  c-green: '#146045'
+  c-blue: '#17529e'
+  c-red: '#8a4038'
+  c-violet: '#5b3ba8'
+  c-orange: '#8c4715'
+  c-gray: '#3f5163'
+  c-pink: '#8f2a67'
+  c-brown: '#6a4a2a'
+  c-black: '#16202b'
+  c-white: '#ffffff'
+  s-yellow: '#ffe9a3'
+  s-green: '#bff0d4'
+  s-blue: '#cfe2ff'
+  s-red: '#ffd5d0'
+  s-violet: '#e3daff'
+  s-orange: '#ffddb8'
+  s-gray: '#dfe5ec'
+  s-pink: '#ffd4ef'
+  s-brown: '#e8dcc6'
+  s-black: '#16202b'
+  s-white: '#ffffff'
 typography:
   display:
-    fontFamily: "ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, sans-serif"
-    fontSize: "22px"
+    fontFamily: 'ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, sans-serif'
+    fontSize: '22px'
     fontWeight: 400
     lineHeight: 1.3
   body:
-    fontFamily: "ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, sans-serif"
-    fontSize: "15px"
+    fontFamily: 'ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, sans-serif'
+    fontSize: '15px'
     fontWeight: 400
     lineHeight: 1.35
   shape-label:
-    fontFamily: "ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, sans-serif"
-    fontSize: "14px"
+    fontFamily: 'ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, sans-serif'
+    fontSize: '14px'
     fontWeight: 400
     lineHeight: 1.3
   ui:
-    fontFamily: "ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, sans-serif"
-    fontSize: "15px"
+    fontFamily: 'ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, sans-serif'
+    fontSize: '15px'
     fontWeight: 400
     lineHeight: 1.3
   ui-small:
-    fontFamily: "ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, sans-serif"
-    fontSize: "13px"
+    fontFamily: 'ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, sans-serif'
+    fontSize: '13px'
     fontWeight: 400
     lineHeight: 1
+  title:
+    fontFamily: 'ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, sans-serif'
+    fontSize: '17px'
+    fontWeight: 600
+    lineHeight: 1.3
+  headline:
+    fontFamily: 'ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, sans-serif'
+    fontSize: '19px'
+    fontWeight: 600
+    lineHeight: 1.35
   record:
-    fontFamily: "ui-monospace, SFMono-Regular, Menlo, Consolas, Liberation Mono, monospace"
-    fontSize: "12px"
+    fontFamily: 'ui-monospace, SFMono-Regular, Menlo, Consolas, Liberation Mono, monospace'
+    fontSize: '12px'
     fontWeight: 400
     lineHeight: 1
-    letterSpacing: "0.02em"
+    letterSpacing: '0.02em'
 rounded:
-  square: "0px"
-  slip: "2px"
-  apparatus: "4px"
-  panel: "6px"
-  control: "7px"
-  surface: "10px"
-  round: "50%"
+  hair: '1px'
+  slip: '2px'
+  apparatus: '4px'
+  control: '6px'
+  surface: '10px'
+  grip: '25%'
+  round: '50%'
+  capsule: '999px'
 spacing:
-  hair: "2px"
-  tight: "4px"
-  snug: "6px"
-  base: "8px"
-  gutter: "10px"
-  margin: "12px"
+  space-2: '2px'
+  space-4: '4px'
+  space-6: '6px'
+  space-8: '8px'
+  step: '10px'
+  space-12: '12px'
+  space-16: '16px'
+  gutter: '20px'
 components:
   tool:
-    backgroundColor: "transparent"
-    textColor: "{colors.ink-muted}"
-    rounded: "8px"
-    size: "40px"
+    backgroundColor: 'transparent'
+    textColor: '{colors.ink-muted}'
+    rounded: '{rounded.control}'
+    size: '50px'
   tool-hover:
-    backgroundColor: "{colors.accent-soft}"
-    textColor: "{colors.ink}"
+    backgroundColor: '{colors.accent-soft}'
+    textColor: '{colors.ink}'
   tool-active:
-    backgroundColor: "{colors.accent-soft}"
-    textColor: "{colors.accent}"
+    backgroundColor: '{colors.accent-soft}'
+    textColor: '{colors.accent}'
   tool-tip:
-    backgroundColor: "{colors.ink}"
-    textColor: "{colors.page}"
-    typography: "{typography.ui-small}"
-    rounded: "{rounded.panel}"
-    padding: "5px 8px"
+    backgroundColor: '{colors.ink}'
+    textColor: '{colors.page}'
+    typography: '{typography.ui-small}'
+    rounded: '{rounded.control}'
+    padding: '5px 8px'
   rail:
-    backgroundColor: "{colors.page}"
-    rounded: "{rounded.apparatus}"
-    padding: "5px 4px"
+    backgroundColor: '{colors.page}'
+    rounded: '{rounded.apparatus}'
+    padding: '5px'
   status:
-    backgroundColor: "{colors.page}"
-    textColor: "{colors.ink-muted}"
-    typography: "{typography.record}"
-    rounded: "{rounded.apparatus}"
-    padding: "4px 10px 4px 5px"
+    backgroundColor: '{colors.page}'
+    textColor: '{colors.ink-muted}'
+    typography: '{typography.record}'
+    rounded: '{rounded.apparatus}'
+    padding: '5px 10px'
   zoom:
-    backgroundColor: "{colors.page}"
-    textColor: "{colors.ink-muted}"
-    rounded: "{rounded.apparatus}"
-    padding: "4px 6px"
+    backgroundColor: '{colors.page}'
+    textColor: '{colors.ink-muted}'
+    rounded: '{rounded.apparatus}'
+    padding: '5px'
   inspector:
-    backgroundColor: "{colors.panel}"
-    textColor: "{colors.ink}"
-    rounded: "{rounded.panel}"
-    padding: "9px 10px 11px"
-    width: "276px"
+    backgroundColor: '{colors.panel}'
+    textColor: '{colors.ink}'
+    rounded: '{rounded.surface}'
+    padding: '10px'
+    width: '360px'
   field-label:
-    textColor: "{colors.ink-muted}"
-    typography: "{typography.record}"
-    width: "52px"
+    textColor: '{colors.ink-muted}'
+    typography: '{typography.record}'
+    width: '82px'
   swatch:
-    rounded: "{rounded.slip}"
-    size: "30px"
-    layout: "6-column grid"
+    rounded: '{rounded.slip}'
+    size: '30px'
+    layout: '6-column grid'
   choice-item:
-    backgroundColor: "transparent"
-    textColor: "{colors.ink-muted}"
-    rounded: "5px"
-    size: "28px"
+    backgroundColor: 'transparent'
+    textColor: '{colors.ink-muted}'
+    rounded: '{rounded.apparatus}'
+    width: '28px'
+    height: '26px'
   choice-item-on:
-    backgroundColor: "{colors.panel}"
-    textColor: "{colors.accent}"
+    backgroundColor: '{colors.panel}'
+    textColor: '{colors.accent}'
   menu:
-    backgroundColor: "{colors.panel}"
-    rounded: "{rounded.surface}"
-    padding: "5px"
+    backgroundColor: '{colors.panel}'
+    rounded: '{rounded.surface}'
+    padding: '5px'
   menu-item:
-    backgroundColor: "transparent"
-    textColor: "{colors.ink}"
-    typography: "{typography.ui}"
-    rounded: "{rounded.panel}"
-    padding: "6px 9px"
+    backgroundColor: 'transparent'
+    textColor: '{colors.ink}'
+    typography: '{typography.ui}'
+    rounded: '{rounded.control}'
+    padding: '6px 9px'
   menu-item-hover:
-    backgroundColor: "{colors.accent-soft}"
+    backgroundColor: '{colors.accent-soft}'
+  button:
+    backgroundColor: '{colors.panel}'
+    textColor: '{colors.ink}'
+    rounded: '{rounded.control}'
+    padding: '0 12px'
+    height: '30px'
+  button-hover:
+    backgroundColor: '{colors.hover}'
+  button-primary:
+    backgroundColor: '{colors.accent}'
+    textColor: '{colors.panel}'
+    rounded: '{rounded.control}'
+    padding: '0 12px'
+    height: '30px'
+  button-primary-large:
+    backgroundColor: '{colors.accent}'
+    textColor: '{colors.panel}'
+    rounded: '{rounded.control}'
+    padding: '0 18px'
+    height: '40px'
+  button-ghost:
+    backgroundColor: 'transparent'
+    textColor: '{colors.ink-muted}'
+    rounded: '{rounded.control}'
+    height: '30px'
+  icon-button:
+    backgroundColor: 'transparent'
+    textColor: '{colors.ink-muted}'
+    rounded: '{rounded.control}'
+    size: '30px'
+  icon-button-hover:
+    backgroundColor: '{colors.hover}'
+    textColor: '{colors.ink}'
+  icon-button-on:
+    backgroundColor: '{colors.accent-soft}'
+    textColor: '{colors.accent}'
+  field:
+    backgroundColor: '{colors.page}'
+    textColor: '{colors.ink}'
+    rounded: '{rounded.control}'
+    padding: '5px 10px'
+    height: '30px'
+  field-large:
+    backgroundColor: '{colors.page}'
+    textColor: '{colors.ink}'
+    rounded: '{rounded.control}'
+    padding: '8px 12px'
+    height: '40px'
+  tip:
+    backgroundColor: '{colors.ink}'
+    textColor: '{colors.page}'
+    typography: '{typography.record}'
+    rounded: '{rounded.control}'
+    padding: '6px 8px'
   sticky:
-    typography: "{typography.body}"
-    rounded: "{rounded.slip}"
-    padding: "13px"
+    typography: '{typography.body}'
+    rounded: '{rounded.slip}'
+    padding: '13px'
   frame:
-    backgroundColor: "transparent"
-    rounded: "{rounded.slip}"
+    backgroundColor: 'transparent'
+    rounded: '{rounded.slip}'
 ---
 
 # Design System: OpenFrame
@@ -173,7 +241,7 @@ The board is a laboratory record, not a drawing surface. The register is the
 engineering computation pad: cold blue-grey stock, a cyan-grey quadrille ruling
 at world scale, blue-black ink that is never pure black, and one correction red
 that appears only where something is being undone or removed. Content arrives as
-coloured index slips laid *on* the page — the one place in the system that is
+coloured index slips laid _on_ the page — the one place in the system that is
 allowed real physical depth.
 
 It refuses two things explicitly. The first is the canvas-app default: a neutral
@@ -356,7 +424,7 @@ the panel is not entitled to overrule.
 ### Named Rules
 
 **The Ground Is Not A Control Rule.** The quadrille is ruled below the 3:1
-non-text floor on purpose, and the build asserts a *ceiling* as well as a floor:
+non-text floor on purpose, and the build asserts a _ceiling_ as well as a floor:
 the fine rule stays under 2:1 against the page and the decade rule between 1.2:1
 and 2.5:1. Ground you cannot ignore is a cage the content has to fight. A future
 "improve contrast" pass must not raise it.
@@ -366,7 +434,7 @@ Content red is held more than 30 units of sRGB distance away from it, because
 when the two sat close a red slip on the page read as a correction mark and the
 record panel offered the correction hue as an ordinary choice.
 
-**The Token Name Rule.** Documents store token *names*, never colour values. The
+**The Token Name Rule.** Documents store token _names_, never colour values. The
 one place a name becomes a CSS variable is `scene/style-tokens.ts`. This is
 load-bearing: a theme can change without touching a single saved board, and any
 restyle must preserve it.
@@ -400,6 +468,13 @@ columns rather than as ransom text.
 - **Record** (400, 12px, mono, 0.02em): the record line, the record panel's
   subject and field labels, slider readings, keyboard shortcuts, the wheel-mode
   value. Lowercase, never uppercase-tracked.
+- **Title** (600, 17px): the one heading a gate or a sheet carries — "This board
+  has a password".
+- **Headline** (600, 19px): the wordmark on the front door, beside the mark.
+
+In the stylesheet these are seven steps of `--of-type-*` — `record` 12,
+`ui-small` 13, `control` 14 (buttons, fields and a shape's label), `ui` 15
+(which is also a sticky's body), `title` 17, `headline` 19, `display` 22.
 
 ### Named Rules
 
@@ -407,6 +482,15 @@ columns rather than as ransom text.
 shortcuts and readouts included. Nothing a user must read goes below it. It was
 eleven until 2026-09-19; a floor is the least you will accept, and this one had
 become the size of nearly everything, which is a different thing.
+
+It was also written down a week before it was true: this file said twelve while
+27 rules in the stylesheet still said eleven, because a floor in prose is a
+floor nothing measures. `design-tokens.test.ts` now reads every absolute
+`font-size` in the stylesheet and fails below 12px, with no exemptions.
+
+**The Ramp Rule.** Every interface size names a step of `--of-type-*`, and
+`design-tokens.test.ts` fails on a literal. Text INSIDE an object scales in `em`
+from the object's own size and is not on the ramp — that is the user's material.
 
 **The Mono Is A Record Rule.** Mono marks records and measurement — counts, zoom,
 field values, shortcuts — and nothing else. It is never applied to make something
@@ -420,15 +504,21 @@ no font fetch; the stacks above are the faces.
 The board is edge to edge and owns the viewport; chrome is a set of absolutely
 positioned overlays that are click-through except where they paint.
 
-- **Left margin gutter** — the creation rail, vertically centred, 12px from the
-  edge, 40px square tools in a 48px-wide rail.
-- **Top centre** — notices and toasts, capped at `min(720px, 100vw - 140px)`.
-- **Bottom left** — the record line, offset 72px to clear the rail's real
-  footprint (48px rail + 12px margin), 12px from the bottom.
-- **Bottom right** — the zoom cluster, 12px from both edges.
-- **Floating** — the record panel, placed beside the selection with a 14px gap,
+- **Top left** — the navigation bar: the way out, the board's name, history
+  and the rest of the record line, 20px from both edges. Everything else
+  anchored to the top starts under it, at `--of-nav-band` (80px).
+- **Left margin gutter** — the creation rail, centred in the band from under
+  the navigation bar to the bottom gutter, 50px square tools in a rail with
+  a hairline.
+- **Top centre** — notices and toasts, under the navigation bar, capped at
+  `min(720px, 100vw - 140px)`.
+- **Bottom right** — the zoom cluster, 20px from both edges.
+- **Floating** — the record panel, placed beside the selection with a 42px gap
+  (clear of the connection points, which reach 38px out from the edge),
   preferring the selection's right edge, falling back to its left, then above or
-  below, always clamped inside the viewport and clear of the rail (84px).
+  below, always clamped inside the viewport, clear of the rail (100px) and
+  clear of the furniture along both edges — the navigation bar at the top and
+  the zoom cluster at the bottom — unless it hangs from that furniture.
 
 **The interface sits on the page's own rule.** `GRID_SIZE` is 10 world units and
 the quadrille draws it, so the chrome measures itself in the same steps — every
@@ -436,13 +526,13 @@ height and offset is a multiple of ten. A control's edge lands where a rule
 does, and the apparatus shares the rhythm of the thing it sits on instead of
 floating at sizes nobody chose.
 
-| Token | Size | What it is |
-| --- | --- | --- |
-| `--of-step` | 10px | the rule, and the gap between things on a line |
-| `--of-hit-sm` | 30px | a secondary control inside apparatus |
-| `--of-hit` | 40px | anything you operate: a field, a button, a record row |
-| `--of-hit-lg` | 50px | a list row, a primary action, and a creation tool |
-| `--of-gutter` | 20px | from the viewport edge |
+| Token         | Size | What it is                                            |
+| ------------- | ---- | ----------------------------------------------------- |
+| `--of-step`   | 10px | the rule, and the gap between things on a line        |
+| `--of-hit-sm` | 30px | a secondary control inside apparatus                  |
+| `--of-hit`    | 40px | anything you operate: a field, a button, a record row |
+| `--of-hit-lg` | 50px | a list row, a primary action, and a creation tool     |
+| `--of-gutter` | 20px | from the viewport edge                                |
 
 `--of-hit-lg` clears the 44px AAA target with room over; `--of-hit-sm` is
 comfortably past the 24px AA floor rather than sitting on it. **Board content
@@ -450,20 +540,25 @@ keeps its own sizes** — a sticky is still 15px and a text object still 22px,
 because that is the user's material and changing it would restyle every
 document ever saved.
 
-**Spacing rhythm** runs on even small steps: 2px between sibling controls, 5px
+**Spacing rhythm** runs on even small steps — `--of-space-2/4/6/8/12/16` below
+the rule, `--of-step` and `--of-gutter` on it: 2px between sibling controls, 6px
 of padding inside apparatus, 10px between a label and its value, 20px from the
-viewport edge. Tool icons are 21px inside a 40px target; secondary icons are
-16–17px; the disclosure arrow is 12px.
+viewport edge.
+
+**The Even Step Rule.** Every padding, margin and gap from 2px to 20px names a
+step, and `design-tokens.test.ts` fails on a literal. Sixteen values were in use,
+and a 3, 5, 7 and 9 beside the 2, 4, 6 and 8 they were meant to be was drift
+rather than a decision; they rounded up, onto the scale. Above 20px a length is
+a size, not rhythm. Tool icons are 21px inside a 50px target; secondary icons are
+16–17px; the arrow in a tool's options strip is 10px.
 
 **World rhythm** is the quadrille: `GRID_SIZE` is 10 world units, snapping lands
 on it, and the decade rule marks the line the user is aiming at.
 
 **Responsive.** Two breakpoints, both structural rather than cosmetic. Below
-**820px** the two bottom clusters would collide, so the record line un-offsets to
-12px and drops its counts, and the zoom cluster drops its slider — both are
-readouts and coarse controls the canvas itself already provides; the controls
-with no other route stay. Below **560px** the record line moves above the rail
-entirely (64px from the bottom).
+**820px** the navigation bar moves to 12px from the edge and drops its counts,
+and the zoom cluster drops its slider — both are readouts and coarse controls
+the canvas itself already provides; the controls with no other route stay.
 
 ### Named Rules
 
@@ -475,7 +570,7 @@ something is selected.
 
 Almost flat. Depth is carried by tonal layering — desk, page, panel — and by
 hairline margin rules. There are exactly two elevations, and they mean different
-things: apparatus is *printed near* the page, and content slips *sit on* it.
+things: apparatus is _printed near_ the page, and content slips _sit on_ it.
 
 ### Shadow Vocabulary
 
@@ -521,9 +616,10 @@ Everything else is feedback or continuity, and there is not much of it:
   edge. Both use the sheet's raise-and-fade, because a surface that simply
   appears beside a control leaves you to work out the relationship yourself.
 
-Timing is `--of-quick` (140ms) for feedback and `--of-settle` (240ms) for the
-ledger, on `cubic-bezier(0.16, 1, 0.3, 1)` — a confident arrival. **No bounce:**
-a ledger entry does not overshoot. The stagger is 28ms and capped at six rows,
+Timing is `--of-quick` (140ms) for feedback, `--of-settle` (240ms) for the
+ledger and `--of-hold` (600ms) for an acknowledgement that stays where the
+click landed, on `cubic-bezier(0.16, 1, 0.3, 1)` — a confident arrival. **No bounce:**
+a ledger entry does not overshoot. The stagger (`--of-stagger`) is 28ms and capped at six rows,
 because an eleventh row arriving eleven beats late is a list that feels slow,
 which is the opposite of what a stagger is for.
 
@@ -553,12 +649,18 @@ its row is tight, which is what a long name did to one.
 ## Shapes
 
 Corners are small and get smaller the closer a form is to the page. Anything that
-reads as *stock laid on the page* — sticky notes, frames, colour swatches — is cut
+reads as _stock laid on the page_ — sticky notes, frames, colour swatches — is cut
 at **2px**, essentially square. Apparatus that lives in the margins — rail, record
-line, zoom cluster — is **4px**. Interactive beds inside a panel are **5–8px**, and
-overlays that appear over the board without belonging to it — menus, flyouts,
-notices, toasts — are **10px**. Only two things are fully round: the rotate handle
-and connector endpoints, where roundness signals a grab point.
+line, zoom cluster — is **4px**. A control you press — a button, a field, a
+menu item, a segmented bed — is **6px**, and an item nested inside a bed takes
+the step below (4px), so the curves stay concentric. Overlays that appear over
+the board without belonging to it — menus, flyouts, notices, toasts — are
+**10px**. Round is spent on grab points: connection points and endpoints, with
+the rotate grip and the lock badge on a softer 25%.
+
+**The Radius Scale Rule.** Every corner names a step of `--of-radius-*` in
+`:root`; `design-tokens.test.ts` fails on a literal. The 5–8px band this file
+used to describe was four different numbers for one idea.
 
 Borders are hairlines: 1px `panel-border` on apparatus, 1px `control-border` on
 anything whose edge you must see to operate it, 1px dashed `panel-border` on
@@ -567,43 +669,104 @@ absent or unreadable content over a 45° hatched fill. The selection frame is a
 
 Icons are drawn, not typed: an inline 24×24 set at a single 1.6 stroke weight,
 round caps and joins, inheriting `currentColor` so active and hover states are
-pure CSS. There is no icon font and no icon library.
+pure CSS. There is no icon font and no icon library. The set is `controls/icons.tsx` —
+a leaf, so a view can reach it — and an `<svg>` anywhere else must be drawing
+content (a shape, a line, a pointer, a specimen), which `controls/icons.test.ts`
+holds. Letters that ARE the subject stay letters: the format bar's A− and A+
+are type specimens, and "3 × 4" is a readout.
 
 ## Components
 
 ### Tool Rail
 
-Creation only — select, hand, sticky, text, shape, frame, connect, then a ruled
-divider and image. Selection actions are not in the rail. Tools are 40px squares
-(the AA 2.5.8 target minimum is 24; a tool reached for constantly deserves more
-than the floor) with 21px icons, muted ink at rest, ink on an accent wash on
-hover, accent on accent wash when active, 0.35 opacity when disabled. The shape
-slot carries a 16px disclosure that opens a two-column flyout of eight shapes.
+Three runs, with a ruled divider between each, and each a labelled group for a
+screen reader: **navigate** (select, hand), **make** (sticky, text, shape,
+frame, connect, table, code, image) and **annotate** (comment). Image is made
+like everything else in its run; it is a button rather than a mode only because
+it needs a file first. Selection actions are not in the rail.
+
+Tools are 50px squares (`--of-hit-lg`, a whole decade of the rule; the AA 2.5.8
+target minimum is 24, and a tool reached for constantly deserves more than the
+floor) with 21px icons, muted ink at rest, ink on an accent wash on hover, and
+the page's colour on a **filled ink bed** when armed — different in kind from
+hover, not only in hue, so the tool you are holding reads at a glance. The pair
+is measured off the rule in `design-tokens.test.ts`. The rail is centred in the band between the
+navigation bar and the bottom gutter and never crosses either: as the window
+shortens the tools step down a decade at a time — 40px below 720 tall, 30px
+below 604 — and only below 494 does the rail scroll, because a scrolling box
+clips the tips.
+
+Shape and Table have options. Pressing the ARMED tool opens them; a 12px strip
+in the rail's padding, beside the tool and never inside it, is the pointer's
+shortcut to the same menu. Opening moves focus in; Escape or a press elsewhere
+closes it and hands focus back. The shape menu walks with the arrows; the size
+grid is one Tab stop of 24px cells that the arrows resize, read out as
+"4 columns × 2 rows". U still cycles the shape kind; nothing on the rail does.
 
 ### Tool Tip
 
 The label, not a standing caption: eleven standing captions were most of the old
 rail's height. Ink-filled, page-coloured text at 12px, 6px radius, 10px to the
-right of the tool, fading in over 110ms and suppressed under
+right of the tool, fading in over `--of-quick` (140ms) and suppressed under
 `prefers-reduced-motion`. It appears on **hover and on keyboard focus** — a
-tooltip only a mouse can summon is not a label. The shortcut inside it is 11px
+tooltip only a mouse can summon is not a label. The shortcut inside it is 12px
 mono in decade-rule grey.
 
-### Record Line
+### Format Bar
 
-The bottom-left readout: undo/redo actions, ruled dividers, object and selection
-counts, zoom percentage, and the AGPL source link (underlined by a 1px
-`currentcolor` border, going accent on hover). All 11px mono, muted ink, with
-counts bolded to 600 in full ink. Its counts are the first thing dropped on a
-narrow viewport.
+One bar for every text — a note, a text box, a shape's label, a slip, a
+connector's label, a frame's title and a table cell (ADR 0014). Bold, italic,
+underline and strike as letters that show the mark; A− and A+ stepping the
+size; then bulleted and numbered lists, drawn as icons. It floats above the
+text being edited, and inside a table it is the first row of the cell bar,
+driving the cell with the caret. Its shortcuts are every document editor's:
+Mod+B/I/U, Mod+Shift+8 and Mod+Shift+7; "- ", "* " and "1. " start a list as
+you type, Tab nests an item and Enter on an empty one ends the list. Lists are
+drawn by the stylesheet — •, ◦, ▪ and 1., a., i. by depth — never typed.
+
+### Tips on Everything Else
+
+Every other control that needs a word says it the same way: the label in ink,
+page-coloured 12px text at the control radius, above the control (the zoom
+cluster hangs its tips from their right edge so none leaves the window). It
+answers keyboard focus at once and a resting pointer after `--of-dwell`
+(400ms), so a pointer crossing the chrome is not a flurry. It is `data-tip`
+on the control, drawn by the stylesheet, with the same text as an
+`aria-description` — which is what the browser's `title` had been doing for
+assistive tech while showing sighted keyboard users nothing, on forty-two
+controls. `title` survives only where it reveals content: an ellipsised field
+label and a comment pin's excerpt.
+
+### Navigation Bar (the Record Line)
+
+Along the top, where a page's heading is looked for: "All boards" and the
+board's name lead it, then undo/redo, ruled dividers, object and selection
+counts, the AGPL source link (underlined by a 1px `currentcolor` border, going
+accent on hover), sharing, mentions, account and theme. The name is the page's
+heading, so it is set in the interface's own voice — 15px sans at 600 in full
+ink — and "All boards" at the control size and 500; everything that is a
+readout stays a record, 12px mono and muted, with counts bolded to 600 in full
+ink. Its tips and sheets open downward. Its counts are the first thing dropped
+on a narrow viewport.
 
 ### Zoom Cluster
 
-Bottom-right, mono throughout. Icon buttons at 16px, a ruled separator, a
-wheel-mode value at 11px (mono and small so it reads as a *setting* beside its
-icon, not a panel title), a 104px measurement slider and a 54px tabular-numeral
-percentage that becomes an inline editor on an accent-soft bed with a 1px accent
+Bottom-right, mono throughout. 30px buttons (`--of-hit-sm`) carrying 16px
+icons, a ruled separator, a wheel-mode value at 12px (mono and small so it reads
+as a _setting_ beside its icon, not a panel title), a 104px measurement slider
+and a 60px, 13px tabular-numeral percentage that becomes an inline editor on an accent-soft bed with a 1px accent
 outline.
+
+### Icon Buttons
+
+A glyph on no ground that takes a bed when you reach for it: 30px
+(`--of-hit-sm`) at its smallest, muted ink at rest, ink on the hover wash,
+accent on the accent wash when pressed (the state an active tool takes), and
+correction red on hover only when it removes something. The record line's
+history, the zoom cluster, the arrange and format bars, the record panel's
+remove and the front door's row actions are all this one control; six private
+versions at 24, 26, 28 and 30px were folded into it, and the three under 30
+were under this world's own target.
 
 ### Measurement Sliders
 
@@ -614,12 +777,48 @@ to a ruled page.
 
 ### Record Panel (Inspector)
 
-The signature component. A 276px panel on panel white that floats beside the
-selection and exists only while something is selected. Its head names the subject
-the way a specimen label does — 11px mono, lowercase, tracked 0.02em — beside a
-remove action that takes correction red only on hover. Below a hairline divider,
-each property is a record row: a 52px right-aligned mono label column and a value
-column, 30px minimum row height.
+The signature component. A 360px panel on panel white that floats beside the
+selection and exists only while something is selected, cut from the one
+contextual surface (10px, below).
+
+**Its head names the thing.** The type as a title in the interface's own
+voice (15px, 600, ink — "Evidence", "Journey stage") with what the object says
+beneath it in one muted line; a mixed selection reads "2 objects" over what it
+is made of ("sticky · shape"). It used to be the type id in 12px muted mono —
+the faintest text in the panel, on the line that should carry the most — and
+this is the one place the panel can show that a note and a piece of evidence
+are the same object with a different payload.
+
+**A record comes before its appearance.** A type that carries semantic fields
+gets two bands, named as specimen labels in the front door's register —
+`record` above, `appearance` below — so the half that means something and the
+half that dresses it no longer share one grammar. An empty record field has a
+dashed edge and an "e.g." example in italic, so an unsourced slip never reads
+as sourced.
+
+Each property is a record row: an 82px right-aligned mono label column and a
+value column, 40px (`--of-hit`) minimum row height. The width is arithmetic,
+not taste: 82px holds eleven 12px mono characters, so a type-declared label
+such as "participant" is never clipped into a different word, and what is
+left must still take a full row of the swatch grid. `design-tokens.test.ts`
+does that sum on every build.
+
+**Each word names one thing.** The colour targets are surface, text, outline
+and label; "fill" is only the none / tint / solid row and "dash" the line's
+pattern — they used to share "fill" and "line" between two controls each —
+and vertical alignment is "vertical", not "down". A new object's colour is
+marked even though nobody chose it: each view declares the colour it is drawn
+in (`defaultColor`), and a test renders every one to hold it to that.
+
+**A keyboard crosses it.** Delete is last in the panel's order, drawn in its
+top corner; each radio row is one Tab stop whose arrows move the choice; every
+option is at the 30px secondary target.
+
+**It gets out of the way.** A menu sits over it (`--of-z-menu`), and holding
+Shift — building a selection — makes it step aside, faint and letting the
+pointer through, because the next object is usually under it. Colour and
+opacity preview on the selection while they are aimed and write once, when
+the gesture ends.
 
 **Which fields appear comes from the registry** (`capabilities.styleProps`), never
 from a hardcoded list; adding a property to an object type surfaces it here with
@@ -654,9 +853,9 @@ pressed-index shadow.
 
 ### Context Menu
 
-Panel white, 10px radius, 196px minimum, 13px items at 6px radius with the accent
-wash on hover, shortcuts at 11px in muted ink, groups separated by a hairline
-margin rule.
+Panel white, 10px radius, 196px minimum. Items are 15px UI text in 40px
+(`--of-hit`) rows at 6px radius, taking the accent wash on hover, with shortcuts
+at 12px mono in muted ink. Groups are separated by a hairline margin rule.
 
 ### The Front Door
 
@@ -669,10 +868,10 @@ two same-size panels of white side by side, which is the neutral void this
 world refuses meeting the card scaffold it refuses, on the first screen anybody
 sees. Ruling it and collapsing the panels into one sheet is what made it belong.
 
-- **Ledger rows** — title in UI sans, "how long ago" in 11px mono with tabular
+- **Ledger rows** — title in UI sans, "how long ago" in 12px mono with tabular
   numerals, divided by the margin rule, taking the accent wash on hover. A time
   is a measurement, so it is set as one.
-- **Specimen labels** — section names are 11px mono, lowercase, tracked, muted:
+- **Specimen labels** — section names are 12px mono, lowercase, tracked, muted:
   the same register the record panel uses to name its subject.
 - **Ground** — tiled `linear-gradient` with `background-size`, never
   `repeating-linear-gradient`, whose stops accumulate in floating point across
@@ -680,12 +879,12 @@ sees. Ruling it and collapsing the panels into one sheet is what made it belong.
 
 ### Sharing
 
-A sheet above the record line, the same shape as the account sheet. Two link
-rows at 44px — above the usual floor because this is the one control in the
-product where hitting the wrong one has a consequence — each naming what it
-gives away in the second line, at the 11px functional floor.
+A sheet under its button in the navigation bar, the same shape as the account sheet. Two link
+rows at 50px (`--of-hit-lg`) — the largest target, because this is the one
+control in the product where hitting the wrong one has a consequence — each
+naming what it gives away in the second line, at the 12px functional floor.
 
-**View-only is a record, not a badge**: 11px mono on page stock with a hairline
+**View-only is a record, not a badge**: 12px mono on page stock with a hairline
 and the apparatus radius, sitting in the record line beside the other readouts.
 A pill would have been the third fully-round thing in a world where round means
 "grab me".
@@ -702,7 +901,7 @@ next surface inherits automatically — it has to be applied.
 - **Text** — transparent, 22px/1.3, 0.4 opacity while empty.
 - **Shape** — SVG stroke and fill from the content pair, with a centred 14px label
   inset per shape geometry.
-- **Frame** — a 1px `panel-border` rectangle at 2px radius with its title *above*
+- **Frame** — a 1px `panel-border` rectangle at 2px radius with its title _above_
   it in 13px muted ink, counter-scaled and never clipped.
 - **Connector** — a drawn path with a 12px label that knocks itself out of the
   ground with a 4px desk-coloured paint-order stroke.
@@ -851,12 +1050,12 @@ time presenting as a control that was visible and could not be used.
 
 Every in-place editor inherits the object's own type and drops its border,
 carrying a 2px accent outline instead. Global `:focus-visible` is a 2px accent
-outline at 2px offset with a 3px radius. Browser surfaces are claimed, not
+outline at 2px offset with the apparatus radius (4px). Browser surfaces are claimed, not
 defaulted: selection highlight, caret colour and thin `control-border` scrollbars.
 
 ### Notices and Toasts
 
-Top centre, 10px radius, 13px, contact shadow. Both the advisory and the failure
+Top centre, 10px radius, 15px UI text, contact shadow. Both the advisory and the failure
 pair use the correction wash (`--of-danger-wash`) with a `--of-danger-edge`
 hairline; the failure pair adds correction-red text.
 
@@ -875,7 +1074,7 @@ an enormous area when zoomed out — and offset by the viewport modulo the cell.
 Three weights, because the zoom steps reach 5%:
 
 - **Fine rule** (`rule`, 10 world units) appears at **zoom ≥ 0.7**. At 100% it
-  lands every 10 screen pixels. That density is what quadrille *is*; the answer to
+  lands every 10 screen pixels. That density is what quadrille _is_; the answer to
   it being too busy was ink, not spacing, so every weight is faint.
 - **Decade rule** (`rule-decade`, 100 world units) appears at **zoom ≥ 0.12**. It
   marks the line snapping actually lands on.
@@ -893,7 +1092,7 @@ ground must survive every step of the zoom ladder.
 
 - **Do** cut chrome from the page's own stock (`page`) with a 1px `panel-border`
   margin rule and the contact shadow. Apparatus, never a floating card.
-- **Do** store token *names* in documents and resolve them through
+- **Do** store token _names_ in documents and resolve them through
   `scene/style-tokens.ts`. A restyle must never require touching a saved board.
 - **Do** keep the quadrille below the 3:1 floor, and keep the build test that
   asserts that ceiling.

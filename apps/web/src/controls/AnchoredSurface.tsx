@@ -2,7 +2,7 @@ import { useEffect, useLayoutEffect, useRef, useState, type ReactNode } from 're
 import { createPortal } from 'react-dom'
 
 import { placeAnchored, type Rect, type Side, type Size } from '../scene/anchoring.js'
-import { bottomBand, watchBottomBand } from './screen-furniture.js'
+import { furnitureBands, watchFurnitureBands } from './screen-furniture.js'
 
 /**
  * Anything that floats beside something else, placed once and placed the same.
@@ -31,6 +31,7 @@ export function AnchoredSurface({
   keepClearLeft,
   avoid,
   testId,
+  layer,
   children,
 }: {
   /** What this belongs beside, in screen pixels. */
@@ -45,6 +46,13 @@ export function AnchoredSurface({
   /** Another floating surface to stay off, if any side avoids it. */
   readonly avoid?: Rect | null | undefined
   readonly testId?: string | undefined
+  /**
+   * `menu` paints over every other surface in the layer. Surfaces otherwise
+   * stack in the order they mounted, which put the record panel over an open
+   * context menu whenever the panel was the later of the two to render —
+   * clipping "Promote to evidence" out of the only place it lives.
+   */
+  readonly layer?: 'menu' | undefined
   readonly children: ReactNode
 }) {
   const element = useRef<HTMLDivElement>(null)
@@ -53,8 +61,8 @@ export function AnchoredSurface({
    * The board's screen-edge furniture, which nothing anchored to a selection
    * may be clamped onto: it is anchored to the window and moves for nobody.
    */
-  const [band, setBand] = useState(bottomBand)
-  useEffect(() => watchBottomBand(setBand), [])
+  const [band, setBand] = useState(furnitureBands)
+  useEffect(() => watchFurnitureBands(setBand), [])
 
   /*
    * MEASURED, not estimated. A bar whose width depends on how many controls a
@@ -70,8 +78,15 @@ export function AnchoredSurface({
    */
   // eslint-disable-next-line react-hooks/exhaustive-deps
   useLayoutEffect(() => {
-    const box = element.current?.getBoundingClientRect()
-    if (box === undefined) return
+    /*
+     * The LAYOUT size, not the painted one. Surfaces rise in with a
+     * `scale(0.985)`, and a bounding rect measured on the first frame is that
+     * scaled box — nothing re-renders when the animation ends, so the surface
+     * stayed placed as a slightly smaller one until something else moved.
+     */
+    const node = element.current
+    if (node === null) return
+    const box = { width: node.offsetWidth, height: node.offsetHeight }
     setSize((old) =>
       Math.abs(old.width - box.width) < 1 && Math.abs(old.height - box.height) < 1
         ? old
@@ -93,7 +108,14 @@ export function AnchoredSurface({
     gap,
     margin,
     keepClearLeft,
-    keepClearBottom: band,
+    /*
+     * A MENU is momentary and paints over everything, the furniture included,
+     * so it keeps clear of nothing: made to dodge the navigation bar as well
+     * as the zoom cluster, a context menu on a laptop-height window had less
+     * room than it is tall and ran off the bottom.
+     */
+    keepClearBottom: layer === 'menu' ? 0 : band.bottom,
+    keepClearTop: layer === 'menu' ? 0 : band.top,
     avoid,
   })
 
@@ -109,7 +131,7 @@ export function AnchoredSurface({
        * the object — and every one presented as a control that was visible and
        * could not be used.
        */
-      className="of-chrome of-editor-chrome"
+      className={`of-chrome of-editor-chrome${layer === 'menu' ? ' of-chrome--menu' : ''}`}
       data-testid={testId ?? 'object-chrome'}
       data-side={placed.side}
       style={{ transform: `translate(${String(placed.x)}px, ${String(placed.y)}px)` }}

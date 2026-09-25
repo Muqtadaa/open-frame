@@ -1,4 +1,5 @@
 import type { Tool } from './interaction-store.js'
+import { IS_MAC } from '../scene/platform.js'
 
 /**
  * Keyboard shortcuts, resolved as pure data.
@@ -178,3 +179,12 @@ export function resolveKeyAction(ctx: KeyContext): KeyAction | null {
 export function formatShortcut(keys: string, isMac: boolean): string {
   return keys.replace('Mod', isMac ? '⌘' : 'Ctrl')
 }
+
+/**
+ * This platform's modifier, as a label shows it.
+ *
+ * It was worked out three times — in the context menu, the record line and the
+ * zoom cluster — from three copies of the same platform sniff, which is how
+ * one of them would eventually have disagreed with the others.
+ */
+export const MOD_KEY = formatShortcut('Mod', IS_MAC)
