@@ -748,16 +748,35 @@ to a ruled page.
 
 The signature component. A 360px panel on panel white that floats beside the
 selection and exists only while something is selected, cut from the one
-contextual surface (10px, below). Its head names the subject the way a specimen
-label does — 12px mono, lowercase, tracked 0.02em — beside a remove action that
-takes correction red only on hover. Below a hairline divider, each property is a
-record row: an 82px right-aligned mono label column and a value column, 40px
-(`--of-hit`) minimum row height.
+contextual surface (10px, below).
 
-The width is arithmetic, not taste: 82px holds eleven 12px mono characters, so a
-type-declared label such as "participant" is never clipped into a different
-word, and what is left must still take a full row of the swatch grid.
-`design-tokens.test.ts` does that sum on every build.
+**Its head names the thing.** The type as a title in the interface's own
+voice (15px, 600, ink — "Evidence", "Journey stage") with what the object says
+beneath it in one muted line; a mixed selection reads "2 objects" over what it
+is made of ("sticky · shape"). It used to be the type id in 12px muted mono —
+the faintest text in the panel, on the line that should carry the most — and
+this is the one place the panel can show that a note and a piece of evidence
+are the same object with a different payload.
+
+**A record comes before its appearance.** A type that carries semantic fields
+gets two bands, named as specimen labels in the front door's register —
+`record` above, `appearance` below — so the half that means something and the
+half that dresses it no longer share one grammar. An empty record field has a
+dashed edge and an "e.g." example in italic, so an unsourced slip never reads
+as sourced.
+
+Each property is a record row: an 82px right-aligned mono label column and a
+value column, 40px (`--of-hit`) minimum row height. The width is arithmetic,
+not taste: 82px holds eleven 12px mono characters, so a type-declared label
+such as "participant" is never clipped into a different word, and what is
+left must still take a full row of the swatch grid. `design-tokens.test.ts`
+does that sum on every build.
+
+**It gets out of the way.** A menu sits over it (`--of-z-menu`), and holding
+Shift — building a selection — makes it step aside, faint and letting the
+pointer through, because the next object is usually under it. Colour and
+opacity preview on the selection while they are aimed and write once, when
+the gesture ends.
 
 **Which fields appear comes from the registry** (`capabilities.styleProps`), never
 from a hardcoded list; adding a property to an object type surfaces it here with

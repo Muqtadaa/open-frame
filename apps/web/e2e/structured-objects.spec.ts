@@ -436,3 +436,24 @@ test('an empty record field reads as an example, not as a value', async ({ page 
   await participant.press('Enter')
   await expect(participant).toHaveCSS('border-top-style', 'solid')
 })
+
+/**
+ * The record panel's head names the thing, and a type that carries a record
+ * gets it named above how it looks: the one place the panel shows that a
+ * note and a piece of evidence are the same object with a different payload.
+ */
+test('the panel names what the object is, and puts its record first', async ({ page }) => {
+  await freshBoard(page)
+  await placeNote(page, 'Three of five could not find the annual price')
+  await page.locator(CANVAS).click({ position: NOTE })
+  await expect(page.getByTestId('inspector-title')).toHaveText('Sticky')
+  await expect(page.getByTestId('inspector')).toContainText('Three of five could not find')
+  // A note has no record, so nothing is named as one.
+  await expect(page.getByTestId('inspector').getByText('record', { exact: true })).toHaveCount(0)
+
+  await promote(page, NOTE)
+  await page.locator(CANVAS).click({ position: NOTE })
+  await expect(page.getByTestId('inspector-title')).toHaveText('Evidence')
+  const bands = page.getByTestId('inspector').locator('.of-inspector__band')
+  await expect(bands).toHaveText(['record', 'appearance'])
+})

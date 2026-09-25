@@ -3679,18 +3679,54 @@ body {
 .of-inspector__head {
   display: flex;
   gap: var(--of-space-8);
-  align-items: center;
+  align-items: flex-start;
   justify-content: space-between;
   padding-bottom: var(--of-space-8);
   margin-bottom: var(--of-space-6);
   border-bottom: 1px solid var(--of-panel-border);
 }
 
-/* The subject of the record, named the way a specimen label names its subject. */
-.of-inspector__subject {
+/*
+ * THE HEAD names the thing: its type as a title in the interface's own voice,
+ * and what it says beneath, one line. It was the type id in 12px muted mono —
+ * the faintest text in the panel, on the line that should carry the most.
+ */
+.of-inspector__heading {
+  display: flex;
+  flex-direction: column;
+  gap: var(--of-space-2);
+  min-width: 0;
+}
+
+.of-inspector__title {
+  margin: 0;
+  font-size: var(--of-type-ui);
+  font-weight: 600;
+  line-height: 1.25;
+  color: var(--of-ink);
+}
+
+.of-inspector__summary {
+  overflow: hidden;
+  margin: 0;
+  font-size: var(--of-type-record);
+  line-height: 1.35;
+  color: var(--of-ink-muted);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/*
+ * A band's name — "record", "appearance" — as a specimen label, the register
+ * the front door names its sections in. It is what separates the half of the
+ * panel that MEANS something from the half that dresses it.
+ */
+.of-inspector__band {
+  margin: var(--of-space-6) 0 var(--of-space-2);
   font-family: var(--of-mono);
   font-size: var(--of-type-record);
-  color: var(--of-ink);
+  font-weight: 400;
+  color: var(--of-ink-muted);
   text-transform: lowercase;
   letter-spacing: 0.02em;
 }

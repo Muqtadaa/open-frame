@@ -270,3 +270,10 @@ named record band, all five issues.
   already draws absent content, so which evidence is sourced is visible at a
   glance. Scoped to the record panel: an empty comment box is a blank to type
   into, not a missing record. One e2e test, failing without the dashed edge.
+- **P1 — fixed: the panel had no head.** The type is a title now (15px/600,
+  "Evidence", derived from the id by `scene/type-noun.ts` — a registry-declared
+  label would be purer, but a required field on every type is a breaking
+  change this did not justify), with the object's own summary beneath; a mixed
+  selection reads "2 objects · sticky · shape". Types with a record get
+  `record` and `appearance` bands as specimen labels. One e2e test; the
+  inspector goldens moved.

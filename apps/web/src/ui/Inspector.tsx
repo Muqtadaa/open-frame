@@ -31,6 +31,7 @@ import { useCommands } from '../hooks/use-commands.js'
 import { useBoardDocument } from '../hooks/use-document-object.js'
 import { useInteractionStore } from '../interaction/interaction-store.js'
 import { PANEL_CLEARANCE_PX } from '../scene/connect-points.js'
+import { selectionMakeup, typeTitle } from '../scene/type-noun.js'
 import { useOpenFrame } from '../runtime/context.js'
 import { Swatches, groundOf, type SwatchKind } from '../controls/Swatches.js'
 import { AlignIcon, VAlignIcon, DashIcon,
@@ -350,8 +351,21 @@ export function Inspector() {
   const paintTargets = PAINTABLE.filter((option) => props.has(option.prop))
   const painting = paintTargets.find((option) => option.prop === paint) ?? paintTargets[0]
 
-  const label =
-    objects.length === 1 ? (objects[0]?.type ?? '') : `${String(objects.length)} objects`
+  /*
+   * The head names the THING, in words, with what it says beneath: the one
+   * place the panel can show that a note and a piece of evidence are the same
+   * object with a different payload. It used to be the type id in 12px muted
+   * mono — the faintest text in the panel, on its most important line.
+   */
+  const title =
+    only !== undefined ? typeTitle(only.type) : `${String(objects.length)} objects`
+  const summary = (() => {
+    if (only === undefined) return selectionMakeup(objects.map((object) => object.type))
+    const said = runtime.registry.describeObject(only).summary.trim()
+    return said === only.type ? '' : said
+  })()
+  // A type that carries a record gets it named, above how it looks.
+  const recorded = only !== undefined && fields.length > 0
 
   return (
     <AnchoredSurface
@@ -377,7 +391,16 @@ export function Inspector() {
       style={{ width: `${String(PANEL_WIDTH)}px` }}
     >
       <div className="of-inspector__head">
-        <span className="of-inspector__subject">{label}</span>
+        <div className="of-inspector__heading">
+          <h2 className="of-inspector__title" data-testid="inspector-title">
+            {title}
+          </h2>
+          {summary !== '' && (
+            <p className="of-inspector__summary" data-tip={summary} aria-description={summary}>
+              {summary}
+            </p>
+          )}
+        </div>
         <button
           type="button"
           className="of-icon-button of-icon-button--destructive"
@@ -390,6 +413,8 @@ export function Inspector() {
           <TrashIcon />
         </button>
       </div>
+
+      {recorded && <h3 className="of-inspector__band">record</h3>}
 
       {fields.length > 0 && only !== undefined && (
         <RecordFields
@@ -438,6 +463,8 @@ export function Inspector() {
       {props.size > 0 && (fields.length > 0 || cites.length > 0 || citedBy.length > 0) && (
         <hr className="of-inspector__rule" />
       )}
+
+      {recorded && props.size > 0 && <h3 className="of-inspector__band">appearance</h3>}
 
       {/*
         * ONE palette, and what it paints.
