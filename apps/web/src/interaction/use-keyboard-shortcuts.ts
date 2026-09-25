@@ -17,6 +17,26 @@ function isTextEntry(target: EventTarget | null): boolean {
   return target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.isContentEditable
 }
 
+const OPERABLE =
+  'button, a[href], [role="menuitem"], [role="menuitemradio"], [role="menuitemcheckbox"], [role="gridcell"], [role="radio"], [role="option"], [role="tab"]'
+
+/**
+ * Space and Enter PRESS a control that a keyboard has focused, and the board
+ * must not take them first.
+ *
+ * The keymap claimed both — Space for the pan hold, Enter to edit the
+ * selection — and prevented them, so no rail button could be pressed without
+ * a mouse and the table size and image import had no keyboard route at all.
+ *
+ * Only when the KEYBOARD put focus there: a click leaves focus on the button
+ * it pressed, and the Space held a moment later to pan the board is the
+ * board's. `:focus-visible` cannot tell the two apart, because the browser
+ * turns it on for the clicked button the moment any key goes down.
+ */
+function isOperable(target: EventTarget | null): boolean {
+  return target instanceof HTMLElement && target.matches(OPERABLE)
+}
+
 /**
  * Binds the keymap to the window.
  *
@@ -32,8 +52,22 @@ export function useKeyboardShortcuts(setSpaceHeld: (held: boolean) => void): voi
   const { runtime } = useOpenFrame()
 
   useEffect(() => {
+    // Whether focus last moved by pointer. Tab hands it to the keyboard.
+    let pointerLed = false
+    const onPointerDown = (): void => {
+      pointerLed = true
+    }
+
     const onKeyDown = (event: KeyboardEvent): void => {
       const store = useInteractionStore.getState()
+
+      if (event.key === 'Tab') pointerLed = false
+      if (
+        !pointerLed &&
+        (event.code === 'Space' || event.key === 'Enter') &&
+        isOperable(event.target)
+      )
+        return
 
       // Space-drag panning is a hold, not a shortcut, so it sits outside the keymap.
       if (event.code === 'Space' && !isTextEntry(event.target)) {
@@ -176,9 +210,11 @@ export function useKeyboardShortcuts(setSpaceHeld: (held: boolean) => void): voi
       if (event.code === 'Space') setSpaceHeld(false)
     }
 
+    window.addEventListener('pointerdown', onPointerDown, true)
     window.addEventListener('keydown', onKeyDown)
     window.addEventListener('keyup', onKeyUp)
     return () => {
+      window.removeEventListener('pointerdown', onPointerDown, true)
       window.removeEventListener('keydown', onKeyDown)
       window.removeEventListener('keyup', onKeyUp)
     }
