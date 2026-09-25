@@ -39,7 +39,9 @@ test('places a table as a single object with a cell per column per row', async (
 
   // ONE object, not nine. The whole grid lives in its data.
   await expect(page.locator('[data-object-id]')).toHaveCount(1)
-  await expect(page.locator('[role="table"] [role="cell"], [role="table"] [role="columnheader"]')).toHaveCount(9)
+  await expect(
+    page.locator('[role="table"] [role="cell"], [role="table"] [role="columnheader"]'),
+  ).toHaveCount(9)
 })
 
 test('types into the cell that was double-clicked, not the first one', async ({ page }) => {
@@ -562,4 +564,44 @@ test('offers no formatting for a language nothing can format', async ({ page }) 
    */
   await page.getByTestId('code-language').selectOption('python')
   await expect(page.getByTestId('code-format')).toBeDisabled()
+})
+
+/*
+ * Typing in a cell rebuilt it as bare text on every keystroke, so a coloured
+ * cell lost its fill, ink and rule the moment anybody corrected a typo in it.
+ */
+test('keeps a cell’s colours when its text is typed', async ({ page }) => {
+  await board(page)
+  await place(page, 'table', { x: 340, y: 240 })
+  await page.locator('[data-object-id]').first().dblclick()
+  await page.getByTestId('table-cell-4').click()
+  await page.getByTestId('cell-fill-green').click()
+  await page.locator(CANVAS).click({ position: { x: 900, y: 600 } })
+
+  await page.locator('[data-object-id]').first().dblclick()
+  await page.getByTestId('table-cell-4').click()
+  await page.keyboard.type('kept')
+  await page.locator(CANVAS).click({ position: { x: 900, y: 600 } })
+
+  const cell = page.locator('[role="table"] > div').nth(4)
+  await expect(cell).toContainText('kept')
+  await expect(cell).toHaveCSS('background-color', 'rgb(191, 240, 212)')
+})
+
+/*
+ * The cell bar names its three targets in words. The rule that made every
+ * option a 30-pixel square left them there, and "fill", "text" and "rule"
+ * ran into one another on the first table anybody placed.
+ */
+test('the cell bar’s targets each have room for their name', async ({ page }) => {
+  await board(page)
+  await page.getByTestId('tool-table').click()
+  await page.locator(CANVAS).click({ position: { x: 340, y: 300 } })
+  await expect(page.getByTestId('table-cell-style')).toBeVisible()
+  for (const key of ['fill', 'text', 'rule']) {
+    const cramped = await page
+      .getByTestId(`cell-target-${key}`)
+      .evaluate((el) => el.scrollWidth > el.clientWidth)
+    expect(cramped, key).toBe(false)
+  }
 })

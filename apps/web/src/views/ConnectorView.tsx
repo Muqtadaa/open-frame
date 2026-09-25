@@ -15,7 +15,6 @@ import {
 import { defineObjectView, type ObjectEditorProps, type ObjectViewProps } from './registry.js'
 import { InlineTextEditor } from './shared-editor.js'
 
-
 /** How far a label's plate stands clear of the text on it, in screen pixels. */
 const PLATE_PAD = 4
 
@@ -65,7 +64,15 @@ function ConnectorRenderer({
     avoiding,
   )
   const label = object.data.text
-  const mid = pathMidpoint(start, end, object.data.routing, held, normals, avoiding, object.data.label)
+  const mid = pathMidpoint(
+    start,
+    end,
+    object.data.routing,
+    held,
+    normals,
+    avoiding,
+    object.data.label,
+  )
 
   // `none` is a colour property's way of saying there is nothing there, which
   // is how a background that has been turned off is stored (see `sanitizeStyle`).
@@ -185,9 +192,16 @@ function ConnectorRenderer({
             className={`of-connector__label${ground === undefined ? '' : ' of-connector__label--plated'}`}
             textAnchor="middle"
             dominantBaseline="middle"
-            // `fill`, not `color`: an SVG glyph is painted, not inked.
-            fill={inkColor(object.style.textColor)}
             style={{
+              /*
+               * `fill`, not `color`: an SVG glyph is painted, not inked. And
+               * as a STYLE, not the attribute: the stylesheet gives the label
+               * the board's ink by default, and any CSS rule outranks a
+               * presentation attribute, so the chosen colour never showed.
+               */
+              ...(object.style.textColor === undefined
+                ? {}
+                : { fill: inkColor(object.style.textColor) }),
               fontSize: `${String(textSizePx(object.style.textSize))}px`,
               ...(object.style.bold === true ? { fontWeight: 700 } : {}),
               ...(object.style.italic === true ? { fontStyle: 'italic' } : {}),

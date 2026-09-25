@@ -141,6 +141,16 @@ for (const world of WORLDS) {
       await snap(page, `${world}-shape-flyout`)
     })
 
+    // No golden covered a table cell, which is how the cell bar's targets
+    // came to overlap without anything noticing.
+    test('table cell bar', async ({ page }) => {
+      await openLocalBoard(page)
+      await page.getByTestId('tool-table').click()
+      await page.locator('[data-testid="canvas"]').click({ position: { x: 420, y: 320 } })
+      await expect(page.getByTestId('table-cell-style')).toBeVisible()
+      await snap(page, `${world}-table-cell-bar`)
+    })
+
     test('comment composer', async ({ page }) => {
       await openSharedBoard(page)
       await page

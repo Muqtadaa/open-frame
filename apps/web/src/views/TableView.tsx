@@ -318,14 +318,12 @@ function TableEditor({ object, at, zoom, Chrome, onCommit, onCancel }: ObjectEdi
               setDraft((current) => ({
                 ...current,
                 /*
-                 * Only the edited cell is rebuilt. Cells hold plain text
-                 * today so nothing is lost either way — but the moment one
-                 * holds a formatted span, rebuilding every cell on every
-                 * keystroke would flatten the table because somebody
-                 * corrected a typo in one corner.
+                 * Only the edited cell is rebuilt, and only its TEXT: the
+                 * cell's fill, ink and rule stay. Rebuilding it as bare text
+                 * wiped a coloured cell's colours on the first keystroke.
                  */
                 cells: current.cells.map((old, other) =>
-                  other === index ? { text: [{ text }] } : old,
+                  other === index ? { ...old, text: [{ text }] } : old,
                 ),
               }))
             }}
@@ -379,7 +377,7 @@ function TableEditor({ object, at, zoom, Chrome, onCommit, onCancel }: ObjectEdi
           <span className="of-cellbar__count">
             {selected.length === 1 ? '1 cell' : `${String(selected.length)} cells`}
           </span>
-          <div className="of-choice of-cellbar__target" role="group" aria-label="What to colour">
+          <div className="of-choice of-choice--text of-cellbar__target" role="group" aria-label="What to colour">
             {CELL_TARGETS.map((option) => (
               <button
                 key={option.key}

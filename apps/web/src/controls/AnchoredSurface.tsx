@@ -78,8 +78,15 @@ export function AnchoredSurface({
    */
   // eslint-disable-next-line react-hooks/exhaustive-deps
   useLayoutEffect(() => {
-    const box = element.current?.getBoundingClientRect()
-    if (box === undefined) return
+    /*
+     * The LAYOUT size, not the painted one. Surfaces rise in with a
+     * `scale(0.985)`, and a bounding rect measured on the first frame is that
+     * scaled box — nothing re-renders when the animation ends, so the surface
+     * stayed placed as a slightly smaller one until something else moved.
+     */
+    const node = element.current
+    if (node === null) return
+    const box = { width: node.offsetWidth, height: node.offsetHeight }
     setSize((old) =>
       Math.abs(old.width - box.width) < 1 && Math.abs(old.height - box.height) < 1
         ? old

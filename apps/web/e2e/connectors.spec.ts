@@ -644,6 +644,25 @@ test.describe('formatting a connector label', () => {
     await page.getByTestId('label-none').click()
     await expect(page.locator('.of-connector rect')).toHaveCount(0)
   })
+
+  /*
+   * The colour was stored and never seen: the stylesheet gave the label a
+   * `fill`, and ANY CSS rule outranks an SVG presentation attribute, so every
+   * choice rendered as the board's ink. Nothing asserted the label's colour,
+   * only that the panel offered one.
+   */
+  test('takes a text colour', async ({ page }) => {
+    await connectedPair(page)
+    await page.locator(CANVAS).click({ position: MIDPOINT })
+    await page.locator(CANVAS).dblclick({ position: MIDPOINT })
+    await page.locator(EDITOR).fill('depends on')
+    await page.locator(CANVAS).click({ position: { x: 1180, y: 120 } })
+    await page.locator('.of-connector__line').click({ force: true })
+
+    await page.getByTestId('paint-textColor').click()
+    await page.getByTestId('ink-red').click()
+    await expect(page.locator('.of-connector__label')).toHaveCSS('fill', 'rgb(138, 64, 56)')
+  })
 })
 
 /**
