@@ -2792,12 +2792,30 @@ body {
   white-space: nowrap;
 }
 
-.of-status__title {
+.of-status__title,
+.of-status__heading {
   flex: 0 1 auto;
 }
 
+/*
+ * The heading that holds the board's name: a landmark for a screen reader,
+ * no box of its own for anybody else. The name inside it sets the size.
+ */
+.of-status__heading {
+  display: flex;
+  min-width: 10ch;
+  margin: 0;
+  font: inherit;
+}
+
 .of-dev {
-  flex: 0 1 auto;
+  /*
+   * Gives all but nothing to the name: development instrumentation
+   * goes before the board's name loses a character. Shrinking at the same
+   * rate, the two split the loss and the name was cut beside a panel no user
+   * ever sees.
+   */
+  flex: 0 10000 auto;
 }
 
 /* Development instrumentation clips rather than pushes. */
@@ -5608,9 +5626,8 @@ textarea.of-input {
 /* ---------- the board's name ---------- */
 
 /*
- * A specimen label at the head of the record line, the way the record panel
- * heads itself with the subject it is describing. Mono because it labels a
- * record, not to look technical.
+ * The board's name, heading the page's navigation. In the interface's own
+ * face: it names the page, it is not a readout on it.
  */
 .of-status__title {
   /*
@@ -5620,7 +5637,12 @@ textarea.of-input {
    */
   flex: 0 1 auto;
   min-width: 10ch;
-  max-width: 22ch;
+  /*
+   * The ROOM the bar has, up to a line you can read at a glance. It was 22
+   * characters, with half the bar's width empty beside it: a heading that
+   * gave up before it had to.
+   */
+  max-width: 48ch;
   overflow: hidden;
   height: var(--of-hit-sm);
   padding: 0 var(--of-space-8);
@@ -5656,7 +5678,9 @@ textarea.of-input {
  * this rather than two.
  */
 .of-status__title--editing {
-  width: 22ch;
+  /* As wide as what is being typed, within the same bounds as the name. */
+  field-sizing: content;
+  min-width: 22ch;
   background: var(--of-accent-soft);
   outline: 1px solid var(--of-accent);
 }

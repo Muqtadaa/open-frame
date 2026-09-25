@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 
 import { useBoardDocument } from '../hooks/use-document-object.js'
 import { useCommands } from '../hooks/use-commands.js'
@@ -38,6 +38,21 @@ export function StatusBar() {
   const [theme, setTheme] = useState<Theme>(readTheme)
   const afterHours = theme === 'after-hours'
   const editingId = useInteractionStore((state) => state.editingId)
+  const title = document.meta.title
+
+  /*
+   * The TAB carries the board's name too. Several boards open in one window,
+   * or one found again in the history a week later, all read "OpenFrame"
+   * otherwise — the one place a returning reader looks first said nothing.
+   * The product's name comes second, as a page's site name does.
+   */
+  useEffect(() => {
+    const before = window.document.title
+    window.document.title = `${title} — OpenFrame`
+    return () => {
+      window.document.title = before
+    }
+  }, [title])
 
   /**
    * Undo and redo, meaning whatever they mean where the caret is.
@@ -66,12 +81,18 @@ export function StatusBar() {
   }
 
   return (
-    <div className="of-status" data-testid="status-bar">
+    /*
+     * The page's navigation, and the board's name as its heading, so a screen
+     * reader can reach both by landmark and heading as it would on any page.
+     */
+    <nav className="of-status" aria-label="Board" data-testid="status-bar">
       {/* Which index this page is in, then which page it is. */}
       <BoardExit />
       <span className="of-status__rule" aria-hidden="true" />
       {/* The board names itself before it accounts for itself. */}
-      <BoardTitle title={document.meta.title} />
+      <h1 className="of-status__heading">
+        <BoardTitle title={title} />
+      </h1>
       <span className="of-status__rule" aria-hidden="true" />
       <div className="of-status__history">
         <button
@@ -185,6 +206,6 @@ export function StatusBar() {
        * production just to never render it.
        */}
       {BENCH_TOOLS_ENABLED && <DevPanel />}
-    </div>
+    </nav>
   )
 }

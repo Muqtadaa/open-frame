@@ -1,19 +1,22 @@
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useLayoutEffect, useRef, useState } from 'react'
 
 import { useCommands } from '../hooks/use-commands.js'
 import { useOpenFrame } from '../runtime/context.js'
 
 /**
- * The board's name, at the head of the record line.
+ * The board's name: the heading of the page's navigation, and of the tab.
  *
- * Set as a specimen label — mono, lowercase-tolerant, tracked — because that
- * is how this world names a subject: the record panel's head does the same
- * thing for the object you have selected, and this is the same act one level
- * up. It is not mono to look technical; it is mono because it is the label on
- * the record.
+ * Set in the interface's own face at 600, because it is the page's name rather
+ * than one more readout on a record line — which is what it was while the line
+ * sat along the foot of the window.
+ *
+ * It takes the room the bar has before it shortens, and a name that still does
+ * not fit is shown whole in its tip: somebody returning to a board days later
+ * reads it by its name, and a name cut off with no way to see the rest is a
+ * board they have to open an editor to identify.
  *
  * Click to edit, the same interaction the zoom percentage already has, so the
- * line has one way of turning a readout into an input rather than two.
+ * bar has one way of turning a readout into an input rather than two.
  */
 export function BoardTitle({ title }: { readonly title: string }) {
   const commands = useCommands()
@@ -21,6 +24,26 @@ export function BoardTitle({ title }: { readonly title: string }) {
   const [editing, setEditing] = useState(false)
   const [draft, setDraft] = useState(title)
   const input = useRef<HTMLInputElement>(null)
+  const shown = useRef<HTMLButtonElement>(null)
+  /*
+   * Whether the name is cut off where it is drawn. Measured, because only the
+   * layout knows: it depends on the face, the window and what else is on the
+   * bar. Re-measured when any of those change size.
+   */
+  const [clipped, setClipped] = useState(false)
+  useLayoutEffect(() => {
+    const element = shown.current
+    if (element === null) return
+    const measure = (): void => {
+      setClipped(element.scrollWidth > element.clientWidth + 1)
+    }
+    measure()
+    const observer = new ResizeObserver(measure)
+    observer.observe(element)
+    return () => {
+      observer.disconnect()
+    }
+  }, [title, editing])
 
   useEffect(() => {
     if (editing) input.current?.select()
@@ -52,10 +75,12 @@ export function BoardTitle({ title }: { readonly title: string }) {
   if (!editing) {
     return (
       <button
+        ref={shown}
         type="button"
         className="of-status__title"
         data-testid="board-title"
-        data-tip="Rename this board"
+        // The whole name when the bar has cut it off; otherwise, what a press does.
+        data-tip={clipped ? title : 'Rename this board'}
         aria-description="Rename this board"
         onClick={open}
       >

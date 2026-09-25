@@ -61,3 +61,52 @@ test('keeps an object’s panel clear of it, however high the object sits', asyn
   if (panel === null) throw new Error('the panel is not on screen')
   expect(panel.y).toBeGreaterThanOrEqual(bar.y + bar.height)
 })
+
+/**
+ * The board's name is the page's name (C3 #3). A person returning days later,
+ * with several boards open, finds them by their tabs — and every tab read
+ * "OpenFrame" — and a name cut to 22 characters beside half a bar of empty
+ * ground could not be read at all.
+ */
+test.describe('the board’s name', () => {
+  async function rename(page: Page, name: string): Promise<void> {
+    await page.getByTestId('board-title').click()
+    await page.keyboard.press('ControlOrMeta+a')
+    await page.keyboard.type(name)
+    await page.keyboard.press('Enter')
+  }
+
+  test('names the tab', async ({ page }) => {
+    await board(page)
+    await rename(page, 'Checkout research')
+    await expect(page).toHaveTitle('Checkout research — OpenFrame')
+  })
+
+  test('uses the room the bar has before it shortens', async ({ page }) => {
+    await board(page)
+    const name = 'Checkout funnel teardown — September interviews'
+    await rename(page, name)
+    const title = page.getByTestId('board-title')
+    await expect(title).toHaveText(name)
+    // A pixel of rounding is not a cut-off letter.
+    const clipped = await title.evaluate((el) => el.scrollWidth > el.clientWidth + 1)
+    expect(clipped).toBe(false)
+  })
+
+  test('shows the whole of a name too long for the bar', async ({ page }) => {
+    await board(page)
+    const name =
+      'Q3 pricing research synthesis — onboarding, checkout, retention and churn interviews across four markets'
+    await rename(page, name)
+    const title = page.getByTestId('board-title')
+    expect(await title.evaluate((el) => el.scrollWidth > el.clientWidth)).toBe(true)
+    await expect(title).toHaveAttribute('data-tip', name)
+  })
+
+  test('is the heading of the page’s navigation', async ({ page }) => {
+    await board(page)
+    const nav = page.getByRole('navigation', { name: 'Board' })
+    await expect(nav).toBeVisible()
+    await expect(nav.getByRole('heading', { level: 1 })).toHaveText('Untitled board')
+  })
+})
