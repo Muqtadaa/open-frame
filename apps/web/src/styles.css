@@ -671,6 +671,12 @@ body {
   }
 }
 
+.of-rail__group {
+  display: flex;
+  flex-direction: column;
+  gap: var(--of-space-2);
+}
+
 .of-rail__slot {
   position: relative;
 }

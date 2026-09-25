@@ -1,5 +1,5 @@
 import { SHAPE_KINDS, screenToWorld, type ShapeKind } from '@openframe/core'
-import { useEffect, useRef, useState } from 'react'
+import { Fragment, useEffect, useRef, useState } from 'react'
 
 import { AnchoredSurface } from '../controls/AnchoredSurface.js'
 import { useImageImport } from '../hooks/use-image-import.js'
@@ -27,21 +27,38 @@ interface ToolSpec {
   readonly shortcut: string
 }
 
-const TOOLS: readonly ToolSpec[] = [
-  { id: 'select', label: 'Select', shortcut: 'V' },
-  { id: 'pan', label: 'Hand', shortcut: 'H' },
-  { id: 'sticky', label: 'Sticky', shortcut: 'S' },
-  { id: 'text', label: 'Text', shortcut: 'T' },
-  { id: 'shape', label: 'Shape', shortcut: 'U' },
-  { id: 'frame', label: 'Frame', shortcut: 'F' },
-  { id: 'connector', label: 'Connect', shortcut: 'C' },
-  { id: 'table', label: 'Table', shortcut: 'G' },
-  { id: 'code', label: 'Code', shortcut: 'K' },
+const mode = (id: Tool, label: string, shortcut: string): ToolSpec => ({ id, label, shortcut })
+
+/**
+ * The rail in three runs, with a rule between each: getting around the board,
+ * making things on it, and annotating what is there. One run of ten with a
+ * single rule setting Image apart read as a list rather than a set.
+ *
+ * `image` stands for the one control that is not a mode (below).
+ */
+const GROUPS: readonly {
+  readonly label: string
+  readonly items: readonly (ToolSpec | 'image')[]
+}[] = [
+  { label: 'Navigate', items: [mode('select', 'Select', 'V'), mode('pan', 'Hand', 'H')] },
+  {
+    label: 'Make',
+    items: [
+      mode('sticky', 'Sticky', 'S'),
+      mode('text', 'Text', 'T'),
+      mode('shape', 'Shape', 'U'),
+      mode('frame', 'Frame', 'F'),
+      mode('connector', 'Connect', 'C'),
+      mode('table', 'Table', 'G'),
+      mode('code', 'Code', 'K'),
+      'image',
+    ],
+  },
   // Not a thing you put on the page, but a thing you put ON what is on the
   // page — and it belongs with the other modes rather than hidden in a menu,
   // because a comment you cannot find a way to leave is a comment nobody
   // leaves.
-  { id: 'comment', label: 'Comment', shortcut: 'M' },
+  { label: 'Annotate', items: [mode('comment', 'Comment', 'M')] },
 ]
 
 /**
@@ -158,181 +175,190 @@ export function Toolbar() {
     }
   }
 
-  return (
-    <div className="of-rail" role="toolbar" aria-label="Board tools" aria-orientation="vertical">
-      {TOOLS.map((spec) => (
-        <div key={spec.id} className="of-rail__slot">
-          <button
-            type="button"
-            className={`of-tool${tool === spec.id ? ' of-tool--active' : ''}`}
-            aria-pressed={tool === spec.id}
-            aria-label={spec.label}
-            data-testid={`tool-${spec.id}`}
-            onClick={(event) => {
-              /*
-               * Pressing an ARMED Shape or Table opens its options. The second
-               * press on Shape used to cycle the kind and on Table open the
-               * picker — one gesture, two meanings — and cycling silently
-               * changed what the next click would make. U still cycles.
-               */
-              if ((spec.id === 'shape' || spec.id === 'table') && tool === spec.id) {
-                toggle(spec.id, event.currentTarget)
-                return
-              }
-              setOpenMenu(null)
-              setTool(spec.id)
-            }}
-          >
-            {icon(spec.id)}
-            <span className="of-tool__tip" aria-hidden="true">
-              {spec.label}
-              <kbd>{spec.shortcut}</kbd>
-            </span>
-          </button>
+  const slot = (spec: ToolSpec) => (
+    <div key={spec.id} className="of-rail__slot">
+      <button
+        type="button"
+        className={`of-tool${tool === spec.id ? ' of-tool--active' : ''}`}
+        aria-pressed={tool === spec.id}
+        aria-label={spec.label}
+        data-testid={`tool-${spec.id}`}
+        onClick={(event) => {
+          /*
+           * Pressing an ARMED Shape or Table opens its options. The second
+           * press on Shape used to cycle the kind and on Table open the
+           * picker — one gesture, two meanings — and cycling silently
+           * changed what the next click would make. U still cycles.
+           */
+          if ((spec.id === 'shape' || spec.id === 'table') && tool === spec.id) {
+            toggle(spec.id, event.currentTarget)
+            return
+          }
+          setOpenMenu(null)
+          setTool(spec.id)
+        }}
+      >
+        {icon(spec.id)}
+        <span className="of-tool__tip" aria-hidden="true">
+          {spec.label}
+          <kbd>{spec.shortcut}</kbd>
+        </span>
+      </button>
 
-          {spec.id === 'shape' && (
-            <button
-              type="button"
-              className="of-rail__more"
-              aria-label="Choose shape"
-              aria-haspopup="menu"
-              aria-expanded={shapesOpen}
-              data-tip="Choose shape"
-              data-testid="shape-menu"
-              onClick={(event) => {
-                toggle('shape', event.currentTarget)
-              }}
-            >
-              <DisclosureIcon />
-            </button>
-          )}
-
-          {spec.id === 'table' && (
-            <button
-              type="button"
-              className="of-rail__more"
-              aria-label="Choose table size"
-              aria-haspopup="grid"
-              aria-expanded={sizeOpen}
-              data-tip="Choose table size"
-              data-testid="table-menu"
-              onClick={(event) => {
-                toggle('table', event.currentTarget)
-              }}
-            >
-              <DisclosureIcon />
-            </button>
-          )}
-
-          {/*
-           * On the SAME surface every other floating thing uses, which places
-           * it and clamps it inside the window. It used to pin itself to the
-           * rail slot with `position: absolute; top: 0`, so on a 420-pixel
-           * window it ran 48 pixels off the bottom of the screen, where
-           * nothing could reach it. Nothing about being in the rail rather
-           * than on the board made that a different problem.
-           */}
-          {spec.id === 'table' && sizeOpen && (
-            <AnchoredSurface
-              anchor={anchor}
-              surface={canvasSize}
-              prefer={['right', 'left']}
-              testId="table-size-flyout"
-              layer="menu"
-            >
-              <div ref={flyout} className="of-flyout of-flyout--wide">
-                <TableSizePicker
-                  size={tableSize}
-                  onChoose={(size) => {
-                    // Selecting the tool as well as the size: choosing 4x6 is
-                    // saying you are about to place one.
-                    setTableSize(size)
-                    close(false)
-                  }}
-                />
-              </div>
-            </AnchoredSurface>
-          )}
-
-          {spec.id === 'shape' && shapesOpen && (
-            <AnchoredSurface
-              anchor={anchor}
-              surface={canvasSize}
-              prefer={['right', 'left']}
-              testId="shape-flyout"
-              layer="menu"
-            >
-              <ShapeMenu refer={flyout}>
-                {SHAPE_KINDS.map((kind: ShapeKind) => (
-                  <button
-                    key={kind}
-                    type="button"
-                    role="menuitemradio"
-                    tabIndex={shapeKind === kind ? 0 : -1}
-                    aria-checked={shapeKind === kind}
-                    className={`of-flyout__item${shapeKind === kind ? ' of-flyout__item--active' : ''}`}
-                    data-testid={`shape-${kind}`}
-                    onClick={() => {
-                      // Cycle until it lands: keeps a single source of truth for
-                      // the variant instead of a second setter to keep in sync.
-                      let guard = SHAPE_KINDS.length
-                      useInteractionStore.getState().setTool('shape')
-                      while (useInteractionStore.getState().shapeKind !== kind && guard-- > 0) {
-                        useInteractionStore.getState().cycleShape()
-                      }
-                      close(false)
-                    }}
-                  >
-                    <ShapeIcon kind={kind} />
-                    <span>{kind}</span>
-                  </button>
-                ))}
-              </ShapeMenu>
-            </AnchoredSurface>
-          )}
-        </div>
-      ))}
-
-      <div className="of-rail__rule" />
-
-      {/*
-       * A button rather than a tool mode. Every other tool places something the
-       * app can invent; an image needs a file first, so there is nothing to arm.
-       */}
-      <div className="of-rail__slot">
+      {spec.id === 'shape' && (
         <button
           type="button"
-          className="of-tool"
-          aria-label="Insert image"
-          data-testid="tool-image"
-          onClick={() => fileInput.current?.click()}
-        >
-          <ImageIcon />
-          <span className="of-tool__tip" aria-hidden="true">
-            Image
-          </span>
-        </button>
-        <input
-          ref={fileInput}
-          type="file"
-          className="of-visually-hidden"
-          accept={ALLOWED_IMAGE_TYPES.join(',')}
-          multiple
-          tabIndex={-1}
-          onChange={(event) => {
-            const files = [...(event.target.files ?? [])]
-            // Reset so choosing the same file twice in a row fires `change`
-            // again — otherwise the second attempt silently does nothing.
-            event.target.value = ''
-            if (files.length === 0) return
-            const { viewport, canvasSize } = useInteractionStore.getState()
-            void importImages(
-              files,
-              screenToWorld(viewport, { x: canvasSize.width / 2, y: canvasSize.height / 2 }),
-            )
+          className="of-rail__more"
+          aria-label="Choose shape"
+          aria-haspopup="menu"
+          aria-expanded={shapesOpen}
+          data-tip="Choose shape"
+          data-testid="shape-menu"
+          onClick={(event) => {
+            toggle('shape', event.currentTarget)
           }}
-        />
-      </div>
+        >
+          <DisclosureIcon />
+        </button>
+      )}
+
+      {spec.id === 'table' && (
+        <button
+          type="button"
+          className="of-rail__more"
+          aria-label="Choose table size"
+          aria-haspopup="grid"
+          aria-expanded={sizeOpen}
+          data-tip="Choose table size"
+          data-testid="table-menu"
+          onClick={(event) => {
+            toggle('table', event.currentTarget)
+          }}
+        >
+          <DisclosureIcon />
+        </button>
+      )}
+
+      {/*
+       * On the SAME surface every other floating thing uses, which places
+       * it and clamps it inside the window. It used to pin itself to the
+       * rail slot with `position: absolute; top: 0`, so on a 420-pixel
+       * window it ran 48 pixels off the bottom of the screen, where
+       * nothing could reach it. Nothing about being in the rail rather
+       * than on the board made that a different problem.
+       */}
+      {spec.id === 'table' && sizeOpen && (
+        <AnchoredSurface
+          anchor={anchor}
+          surface={canvasSize}
+          prefer={['right', 'left']}
+          testId="table-size-flyout"
+          layer="menu"
+        >
+          <div ref={flyout} className="of-flyout of-flyout--wide">
+            <TableSizePicker
+              size={tableSize}
+              onChoose={(size) => {
+                // Selecting the tool as well as the size: choosing 4x6 is
+                // saying you are about to place one.
+                setTableSize(size)
+                close(false)
+              }}
+            />
+          </div>
+        </AnchoredSurface>
+      )}
+
+      {spec.id === 'shape' && shapesOpen && (
+        <AnchoredSurface
+          anchor={anchor}
+          surface={canvasSize}
+          prefer={['right', 'left']}
+          testId="shape-flyout"
+          layer="menu"
+        >
+          <ShapeMenu refer={flyout}>
+            {SHAPE_KINDS.map((kind: ShapeKind) => (
+              <button
+                key={kind}
+                type="button"
+                role="menuitemradio"
+                tabIndex={shapeKind === kind ? 0 : -1}
+                aria-checked={shapeKind === kind}
+                className={`of-flyout__item${shapeKind === kind ? ' of-flyout__item--active' : ''}`}
+                data-testid={`shape-${kind}`}
+                onClick={() => {
+                  // Cycle until it lands: keeps a single source of truth for
+                  // the variant instead of a second setter to keep in sync.
+                  let guard = SHAPE_KINDS.length
+                  useInteractionStore.getState().setTool('shape')
+                  while (useInteractionStore.getState().shapeKind !== kind && guard-- > 0) {
+                    useInteractionStore.getState().cycleShape()
+                  }
+                  close(false)
+                }}
+              >
+                <ShapeIcon kind={kind} />
+                <span>{kind}</span>
+              </button>
+            ))}
+          </ShapeMenu>
+        </AnchoredSurface>
+      )}
+    </div>
+  )
+
+  /*
+   * A button rather than a tool mode. Every other tool places something the
+   * app can invent; an image needs a file first, so there is nothing to arm.
+   */
+  const image = (
+    <div key="image" className="of-rail__slot">
+      <button
+        type="button"
+        className="of-tool"
+        aria-label="Insert image"
+        data-testid="tool-image"
+        onClick={() => fileInput.current?.click()}
+      >
+        <ImageIcon />
+        <span className="of-tool__tip" aria-hidden="true">
+          Image
+        </span>
+      </button>
+      <input
+        ref={fileInput}
+        type="file"
+        className="of-visually-hidden"
+        accept={ALLOWED_IMAGE_TYPES.join(',')}
+        multiple
+        tabIndex={-1}
+        onChange={(event) => {
+          const files = [...(event.target.files ?? [])]
+          // Reset so choosing the same file twice in a row fires `change`
+          // again — otherwise the second attempt silently does nothing.
+          event.target.value = ''
+          if (files.length === 0) return
+          const { viewport, canvasSize } = useInteractionStore.getState()
+          void importImages(
+            files,
+            screenToWorld(viewport, { x: canvasSize.width / 2, y: canvasSize.height / 2 }),
+          )
+        }}
+      />
+    </div>
+  )
+
+  return (
+    <div className="of-rail" role="toolbar" aria-label="Board tools" aria-orientation="vertical">
+      {GROUPS.map((group, index) => (
+        <Fragment key={group.label}>
+          {index > 0 && <div className="of-rail__rule" role="separator" />}
+          <div className="of-rail__group" role="group" aria-label={group.label}>
+            {group.items.map((item) => (item === 'image' ? image : slot(item)))}
+          </div>
+        </Fragment>
+      ))}
     </div>
   )
 }

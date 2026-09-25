@@ -550,7 +550,7 @@ step, and `design-tokens.test.ts` fails on a literal. Sixteen values were in use
 and a 3, 5, 7 and 9 beside the 2, 4, 6 and 8 they were meant to be was drift
 rather than a decision; they rounded up, onto the scale. Above 20px a length is
 a size, not rhythm. Tool icons are 21px inside a 50px target; secondary icons are
-16–17px; the disclosure arrow is 12px.
+16–17px; the arrow in a tool's options strip is 10px.
 
 **World rhythm** is the quadrille: `GRID_SIZE` is 10 world units, snapping lands
 on it, and the decade rule marks the line the user is aiming at.
@@ -681,12 +681,27 @@ are type specimens, and "3 × 4" is a readout.
 
 ### Tool Rail
 
-Creation only — select, hand, sticky, text, shape, frame, connect, then a ruled
-divider and image. Selection actions are not in the rail. Tools are 50px squares
-(`--of-hit-lg`, a whole decade of the rule; the AA 2.5.8 target minimum is 24,
-and a tool reached for constantly deserves more than the floor) with 21px icons, muted ink at rest, ink on an accent wash on
-hover, accent on accent wash when active, 0.35 opacity when disabled. The shape
-slot carries a 16px disclosure that opens a two-column flyout of eight shapes.
+Three runs, with a ruled divider between each, and each a labelled group for a
+screen reader: **navigate** (select, hand), **make** (sticky, text, shape,
+frame, connect, table, code, image) and **annotate** (comment). Image is made
+like everything else in its run; it is a button rather than a mode only because
+it needs a file first. Selection actions are not in the rail.
+
+Tools are 50px squares (`--of-hit-lg`, a whole decade of the rule; the AA 2.5.8
+target minimum is 24, and a tool reached for constantly deserves more than the
+floor) with 21px icons, muted ink at rest, ink on an accent wash on hover,
+accent on accent wash when active. The rail is centred in the band between the
+top gutter and the record line and never crosses either: as the window
+shortens the tools step down a decade at a time — 40px below 720 tall, 30px
+below 604 — and only below 494 does the rail scroll, because a scrolling box
+clips the tips.
+
+Shape and Table have options. Pressing the ARMED tool opens them; a 12px strip
+in the rail's padding, beside the tool and never inside it, is the pointer's
+shortcut to the same menu. Opening moves focus in; Escape or a press elsewhere
+closes it and hands focus back. The shape menu walks with the arrows; the size
+grid is one Tab stop of 24px cells that the arrows resize, read out as
+"4 columns × 2 rows". U still cycles the shape kind; nothing on the rail does.
 
 ### Tool Tip
 

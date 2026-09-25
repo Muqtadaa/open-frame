@@ -84,3 +84,37 @@ test.describe('the rail from the keyboard', () => {
     expect(after?.x).toBeCloseTo((before?.x ?? 0) + 60, 0)
   })
 })
+
+/*
+ * One run of ten tools with a single rule setting Image apart mixed getting
+ * around, making things and annotating them. The groups are what a screen
+ * reader announces on the way in, and what the rules between them draw.
+ */
+test('the rail is grouped into getting around, making and annotating', async ({ page }) => {
+  await board(page)
+  const rail = page.getByRole('toolbar', { name: 'Board tools' })
+  const groups = rail.getByRole('group')
+  await expect(groups).toHaveCount(3)
+  await expect(groups.nth(0)).toHaveAttribute('aria-label', 'Navigate')
+  await expect(groups.nth(1)).toHaveAttribute('aria-label', 'Make')
+  await expect(groups.nth(2)).toHaveAttribute('aria-label', 'Annotate')
+
+  const ids = async (index: number): Promise<(string | null)[]> =>
+    groups
+      .nth(index)
+      .locator('.of-tool')
+      .evaluateAll((tools) => tools.map((tool) => tool.getAttribute('data-testid')))
+  expect(await ids(0)).toEqual(['tool-select', 'tool-pan'])
+  // Image is something you make, not an afterthought below a rule.
+  expect(await ids(1)).toEqual([
+    'tool-sticky',
+    'tool-text',
+    'tool-shape',
+    'tool-frame',
+    'tool-connector',
+    'tool-table',
+    'tool-code',
+    'tool-image',
+  ])
+  expect(await ids(2)).toEqual(['tool-comment'])
+})
