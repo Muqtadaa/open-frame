@@ -346,3 +346,12 @@ Inspector P2s — **fixed** (one commit):
   unset text colour inherits the board ink, which in After Hours is not one of
   the palette tokens, so marking a swatch would claim a choice nobody made.
   The outline default is marked because it is a token.
+
+### #2 Tool rail and flyouts — critique
+
+**21/40**, first run (`.impeccable/critique/2026-09-25T03-05-16Z__src-ui-toolbar-tsx.md`).
+P0: no rail button can be pressed from the keyboard (the global keymap claims
+Enter and Space). P1: flyouts unreachable by keyboard, undismissable, 16px
+targets, and painting over the record panel; the fixed 599px rail runs off
+short windows and into the record line. P2: grouping and tool set; weak active
+state. Fix order pending the owner's answers.
