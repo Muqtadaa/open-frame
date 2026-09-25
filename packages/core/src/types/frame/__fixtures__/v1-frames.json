@@ -1,0 +1,65 @@
+{
+  "format": "openframe.board",
+  "schemaVersion": 1,
+  "savedAt": 1700000000000,
+  "board": {
+    "id": "board_frozen_frames",
+    "meta": {
+      "title": "Before a frame title could be formatted",
+      "createdAt": 1700000000000
+    },
+    "objects": [
+      {
+        "id": "obj_frame",
+        "type": "frame",
+        "dataVersion": 1,
+        "frame": {
+          "x": 0,
+          "y": 0,
+          "width": 640,
+          "height": 420,
+          "rotation": 0
+        },
+        "parentId": null,
+        "order": "a0",
+        "style": {},
+        "locked": false,
+        "hidden": false,
+        "data": {
+          "name": "Onboarding research"
+        },
+        "meta": {
+          "createdAt": 1700000000000,
+          "createdBy": null,
+          "createdVia": "user"
+        }
+      },
+      {
+        "id": "obj_frame_empty",
+        "type": "frame",
+        "dataVersion": 1,
+        "frame": {
+          "x": 0,
+          "y": 0,
+          "width": 640,
+          "height": 420,
+          "rotation": 0
+        },
+        "parentId": null,
+        "order": "a1",
+        "style": {},
+        "locked": false,
+        "hidden": false,
+        "data": {
+          "name": ""
+        },
+        "meta": {
+          "createdAt": 1700000000000,
+          "createdBy": null,
+          "createdVia": "user"
+        }
+      }
+    ],
+    "assets": []
+  }
+}

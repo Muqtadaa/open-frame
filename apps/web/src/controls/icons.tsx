@@ -559,3 +559,27 @@ export function LockIcon({ className }: IconProps) {
     </svg>
   )
 }
+
+/** Three items, each with a dot: a bulleted list. */
+export function BulletListIcon({ className }: IconProps) {
+  return (
+    <svg {...base} className={className}>
+      <path d="M10 6h10M10 12h10M10 18h10" />
+      <circle cx="5" cy="6" r="1" fill="currentColor" />
+      <circle cx="5" cy="12" r="1" fill="currentColor" />
+      <circle cx="5" cy="18" r="1" fill="currentColor" />
+    </svg>
+  )
+}
+
+/** Three items, counted: a numbered list. Drawn, not typed, like every glyph here. */
+export function NumberListIcon({ className }: IconProps) {
+  return (
+    <svg {...base} className={className}>
+      <path d="M10 6h10M10 12h10M10 18h10" />
+      <path d="M4 4.5l1.2-.8V8" />
+      <path d="M3.6 10.6a1.2 1.2 0 0 1 2.2.6c0 .9-2.2 1.9-2.2 2.8h2.4" />
+      <path d="M3.6 16.2h2.2l-1.2 1.5a1.1 1.1 0 1 1-1 1.7" />
+    </svg>
+  )
+}

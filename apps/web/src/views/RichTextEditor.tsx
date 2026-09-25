@@ -1,10 +1,17 @@
 import {
   applyMark,
   applySize,
+  indentBy,
+  listOf,
   markCovers,
+  paragraphsOf,
   DEFAULT_SIZE,
   plainTextOf,
+  setList,
   SIZE_TOKENS,
+  spliceText,
+  updateParagraph,
+  type ListKind,
   type Mark,
   type RichText,
   type SizeToken,
@@ -12,6 +19,8 @@ import {
 import type { ObjectEditorProps } from './registry.js'
 import { useEffect, useLayoutEffect, useRef, useState } from 'react'
 
+import { BulletListIcon, NumberListIcon } from '../controls/icons.js'
+import { IS_MAC } from '../scene/platform.js'
 import {
   renderSpansInto,
   selectionOffsets,
@@ -81,6 +90,8 @@ export function RichTextEditor({
    * without anything else having changed.
    */
   const [active, setActive] = useState<readonly Mark[]>([])
+  /** The list kind the caret's paragraphs share, for the two list buttons. */
+  const [activeList, setActiveList] = useState<ListKind | undefined>(undefined)
 
   /*
    * Filled imperatively, and React never renders children here.
@@ -116,6 +127,7 @@ export function RichTextEditor({
       if (at === null) return
       const text = spansFromElement(element)
       setActive(MARK_LIST.filter((mark) => markCovers(text, at.from, at.to, mark)))
+      setActiveList(listOf(text, at.from, at.to))
     }
     owner.addEventListener('selectionchange', sync)
     return () => {
@@ -159,6 +171,50 @@ export function RichTextEditor({
      */
     setSelectionOffsets(element, range.from, range.to)
     setActive(MARK_LIST.filter((mark) => markCovers(next, range.from, range.to, mark)))
+    setActiveList(listOf(next, range.from, range.to))
+  }
+
+  /*
+   * A change to PARAGRAPHS rather than to characters. Unlike marks, a caret
+   * with nothing selected means the paragraph it is in, not the whole text:
+   * pressing "bullet" in the middle of a note makes that line an item.
+   *
+   * `shift` is how far the selection moves because characters before it were
+   * removed — the "- " that became a bullet.
+   */
+  const reshape = (
+    transform: (text: RichText, from: number, to: number) => RichText,
+    shift = 0,
+  ): void => {
+    const element = ref.current
+    if (element === null) return
+    const current = spansFromElement(element)
+    const range = selectionOffsets(element) ?? { from: 0, to: plainTextOf(current).length }
+    const next = transform(current, range.from, range.to)
+    draft.current = next
+    renderSpansInto(element, next)
+    const from = Math.max(0, range.from - shift)
+    const to = Math.max(from, range.to - shift)
+    setSelectionOffsets(element, from, to)
+    setActive(MARK_LIST.filter((mark) => markCovers(next, from, to, mark)))
+    setActiveList(listOf(next, from, to))
+  }
+
+  const toggleList = (kind: ListKind): void => {
+    reshape((text, from, to) =>
+      setList(text, from, to, listOf(text, from, to) === kind ? undefined : kind),
+    )
+  }
+
+  /** The paragraph a collapsed caret is in, and how far into it, or null. */
+  const caretParagraph = () => {
+    const element = ref.current
+    if (element === null) return null
+    const at = selectionOffsets(element)
+    if (at === null || at.from !== at.to) return null
+    const text = spansFromElement(element)
+    const paragraph = paragraphsOf(text).find((p) => p.from <= at.from && at.from <= p.to)
+    return paragraph === undefined ? null : { text, paragraph, at: at.from }
   }
 
   const apply = (transform: (text: RichText, from: number, to: number) => RichText): void => {
@@ -168,22 +224,24 @@ export function RichTextEditor({
   return (
     <>
       <Chrome prefer={['above', 'below']}>
-      <FormatBar
-        active={active}
-        onToggle={(mark) =>
-          apply((text, from, to) =>
-            applyMark(text, from, to, mark, !markCovers(text, from, to, mark)),
-          )
-        }
-        onResize={(by) => {
-          apply((text, from, to) => {
-            const next = stepSize(sizeOfRange(text, from, to), by)
-            // `md` is the object's own size, so it is stored as no size at all
-            // rather than as a token meaning "the default".
-            return applySize(text, from, to, next === DEFAULT_SIZE ? undefined : next)
-          })
-        }}
-      />
+        <FormatBar
+          active={active}
+          list={activeList}
+          onList={toggleList}
+          onToggle={(mark) =>
+            apply((text, from, to) =>
+              applyMark(text, from, to, mark, !markCovers(text, from, to, mark)),
+            )
+          }
+          onResize={(by) => {
+            apply((text, from, to) => {
+              const next = stepSize(sizeOfRange(text, from, to), by)
+              // `md` is the object's own size, so it is stored as no size at all
+              // rather than as a token meaning "the default".
+              return applySize(text, from, to, next === DEFAULT_SIZE ? undefined : next)
+            })
+          }}
+        />
       </Chrome>
       <div
         ref={ref}
@@ -212,6 +270,29 @@ export function RichTextEditor({
            * because it looks handled.
            */
           event.preventDefault()
+          const html = event.clipboardData.getData('text/html')
+          const element = ref.current
+          if (html !== '' && element !== null) {
+            /*
+             * Markup is READ, never inserted. It is parsed into a document
+             * that is never rendered — nothing in it loads or runs — and only
+             * what the reader understands comes out: the characters, the four
+             * marks, the sizes and the lists. Then that text is spliced into
+             * the model and drawn from it like any other edit.
+             */
+            const parsed = new DOMParser().parseFromString(html, 'text/html')
+            const pasted = spansFromElement(parsed.body)
+            if (plainTextOf(pasted) !== '') {
+              const at = selectionOffsets(element) ?? { from: 0, to: 0 }
+              const current = spansFromElement(element)
+              const next = spliceText(current, at.from, at.to, pasted)
+              draft.current = next
+              renderSpansInto(element, next)
+              const caret = at.from + plainTextOf(pasted).length
+              setSelectionOffsets(element, caret, caret)
+              return
+            }
+          }
           const text = event.clipboardData.getData('text/plain')
           if (text !== '') event.currentTarget.ownerDocument.execCommand('insertText', false, text)
         }}
@@ -231,6 +312,88 @@ export function RichTextEditor({
             const element = ref.current
             onCommit(element === null ? draft.current : spansFromElement(element))
             return
+          }
+
+          // The list shortcuts every document editor shares: Mod+Shift+8 for
+          // bullets, Mod+Shift+7 for numbers. By CODE, because Shift+8 is "*"
+          // on one keyboard and something else on the next.
+          if ((event.metaKey || event.ctrlKey) && event.shiftKey) {
+            const kind =
+              event.code === 'Digit8' ? 'bullet' : event.code === 'Digit7' ? 'number' : null
+            if (kind !== null) {
+              event.preventDefault()
+              toggleList(kind)
+              return
+            }
+          }
+
+          if (event.key === 'Tab') {
+            const element = ref.current
+            const at = element === null ? null : selectionOffsets(element)
+            if (element !== null && at !== null) {
+              const text = spansFromElement(element)
+              // Only a list nests. A Tab anywhere else leaves the editor, as
+              // it leaves every other field, and that commits.
+              if (listOf(text, at.from, at.to) !== undefined) {
+                event.preventDefault()
+                reshape((current, from, to) => indentBy(current, from, to, event.shiftKey ? -1 : 1))
+                return
+              }
+            }
+          }
+
+          if (event.key === 'Enter' && !event.shiftKey) {
+            const here = caretParagraph()
+            // Enter on an EMPTY item ends the list, as it does everywhere else;
+            // Enter on any other item is the browser's, which splits the block
+            // and copies the item's attributes onto the new one.
+            if (here?.paragraph.list !== undefined && here.paragraph.to === here.paragraph.from) {
+              event.preventDefault()
+              reshape((current, from, to) => setList(current, from, to, undefined))
+              return
+            }
+          }
+
+          if (event.key === 'Backspace') {
+            const here = caretParagraph()
+            // At the very start of an item, Backspace takes the bullet away
+            // first and leaves the words; a second press joins the lines.
+            if (here?.paragraph.list !== undefined && here.at === here.paragraph.from) {
+              event.preventDefault()
+              reshape((current, from, to) => setList(current, from, to, undefined))
+              return
+            }
+          }
+
+          if (event.key === ' ') {
+            const here = caretParagraph()
+            if (here !== null && here.paragraph.list === undefined) {
+              const typed = plainTextOf(here.paragraph.spans).slice(
+                0,
+                here.at - here.paragraph.from,
+              )
+              // "- " or "* " starts a bulleted list and "1. " a numbered one,
+              // typed at the start of a line: what people type anyway.
+              const kind =
+                typed === '-' || typed === '*' ? 'bullet' : typed === '1.' ? 'number' : null
+              if (kind !== null) {
+                event.preventDefault()
+                // A change to THE PARAGRAPH, never a character edit: see
+                // `updateParagraph` for the empty line it would otherwise lose.
+                const index = paragraphsOf(here.text).findIndex(
+                  (paragraph) => paragraph.from === here.paragraph.from,
+                )
+                reshape(
+                  (current) =>
+                    updateParagraph(current, index, (paragraph) => ({
+                      spans: spliceText(paragraph.spans, 0, typed.length, [{ text: '' }]),
+                      list: kind,
+                    })),
+                  typed.length,
+                )
+                return
+              }
+            }
           }
 
           const mark = (event.metaKey || event.ctrlKey) && SHORTCUTS[event.key.toLowerCase()]
@@ -296,10 +459,14 @@ function stepSize(current: SizeToken, by: 1 | -1): SizeToken {
  */
 function FormatBar({
   active,
+  list,
+  onList,
   onToggle,
   onResize,
 }: {
   readonly active: readonly Mark[]
+  readonly list: ListKind | undefined
+  readonly onList: (kind: ListKind) => void
   readonly onToggle: (mark: Mark) => void
   readonly onResize: (by: 1 | -1) => void
 }) {
@@ -377,6 +544,43 @@ function FormatBar({
       >
         A+
       </button>
+
+      <span className="of-format-bar__rule" aria-hidden="true" />
+
+      {LIST_BUTTONS.map(({ kind, label, keys, Icon }) => (
+        <button
+          key={kind}
+          type="button"
+          className="of-icon-button of-format-bar__button"
+          aria-label={label}
+          aria-pressed={list === kind}
+          aria-keyshortcuts={keys}
+          data-tip={`${label} ${shown(keys)}`}
+          aria-description={`${label} ${shown(keys)}`}
+          data-testid={`format-${kind}`}
+          onMouseDown={keepFocus}
+          onClick={() => {
+            onList(kind)
+          }}
+        >
+          <Icon />
+        </button>
+      ))}
     </div>
   )
 }
+
+const MOD = IS_MAC ? 'Meta' : 'Control'
+/** A shortcut as a tip shows it: the platform's own glyphs. */
+const shown = (keys: string): string =>
+  IS_MAC ? keys.replace('Meta+Shift+', '⌘⇧') : keys.replace('Control', 'Ctrl')
+
+const LIST_BUTTONS: readonly {
+  readonly kind: ListKind
+  readonly label: string
+  readonly keys: string
+  readonly Icon: typeof BulletListIcon
+}[] = [
+  { kind: 'bullet', label: 'Bulleted list', keys: `${MOD}+Shift+8`, Icon: BulletListIcon },
+  { kind: 'number', label: 'Numbered list', keys: `${MOD}+Shift+7`, Icon: NumberListIcon },
+]

@@ -1,4 +1,5 @@
 import type { Tool } from './interaction-store.js'
+import { IS_MAC } from '../scene/platform.js'
 
 /**
  * Keyboard shortcuts, resolved as pure data.
@@ -186,7 +187,4 @@ export function formatShortcut(keys: string, isMac: boolean): string {
  * zoom cluster — from three copies of the same platform sniff, which is how
  * one of them would eventually have disagreed with the others.
  */
-export const MOD_KEY = formatShortcut(
-  'Mod',
-  typeof navigator !== 'undefined' && /Mac|iPhone|iPad/.test(navigator.platform),
-)
+export const MOD_KEY = formatShortcut('Mod', IS_MAC)

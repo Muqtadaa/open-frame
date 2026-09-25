@@ -486,14 +486,11 @@ become the size of nearly everything, which is a different thing.
 It was also written down a week before it was true: this file said twelve while
 27 rules in the stylesheet still said eleven, because a floor in prose is a
 floor nothing measures. `design-tokens.test.ts` now reads every absolute
-`font-size` in the stylesheet and fails below 12px. Its one exemption is a
-specimen — the format bar's small-size button, drawn at the size it applies.
+`font-size` in the stylesheet and fails below 12px, with no exemptions.
 
 **The Ramp Rule.** Every interface size names a step of `--of-type-*`, and
 `design-tokens.test.ts` fails on a literal. Text INSIDE an object scales in `em`
 from the object's own size and is not on the ramp — that is the user's material.
-The only exemptions are the format bar's size specimens, each drawn at the size
-it applies.
 
 **The Mono Is A Record Rule.** Mono marks records and measurement — counts, zoom,
 field values, shortcuts — and nothing else. It is never applied to make something

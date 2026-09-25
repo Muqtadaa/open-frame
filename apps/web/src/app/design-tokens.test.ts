@@ -556,13 +556,12 @@ describe('the record panel fits what it promises to show', () => {
  */
 describe('the twelve pixel floor', () => {
   const FLOOR = 12
-  /**
-   * The one exemption: the text format bar shows each size step AT its own
-   * size, so the small step's glyph is a specimen of small type rather than a
-   * label anyone reads — the button carries its name for assistive tech.
+  /*
+   * No exemptions. There was one — the record panel's size choice drew each
+   * step at its own size, so "small" was a specimen of 10px type — and it
+   * went with the control when a connector's label became rich text
+   * (ADR 0014).
    */
-  const SPECIMENS = new Set(['.of-size--small', '.of-size--medium', '.of-size--large'])
-
   /**
    * Sizes are ramp tokens now, so the floor has to READ the ramp — a check
    * that only looked at literal `px` would pass on a stylesheet with no
@@ -591,7 +590,6 @@ describe('the twelve pixel floor', () => {
 
   it('sets no functional text below 12px', () => {
     const below = rules()
-      .filter(([selector]) => !SPECIMENS.has(selector))
       .filter(([, size]) => {
         const px = sizeOf(size)
         return px !== null && px < FLOOR
@@ -613,17 +611,11 @@ describe('the twelve pixel floor', () => {
    */
   it('draws every interface size from the ramp', () => {
     const off = rules()
-      .filter(([selector]) => !SPECIMENS.has(selector))
       .filter(([, size]) => !/^var\(--of-type-[\w-]+\)$/.test(size) && !size.endsWith('em'))
       .map(([selector, size]) => `${selector}: ${size}`)
     expect(off).toEqual([])
   })
 
-  it('exempts only the specimens, and only while they exist', () => {
-    for (const selector of SPECIMENS) {
-      expect(CSS).toContain(`${selector} {`)
-    }
-  })
 })
 
 /**

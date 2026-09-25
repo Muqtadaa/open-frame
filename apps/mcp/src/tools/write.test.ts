@@ -160,13 +160,17 @@ describe('changing a board', () => {
 
     const connector = objectsOn(peer).find((object) => object.type === 'connector')
     expect(connector).toBeDefined()
-    const data = connector?.data as { from: { kind: string; objectId: string }; text: string }
+    const data = connector?.data as {
+      from: { kind: string; objectId: string }
+      text: readonly { text: string }[]
+    }
     // ATTACHED, not placed at the object's coordinates: an end that is
     // attached moves with what it is attached to, which is the whole
     // difference between a connector and a line.
     expect(data.from.kind).toBe('object')
     expect(data.from.objectId).toBe(from?.id)
-    expect(data.text).toBe('causes')
+    // The label is rich text (ADR 0014); the agent named it in words.
+    expect(data.text).toEqual([{ text: 'causes' }])
     await context.close()
   })
 })

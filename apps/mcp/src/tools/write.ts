@@ -325,7 +325,8 @@ export const createConnector: ToolDefinition = {
               points: [],
               startArrow: asked.startArrow ?? 'none',
               endArrow: asked.endArrow ?? 'arrow',
-              text: asked.text ?? '',
+              // A label is rich text (ADR 0014); an agent names it in words.
+              text: [{ text: asked.text ?? '' }],
               label: null,
             },
           },

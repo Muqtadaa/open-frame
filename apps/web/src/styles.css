@@ -3532,22 +3532,29 @@ body {
   overflow: visible;
 }
 
+/*
+ * A frame's title, which is rich text (ADR 0014): it can wrap, take a list and
+ * carry a larger size, so it is anchored by its BOTTOM edge to the frame's top
+ * and grows upward, rather than living in a fixed 18-pixel band that clipped
+ * anything taller than one line.
+ */
 .of-frame__title {
   position: absolute;
+  bottom: 100%;
   left: 0;
-  display: flex;
-  align-items: flex-end;
   max-width: 480px;
+  padding-bottom: var(--of-space-2);
   overflow: hidden;
   font-size: var(--of-type-ui);
-  line-height: 1;
+  line-height: 1.2;
   color: var(--of-ink-muted);
-  white-space: nowrap;
-  text-overflow: ellipsis;
+  overflow-wrap: anywhere;
+  white-space: pre-wrap;
 }
 
 .of-frame__editor {
   width: 300px;
+  min-height: 18px;
   padding: 0;
   background: var(--of-panel);
   outline: 1px solid var(--of-accent);
@@ -3583,23 +3590,44 @@ body {
   pointer-events: none;
 }
 
+.of-connector__label-room {
+  overflow: visible;
+  pointer-events: none;
+}
+
+.of-connector__label-centre {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  height: 100%;
+}
+
+/*
+ * The label, in HTML (ADR 0014), so it takes marks, sizes and lists. With no
+ * plate it wears a board-coloured halo, so it reads where it crosses the line
+ * it names; with one, the halo would be a second background fringing every
+ * glyph, so the plate alone.
+ */
 .of-connector__label {
+  max-width: 240px;
   font-family: inherit;
   font-size: var(--of-type-record);
-  fill: var(--of-ink);
-  paint-order: stroke;
-  stroke: var(--of-bg);
-  stroke-width: 4px;
-  stroke-linejoin: round;
+  line-height: 1.3;
+  color: var(--of-ink);
+  text-align: center;
+  overflow-wrap: anywhere;
+  white-space: pre-wrap;
+  text-shadow:
+    0 0 2px var(--of-bg),
+    0 0 2px var(--of-bg),
+    0 0 3px var(--of-bg);
 }
-/*
- * With a plate behind it the halo is worse than useless: it is a second,
- * board-coloured background drawn on top of the chosen one, fringing every
- * glyph. The label sits ON the line now, so one of the two has to be there —
- * and when a colour has been picked, that is the one.
- */
+
 .of-connector__label--plated {
-  stroke: none;
+  padding: var(--of-space-4);
+  text-shadow: none;
+  border-radius: var(--of-radius-slip);
 }
 
 .of-connector__editor-wrap {
@@ -3609,8 +3637,10 @@ body {
 }
 
 .of-connector__editor {
-  width: 160px;
-  height: 28px;
+  width: max-content;
+  min-width: 160px;
+  max-width: 320px;
+  min-height: 28px;
   padding: var(--of-space-4) var(--of-space-6);
   font: inherit;
   font-size: var(--of-type-record);
@@ -4017,31 +4047,6 @@ textarea.of-input {
   cursor: pointer;
 }
 
-/* Separates what an object IS from how it looks. */
-/*
- * The mark buttons show what they DO — a bold B, an italic I, an underlined U
- * — because three letters that all look the same are three buttons nobody can
- * tell apart.
- */
-.of-mark--bold {
-  font-weight: 700;
-}
-.of-mark--italic {
-  font-style: italic;
-}
-.of-mark--underline {
-  text-decoration: underline;
-}
-/* And the size steps are shown at their own size, for the same reason. */
-.of-size--small {
-  font-size: 10px;
-}
-.of-size--medium {
-  font-size: 13px;
-}
-.of-size--large {
-  font-size: 16px;
-}
 /* No background at all, drawn as the absence it is. */
 .of-swatch--none {
   background:
@@ -4488,6 +4493,120 @@ textarea.of-input {
 
 .of-size--5xl {
   font-size: 7.6em;
+}
+
+/*
+ * Paragraphs and lists (ADR 0014).
+ *
+ * Every paragraph is a block, and a list item says so in data attributes —
+ * which a browser copies when Enter splits a block, so the editor continues a
+ * list by itself. The bullet or number is drawn here rather than typed, so it
+ * renumbers, never reaches search, and cannot be selected and deleted as if it
+ * were a character.
+ *
+ * A HANGING indent, not an absolutely placed marker: a centred shape label
+ * with a list in it keeps the bullet beside its words rather than stranded at
+ * the far edge of the box.
+ */
+.of-p[data-list] {
+  --of-depth: 0;
+
+  padding-inline-start: calc(1.4em * (var(--of-depth) + 1));
+  text-indent: -1.4em;
+}
+
+.of-p[data-indent='1'] {
+  --of-depth: 1;
+}
+
+.of-p[data-indent='2'] {
+  --of-depth: 2;
+}
+
+.of-p[data-indent='3'] {
+  --of-depth: 3;
+}
+
+.of-p[data-list]::before {
+  display: inline-block;
+  width: 1.4em;
+  text-indent: 0;
+  font-variant-numeric: tabular-nums;
+}
+
+.of-p[data-list='bullet']::before {
+  content: '•';
+}
+
+.of-p[data-list='bullet'][data-indent='1']::before {
+  content: '◦';
+}
+
+.of-p[data-list='bullet'][data-indent='2']::before {
+  content: '▪';
+}
+
+/*
+ * Numbering, one counter per level, and the paragraphs are SIBLINGS rather
+ * than nested lists — the shape the editor can keep while a browser splits
+ * and merges blocks under it. So each paragraph resets what should restart
+ * after it: a plain paragraph every level, an item every level deeper than
+ * itself, and a bullet its own level too, so a numbered list after bullets
+ * starts again at one.
+ */
+.of-p:not([data-list]) {
+  counter-reset: of-l0 of-l1 of-l2 of-l3;
+}
+
+.of-p[data-list='bullet']:not([data-indent]) {
+  counter-reset: of-l0 of-l1 of-l2 of-l3;
+}
+
+.of-p[data-list='bullet'][data-indent='1'] {
+  counter-reset: of-l1 of-l2 of-l3;
+}
+
+.of-p[data-list='bullet'][data-indent='2'] {
+  counter-reset: of-l2 of-l3;
+}
+
+.of-p[data-list='bullet'][data-indent='3'] {
+  counter-reset: of-l3;
+}
+
+.of-p[data-list='number']:not([data-indent]) {
+  counter-increment: of-l0;
+  counter-reset: of-l1 of-l2 of-l3;
+}
+
+.of-p[data-list='number']:not([data-indent])::before {
+  content: counter(of-l0) '.';
+}
+
+.of-p[data-list='number'][data-indent='1'] {
+  counter-increment: of-l1;
+  counter-reset: of-l2 of-l3;
+}
+
+.of-p[data-list='number'][data-indent='1']::before {
+  content: counter(of-l1, lower-alpha) '.';
+}
+
+.of-p[data-list='number'][data-indent='2'] {
+  counter-increment: of-l2;
+  counter-reset: of-l3;
+}
+
+.of-p[data-list='number'][data-indent='2']::before {
+  content: counter(of-l2, lower-roman) '.';
+}
+
+.of-p[data-list='number'][data-indent='3'] {
+  counter-increment: of-l3;
+}
+
+.of-p[data-list='number'][data-indent='3']::before {
+  content: counter(of-l3) '.';
 }
 
 /*

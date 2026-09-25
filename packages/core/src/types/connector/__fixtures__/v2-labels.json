@@ -1,0 +1,185 @@
+{
+  "format": "openframe.board",
+  "schemaVersion": 1,
+  "savedAt": 1700000000000,
+  "board": {
+    "id": "board_frozen_labels",
+    "meta": {
+      "title": "Before a label could be formatted",
+      "createdAt": 1700000000000
+    },
+    "objects": [
+      {
+        "id": "obj_plain",
+        "type": "connector",
+        "dataVersion": 2,
+        "frame": {
+          "x": 0,
+          "y": 0,
+          "width": 0,
+          "height": 0,
+          "rotation": 0
+        },
+        "parentId": null,
+        "order": "a0",
+        "style": {},
+        "locked": false,
+        "hidden": false,
+        "data": {
+          "from": {
+            "kind": "point",
+            "x": 0,
+            "y": 0
+          },
+          "to": {
+            "kind": "point",
+            "x": 300,
+            "y": 0
+          },
+          "routing": "straight",
+          "points": [],
+          "startArrow": "none",
+          "endArrow": "arrow",
+          "text": "depends on",
+          "label": null
+        },
+        "meta": {
+          "createdAt": 1700000000000,
+          "createdBy": null,
+          "createdVia": "user"
+        }
+      },
+      {
+        "id": "obj_bold_large",
+        "type": "connector",
+        "dataVersion": 2,
+        "frame": {
+          "x": 0,
+          "y": 0,
+          "width": 0,
+          "height": 0,
+          "rotation": 0
+        },
+        "parentId": null,
+        "order": "a1",
+        "style": {
+          "bold": true,
+          "italic": true,
+          "textSize": "large",
+          "textColor": "red"
+        },
+        "locked": false,
+        "hidden": false,
+        "data": {
+          "from": {
+            "kind": "point",
+            "x": 0,
+            "y": 0
+          },
+          "to": {
+            "kind": "point",
+            "x": 300,
+            "y": 0
+          },
+          "routing": "straight",
+          "points": [],
+          "startArrow": "none",
+          "endArrow": "arrow",
+          "text": "blocks",
+          "label": null
+        },
+        "meta": {
+          "createdAt": 1700000000000,
+          "createdBy": null,
+          "createdVia": "user"
+        }
+      },
+      {
+        "id": "obj_small_underline",
+        "type": "connector",
+        "dataVersion": 2,
+        "frame": {
+          "x": 0,
+          "y": 0,
+          "width": 0,
+          "height": 0,
+          "rotation": 0
+        },
+        "parentId": null,
+        "order": "a2",
+        "style": {
+          "underline": true,
+          "textSize": "small"
+        },
+        "locked": false,
+        "hidden": false,
+        "data": {
+          "from": {
+            "kind": "point",
+            "x": 0,
+            "y": 0
+          },
+          "to": {
+            "kind": "point",
+            "x": 300,
+            "y": 0
+          },
+          "routing": "straight",
+          "points": [],
+          "startArrow": "none",
+          "endArrow": "arrow",
+          "text": "maybe",
+          "label": null
+        },
+        "meta": {
+          "createdAt": 1700000000000,
+          "createdBy": null,
+          "createdVia": "user"
+        }
+      },
+      {
+        "id": "obj_unlabelled",
+        "type": "connector",
+        "dataVersion": 2,
+        "frame": {
+          "x": 0,
+          "y": 0,
+          "width": 0,
+          "height": 0,
+          "rotation": 0
+        },
+        "parentId": null,
+        "order": "a3",
+        "style": {
+          "bold": true
+        },
+        "locked": false,
+        "hidden": false,
+        "data": {
+          "from": {
+            "kind": "point",
+            "x": 0,
+            "y": 0
+          },
+          "to": {
+            "kind": "point",
+            "x": 300,
+            "y": 0
+          },
+          "routing": "straight",
+          "points": [],
+          "startArrow": "none",
+          "endArrow": "arrow",
+          "text": "",
+          "label": null
+        },
+        "meta": {
+          "createdAt": 1700000000000,
+          "createdBy": null,
+          "createdVia": "user"
+        }
+      }
+    ],
+    "assets": []
+  }
+}

@@ -141,6 +141,29 @@ for (const world of WORLDS) {
       await snap(page, `${world}-shape-flyout`)
     })
 
+    // The numbers and bullets are CSS counters and glyphs no functional test
+    // can read back, so this is what holds 1, 2, a, b and the restart after.
+    test('a note with nested lists', async ({ page }) => {
+      await openLocalBoard(page)
+      await page.keyboard.press('s')
+      await page.locator('[data-testid="canvas"]').click({ position: { x: 520, y: 260 } })
+      await page.keyboard.press('Delete')
+      await page.keyboard.type('1. one')
+      await page.keyboard.press('Enter')
+      await page.keyboard.type('two')
+      await page.keyboard.press('Enter')
+      await page.keyboard.press('Tab')
+      await page.keyboard.type('nested')
+      await page.keyboard.press('Enter')
+      await page.keyboard.press('Shift+Tab')
+      await page.keyboard.press('Enter')
+      await page.keyboard.type('- bullet')
+      // Committed by leaving: Escape would discard the edit.
+      await page.mouse.click(1100, 600)
+      await expect(page.locator('[data-object-type="sticky"] [role="listitem"]')).toHaveCount(4)
+      await snap(page, `${world}-note-lists`)
+    })
+
     // No golden covered a table cell, which is how the cell bar's targets
     // came to overlap without anything noticing.
     test('table cell bar', async ({ page }) => {

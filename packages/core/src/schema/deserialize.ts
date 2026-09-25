@@ -164,7 +164,7 @@ export function deserializeBoard(raw: unknown, registry: ObjectTypeRegistry): Lo
 
     let data: unknown
     try {
-      data = definition.migrate(persisted.data, persisted.dataVersion)
+      data = definition.migrate(persisted.data, persisted.dataVersion, persisted.style)
     } catch (error) {
       objects.set(id, quarantineObject(persisted, registry))
       degraded.push({

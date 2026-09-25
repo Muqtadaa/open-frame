@@ -108,7 +108,7 @@ function ShapeRenderer({ object }: ObjectViewProps<ShapeData>) {
     >
       <ShapeOutline object={object} />
       {plain.trim() !== '' && (
-        <span
+        <div
           className="of-shape__label"
           style={{
             // Per shape, not a uniform 10%: a label centred in the bounding box
@@ -138,10 +138,10 @@ function ShapeRenderer({ object }: ObjectViewProps<ShapeData>) {
            * of why "shape labels are permanently centred" reached a deployed
            * build. Layout is unchanged: one flex item either way.
            */}
-          <span className="of-shape__label-text" data-fit-text>
+          <div className="of-shape__label-text" data-fit-text>
             <RichTextView value={label} />
-          </span>
-        </span>
+          </div>
+        </div>
       )}
     </div>
   )

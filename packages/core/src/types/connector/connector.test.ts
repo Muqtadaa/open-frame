@@ -1586,7 +1586,7 @@ describe('placing a connector label', () => {
       from: { kind: 'point', x: 0, y: 0 },
       to: { kind: 'point', x: 400, y: 200 },
       routing: 'orthogonal',
-      text,
+      text: [{ text }],
       ...(label === undefined ? {} : { label }),
     })
     const object = h.store.getObject(id)
@@ -1714,43 +1714,39 @@ describe('placing a connector label', () => {
 })
 
 /**
- * FORMATTING the label, which is a caption on a line rather than a paragraph.
+ * FORMATTING the label (ADR 0014).
  *
- * Whole-object marks, declared as style properties, where a sticky's body text
- * takes its marks per span through the rich-text editor. Both exist because
- * they answer different questions — and no type declares both, so there is
- * never a second way to bold the same characters.
+ * Its bold, italic, underline and size used to be whole-object style props,
+ * the one text allowed to take marks that way. The label is rich text now and
+ * takes them per span, like a note — so what the connector still offers the
+ * panel is the label's colour and the plate behind it, and nothing that would
+ * be a second way to bold the same characters.
  */
-describe('a connector label takes its own formatting', () => {
+describe('a connector label takes its formatting in its text', () => {
   const h = createTestHarness()
   const id = create(h, 'connector', 0, 0, {
     from: { kind: 'point', x: 0, y: 0 },
     to: { kind: 'point', x: 400, y: 200 },
-    text: 'depends on',
+    text: [{ text: 'depends on', marks: ['bold'] }],
   })
   const object = h.store.getObject(id)
   if (object === undefined) throw new Error('missing connector')
 
-  it('offers the marks, a size and a background of its own', () => {
+  it('offers its colour and a background of its own', () => {
     const props = h.registry.stylePropsOf(object)
-    expect(props).toContain('bold')
-    expect(props).toContain('italic')
-    expect(props).toContain('underline')
-    expect(props).toContain('textSize')
+    expect(props).toContain('textColor')
     expect(props).toContain('labelFill')
   })
 
-  it('does not offer them on a type whose text takes marks per span', () => {
-    const sticky = h.store.getObject(create(h, 'sticky', 0, 0))
-    if (sticky === undefined) throw new Error('missing note')
-    /*
-     * A sticky's words are bolded in the editor, a span at a time (ADR 0012).
-     * Declaring the whole-object marks here as well would be two controls for
-     * one question, and the second one would silently win.
-     */
-    const props = h.registry.stylePropsOf(sticky)
-    expect(props).not.toContain('bold')
-    expect(props).not.toContain('textSize')
+  it('offers no whole-label marks beside the ones in its text', () => {
+    const props: readonly string[] = h.registry.stylePropsOf(object)
+    for (const retired of ['bold', 'italic', 'underline', 'textSize']) {
+      expect(props).not.toContain(retired)
+    }
+  })
+
+  it('describes its label as the words, formatting dropped', () => {
+    expect(h.registry.get('connector')?.describe(object).searchText).toBe('depends on')
   })
 
   it('keeps a background turned off through a save and a load', () => {

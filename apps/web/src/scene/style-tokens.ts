@@ -6,7 +6,6 @@ import {
   type DashToken,
   type FontToken,
   type StrokeToken,
-  type TextSizeToken,
   type VAlignToken,
 } from '@openframe/core'
 
@@ -113,23 +112,6 @@ export function surfaceColor(value: ColorValue | undefined): string | undefined 
   return value === undefined ? undefined : surfaceOf(value, 'gray')
 }
 
-/**
- * How big text is, in SCREEN pixels.
- *
- * Screen rather than world, because everywhere this is used sits inside a
- * counter-scale — a connector's label is laid out at its written size and
- * painted at whatever the board is zoomed to, so twelve means twelve on the
- * glass at every zoom (rule 24).
- */
-const TEXT_SIZES: Readonly<Record<TextSizeToken, number>> = {
-  small: 10,
-  medium: 12,
-  large: 16,
-}
-
-export function textSizePx(token: TextSizeToken | undefined): number {
-  return TEXT_SIZES[token ?? 'medium']
-}
 
 /**
  * Ink that can be read on a given fill, when nobody has chosen one.
