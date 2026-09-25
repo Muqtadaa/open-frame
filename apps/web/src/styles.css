@@ -162,6 +162,21 @@
   /* From the viewport edge, and between a cluster and what it clears. */
   --of-gutter: 20px;
 
+  /*
+   * THE SPACING SCALE, below the rule. The quadrille sets the big rhythm —
+   * `--of-step` between things on a line, `--of-gutter` from the edge — and
+   * these are the small steps inside a control or a row. Even pixels only:
+   * sixteen values were in use, and a 3, a 5, a 7 and a 9 beside the 2, 4, 6
+   * and 8 they were meant to be was the drift, not a decision. Named for their
+   * size, because what they space is written where they are used.
+   */
+  --of-space-2: 2px;
+  --of-space-4: 4px;
+  --of-space-6: 6px;
+  --of-space-8: 8px;
+  --of-space-12: 12px;
+  --of-space-16: 16px;
+
   --of-font: ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
   /*
    * Mono is for records and measurement — counts, zoom, field values — never as
@@ -398,11 +413,11 @@
  */
 .of-button {
   display: inline-flex;
-  gap: 6px;
+  gap: var(--of-space-6);
   align-items: center;
   justify-content: center;
   min-height: var(--of-hit-sm);
-  padding: 0 12px;
+  padding: 0 var(--of-space-12);
   font: inherit;
   font-family: var(--of-font);
   font-size: var(--of-type-control);
@@ -454,7 +469,7 @@
 /* The one act a sheet or a gate exists for, at the operating height. */
 .of-button--large {
   min-height: var(--of-hit);
-  padding: 0 18px;
+  padding: 0 var(--of-gutter);
 }
 
 /* Numerals in any record read as columns, never as ransom text. */
@@ -536,8 +551,8 @@ body {
 .of-rail {
   display: flex;
   flex-direction: column;
-  gap: 2px;
-  padding: 5px;
+  gap: var(--of-space-2);
+  padding: var(--of-space-6);
   /* The page's own stock, with a margin rule down its inner edge — the way a
      ruled pad prints its margin — rather than a white card hovering over it. */
   background: var(--of-page);
@@ -552,7 +567,7 @@ body {
 
 .of-rail__rule {
   height: 1px;
-  margin: 6px 4px;
+  margin: var(--of-space-6) var(--of-space-4);
   background: var(--of-panel-border);
 }
 
@@ -589,9 +604,9 @@ body {
   left: calc(100% + 10px);
   z-index: var(--of-z-tip);
   display: flex;
-  gap: 7px;
+  gap: var(--of-space-8);
   align-items: center;
-  padding: 5px 8px;
+  padding: var(--of-space-6) var(--of-space-8);
   font-size: var(--of-type-record);
   line-height: 1;
   color: var(--of-page);
@@ -679,8 +694,8 @@ body {
   display: grid;
   grid-template-columns: repeat(2, max-content);
   width: max-content;
-  gap: 2px;
-  padding: 6px;
+  gap: var(--of-space-2);
+  padding: var(--of-space-6);
   background: var(--of-panel);
   border: 1px solid var(--of-panel-border);
   border-radius: var(--of-radius-surface);
@@ -689,9 +704,9 @@ body {
 
 .of-flyout__item {
   display: flex;
-  gap: 8px;
+  gap: var(--of-space-8);
   align-items: center;
-  padding: 6px 10px 6px 7px;
+  padding: var(--of-space-6) var(--of-step) var(--of-space-6) var(--of-space-8);
   font: inherit;
   font-size: var(--of-type-record);
   color: var(--of-ink-muted);
@@ -802,9 +817,9 @@ body {
  */
 .of-picker {
   display: grid;
-  gap: 8px;
+  gap: var(--of-space-8);
   width: 212px;
-  padding: 10px;
+  padding: var(--of-step);
 }
 
 /*
@@ -917,7 +932,7 @@ body {
 
 .of-picker__row {
   display: flex;
-  gap: 6px;
+  gap: var(--of-space-6);
   align-items: center;
 }
 
@@ -992,9 +1007,9 @@ body {
 
 .of-zoom {
   display: flex;
-  gap: 2px;
+  gap: var(--of-space-2);
   align-items: center;
-  padding: 5px;
+  padding: var(--of-space-6);
   font-family: var(--of-mono);
   background: var(--of-page);
   border: 1px solid var(--of-panel-border);
@@ -1005,18 +1020,18 @@ body {
 .of-zoom__sep {
   width: 1px;
   height: 14px;
-  margin: 0 4px;
+  margin: 0 var(--of-space-4);
   background: var(--of-panel-border);
 }
 
 .of-zoom__button {
   display: flex;
-  gap: 6px;
+  gap: var(--of-space-6);
   align-items: center;
   /* Square where it holds only an icon, and the same height when it does not. */
   min-width: var(--of-hit-sm);
   height: var(--of-hit-sm);
-  padding: 0 7px;
+  padding: 0 var(--of-space-8);
   justify-content: center;
   font: inherit;
   color: var(--of-ink-muted);
@@ -1060,7 +1075,7 @@ body {
 .of-zoom__input {
   width: 60px;
   height: var(--of-hit-sm);
-  padding: 0 4px;
+  padding: 0 var(--of-space-4);
   font: inherit;
   font-size: var(--of-type-ui-small);
   font-variant-numeric: tabular-nums;
@@ -1086,9 +1101,9 @@ body {
 
 .of-notice {
   display: flex;
-  gap: 12px;
+  gap: var(--of-space-12);
   align-items: center;
-  padding: 9px 12px;
+  padding: var(--of-step) var(--of-space-12);
   font-size: var(--of-type-ui);
   background: var(--of-danger-wash);
   border: 1px solid var(--of-danger-edge);
@@ -1157,7 +1172,7 @@ body {
 .of-table__cell {
   min-width: 0;
   min-height: 0;
-  padding: 4px 6px;
+  padding: var(--of-space-4) var(--of-space-6);
   overflow: hidden;
   font-size: var(--of-type-record);
   /*
@@ -1361,8 +1376,8 @@ body {
  */
 .of-cellbar {
   display: grid;
-  gap: 7px;
-  padding: 7px;
+  gap: var(--of-space-8);
+  padding: var(--of-space-8);
 }
 
 .of-cellbar__head {
@@ -1410,8 +1425,8 @@ body {
 .of-table-edit__columns,
 .of-table-edit__rows {
   display: flex;
-  gap: 2px;
-  padding: 3px;
+  gap: var(--of-space-2);
+  padding: var(--of-space-4);
 }
 
 .of-table-edit__columns {
@@ -1448,16 +1463,16 @@ body {
  * reading two numbers and imagining it.
  */
 .of-grid-pick {
-  padding: 6px;
+  padding: var(--of-space-6);
 }
 
 .of-grid-pick__row {
   display: flex;
-  gap: 2px;
+  gap: var(--of-space-2);
 }
 
 .of-grid-pick__row + .of-grid-pick__row {
-  margin-top: 2px;
+  margin-top: var(--of-space-2);
 }
 
 .of-grid-pick__cell {
@@ -1476,7 +1491,7 @@ body {
 }
 
 .of-grid-pick__readout {
-  margin: 6px 0 0;
+  margin: var(--of-space-6) 0 0;
   font-size: var(--of-type-record);
   color: var(--of-ink-muted);
   text-align: center;
@@ -1514,7 +1529,7 @@ body {
 .of-code__pre {
   width: 100%;
   height: 100%;
-  padding: 8px 10px;
+  padding: var(--of-space-8) var(--of-step);
   margin: 0;
   overflow: auto;
   tab-size: 2;
@@ -1532,7 +1547,7 @@ body {
 .of-code__input {
   width: 100%;
   height: 100%;
-  padding: 8px 10px;
+  padding: var(--of-space-8) var(--of-step);
   resize: none;
   background: transparent;
   border: none;
@@ -1546,7 +1561,7 @@ body {
 
 /* Placement and shell are shared; this only says how the control looks. */
 .of-code__picker {
-  padding: 4px 6px;
+  padding: var(--of-space-4) var(--of-space-6);
   font: inherit;
   font-size: var(--of-type-record);
   color: var(--of-ink-muted);
@@ -1603,8 +1618,8 @@ body {
  */
 .of-spaces {
   display: grid;
-  gap: 6px;
-  margin: 0 0 10px;
+  gap: var(--of-space-6);
+  margin: 0 0 var(--of-step);
 }
 
 /*
@@ -1630,18 +1645,18 @@ body {
 .of-spaces__tabs {
   display: flex;
   flex-wrap: wrap;
-  gap: 2px;
-  padding: 2px;
+  gap: var(--of-space-2);
+  padding: var(--of-space-2);
   background: var(--of-bg);
   border-radius: var(--of-radius);
 }
 
 .of-spaces__tab {
   display: inline-flex;
-  gap: 6px;
+  gap: var(--of-space-6);
   align-items: baseline;
   min-height: 26px;
-  padding: 3px 9px;
+  padding: var(--of-space-4) var(--of-step);
   font: inherit;
   font-size: var(--of-type-record);
   color: var(--of-ink-muted);
@@ -1688,10 +1703,10 @@ body {
 .of-spaces__new {
   display: inline-flex;
   flex: none;
-  gap: 5px;
+  gap: var(--of-space-6);
   align-items: center;
   min-height: 26px;
-  padding: 3px 9px 3px 7px;
+  padding: var(--of-space-4) var(--of-step) var(--of-space-4) var(--of-space-8);
   font: inherit;
   font-size: var(--of-type-record);
   color: var(--of-ink-muted);
@@ -1711,7 +1726,7 @@ body {
 
 .of-spaces__naming {
   display: flex;
-  gap: 6px;
+  gap: var(--of-space-6);
 }
 
 .of-spaces__name,
@@ -1722,7 +1737,7 @@ body {
 
 .of-spaces__share {
   display: flex;
-  gap: 6px;
+  gap: var(--of-space-6);
   align-items: center;
 }
 
@@ -1732,7 +1747,7 @@ body {
 }
 
 .of-mentions__bell {
-  padding: 4px 10px;
+  padding: var(--of-space-4) var(--of-step);
   font: inherit;
   font-size: var(--of-type-record);
   color: var(--of-panel);
@@ -1767,7 +1782,7 @@ body {
 
 .of-mentions__item:not(.is-read) {
   border-left: 2px solid var(--of-accent);
-  padding-left: 6px;
+  padding-left: var(--of-space-6);
 }
 
 /*
@@ -1783,7 +1798,7 @@ body {
 .of-mentions__list {
   width: 280px;
   max-height: 320px;
-  padding: 4px;
+  padding: var(--of-space-4);
   margin: 0;
   overflow-y: auto;
   list-style: none;
@@ -1796,7 +1811,7 @@ body {
 .of-mentions__item {
   display: grid;
   gap: 1px;
-  padding: 8px;
+  padding: var(--of-space-8);
   color: inherit;
   text-decoration: none;
   border-radius: var(--of-radius);
@@ -1838,7 +1853,7 @@ body {
  * is the difference between "somebody was named here" and "you were".
  */
 .of-mention {
-  padding: 0 3px;
+  padding: 0 var(--of-space-4);
   font-weight: 600;
   color: var(--of-accent);
   background: var(--of-accent-soft);
@@ -1860,8 +1875,8 @@ body {
  */
 .of-mention-menu {
   max-height: 168px;
-  padding: 4px;
-  margin: 4px 0 0;
+  padding: var(--of-space-4);
+  margin: var(--of-space-4) 0 0;
   overflow-y: auto;
   list-style: none;
   background: var(--of-panel);
@@ -1872,9 +1887,9 @@ body {
 
 .of-mention-menu__item {
   display: flex;
-  gap: 8px;
+  gap: var(--of-space-8);
   align-items: center;
-  padding: 6px 8px;
+  padding: var(--of-space-6) var(--of-space-8);
   cursor: pointer;
   border-radius: var(--of-radius);
 }
@@ -1966,10 +1981,10 @@ body {
   z-index: var(--of-z-panel);
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  gap: var(--of-step);
   width: 300px;
   max-height: calc(100vh - 120px);
-  padding: 14px;
+  padding: var(--of-space-16);
   overflow-y: auto;
   background: var(--of-panel);
   border: 1px solid var(--of-panel-border);
@@ -1979,7 +1994,7 @@ body {
 
 .of-comment-panel__head {
   display: flex;
-  gap: 8px;
+  gap: var(--of-space-8);
   align-items: center;
   justify-content: space-between;
 }
@@ -2000,13 +2015,13 @@ body {
 .of-comment-panel__thread {
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  gap: var(--of-step);
   max-height: 320px;
   overflow-y: auto;
 }
 
 .of-comment-panel__hint {
-  margin: 6px 0 0;
+  margin: var(--of-space-6) 0 0;
   font-size: var(--of-type-record);
   color: var(--of-ink-muted);
 }
@@ -2022,7 +2037,7 @@ body {
  */
 .of-comment-panel__list {
   display: grid;
-  gap: 2px;
+  gap: var(--of-space-2);
   max-height: 320px;
   overflow-y: auto;
 }
@@ -2030,7 +2045,7 @@ body {
 .of-comment-panel__entry {
   display: grid;
   gap: 1px;
-  padding: 6px 8px;
+  padding: var(--of-space-6) var(--of-space-8);
   font: inherit;
   text-align: left;
   cursor: pointer;
@@ -2084,20 +2099,20 @@ body {
 }
 
 .of-comment-panel__problem {
-  margin: 6px 0 0;
+  margin: var(--of-space-6) 0 0;
   font-size: var(--of-type-record);
   color: var(--of-danger);
 }
 
 .of-comment-panel__actions {
   display: flex;
-  gap: 8px;
-  margin-top: 10px;
+  gap: var(--of-space-8);
+  margin-top: var(--of-step);
 }
 
 .of-comment {
   display: flex;
-  gap: 8px;
+  gap: var(--of-space-8);
   align-items: flex-start;
 }
 
@@ -2121,7 +2136,7 @@ body {
 
 .of-comment__text {
   /* Somebody else's words, wrapped as written rather than reflowed into one line. */
-  margin: 2px 0 0;
+  margin: var(--of-space-2) 0 0;
   font-size: var(--of-type-ui-small);
   line-height: 1.4;
   color: var(--of-ink);
@@ -2135,13 +2150,13 @@ body {
   z-index: var(--of-z-gate);
   display: grid;
   place-items: center;
-  padding: 16px;
+  padding: var(--of-space-16);
   background: var(--of-scrim);
 }
 
 .of-gone__panel {
   max-width: 360px;
-  padding: 20px;
+  padding: var(--of-gutter);
   text-align: left;
   background: var(--of-panel);
   border: 1px solid var(--of-panel-border);
@@ -2150,14 +2165,14 @@ body {
 }
 
 .of-gone__title {
-  margin: 0 0 8px;
+  margin: 0 0 var(--of-space-8);
   font-size: var(--of-type-title);
   font-weight: 600;
   color: var(--of-ink);
 }
 
 .of-gone__body {
-  margin: 0 0 16px;
+  margin: 0 0 var(--of-space-16);
   font-size: var(--of-type-ui);
   line-height: 1.45;
   color: var(--of-ink-muted);
@@ -2171,11 +2186,11 @@ body {
 
 .of-gone__input {
   width: 100%;
-  margin-bottom: 12px;
+  margin-bottom: var(--of-space-12);
 }
 
 .of-gone__problem {
-  margin: 0 0 12px;
+  margin: 0 0 var(--of-space-12);
   font-size: var(--of-type-ui-small);
   color: var(--of-danger);
 }
@@ -2218,7 +2233,7 @@ body {
    * does not otherwise show.
    */
   max-width: calc(100vw - 80px - 420px);
-  padding: 5px 10px;
+  padding: var(--of-space-6) var(--of-step);
   font-family: var(--of-mono);
   font-size: var(--of-type-record);
   color: var(--of-ink-muted);
@@ -2243,10 +2258,10 @@ body {
  */
 .of-status__exit {
   display: flex;
-  gap: 6px;
+  gap: var(--of-space-6);
   align-items: center;
   height: var(--of-hit-sm);
-  padding: 0 9px 0 7px;
+  padding: 0 var(--of-step) 0 var(--of-space-8);
   color: var(--of-ink-muted);
   text-decoration: none;
   border-radius: var(--of-radius);
@@ -2285,7 +2300,7 @@ body {
  */
 .of-status__history {
   display: flex;
-  gap: 2px;
+  gap: var(--of-space-2);
 }
 
 .of-status__action {
@@ -2351,13 +2366,13 @@ body {
 
 .of-account__field {
   display: block;
-  margin-bottom: 12px;
+  margin-bottom: var(--of-space-12);
 }
 
 /* A field label, set the way the record panel sets one. */
 .of-account__field span {
   display: block;
-  margin-bottom: 5px;
+  margin-bottom: var(--of-space-6);
   font-family: var(--of-mono);
   font-size: var(--of-type-record);
   letter-spacing: 0.02em;
@@ -2365,7 +2380,7 @@ body {
 }
 
 .of-account__error {
-  margin: 0 0 12px;
+  margin: 0 0 var(--of-space-12);
   font-size: var(--of-type-control);
   line-height: 1.4;
   color: var(--of-danger);
@@ -2373,13 +2388,13 @@ body {
 
 .of-account__actions {
   display: flex;
-  gap: 8px;
+  gap: var(--of-space-8);
   align-items: center;
   justify-content: space-between;
 }
 
 .of-account__switch {
-  padding: 4px 0;
+  padding: var(--of-space-4) 0;
   font-family: var(--of-font);
   font-size: var(--of-type-ui-small);
   color: var(--of-ink-muted);
@@ -2507,7 +2522,7 @@ body {
   position: absolute;
   top: 0;
   left: 0;
-  padding: 2px 5px;
+  padding: var(--of-space-2) var(--of-space-6);
   font-family: var(--of-font);
   font-size: var(--of-type-record);
   font-weight: 500;
@@ -2552,10 +2567,10 @@ body {
  */
 .of-status__share {
   display: flex;
-  gap: 6px;
+  gap: var(--of-space-6);
   align-items: center;
   height: var(--of-hit-sm);
-  padding: 0 10px;
+  padding: 0 var(--of-step);
   font: inherit;
   color: var(--of-ink-muted);
   background: transparent;
@@ -2597,7 +2612,7 @@ body {
 
 .of-status__room {
   display: flex;
-  gap: 6px;
+  gap: var(--of-space-6);
   align-items: center;
 }
 
@@ -2936,7 +2951,7 @@ body {
 .of-sticky {
   width: 100%;
   height: 100%;
-  padding: 13px;
+  padding: var(--of-space-12);
   overflow: hidden;
   font-size: var(--of-type-ui);
   line-height: 1.35;
@@ -2990,7 +3005,7 @@ body {
   flex-direction: column;
   width: 100%;
   height: 100%;
-  padding: 13px;
+  padding: var(--of-space-12);
   overflow: hidden;
   border-radius: var(--of-radius-slip);
   box-shadow: var(--of-slip-shadow);
@@ -3033,9 +3048,9 @@ body {
    * Bounded at one line each, the record stays subordinate to the content.
    */
   flex-direction: column;
-  gap: 2px;
-  padding-top: 6px;
-  margin-top: 8px;
+  gap: var(--of-space-2);
+  padding-top: var(--of-space-6);
+  margin-top: var(--of-space-8);
   font-family: var(--of-mono);
   /* The twelve pixel floor: this is functional text, not decoration. */
   font-size: var(--of-type-record);
@@ -3179,12 +3194,12 @@ body {
 .of-render-error {
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  gap: var(--of-space-4);
   align-items: center;
   justify-content: center;
   width: 100%;
   height: 100%;
-  padding: 8px;
+  padding: var(--of-space-8);
   font-size: var(--of-type-record);
   color: var(--of-ink-muted);
   text-align: center;
@@ -3229,7 +3244,7 @@ body {
 
 .of-dev {
   display: flex;
-  gap: 4px;
+  gap: var(--of-space-4);
   align-items: center;
   font-size: var(--of-type-record);
 }
@@ -3241,7 +3256,7 @@ body {
 }
 
 .of-dev__button {
-  padding: 1px 6px;
+  padding: 1px var(--of-space-6);
   font: inherit;
   color: var(--of-ink-muted);
   background: var(--of-panel);
@@ -3274,23 +3289,23 @@ body {
 
 .of-menu {
   min-width: 196px;
-  padding: 5px;
+  padding: var(--of-space-6);
 }
 
 .of-menu__group + .of-menu__group {
-  margin-top: 4px;
-  padding-top: 4px;
+  margin-top: var(--of-space-4);
+  padding-top: var(--of-space-4);
   border-top: 1px solid var(--of-panel-border);
 }
 
 .of-menu__item {
   display: flex;
   min-height: var(--of-hit);
-  gap: 16px;
+  gap: var(--of-space-16);
   align-items: center;
   justify-content: space-between;
   width: 100%;
-  padding: 6px 9px;
+  padding: var(--of-space-6) var(--of-step);
   font: inherit;
   font-size: var(--of-type-ui);
   color: var(--of-ink);
@@ -3406,7 +3421,7 @@ body {
 .of-connector__editor {
   width: 160px;
   height: 28px;
-  padding: 3px 6px;
+  padding: var(--of-space-4) var(--of-space-6);
   font: inherit;
   font-size: var(--of-type-record);
   text-align: center;
@@ -3451,7 +3466,7 @@ body {
 .of-image--missing {
   display: grid;
   place-items: center;
-  padding: 8px;
+  padding: var(--of-space-8);
   font-size: var(--of-type-record);
   text-align: center;
   color: var(--of-ink-muted);
@@ -3468,7 +3483,7 @@ body {
 .of-image__alt-editor {
   width: 100%;
   height: 100%;
-  padding: 8px;
+  padding: var(--of-space-8);
   font: inherit;
   font-size: var(--of-type-ui);
   resize: none;
@@ -3481,7 +3496,7 @@ body {
 
 
 .of-toast__dismiss {
-  padding: 0 4px;
+  padding: 0 var(--of-space-4);
   font-size: var(--of-type-ui);
   line-height: 1;
   color: inherit;
@@ -3551,17 +3566,17 @@ body {
 .of-inspector {
   display: flex;
   flex-direction: column;
-  gap: 2px;
-  padding: 10px;
+  gap: var(--of-space-2);
+  padding: var(--of-step);
 }
 
 .of-inspector__head {
   display: flex;
-  gap: 8px;
+  gap: var(--of-space-8);
   align-items: center;
   justify-content: space-between;
-  padding-bottom: 7px;
-  margin-bottom: 5px;
+  padding-bottom: var(--of-space-8);
+  margin-bottom: var(--of-space-6);
   border-bottom: 1px solid var(--of-panel-border);
 }
 
@@ -3649,7 +3664,7 @@ body {
 }
 
 .of-field--tall .of-field__label {
-  padding-top: 7px;
+  padding-top: var(--of-space-8);
 }
 
 /*
@@ -3668,7 +3683,7 @@ body {
 .of-input {
   width: 100%;
   min-height: var(--of-hit-sm);
-  padding: 5px 10px;
+  padding: var(--of-space-6) var(--of-step);
   font-family: var(--of-font);
   font-size: var(--of-type-control);
   color: var(--of-ink);
@@ -3679,7 +3694,7 @@ body {
 
 .of-input--large {
   min-height: var(--of-hit);
-  padding: 8px 12px;
+  padding: var(--of-space-8) var(--of-space-12);
 }
 
 .of-input::placeholder {
@@ -3747,8 +3762,8 @@ textarea.of-input {
 .of-inspector__actions {
   display: flex;
   flex-wrap: wrap;
-  gap: 6px;
-  padding: 0 10px 8px;
+  gap: var(--of-space-6);
+  padding: 0 var(--of-step) var(--of-space-8);
 }
 /*
  * A quiet button, not a loud one. These undo something you did by hand, so
@@ -3757,7 +3772,7 @@ textarea.of-input {
  */
 .of-inspector__rule {
   height: 0;
-  margin: 7px 0 5px;
+  margin: var(--of-space-8) 0 var(--of-space-6);
   border: none;
   border-top: 1px solid var(--of-panel-border);
 }
@@ -3767,7 +3782,7 @@ textarea.of-input {
  */
 .of-paint {
   display: grid;
-  gap: 6px;
+  gap: var(--of-space-6);
   justify-items: start;
 }
 
@@ -3789,14 +3804,14 @@ textarea.of-input {
   position: relative;
   display: grid;
   grid-template-columns: repeat(6, var(--of-hit-sm));
-  gap: 4px;
+  gap: var(--of-space-4);
   justify-content: start;
 }
 
 .of-choice {
   display: flex;
-  gap: 2px;
-  padding: 2px;
+  gap: var(--of-space-2);
+  padding: var(--of-space-2);
   background: var(--of-bg);
   border-radius: var(--of-radius);
 }
@@ -3824,7 +3839,7 @@ textarea.of-input {
 .of-choice--text .of-choice__item {
   width: auto;
   min-width: 28px;
-  padding: 0 9px;
+  padding: 0 var(--of-step);
 }
 
 .of-choice__item svg {
@@ -3861,7 +3876,7 @@ textarea.of-input {
 
 .of-inspector__slider {
   display: flex;
-  gap: 8px;
+  gap: var(--of-space-8);
   align-items: center;
   width: 100%;
 }
@@ -4005,7 +4020,7 @@ textarea.of-input {
 .of-trail__item {
   display: block;
   width: 100%;
-  padding: 4px 6px;
+  padding: var(--of-space-4) var(--of-space-6);
   overflow: hidden;
   font-family: var(--of-font);
   /* Functional text: readable, and on the twelve pixel floor. */
@@ -4185,9 +4200,9 @@ textarea.of-input {
 /* Placement and shell are shared; this only says how the controls sit. */
 .of-format-bar {
   display: flex;
-  gap: 2px;
+  gap: var(--of-space-2);
   align-items: center;
-  padding: 3px;
+  padding: var(--of-space-4);
 }
 
 .of-format-bar__button {
@@ -4196,7 +4211,7 @@ textarea.of-input {
   /* The AA 2.5.8 target minimum, like every other control in the system. */
   min-width: 24px;
   height: 24px;
-  padding: 0 4px;
+  padding: 0 var(--of-space-4);
   font-family: var(--of-font);
   font-size: var(--of-type-ui);
   color: var(--of-ink);
@@ -4235,7 +4250,7 @@ textarea.of-input {
 .of-format-bar__rule {
   width: 1px;
   height: 16px;
-  margin: 0 2px;
+  margin: 0 var(--of-space-2);
   background: var(--of-panel-border);
 }
 
@@ -4287,7 +4302,7 @@ textarea.of-input {
 
 .of-search__input {
   width: 100%;
-  padding: 10px 12px;
+  padding: var(--of-step) var(--of-space-12);
   font-family: var(--of-font);
   font-size: var(--of-type-control);
   color: var(--of-ink);
@@ -4302,7 +4317,7 @@ textarea.of-input {
 }
 
 .of-search__count {
-  padding: 0 12px 7px;
+  padding: 0 var(--of-space-12) var(--of-space-8);
   font-family: var(--of-mono);
   /* The twelve pixel floor: a readout, like the zoom percentage. */
   font-size: var(--of-type-record);
@@ -4325,12 +4340,12 @@ textarea.of-input {
 .of-search__result {
   display: flex;
   min-height: var(--of-hit);
-  gap: 10px;
+  gap: var(--of-step);
   align-items: baseline;
   width: 100%;
   /* The AA 2.5.8 target minimum, like every other control in the system. */
   min-height: 32px;
-  padding: 6px 12px;
+  padding: var(--of-space-6) var(--of-space-12);
   font-family: var(--of-font);
   font-size: var(--of-type-ui);
   color: var(--of-ink);
@@ -4418,7 +4433,7 @@ textarea.of-input {
 .of-home__column {
   display: flex;
   flex-direction: column;
-  gap: 20px;
+  gap: var(--of-gutter);
   width: 100%;
   /*
    * 680, up from 560 on 2026-09-19.
@@ -4437,12 +4452,12 @@ textarea.of-input {
 .of-home__head {
   display: flex;
   flex-direction: column;
-  gap: 6px;
+  gap: var(--of-space-6);
 }
 
 .of-home__lockup {
   display: flex;
-  gap: 10px;
+  gap: var(--of-step);
   align-items: center;
 }
 
@@ -4465,13 +4480,13 @@ textarea.of-input {
 
 .of-home__account {
   display: flex;
-  gap: 7px;
+  gap: var(--of-space-8);
   align-items: center;
   /* Pushed to the far edge rather than floated, so a long name cannot collide
      with the wordmark block. */
   margin-left: auto;
   height: var(--of-hit);
-  padding: 0 14px 0 5px;
+  padding: 0 var(--of-space-16) 0 var(--of-space-6);
   font-family: var(--of-font);
   font-size: var(--of-type-control);
   color: var(--of-ink);
@@ -4538,7 +4553,7 @@ textarea.of-input {
  * tracked, muted. It says what this block IS rather than shouting a heading.
  */
 .of-home__heading {
-  margin: 0 0 12px;
+  margin: 0 0 var(--of-space-12);
   font-family: var(--of-mono);
   font-size: var(--of-type-record);
   font-weight: 400;
@@ -4548,7 +4563,7 @@ textarea.of-input {
 }
 
 .of-home__note {
-  margin: 0 0 16px;
+  margin: 0 0 var(--of-space-16);
   font-size: var(--of-type-control);
   line-height: 1.5;
   color: var(--of-ink-muted);
@@ -4556,7 +4571,7 @@ textarea.of-input {
 
 /* A ledger: rows on a page, divided by the margin rule. */
 .of-home__list {
-  margin: 0 0 16px;
+  margin: 0 0 var(--of-space-16);
   padding: 0;
   list-style: none;
   border-top: 1px solid var(--of-panel-border);
@@ -4576,9 +4591,9 @@ textarea.of-input {
  */
 .of-home__row-main {
   display: flex;
-  gap: 4px;
+  gap: var(--of-space-4);
   align-items: center;
-  padding-right: 6px;
+  padding-right: var(--of-space-6);
 }
 
 .of-home__row-main .of-home__board {
@@ -4650,7 +4665,7 @@ textarea.of-input {
    */
   justify-content: flex-end;
   width: 126px;
-  gap: 2px;
+  gap: var(--of-space-2);
   opacity: 0;
 }
 
@@ -4702,7 +4717,7 @@ textarea.of-input {
   flex: 1;
   min-width: 0;
   height: var(--of-hit);
-  padding: 0 8px;
+  padding: 0 var(--of-space-8);
   font-family: inherit;
   font-size: var(--of-type-ui);
   color: var(--of-ink);
@@ -4725,7 +4740,7 @@ textarea.of-input {
   gap: var(--of-step);
   align-items: center;
   margin: 0;
-  padding: 8px 8px 12px 40px;
+  padding: var(--of-space-8) var(--of-space-8) var(--of-space-12) 40px;
   font-size: var(--of-type-ui-small);
   color: var(--of-ink);
 }
@@ -4739,7 +4754,7 @@ textarea.of-input {
 .of-home__confirm-no {
   flex: none;
   height: var(--of-hit-sm);
-  padding: 0 14px;
+  padding: 0 var(--of-space-16);
   font-family: inherit;
   font-size: var(--of-type-ui-small);
   border-radius: var(--of-radius-apparatus);
@@ -4785,7 +4800,7 @@ textarea.of-input {
   gap: var(--of-step);
   align-items: center;
   flex-wrap: wrap;
-  margin: 0 0 16px;
+  margin: 0 0 var(--of-space-16);
 }
 
 .of-home__claim-what {
@@ -4804,7 +4819,7 @@ textarea.of-input {
 .of-home__claim-go {
   flex: none;
   height: var(--of-hit-sm);
-  padding: 0 14px;
+  padding: 0 var(--of-space-16);
   font-family: inherit;
   font-size: var(--of-type-ui-small);
   color: var(--of-ink);
@@ -4846,7 +4861,7 @@ textarea.of-input {
 .of-home__row-note,
 .of-home__row-problem {
   margin: 0;
-  padding: 4px 8px 10px 40px;
+  padding: var(--of-space-4) var(--of-space-8) var(--of-step) 40px;
   font-size: var(--of-type-ui-small);
   color: var(--of-ink-muted);
 }
@@ -4890,7 +4905,7 @@ textarea.of-input {
   /* 36px rather than the 24px AA floor: a list row is a large target that costs
      nothing to make comfortable. */
   min-height: var(--of-hit-lg);
-  padding: 0 8px;
+  padding: 0 var(--of-space-8);
   color: inherit;
   text-decoration: none;
 }
@@ -4947,11 +4962,11 @@ textarea.of-input {
 /* Below the rail's own breakpoint, the page stops being a margin exercise. */
 @media (width <= 560px) {
   .of-home {
-    padding: 24px 16px;
+    padding: 24px var(--of-space-16);
   }
 
   .of-home__column {
-    gap: 16px;
+    gap: var(--of-space-16);
   }
 
   /*
@@ -4969,8 +4984,8 @@ textarea.of-input {
     grid-template-areas:
       'title title'
       'tag when';
-    row-gap: 2px;
-    padding: 10px 8px;
+    row-gap: var(--of-space-2);
+    padding: var(--of-step) var(--of-space-8);
   }
 
   .of-home__board-title {
@@ -4996,7 +5011,7 @@ textarea.of-input {
  */
 
 .of-share__lead {
-  margin: 0 0 14px;
+  margin: 0 0 var(--of-space-16);
   font-size: var(--of-type-control);
   line-height: 1.4;
   color: var(--of-ink-muted);
@@ -5009,8 +5024,8 @@ textarea.of-input {
      word are the one control in this product where hitting the wrong one has a
      consequence. */
   min-height: var(--of-hit-lg);
-  margin-bottom: 10px;
-  padding: 8px 14px;
+  margin-bottom: var(--of-step);
+  padding: var(--of-space-8) var(--of-space-16);
   font-family: var(--of-font);
   text-align: left;
   color: var(--of-ink);
@@ -5046,7 +5061,7 @@ textarea.of-input {
 .of-share__error {
   width: 320px;
   margin: 0;
-  padding: 14px var(--of-gutter);
+  padding: var(--of-space-16) var(--of-gutter);
   font-size: var(--of-type-control);
   line-height: 1.4;
   color: var(--of-danger);
@@ -5064,7 +5079,7 @@ textarea.of-input {
  * means "grab me".
  */
 .of-status__watching {
-  padding: 0 9px;
+  padding: 0 var(--of-step);
   font-family: var(--of-mono);
   font-size: var(--of-type-record);
   line-height: 28px;
@@ -5093,7 +5108,7 @@ textarea.of-input {
   max-width: 22ch;
   overflow: hidden;
   height: var(--of-hit-sm);
-  padding: 0 7px;
+  padding: 0 var(--of-space-8);
   font-family: var(--of-mono);
   font-size: var(--of-type-record);
   letter-spacing: 0.02em;
@@ -5134,7 +5149,7 @@ textarea.of-input {
  */
 .of-home__board-tag {
   justify-self: start;
-  padding: 3px 8px;
+  padding: var(--of-space-4) var(--of-space-8);
   font-family: var(--of-mono);
   font-size: var(--of-type-record);
   letter-spacing: 0.02em;
@@ -5310,12 +5325,12 @@ textarea.of-input {
  */
 .of-code__bar {
   display: flex;
-  gap: 6px;
+  gap: var(--of-space-6);
   align-items: center;
 }
 
 .of-code__format {
-  padding: 0 10px;
+  padding: 0 var(--of-step);
   font-size: var(--of-type-record);
   line-height: 24px;
 }
@@ -5329,9 +5344,9 @@ textarea.of-input {
  */
 .of-arrange {
   display: flex;
-  gap: 2px;
+  gap: var(--of-space-2);
   align-items: center;
-  padding: 4px;
+  padding: var(--of-space-4);
 }
 
 .of-arrange__button {
@@ -5368,7 +5383,7 @@ textarea.of-input {
 .of-arrange__rule {
   width: 1px;
   height: 18px;
-  margin: 0 4px;
+  margin: 0 var(--of-space-4);
   background: var(--of-panel-border);
 }
 
@@ -5513,7 +5528,7 @@ textarea.of-input {
 /* On the chrome layer now, so it needs no counter-scale and no placement of
    its own — the layer does both. */
 .of-crop__reset {
-  padding: 5px 11px;
+  padding: var(--of-space-6) var(--of-space-12);
   font-size: var(--of-type-record);
   color: var(--of-ink-muted);
   background: none;

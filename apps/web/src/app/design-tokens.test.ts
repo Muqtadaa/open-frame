@@ -678,6 +678,32 @@ describe('one clock', () => {
 })
 
 /**
+ * The spacing scale. Sixteen values were in use for padding, margins and gaps,
+ * with a 3, 5, 7 and 9 beside the 2, 4, 6 and 8 they were meant to be. Every
+ * space from 2px to 20px now names a step; above that a length is a size, not
+ * rhythm, and a 1px hairline offset or a negative pull stays as written.
+ */
+describe('the spacing scale', () => {
+  it('spaces everything from 2px to 20px on a step of the scale', () => {
+    const source = CSS.replace(/\/\*[\s\S]*?\*\//g, '')
+    const off: string[] = []
+    const property = /(?<![\w-])((?:padding|margin)[\w-]*|gap|row-gap|column-gap):\s*([^;]+);/g
+    for (const [, name = '', value = ''] of source.matchAll(property)) {
+      for (const [, px = ''] of value.matchAll(/(?<![\w.(-])(\d+)px/g)) {
+        if (Number(px) >= 2 && Number(px) <= 20) off.push(`${name}: ${value.trim()}`)
+      }
+    }
+    expect(off).toEqual([])
+  })
+
+  it('defines every step it asks for', () => {
+    const defined = new Set([...CSS.matchAll(/(--of-space-\d+):/g)].map((m) => m[1]))
+    const used = new Set([...CSS.matchAll(/var\((--of-space-\d+)\)/g)].map((m) => m[1]))
+    expect([...used].filter((name) => !defined.has(name))).toEqual([])
+  })
+})
+
+/**
  * The stylesheet has to PARSE.
  *
  * This file is only minified by the production build, so a structurally broken

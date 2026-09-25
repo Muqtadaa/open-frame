@@ -92,12 +92,13 @@ rounded:
   round: "50%"
   capsule: "999px"
 spacing:
-  hair: "2px"
-  tight: "4px"
-  snug: "6px"
-  base: "8px"
+  space-2: "2px"
+  space-4: "4px"
+  space-6: "6px"
+  space-8: "8px"
   step: "10px"
-  margin: "12px"
+  space-12: "12px"
+  space-16: "16px"
   gutter: "20px"
 components:
   tool:
@@ -485,9 +486,16 @@ keeps its own sizes** — a sticky is still 15px and a text object still 22px,
 because that is the user's material and changing it would restyle every
 document ever saved.
 
-**Spacing rhythm** runs on even small steps: 2px between sibling controls, 5px
+**Spacing rhythm** runs on even small steps — `--of-space-2/4/6/8/12/16` below
+the rule, `--of-step` and `--of-gutter` on it: 2px between sibling controls, 6px
 of padding inside apparatus, 10px between a label and its value, 20px from the
-viewport edge. Tool icons are 21px inside a 50px target; secondary icons are
+viewport edge.
+
+**The Even Step Rule.** Every padding, margin and gap from 2px to 20px names a
+step, and `design-tokens.test.ts` fails on a literal. Sixteen values were in use,
+and a 3, 5, 7 and 9 beside the 2, 4, 6 and 8 they were meant to be was drift
+rather than a decision; they rounded up, onto the scale. Above 20px a length is
+a size, not rhythm. Tool icons are 21px inside a 50px target; secondary icons are
 16–17px; the disclosure arrow is 12px.
 
 **World rhythm** is the quadrille: `GRID_SIZE` is 10 world units, snapping lands

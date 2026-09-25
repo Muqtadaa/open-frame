@@ -155,4 +155,16 @@ Found by looking at them:
   it is covered") fails under four parallel workers on the unchanged branch
   and passes serially — a timing-sensitive test, for Track B.
 
+- **C2.5 — the spacing scale (full snap, as decided).** 203 padding, margin and
+  gap values onto `--of-space-2/4/6/8/12/16` plus `--of-step` and `--of-gutter`.
+  Odd values rounded up (3→4, 5→6, 7→8, 9→10), 13→12, 14→16, 18→20; above 20px
+  a length is a size and stays literal. Every golden moved, as expected, and
+  one batched look found layout intact on all eighteen; the record panel's
+  width arithmetic still holds. A literal in range fails the build (broken once
+  with a stray `7px`). Full e2e: 327/328, the one failure the known flake.
+- **Found (pre-existing, in the baseline golden):** the record panel paints OVER
+  an open context menu — "Promote to evidence", "Promote to insight" and three
+  shortcuts are clipped under it. Two floating surfaces on the same layer, the
+  later one winning. Goes to C3 #1/#4.
+
 ### Remaining
