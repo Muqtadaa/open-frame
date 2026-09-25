@@ -288,3 +288,7 @@ named record band, all five issues.
   changes nothing (rule 21). What a table's colour should mean is a product
   decision; exempted by name in `default-colour-coverage.test.tsx`, with a
   test that fails once the table paints it. For C3 #8.
+- **Contract written:** `apps/web/.impeccable/surfaces/apps-web-src-ui-inspector-tsx.md`
+  (thesis, head, bands, words, gestures, keyboard, placement, what it is not,
+  and the tests that hold it). Full e2e after the pass: 340/341, the one
+  failure the known `comments.spec.ts:901` flake.
