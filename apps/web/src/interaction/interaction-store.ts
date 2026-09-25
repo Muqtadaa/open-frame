@@ -272,6 +272,12 @@ export interface ContextMenuAt {
   readonly width: number
   readonly height: number
   readonly via: 'pointer' | 'keyboard'
+  /**
+   * The board point the menu is ABOUT — where "Paste here" pastes and "Add a
+   * note here" adds. The pointer, or the middle of what the keyboard's menu
+   * hangs from.
+   */
+  readonly world: Point
 }
 
 interface InteractionState {

@@ -1396,7 +1396,16 @@ export function useCanvasGestures(containerRef: RefObject<HTMLElement | null>) {
           selected === null
             ? { x: store.canvasSize.width / 2, y: store.canvasSize.height / 2, width: 0, height: 0 }
             : worldRectToScreen(store.viewport, selected)
-        store.openContextMenu({ ...box, x: box.x + left, y: box.y + top, via: 'keyboard' })
+        store.openContextMenu({
+          ...box,
+          x: box.x + left,
+          y: box.y + top,
+          via: 'keyboard',
+          world: screenToWorld(store.viewport, {
+            x: box.x + box.width / 2,
+            y: box.y + box.height / 2,
+          }),
+        })
         return
       }
       const worldPoint = toWorld(event.clientX, event.clientY)
@@ -1415,6 +1424,7 @@ export function useCanvasGestures(containerRef: RefObject<HTMLElement | null>) {
         width: 0,
         height: 0,
         via: 'pointer',
+        world: worldPoint,
       })
     },
     [containerRef, runtime.registry, runtime.store, toWorld],

@@ -3838,14 +3838,20 @@ body {
   border-top: 1px solid var(--of-panel-border);
 }
 
+/*
+ * Rows at the small target, not the tool target: a menu is read down a
+ * column and pressed once, and at 40px a selection's thirteen entries were
+ * taller than the space under a pointer halfway down a laptop screen — so the
+ * menu was clamped up over the very object it was about.
+ */
 .of-menu__item {
   display: flex;
-  min-height: var(--of-hit);
+  min-height: var(--of-hit-sm);
   gap: var(--of-space-16);
   align-items: center;
   justify-content: space-between;
   width: 100%;
-  padding: var(--of-space-6) var(--of-step);
+  padding: var(--of-space-4) var(--of-step);
   font: inherit;
   font-size: var(--of-type-ui);
   color: var(--of-ink);
@@ -3874,9 +3880,34 @@ body {
   cursor: default;
 }
 
+/*
+ * Shortcuts in the mono DESIGN.md gives every readout, so the column reads as
+ * keys rather than as a second, fainter label.
+ */
 .of-menu__shortcut {
+  font-family: var(--of-mono);
   font-size: var(--of-type-record);
   color: var(--of-ink-muted);
+}
+
+.of-menu__more {
+  width: 16px;
+  height: 16px;
+  color: var(--of-ink-muted);
+}
+
+.of-menu__item[aria-expanded='true'] {
+  background: var(--of-accent-soft);
+}
+
+/*
+ * Delete is the one entry that destroys, so it says so the moment it is
+ * aimed at — not at rest, where a red word in every menu would shout.
+ */
+.of-menu__item--danger:hover:not([aria-disabled='true']),
+.of-menu__item--danger:focus-visible {
+  color: var(--of-danger);
+  background: var(--of-danger-wash);
 }
 
 /* ---------- frames ---------- */

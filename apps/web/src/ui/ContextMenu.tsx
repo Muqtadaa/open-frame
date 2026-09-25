@@ -1,24 +1,41 @@
-import { useEffect, useRef, type KeyboardEvent } from 'react'
+import { useEffect, useRef, useState, type KeyboardEvent, type RefObject } from 'react'
 
 import { AnchoredSurface } from '../controls/AnchoredSurface.js'
+import { DisclosureIcon } from '../controls/icons.js'
 import { useViewportSize } from '../controls/use-viewport-size.js'
 import { useCommands } from '../hooks/use-commands.js'
 import { useOpenFrame } from '../runtime/context.js'
-import { useInteractionStore } from '../interaction/interaction-store.js'
+import { useInteractionStore, type ContextMenuAt } from '../interaction/interaction-store.js'
 import { ariaKeys, formatKeys } from '../interaction/keymap.js'
+import type { Rect } from '../scene/anchoring.js'
+import { fitToDocument } from '../scene/zoom.js'
 
 interface Item {
   readonly label: string
   /** Written once, as a chord — `'Mod+Shift+G'` — and shown per platform. */
   readonly shortcut?: string
-  readonly run: () => void
+  readonly run?: () => void
   readonly disabled?: boolean
+  /** Destroys what it acts on, and looks it on hover and focus. */
+  readonly danger?: boolean
+  /** Items that open beside this one instead of running anything. */
+  readonly submenu?: readonly Item[]
 }
 
-/** The items a keyboard can land on, in order. Disabled ones included (see below). */
+type Group = readonly Item[]
+
+/** The items a keyboard can land on in ONE menu, in order, disabled ones included. */
 function itemsIn(menu: HTMLElement | null): HTMLElement[] {
-  return menu === null ? [] : [...menu.querySelectorAll<HTMLElement>('[role="menuitem"]')]
+  return menu === null
+    ? []
+    : [...menu.querySelectorAll<HTMLElement>(':scope > .of-menu__group > [role="menuitem"]')]
 }
+
+const testIdOf = (label: string): string =>
+  `menu-${label
+    .toLowerCase()
+    .replace(/ /g, '-')
+    .replace(/[^a-z-]/g, '')}`
 
 /**
  * Right-click menu.
@@ -34,7 +51,21 @@ export function ContextMenu() {
   const commands = useCommands()
   const { runtime } = useOpenFrame()
   const ref = useRef<HTMLDivElement>(null)
+  const subRef = useRef<HTMLDivElement>(null)
   const surface = useViewportSize()
+  /*
+   * The open submenu, tagged with the menu it was opened in: a menu opened
+   * afresh starts with none, without an effect resetting it.
+   */
+  const [opened, setOpened] = useState<{
+    readonly label: string
+    readonly at: Rect
+    readonly in: ContextMenuAt
+  } | null>(null)
+  const open = opened !== null && opened.in === at ? opened : null
+  const setOpen = (next: { readonly label: string; readonly at: Rect } | null): void => {
+    setOpened(next === null || at === null ? null : { ...next, in: at })
+  }
   /*
    * Where the keyboard was before the menu opened, so closing hands it back.
    * Without this, Escape left focus on the body — somebody working by keyboard
@@ -45,17 +76,11 @@ export function ContextMenu() {
   /*
    * A menu anchored to a POINT rather than to a control: a zero-sized
    * rectangle where the pointer was, with no gap, so `below` puts its
-   * top-left exactly there.
+   * top-left exactly there — or, from the keyboard, to the selection.
    *
    * It FLIPS above the pointer rather than sliding up, which is `above` as the
    * second preference — sliding would put the menu over the thing you just
    * right-clicked.
-   *
-   * This was a third hand-rolled clamp, after the record panel's and the
-   * mentions list's: `Math.max(margin, Math.min(at.x, innerWidth - width -
-   * margin))`, measured in a layout effect, with its own margin constant. It
-   * was written because a right-click near the bottom of the window put the
-   * menu's lower entries off-screen — unreachable, and silent about it.
    */
   const anchor = at === null ? null : { x: at.x, y: at.y, width: at.width, height: at.height }
 
@@ -79,18 +104,26 @@ export function ContextMenu() {
 
   useEffect(() => {
     if (at === null) return
-    const dismiss = (event: Event): void => {
-      if (ref.current?.contains(event.target as Node) === true) return
+    const outside = (event: Event): void => {
+      const target = event.target as Node
+      if (ref.current?.contains(target) === true || subRef.current?.contains(target) === true)
+        return
       close()
     }
     // Capture phase: the canvas would otherwise consume the pointerdown first.
-    window.addEventListener('pointerdown', dismiss, true)
+    window.addEventListener('pointerdown', outside, true)
     window.addEventListener('blur', close)
     return () => {
-      window.removeEventListener('pointerdown', dismiss, true)
+      window.removeEventListener('pointerdown', outside, true)
       window.removeEventListener('blur', close)
     }
   }, [at, close])
+
+  // The submenu takes the keyboard as soon as it is open.
+  useEffect(() => {
+    if (open === null) return
+    itemsIn(subRef.current)[0]?.focus()
+  }, [open])
 
   if (at === null) return null
 
@@ -105,17 +138,10 @@ export function ContextMenu() {
   })
 
   /*
-   * Promotions come from the REGISTRY, so this menu names no type. A selection
-   * is offered only what EVERY member can become — the same intersection rule
-   * as the inspector's style properties, and for the same reason: one entry
-   * must mean one thing, and an entry that promotes three of five objects is a
-   * partial action the user cannot see the shape of.
-   */
-  /*
-   * Only what EVERY selected object can derive, the same intersection rule as
-   * promotions and style properties: one entry must mean one thing, and an
-   * entry that relates three of five objects is a partial action nobody can see
-   * the shape of.
+   * Only what EVERY selected object can derive or become — the intersection
+   * rule the inspector's style properties follow, and for the same reason: one
+   * entry must mean one thing, and an entry that acts on three of five objects
+   * is a partial action nobody can see the shape of.
    */
   const derivations = selected
     .map((id) => {
@@ -139,60 +165,87 @@ export function ContextMenu() {
       [],
     )
 
-  const groups: Item[][] = [
+  /*
+   * A point on the board is not an object. Right-clicking empty canvas used to
+   * offer the object menu with all fourteen entries switched off — a list of
+   * things you cannot do. It now offers what can be done AT a point.
+   */
+  const boardGroups: Group[] = [
     [
       {
-        label: 'Cut',
-        shortcut: 'Mod+X',
-        run: () => commands.cutSelection(),
-        disabled: !hasSelection,
+        label: 'Paste here',
+        shortcut: 'Mod+V',
+        run: () => commands.paste(at.world),
+        disabled: clipboardSize === 0,
       },
       {
-        label: 'Copy',
-        shortcut: 'Mod+C',
-        run: () => commands.copySelection(),
-        disabled: !hasSelection,
+        label: 'Add a note here',
+        run: () => {
+          const id = commands.createObject('sticky', at.world)
+          if (id === null) return
+          const store = useInteractionStore.getState()
+          store.setSelection([id])
+          store.setEditing(id)
+        },
       },
+    ],
+    [
+      { label: 'Select all', shortcut: 'Mod+A', run: () => commands.selectAll() },
+      {
+        label: 'Zoom to fit',
+        shortcut: 'Mod+1',
+        run: () => {
+          const store = useInteractionStore.getState()
+          const next = fitToDocument(
+            runtime.store.getDocument(),
+            runtime.registry,
+            store.canvasSize.width,
+            store.canvasSize.height,
+          )
+          if (next !== null) store.setViewport(next)
+        },
+      },
+    ],
+  ]
+
+  const selectionGroups: Group[] = [
+    /*
+     * FIRST, because they are what this product is for: turning a note into
+     * evidence, and standing an insight on it, is the synthesis motion
+     * PRODUCT.md is built around. They sat fourth, in a flat list where
+     * "Promote to evidence" weighed exactly what "Bring forward" did.
+     *
+     * Deriving is not promoting: it CREATES something standing on what is
+     * selected, rather than turning the selection into it. Which of either
+     * exist comes from the registry, so this menu names no type.
+     */
+    [
+      ...derivations.map((derivation) => ({
+        label: `Derive ${derivation.type}`,
+        run: () => {
+          commands.derive(derivation.type, derivation.predicate)
+        },
+      })),
+      ...promotions.map((target) => ({
+        // "Promote", not "Convert": the note turns out to have BEEN evidence.
+        label: `Promote to ${target}`,
+        run: () => {
+          commands.promoteSelection(target)
+        },
+        disabled: locked,
+      })),
+    ],
+    [
+      { label: 'Cut', shortcut: 'Mod+X', run: () => commands.cutSelection() },
+      { label: 'Copy', shortcut: 'Mod+C', run: () => commands.copySelection() },
       {
         label: 'Paste',
         shortcut: 'Mod+V',
         run: () => commands.paste(),
         disabled: clipboardSize === 0,
       },
-      {
-        label: 'Duplicate',
-        shortcut: 'Mod+D',
-        run: () => commands.duplicateSelection(),
-        disabled: !hasSelection,
-      },
+      { label: 'Duplicate', shortcut: 'Mod+D', run: () => commands.duplicateSelection() },
     ],
-    /*
-     * Deriving is not promoting: it CREATES something standing on what is
-     * selected, rather than turning the selection into it. Conflating the two
-     * would mean the evidence disappeared at the moment it started being cited.
-     *
-     * Which derivations exist comes from the registry, so this menu names no
-     * type — and the next one is reachable by declaring itself.
-     */
-    derivations.map((derivation) => ({
-      label: `Derive ${derivation.type}`,
-      run: () => {
-        commands.derive(derivation.type, derivation.predicate)
-      },
-      disabled: !hasSelection,
-    })),
-    promotions.map((target) => ({
-      /*
-       * "Promote to evidence", not "Convert to evidence": the user is saying
-       * what the note turns out to have been, which is the vocabulary
-       * PRODUCT.md uses for the whole synthesis motion.
-       */
-      label: `Promote to ${target}`,
-      run: () => {
-        commands.promoteSelection(target)
-      },
-      disabled: !hasSelection || locked,
-    })),
     [
       {
         label: 'Group',
@@ -208,58 +261,138 @@ export function ContextMenu() {
         run: () => commands.ungroup(),
         disabled: !hasGroup,
       },
-    ],
-    [
+      /*
+       * Four entries that are one idea — which way in the stack — folded into
+       * one. Flat, they were a quarter of the menu's height.
+       */
       {
-        label: 'Bring to front',
-        shortcut: 'Shift+]',
-        run: () => commands.reorder('front'),
-        disabled: !hasSelection,
-      },
-      {
-        label: 'Bring forward',
-        shortcut: ']',
-        run: () => commands.reorder('forward'),
-        disabled: !hasSelection,
-      },
-      {
-        label: 'Send backward',
-        shortcut: '[',
-        run: () => commands.reorder('backward'),
-        disabled: !hasSelection,
-      },
-      {
-        label: 'Send to back',
-        shortcut: 'Shift+[',
-        run: () => commands.reorder('back'),
-        disabled: !hasSelection,
+        label: 'Arrange',
+        submenu: [
+          { label: 'Bring to front', shortcut: 'Shift+]', run: () => commands.reorder('front') },
+          { label: 'Bring forward', shortcut: ']', run: () => commands.reorder('forward') },
+          { label: 'Send backward', shortcut: '[', run: () => commands.reorder('backward') },
+          { label: 'Send to back', shortcut: 'Shift+[', run: () => commands.reorder('back') },
+        ],
       },
     ],
     [
-      {
-        label: locked ? 'Unlock' : 'Lock',
-        run: () => commands.setLocked(!locked),
-        disabled: !hasSelection,
-      },
-      { label: 'Hide', run: () => commands.setHidden(true), disabled: !hasSelection },
+      { label: locked ? 'Unlock' : 'Lock', run: () => commands.setLocked(!locked) },
+      { label: 'Hide', run: () => commands.setHidden(true) },
+    ],
+    [
       {
         label: 'Delete',
         shortcut: 'Del',
         run: () => commands.deleteSelection(),
-        disabled: !hasSelection,
+        danger: true,
       },
     ],
   ]
 
-  /*
-   * A menu's keys, per the ARIA menu pattern: arrows move and wrap, Home and
-   * End jump, a letter jumps to the next item starting with it, Escape and
-   * Tab close. EVERY key stops here — the board's keymap listens on the
-   * window and reads arrows as nudges and Escape as "clear the selection".
-   */
+  const groups = hasSelection ? selectionGroups : boardGroups
+  const submenu = groups.flat().find((item) => item.label === open?.label)?.submenu
+
+  return (
+    <>
+      <AnchoredSurface
+        anchor={anchor}
+        surface={surface}
+        // Beside, when a menu hung from a selection fits neither under it nor
+        // over it — never on top of the thing it is about.
+        prefer={['below', 'above', 'right', 'left']}
+        gap={0}
+        margin={8}
+        testId="context-menu-surface"
+        layer="menu"
+      >
+        <MenuList
+          list={ref}
+          groups={groups}
+          label={hasSelection ? 'Selection' : 'Board'}
+          testId="context-menu"
+          open={open?.label ?? null}
+          onOpen={(label, rect) => setOpen({ label, at: rect })}
+          onHover={(label) => {
+            if (label !== open?.label) setOpen(null)
+          }}
+          onRun={dismiss}
+          onClose={dismiss}
+        />
+      </AnchoredSurface>
+      {open !== null && submenu !== undefined && (
+        <AnchoredSurface
+          anchor={open.at}
+          surface={surface}
+          prefer={['right', 'left']}
+          gap={2}
+          margin={8}
+          testId="context-submenu-surface"
+          layer="menu"
+        >
+          <MenuList
+            list={subRef}
+            groups={[submenu]}
+            label={open.label}
+            testId="context-submenu"
+            open={null}
+            onOpen={() => undefined}
+            onHover={() => undefined}
+            onRun={dismiss}
+            onClose={() => {
+              // Back to the item that opened it, as the menu pattern does.
+              const parent = ref.current?.querySelector<HTMLElement>(
+                `[data-testid="${testIdOf(open.label)}"]`,
+              )
+              setOpen(null)
+              parent?.focus()
+            }}
+            closeOnLeft
+          />
+        </AnchoredSurface>
+      )}
+    </>
+  )
+}
+
+/**
+ * One menu's worth of items, and its keys.
+ *
+ * Per the ARIA menu pattern: arrows move and wrap, Home and End jump, a letter
+ * jumps to the next item starting with it, Escape and Tab close. EVERY key
+ * stops here — the board's keymap listens on the window and reads arrows as
+ * nudges and Escape as "clear the selection".
+ */
+function MenuList({
+  list,
+  groups,
+  label,
+  testId,
+  open,
+  onOpen,
+  onHover,
+  onRun,
+  onClose,
+  closeOnLeft = false,
+}: {
+  readonly list: RefObject<HTMLDivElement | null>
+  readonly groups: readonly Group[]
+  readonly label: string
+  readonly testId: string
+  readonly open: string | null
+  readonly onOpen: (label: string, at: Rect) => void
+  readonly onHover: (label: string) => void
+  readonly onRun: () => void
+  readonly onClose: () => void
+  readonly closeOnLeft?: boolean
+}) {
+  const openFrom = (element: HTMLElement, item: Item): void => {
+    const box = element.getBoundingClientRect()
+    onOpen(item.label, { x: box.x, y: box.y, width: box.width, height: box.height })
+  }
+
   const onKeyDown = (event: KeyboardEvent<HTMLDivElement>): void => {
     event.stopPropagation()
-    const items = itemsIn(ref.current)
+    const items = itemsIn(list.current)
     const current = items.indexOf(document.activeElement as HTMLElement)
     const go = (index: number): void => {
       event.preventDefault()
@@ -278,10 +411,24 @@ export function ContextMenu() {
       case 'End':
         go(items.length - 1)
         return
+      case 'ArrowRight': {
+        const element = items[current]
+        if (element?.getAttribute('aria-haspopup') === 'menu') {
+          event.preventDefault()
+          element.click()
+        }
+        return
+      }
+      case 'ArrowLeft':
+        if (closeOnLeft) {
+          event.preventDefault()
+          onClose()
+        }
+        return
       case 'Escape':
       case 'Tab':
         event.preventDefault()
-        dismiss()
+        onClose()
         return
     }
     if (event.key.length === 1 && /\S/.test(event.key) && !event.metaKey && !event.ctrlKey) {
@@ -297,72 +444,72 @@ export function ContextMenu() {
   }
 
   return (
-    <AnchoredSurface
-      anchor={anchor}
-      surface={surface}
-      // Beside, when a menu hung from a selection fits neither under it nor
-      // over it — never on top of the thing it is about.
-      prefer={['below', 'above', 'right', 'left']}
-      gap={0}
-      margin={8}
-      testId="context-menu-surface"
-      layer="menu"
+    <div
+      ref={list}
+      className="of-menu of-surface"
+      role="menu"
+      aria-label={label}
+      data-testid={testId}
+      onKeyDown={onKeyDown}
     >
-      <div
-        ref={ref}
-        className="of-menu of-surface"
-        role="menu"
-        aria-label={hasSelection ? 'Selection' : 'Board'}
-        data-testid="context-menu"
-        onKeyDown={onKeyDown}
-      >
-        {/*
-         * Empty groups are dropped, not rendered. A group carries a separator
-         * rule, so a selection with no promotions on offer would otherwise show
-         * a divider with nothing under it.
-         */}
-        {groups
-          .filter((group) => group.length > 0)
-          .map((group, index) => (
-            <div key={index} className="of-menu__group">
-              {group.map((item) => (
-                /*
-                 * Disabled by `aria-disabled`, not `disabled`: a disabled
-                 * button leaves the focus order, so the arrows skipped it and
-                 * a screen reader never heard that Paste existed. The menu
-                 * pattern keeps unavailable items reachable and says so.
-                 *
-                 * Named by the label alone. The shortcut was part of the
-                 * name — "Cut Ctrl+X" — and is `aria-keyshortcuts` instead.
-                 */
-                <button
-                  key={item.label}
-                  type="button"
-                  role="menuitem"
-                  tabIndex={-1}
-                  className="of-menu__item"
-                  aria-disabled={item.disabled === true ? true : undefined}
-                  aria-keyshortcuts={
-                    item.shortcut === undefined ? undefined : ariaKeys(item.shortcut)
+      {/*
+       * Empty groups are dropped, not rendered. A group carries a separator
+       * rule, so a selection with nothing to derive or promote would otherwise
+       * show a divider with nothing under it.
+       */}
+      {groups
+        .filter((group) => group.length > 0)
+        .map((group, index) => (
+          <div key={index} className="of-menu__group">
+            {group.map((item) => (
+              /*
+               * Disabled by `aria-disabled`, not `disabled`: a disabled button
+               * leaves the focus order, so the arrows skipped it and a screen
+               * reader never heard that Paste existed. The menu pattern keeps
+               * unavailable items reachable and says so.
+               *
+               * Named by the label alone. The shortcut was part of the name —
+               * "Cut Ctrl+X" — and is `aria-keyshortcuts` instead.
+               */
+              <button
+                key={item.label}
+                type="button"
+                role="menuitem"
+                tabIndex={-1}
+                className={`of-menu__item${item.danger === true ? ' of-menu__item--danger' : ''}`}
+                aria-disabled={item.disabled === true ? true : undefined}
+                aria-haspopup={item.submenu === undefined ? undefined : 'menu'}
+                aria-expanded={item.submenu === undefined ? undefined : open === item.label}
+                aria-keyshortcuts={
+                  item.shortcut === undefined ? undefined : ariaKeys(item.shortcut)
+                }
+                data-testid={testIdOf(item.label)}
+                onPointerEnter={(event) => {
+                  onHover(item.label)
+                  if (item.submenu !== undefined && item.disabled !== true)
+                    openFrom(event.currentTarget, item)
+                }}
+                onClick={(event) => {
+                  if (item.disabled === true) return
+                  if (item.submenu !== undefined) {
+                    openFrom(event.currentTarget, item)
+                    return
                   }
-                  data-testid={`menu-${item.label.toLowerCase().replace(/ /g, '-')}`}
-                  onClick={() => {
-                    if (item.disabled === true) return
-                    item.run()
-                    dismiss()
-                  }}
-                >
-                  <span>{item.label}</span>
-                  {item.shortcut !== undefined && (
-                    <span className="of-menu__shortcut" aria-hidden="true">
-                      {formatKeys(item.shortcut)}
-                    </span>
-                  )}
-                </button>
-              ))}
-            </div>
-          ))}
-      </div>
-    </AnchoredSurface>
+                  item.run?.()
+                  onRun()
+                }}
+              >
+                <span>{item.label}</span>
+                {item.shortcut !== undefined && (
+                  <span className="of-menu__shortcut" aria-hidden="true">
+                    {formatKeys(item.shortcut)}
+                  </span>
+                )}
+                {item.submenu !== undefined && <DisclosureIcon className="of-menu__more" />}
+              </button>
+            ))}
+          </div>
+        ))}
+    </div>
   )
 }

@@ -46,6 +46,7 @@ test('keeps what was typed into a new note, as one undoable edit', async ({ page
 test('keeps a rewrite of an existing note', async ({ page }) => {
   await page.keyboard.press('s')
   await page.locator(CANVAS).click({ position: { x: 340, y: 260 } })
+  await expect(page.locator(EDITOR)).toBeFocused()
   await page.keyboard.type('First draft')
   await page.locator(CANVAS).click({ position: { x: 1100, y: 640 } })
 
@@ -60,6 +61,7 @@ test('keeps a rewrite of an existing note', async ({ page }) => {
 test('keeps a shape label', async ({ page }) => {
   await page.keyboard.press('u')
   await page.locator(CANVAS).click({ position: { x: 340, y: 200 } })
+  await expect(page.locator(EDITOR)).toBeFocused()
   await page.keyboard.type('Box')
   await page.keyboard.press('Escape')
   await expect(page.locator('[data-object-type="shape"]')).toContainText('Box')
@@ -107,6 +109,7 @@ test('keeps a table cell, and a second Escape leaves the table with it', async (
 test('leaving an edit that changed nothing adds no undo step', async ({ page }) => {
   await page.keyboard.press('s')
   await page.locator(CANVAS).click({ position: { x: 340, y: 260 } })
+  await expect(page.locator(EDITOR)).toBeFocused()
   await page.keyboard.type('Untouched')
   await page.locator(CANVAS).click({ position: { x: 1100, y: 640 } })
 
