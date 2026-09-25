@@ -24,7 +24,7 @@ import {
   type StrokeToken,
   type StyleProp,
 } from '@openframe/core'
-import { useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 
 import { AnchoredSurface } from '../controls/AnchoredSurface.js'
 import { useCommands } from '../hooks/use-commands.js'
@@ -141,6 +141,29 @@ export function Inspector() {
   const dragKind = useInteractionStore((state) => state.drag.kind)
   const editingId = useInteractionStore((state) => state.editingId)
   const commands = useCommands()
+  /*
+   * A style being aimed at: a colour dragged across the picker, an opacity
+   * slid. Previewed on the selection and written ONCE when the gesture ends
+   * (rules 4 and 14) — to the objects it was previewed on, not to whatever is
+   * selected by the time it settles, because the gesture can end on a click
+   * that selects something else.
+   */
+  const previewStyle = useInteractionStore((state) => state.previewStyle)
+  const clearStylePreview = useInteractionStore((state) => state.clearStylePreview)
+  /*
+   * What is being aimed at, so the panel's own controls show it too — the
+   * custom swatch its colour, the slider where it is. The store holds the same
+   * object between updates, so the reference is stable (rule 9).
+   */
+  const aimed = useInteractionStore((state) => state.stylePreview?.style)
+  const settle = useCallback((): void => {
+    const aimed = useInteractionStore.getState().stylePreview
+    if (aimed === null) return
+    commands.setStyle([...aimed.ids], aimed.style)
+    clearStylePreview()
+  }, [commands, clearStylePreview])
+  // A panel that closes mid-gesture still lands what was aimed at.
+  useEffect(() => settle, [settle])
 
   const objects = useMemo<AnyOpenFrameObject[]>(
     () =>
@@ -266,15 +289,21 @@ export function Inspector() {
   }
 
   const value = <K extends StyleProp>(prop: K): ObjectStyle[K] | undefined => {
+    const pending = aimed?.[prop]
+    if (pending !== undefined) return pending
     const first = objects[0]?.style[prop]
     return objects.every((object) => object.style[prop] === first) ? first : undefined
   }
 
   const apply = (style: ObjectStyle): void => {
-    commands.setStyle(
-      objects.map((object) => object.id),
-      style,
-    )
+    const aimed = useInteractionStore.getState().stylePreview
+    commands.setStyle(aimed === null ? objects.map((object) => object.id) : [...aimed.ids], style)
+    if (aimed !== null) clearStylePreview()
+  }
+
+  const preview = (style: ObjectStyle | null): void => {
+    if (style === null) clearStylePreview()
+    else previewStyle(new Set(objects.map((object) => object.id)), style)
   }
 
   /*
@@ -431,6 +460,7 @@ export function Inspector() {
                */
               against={painting.prop === 'textColor' ? groundOf(value('color')) : null}
               onPick={(colour) => apply({ [painting.prop]: colour })}
+              onPreview={(colour) => preview(colour === null ? null : { [painting.prop]: colour })}
               /*
                * Only a label's background can be nothing at all. Cleared by
                * being SET to none rather than to undefined, which a style
@@ -576,7 +606,10 @@ export function Inspector() {
               value={Math.round((value('opacity') ?? 1) * 100)}
               aria-label="Opacity"
               data-testid="opacity"
-              onChange={(event) => apply({ opacity: Number(event.target.value) / 100 })}
+              onChange={(event) => preview({ opacity: Number(event.target.value) / 100 })}
+              // Released, or left with the keyboard: one undo entry either way.
+              onPointerUp={settle}
+              onBlur={settle}
             />
             <span className="of-inspector__reading">
               {Math.round((value('opacity') ?? 1) * 100)}%

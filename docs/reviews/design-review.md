@@ -232,3 +232,24 @@ the inspector, rail and record line.
 
 Closing pass: `/impeccable audit apps/web/src` (a11y, performance, theming in
 both worlds, responsive/touch), then `impeccable-finish-reviewer` per surface.
+
+### #1 Record panel — critique and fix pass
+
+`/impeccable critique` (dual-agent, both worlds, 760px and 1280px) scored it
+**21/40**, snapshot `apps/web/.impeccable/critique/2026-09-25T00-53-07Z__src-ui-inspector-tsx.md`.
+Paint is sound — detector clean on its five files, axe 0 violations, every
+text pair ≥ 5.78:1, every control named and ringed. The problems are
+behaviour and hierarchy. Owner's call: correctness first, then a head and a
+named record band, all five issues.
+
+- **P0 — fixed: continuous controls wrote per event.** The colour picker
+  dispatched `UpdateStyle` on every pointer move and the opacity slider on
+  every step — one drag, ~20 undo entries, against rules 4 and 14. A style
+  being aimed at now lives in the interaction store (`stylePreview`),
+  `ObjectView` merges it like a crop or a divider, and one command lands when
+  the gesture ends (release, Enter, leaving the control, or closing the
+  picker) — on the objects it was previewed on, since the ending click may
+  select something else. Escape takes it back. The table's cell colours write
+  data rather than style, so their picker settles once at the end without a
+  live preview on the cells; noted for #8. Three e2e tests, two of which fail
+  with the old per-move write restored.

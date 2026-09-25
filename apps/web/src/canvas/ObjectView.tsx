@@ -1,4 +1,4 @@
-import type { AnyOpenFrameObject, ObjectFrame, ObjectId } from '@openframe/core'
+import type { AnyOpenFrameObject, ObjectFrame, ObjectId, ObjectStyle } from '@openframe/core'
 import { memo, useCallback, useMemo } from 'react'
 
 import { useAssetUrl } from '../hooks/use-asset-url.js'
@@ -134,6 +134,13 @@ function ObjectViewInner({ id, views }: Props) {
    * box shrinks with it, which is what keeps the surviving pixels still under
    * the pointer. Primitives, not the frame object: rule 9.
    */
+  /*
+   * A style being aimed at in the record panel. The store holds the same
+   * object between updates, so the reference is stable (rule 9).
+   */
+  const stylePreview = useInteractionStore((state) =>
+    state.stylePreview?.ids.has(id) === true ? state.stylePreview.style : null,
+  )
   const cropPreview = useInteractionStore((state) =>
     state.drag.kind === 'crop' && state.drag.objectId === id ? state.drag.crop : null,
   )
@@ -264,6 +271,7 @@ function ObjectViewInner({ id, views }: Props) {
               crop: cropPreview,
               divider: dividerPreview,
               reshape: reshapePreview,
+              style: stylePreview,
             })}
             selected={selected}
             zoom={zoom}
@@ -289,6 +297,25 @@ function ObjectViewInner({ id, views }: Props) {
  * is not a precedence, only a search.
  */
 function previewed(
+  object: AnyOpenFrameObject,
+  frame: ObjectFrame,
+  pending: {
+    readonly crop: unknown
+    readonly divider: Readonly<Record<string, unknown>> | null
+    readonly reshape: Readonly<Record<string, unknown>> | null
+    readonly style: ObjectStyle | null
+  },
+): AnyOpenFrameObject {
+  /*
+   * A style preview comes from the record panel rather than a canvas drag, so
+   * it can be in flight at the same time as one of the others; it is layered
+   * on whatever they produce.
+   */
+  const shaped = previewedShape(object, frame, pending)
+  return pending.style === null ? shaped : { ...shaped, style: { ...shaped.style, ...pending.style } }
+}
+
+function previewedShape(
   object: AnyOpenFrameObject,
   frame: ObjectFrame,
   pending: {

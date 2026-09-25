@@ -42,7 +42,18 @@ export interface ColorPickerProps {
    * or a property that is not text.
    */
   readonly against: HexColor | null
+  /** The colour settled on: called ONCE per gesture, when it ends. */
   readonly onPick: (color: ColorValue) => void
+  /**
+   * The colour being aimed at, or `null` to take the preview away (Escape).
+   *
+   * Aiming is a gesture, and a gesture writes nothing until it ends (rules 4
+   * and 14): the picker used to call `onPick` on every pointer move, and one
+   * drag across the area left about twenty undo entries. A caller that cannot
+   * preview leaves this out and simply sees the colour land when the gesture
+   * does.
+   */
+  readonly onPreview?: (color: ColorValue | null) => void
   readonly onClose: () => void
 }
 
@@ -59,11 +70,46 @@ export interface ColorPickerProps {
  * a colour somebody picks cannot be, so the guarantee becomes a warning at the
  * moment of choosing rather than disappearing.
  */
-export function ColorPicker({ current, against, onPick, onClose }: ColorPickerProps) {
+export function ColorPicker({ current, against, onPick, onPreview, onClose }: ColorPickerProps) {
   const [hsv, setHsv] = useState<Hsv>(() => hexToHsv(current))
   const [typed, setTyped] = useState<string>(current)
   const area = useRef<HTMLDivElement>(null)
   const dropper = useMemo(() => eyeDropper(), [])
+  /*
+   * What has been aimed at and not yet settled. A ref, because it is read by
+   * handlers and by the unmount below, none of which should re-render.
+   */
+  const pending = useRef<HexColor | null>(null)
+  // The latest callbacks, so the unmount flush below sees today's selection.
+  const settle = useRef(onPick)
+  useEffect(() => {
+    settle.current = onPick
+  }, [onPick])
+
+  const aimAt = (value: HexColor): void => {
+    pending.current = value
+    onPreview?.(value)
+  }
+
+  /** The gesture has ended: write what it aimed at, once. */
+  const flush = (): void => {
+    const value = pending.current
+    if (value === null) return
+    pending.current = null
+    onPick(value)
+  }
+
+  /*
+   * Closing by any route but Escape keeps the colour — clicking away is how
+   * somebody says "that one" — so a pending preview is settled on the way out.
+   */
+  useEffect(
+    () => () => {
+      const value = pending.current
+      if (value !== null) settle.current(value)
+    },
+    [],
+  )
 
   const hex = hsvToHex(hsv)
   const ratio = against === null ? null : contrastRatio(hex, against)
@@ -73,7 +119,10 @@ export function ColorPicker({ current, against, onPick, onClose }: ColorPickerPr
   useEffect(() => {
     const onKey = (event: KeyboardEvent): void => {
       if (event.key === 'Escape') {
+        // Escape is the one way out that takes the preview back.
         event.stopPropagation()
+        pending.current = null
+        onPreview?.(null)
         onClose()
       }
     }
@@ -81,21 +130,21 @@ export function ColorPicker({ current, against, onPick, onClose }: ColorPickerPr
     return () => {
       window.removeEventListener('keydown', onKey, true)
     }
-  }, [onClose])
+  }, [onClose, onPreview])
 
-  const commit = (next: Hsv): void => {
+  const aim = (next: Hsv): void => {
     setHsv(next)
     const value = hsvToHex(next)
     setTyped(value)
-    onPick(value)
+    aimAt(value)
   }
 
-  const aim = (event: ReactPointerEvent<HTMLDivElement>): void => {
+  const aimArea = (event: ReactPointerEvent<HTMLDivElement>): void => {
     const box = area.current?.getBoundingClientRect()
     if (box === undefined) return
     const s = Math.min(1, Math.max(0, (event.clientX - box.left) / box.width))
     const v = 1 - Math.min(1, Math.max(0, (event.clientY - box.top) / box.height))
-    commit({ ...hsv, s, v })
+    aim({ ...hsv, s, v })
   }
 
   return (
@@ -113,11 +162,12 @@ export function ColorPicker({ current, against, onPick, onClose }: ColorPickerPr
         data-testid="picker-area"
         onPointerDown={(event) => {
           event.currentTarget.setPointerCapture(event.pointerId)
-          aim(event)
+          aimArea(event)
         }}
         onPointerMove={(event) => {
-          if (event.currentTarget.hasPointerCapture(event.pointerId)) aim(event)
+          if (event.currentTarget.hasPointerCapture(event.pointerId)) aimArea(event)
         }}
+        onLostPointerCapture={flush}
       >
         <span
           className="of-picker__pointer"
@@ -140,8 +190,11 @@ export function ColorPicker({ current, against, onPick, onClose }: ColorPickerPr
         aria-label="Hue"
         data-testid="picker-hue"
         onChange={(event) => {
-          commit({ ...hsv, h: Number(event.target.value) })
+          aim({ ...hsv, h: Number(event.target.value) })
         }}
+        // Released, or left with the keyboard: either way the hue is chosen.
+        onPointerUp={flush}
+        onBlur={flush}
       />
 
       <div className="of-picker__row">
@@ -164,9 +217,14 @@ export function ColorPicker({ current, against, onPick, onClose }: ColorPickerPr
             const parsed = parseHexColor(event.target.value)
             if (parsed !== null) {
               setHsv(hexToHsv(parsed))
-              onPick(parsed)
+              aimAt(parsed)
             }
           }}
+          // `#f00` is a colour on the way to `#f00a0b`: settle on Enter or on leaving.
+          onKeyDown={(event) => {
+            if (event.key === 'Enter') flush()
+          }}
+          onBlur={flush}
         />
 
         {dropper !== null && (

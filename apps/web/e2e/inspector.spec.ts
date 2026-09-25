@@ -121,9 +121,9 @@ test.describe('inspector', () => {
     await place(page, 's', 340, 260, 'Note')
     await page.locator(CANVAS).click({ position: { x: 340, y: 260 } })
 
-    const paper = await page.locator('.of-sticky').evaluate(
-      (note) => getComputedStyle(note).backgroundColor,
-    )
+    const paper = await page
+      .locator('.of-sticky')
+      .evaluate((note) => getComputedStyle(note).backgroundColor)
 
     await page.getByTestId('paint-textColor').click()
     await page.getByTestId('ink-red').click()
@@ -199,10 +199,7 @@ test.describe('inspector', () => {
      * The custom swatch now shows what it holds, so the row still answers
      * "what is this set to" when the answer is not in the palette.
      */
-    await expect(page.getByTestId('ink-custom')).toHaveCSS(
-      'background-color',
-      'rgb(58, 123, 213)',
-    )
+    await expect(page.getByTestId('ink-custom')).toHaveCSS('background-color', 'rgb(58, 123, 213)')
   })
 
   /**
@@ -273,5 +270,74 @@ test.describe('inspector', () => {
 
     await page.getByTestId('inspector-delete').click()
     await expect(page.locator('[data-object-type="sticky"]')).toHaveCount(0)
+  })
+})
+
+/**
+ * Aiming is a gesture, and a gesture writes nothing until it ends (rules 4
+ * and 14). The picker dispatched a style command on every pointer move and the
+ * opacity slider on every step, so one drag across the colour area left about
+ * twenty undo entries. They preview on the selection now and write once.
+ */
+test.describe('continuous controls write once', () => {
+  test.beforeEach(async ({ page }) => {
+    await freshBoard(page)
+  })
+
+  const surfaceOf = (page: Page) =>
+    page.locator('.of-sticky').evaluate((element) => getComputedStyle(element).backgroundColor)
+
+  test('a drag across the colour picker is one undo entry', async ({ page }) => {
+    await place(page, 's', 340, 260, 'Note')
+    await page.locator(CANVAS).click({ position: { x: 340, y: 260 } })
+    const before = await surfaceOf(page)
+
+    await page.getByTestId('swatch-custom').click()
+    const area = await page.getByTestId('picker-area').boundingBox()
+    expect(area).not.toBeNull()
+    if (area === null) return
+    await page.mouse.move(area.x + 4, area.y + 4)
+    await page.mouse.down()
+    for (let step = 1; step <= 20; step++) {
+      await page.mouse.move(area.x + (area.width * step) / 21, area.y + (area.height * step) / 42)
+    }
+    await page.mouse.up()
+    const after = await surfaceOf(page)
+    expect(after).not.toBe(before)
+
+    await page.locator(CANVAS).click({ position: EMPTY })
+    await page.keyboard.press('ControlOrMeta+z')
+    await expect.poll(() => surfaceOf(page)).toBe(before)
+  })
+
+  test('Escape takes back a colour that was only aimed at', async ({ page }) => {
+    await place(page, 's', 340, 260, 'Note')
+    await page.locator(CANVAS).click({ position: { x: 340, y: 260 } })
+    const before = await surfaceOf(page)
+
+    await page.getByTestId('swatch-custom').click()
+    await page.getByTestId('picker-hex').fill('#c0ffee')
+    // Previewed on the note while it is being chosen…
+    await expect.poll(() => surfaceOf(page)).toBe('rgb(192, 255, 238)')
+
+    // …and gone again without a trace when it is not.
+    await page.keyboard.press('Escape')
+    await expect.poll(() => surfaceOf(page)).toBe(before)
+    await page.locator(CANVAS).click({ position: EMPTY })
+    await expect.poll(() => surfaceOf(page)).toBe(before)
+  })
+
+  test('six steps of the opacity slider are one undo entry', async ({ page }) => {
+    await place(page, 's', 340, 260, 'Note')
+    await page.locator(CANVAS).click({ position: { x: 340, y: 260 } })
+
+    await page.getByTestId('opacity').focus()
+    for (let step = 0; step < 6; step++) await page.keyboard.press('ArrowLeft')
+    await expect(page.locator('.of-sticky')).toHaveCSS('opacity', '0.7')
+
+    await page.locator(CANVAS).click({ position: EMPTY })
+    await expect(page.locator('.of-sticky')).toHaveCSS('opacity', '0.7')
+    await page.keyboard.press('ControlOrMeta+z')
+    await expect(page.locator('.of-sticky')).toHaveCSS('opacity', '1')
   })
 })

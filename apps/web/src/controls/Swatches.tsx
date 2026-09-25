@@ -128,6 +128,7 @@ export function Swatches({
   current,
   against,
   onPick,
+  onPreview,
   onNone,
 }: {
   readonly kind: SwatchKind
@@ -136,6 +137,8 @@ export function Swatches({
   readonly current: ColorValue | undefined
   readonly against: HexColor | null
   readonly onPick: (color: ColorValue) => void
+  /** A colour being aimed at in the picker, not yet chosen; `null` takes it back. */
+  readonly onPreview?: (color: ColorValue | null) => void
   /**
    * What "no colour at all" does, for a property that has such a state.
    *
@@ -250,6 +253,7 @@ export function Swatches({
             current={custom ?? seedOf(kind, current)}
             against={against}
             onPick={onPick}
+            {...(onPreview === undefined ? {} : { onPreview })}
             onClose={() => {
               setPicking(false)
             }}
