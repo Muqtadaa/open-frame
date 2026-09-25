@@ -1,19 +1,23 @@
-import { useEffect, useRef } from 'react'
+import { useEffect, useRef, type KeyboardEvent } from 'react'
 
 import { AnchoredSurface } from '../controls/AnchoredSurface.js'
 import { useViewportSize } from '../controls/use-viewport-size.js'
 import { useCommands } from '../hooks/use-commands.js'
 import { useOpenFrame } from '../runtime/context.js'
 import { useInteractionStore } from '../interaction/interaction-store.js'
-import { MOD_KEY } from '../interaction/keymap.js'
-
-const mod = MOD_KEY
+import { ariaKeys, formatKeys } from '../interaction/keymap.js'
 
 interface Item {
   readonly label: string
+  /** Written once, as a chord — `'Mod+Shift+G'` — and shown per platform. */
   readonly shortcut?: string
   readonly run: () => void
   readonly disabled?: boolean
+}
+
+/** The items a keyboard can land on, in order. Disabled ones included (see below). */
+function itemsIn(menu: HTMLElement | null): HTMLElement[] {
+  return menu === null ? [] : [...menu.querySelectorAll<HTMLElement>('[role="menuitem"]')]
 }
 
 /**
@@ -31,6 +35,12 @@ export function ContextMenu() {
   const { runtime } = useOpenFrame()
   const ref = useRef<HTMLDivElement>(null)
   const surface = useViewportSize()
+  /*
+   * Where the keyboard was before the menu opened, so closing hands it back.
+   * Without this, Escape left focus on the body — somebody working by keyboard
+   * was put back at the top of the page.
+   */
+  const returnTo = useRef<HTMLElement | null>(null)
 
   /*
    * A menu anchored to a POINT rather than to a control: a zero-sized
@@ -47,7 +57,25 @@ export function ContextMenu() {
    * was written because a right-click near the bottom of the window put the
    * menu's lower entries off-screen — unreachable, and silent about it.
    */
-  const anchor = at === null ? null : { x: at.x, y: at.y, width: 0, height: 0 }
+  const anchor = at === null ? null : { x: at.x, y: at.y, width: at.width, height: at.height }
+
+  /*
+   * Focus goes IN when the menu opens. It stayed wherever it was, so arrow
+   * keys nudged the object underneath rather than moving through the items,
+   * and a screen reader was never told a menu had appeared.
+   */
+  useEffect(() => {
+    if (at === null) return
+    const active = document.activeElement
+    returnTo.current = active instanceof HTMLElement && active !== document.body ? active : null
+    const items = itemsIn(ref.current)
+    ;(items.find((item) => item.getAttribute('aria-disabled') !== 'true') ?? items[0])?.focus()
+  }, [at])
+
+  const dismiss = (): void => {
+    close()
+    returnTo.current?.focus()
+  }
 
   useEffect(() => {
     if (at === null) return
@@ -115,25 +143,25 @@ export function ContextMenu() {
     [
       {
         label: 'Cut',
-        shortcut: `${mod}X`,
+        shortcut: 'Mod+X',
         run: () => commands.cutSelection(),
         disabled: !hasSelection,
       },
       {
         label: 'Copy',
-        shortcut: `${mod}C`,
+        shortcut: 'Mod+C',
         run: () => commands.copySelection(),
         disabled: !hasSelection,
       },
       {
         label: 'Paste',
-        shortcut: `${mod}V`,
+        shortcut: 'Mod+V',
         run: () => commands.paste(),
         disabled: clipboardSize === 0,
       },
       {
         label: 'Duplicate',
-        shortcut: `${mod}D`,
+        shortcut: 'Mod+D',
         run: () => commands.duplicateSelection(),
         disabled: !hasSelection,
       },
@@ -168,7 +196,7 @@ export function ContextMenu() {
     [
       {
         label: 'Group',
-        shortcut: `${mod}G`,
+        shortcut: 'Mod+G',
         run: () => commands.group(),
         // One object is already a unit; grouping it would add a container with
         // nothing to contain.
@@ -176,7 +204,7 @@ export function ContextMenu() {
       },
       {
         label: 'Ungroup',
-        shortcut: `${mod}⇧G`,
+        shortcut: 'Mod+Shift+G',
         run: () => commands.ungroup(),
         disabled: !hasGroup,
       },
@@ -184,7 +212,7 @@ export function ContextMenu() {
     [
       {
         label: 'Bring to front',
-        shortcut: '⇧]',
+        shortcut: 'Shift+]',
         run: () => commands.reorder('front'),
         disabled: !hasSelection,
       },
@@ -202,7 +230,7 @@ export function ContextMenu() {
       },
       {
         label: 'Send to back',
-        shortcut: '⇧[',
+        shortcut: 'Shift+[',
         run: () => commands.reorder('back'),
         disabled: !hasSelection,
       },
@@ -223,17 +251,71 @@ export function ContextMenu() {
     ],
   ]
 
+  /*
+   * A menu's keys, per the ARIA menu pattern: arrows move and wrap, Home and
+   * End jump, a letter jumps to the next item starting with it, Escape and
+   * Tab close. EVERY key stops here — the board's keymap listens on the
+   * window and reads arrows as nudges and Escape as "clear the selection".
+   */
+  const onKeyDown = (event: KeyboardEvent<HTMLDivElement>): void => {
+    event.stopPropagation()
+    const items = itemsIn(ref.current)
+    const current = items.indexOf(document.activeElement as HTMLElement)
+    const go = (index: number): void => {
+      event.preventDefault()
+      items[(index + items.length) % items.length]?.focus()
+    }
+    switch (event.key) {
+      case 'ArrowDown':
+        go(current + 1)
+        return
+      case 'ArrowUp':
+        go(current < 0 ? items.length - 1 : current - 1)
+        return
+      case 'Home':
+        go(0)
+        return
+      case 'End':
+        go(items.length - 1)
+        return
+      case 'Escape':
+      case 'Tab':
+        event.preventDefault()
+        dismiss()
+        return
+    }
+    if (event.key.length === 1 && /\S/.test(event.key) && !event.metaKey && !event.ctrlKey) {
+      const letter = event.key.toLowerCase()
+      for (let step = 1; step <= items.length; step++) {
+        const index = (current + step) % items.length
+        if (items[index]?.textContent?.trim().toLowerCase().startsWith(letter) === true) {
+          go(index)
+          return
+        }
+      }
+    }
+  }
+
   return (
     <AnchoredSurface
       anchor={anchor}
       surface={surface}
-      prefer={['below', 'above']}
+      // Beside, when a menu hung from a selection fits neither under it nor
+      // over it — never on top of the thing it is about.
+      prefer={['below', 'above', 'right', 'left']}
       gap={0}
       margin={8}
       testId="context-menu-surface"
       layer="menu"
     >
-      <div ref={ref} className="of-menu of-surface" role="menu" data-testid="context-menu">
+      <div
+        ref={ref}
+        className="of-menu of-surface"
+        role="menu"
+        aria-label={hasSelection ? 'Selection' : 'Board'}
+        data-testid="context-menu"
+        onKeyDown={onKeyDown}
+      >
         {/*
          * Empty groups are dropped, not rendered. A group carries a separator
          * rule, so a selection with no promotions on offer would otherwise show
@@ -244,21 +326,37 @@ export function ContextMenu() {
           .map((group, index) => (
             <div key={index} className="of-menu__group">
               {group.map((item) => (
+                /*
+                 * Disabled by `aria-disabled`, not `disabled`: a disabled
+                 * button leaves the focus order, so the arrows skipped it and
+                 * a screen reader never heard that Paste existed. The menu
+                 * pattern keeps unavailable items reachable and says so.
+                 *
+                 * Named by the label alone. The shortcut was part of the
+                 * name — "Cut Ctrl+X" — and is `aria-keyshortcuts` instead.
+                 */
                 <button
                   key={item.label}
                   type="button"
                   role="menuitem"
+                  tabIndex={-1}
                   className="of-menu__item"
-                  disabled={item.disabled === true}
+                  aria-disabled={item.disabled === true ? true : undefined}
+                  aria-keyshortcuts={
+                    item.shortcut === undefined ? undefined : ariaKeys(item.shortcut)
+                  }
                   data-testid={`menu-${item.label.toLowerCase().replace(/ /g, '-')}`}
                   onClick={() => {
+                    if (item.disabled === true) return
                     item.run()
-                    close()
+                    dismiss()
                   }}
                 >
                   <span>{item.label}</span>
                   {item.shortcut !== undefined && (
-                    <span className="of-menu__shortcut">{item.shortcut}</span>
+                    <span className="of-menu__shortcut" aria-hidden="true">
+                      {formatKeys(item.shortcut)}
+                    </span>
                   )}
                 </button>
               ))}

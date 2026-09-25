@@ -3856,11 +3856,20 @@ body {
   cursor: pointer;
 }
 
-.of-menu__item:hover:not(:disabled) {
+.of-menu__item:hover:not([aria-disabled='true']) {
   background: var(--of-accent-soft);
 }
 
-.of-menu__item:disabled {
+/*
+ * The keyboard's item gets the SAME bed as the pointer's, plus the ring. It
+ * had the ring alone, on a menu whose hover was a wash — so the item somebody
+ * arrowed to looked less chosen than the one a mouse happened to cross.
+ */
+.of-menu__item:focus-visible {
+  background: var(--of-accent-soft);
+}
+
+.of-menu__item[aria-disabled='true'] {
   opacity: 0.38;
   cursor: default;
 }

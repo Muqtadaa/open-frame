@@ -167,6 +167,12 @@ export function useKeyboardShortcuts(setSpaceHeld: (held: boolean) => void): voi
             store.setSearchOpen(false)
             return
           }
+          // An open menu is closed and nothing else: the selection it was
+          // about is still what the next action is about.
+          if (store.contextMenu !== null) {
+            store.closeContextMenu()
+            return
+          }
           store.setEditing(null)
           store.clearSelection()
           store.closeContextMenu()

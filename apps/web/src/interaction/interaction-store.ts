@@ -257,6 +257,23 @@ export type DragState =
  * see them — but this store stays authoritative locally, and presence is never
  * read back into it.
  */
+/**
+ * What a context menu hangs from, in screen pixels.
+ *
+ * A right-click is a POINT — a zero-sized box where the pointer was. A menu
+ * asked for from the keyboard (Shift+F10, the menu key) hangs from the
+ * SELECTION instead: the browser reports that one at the corner of whatever
+ * had focus, which put the menu over the navigation bar, as far from the thing
+ * it acts on as the window allows.
+ */
+export interface ContextMenuAt {
+  readonly x: number
+  readonly y: number
+  readonly width: number
+  readonly height: number
+  readonly via: 'pointer' | 'keyboard'
+}
+
 interface InteractionState {
   readonly tool: Tool
   /** Which shape the shape tool will draw. Cycled with `U`. */
@@ -404,8 +421,8 @@ interface InteractionState {
    * blocking copy/paste on. Cross-tab paste is the deliberate gap.
    */
   readonly clipboard: readonly AnyOpenFrameObject[]
-  /** Screen coordinates of the open context menu, or null. */
-  readonly contextMenu: Point | null
+  /** Where the open context menu hangs from, or null. */
+  readonly contextMenu: ContextMenuAt | null
   /**
    * Whether the search panel is open.
    *
@@ -451,7 +468,7 @@ interface InteractionState {
   noteSaid(): void
   setCanvasSize(width: number, height: number): void
   setClipboard(objects: readonly AnyOpenFrameObject[]): void
-  openContextMenu(at: Point): void
+  openContextMenu(at: ContextMenuAt): void
   closeContextMenu(): void
   setSearchOpen(open: boolean): void
   beginTranslate(ids: readonly ObjectId[]): void
