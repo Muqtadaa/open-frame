@@ -188,14 +188,20 @@ export function Inspector() {
    */
   const [yielding, setYielding] = useState(false)
   useEffect(() => {
+    /*
+     * Busy means TYPING — where Shift is a capital letter. Focus resting on a
+     * swatch or a radio after a click is not typing, and counting it meant
+     * the commonest flow, recolour this one then shift-click the next, still
+     * landed on the panel.
+     */
     const busy = (): boolean => {
       const focused = window.document.activeElement
       if (!(focused instanceof HTMLElement)) return false
+      if (focused.isContentEditable || focused instanceof HTMLTextAreaElement) return true
+      if (focused instanceof HTMLSelectElement) return true
       return (
-        focused.closest('[data-testid="inspector"]') !== null ||
-        focused.isContentEditable ||
-        focused instanceof HTMLInputElement ||
-        focused instanceof HTMLTextAreaElement
+        focused instanceof HTMLInputElement &&
+        !['range', 'checkbox', 'radio', 'button'].includes(focused.type)
       )
     }
     const down = (event: KeyboardEvent): void => {
@@ -548,11 +554,11 @@ export function Inspector() {
                    * Only when every view in the selection agrees on it.
                    */
                   // An outline or a line unset is drawn in the surface's own hue.
-                if (
-                  picked === undefined &&
-                  (painting.prop === 'color' || painting.prop === 'strokeColor')
-                )
-                  return surface
+                  if (
+                    picked === undefined &&
+                    (painting.prop === 'color' || painting.prop === 'strokeColor')
+                  )
+                    return surface
                   return picked
                 })()}
                 /*

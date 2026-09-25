@@ -406,6 +406,22 @@ test.describe('the panel is not in the way', () => {
 
     await expect(page.getByTestId('inspector')).toContainText('2 objects')
   })
+
+  // The commonest flow: recolour this one, then add the next. Focus is left on
+  // the swatch, which is not typing, so Shift must still clear the way.
+  test('steps aside after a swatch was clicked, too', async ({ page }) => {
+    await place(page, 's', 640, 300, 'Beside')
+    await place(page, 's', 300, 300, 'First')
+    await page.locator(CANVAS).click({ position: { x: 300, y: 300 } })
+    await page.getByTestId('swatch-blue').click()
+    await expect(page.getByTestId('swatch-blue')).toBeFocused()
+
+    await page.keyboard.down('Shift')
+    await page.mouse.click(640, 300)
+    await page.keyboard.up('Shift')
+
+    await expect(page.getByTestId('inspector')).toContainText('2 objects')
+  })
 })
 
 /**
