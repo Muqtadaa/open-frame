@@ -1,6 +1,6 @@
 # Phase 5a · The MCP server
 
-**Status: In progress — stages 1 to 3 done** · ← [Roadmap](README.md) · Design: [Phase 5](phase-5-ai-and-mcp.md)
+**Status: In progress — stages 1 to 4 done** · ← [Roadmap](README.md) · Design: [Phase 5](phase-5-ai-and-mcp.md)
 
 The execution plan for the MCP half of Phase 5. The *why* is in the phase
 document; this is the order, the decisions taken, and what each stage has to
@@ -250,7 +250,7 @@ covered by `server.stdio.test.ts`, which spawns the server and talks to it with
 a real MCP client; the tool half is covered against a real `BoardRoom` in
 `tools/read.test.ts`.
 
-### 4 · Write tools
+### 4 · Write tools ✅
 
 `create_objects`, `update_object`, `move_objects`, `delete_objects`,
 `create_connector`, `create_frame`, `add_comment`.
@@ -264,6 +264,42 @@ twenty notes must be revertible in one press, not twenty.
 step, and a viewer-level session is refused. **Guards:** a test that no tool
 reaches the document except through `dispatch`; a test that a read-only session
 cannot write.
+
+**Done.** `tools/write.ts` holds the seven; `tools/definition.ts` holds the one
+place a call is validated, a board resolved and a refusal decided, so "is this
+board mine" is answered once rather than fourteen times.
+
+Decisions taken here, by the project owner:
+
+- **One undo entry per TOOL CALL**, not per object. Every tool goes through
+  `transact`, including the one that issues two commands — a frame and the
+  reparenting of what goes into it — because undoing a frame that swallowed six
+  notes has to give back the six notes as well.
+- **A view-only board is refused outright**, by the tool, before a command
+  exists. The room re-authorizes every write and the dispatcher's capability
+  check would refuse it first, so all three would stop it; only this one tells
+  the agent, and an agent told nothing tries again.
+
+`add_comment` is the exception to both, and deliberately: a comment is not part
+of the document (it is not in undo, in export or in the registry), it goes to
+the database through the same function the web app's composer calls, and a
+viewer MAY leave one — `readOnlyCapabilities` has granted `comment` since phase
+1.
+
+`move_objects` takes ABSOLUTE coordinates and converts them to the deltas the
+command wants. An agent reads positions rather than feeling them, so asking it
+to subtract would be asking it to re-derive a number it already has, against a
+board that may have moved since.
+
+`apps/web/e2e-rooms/mcp-peer.spec.ts` is the proof over a real socket: a tool
+creates three notes, a browser on the same board sees all three arrive marked
+`createdVia: 'mcp'`, and ONE undo on the peer takes all three away again.
+
+**Still open, and worth a decision before stage 5:** the entry lives on the
+agent's own undo stack. A person watching in a browser cannot press undo to
+reverse it — remote changes are applied with `skipUndo`, which is what keeps
+undo meaning "reverse MY last change" — so today "revertible in one press"
+means asking the agent to revert it, and no tool offers that yet.
 
 ### 5 · Remote transport
 

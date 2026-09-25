@@ -1,4 +1,4 @@
-import { openBoard } from '@openframe/mcp'
+import { openBoard, toolContext, WRITE_TOOLS, type BoardPeer } from '@openframe/mcp'
 import { asBoardId } from '@openframe/core'
 import { expect, test, type Browser, type Page } from '@playwright/test'
 
@@ -115,5 +115,88 @@ test('a headless peer reads the board and writes to it, live', async ({ browser 
       ])
   } finally {
     peer.close()
+  }
+})
+
+/**
+ * The tools, over a real socket, with somebody watching.
+ *
+ * Stage 4's "proves", and the half that cannot be checked in one process: that
+ * what a tool dispatches reaches a browser on the same board, that it arrives
+ * marked as an agent's work, and that the whole of a call is ONE change —
+ * undone in a single press rather than in twenty.
+ *
+ * The account is a stub, because signing in needs somebody's password and a
+ * test must not want one. What it stands in for is stage 2, which is covered
+ * against a fake client in `apps/mcp/src/supabase/account.test.ts`; what is
+ * real here is everything below it.
+ */
+test('an agent builds something, and the browser sees one change', async ({ browser }) => {
+  const room = newRoomId()
+  const boardId = asBoardId(room)
+  const page = await join(browser, room)
+
+  const access = { boardId, title: 'Live board', role: 'editor' as const, accessKey: null }
+  /*
+   * A list rather than a `let`: the peer is assigned inside a closure, and
+   * TypeScript does not follow that — it narrows the variable to `null` and
+   * then refuses the `undo` below on a type of `never`.
+   */
+  const opened: BoardPeer[] = []
+
+  const context = toolContext(
+    {
+      account: { userId: 'agent', email: null, displayName: 'An agent' },
+      boards: () => Promise.resolve([access]),
+      board: () => Promise.resolve(access),
+      comment: () => Promise.resolve(null),
+      close: () => undefined,
+    },
+    {
+      open: async () => {
+        const peer = await openBoard({ boardId, server: ROOM_SERVER })
+        opened.push(peer)
+        return peer
+      },
+    },
+  )
+
+  const create = WRITE_TOOLS.find((tool) => tool.name === 'create_objects')
+  expect(create).toBeDefined()
+
+  try {
+    const answer = await create?.run(
+      {
+        board: boardId,
+        objects: [
+          { type: 'sticky', x: 0, y: 0, data: { text: [{ text: 'from the agent' }] } },
+          { type: 'sticky', x: 300, y: 0, data: { text: [{ text: 'and another' }] } },
+          { type: 'sticky', x: 600, y: 0, data: { text: [{ text: 'and a third' }] } },
+        ],
+      },
+      context,
+    )
+    expect(answer?.isError, answer?.text).toBe(false)
+
+    // All three, live, marked as an agent's.
+    await expect
+      .poll(() => objectsIn(page), { timeout: 20_000 })
+      .toEqual([
+        { type: 'sticky', via: 'mcp' },
+        { type: 'sticky', via: 'mcp' },
+        { type: 'sticky', via: 'mcp' },
+      ])
+
+    /*
+     * ONE entry. Three objects arrived as one change, so one undo takes all
+     * three away — which is the difference between an agent that can be
+     * reversed and one that leaves somebody deleting notes by hand.
+     */
+    expect(opened).toHaveLength(1)
+    opened[0]?.dispatcher.undo()
+
+    await expect.poll(() => objectsIn(page), { timeout: 20_000 }).toEqual([])
+  } finally {
+    await context.close()
   }
 })

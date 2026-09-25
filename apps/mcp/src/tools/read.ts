@@ -1,5 +1,4 @@
 import {
-  asBoardId,
   asObjectId,
   groupByParent,
   type AnyOpenFrameObject,
@@ -8,8 +7,14 @@ import {
 import { z } from 'zod'
 
 import type { BoardPeer } from '../board.js'
-import type { ToolContext } from './context.js'
-import { data, problem, type ToolResponse } from './respond.js'
+import {
+  boardArgument,
+  isResponse,
+  NOT_SIGNED_IN,
+  onBoard,
+  type ToolDefinition,
+} from './definition.js'
+import { data, problem } from './respond.js'
 
 /**
  * What an agent may ask about a board.
@@ -25,11 +30,6 @@ import { data, problem, type ToolResponse } from './respond.js'
  * ever looks at `BoardAccess.accessKey`, and `read.test.ts` checks the whole
  * of every response against a key it planted.
  */
-
-const NOT_SIGNED_IN =
-  'Not signed in. Run `openframe login` in a terminal on this machine, then try again.'
-const NO_SUCH_BOARD =
-  'No such board, or it is not one this account can open. `list_boards` says which are.'
 
 /** Enough to say which board an answer is about, without repeating the board. */
 function boardHead(peer: BoardPeer): { id: string; title: string } {
@@ -60,49 +60,6 @@ function inDocumentOrder(document: BoardDocument): AnyOpenFrameObject[] {
   // The order key is the board's own stacking order, and a stable one: two
   // calls a minute apart page through the same list in the same sequence.
   return [...document.objects.values()].sort((a, b) => a.order.localeCompare(b.order))
-}
-
-/**
- * One tool, transport-free.
- *
- * `input` is a Zod SHAPE rather than a schema because that is what the MCP SDK
- * takes for a tool's declared arguments — and validating it here as well is
- * rule 8, not belt and braces: this layer is what stage 5's HTTP transport
- * will call, and a payload that arrived over a network is arbitrary whatever
- * the last layer promised.
- */
-export interface ToolDefinition {
-  readonly name: string
-  readonly title: string
-  readonly description: string
-  readonly input: z.ZodRawShape
-  readonly run: (input: unknown, context: ToolContext) => Promise<ToolResponse>
-}
-
-const boardArgument = {
-  board: z.string().describe('The board id, as `list_boards` gives it (brd_…).'),
-}
-
-/** Resolves the board argument, or says why it could not. */
-async function onBoard(
-  input: unknown,
-  context: ToolContext,
-  shape: z.ZodRawShape,
-): Promise<{ peer: BoardPeer; input: Record<string, unknown> } | ToolResponse> {
-  const parsed = z.object(shape).safeParse(input)
-  if (!parsed.success) return problem(`That is not a valid request: ${parsed.error.message}`)
-  if (context.account === null) return problem(NOT_SIGNED_IN)
-
-  const asked = parsed.data as { board: string }
-  // `asBoardId` at a deserialization boundary, which is what a tool call is:
-  // the string arrived from outside and nothing has vouched for it yet.
-  const peer = await context.board(asBoardId(asked.board))
-  if (peer === null) return problem(NO_SUCH_BOARD)
-  return { peer, input: parsed.data }
-}
-
-function isResponse(value: unknown): value is ToolResponse {
-  return typeof value === 'object' && value !== null && 'text' in value
 }
 
 export const listBoards: ToolDefinition = {

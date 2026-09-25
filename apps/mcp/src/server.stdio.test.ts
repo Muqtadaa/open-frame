@@ -7,6 +7,7 @@ import { StdioClientTransport } from '@modelcontextprotocol/sdk/client/stdio.js'
 import { afterAll, beforeAll, describe, expect, it } from 'vitest'
 
 import { READ_TOOLS } from './tools/read.js'
+import { WRITE_TOOLS } from './tools/write.js'
 
 /**
  * The server, spoken to the way an agent speaks to it.
@@ -50,7 +51,7 @@ describe('the server over stdio', () => {
   it('offers exactly the tools this build has', async () => {
     const { tools } = await client.listTools()
     expect(tools.map((tool) => tool.name).sort()).toEqual(
-      READ_TOOLS.map((tool) => tool.name).sort(),
+      [...READ_TOOLS, ...WRITE_TOOLS].map((tool) => tool.name).sort(),
     )
   })
 
@@ -59,11 +60,23 @@ describe('the server over stdio', () => {
    * somebody — the difference between an agent that can look something up and
    * one that interrupts to do it.
    */
-  it('says which of them only read', async () => {
+  it('says which of them only read, and which one removes things', async () => {
     const { tools } = await client.listTools()
-    for (const tool of tools) {
-      expect(tool.annotations?.readOnlyHint, `${tool.name} does not say it is read-only`).toBe(true)
+    const named = new Map(tools.map((tool) => [tool.name, tool]))
+
+    for (const tool of READ_TOOLS) {
+      expect(named.get(tool.name)?.annotations?.readOnlyHint, `${tool.name} is not read-only`).toBe(
+        true,
+      )
     }
+    for (const tool of WRITE_TOOLS) {
+      expect(named.get(tool.name)?.annotations?.readOnlyHint, `${tool.name} claims read-only`).toBe(
+        false,
+      )
+    }
+    // The one a client should ask a person about before calling.
+    expect(named.get('delete_objects')?.annotations?.destructiveHint).toBe(true)
+    expect(named.get('create_objects')?.annotations?.destructiveHint).toBe(false)
   })
 
   it('carries each tool’s arguments across as a schema', async () => {

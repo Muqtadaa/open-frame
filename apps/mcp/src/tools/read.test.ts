@@ -1,10 +1,9 @@
 import { BoardRoom } from '@openframe/collab'
-import type { BoardId } from '@openframe/core'
 import { describe, expect, it } from 'vitest'
 
 import type { BoardPeer } from '../board.js'
-import type { BoardAccess, SignedIn } from '../supabase/account.js'
-import { peerOn, settles, TEST_BOARD } from '../testing.js'
+import type { BoardAccess } from '../supabase/account.js'
+import { peerOn, settles, stubAccount, TEST_BOARD } from '../testing.js'
 import { toolContext } from './context.js'
 import { getBoard, getObjects, listBoards, READ_TOOLS, searchBoard } from './read.js'
 import { FRAMING } from './respond.js'
@@ -31,13 +30,7 @@ function accountHolding(
   boards: readonly BoardAccess[],
   peer: (board: BoardAccess) => Promise<BoardPeer>,
 ) {
-  const account: SignedIn = {
-    account: { userId: 'user-1', email: 'someone@example.com', displayName: 'Someone' },
-    boards: () => Promise.resolve(boards),
-    board: (id: BoardId) => Promise.resolve(boards.find((board) => board.boardId === id) ?? null),
-    close: () => undefined,
-  }
-  return toolContext(account, { open: peer })
+  return toolContext(stubAccount(boards), { open: peer })
 }
 
 async function boardWith(

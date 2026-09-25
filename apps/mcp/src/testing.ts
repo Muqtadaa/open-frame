@@ -2,6 +2,7 @@ import type { BoardRoom, RoomPeer, RoomRole, RoomSocket } from '@openframe/colla
 import { asBoardId, type BoardId } from '@openframe/core'
 
 import { openBoard, type BoardPeer } from './board.js'
+import type { BoardAccess, NewComment, SignedIn } from './supabase/account.js'
 
 /**
  * A room in one process, for tests that need a real one.
@@ -87,4 +88,27 @@ export async function peerOn(
 /** One turn for the room to answer, and one for the session to apply. */
 export async function settles(): Promise<void> {
   await new Promise((resolve) => setTimeout(resolve, 10))
+}
+
+/**
+ * A signed-in account with no Supabase behind it.
+ *
+ * The identity half is tested against a fake client in `account.test.ts`; what
+ * the tools need from it is a list of boards and somewhere for a comment to
+ * go, so that is all this is.
+ */
+export function stubAccount(
+  boards: readonly BoardAccess[],
+  said: NewComment[] = [],
+): SignedIn {
+  return {
+    account: { userId: 'user-1', email: 'someone@example.com', displayName: 'Someone' },
+    boards: () => Promise.resolve(boards),
+    board: (id: BoardId) => Promise.resolve(boards.find((board) => board.boardId === id) ?? null),
+    comment: (comment: NewComment) => {
+      said.push(comment)
+      return Promise.resolve(`cmt_${String(said.length)}`)
+    },
+    close: () => undefined,
+  }
 }

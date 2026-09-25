@@ -4,6 +4,7 @@ import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js'
 import { resume } from './supabase/account.js'
 import { toolContext } from './tools/context.js'
 import { READ_TOOLS } from './tools/read.js'
+import { WRITE_TOOLS } from './tools/write.js'
 
 /**
  * OpenFrame as an MCP server, over stdio.
@@ -30,7 +31,7 @@ async function main(): Promise<void> {
 
   const server = new McpServer({ name: 'openframe', version: '0.1.0' })
 
-  for (const tool of READ_TOOLS) {
+  for (const tool of [...READ_TOOLS, ...WRITE_TOOLS]) {
     server.registerTool(
       tool.name,
       {
@@ -38,12 +39,18 @@ async function main(): Promise<void> {
         description: tool.description,
         inputSchema: tool.input,
         /*
-         * Read-only, and said out loud: a client that knows a tool cannot
-         * change anything can call it without asking a person first, which is
-         * the difference between an agent that can look something up and one
-         * that interrupts to do it.
+         * Said out loud, because it decides whether a client stops to ask a
+         * person. A tool that cannot change anything can be called freely —
+         * the difference between an agent that looks something up and one
+         * that interrupts to do it — and one that deletes should be asked
+         * about, which is the client's decision to make and its business to
+         * be told.
          */
-        annotations: { readOnlyHint: true, openWorldHint: false },
+        annotations: {
+          readOnlyHint: tool.writes !== true,
+          destructiveHint: tool.destructive === true,
+          openWorldHint: false,
+        },
       },
       async (input: unknown) => {
         const answer = await tool.run(input, context)

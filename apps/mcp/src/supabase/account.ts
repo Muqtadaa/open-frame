@@ -38,12 +38,33 @@ export interface BoardAccess {
   readonly accessKey: string | null
 }
 
+export interface NewComment {
+  readonly boardId: BoardId
+  readonly body: string
+  /** Where the pin goes, in board coordinates. */
+  readonly at?: { readonly x: number; readonly y: number } | undefined
+  /** What it is about, if it is about an object. */
+  readonly objectId?: string | undefined
+  /** Where on that object, as a fraction of its box. */
+  readonly on?: { readonly fx: number; readonly fy: number } | undefined
+}
+
 export interface SignedIn {
   readonly account: Account
   /** Every board this person may reach, as the database computes it. */
   boards(): Promise<readonly BoardAccess[]>
   /** One of them, or `null` — which is the same answer as "there is no such board". */
   board(id: BoardId): Promise<BoardAccess | null>
+  /**
+   * Says something on a board. The comment's id, or `null` if it was refused.
+   *
+   * NOT through the dispatcher, and that is not an exception to rule 3: a
+   * remark is not part of the document. A comment in the CRDT would be in
+   * undo, in export, in search and in the registry — so comments live in the
+   * database, and what crosses the room is only a nudge saying there is
+   * something new.
+   */
+  comment(comment: NewComment): Promise<string | null>
   close(): void
 }
 
@@ -176,6 +197,26 @@ function handle(
     boards: list,
     async board(id) {
       return (await list()).find((candidate) => candidate.boardId === id) ?? null
+    },
+    async comment(comment) {
+      /*
+       * The same database function the web app's composer calls. Who may say
+       * something on which board is decided there, by the same policy, for
+       * an agent as for a person — and a viewer may comment, which is what
+       * `readOnlyCapabilities` has always said.
+       */
+      const response = (await client.rpc('post_comment', {
+        p_board_id: comment.boardId,
+        p_body: comment.body,
+        p_parent_id: null,
+        p_x: comment.at?.x ?? null,
+        p_y: comment.at?.y ?? null,
+        p_object_id: comment.objectId ?? null,
+        p_mentions: [],
+        p_fx: comment.on?.fx ?? null,
+        p_fy: comment.on?.fy ?? null,
+      })) as { data: unknown; error: unknown }
+      return response.error === null && typeof response.data === 'string' ? response.data : null
     },
     close: detach,
   }
