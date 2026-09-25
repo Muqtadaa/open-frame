@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 
 import type { TableSize } from '../interaction/interaction-store.js'
 
@@ -30,13 +30,48 @@ export function TableSizePicker({ size, onChoose }: Props) {
    */
   const [hovered, setHovered] = useState<TableSize | null>(null)
   const shown = hovered ?? size
+  const grid = useRef<HTMLDivElement>(null)
+
+  /*
+   * One Tab stop, on the size it would give you, and focus lands there when
+   * the picker opens. Sixty-four stops made the grid a wall to Tab through,
+   * and focus left on the rail made it unreachable: the picker is portaled
+   * into the chrome layer, which comes BEFORE the rail in the document.
+   */
+  useEffect(() => {
+    grid.current?.querySelector<HTMLElement>('[tabindex="0"]')?.focus()
+  }, [])
+
+  const move = (event: React.KeyboardEvent<HTMLDivElement>): void => {
+    const [columns, rows] =
+      event.key === 'ArrowRight'
+        ? [shown.columns + 1, shown.rows]
+        : event.key === 'ArrowLeft'
+          ? [shown.columns - 1, shown.rows]
+          : event.key === 'ArrowDown'
+            ? [shown.columns, shown.rows + 1]
+            : event.key === 'ArrowUp'
+              ? [shown.columns, shown.rows - 1]
+              : [null, null]
+    if (columns === null || rows === null) return
+    // The arrows are the grid's; on the board they would nudge the selection.
+    event.preventDefault()
+    event.stopPropagation()
+    const column = Math.min(MOST_COLUMNS, Math.max(1, columns))
+    const row = Math.min(MOST_ROWS, Math.max(1, rows))
+    grid.current
+      ?.querySelector<HTMLElement>(`[data-testid="table-size-${String(column)}x${String(row)}"]`)
+      ?.focus()
+  }
 
   return (
     <div className="of-grid-pick" data-testid="table-size-picker">
       <div
+        ref={grid}
         className="of-grid-pick__grid"
         role="grid"
         aria-label="Table size"
+        onKeyDown={move}
         onPointerLeave={() => {
           setHovered(null)
         }}
@@ -45,6 +80,7 @@ export function TableSizePicker({ size, onChoose }: Props) {
           <div className="of-grid-pick__row" role="row" key={row}>
             {Array.from({ length: MOST_COLUMNS }, (_, column) => {
               const within = column < shown.columns && row < shown.rows
+              const corner = column + 1 === shown.columns && row + 1 === shown.rows
               return (
                 <button
                   key={column}
@@ -52,6 +88,7 @@ export function TableSizePicker({ size, onChoose }: Props) {
                   role="gridcell"
                   className={`of-grid-pick__cell${within ? ' of-grid-pick__cell--on' : ''}`}
                   aria-selected={within}
+                  tabIndex={corner ? 0 : -1}
                   aria-label={`${String(column + 1)} by ${String(row + 1)}`}
                   data-testid={`table-size-${String(column + 1)}x${String(row + 1)}`}
                   onPointerEnter={() => {
@@ -74,8 +111,12 @@ export function TableSizePicker({ size, onChoose }: Props) {
       </div>
 
       <p className="of-grid-pick__readout" data-testid="table-size-readout">
-        {shown.columns} × {shown.rows}
+        {count(shown.columns, 'column')} × {count(shown.rows, 'row')}
       </p>
     </div>
   )
+}
+
+function count(n: number, noun: string): string {
+  return `${String(n)} ${noun}${n === 1 ? '' : 's'}`
 }

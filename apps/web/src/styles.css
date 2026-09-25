@@ -618,7 +618,8 @@ body {
   display: flex;
   flex-direction: column;
   gap: var(--of-space-2);
-  padding: var(--of-space-6);
+  /* The right-hand padding is where a tool's options strip lives. */
+  padding: var(--of-space-6) var(--of-space-12) var(--of-space-6) var(--of-space-6);
   /* The page's own stock, with a margin rule down its inner edge — the way a
      ruled pad prints its margin — rather than a white card hovering over it. */
   background: var(--of-page);
@@ -809,27 +810,39 @@ body {
   cursor: default;
 }
 
+/*
+ * A tool's options, as a strip down its OUTER edge, in the rail's padding.
+ *
+ * It was a 16-pixel chevron inside the tool's own corner: too small to aim at,
+ * and a press a few pixels off opened a menu instead of arming the tool. The
+ * tool itself is now the full-size way in (press it again once armed), so this
+ * strip is the mouse's shortcut beside it, never on top of it.
+ */
 .of-rail__more {
   position: absolute;
-  right: 0;
-  bottom: 0;
+  top: 0;
+  right: calc(-1 * var(--of-space-12));
   display: grid;
   place-items: center;
-  width: 16px;
-  height: 16px;
+  width: var(--of-space-12);
+  height: 100%;
+  padding: 0;
   color: var(--of-ink-muted);
   background: transparent;
   border: none;
+  border-radius: var(--of-radius-slip);
   cursor: pointer;
 }
 
 .of-rail__more svg {
-  width: 12px;
-  height: 12px;
+  width: 10px;
+  height: 10px;
 }
 
-.of-rail__more:hover {
-  color: var(--of-accent);
+.of-rail__more:hover,
+.of-rail__more[aria-expanded='true'] {
+  color: var(--of-ink);
+  background: var(--of-hover);
 }
 
 /*
@@ -864,6 +877,7 @@ body {
   display: flex;
   gap: var(--of-space-8);
   align-items: center;
+  min-height: var(--of-hit-sm);
   padding: var(--of-space-6) var(--of-step) var(--of-space-6) var(--of-space-8);
   font: inherit;
   font-size: var(--of-type-record);
@@ -1604,8 +1618,9 @@ body {
 }
 
 .of-grid-pick__cell {
-  width: 16px;
-  height: 16px;
+  /* The AA 2.5.8 minimum: at 16 on an 18-pixel pitch a hand hit its neighbour. */
+  width: 24px;
+  height: 24px;
   padding: 0;
   cursor: pointer;
   background: var(--of-panel);

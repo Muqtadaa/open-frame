@@ -32,11 +32,23 @@ test.describe('the rail from the keyboard', () => {
     await expect(page.getByTestId('tool-frame')).toHaveAttribute('aria-pressed', 'true')
   })
 
-  test('Enter on Image opens the file chooser', async ({ page }) => {
+  test('Enter on Image asks for a file', async ({ page }) => {
+    /*
+     * Watched on the page rather than through Playwright's file-chooser
+     * event, which arms its interception asynchronously and missed about one
+     * run in three however it was awaited.
+     */
+    await page.evaluate(() => {
+      const input = document.querySelector<HTMLInputElement>('.of-rail input[type="file"]')
+      input?.addEventListener('click', (event) => {
+        event.preventDefault()
+        document.body.dataset.askedForFile = 'yes'
+      })
+    })
     await page.getByTestId('tool-image').focus()
-    const chooser = page.waitForEvent('filechooser')
+    await expect(page.getByTestId('tool-image')).toBeFocused()
     await page.keyboard.press('Enter')
-    await chooser
+    await expect(page.locator('body')).toHaveAttribute('data-asked-for-file', 'yes')
   })
 
   test('a letter still picks its tool while focus is on the rail', async ({ page }) => {

@@ -90,3 +90,111 @@ test('the shape menu still picks a shape', async ({ page }) => {
   await page.keyboard.press('v')
   await expect(page.locator('[data-object-type="shape"]')).toHaveCount(1)
 })
+
+/**
+ * Reaching the menus at all.
+ *
+ * The only way in was a 16-pixel chevron tucked inside the tool's corner: too
+ * small to aim at, overlapping the tool it belonged to, and — until the keymap
+ * stopped claiming Enter — impossible to press from the keyboard. Once open, a
+ * menu ignored Escape and the board, and closed only when something in it was
+ * chosen.
+ */
+test.describe('opening, walking and leaving a rail menu', () => {
+  test.beforeEach(async ({ page }) => {
+    await board(page)
+  })
+
+  test('a second press on the armed Shape opens its menu', async ({ page }) => {
+    await page.getByTestId('tool-shape').click()
+    await expect(page.getByTestId('shape-flyout')).toHaveCount(0)
+    await page.getByTestId('tool-shape').click()
+    await expect(page.getByTestId('shape-flyout')).toBeVisible()
+    // Opening is not choosing: the kind it had is the kind it keeps.
+    await expect(page.getByTestId('shape-rectangle')).toHaveAttribute('aria-checked', 'true')
+  })
+
+  test('Escape closes a menu and hands focus back', async ({ page }) => {
+    await page.getByTestId('shape-menu').click()
+    await expect(page.getByTestId('shape-flyout')).toBeVisible()
+    await page.keyboard.press('Escape')
+    await expect(page.getByTestId('shape-flyout')).toHaveCount(0)
+    await expect(page.getByTestId('shape-menu')).toBeFocused()
+  })
+
+  test('a press on the board closes a menu', async ({ page }) => {
+    await page.getByTestId('table-menu').click()
+    await expect(page.getByTestId('table-size-flyout')).toBeVisible()
+    await page.locator(CANVAS).click({ position: { x: 900, y: 500 } })
+    await expect(page.getByTestId('table-size-flyout')).toHaveCount(0)
+  })
+
+  test('the keyboard opens the shape menu, walks it and chooses', async ({ page }) => {
+    await page.getByTestId('tool-shape').focus()
+    await page.keyboard.press('Enter')
+    await page.keyboard.press('Enter')
+    await expect(page.getByTestId('shape-rectangle')).toBeFocused()
+
+    await page.keyboard.press('ArrowDown')
+    await expect(page.getByTestId('shape-ellipse')).toBeFocused()
+    await page.keyboard.press('ArrowUp')
+    await page.keyboard.press('ArrowUp')
+    // Wraps from the first to the last, as a menu does.
+    await expect(page.getByTestId('shape-flyout').getByRole('menuitemradio').last()).toBeFocused()
+    await page.keyboard.press('Home')
+    await page.keyboard.press('ArrowDown')
+    await page.keyboard.press('Enter')
+
+    await expect(page.getByTestId('shape-flyout')).toHaveCount(0)
+    await page.getByTestId('shape-menu').click()
+    await expect(page.getByTestId('shape-ellipse')).toHaveAttribute('aria-checked', 'true')
+  })
+
+  test('the keyboard picks a table size', async ({ page }) => {
+    await page.getByTestId('tool-table').focus()
+    await page.keyboard.press('Enter')
+    await page.keyboard.press('Enter')
+    await expect(page.getByTestId('table-size-3x3')).toBeFocused()
+
+    await page.keyboard.press('ArrowRight')
+    await page.keyboard.press('ArrowDown')
+    await expect(page.getByTestId('table-size-4x4')).toBeFocused()
+    await expect(page.getByTestId('table-size-readout')).toHaveText('4 columns × 4 rows')
+    await page.keyboard.press('Enter')
+    await expect(page.getByTestId('table-size-flyout')).toHaveCount(0)
+
+    await page.locator(CANVAS).click({ position: { x: 600, y: 300 } })
+    await page.keyboard.press('Escape')
+    await expect(page.locator('[role="table"] > *')).toHaveCount(16)
+  })
+
+  test('a size cell is one Tab stop, not sixty-four', async ({ page }) => {
+    await page.getByTestId('table-menu').click()
+    const stops = await page
+      .getByTestId('table-size-picker')
+      .locator('[role="gridcell"]:not([tabindex="-1"])')
+      .count()
+    expect(stops).toBe(1)
+  })
+
+  test('the disclosures are a target of their own', async ({ page }) => {
+    for (const [menu, tool] of [
+      ['shape-menu', 'tool-shape'],
+      ['table-menu', 'tool-table'],
+    ] as const) {
+      const strip = await page.getByTestId(menu).boundingBox()
+      const owner = await page.getByTestId(tool).boundingBox()
+      if (strip === null || owner === null) throw new Error(`${menu} is not on screen`)
+      expect(strip.height).toBeGreaterThanOrEqual(24)
+      // Beside the tool, never inside it: a press on the tool's edge arms it.
+      expect(strip.x).toBeGreaterThanOrEqual(owner.x + owner.width)
+    }
+  })
+
+  test('size cells are a target a hand can hit', async ({ page }) => {
+    await page.getByTestId('table-menu').click()
+    const cell = await page.getByTestId('table-size-1x1').boundingBox()
+    expect(cell?.width).toBeGreaterThanOrEqual(24)
+    expect(cell?.height).toBeGreaterThanOrEqual(24)
+  })
+})

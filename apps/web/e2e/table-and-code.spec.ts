@@ -154,7 +154,7 @@ test('drops a table at the size picked from the grid', async ({ page }) => {
 
   // Hovering PREVIEWS: the readout says what clicking would give you.
   await page.getByTestId('table-size-5x2').hover()
-  await expect(page.getByTestId('table-size-readout')).toHaveText('5 × 2')
+  await expect(page.getByTestId('table-size-readout')).toHaveText('5 columns × 2 rows')
 
   await page.getByTestId('table-size-5x2').click()
   await page.locator(CANVAS).click({ position: { x: 340, y: 260 } })
