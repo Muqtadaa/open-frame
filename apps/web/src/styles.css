@@ -3785,9 +3785,20 @@ body {
   /*
    * Muted, and it must stay above 4.5:1 on the field background — a placeholder
    * that says what a field MEANS ("P07") is the only explanation of the field
-   * there is, so it is content, not decoration.
+   * there is, so it is content, not decoration. Italic, so an example is never
+   * read as a value somebody entered.
    */
+  font-style: italic;
   color: var(--of-ink-muted);
+}
+
+/*
+ * A field with nothing in it looks like a blank to be filled: a dashed edge,
+ * the way this world already draws absent content. A returning collaborator
+ * can then see at a glance which evidence has been sourced and which has not.
+ */
+.of-inspector .of-input:placeholder-shown {
+  border-style: dashed;
 }
 
 .of-input:focus-visible {

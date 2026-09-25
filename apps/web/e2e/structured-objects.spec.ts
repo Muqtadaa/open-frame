@@ -416,3 +416,23 @@ test.describe('the synthesis spine', () => {
     )
   })
 })
+
+/**
+ * An unsourced slip must not look sourced (PRODUCT.md: provenance intact).
+ * The evidence type's placeholders are realistic examples, and set in muted
+ * ink beside real values they read as data somebody had entered.
+ */
+test('an empty record field reads as an example, not as a value', async ({ page }) => {
+  await freshBoard(page)
+  await placeNote(page, 'Three of five could not find the annual price')
+  await promote(page, NOTE)
+  await page.locator(CANVAS).click({ position: NOTE })
+
+  const participant = page.getByTestId('field-participant')
+  await expect(participant).toHaveAttribute('placeholder', 'e.g. P07')
+  await expect(participant).toHaveCSS('border-top-style', 'dashed')
+
+  await participant.fill('P03')
+  await participant.press('Enter')
+  await expect(participant).toHaveCSS('border-top-style', 'solid')
+})

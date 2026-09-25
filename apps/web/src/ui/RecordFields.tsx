@@ -126,7 +126,13 @@ function Textish({
   const shared = {
     className: 'of-input',
     value: draft,
-    placeholder: field.placeholder,
+    /*
+     * An EXAMPLE, and said to be one. A type's placeholder is a real-looking
+     * value — "September usability study", "P07" — and set in muted ink beside
+     * fields in full ink it read as data somebody had entered, so an unsourced
+     * slip looked sourced: the one thing this product promises not to lose.
+     */
+    placeholder: field.placeholder === undefined ? undefined : `e.g. ${field.placeholder}`,
     'aria-label': field.label,
     'data-testid': `field-${field.key}`,
     onChange: (event: { target: { value: string } }) => {

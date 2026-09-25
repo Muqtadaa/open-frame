@@ -263,3 +263,10 @@ named record band, all five issues.
   panel or any editor, where Shift is a capital letter. Two e2e tests, both
   failing with the change removed; the context-menu goldens moved and show
   every item.
+- **P1 — fixed: placeholders impersonated data.** The evidence type's
+  placeholders are realistic examples, and in muted ink beside real values they
+  read as entered — an unsourced slip looked sourced. They now read "e.g. P07",
+  in italic, and an empty record field has a dashed edge, the way this world
+  already draws absent content, so which evidence is sourced is visible at a
+  glance. Scoped to the record panel: an empty comment box is a blank to type
+  into, not a missing record. One e2e test, failing without the dashed edge.
