@@ -98,3 +98,25 @@ test('keeps a table cell, and a second Escape leaves the table with it', async (
   await expect(editor).toHaveCount(0)
   await expect(page.locator('[role="table"] > div').nth(0)).toHaveText('kept')
 })
+
+/*
+ * Every way out of an editor commits now, so one that changed nothing must
+ * commit NOTHING — or opening a note and pressing Escape would put a no-op on
+ * the undo stack, and the next undo would appear to do nothing at all.
+ */
+test('leaving an edit that changed nothing adds no undo step', async ({ page }) => {
+  await page.keyboard.press('s')
+  await page.locator(CANVAS).click({ position: { x: 340, y: 260 } })
+  await page.keyboard.type('Untouched')
+  await page.locator(CANVAS).click({ position: { x: 1100, y: 640 } })
+
+  const note = page.locator('[data-object-type="sticky"]')
+  await note.dblclick()
+  await expect(page.locator(EDITOR)).toBeFocused()
+  await page.keyboard.press('Escape')
+  await expect(page.locator(EDITOR)).toHaveCount(0)
+
+  // The one undo takes back the typing, not an empty re-save of it.
+  await page.keyboard.press(`${MOD}+z`)
+  await expect(note).not.toContainText('Untouched')
+})
