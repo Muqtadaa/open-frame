@@ -197,4 +197,38 @@ Found by looking at them:
   resting pointer until the dwell (broken once by removing the focus rule);
   a new golden pair shows the zoom cluster's tip hung inside the window.
 
-### Remaining
+### C2 closed
+
+Everything the backlog listed is done, except by decision the split of
+`styles.css` into layer files, which waits until C3 has settled which rules
+survive. Detector 56 → 6, every remaining hit deliberate. DESIGN.md's component
+tokens and the `.impeccable/design.json` sidecar carry the button (three weights
+and a large size), the field, the icon button and the tip. Two survey findings
+turned out false (the cursor's and the swatches' colour literals, above).
+
+_(This file lost its backlog and C3 section in the C2.1 commit, when an edit
+kept the text before its insertion point and dropped everything after it;
+restored here from `358fea3`, with what C2 has learned since.)_
+
+## C3 — per-surface critique (in progress)
+
+Each: `/impeccable critique <surface>` (two isolated assessments + detector,
+browser evidence at desktop and narrow widths, both worlds) → surface contract
+in `apps/web/.impeccable/surfaces/` → `polish`; `bolder`/`typeset` permitted on
+the inspector, rail and record line.
+
+| #   | Surface                                                      | Contract | Known going in                                                                                                 |
+| --- | ------------------------------------------------------------ | -------- | -------------------------------------------------------------------------------------------------------------- |
+| 1   | Record panel (Inspector, RecordFields, Provenance, Swatches) | none     | the signature component; segmented items 28×26 (off-rhythm); paints over an open context menu                  |
+| 2   | Tool rail + flyouts                                          | none     |                                                                                                                |
+| 3   | Record line + zoom cluster                                   | none     | runs under the zoom cluster on a signed-in shared board                                                        |
+| 4   | Context menu, search, arrange bar, format bar                | none     | search under the notice layer and 16px from the top; search `outline: none` with no ring; `:focus`-only fields |
+| 5   | Comments, mentions, presence                                 | none     |                                                                                                                |
+| 6   | BoardLocked, BoardGone, notices (quarantine), toasts, errors | none     | `harden` + `clarify` on copy; the gate's field has no visible label                                            |
+| 7   | Selection apparatus                                          | none     | FrameView/TableView divide by zoom (rule 24)                                                                   |
+| 8   | Object views (11 types + 8 semantic slips)                   | none     | shape fill-vs-stroke contrast never checked (PRODUCT.md)                                                       |
+| 9   | Home, account, share                                         | yes      | re-critique for regressions                                                                                    |
+| 10  | Boot splash                                                  | none     | inline styles, own timings                                                                                     |
+
+Closing pass: `/impeccable audit apps/web/src` (a11y, performance, theming in
+both worlds, responsive/touch), then `impeccable-finish-reviewer` per surface.

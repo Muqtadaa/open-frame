@@ -168,6 +168,60 @@ components:
     padding: '6px 9px'
   menu-item-hover:
     backgroundColor: '{colors.accent-soft}'
+  button:
+    backgroundColor: '{colors.panel}'
+    textColor: '{colors.ink}'
+    rounded: '{rounded.control}'
+    padding: '0 12px'
+    height: '30px'
+  button-hover:
+    backgroundColor: '{colors.hover}'
+  button-primary:
+    backgroundColor: '{colors.accent}'
+    textColor: '{colors.panel}'
+    rounded: '{rounded.control}'
+    padding: '0 12px'
+    height: '30px'
+  button-primary-large:
+    backgroundColor: '{colors.accent}'
+    textColor: '{colors.panel}'
+    rounded: '{rounded.control}'
+    padding: '0 18px'
+    height: '40px'
+  button-ghost:
+    backgroundColor: 'transparent'
+    textColor: '{colors.ink-muted}'
+    rounded: '{rounded.control}'
+    height: '30px'
+  icon-button:
+    backgroundColor: 'transparent'
+    textColor: '{colors.ink-muted}'
+    rounded: '{rounded.control}'
+    size: '30px'
+  icon-button-hover:
+    backgroundColor: '{colors.hover}'
+    textColor: '{colors.ink}'
+  icon-button-on:
+    backgroundColor: '{colors.accent-soft}'
+    textColor: '{colors.accent}'
+  field:
+    backgroundColor: '{colors.page}'
+    textColor: '{colors.ink}'
+    rounded: '{rounded.control}'
+    padding: '5px 10px'
+    height: '30px'
+  field-large:
+    backgroundColor: '{colors.page}'
+    textColor: '{colors.ink}'
+    rounded: '{rounded.control}'
+    padding: '8px 12px'
+    height: '40px'
+  tip:
+    backgroundColor: '{colors.ink}'
+    textColor: '{colors.page}'
+    typography: '{typography.record}'
+    rounded: '{rounded.control}'
+    padding: '6px 8px'
   sticky:
     typography: '{typography.body}'
     rounded: '{rounded.slip}'

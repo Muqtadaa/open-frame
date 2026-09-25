@@ -1,6 +1,6 @@
 {
   "schemaVersion": 2,
-  "generatedAt": "2026-09-24T00:00:00.000Z",
+  "generatedAt": "2026-09-25T00:00:00.000Z",
   "title": "Design System: OpenFrame",
   "extensions": {
     "colorMeta": {
@@ -533,6 +533,54 @@
       "description": "The quadrille the board is written on: a fine 10-unit rule and a heavier decade rule, both faint, painted on the canvas element rather than the scaled world layer.",
       "html": "<div class=\"ds-ground\"></div>",
       "css": ".ds-ground { width: 100%; height: 220px; background-color: var(--of-page, #f7f9fb); background-image: linear-gradient(to right, var(--of-rule, #e4ebf2) 1px, transparent 1px), linear-gradient(to bottom, var(--of-rule, #e4ebf2) 1px, transparent 1px), linear-gradient(to right, var(--of-rule-decade, #c9d6e4) 1px, transparent 1px), linear-gradient(to bottom, var(--of-rule-decade, #c9d6e4) 1px, transparent 1px); background-size: 10px 10px, 10px 10px, 100px 100px, 100px 100px; }"
+    },
+    {
+      "name": "Button",
+      "kind": "button",
+      "refersTo": "button",
+      "description": "A bordered control on panel white: do this, but not the main act.",
+      "html": "<button class=\"ds-btn\">Reset</button>",
+      "css": ".ds-btn { display: inline-flex; align-items: center; justify-content: center; min-height: 30px; padding: 0 12px; font-family: ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif; font-size: 14px; line-height: 1; color: var(--of-ink, #16202b); background: var(--of-panel, #fff); border: 1px solid var(--of-control-border, #758596); border-radius: 6px; cursor: pointer; } .ds-btn:hover { background: var(--of-hover, #e8edf3); } .ds-btn:focus-visible { outline: 2px solid var(--of-accent, #1450b5); outline-offset: 2px; }"
+    },
+    {
+      "name": "Primary Button",
+      "kind": "button",
+      "refersTo": "button-primary-large",
+      "description": "The accent fill: the one thing a sheet or a gate exists to do. Hover moves toward the ink, deeper on the page and brighter at night.",
+      "html": "<button class=\"ds-btn-primary\">Sign in</button>",
+      "css": ".ds-btn-primary { display: inline-flex; align-items: center; justify-content: center; min-height: 40px; padding: 0 18px; font-family: ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif; font-size: 14px; line-height: 1; color: var(--of-panel, #fff); background: var(--of-accent, #1450b5); border: 1px solid var(--of-accent, #1450b5); border-radius: 6px; cursor: pointer; } .ds-btn-primary:hover { background: color-mix(in srgb, var(--of-accent, #1450b5) 84%, var(--of-ink, #16202b)); } .ds-btn-primary:focus-visible { outline: 2px solid var(--of-accent, #1450b5); outline-offset: 2px; }"
+    },
+    {
+      "name": "Ghost Button",
+      "kind": "button",
+      "refersTo": "button-ghost",
+      "description": "Text on no ground: a dismissal or a secondary move beside a primary.",
+      "html": "<button class=\"ds-btn-ghost\">Close</button>",
+      "css": ".ds-btn-ghost { display: inline-flex; align-items: center; min-height: 30px; padding: 0 12px; font-family: ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif; font-size: 14px; color: var(--of-ink-muted, #4e6070); background: transparent; border: 1px solid transparent; border-radius: 6px; cursor: pointer; } .ds-btn-ghost:hover { color: var(--of-ink, #16202b); background: var(--of-hover, #e8edf3); }"
+    },
+    {
+      "name": "Icon Button",
+      "kind": "button",
+      "refersTo": "icon-button",
+      "description": "A glyph on no ground that takes a bed when reached for; 30px at its smallest; accent on the accent wash when pressed; correction red on hover when it removes.",
+      "html": "<button class=\"ds-icon-btn\" aria-label=\"Zoom in\"><svg viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.6\" stroke-linecap=\"round\"><path d=\"M12 5v14M5 12h14\"/></svg></button><button class=\"ds-icon-btn ds-icon-btn--on\" aria-pressed=\"true\" aria-label=\"Snap to grid\"><svg viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.6\" stroke-linecap=\"round\"><path d=\"M4 9h16M4 15h16M9 4v16M15 4v16\"/></svg></button>",
+      "css": ".ds-icon-btn { display: inline-flex; align-items: center; justify-content: center; min-width: 30px; height: 30px; padding: 0 6px; color: var(--of-ink-muted, #4e6070); background: transparent; border: none; border-radius: 6px; cursor: pointer; } .ds-icon-btn svg { width: 16px; height: 16px; } .ds-icon-btn:hover { color: var(--of-ink, #16202b); background: var(--of-hover, #e8edf3); } .ds-icon-btn--on { color: var(--of-accent, #1450b5); background: var(--of-accent-soft, #e4ecfa); } .ds-icon-btn:focus-visible { outline: 2px solid var(--of-accent, #1450b5); outline-offset: 2px; }"
+    },
+    {
+      "name": "Field",
+      "kind": "input",
+      "refersTo": "field",
+      "description": "One text field everywhere, with an edge you can see (control-border, 3:1). 30px in a panel row, 40px in a sheet or gate.",
+      "html": "<input class=\"ds-field\" placeholder=\"P07\">",
+      "css": ".ds-field { width: 220px; min-height: 30px; padding: 5px 10px; font-family: ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif; font-size: 14px; color: var(--of-ink, #16202b); background: var(--of-page, #f7f9fb); border: 1px solid var(--of-control-border, #758596); border-radius: 6px; } .ds-field::placeholder { color: var(--of-ink-muted, #4e6070); } .ds-field:focus-visible { border-color: var(--of-accent, #1450b5); outline: 2px solid var(--of-accent, #1450b5); outline-offset: 1px; }"
+    },
+    {
+      "name": "Tip",
+      "kind": "custom",
+      "refersTo": "tip",
+      "description": "The label, in ink, on hover after a dwell and at once on keyboard focus. data-tip plus the same text as aria-description.",
+      "html": "<span class=\"ds-tip\">Zoom to fit (Ctrl1)</span>",
+      "css": ".ds-tip { display: inline-block; max-width: 280px; padding: 6px 8px; font-family: ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif; font-size: 12px; line-height: 1.35; color: var(--of-page, #f7f9fb); background: var(--of-ink, #16202b); border-radius: 6px; }"
     }
   ],
   "narrative": {
