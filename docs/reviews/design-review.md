@@ -292,3 +292,25 @@ named record band, all five issues.
   (thesis, head, bands, words, gestures, keyboard, placement, what it is not,
   and the tests that hold it). Full e2e after the pass: 340/341, the one
   failure the known `comments.spec.ts:901` flake.
+
+### #1 Record panel — re-critique
+
+**21 → 24/40.** Verified by measurement: a 20-move picker drag is one undo, six
+opacity steps one undo, the context menu is on top in every sampled point,
+Shift lets a click through to the object beneath, the default colour is marked,
+every target ≥ 30px, axe 0. The re-run found a P0 the fix pass itself
+introduced — arrows in a radio row also nudged the object — fixed in `c8c05d2`
+with an e2e test.
+
+Logged as the panel's backlog (the owner asked to move on to the rail):
+
+- P1 the evidence panel (539px, no scroll) runs over the record line and zoom
+  cluster; at 760px it covers the zoom cluster and the selection's handles
+- P1 Shift does not yield once focus is in the panel (recolour, then extend)
+- P1 a connector's colour targets overflow the panel and misname what they
+  paint; its default marker is wrong
+- P2 the `record` band reads as a label and holds a connector's geometry
+- P2 Escape on opacity commits; text/outline defaults unmarked; radios and
+  swatches speak their name twice (`aria-description` = name); the dash group
+  is announced "line"; weak "on" swatch mark in After Hours; the 760px context
+  menu runs 7px off-screen
