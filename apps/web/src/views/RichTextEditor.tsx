@@ -327,7 +327,8 @@ function FormatBar({
           className={`of-icon-button of-format-bar__button of-format-bar__button--${mark}`}
           aria-label={label}
           aria-pressed={active.includes(mark)}
-          title={label}
+          data-tip={label}
+          aria-description={label}
           data-testid={`format-${mark}`}
           onMouseDown={keepFocus}
           onClick={() => {
@@ -353,7 +354,8 @@ function FormatBar({
         type="button"
         className="of-icon-button of-format-bar__button of-format-bar__button--size"
         aria-label="Smaller text"
-        title="Smaller"
+        data-tip="Smaller"
+        aria-description="Smaller"
         data-testid="format-smaller"
         onMouseDown={keepFocus}
         onClick={() => {
@@ -366,7 +368,8 @@ function FormatBar({
         type="button"
         className="of-icon-button of-format-bar__button of-format-bar__button--size of-format-bar__button--bigger"
         aria-label="Bigger text"
-        title="Bigger"
+        data-tip="Bigger"
+        aria-description="Bigger"
         data-testid="format-bigger"
         onMouseDown={keepFocus}
         onClick={() => {

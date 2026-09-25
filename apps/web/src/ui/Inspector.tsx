@@ -316,7 +316,8 @@ export function Inspector() {
         <button
           type="button"
           className="of-icon-button of-icon-button--destructive"
-          title="Delete (Del)"
+          data-tip="Delete (Del)"
+          aria-description="Delete (Del)"
           aria-label="Delete selection"
           data-testid="inspector-delete"
           onClick={() => commands.deleteSelection()}
@@ -490,7 +491,8 @@ export function Inspector() {
                   type="button"
                   aria-pressed={on}
                   aria-label={mark.name}
-                  title={mark.name}
+                  data-tip={mark.name}
+                  aria-description={mark.name}
                   data-testid={`mark-${mark.prop}`}
                   className={`of-choice__item${on ? ' of-choice__item--on' : ''}`}
                   onClick={() => apply({ [mark.prop]: !on })}
@@ -616,7 +618,8 @@ function Choice<T extends string>({ options, current, name, onPick, render }: Ch
           role="radio"
           aria-checked={option === current}
           aria-label={option}
-          title={option}
+          data-tip={option}
+          aria-description={option}
           data-testid={`${name}-${option}`}
           className={`of-choice__item${option === current ? ' of-choice__item--on' : ''}`}
           onClick={() => onPick(option)}

@@ -643,6 +643,19 @@ right of the tool, fading in over `--of-quick` (140ms) and suppressed under
 tooltip only a mouse can summon is not a label. The shortcut inside it is 12px
 mono in decade-rule grey.
 
+### Tips on Everything Else
+
+Every other control that needs a word says it the same way: the label in ink,
+page-coloured 12px text at the control radius, above the control (the zoom
+cluster hangs its tips from their right edge so none leaves the window). It
+answers keyboard focus at once and a resting pointer after `--of-dwell`
+(400ms), so a pointer crossing the chrome is not a flurry. It is `data-tip`
+on the control, drawn by the stylesheet, with the same text as an
+`aria-description` — which is what the browser's `title` had been doing for
+assistive tech while showing sighted keyboard users nothing, on forty-two
+controls. `title` survives only where it reveals content: an ellipsised field
+label and a comment pin's excerpt.
+
 ### Record Line
 
 The bottom-left readout: undo/redo actions, ruled dividers, object and selection

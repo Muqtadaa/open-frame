@@ -204,7 +204,8 @@ export function SelectionOverlay() {
           className="of-lock"
           data-testid="selection-lock"
           aria-label="Locked"
-          title="Locked — unlock it to move or resize it"
+          data-tip="Locked — unlock it to move or resize it"
+          aria-description="Locked — unlock it to move or resize it"
           style={{
             left: `${String(-LOCK_PX)}px`,
             top: `${String(-LOCK_PX)}px`,

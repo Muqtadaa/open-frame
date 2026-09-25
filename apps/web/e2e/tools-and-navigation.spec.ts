@@ -39,7 +39,7 @@ async function freshBoard(page: Page): Promise<void> {
    * paint, so a keystroke sent on the canvas alone can land in the gap and be
    * dropped. That showed up as a rare, unexplained tool-selection failure.
    */
-  await expect(page.getByTestId("tool-select")).toBeVisible()
+  await expect(page.getByTestId('tool-select')).toBeVisible()
 }
 
 async function zoomPercent(page: Page): Promise<number> {
@@ -292,5 +292,36 @@ test.describe('selection shortcuts', () => {
     expect(after).not.toBeNull()
     if (after === null) return
     expect(Math.round(after.x - before.x)).toBe(50)
+  })
+})
+
+/**
+ * A tip a keyboard can summon (DESIGN.md: "a tooltip only a mouse can summon
+ * is not a label"). The chrome used the browser's `title` for forty-two
+ * controls, which never appears on focus; the tip is drawn by the stylesheet
+ * from `data-tip`, and the same text reaches assistive tech as a description.
+ */
+test.describe('tips', () => {
+  const tipOf = (page: Page, testId: string) =>
+    page.getByTestId(testId).evaluate((element) => {
+      const after = getComputedStyle(element, '::after')
+      return { content: after.content, opacity: after.opacity }
+    })
+
+  test('a control says what it does when it is reached from the keyboard', async ({ page }) => {
+    const zoomIn = page.getByTestId('zoom-in')
+    await expect(zoomIn).toHaveAttribute('aria-description', /Zoom in/)
+    expect((await tipOf(page, 'zoom-in')).opacity).toBe('0')
+
+    await zoomIn.focus()
+    await expect.poll(async () => (await tipOf(page, 'zoom-in')).opacity).toBe('1')
+    expect((await tipOf(page, 'zoom-in')).content).toContain('Zoom in')
+  })
+
+  test('a pointer waits a moment before the tip answers', async ({ page }) => {
+    await page.getByTestId('zoom-in').hover()
+    // Mid-dwell: nothing yet, so a pointer crossing the chrome is not a flurry.
+    expect((await tipOf(page, 'zoom-in')).opacity).toBe('0')
+    await expect.poll(async () => (await tipOf(page, 'zoom-in')).opacity).toBe('1')
   })
 })

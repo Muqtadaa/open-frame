@@ -73,6 +73,10 @@ export function ShareControl() {
      */
     if (ACCOUNTS_ENABLED && identity === null) return null
 
+    const shareHint = runtime.readOnly
+      ? 'This board is read-only and cannot be shared'
+      : 'Give this board a link other people can open'
+
     return (
       <>
       <button
@@ -81,11 +85,8 @@ export function ShareControl() {
         className="of-status__share"
         disabled={sharing || runtime.readOnly}
         data-testid="share-board"
-        title={
-          runtime.readOnly
-            ? 'This board is read-only and cannot be shared'
-            : 'Give this board a link other people can open'
-        }
+        data-tip={shareHint}
+        aria-description={shareHint}
         onClick={() => {
           setSharing(true)
           setShareError(null)
@@ -165,6 +166,11 @@ export function ShareControl() {
     })),
   ]
 
+  const roomHint =
+    here.length === 1
+      ? 'You are the only one here. Click to copy the link.'
+      : `Here now: ${here.map((person) => person.name).join(', ')}. Click to copy the link.`
+
   return (
     <span className="of-status__room">
       <button
@@ -172,11 +178,8 @@ export function ShareControl() {
         className="of-status__share"
         data-testid="room-status"
         data-status={status}
-        title={
-          here.length === 1
-            ? 'You are the only one here. Click to copy the link.'
-            : `Here now: ${here.map((person) => person.name).join(', ')}. Click to copy the link.`
-        }
+        data-tip={roomHint}
+        aria-description={roomHint}
         onClick={() => {
           /*
            * The link you arrived on, key and all. Copying a bare board id
@@ -204,7 +207,7 @@ export function ShareControl() {
        * not stick. A viewer is not broken — they were given the other link.
        */}
       {role === 'viewer' && (
-        <span className="of-status__watching" data-testid="viewing-only" title="You can watch, and others can see you here. Changing the board needs the edit link.">
+        <span className="of-status__watching" data-testid="viewing-only" data-tip="You can watch, and others can see you here. Changing the board needs the edit link." aria-description="You can watch, and others can see you here. Changing the board needs the edit link.">
           View only
         </span>
       )}
@@ -230,7 +233,8 @@ export function ShareControl() {
                 key={person.key}
                 className="of-status__person"
                 style={{ background: hueVar(person.hue) }}
-                title={person.name}
+                data-tip={person.name}
+                aria-description={person.name}
                 role="img"
                 aria-label={person.name}
               >
@@ -247,7 +251,8 @@ export function ShareControl() {
                 isFollowed ? ' of-status__person--following' : ''
               }`}
               style={{ background: hueVar(person.hue) }}
-              title={label}
+              data-tip={label}
+              aria-description={label}
               aria-label={label}
               aria-pressed={isFollowed}
               data-testid={`follow-${person.key}`}

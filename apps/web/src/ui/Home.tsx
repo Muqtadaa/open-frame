@@ -234,7 +234,8 @@ export function Home({ repository }: { readonly repository: BoardRepository }) {
                  * on your cursor when you are on a board together, so saying so
                  * turns a swatch into a fact about yourself.
                  */
-                title={`Signed in as ${identity.displayName}. Click to sign out.`}
+                data-tip={`Signed in as ${identity.displayName}. Click to sign out.`}
+                aria-description={`Signed in as ${identity.displayName}. Click to sign out.`}
                 onClick={() => {
                   void signOut()
                 }}

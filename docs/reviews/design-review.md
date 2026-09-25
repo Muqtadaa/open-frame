@@ -186,4 +186,15 @@ Found by looking at them:
   holds that any other `<svg>` is on a named list of content drawings (broken
   once by restoring the private plus).
 
+- **C2.8 — tips a keyboard can summon.** Forty-two controls were labelled with
+  the browser's `title`, which never appears on focus. They carry `data-tip`
+  (drawn by one stylesheet rule on hover after `--of-dwell` and at once on
+  `:focus-visible`) plus the same text as `aria-description`, preserving what
+  `title` gave assistive tech. The three copies of the platform-modifier sniff
+  are one `MOD_KEY` beside `formatShortcut`. Guarded: no `title` outside the
+  two content cases, and no tip without its description (broken once); an e2e
+  test in the CI suite shows the tip on keyboard focus and holds it back for a
+  resting pointer until the dwell (broken once by removing the focus rule);
+  a new golden pair shows the zoom cluster's tip hung inside the window.
+
 ### Remaining

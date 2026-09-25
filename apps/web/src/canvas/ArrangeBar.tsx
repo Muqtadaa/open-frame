@@ -110,7 +110,8 @@ export function ArrangeBar() {
             key={edge}
             type="button"
             className="of-icon-button"
-            title={label}
+            data-tip={label}
+            aria-description={label}
             aria-label={label}
             data-testid={`align-${edge}`}
             onClick={() => {
@@ -135,7 +136,8 @@ export function ArrangeBar() {
              * code box's format button makes.
              */
             disabled={!canDistribute}
-            title={canDistribute ? label : `${label} (needs three or more)`}
+            data-tip={canDistribute ? label : `${label} (needs three or more)`}
+            aria-description={canDistribute ? label : `${label} (needs three or more)`}
             aria-label={label}
             data-testid={`distribute-${axis}`}
             onClick={() => {

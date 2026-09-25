@@ -400,7 +400,8 @@ function TableEditor({ object, at, zoom, Chrome, onCommit, onCancel }: ObjectEdi
             type="button"
             className="of-button of-button--ghost of-cellbar__clear"
             // Says what it puts back, not just that it removes something.
-            title="Use the table's own colours"
+            data-tip="Use the table's own colours"
+            aria-description="Use the table's own colours"
             data-testid="cell-clear"
             onMouseDown={keepFocus}
             onClick={() => {

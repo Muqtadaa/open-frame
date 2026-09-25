@@ -701,6 +701,98 @@ body {
   }
 }
 
+/*
+ * THE TIP, for every control that is not a rail tool. The rail's tips are the
+ * pattern: the label, in ink, on hover AND on keyboard focus. Everything else
+ * used the browser's `title`, which only a mouse can summon, never appears on
+ * focus, waits a second and a half, and is drawn in the operating system's
+ * chrome rather than this world's — so DESIGN.md's own rule that "a tooltip
+ * only a mouse can summon is not a label" was broken forty-two times.
+ *
+ * `data-tip` carries the text and `aria-description` carries the same text to
+ * assistive tech, which is what `title` had been doing. Above by default,
+ * because most of the chrome that has tips lives at the bottom of the screen;
+ * `data-tip-side` turns it, and the zoom cluster — flush with the right edge —
+ * hangs its tips from their right-hand side so none leaves the window.
+ *
+ * A pointer dwells before the tip answers; keyboard focus gets it at once,
+ * because tabbing to a control IS asking what it is.
+ */
+:where([data-tip]) {
+  position: relative;
+}
+
+[data-tip]::after {
+  position: absolute;
+  bottom: calc(100% + var(--of-space-6));
+  left: 50%;
+  z-index: var(--of-z-tip);
+  width: max-content;
+  max-width: 280px;
+  padding: var(--of-space-6) var(--of-space-8);
+  font-family: var(--of-font);
+  font-size: var(--of-type-record);
+  font-style: normal;
+  font-weight: 400;
+  line-height: 1.35;
+  color: var(--of-page);
+  text-align: left;
+  text-decoration: none;
+  text-transform: none;
+  letter-spacing: normal;
+  white-space: normal;
+  content: attr(data-tip);
+  background: var(--of-ink);
+  border-radius: var(--of-radius);
+  opacity: 0;
+  transform: translate(-50%, var(--of-space-2));
+  transition:
+    opacity var(--of-quick) var(--of-ease),
+    transform var(--of-quick) var(--of-ease);
+  pointer-events: none;
+}
+
+[data-tip]:hover::after {
+  opacity: 1;
+  transform: translate(-50%, 0);
+  transition-delay: var(--of-dwell);
+}
+
+[data-tip]:focus-visible::after {
+  opacity: 1;
+  transform: translate(-50%, 0);
+}
+
+[data-tip-side='below']::after {
+  top: calc(100% + var(--of-space-6));
+  bottom: auto;
+}
+
+.of-zoom [data-tip]::after {
+  right: 0;
+  left: auto;
+  transform: translateY(var(--of-space-2));
+}
+
+.of-zoom [data-tip]:hover::after,
+.of-zoom [data-tip]:focus-visible::after {
+  transform: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  [data-tip]::after,
+  [data-tip]:hover::after,
+  [data-tip]:focus-visible::after {
+    transform: translate(-50%, 0);
+  }
+
+  .of-zoom [data-tip]::after,
+  .of-zoom [data-tip]:hover::after,
+  .of-zoom [data-tip]:focus-visible::after {
+    transform: none;
+  }
+}
+
 .of-tool:hover:not(:disabled) {
   color: var(--of-ink);
   background: var(--of-accent-soft);
@@ -5085,6 +5177,8 @@ textarea.of-input {
   --of-hold: 600ms;
   /* Between one ledger row and the next as they settle. */
   --of-stagger: 28ms;
+  /* How long a pointer rests on a control before its tip answers. */
+  --of-dwell: 400ms;
 }
 
 @keyframes of-settle {

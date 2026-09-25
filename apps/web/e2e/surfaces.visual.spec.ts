@@ -116,6 +116,17 @@ for (const world of WORLDS) {
       await snap(page, `${world}-tool-tip`)
     })
 
+    test('zoom cluster tip on keyboard focus, hung from the right edge', async ({ page }) => {
+      await openLocalBoard(page)
+      await page.getByTestId('zoom-fit').focus()
+      await expect
+        .poll(() =>
+          page.getByTestId('zoom-fit').evaluate((el) => getComputedStyle(el, '::after').opacity),
+        )
+        .toBe('1')
+      await snap(page, `${world}-zoom-tip`)
+    })
+
     test('sign-in sheet (the shell the share sheet shares)', async ({ page }) => {
       await openLocalBoard(page)
       await page.getByTestId('sign-in').click()

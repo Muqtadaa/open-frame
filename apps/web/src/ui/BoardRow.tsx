@@ -152,7 +152,8 @@ export function BoardRow({
           className="of-icon-button of-home__pin"
           aria-pressed={pinned}
           data-testid="pin-board"
-          title={pinned ? 'Unpin this board' : 'Pin this board to the top'}
+          data-tip={pinned ? 'Unpin this board' : 'Pin this board to the top'}
+          aria-description={pinned ? 'Unpin this board' : 'Pin this board to the top'}
           onClick={togglePin}
         >
           <PinIcon pressed={pinned} />
@@ -221,7 +222,8 @@ export function BoardRow({
                 type="button"
                 className="of-icon-button"
                 data-testid="copy-view-link"
-                title={`Copy a view-only link to ${board.title}. They can open it, not change it.`}
+                data-tip={`Copy a view-only link to ${board.title}. They can open it, not change it.`}
+                aria-description={`Copy a view-only link to ${board.title}. They can open it, not change it.`}
                 onClick={() => {
                   const link = shareLink(board.boardId, window.location.origin, board.viewKey)
                   void navigator.clipboard.writeText(link).then(
@@ -256,7 +258,8 @@ export function BoardRow({
                 type="button"
                 className="of-icon-button"
                 data-testid="set-password"
-                title={`Require a password for ${board.title}. Both links ask for it.`}
+                data-tip={`Require a password for ${board.title}. Both links ask for it.`}
+                aria-description={`Require a password for ${board.title}. Both links ask for it.`}
                 onClick={() => {
                   setSecret('')
                   setProblem(null)
@@ -272,7 +275,8 @@ export function BoardRow({
               type="button"
               className="of-icon-button"
               data-testid="rename-board"
-              title={`Rename ${board.title}`}
+              data-tip={`Rename ${board.title}`}
+              aria-description={`Rename ${board.title}`}
               onClick={() => {
                 setDraft(board.title)
                 setMode('renaming')
@@ -294,7 +298,8 @@ export function BoardRow({
                 type="button"
                 className="of-icon-button"
                 data-testid="leave-board"
-                title={`Leave ${board.title}. It carries on without you.`}
+                data-tip={`Leave ${board.title}. It carries on without you.`}
+                aria-description={`Leave ${board.title}. It carries on without you.`}
                 onClick={() => setMode('confirming')}
               >
                 <LeaveIcon />
@@ -306,7 +311,8 @@ export function BoardRow({
                   type="button"
                   className="of-icon-button of-icon-button--destructive"
                   data-testid="delete-board"
-                  title={`Delete ${board.title}. This cannot be undone.`}
+                  data-tip={`Delete ${board.title}. This cannot be undone.`}
+                  aria-description={`Delete ${board.title}. This cannot be undone.`}
                   onClick={() => setMode('confirming')}
                 >
                   <TrashIcon />

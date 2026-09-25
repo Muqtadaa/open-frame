@@ -126,7 +126,6 @@ export function Toolbar() {
             className={`of-tool${tool === spec.id ? ' of-tool--active' : ''}`}
             aria-pressed={tool === spec.id}
             aria-label={spec.label}
-            title={`${spec.label} (${spec.shortcut})`}
             data-testid={`tool-${spec.id}`}
             onClick={(event) => {
               if (spec.id === 'shape' && tool === 'shape') cycleShape()
@@ -259,7 +258,6 @@ export function Toolbar() {
           type="button"
           className="of-tool"
           aria-label="Insert image"
-          title="Insert image"
           data-testid="tool-image"
           onClick={() => fileInput.current?.click()}
         >
