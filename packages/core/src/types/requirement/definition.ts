@@ -35,7 +35,7 @@ export const requirementType = defineObjectType<typeof REQUIREMENT_TYPE, Require
     styleProps: ['color', 'textColor', 'font', 'align', 'verticalAlign', 'opacity'],
   },
 
-  fields: [{ key: 'priority', label: 'Priority', kind: 'select', options: REQUIREMENT_PRIORITY }],
+  fields: [{ key: 'priority', meaning: 'record', label: 'Priority', kind: 'select', options: REQUIREMENT_PRIORITY }],
 
   derivations: [{ type: 'task', predicate: 'implements' }],
 

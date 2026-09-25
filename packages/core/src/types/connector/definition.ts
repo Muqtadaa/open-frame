@@ -269,9 +269,9 @@ export const connectorType = defineObjectType<typeof CONNECTOR_TYPE, ConnectorDa
   ],
 
   fields: [
-    { key: 'routing', label: 'Route', kind: 'select', options: ROUTINGS },
-    { key: 'startArrow', label: 'Start', kind: 'select', options: ARROWHEADS },
-    { key: 'endArrow', label: 'End', kind: 'select', options: ARROWHEADS },
+    { key: 'routing', meaning: 'shape', label: 'Route', kind: 'select', options: ROUTINGS },
+    { key: 'startArrow', meaning: 'shape', label: 'Start', kind: 'select', options: ARROWHEADS },
+    { key: 'endArrow', meaning: 'shape', label: 'End', kind: 'select', options: ARROWHEADS },
   ],
 
   /**

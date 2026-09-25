@@ -37,8 +37,8 @@ export const decisionType = defineObjectType<typeof DECISION_TYPE, DecisionData>
   },
 
   fields: [
-    { key: 'rationale', label: 'Rationale', kind: 'longText' },
-    { key: 'status', label: 'Status', kind: 'select', options: DECISION_STATUS },
+    { key: 'rationale', meaning: 'record', label: 'Rationale', kind: 'longText' },
+    { key: 'status', meaning: 'record', label: 'Status', kind: 'select', options: DECISION_STATUS },
   ],
 
   // And a decision is worth nothing until somebody does the work.

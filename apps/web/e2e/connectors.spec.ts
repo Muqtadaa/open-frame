@@ -1143,6 +1143,9 @@ test('offers its line one colour, and marks the one it is drawn in', async ({ pa
   await page.locator(CANVAS).click({ position: MIDPOINT })
   await expect(page.getByTestId('inspector-title')).toHaveText('Connector')
 
+  // Its route and arrowheads are how it is drawn, not a record of anything.
+  await expect(page.locator('.of-inspector__band')).toHaveCount(0)
+  await expect(page.getByTestId('field-routing')).toBeVisible()
   await expect(page.getByTestId('paint-color')).toHaveCount(0)
   await expect(page.getByTestId('paint-strokeColor')).toHaveText('line')
   await page.getByTestId('paint-strokeColor').click()

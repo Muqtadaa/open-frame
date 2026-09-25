@@ -314,3 +314,16 @@ Logged as the panel's backlog (the owner asked to move on to the rail):
   swatches speak their name twice (`aria-description` = name); the dash group
   is announced "line"; weak "on" swatch mark in After Hours; the 760px context
   menu runs 7px off-screen
+
+Inspector P1s from the re-critique — **all three fixed** (owner's call):
+
+- **Connector colour targets** (`475c988`): the connector declared `color` and
+  `strokeColor`, both painting one line; it declares `strokeColor` alone, the
+  target is called "line" on a type with no surface, the unset line is marked,
+  and the B/I/U row is "marks".
+- **Shift after a click inside the panel** (`ecdcda8`): busy now means typing.
+- **Panel height**: appearance folds away by default on types that carry a
+  record. Each `FieldDefinition` now declares a required `meaning` —
+  `record` or `shape` — so a connector's route and ends are filed with its
+  appearance rather than as a "record". Evidence panel clears the record line;
+  one e2e test, plus the connector test asserting no record band.

@@ -324,6 +324,17 @@ export interface FieldDefinition {
   /** Shown beside the control. Sentence case, because it is a label, not a heading. */
   readonly label: string
   readonly kind: FieldKind
+  /**
+   * What the field is ABOUT, and required so every type has to say.
+   *
+   * `record` is what the object says — a source, a participant, a status, an
+   * image's alt text. `shape` is how it is drawn — a connector's route and its
+   * arrowheads. The record panel names the first as the object's record and
+   * files the second with its appearance: filing a line's arrowheads under
+   * "record" made the one section meant to show what an object MEANS hold
+   * geometry, and made a connector fold its styling away like evidence does.
+   */
+  readonly meaning: 'record' | 'shape'
   /** Only for `select`, and the only values its schema accepts. */
   readonly options?: readonly string[]
   /**

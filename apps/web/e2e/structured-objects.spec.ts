@@ -457,3 +457,30 @@ test('the panel names what the object is, and puts its record first', async ({ p
   const bands = page.getByTestId('inspector').locator('.of-inspector__band')
   await expect(bands).toHaveText(['record', 'appearance'])
 })
+
+/**
+ * The record IS the panel for a type that carries one. With nine rows of
+ * appearance under it an evidence panel was 539px tall with nothing that
+ * scrolled, and painted over the record line and the zoom cluster.
+ */
+test('folds appearance away on evidence, and opens it on request', async ({ page }) => {
+  await freshBoard(page)
+  await placeNote(page, 'Three of five could not find the annual price')
+  await promote(page, NOTE)
+  await page.locator(CANVAS).click({ position: NOTE })
+
+  const toggle = page.getByTestId('inspector-appearance')
+  await expect(toggle).toHaveAttribute('aria-expanded', 'false')
+  await expect(page.getByTestId('swatch-gray')).toHaveCount(0)
+
+  const panel = await page.getByTestId('inspector').boundingBox()
+  const line = await page.getByTestId('status-bar').boundingBox()
+  expect(panel).not.toBeNull()
+  expect(line).not.toBeNull()
+  if (panel === null || line === null) return
+  expect(panel.y + panel.height).toBeLessThan(line.y)
+
+  await toggle.click()
+  await expect(toggle).toHaveAttribute('aria-expanded', 'true')
+  await expect(page.getByTestId('swatch-gray')).toBeVisible()
+})

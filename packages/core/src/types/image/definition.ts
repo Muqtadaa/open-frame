@@ -86,7 +86,7 @@ export const imageType = defineObjectType<typeof IMAGE_TYPE, ImageData>({
    * home for it: "alt text" said out loud teaches what the box is for, where
    * an unlabelled caret in the middle of a photograph does not.
    */
-  fields: [{ key: 'alt', label: 'Alt text', kind: 'longText' }],
+  fields: [{ key: 'alt', meaning: 'record', label: 'Alt text', kind: 'longText' }],
 
   describe: (object) => ({
     searchText: object.data.alt,

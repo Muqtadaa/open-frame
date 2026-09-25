@@ -3748,6 +3748,40 @@ body {
   letter-spacing: 0.02em;
 }
 
+/*
+ * The appearance band is a disclosure on a type that carries a record: the
+ * name is the control, and the arrow turns to say which way it is.
+ */
+.of-inspector__disclosure {
+  display: inline-flex;
+  gap: var(--of-space-4);
+  align-items: center;
+  min-height: var(--of-hit-sm);
+  padding: 0 var(--of-space-4) 0 0;
+  font: inherit;
+  color: inherit;
+  text-transform: inherit;
+  letter-spacing: inherit;
+  background: none;
+  border: none;
+  border-radius: var(--of-radius);
+  cursor: pointer;
+}
+
+.of-inspector__disclosure:hover {
+  color: var(--of-ink);
+}
+
+.of-inspector__disclosure svg {
+  width: 12px;
+  height: 12px;
+  transition: transform var(--of-quick) var(--of-ease);
+}
+
+.of-inspector__disclosure[aria-expanded='true'] svg {
+  transform: rotate(90deg);
+}
+
 
 /*
  * A record row: label column, value column.
