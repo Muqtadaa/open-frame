@@ -109,6 +109,15 @@ export interface BoardCommands {
     frame: ObjectFrame,
   ): void
   updateData(id: ObjectId, patch: Readonly<Record<string, unknown>>): void
+  /**
+   * An edit that also changed the object's size — a table whose track was
+   * fitted or dragged while it was open — as one undo entry.
+   */
+  updateDataAndSize(
+    id: ObjectId,
+    patch: Readonly<Record<string, unknown>>,
+    frame: ObjectFrame,
+  ): void
   /** Promotes the selection to another type, keeping every object's identity. */
   promoteSelection(toType: string): void
   /**
@@ -658,6 +667,15 @@ export function useCommands(): BoardCommands {
 
       updateData(id, patch) {
         report(dispatcher.dispatch({ kind: 'UpdateObjectData', id, patch }))
+      },
+
+      updateDataAndSize(id, patch, frame) {
+        report(
+          dispatcher.transact('Edit', [
+            { kind: 'UpdateObjectData', id, patch },
+            { kind: 'ResizeObjects', resizes: [{ id, frame }] },
+          ]),
+        )
       },
 
       resizeDivider(id, patch, frame) {

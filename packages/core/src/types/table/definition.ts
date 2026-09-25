@@ -1,5 +1,7 @@
 import { plainTextOf } from '../../domain/rich-text.js'
 import { defineObjectType } from '../../domain/registry.js'
+import { borderToLines } from './border-to-lines.js'
+import { isCovered } from './grid.js'
 import {
   TABLE_VERSION,
   TableDataSchema,
@@ -20,8 +22,7 @@ export const tableType = defineObjectType<typeof TABLE_TYPE, TableData>({
 
   schema: TableDataSchema,
   currentVersion: TABLE_VERSION,
-  // Nothing to migrate: this type has only ever had one shape.
-  migrations: {},
+  migrations: { 2: borderToLines },
 
   create: (init) => {
     // Equal weights: a new table divides its frame evenly, and the first
@@ -45,6 +46,13 @@ export const tableType = defineObjectType<typeof TABLE_TYPE, TableData>({
         rows: [...rows],
         cells,
         headerRow: init?.headerRow ?? true,
+        /*
+         * Lines and merges only with the cells they were made for: a merge
+         * addressed to a grid that was just rebuilt would point at nothing,
+         * and the schema would refuse the table `create` cannot fail to make.
+         */
+        ...(cells === init?.cells && init.lines !== undefined ? { lines: init.lines } : {}),
+        ...(cells === init?.cells && init.merges !== undefined ? { merges: init.merges } : {}),
       },
       frame: { width: 420, height: 180 },
     }
@@ -141,7 +149,17 @@ export const tableType = defineObjectType<typeof TABLE_TYPE, TableData>({
      * written anywhere in it. A table whose contents were invisible to search
      * would be the one place on a board where writing something hides it.
      */
-    const cells = object.data.cells.map((cell) => plainTextOf(cell.text).trim())
+    /*
+     * Not the cells a merge covers. They keep their words so an unmerge can
+     * bring them back, but a search that found a table by words nobody can
+     * see on it would be pointing at nothing.
+     */
+    const width = object.data.columns.length
+    const cells = object.data.cells.map((cell, index) =>
+      isCovered(object.data, Math.floor(index / width), index % width)
+        ? ''
+        : plainTextOf(cell.text).trim(),
+    )
     const filled = cells.filter((text) => text !== '')
     const shape = `${String(object.data.columns.length)}x${String(object.data.rows.length)}`
 

@@ -423,3 +423,32 @@ the record line to become a top navigation bar with bolder text.
   - a table's row and column controls merged into one control on its right
 - **Rail tips** now read over a record panel beside the rail: the rail rises to
   `--of-z-reached` while it is being reached for.
+
+### Tables as a lightweight spreadsheet (ADR 0015)
+
+After more hands-on testing, the owner asked for three things:
+
+- new rows and columns should inherit their neighbours' styles
+- each cell should have a top, bottom, left and right line that can be set
+  on its own, replacing the confusing single rule colour
+- the table as a whole should work more like a spreadsheet, with no formulas
+
+- **Model (v2):**
+  - lines live on the grid, sparse, one entry per stretch of line
+  - merges are rectangles that keep the text they cover
+  - a cell carries only fill and ink
+  - the v1 `border` migrates onto the lines it drew, with a frozen fixture
+  - the table's `color` is finally painted, as its ground, so its exemption in
+    the colour-coverage test is gone
+- **Editor:** a spreadsheet with a navigating mode and an editing mode:
+  - column letters and row numbers, and drag-select
+  - insert, delete, merge and unmerge from a right-click menu or `···`; new
+    tracks dress like their neighbour
+  - a borders menu with eleven presets and a pen (weight, pattern, colour)
+  - the format bar applies to a whole range when there is no caret
+  - the apparatus is drawn in screen space through a new `Overlay` editor
+    slot (rule 24)
+- **Removed:** the end-only +/− shape control, the "rule" colour target, and
+  the per-cell field keyed by index. The stale-field bug that key caused
+  cannot recur, because only the cell being typed in is a field.
+- **Contract:** `.impeccable/surfaces/apps-web-src-views-tableview-tsx.md`.

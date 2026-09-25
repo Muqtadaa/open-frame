@@ -174,6 +174,51 @@ for (const world of WORLDS) {
       await snap(page, `${world}-table-cell-bar`)
     })
 
+    // A table as a spreadsheet (ADR 0015): the letters and numbers, a range,
+    // and the borders menu open over it.
+    test('table borders', async ({ page }) => {
+      await openLocalBoard(page)
+      await page.getByTestId('tool-table').click()
+      await page.locator('[data-testid="canvas"]').click({ position: { x: 420, y: 360 } })
+      for (const value of ['Name', 'Owner', 'Due', 'Alpha', 'Ana', 'Mon']) {
+        await page.keyboard.type(value)
+        await page.keyboard.press('Tab')
+      }
+      await page.getByTestId('table-cell-4').click()
+      await page.getByTestId('table-cell-8').click({ modifiers: ['Shift'] })
+      await page.getByTestId('cell-target-borders').click()
+      await page.getByTestId('borders-weight-thick').click()
+      await page.getByTestId('borders-outer').click()
+      await expect(page.getByTestId('cell-borders-panel')).toBeVisible()
+      await snap(page, `${world}-table-borders`)
+    })
+
+    // The same table at rest: grid lines drawn by the grid, a merged cell,
+    // a dashed rule and a coloured row.
+    test('table at rest', async ({ page }) => {
+      await openLocalBoard(page)
+      await page.getByTestId('tool-table').click()
+      await page.locator('[data-testid="canvas"]').click({ position: { x: 420, y: 320 } })
+      for (const value of ['Name', 'Owner', 'Due', 'Alpha', 'Ana', 'Mon', 'Merged across']) {
+        await page.keyboard.type(value)
+        await page.keyboard.press('Tab')
+      }
+      await page.getByTestId('table-cell-6').click()
+      await page.getByTestId('table-cell-7').click({ modifiers: ['Shift'] })
+      await page.getByTestId('table-cell-6').click({ button: 'right' })
+      await page.getByTestId('table-menu-merge').click()
+      await page.getByTestId('table-row-2').click()
+      await page.getByTestId('cell-fill-yellow').click()
+      await page.getByTestId('cell-target-borders').click()
+      await page.getByTestId('borders-dash-dashed').click()
+      await page.getByTestId('borders-weight-medium').click()
+      await page.getByTestId('borders-color-red').click()
+      await page.getByTestId('borders-bottom').click()
+      await page.mouse.click(1100, 600)
+      await expect(page.getByTestId('table-editor')).toHaveCount(0)
+      await snap(page, `${world}-table-at-rest`)
+    })
+
     test('comment composer', async ({ page }) => {
       await openSharedBoard(page)
       await page

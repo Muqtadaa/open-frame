@@ -421,7 +421,7 @@ export function RichTextField({
  * The object's own size when the runs disagree: stepping from a mixed selection
  * has to start somewhere, and the default is the least surprising place.
  */
-function sizeOfRange(text: RichText, from: number, to: number): SizeToken {
+export function sizeOfRange(text: RichText, from: number, to: number): SizeToken {
   let seen = 0
   let found: SizeToken | undefined
   for (const span of text) {
@@ -435,7 +435,7 @@ function sizeOfRange(text: RichText, from: number, to: number): SizeToken {
   return found ?? DEFAULT_SIZE
 }
 
-function stepSize(current: SizeToken, by: 1 | -1): SizeToken {
+export function stepSize(current: SizeToken, by: 1 | -1): SizeToken {
   const index = SIZE_TOKENS.indexOf(current)
   const next = Math.min(SIZE_TOKENS.length - 1, Math.max(0, index + by))
   return SIZE_TOKENS[next] ?? current

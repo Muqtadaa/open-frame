@@ -609,8 +609,8 @@ Everything else is feedback or continuity, and there is not much of it:
   row, not a toast: the acknowledgement belongs where the action was, and this
   is a control somebody uses twice and never again that session.
 - **Beds transition, they do not snap.** 140ms on hover and active states, and
-  the same for a swatch's selected ring and a selected table cell's — the ring
-  arrives rather than appearing.
+  the same for a swatch's selected ring — the ring arrives rather than
+  appearing.
 - **A surface comes out of the thing that opened it.** The colour picker is
   pulled from the swatch grid, the table's colour bar from the table's top
   edge. Both use the sheet's raise-and-fade, because a surface that simply
@@ -723,6 +723,46 @@ driving the cell with the caret. Its shortcuts are every document editor's:
 Mod+B/I/U, Mod+Shift+8 and Mod+Shift+7; "- ", "* " and "1. " start a list as
 you type, Tab nests an item and Enter on an empty one ends the list. Lists are
 drawn by the stylesheet — •, ◦, ▪ and 1., a., i. by depth — never typed.
+
+### Tables (a lightweight spreadsheet)
+
+A table is edited the way a spreadsheet is (ADR 0015), because that is what
+everybody who reaches for one already knows. Double-clicking opens the cell
+under the pointer with a caret; otherwise a cell is SELECTED rather than
+typed in, and the keyboard moves it — arrows, Shift to extend, Tab along the
+row and on to the next, Enter or F2 to type, Delete to clear, Mod+A for
+everything. Typing over a selected cell replaces it; Enter finishes a cell
+and moves down, Escape puts that one cell back.
+
+- **The apparatus lines up with the grid.** Column letters and row numbers sit
+  exactly over the tracks they name, in 12px mono at the apparatus radius,
+  and select what they name when pressed. The selection is a 2px accent ring,
+  a range carries a 10% accent wash and the cell the range started from keeps
+  a 1px ring. All of it is in screen space (rule 24): the same thickness at
+  every zoom.
+- **Lines belong to the grid, not to cells.** A table has no border of its
+  own; its outer edge and its inner lines are all grid lines, drawn over the
+  cells in world units like any other object's outline. Unset, the outer edge
+  is the control border and the inner lines the ruled grey — the look a table
+  always had — and the table's line colour and weight in the record panel
+  recolour every line nobody chose separately.
+- **The borders menu** is the one every spreadsheet has: eleven presets drawn
+  as the lines they reach (all, outer, inner, inner horizontal, inner
+  vertical, top, bottom, left, right, none, and the table's own), then the
+  pen — weight, pattern, colour — they draw with.
+- **Sizing a track is done where a spreadsheet does it.** The edge between two
+  letters or two numbers is a grip: drag it to size the track before it, or
+  double-click it to fit that track to its content. The table grows to hold
+  the change rather than squeezing its other tracks, and the new size lands
+  with the rest of the edit. From outside the editor the board's own dividers
+  do the same. Either way a merged cell is left out of the measurement: its
+  width is shared, so it says nothing about any one column.
+- **Rows, columns and merging** live on the table's menu: right-click a cell or
+  a letter, or the `···` in the cell bar. Inserting takes as many rows or
+  columns as are selected and dresses them like their neighbour.
+- **The format bar works with no caret.** With a range selected, bold,
+  size and lists apply to every cell in it, and read as on only when every
+  cell already is.
 
 ### Tips on Everything Else
 
@@ -842,7 +882,7 @@ square — which is what the first build of this grid shipped.
 
 **One palette, and a target.** Where more than one property can take a colour,
 the control names what it paints rather than repeating the grid: the record
-panel for surface and text, a table's bar for fill, text and rule. Three grids
+panel for surface and text, a table's bar for fill and text. Three grids
 of eleven is thirty-three swatches you have to count columns to navigate, and
 in the record panel it also made a floating panel 68px taller — which covers
 board, and covered an object somebody then could not pick up. The targets come

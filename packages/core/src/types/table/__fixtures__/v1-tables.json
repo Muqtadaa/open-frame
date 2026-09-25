@@ -1,0 +1,115 @@
+{
+  "format": "openframe.board",
+  "schemaVersion": 1,
+  "savedAt": 1700000000000,
+  "board": {
+    "id": "board_frozen_tables",
+    "meta": {
+      "title": "Before a table's lines lived on its grid",
+      "createdAt": 1700000000000
+    },
+    "objects": [
+      {
+        "id": "obj_table",
+        "type": "table",
+        "dataVersion": 1,
+        "frame": {
+          "x": 0,
+          "y": 0,
+          "width": 420,
+          "height": 180,
+          "rotation": 0
+        },
+        "parentId": null,
+        "order": "a0",
+        "style": {
+          "strokeColor": "blue"
+        },
+        "locked": false,
+        "hidden": false,
+        "data": {
+          "columns": [1, 2],
+          "rows": [1, 1],
+          "cells": [
+            {
+              "text": [
+                {
+                  "text": "Name",
+                  "marks": ["bold"]
+                }
+              ]
+            },
+            {
+              "text": [
+                {
+                  "text": "Status"
+                }
+              ],
+              "fill": "yellow",
+              "border": "red"
+            },
+            {
+              "text": [
+                {
+                  "text": "Alpha"
+                }
+              ],
+              "textColor": "#336699"
+            },
+            {
+              "text": [
+                {
+                  "text": ""
+                }
+              ],
+              "border": "#112233"
+            }
+          ],
+          "headerRow": true
+        },
+        "meta": {
+          "createdAt": 1700000000000,
+          "createdBy": null,
+          "createdVia": "user"
+        }
+      },
+      {
+        "id": "obj_table_plain",
+        "type": "table",
+        "dataVersion": 1,
+        "frame": {
+          "x": 500,
+          "y": 0,
+          "width": 200,
+          "height": 100,
+          "rotation": 0
+        },
+        "parentId": null,
+        "order": "a1",
+        "style": {},
+        "locked": false,
+        "hidden": false,
+        "data": {
+          "columns": [1],
+          "rows": [1],
+          "cells": [
+            {
+              "text": [
+                {
+                  "text": "Only"
+                }
+              ]
+            }
+          ],
+          "headerRow": false
+        },
+        "meta": {
+          "createdAt": 1700000000000,
+          "createdBy": null,
+          "createdVia": "user"
+        }
+      }
+    ],
+    "assets": []
+  }
+}

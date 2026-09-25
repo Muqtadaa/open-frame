@@ -1,58 +1,129 @@
-import { useRef, useState, type CSSProperties } from 'react'
+import {
+  useEffect,
+  useRef,
+  useState,
+  type CSSProperties,
+  type HTMLAttributes,
+  type KeyboardEvent,
+  type MouseEvent as ReactMouseEvent,
+  type PointerEvent as ReactPointerEvent,
+  type ReactNode,
+} from 'react'
+import { flushSync } from 'react-dom'
 
 import {
-  cellRange,
-  cellRegion,
-  resizeGrid,
+  DEFAULT_SIZE,
+  LINE_PRESETS,
+  MARKS,
+  applyMark,
+  applySize,
+  clearCells,
+  listOf,
+  markCovers,
+  plainTextOf,
+  setList,
+  deleteTracks,
+  expandToMerges,
+  hasMerge,
+  indicesOf,
+  insertTracks,
+  lineLookup,
+  mergeAt,
+  mergeRange,
+  rangeBetween,
+  setLines,
+  setTrackSize,
   styleCells,
+  unmergeRange,
+  type Axis,
+  type CellRange,
   type CellStyle,
   type ColorValue,
+  type DashToken,
+  type LinePreset,
+  type ListKind,
+  type Mark,
+  type Merge,
+  type ObjectStyle,
+  type Rect,
+  type RichText,
+  type StrokeToken,
   type TableCell,
   type TableData,
+  type TableLine,
 } from '@openframe/core'
 
 import { defineObjectView, type ObjectEditorProps, type ObjectViewProps } from './registry.js'
 import { FormatBar } from './FormatBar.js'
-import { RichTextField, type FormatState, type RichTextFieldHandle } from './RichTextField.js'
+import {
+  RichTextField,
+  sizeOfRange,
+  stepSize,
+  type FormatState,
+  type RichTextFieldHandle,
+} from './RichTextField.js'
 import { RichTextView } from './RichTextView.js'
 import { cellAt, tracks } from '../scene/table-grid.js'
+import { cellsInTrack, fitColumnWidth, fitRowHeight } from '../scene/fit-track.js'
 import {
+  STROKE_WIDTHS,
+  dashArray,
   fontFamily,
-  textAlign, verticalAlign,
   inkColor,
   inkOf,
   readableInkOn,
   surfaceOf,
+  textAlign,
+  verticalAlign,
 } from '../scene/style-tokens.js'
 import { Swatches, groundOf, type SwatchKind } from '../controls/Swatches.js'
-import { MinusIcon, PlusIcon } from '../controls/icons.js'
+import { BorderPresetIcon, DashIcon, StrokeIcon } from '../controls/icons.js'
 
-/**
- * What a colour lands on, named in the order somebody reaches for them.
- *
- * `label` is what the control shows and `name` is what the swatch grid is
- * called for a screen reader — "fill" alone would be three identically named
- * groups to anyone not looking at which tab is pressed.
+/*
+ * ---------------------------------------------------------------------------
+ * Drawing a table
+ * ---------------------------------------------------------------------------
  */
-type CellTarget = 'fill' | 'text' | 'rule'
 
-const CELL_TARGETS: readonly { key: CellTarget; label: string; name: string }[] = [
-  { key: 'fill', label: 'fill', name: 'Cell background' },
-  { key: 'text', label: 'text', name: 'Cell text colour' },
-  { key: 'rule', label: 'rule', name: 'Cell rule colour' },
-]
-
-/** The same three specimens the record panel uses, for the same reason. */
-const CELL_KIND: Readonly<Record<CellTarget, SwatchKind>> = {
-  fill: 'surface',
-  text: 'ink',
-  rule: 'line',
+/** Where each track boundary falls, in the object's own units, ends included. */
+function edgesOf(weights: readonly number[], extent: number): number[] {
+  const total = weights.reduce((sum, weight) => sum + weight, 0)
+  const found = [0]
+  let running = 0
+  for (const weight of weights) {
+    running += weight
+    found.push(total > 0 ? (running / total) * extent : 0)
+  }
+  return found
 }
 
-const CELL_KEY: Readonly<Record<CellTarget, keyof CellStyle>> = {
-  fill: 'fill',
-  text: 'textColor',
-  rule: 'border',
+/** The same, as fractions — the unit apparatus is placed in. */
+function fractionsOf(weights: readonly number[]): number[] {
+  return edgesOf(weights, 1)
+}
+
+/**
+ * Which cells a merge hides, and which cells anchor one, found ONCE per draw.
+ *
+ * Asked per cell, `mergeAt` is a scan of every merge per cell — rule 10 on a
+ * grid that may hold five thousand of them.
+ */
+function mergeIndex(data: TableData): {
+  readonly anchors: ReadonlyMap<number, Merge>
+  readonly covered: ReadonlySet<number>
+} {
+  const anchors = new Map<number, Merge>()
+  const covered = new Set<number>()
+  const width = data.columns.length
+  for (const merge of data.merges ?? []) {
+    anchors.set(merge.row * width + merge.col, merge)
+    for (let row = merge.row; row < merge.row + merge.rows; row++) {
+      for (let col = merge.col; col < merge.col + merge.cols; col++) {
+        if (row !== merge.row || col !== merge.col) covered.add(row * width + col)
+      }
+    }
+  }
+  return { anchors, covered }
 }
 
 /**
@@ -63,9 +134,7 @@ const CELL_KEY: Readonly<Record<CellTarget, keyof CellStyle>> = {
  * a grid that may hold hundreds.
  */
 function cellPaint(cell: TableCell): CSSProperties | undefined {
-  if (cell.fill === undefined && cell.textColor === undefined && cell.border === undefined) {
-    return undefined
-  }
+  if (cell.fill === undefined && cell.textColor === undefined) return undefined
   /*
    * The ink flips on the CELL's own fill, not the table's. A black cell in a
    * plain table is the case: the table says nothing about ink, so without this
@@ -75,9 +144,280 @@ function cellPaint(cell: TableCell): CSSProperties | undefined {
   return {
     ...(cell.fill === undefined ? {} : { background: surfaceOf(cell.fill, 'gray') }),
     ...(ink === undefined ? {} : { color: ink }),
-    ...(cell.border === undefined ? {} : { borderColor: inkOf(cell.border) }),
   }
 }
+
+/**
+ * How a line at one address is drawn, or `null` for not at all.
+ *
+ * Anything the line does not say is the TABLE's: its `strokeColor`, its
+ * `stroke`. A table nobody has ruled keeps the look it always had — a firmer
+ * edge round a fainter grid — until somebody gives it a line colour, which
+ * then means every line, because one colour meaning two was the confusion this
+ * model was written to end.
+ */
+function resolveLine(
+  stored: TableLine | undefined,
+  style: ObjectStyle,
+  outer: boolean,
+): { width: number; color: string; dash: DashToken | undefined } | null {
+  const weight: StrokeToken = stored?.weight ?? style.stroke ?? 'thin'
+  if (weight === 'none') return null
+  const color =
+    stored?.color !== undefined
+      ? inkOf(stored.color)
+      : style.strokeColor !== undefined
+        ? inkOf(style.strokeColor)
+        : outer
+          ? 'var(--of-control-border)'
+          : 'var(--of-rule)'
+  return { width: STROKE_WIDTHS[weight], color, dash: stored?.dash }
+}
+
+/**
+ * The grid's lines, drawn once over the cells.
+ *
+ * SVG rather than cell borders, because a line here belongs to the GRID: a
+ * border belongs to one element, so two cells either side of a line each had
+ * an opinion about it and one of them had to lose. It also lets a line be
+ * thick without pushing the text of the cells beside it about, and dashed
+ * without the browser's own idea of what a dashed border looks like.
+ *
+ * Runs of identical segments are joined into one line, so a dashed rule reads
+ * as one rule rather than restarting its pattern at every cell.
+ */
+function GridLines({
+  data,
+  style,
+  width,
+  height,
+}: {
+  readonly data: TableData
+  readonly style: ObjectStyle
+  readonly width: number
+  readonly height: number
+}) {
+  const xs = edgesOf(data.columns, width)
+  const ys = edgesOf(data.rows, height)
+  const cols = data.columns.length
+  const rows = data.rows.length
+  const line = lineLookup(data)
+
+  // The segments INSIDE a merge are not drawn: it is one cell.
+  const hidden = { h: new Set<string>(), v: new Set<string>() }
+  for (const merge of data.merges ?? []) {
+    for (let row = merge.row + 1; row < merge.row + merge.rows; row++) {
+      for (let col = merge.col; col < merge.col + merge.cols; col++) {
+        hidden.h.add(`${String(row)}:${String(col)}`)
+      }
+    }
+    for (let col = merge.col + 1; col < merge.col + merge.cols; col++) {
+      for (let row = merge.row; row < merge.row + merge.rows; row++) {
+        hidden.v.add(`${String(row)}:${String(col)}`)
+      }
+    }
+  }
+
+  const drawn: ReactNode[] = []
+  const run = (
+    orientation: 'h' | 'v',
+    at: number,
+    count: number,
+    outer: boolean,
+    place: (from: number, to: number) => { x1: number; y1: number; x2: number; y2: number },
+  ): void => {
+    let start = 0
+    let current: ReturnType<typeof resolveLine> = null
+    const flush = (end: number): void => {
+      if (current !== null && end > start) {
+        drawn.push(
+          <line
+            key={`${orientation}${String(at)}:${String(start)}`}
+            {...place(start, end)}
+            stroke={current.color}
+            strokeWidth={current.width}
+            strokeDasharray={dashArray(current.dash, current.width)}
+            strokeLinecap={current.dash === 'dotted' ? 'round' : 'square'}
+          />,
+        )
+      }
+    }
+    for (let index = 0; index <= count; index++) {
+      const key =
+        orientation === 'h' ? `${String(at)}:${String(index)}` : `${String(index)}:${String(at)}`
+      const next =
+        index === count || hidden[orientation].has(key)
+          ? null
+          : resolveLine(
+              orientation === 'h' ? line('h', at, index) : line('v', index, at),
+              style,
+              outer,
+            )
+      const same =
+        next !== null &&
+        current !== null &&
+        next.color === current.color &&
+        next.width === current.width &&
+        next.dash === current.dash
+      if (same) continue
+      flush(index)
+      current = next
+      start = index
+    }
+  }
+
+  for (let row = 0; row <= rows; row++) {
+    const y = ys[row] ?? 0
+    run('h', row, cols, row === 0 || row === rows, (from, to) => ({
+      x1: xs[from] ?? 0,
+      y1: y,
+      x2: xs[to] ?? 0,
+      y2: y,
+    }))
+  }
+  for (let col = 0; col <= cols; col++) {
+    const x = xs[col] ?? 0
+    run('v', col, rows, col === 0 || col === cols, (from, to) => ({
+      x1: x,
+      y1: ys[from] ?? 0,
+      x2: x,
+      y2: ys[to] ?? 0,
+    }))
+  }
+
+  return (
+    <svg
+      className="of-table__lines"
+      width={width}
+      height={height}
+      aria-hidden="true"
+      focusable="false"
+    >
+      {drawn}
+    </svg>
+  )
+}
+
+/**
+ * The grid itself: the cells laid out, and the lines over them.
+ *
+ * Shared by the board and the editor, so what you edit is what is drawn — the
+ * editor only swaps one cell's contents for a field.
+ */
+function TableGrid({
+  data,
+  style,
+  width,
+  height,
+  label,
+  content,
+  cellProps,
+  sized = false,
+}: {
+  readonly data: TableData
+  readonly style: ObjectStyle
+  readonly width: number
+  readonly height: number
+  readonly label: string
+  /** What goes in a cell; the board's text unless the editor says otherwise. */
+  readonly content?: ((index: number, cell: TableCell) => ReactNode) | undefined
+  readonly cellProps?:
+    | ((index: number) => HTMLAttributes<HTMLDivElement> & Record<`data-${string}`, string>)
+    | undefined
+  /**
+   * Drawn at `width` by `height` rather than filling the object: the editor's
+   * draft can be a different size from the object until the edit commits.
+   */
+  readonly sized?: boolean | undefined
+}) {
+  const { columns, rows, cells, headerRow } = data
+  const width_ = columns.length
+  const merges = mergeIndex(data)
+  // Placed explicitly only when something spans; otherwise the grid flows.
+  const placed = merges.anchors.size > 0
+
+  return (
+    <div
+      className="of-table-wrap"
+      style={sized ? { width: `${String(width)}px`, height: `${String(height)}px` } : undefined}
+    >
+      <div
+        className="of-table"
+        style={{
+          gridTemplateColumns: tracks(columns),
+          gridTemplateRows: tracks(rows),
+          fontFamily: fontFamily(style.font),
+          textAlign: textAlign(style.align),
+          /*
+           * A CUSTOM PROPERTY, because those inherit and `justify-content` does
+           * not. This element is a grid, where `justify-content` distributes
+           * tracks along the inline axis — so setting it here moved nothing at
+           * all, and vertical alignment in a table did nothing until this line
+           * changed. The cells read it in `.of-table__cell`.
+           */
+          ['--of-valign' as string]: verticalAlign(style.verticalAlign),
+          /*
+           * The table's colour is its GROUND — what every cell stands on
+           * unless it has a fill of its own. Unset, it is the panel, which is
+           * what a table always stood on and which follows After Hours.
+           */
+          ...(style.color === undefined ? {} : { background: surfaceOf(style.color, 'gray') }),
+          // On the table, not on each cell: one declaration the cells inherit,
+          // rather than a style object rebuilt per cell on every render.
+          color: inkColor(style.textColor) ?? readableInkOn(style.color),
+          opacity: style.opacity ?? 1,
+        }}
+        role="table"
+        aria-label={label}
+      >
+        {cells.map((cell, index) => {
+          if (merges.covered.has(index)) return null
+          const row = Math.floor(index / width_)
+          const col = index % width_
+          const merge = merges.anchors.get(index)
+          const head = headerRow && row === 0
+          const paint = cellPaint(cell)
+          return (
+            <div
+              // The index IS the identity: cells have no ids, and their
+              // position is what they are.
+              key={index}
+              className={`of-table__cell${head ? ' of-table__cell--head' : ''}`}
+              role={head ? 'columnheader' : 'cell'}
+              // Where it is and how far it reaches, read back by fitting a
+              // track: with merges, a cell's position among its siblings no
+              // longer says which column it is in.
+              data-row={row}
+              data-col={col}
+              data-rows={merge?.rows ?? 1}
+              data-cols={merge?.cols ?? 1}
+              {...(cellProps?.(index) ?? {})}
+              style={
+                placed
+                  ? {
+                      ...paint,
+                      gridRow: `${String(row + 1)} / span ${String(merge?.rows ?? 1)}`,
+                      gridColumn: `${String(col + 1)} / span ${String(merge?.cols ?? 1)}`,
+                    }
+                  : paint
+              }
+            >
+              {content?.(index, cell) ?? (
+                <div className="of-table__cell-text">
+                  <RichTextView value={cell.text} />
+                </div>
+              )}
+            </div>
+          )
+        })}
+      </div>
+      <GridLines data={data} style={style} width={width} height={height} />
+    </div>
+  )
+}
+
+const describeShape = (data: TableData): string =>
+  `Table, ${String(data.columns.length)} columns by ${String(data.rows.length)} rows`
 
 /**
  * A table: one object holding a grid.
@@ -87,511 +427,1266 @@ function cellPaint(cell: TableCell): CSSProperties | undefined {
  * recalculation at all.
  */
 function TableRenderer({ object }: ObjectViewProps<TableData>) {
-  const { columns, rows, cells, headerRow } = object.data
-
   return (
-    <div
-      className="of-table"
-      style={{
-        gridTemplateColumns: tracks(columns),
-        gridTemplateRows: tracks(rows),
-        fontFamily: fontFamily(object.style.font),
-        textAlign: textAlign(object.style.align),
-        /*
-         * A CUSTOM PROPERTY, because those inherit and `justify-content` does
-         * not. This element is a grid, where `justify-content` distributes
-         * tracks along the inline axis — so setting it here moved nothing at
-         * all, and vertical alignment in a table did nothing until this line
-         * changed. The cells read it in `.of-table__cell`.
-         */
-        ['--of-valign' as string]: verticalAlign(object.style.verticalAlign),
-        // On the table, not on each cell: one declaration the cells inherit,
-        // rather than a style object rebuilt per cell on every render.
-        color: inkColor(object.style.textColor),
-        // On the table; the cells read it through `currentcolor` on their rules.
-        borderColor: inkColor(object.style.strokeColor),
-        opacity: object.style.opacity ?? 1,
-      }}
-      role="table"
-      aria-label={`Table, ${String(columns.length)} columns by ${String(rows.length)} rows`}
-    >
-      {cells.map((cell, index) => {
-        const row = Math.floor(index / columns.length)
-        return (
-          <div
-            // The index IS the identity: cells have no ids, and their position
-            // is what they are.
-            key={index}
-            className={`of-table__cell${headerRow && row === 0 ? ' of-table__cell--head' : ''}`}
-            role={headerRow && row === 0 ? 'columnheader' : 'cell'}
-            /*
-             * A cell's own colours, or nothing at all. Absent means "the
-             * table's", and an absent CSS property is exactly that — writing
-             * the table's current colour into each cell would stop the cell
-             * following it.
-             */
-            style={cellPaint(cell)}
-          >
-            <div className="of-table__cell-text">
-              <RichTextView value={cell.text} />
-            </div>
-          </div>
-        )
-      })}
-    </div>
+    <TableGrid
+      data={object.data}
+      style={object.style}
+      width={object.frame.width}
+      height={object.frame.height}
+      label={describeShape(object.data)}
+    />
   )
+}
+
+/*
+ * ---------------------------------------------------------------------------
+ * Editing a table, as a spreadsheet
+ * ---------------------------------------------------------------------------
+ */
+
+interface Cell {
+  readonly row: number
+  readonly col: number
+}
+
+/** The column's letter, as a spreadsheet names it. Twenty-six is the most. */
+const letter = (col: number): string => String.fromCharCode(65 + col)
+
+/** The top-left of whatever merge a cell is in, or the cell itself. */
+function anchorOf(data: TableData, cell: Cell): Cell {
+  const merge = mergeAt(data, cell.row, cell.col)
+  return merge === undefined ? cell : { row: merge.row, col: merge.col }
 }
 
 /**
- * Editing the grid: its contents AND its shape, committing ONE command.
- *
- * Adding a column while editing changes only this draft. It reaches the
- * document when the edit ends, together with whatever was typed — so building
- * a table is one undo entry, one save and one network message rather than one
- * per keystroke and one per column.
- *
- * The alternative was dispatching each shape change immediately, which closes
- * the editor every time: adding three columns would mean re-opening it three
- * times.
+ * One step from a cell, stepping OVER a merge rather than into its middle —
+ * moving right out of a cell three columns wide lands in the fourth column,
+ * as it looks like it should.
  */
-function TableEditor({ object, at, zoom, Chrome, onCommit, onCancel }: ObjectEditorProps<TableData>) {
-  /*
-   * The whole table as a draft, not just its text. `resizeGrid` moves the
-   * weights and the cells together, which is the only way the two cannot
-   * disagree — and it is the same function the tests exercise directly.
-   */
+function step(data: TableData, from: Cell, rows: number, cols: number): Cell {
+  const merge = mergeAt(data, from.row, from.col)
+  const top = merge?.row ?? from.row
+  const left = merge?.col ?? from.col
+  const bottom = merge === undefined ? from.row : merge.row + merge.rows - 1
+  const right = merge === undefined ? from.col : merge.col + merge.cols - 1
+  const row = rows > 0 ? bottom + rows : rows < 0 ? top + rows : from.row
+  const col = cols > 0 ? right + cols : cols < 0 ? left + cols : from.col
+  return {
+    row: Math.max(0, Math.min(data.rows.length - 1, row)),
+    col: Math.max(0, Math.min(data.columns.length - 1, col)),
+  }
+}
+
+/** What the user's selection is, and which end of it is moving. */
+interface Selection {
+  readonly anchor: Cell
+  readonly focus: Cell
+}
+
+/**
+ * What the lower half of the cell bar edits: the cells' ground, their ink, or
+ * the lines round them. One switch rather than a colour switch AND a borders
+ * button, because only one of the three is ever on show — two controls that
+ * each half-decided it read as though both applied at once.
+ */
+type CellTarget = 'fill' | 'text' | 'borders'
+type ColourTarget = Exclude<CellTarget, 'borders'>
+
+const CELL_TARGETS: readonly { key: CellTarget; label: string; name: string }[] = [
+  { key: 'fill', label: 'fill', name: 'Cell background' },
+  { key: 'text', label: 'text', name: 'Cell text colour' },
+  { key: 'borders', label: 'borders', name: 'Borders' },
+]
+
+const CELL_KIND: Readonly<Record<ColourTarget, SwatchKind>> = { fill: 'surface', text: 'ink' }
+const CELL_KEY: Readonly<Record<ColourTarget, keyof CellStyle>> = {
+  fill: 'fill',
+  text: 'textColor',
+}
+
+const PRESET_NAMES: Readonly<Record<LinePreset, string>> = {
+  all: 'All lines',
+  outer: 'Outer border',
+  inner: 'Inner lines',
+  horizontal: 'Inner horizontal',
+  vertical: 'Inner vertical',
+  top: 'Top',
+  bottom: 'Bottom',
+  left: 'Left',
+  right: 'Right',
+  none: 'No lines',
+  reset: "The table's own lines",
+}
+
+const WEIGHTS: readonly StrokeToken[] = ['thin', 'medium', 'thick']
+const DASHES: readonly DashToken[] = ['solid', 'dashed', 'dotted']
+
+/** The screen size of the letter and number strips, in pixels. */
+const STRIP = 22
+/** How wide a boundary between two letters is to grab, in screen pixels. */
+const GRIP = 10
+
+/**
+ * Editing the grid as a spreadsheet, committing ONE command.
+ *
+ * Two modes, as in every spreadsheet. NAVIGATING, a cell or a block of cells
+ * is selected and the keyboard moves it; EDITING, one cell holds a caret. Only
+ * that one cell is a field — every other is drawn exactly as the board draws
+ * it — so inserting a row can never leave a field showing the text of the cell
+ * that used to be where it is, which the old one-field-per-cell editor did.
+ *
+ * Everything goes into one draft: text, colours, lines, merges, rows and
+ * columns. It reaches the document when the edit ends, so building a table is
+ * one undo entry, one save and one network message (rules 3 and 4).
+ */
+function TableEditor({
+  object,
+  at,
+  zoom,
+  Chrome,
+  Overlay,
+  onCommit,
+}: ObjectEditorProps<TableData>) {
   const [draft, setDraft] = useState<TableData>(object.data)
+  /*
+   * The draft's SIZE, in world units. Fitting or dragging a track changes one
+   * track and leaves the rest as they are, so the table grows or shrinks to
+   * hold it — and that lands with the rest of the edit, as one undo entry.
+   */
+  const [size, setSize] = useState({ width: object.frame.width, height: object.frame.height })
+  const root = useRef<HTMLDivElement>(null)
 
   /*
-   * Which cell the caret starts in, decided ONCE when the editor opens.
-   *
-   * A `useState` initialiser rather than a ref, because a ref read during
-   * render is a render that depends on something React does not track — and
-   * this value is read while deciding which field carries `autoFocus`.
+   * Where it opens: in the cell somebody double-clicked, with a caret, or —
+   * opened from the keyboard — on the first cell, navigating.
    */
-  const [started] = useState(() => {
-    if (at === null) return 0
+  const [opened] = useState<Cell | null>(() => {
+    if (at === null) return null
     const found = cellAt(object.data, object.frame, at)
-    return found === null ? 0 : found.row * object.data.columns.length + found.column
+    return found === null ? null : anchorOf(object.data, { row: found.row, col: found.column })
   })
+  const start = opened ?? { row: 0, col: 0 }
+  const [selection, setSelection] = useState<Selection>({ anchor: start, focus: start })
+  const range = expandToMerges(draft, rangeBetween(selection.anchor, selection.focus))
 
   /*
-   * The cell range being dressed: an anchor and a focus, in the spreadsheet
-   * sense. Click sets both; shift-click moves the focus and the rectangle
-   * between them is what a colour lands on.
-   *
-   * Shift-click rather than drag-select, and that is a real trade. A cell is a
-   * `textarea`, so a pointer drag inside one is the browser selecting TEXT —
-   * taking that over would mean the cells stop being fields until something
-   * says otherwise, which is a bigger rework of typing than this feature
-   * earns. Shift-click is what a spreadsheet already teaches.
+   * The cell being typed in, and a counter so that editing the same cell
+   * twice mounts a fresh field: a field reads its text once, on mount.
    */
-  const [target, setTarget] = useState<CellTarget>('fill')
-  const [anchor, setAnchor] = useState(started)
-  const [focus, setFocus] = useState(started)
-  const selected = cellRange(draft, anchor, focus)
-  const inRange = new Set(selected)
-
-  /*
-   * The cell being TYPED in, and its field, for the format bar in the cell
-   * bar. Formatting is text, so it acts on the one cell with the caret; the
-   * colours below act on the whole range.
-   */
-  const fields = useRef<(RichTextFieldHandle | null)[]>([])
-  const [editingCell, setEditingCell] = useState(started)
+  const [editing, setEditing] = useState<{
+    readonly cell: Cell
+    readonly before: RichText
+    readonly seed: RichText
+    readonly caret: 'end' | 'select-all'
+    readonly turn: number
+  } | null>(() =>
+    opened === null
+      ? null
+      : {
+          cell: opened,
+          before: object.data.cells[opened.row * object.data.columns.length + opened.col]?.text ?? [
+            { text: '' },
+          ],
+          seed: object.data.cells[opened.row * object.data.columns.length + opened.col]?.text ?? [
+            { text: '' },
+          ],
+          caret: 'end',
+          turn: 0,
+        },
+  )
+  const field = useRef<RichTextFieldHandle | null>(null)
   const [format, setFormat] = useState<FormatState>({ marks: [], list: undefined })
-  const typing = (): RichTextFieldHandle | null => fields.current[editingCell] ?? null
 
-  const commit = (): void => {
-    onCommit({ columns: draft.columns, rows: draft.rows, cells: draft.cells })
-  }
-
-  /**
-   * Dresses the selected cells.
-   *
-   * Into the DRAFT, like everything else in this editor, so colouring three
-   * cells and typing in a fourth is one command, one undo entry and one
-   * network message when the editor closes.
-   */
-  const dress = (patch: Partial<Record<keyof CellStyle, ColorValue | null>>): void => {
-    setDraft((current) => styleCells(current, cellRange(current, anchor, focus), patch))
-  }
-
-  /** What the selection agrees on, or `undefined` if it does not. */
-  const agreed = (key: keyof CellStyle): ColorValue | undefined => {
-    const first = draft.cells[selected[0] ?? -1]?.[key]
-    return selected.every((index) => draft.cells[index]?.[key] === first) ? first : undefined
-  }
-
-  const reshape = (axis: 'column' | 'row', delta: 1 | -1): void => {
-    const next = resizeGrid(draft, axis, delta)
-    if (next === draft) return
-    setDraft(next)
-    /*
-     * Columns change at the END of every row, so every later row's cells
-     * move to new positions in the list. The caret's cell moves with its row
-     * and column — it is where the fields remount (they are keyed by width,
-     * below) and so where the caret goes back to.
-     */
-    const was = draft.columns.length
-    const now = next.columns.length
-    const row = Math.floor(editingCell / was)
-    const column = Math.min(editingCell % was, now - 1)
-    const moved = Math.min(row, next.rows.length - 1) * now + column
-    setEditingCell(moved)
-    setAnchor(moved)
-    setFocus(moved)
-  }
-
-  /*
-   * The shape buttons do not TAKE focus, so the caret stays in the cell you
-   * were typing in while you add a column beside it.
-   *
-   * Comfort, not correctness — and worth saying, because it was written as
-   * the fix for the editor closing on every press and it was not. That was
-   * the canvas reading the press as a gesture, and it is fixed where gestures
-   * are decided; removing these four handlers leaves every test green.
-   */
-  const keepFocus = (event: { preventDefault: () => void }): void => {
-    event.preventDefault()
-  }
+  const [menu, setMenu] = useState<{ x: number; y: number } | null>(null)
+  const [target, setTarget] = useState<CellTarget>('fill')
+  const borders = target === 'borders'
+  const [pen, setPen] = useState<{ color?: ColorValue; weight: StrokeToken; dash: DashToken }>({
+    weight: 'thin',
+    dash: 'solid',
+  })
+  // What a drag started on, so moving over cells or strips extends the right thing.
+  const dragging = useRef<'cells' | 'columns' | 'rows' | null>(null)
 
   const width = draft.columns.length
+  const height = draft.rows.length
+  const lastRow = height - 1
+  const lastCol = width - 1
+
+  useEffect(() => {
+    if (opened === null) root.current?.focus()
+    const end = (): void => {
+      dragging.current = null
+    }
+    window.addEventListener('pointerup', end)
+    return () => {
+      window.removeEventListener('pointerup', end)
+    }
+  }, [opened])
+
+  /*
+   * A menu or the borders panel closes on a press anywhere else, as a menu
+   * does. Capture phase: the canvas would otherwise consume the press first.
+   */
+  useEffect(() => {
+    if (menu === null) return
+    const dismiss = (event: Event): void => {
+      if (event.target instanceof Element && event.target.closest('[data-table-popup]') !== null) {
+        return
+      }
+      setMenu(null)
+    }
+    window.addEventListener('pointerdown', dismiss, true)
+    return () => {
+      window.removeEventListener('pointerdown', dismiss, true)
+    }
+  }, [menu])
+
+  const commit = (data: TableData = draft): void => {
+    onCommit(
+      {
+        columns: data.columns,
+        rows: data.rows,
+        cells: data.cells,
+        // Written out even when empty, so a merge or a line taken away in this
+        // edit is taken away in the document too rather than merged back in.
+        lines: data.lines ?? { h: [], v: [] },
+        merges: data.merges ?? [],
+      },
+      size,
+    )
+  }
+
+  /** The keyboard back on the grid, so navigation keys keep arriving. */
+  const home = (): void => {
+    root.current?.focus()
+  }
+
+  const select = (anchor: Cell, focus: Cell = anchor): void => {
+    setSelection({ anchor, focus })
+  }
+
+  const edit = (cell: Cell, seed?: RichText): void => {
+    const anchor = anchorOf(draft, cell)
+    const text = draft.cells[anchor.row * width + anchor.col]?.text ?? [{ text: '' }]
+    select(anchor)
+    setEditing((current) => ({
+      cell: anchor,
+      before: text,
+      seed: seed ?? text,
+      caret: 'end',
+      turn: (current?.turn ?? 0) + 1,
+    }))
+    if (seed !== undefined) writeCell(anchor, seed)
+  }
+
+  /*
+   * Opening a cell from the KEYBOARD mounts and focuses its field inside the
+   * keydown, synchronously. Left to an effect, the keys typed straight after
+   * the first arrived at the grid while the field was still mounting — each
+   * one re-opening the cell with itself as the text, so "Owner" came out as
+   * "r". Focused in time, a typed character's default action lands in the
+   * field, which is how every spreadsheet on the web does it.
+   */
+  const openField = (cell: Cell, seed?: RichText): void => {
+    flushSync(() => {
+      edit(cell, seed)
+    })
+    const element = root.current?.querySelector<HTMLElement>('[data-testid="table-cell-field"]')
+    if (element === null || element === undefined) return
+    element.focus()
+    const range = element.ownerDocument.createRange()
+    range.selectNodeContents(element)
+    range.collapse(false)
+    const selection = element.ownerDocument.getSelection()
+    selection?.removeAllRanges()
+    selection?.addRange(range)
+  }
+
+  const writeCell = (cell: Cell, text: RichText): void => {
+    setDraft((current) => {
+      const index = cell.row * current.columns.length + cell.col
+      return {
+        ...current,
+        cells: current.cells.map((old, other) => (other === index ? { ...old, text } : old)),
+      }
+    })
+  }
+
+  /** Stop typing, keep what was typed, and go on navigating. */
+  const finishEditing = (): void => {
+    home()
+    setEditing(null)
+  }
+
+  const change = (next: TableData, keep: Selection = selection): void => {
+    setDraft(next)
+    const clamp = (cell: Cell): Cell => ({
+      row: Math.min(cell.row, next.rows.length - 1),
+      col: Math.min(cell.col, next.columns.length - 1),
+    })
+    setSelection({ anchor: clamp(keep.anchor), focus: clamp(keep.focus) })
+  }
+
+  /*
+   * Rows and columns, anywhere. Inserting takes as many as are selected, as a
+   * spreadsheet does, and the selection follows the tracks it had.
+   */
+  const insert = (axis: Axis, side: 'before' | 'after'): void => {
+    const rows = axis === 'row'
+    const count = rows ? range.bottom - range.top + 1 : range.right - range.left + 1
+    const at = rows
+      ? side === 'before'
+        ? range.top
+        : range.bottom + 1
+      : side === 'before'
+        ? range.left
+        : range.right + 1
+    const next = insertTracks(draft, axis, at, count)
+    if (next === draft) return
+    const shift = (cell: Cell): Cell =>
+      side === 'before'
+        ? rows
+          ? { ...cell, row: cell.row + count }
+          : { ...cell, col: cell.col + count }
+        : cell
+    change(next, { anchor: shift(selection.anchor), focus: shift(selection.focus) })
+  }
+
+  const remove = (axis: Axis): void => {
+    const next =
+      axis === 'row'
+        ? deleteTracks(draft, 'row', range.top, range.bottom - range.top + 1)
+        : deleteTracks(draft, 'column', range.left, range.right - range.left + 1)
+    if (next === draft) return
+    const corner = { row: range.top, col: range.left }
+    change(next, { anchor: corner, focus: corner })
+  }
+
+  const cellsOf = (area: CellRange): number[] => indicesOf(draft, area)
+
+  /** What every selected cell agrees on, or `undefined` if they do not. */
+  const agreed = (key: keyof CellStyle): ColorValue | undefined => {
+    const indices = cellsOf(range)
+    const first = draft.cells[indices[0] ?? -1]?.[key]
+    return indices.every((index) => draft.cells[index]?.[key] === first) ? first : undefined
+  }
+
+  const dress = (patch: Partial<Record<keyof CellStyle, ColorValue | null>>): void => {
+    setDraft((current) => styleCells(current, indicesOf(current, range), patch))
+  }
+
+  const rule = (preset: LinePreset): void => {
+    setDraft((current) =>
+      setLines(current, range, preset, {
+        ...(pen.color === undefined ? {} : { color: pen.color }),
+        weight: pen.weight,
+        ...(pen.dash === 'solid' ? {} : { dash: pen.dash }),
+      }),
+    )
+  }
+
+  /*
+   * FORMATTING A RANGE, with no caret: what a spreadsheet does when you press
+   * bold with a block of cells selected. Every cell's whole text, and the
+   * button reads as on only when every one of them already is.
+   */
+  const rangeCells = (): TableCell[] =>
+    indicesOf(draft, range)
+      .map((index) => draft.cells[index])
+      .filter((cell): cell is TableCell => cell !== undefined)
+  const whole = (text: RichText): number => plainTextOf(text).length
+  const reformat = (change: (text: RichText) => RichText): void => {
+    setDraft((current) => {
+      const touched = new Set(indicesOf(current, range))
+      return {
+        ...current,
+        cells: current.cells.map((cell, index) =>
+          touched.has(index) ? { ...cell, text: change(cell.text) } : cell,
+        ),
+      }
+    })
+  }
+  const covers = (mark: Mark): boolean =>
+    rangeCells().every(
+      (cell) => whole(cell.text) === 0 || markCovers(cell.text, 0, whole(cell.text), mark),
+    )
+  const hasText = rangeCells().some((cell) => whole(cell.text) > 0)
+  const listed = (): ListKind | undefined => {
+    const kinds = rangeCells().map((cell) => listOf(cell.text, 0, whole(cell.text)))
+    const first = kinds[0]
+    return kinds.every((kind) => kind === first) ? first : undefined
+  }
+  const rangeFormat: FormatState = {
+    marks: hasText ? MARKS.filter((mark) => covers(mark)) : [],
+    list: listed(),
+  }
+  const toggleRangeMark = (mark: Mark): void => {
+    const on = !covers(mark)
+    reformat((text) => applyMark(text, 0, whole(text), mark, on))
+  }
+  const toggleRangeList = (kind: ListKind): void => {
+    const next = listed() === kind ? undefined : kind
+    reformat((text) => setList(text, 0, whole(text), next))
+  }
+
+  /** Right along the row, then on to the start of the next: reading order. */
+  const tabFrom = (from: Cell, backward: boolean): Cell => {
+    const merge = mergeAt(draft, from.row, from.col)
+    const left = merge?.col ?? from.col
+    const right = merge === undefined ? from.col : merge.col + merge.cols - 1
+    const next = !backward
+      ? right < lastCol
+        ? step(draft, from, 0, 1)
+        : { row: Math.min(lastRow, from.row + 1), col: 0 }
+      : left > 0
+        ? step(draft, from, 0, -1)
+        : { row: Math.max(0, from.row - 1), col: lastCol }
+    return anchorOf(draft, next)
+  }
+
+  /*
+   * The spreadsheet's keys while a cell is being typed in. The field stops
+   * every key from reaching the board, so these are claimed from inside it:
+   * Tab moves on rather than nesting a list item, Enter finishes and moves
+   * down, and Escape puts back what the cell said before.
+   */
+  const editingKey = (event: KeyboardEvent<HTMLDivElement>): void => {
+    if (editing === null) return
+    if (event.key === 'Escape') {
+      event.preventDefault()
+      writeCell(editing.cell, editing.before)
+      finishEditing()
+      return
+    }
+    if (event.key === 'Enter' && !event.shiftKey) {
+      event.preventDefault()
+      finishEditing()
+      select(anchorOf(draft, step(draft, editing.cell, 1, 0)))
+      return
+    }
+    if (event.key === 'Tab') {
+      event.preventDefault()
+      finishEditing()
+      select(tabFrom(editing.cell, event.shiftKey))
+    }
+  }
+
+  const onKeyDown = (event: KeyboardEvent<HTMLDivElement>): void => {
+    /*
+     * Every key stops here. The board's keymap would otherwise read an arrow
+     * as nudging the table, Delete as deleting it and a letter as a tool —
+     * while the person is plainly working INSIDE it.
+     */
+    event.stopPropagation()
+    const mod = event.metaKey || event.ctrlKey
+
+    if (menu !== null) {
+      if (event.key === 'Escape') {
+        event.preventDefault()
+        setMenu(null)
+        home()
+      }
+      return
+    }
+
+    // The field handles its own keys (`editingKey`) and stops them there.
+    if (editing !== null) return
+
+    const moves: Record<string, readonly [number, number]> = {
+      ArrowUp: [-1, 0],
+      ArrowDown: [1, 0],
+      ArrowLeft: [0, -1],
+      ArrowRight: [0, 1],
+    }
+    const move = moves[event.key]
+    if (move !== undefined) {
+      event.preventDefault()
+      if (event.shiftKey) {
+        setSelection({ ...selection, focus: step(draft, selection.focus, move[0], move[1]) })
+      } else {
+        select(anchorOf(draft, step(draft, selection.anchor, move[0], move[1])))
+      }
+      return
+    }
+
+    switch (event.key) {
+      case 'Tab':
+        event.preventDefault()
+        select(tabFrom(selection.anchor, event.shiftKey))
+        return
+      case 'Enter':
+      case 'F2':
+        event.preventDefault()
+        openField(selection.anchor)
+        return
+      case 'Delete':
+      case 'Backspace':
+        event.preventDefault()
+        setDraft((current) => clearCells(current, range))
+        return
+      case 'Escape':
+        event.preventDefault()
+        commit()
+        return
+    }
+
+    if (mod && event.key.toLowerCase() === 'a') {
+      event.preventDefault()
+      select({ row: 0, col: 0 }, { row: lastRow, col: lastCol })
+      return
+    }
+
+    /*
+     * A character typed at a selected cell replaces it, as in a spreadsheet.
+     * NOT prevented: the field is focused before this returns, so the
+     * character itself is typed into it by the browser.
+     */
+    if (!mod && !event.altKey && event.key.length === 1) {
+      openField(selection.anchor, [{ text: '' }])
+    }
+  }
+
+  const editingIndex = editing === null ? -1 : editing.cell.row * width + editing.cell.col
+  /*
+   * Fractions of the OBJECT, which is what apparatus is placed against —
+   * so a draft grown past it runs past 1, and the letters stay over their
+   * columns while the table is wider than the object it will become.
+   */
+  const sx = size.width / Math.max(1, object.frame.width)
+  const sy = size.height / Math.max(1, object.frame.height)
+  const xs = fractionsOf(draft.columns).map((at) => at * sx)
+  const ys = fractionsOf(draft.rows).map((at) => at * sy)
+
+  /**
+   * One track set to an exact size, in world units, into the draft. The same
+   * arithmetic as a boundary dragged from outside the editor (`setTrackSize`):
+   * this track changes, every other keeps its size, and the table grows.
+   */
+  const sizeTrack = (
+    axis: Axis,
+    index: number,
+    wanted: number,
+    from: { readonly weights: readonly number[]; readonly extent: number } = {
+      weights: axis === 'column' ? draft.columns : draft.rows,
+      extent: axis === 'column' ? size.width : size.height,
+    },
+  ): void => {
+    const sized = setTrackSize(from.weights, index, wanted, from.extent)
+    if (sized === null) return
+    setDraft((current) =>
+      axis === 'column'
+        ? { ...current, columns: sized.weights }
+        : { ...current, rows: sized.weights },
+    )
+    setSize((current) =>
+      axis === 'column' ? { ...current, width: sized.total } : { ...current, height: sized.total },
+    )
+  }
+
+  /** Double-clicking a boundary: the track before it fitted to what is in it. */
+  const fit = (axis: Axis, index: number): void => {
+    const grid = root.current?.querySelector('[role="table"]')
+    if (grid === null || grid === undefined) return
+    const cells = cellsInTrack(grid, axis, index)
+    const wanted = axis === 'column' ? fitColumnWidth(cells) : fitRowHeight(cells)
+    if (wanted !== null) sizeTrack(axis, index, wanted)
+  }
+
+  // A boundary being dragged, and what it started from.
+  const resizing = useRef<{
+    readonly axis: Axis
+    readonly index: number
+    readonly start: number
+    readonly track: number
+    readonly weights: readonly number[]
+    readonly extent: number
+  } | null>(null)
+  const region = (area: CellRange): Rect => ({
+    x: xs[area.left] ?? 0,
+    y: ys[area.top] ?? 0,
+    width: (xs[area.right + 1] ?? 1) - (xs[area.left] ?? 0),
+    height: (ys[area.bottom + 1] ?? 1) - (ys[area.top] ?? 0),
+  })
+  const selectedCount = cellsOf(range).length
+  const merged = hasMerge(draft, range)
+  const columnsSelected = range.top === 0 && range.bottom === lastRow
+  const rowsSelected = range.left === 0 && range.right === lastCol
+
+  const menuItems: readonly (readonly {
+    label: string
+    run: () => void
+    disabled?: boolean
+    testId: string
+  }[])[] = [
+    [
+      { label: 'Insert row above', run: () => insert('row', 'before'), testId: 'row-above' },
+      { label: 'Insert row below', run: () => insert('row', 'after'), testId: 'row-below' },
+      { label: 'Insert column left', run: () => insert('column', 'before'), testId: 'column-left' },
+      {
+        label: 'Insert column right',
+        run: () => insert('column', 'after'),
+        testId: 'column-right',
+      },
+    ],
+    [
+      {
+        label: range.bottom > range.top ? 'Delete rows' : 'Delete row',
+        run: () => remove('row'),
+        disabled: range.bottom - range.top + 1 >= height,
+        testId: 'delete-rows',
+      },
+      {
+        label: range.right > range.left ? 'Delete columns' : 'Delete column',
+        run: () => remove('column'),
+        disabled: range.right - range.left + 1 >= width,
+        testId: 'delete-columns',
+      },
+    ],
+    [
+      {
+        label: 'Merge cells',
+        run: () => setDraft((current) => mergeRange(current, range)),
+        disabled: selectedCount < 2,
+        testId: 'merge',
+      },
+      {
+        label: 'Unmerge',
+        run: () => setDraft((current) => unmergeRange(current, range)),
+        disabled: !merged,
+        testId: 'unmerge',
+      },
+      {
+        label: 'Clear contents',
+        run: () => setDraft((current) => clearCells(current, range)),
+        testId: 'clear',
+      },
+    ],
+  ]
 
   return (
     <div
+      ref={root}
       className="of-table-edit of-editor-chrome"
       data-testid="table-editor"
+      data-mode={editing === null ? 'navigate' : 'edit'}
+      tabIndex={-1}
+      role="grid"
+      aria-label={describeShape(draft)}
+      aria-multiselectable="true"
+      onKeyDown={onKeyDown}
       onBlur={(event) => {
         /*
-         * Committed only when focus leaves the whole editor, not when it moves
-         * between cells or onto one of the buttons. Tabbing from one cell to
-         * the next is still one edit.
+         * Committed only when focus leaves the whole editor — not when it
+         * moves between the grid, a cell's field and the bars. The apparatus
+         * is PORTALED out of this element, so `contains` says a press on a
+         * swatch left the editor; the layer is the editor as far as focus is
+         * concerned (rule 15's DOM fallback).
          */
-        if (
-          event.relatedTarget instanceof Node &&
-          event.currentTarget.contains(event.relatedTarget)
-        ) {
-          return
-        }
-        /*
-         * The apparatus is PORTALED out of this element, so `contains` says a
-         * click on a swatch left the editor — and committing there closed it
-         * mid-edit. The layer is the editor as far as focus is concerned: the
-         * DOM is what knows where a portal landed, which is the same fallback
-         * rule 15 uses for chrome outside an object's world bounds.
-         */
-        if (
-          event.relatedTarget instanceof Element &&
-          event.relatedTarget.closest('[data-chrome-layer]') !== null
-        ) {
-          return
-        }
+        const next = event.relatedTarget
+        if (next instanceof Node && event.currentTarget.contains(next)) return
+        if (next instanceof Element && next.closest('[data-chrome-layer]') !== null) return
         commit()
       }}
     >
-      <div
-        className="of-table of-table--editing"
-        style={{
-          gridTemplateColumns: tracks(draft.columns),
-          gridTemplateRows: tracks(draft.rows),
-          fontFamily: fontFamily(object.style.font),
-          color: inkColor(object.style.textColor),
-        }}
-      >
-        {draft.cells.map((cell, index) => (
-          <RichTextField
-            /*
-             * Keyed by the WIDTH as well as the position. A field reads its
-             * text once, on mount, and a new column moves every later row's
-             * cells to new positions — so a field kept by position alone went
-             * on showing the cell that used to be there, and typing into it
-             * wrote that stale text over the cell now in its place. A change
-             * of width remounts the grid from the draft.
-             */
-            key={`${String(width)}:${String(index)}`}
-            handle={(field) => {
-              fields.current[index] = field
-            }}
-            initialText={cell.text}
-            className={`of-table__cell of-table__input${
-              draft.headerRow && Math.floor(index / width) === 0 ? ' of-table__cell--head' : ''
-            }`}
-            focusOnMount={index === editingCell ? 'end' : false}
-            ariaLabel={`Row ${String(Math.floor(index / width) + 1)}, column ${String(
-              (index % width) + 1,
-            )}`}
-            testId={`table-cell-${String(index)}`}
-            attributes={{ 'data-selected': inRange.has(index) ? 'true' : undefined }}
-            /*
-             * Enter finishes, as it did in the textarea: a table holds short
-             * values, so finishing is the common case. A new line — and a new
-             * list item — is Shift+Enter.
-             */
-            newParagraph="Shift+Enter"
-            /*
-             * The ring is 2px ON SCREEN, so it is divided by the zoom like
-             * every other piece of chrome here — at 400% a 2px inset ring is
-             * 8px of accent and reads as a filled border rather than as a
-             * selection.
-             */
-            style={{
-              ...cellPaint(cell),
-              ...(inRange.has(index)
-                ? { boxShadow: `inset 0 0 0 ${String(2 / zoom)}px var(--of-accent)` }
-                : {}),
-            }}
-            onFocus={() => {
-              setEditingCell(index)
-            }}
-            onFormatState={setFormat}
-            onPointerDown={(event) => {
-              /*
-               * Shift EXTENDS from the anchor; a plain press starts a new
-               * range where it landed. `preventDefault` only on the extend:
-               * without it the browser moves focus and selects text across
-               * two fields, and with it on every press you could not put the
-               * caret anywhere.
-               */
-              if (event.shiftKey) {
-                event.preventDefault()
-                setFocus(index)
-                return
-              }
-              setAnchor(index)
-              setFocus(index)
-            }}
-            onChange={(text) => {
-              setDraft((current) => ({
-                ...current,
-                /*
-                 * Only the edited cell is rebuilt, and only its TEXT: the
-                 * cell's fill, ink and rule stay. Rebuilding it as bare text
-                 * wiped a coloured cell's colours on the first keystroke.
-                 */
-                cells: current.cells.map((old, other) =>
-                  other === index ? { ...old, text } : old,
-                ),
-              }))
-            }}
-            onKeyDown={(event) => {
-              if (event.key === 'Escape') {
-                event.preventDefault()
-                onCancel()
-                return
-              }
-              if (event.key === 'Enter' && !event.shiftKey) {
-                event.preventDefault()
-                commit()
-              }
-            }}
-          />
-        ))}
-      </div>
-
-      {/*
-        * CELL COLOURS, acting on the selected range.
-        *
-        * ONE palette and a target, not three palettes. Eleven colours times
-        * three properties is thirty-three swatches in a bar wider than the
-        * table it belongs to, with the two ink grids indistinguishable from
-        * each other — you had to count columns to know which one you were
-        * about to press. Naming the target first is how every paint tool has
-        * solved this, and it costs one press that you were making anyway by
-        * aiming.
-        *
-        * Here rather than in the record panel: the panel's fields come from
-        * the registry's `styleProps` and apply to whole OBJECTS. A cell is not
-        * one, and teaching the panel about "the selected cells of the selected
-        * table" would put type-specific knowledge in the one component that
-        * exists to have none — rule 21.
-        *
-        * Rendered into `Chrome`, so it sits in SCREEN space beside the cells
-        * it acts on. Inside the editor it was multiplied by the zoom and
-        * anchored to the table's top edge, which is off the window as soon as
-        * you zoom into a large table — and it pointed at the table rather than
-        * at the selection, which is not what it changes.
-        *
-        * Lined up with the selection ACROSS, but outside the table UP AND
-        * DOWN. Anchored to the cells themselves, a bar that found no room
-        * above them dropped onto the rows below — the very cells a shift-click
-        * was reaching for — and with the format row in it, it is tall enough
-        * that it usually did.
-        */}
-      <Chrome
-        anchor={across(cellRegion(draft, selected))}
-        prefer={['above', 'below']}
-      >
-      <div
-        className="of-cellbar of-surface"
-        data-testid="table-cell-style"
-        /*
-         * A press on any BUTTON here leaves the caret in the cell: pick a
-         * colour, keep typing. Only buttons — the custom colour's hex field
-         * has to be able to take focus to be typed in.
-         */
-        onMouseDown={(event) => {
-          if (event.target instanceof Element && event.target.closest('button') !== null) {
-            event.preventDefault()
+      <TableGrid
+        data={draft}
+        style={object.style}
+        width={size.width}
+        height={size.height}
+        sized
+        label={describeShape(draft)}
+        cellProps={(index) => {
+          const row = Math.floor(index / width)
+          const col = index % width
+          return {
+            'data-testid': `table-cell-${String(index)}`,
+            'aria-selected':
+              row >= range.top && row <= range.bottom && col >= range.left && col <= range.right,
+            onPointerDown: (event: ReactPointerEvent<HTMLDivElement>) => {
+              if (event.button !== 0 || index === editingIndex) return
+              // Not the browser's text selection across cells, nor its focus.
+              event.preventDefault()
+              if (editing !== null) finishEditing()
+              else home()
+              const cell = { row, col }
+              if (event.shiftKey) setSelection({ ...selection, focus: cell })
+              else select(cell)
+              dragging.current = 'cells'
+            },
+            onPointerEnter: (event: ReactPointerEvent<HTMLDivElement>) => {
+              if (dragging.current !== 'cells' || (event.buttons & 1) === 0) return
+              setSelection((current) => ({ ...current, focus: { row, col } }))
+            },
+            onDoubleClick: () => {
+              if (index !== editingIndex) edit({ row, col })
+            },
+            onContextMenu: (event: ReactMouseEvent<HTMLDivElement>) => {
+              // The table's menu, not the board's.
+              event.preventDefault()
+              event.stopPropagation()
+              const inside =
+                row >= range.top && row <= range.bottom && col >= range.left && col <= range.right
+              if (!inside) select({ row, col })
+              const grid = event.currentTarget.parentElement
+              if (grid === null) return
+              const box = grid.getBoundingClientRect()
+              setMenu({
+                x: ((event.clientX - box.left) / box.width) * sx,
+                y: ((event.clientY - box.top) / box.height) * sy,
+              })
+            },
           }
         }}
-      >
-        {/*
-          * The same format bar every text has, driving the cell with the
-          * caret: a cell is text like any other, and it could not be bolded
-          * while it was a textarea.
-          */}
-        <FormatBar
-          embedded
-          state={format}
-          onToggle={(mark) => typing()?.toggleMark(mark)}
-          onResize={(by) => typing()?.resize(by)}
-          onList={(kind) => typing()?.toggleList(kind)}
-        />
-        <div className="of-cellbar__head">
-          <span className="of-cellbar__count">
-            {selected.length === 1 ? '1 cell' : `${String(selected.length)} cells`}
-          </span>
-          <div className="of-choice of-choice--text of-cellbar__target" role="group" aria-label="What to colour">
-            {CELL_TARGETS.map((option) => (
-              <button
-                key={option.key}
-                type="button"
-                className={`of-choice__item${target === option.key ? ' of-choice__item--on' : ''}`}
-                aria-pressed={target === option.key}
-                data-testid={`cell-target-${option.key}`}
-                onMouseDown={keepFocus}
-                onClick={() => {
-                  setTarget(option.key)
-                }}
-              >
-                {option.label}
-              </button>
-            ))}
-          </div>
-          <button
-            type="button"
-            className="of-button of-button--ghost of-cellbar__clear"
-            // Says what it puts back, not just that it removes something.
-            data-tip="Use the table's own colours"
-            aria-description="Use the table's own colours"
-            data-testid="cell-clear"
-            onMouseDown={keepFocus}
-            onClick={() => {
-              /*
-               * Back to the table's own colours, which no token can express:
-               * every colour in the palette is A colour, and "whatever the
-               * table is" is the absence of one.
-               */
-              dress({ fill: null, textColor: null, border: null })
-            }}
-          >
-            Reset
-          </button>
-        </div>
-
-        <Swatches
-          kind={CELL_KIND[target]}
-          label={CELL_TARGETS.find((option) => option.key === target)?.name ?? 'Colour'}
-          testPrefix={`cell-${target}`}
-          current={agreed(CELL_KEY[target])}
-          /*
-           * Read against what the cell actually stands on: its own fill when
-           * the range agrees on one, the board otherwise. The table's own
-           * colour is not it — a table has no surface.
-           */
-          against={target === 'fill' ? null : groundOf(agreed('fill'))}
-          onPick={(colour) => {
-            dress({ [CELL_KEY[target]]: colour })
-          }}
-        />
-      </div>
-      </Chrome>
+        content={(index, cell) =>
+          index === editingIndex && editing !== null ? (
+            <RichTextField
+              key={`${String(editing.turn)}`}
+              handle={field}
+              initialText={editing.seed}
+              className="of-table__input"
+              focusOnMount={editing.caret}
+              ariaLabel={`${letter(editing.cell.col)}${String(editing.cell.row + 1)}`}
+              testId="table-cell-field"
+              // Enter finishes; a new line — and a new list item — is Shift+Enter.
+              newParagraph="Shift+Enter"
+              onKeyDown={editingKey}
+              onFormatState={setFormat}
+              onChange={(text) => {
+                writeCell(editing.cell, text)
+              }}
+            />
+          ) : (
+            <div className="of-table__cell-text">
+              <RichTextView value={cell.text} />
+            </div>
+          )
+        }
+      />
 
       {/*
-        * The shape controls, ONE surface on the table's right: a named row
-        * for each axis, so four identical buttons never have to be read one by
-        * one to find the right one.
-        *
-        * Rows used to sit underneath the table, beside the axis they change.
-        * Below the table is also where the cell bar goes whenever there is no
-        * room above it — under the navigation bar, a table near the top has
-        * none — and the two landed on each other. The right side is the
-        * table's alone.
-        */}
-      <Chrome anchor={{ x: 1, y: 0, width: 0, height: 1 }} prefer={['right', 'left']}>
-        <div className="of-table-edit__shape of-surface">
-          <div className="of-table-edit__axis" role="group" aria-label="Columns">
-            <span className="of-table-edit__axis-name" aria-hidden="true">
-              cols
-            </span>
-            <button
-              type="button"
-              className="of-icon-button"
-              aria-label="Add a column"
-              data-testid="table-add-column"
-              onMouseDown={keepFocus}
-              onClick={() => {
-                reshape('column', 1)
-              }}
-            >
-              <PlusIcon />
-            </button>
-            <button
-              type="button"
-              className="of-icon-button"
-              aria-label="Remove the last column"
-              disabled={width <= 1}
-              data-testid="table-remove-column"
-              onMouseDown={keepFocus}
-              onClick={() => {
-                reshape('column', -1)
-              }}
-            >
-              <MinusIcon />
-            </button>
+       * The spreadsheet's own apparatus, drawn exactly ON the table in
+       * screen space: the letters over the columns, the numbers beside the
+       * rows, and the ring round the selection. Screen space because a ring
+       * divided by the zoom stops getting thinner at one world pixel (rule
+       * 24), and exact because a letter a few pixels off its column names
+       * the wrong one.
+       */}
+      <Overlay>
+        {(place) => {
+          const table = place({ x: 0, y: 0, width: sx, height: sy })
+          const ring = place(region(range))
+          const cursor = place(
+            region(expandToMerges(draft, rangeBetween(selection.anchor, selection.anchor))),
+          )
+          const strip = (
+            axis: 'columns' | 'rows',
+            index: number,
+            onDown: (extend: boolean) => void,
+          ): ReactNode => {
+            const box =
+              axis === 'columns'
+                ? place({
+                    x: xs[index] ?? 0,
+                    y: 0,
+                    width: (xs[index + 1] ?? 1) - (xs[index] ?? 0),
+                    height: 0,
+                  })
+                : place({
+                    x: 0,
+                    y: ys[index] ?? 0,
+                    width: 0,
+                    height: (ys[index + 1] ?? 1) - (ys[index] ?? 0),
+                  })
+            const on =
+              axis === 'columns'
+                ? index >= range.left && index <= range.right && columnsSelected
+                : index >= range.top && index <= range.bottom && rowsSelected
+            const within =
+              axis === 'columns'
+                ? index >= range.left && index <= range.right
+                : index >= range.top && index <= range.bottom
+            return (
+              <button
+                key={`${axis}${String(index)}`}
+                type="button"
+                tabIndex={-1}
+                className={`of-table-strip__item${on ? ' of-table-strip__item--on' : within ? ' of-table-strip__item--within' : ''}`}
+                data-testid={
+                  axis === 'columns'
+                    ? `table-column-${letter(index)}`
+                    : `table-row-${String(index + 1)}`
+                }
+                aria-label={
+                  axis === 'columns' ? `Column ${letter(index)}` : `Row ${String(index + 1)}`
+                }
+                aria-pressed={on}
+                style={
+                  axis === 'columns'
+                    ? { left: box.x, top: table.y - STRIP - 2, width: box.width, height: STRIP }
+                    : {
+                        left: table.x - STRIP - 10,
+                        top: box.y,
+                        width: STRIP + 8,
+                        height: box.height,
+                      }
+                }
+                onMouseDown={(event) => {
+                  event.preventDefault()
+                }}
+                onPointerDown={(event) => {
+                  if (event.button !== 0) return
+                  if (editing !== null) finishEditing()
+                  else home()
+                  onDown(event.shiftKey)
+                  dragging.current = axis
+                }}
+                onPointerEnter={(event) => {
+                  if (dragging.current !== axis || (event.buttons & 1) === 0) return
+                  setSelection((current) => ({
+                    ...current,
+                    focus:
+                      axis === 'columns'
+                        ? { row: lastRow, col: index }
+                        : { row: index, col: lastCol },
+                  }))
+                }}
+                onContextMenu={(event) => {
+                  event.preventDefault()
+                  event.stopPropagation()
+                  if (!within) onDown(false)
+                  setMenu(
+                    axis === 'columns'
+                      ? {
+                          x: (xs[index] ?? 0) + ((xs[index + 1] ?? 1) - (xs[index] ?? 0)) / 2,
+                          y: 0,
+                        }
+                      : {
+                          x: 0,
+                          y: (ys[index] ?? 0) + ((ys[index + 1] ?? 1) - (ys[index] ?? 0)) / 2,
+                        },
+                  )
+                }}
+              >
+                {axis === 'columns' ? letter(index) : String(index + 1)}
+              </button>
+            )
+          }
+          return (
+            <>
+              <div
+                className={`of-table-ring${selectedCount > 1 ? ' of-table-ring--range' : ''}`}
+                data-testid="table-selection"
+                style={{ left: ring.x, top: ring.y, width: ring.width, height: ring.height }}
+              />
+              {selectedCount > 1 && (
+                <div
+                  className="of-table-ring of-table-ring--cursor"
+                  style={{
+                    left: cursor.x,
+                    top: cursor.y,
+                    width: cursor.width,
+                    height: cursor.height,
+                  }}
+                />
+              )}
+              <div className="of-table-strip" role="presentation">
+                <button
+                  type="button"
+                  tabIndex={-1}
+                  className="of-table-strip__item of-table-strip__corner"
+                  aria-label="Select the whole table"
+                  data-testid="table-select-all"
+                  style={{
+                    left: table.x - STRIP - 10,
+                    top: table.y - STRIP - 2,
+                    width: STRIP + 8,
+                    height: STRIP,
+                  }}
+                  onMouseDown={(event) => {
+                    event.preventDefault()
+                  }}
+                  onPointerDown={() => {
+                    if (editing !== null) finishEditing()
+                    else home()
+                    select({ row: 0, col: 0 }, { row: lastRow, col: lastCol })
+                  }}
+                />
+                {draft.columns.map((_, index) =>
+                  strip('columns', index, (extend) => {
+                    if (extend) {
+                      setSelection({
+                        anchor: { row: 0, col: selection.anchor.col },
+                        focus: { row: lastRow, col: index },
+                      })
+                    } else {
+                      select({ row: 0, col: index }, { row: lastRow, col: index })
+                    }
+                  }),
+                )}
+                {draft.rows.map((_, index) =>
+                  strip('rows', index, (extend) => {
+                    if (extend) {
+                      setSelection({
+                        anchor: { row: selection.anchor.row, col: 0 },
+                        focus: { row: index, col: lastCol },
+                      })
+                    } else {
+                      select({ row: index, col: 0 }, { row: index, col: lastCol })
+                    }
+                  }),
+                )}
+                {/*
+                 * The boundaries between the letters and between the
+                 * numbers, where a spreadsheet puts them: drag one to size
+                 * the track before it, double-click it to fit that track to
+                 * its content. After every track, the last included — the
+                 * table's own edge is how the last column is sized.
+                 */}
+                {(['column', 'row'] as const).flatMap((axis) =>
+                  (axis === 'column' ? draft.columns : draft.rows).map((_, index) => {
+                    const edge =
+                      axis === 'column'
+                        ? place({ x: xs[index + 1] ?? sx, y: 0, width: 0, height: 0 })
+                        : place({ x: 0, y: ys[index + 1] ?? sy, width: 0, height: 0 })
+                    const name =
+                      axis === 'column' ? `column ${letter(index)}` : `row ${String(index + 1)}`
+                    return (
+                      <div
+                        key={`${axis}-grip-${String(index)}`}
+                        className={`of-table-strip__grip of-table-strip__grip--${axis}`}
+                        role="separator"
+                        aria-orientation={axis === 'column' ? 'vertical' : 'horizontal'}
+                        aria-label={`Edge of ${name}`}
+                        data-tip={`Drag to resize ${name}, double-click to fit`}
+                        aria-description={`Drag to resize ${name}, double-click to fit`}
+                        data-testid={
+                          axis === 'column'
+                            ? `table-column-edge-${letter(index)}`
+                            : `table-row-edge-${String(index + 1)}`
+                        }
+                        style={
+                          axis === 'column'
+                            ? {
+                                left: edge.x - GRIP / 2,
+                                top: table.y - STRIP - 2,
+                                width: GRIP,
+                                height: STRIP,
+                              }
+                            : {
+                                left: table.x - STRIP - 10,
+                                top: edge.y - GRIP / 2,
+                                width: STRIP + 8,
+                                height: GRIP,
+                              }
+                        }
+                        onMouseDown={(event) => {
+                          event.preventDefault()
+                        }}
+                        onPointerDown={(event) => {
+                          if (event.button !== 0) return
+                          event.stopPropagation()
+                          if (editing !== null) finishEditing()
+                          else home()
+                          const weights = axis === 'column' ? draft.columns : draft.rows
+                          const extent = axis === 'column' ? size.width : size.height
+                          const total = weights.reduce((sum, weight) => sum + weight, 0)
+                          resizing.current = {
+                            axis,
+                            index,
+                            start: axis === 'column' ? event.clientX : event.clientY,
+                            track: ((weights[index] ?? 0) / Math.max(total, 1e-9)) * extent,
+                            weights,
+                            extent,
+                          }
+                          event.currentTarget.setPointerCapture(event.pointerId)
+                        }}
+                        onPointerMove={(event) => {
+                          const drag = resizing.current
+                          if (drag?.axis !== axis || drag.index !== index) return
+                          const now = axis === 'column' ? event.clientX : event.clientY
+                          // Screen pixels to world units: the grip is apparatus, the track is not.
+                          const moved = (now - drag.start) / zoom
+                          if (moved === 0) return
+                          sizeTrack(axis, index, drag.track + moved, drag)
+                        }}
+                        onPointerUp={(event) => {
+                          resizing.current = null
+                          event.currentTarget.releasePointerCapture(event.pointerId)
+                        }}
+                        onDoubleClick={() => {
+                          fit(axis, index)
+                        }}
+                      />
+                    )
+                  }),
+                )}
+              </div>
+            </>
+          )
+        }}
+      </Overlay>
+
+      {menu !== null && (
+        <Chrome
+          anchor={{ x: menu.x, y: menu.y, width: 0, height: 0 }}
+          prefer={['below', 'above', 'right', 'left']}
+        >
+          <div
+            className="of-menu of-surface"
+            role="menu"
+            aria-label="Table"
+            data-testid="table-menu"
+            data-table-popup
+            onMouseDown={(event) => {
+              event.preventDefault()
+            }}
+          >
+            {menuItems.map((group, index) => (
+              <div key={index} className="of-menu__group">
+                {group.map((item) => (
+                  <button
+                    key={item.testId}
+                    type="button"
+                    role="menuitem"
+                    className="of-menu__item"
+                    disabled={item.disabled === true}
+                    data-testid={`table-menu-${item.testId}`}
+                    onClick={() => {
+                      /*
+                       * The cell being typed in is finished FIRST. Its text is
+                       * already in the draft; left open, the field stayed
+                       * pinned to its old coordinates while an insert above or
+                       * to the left moved the cells under it, and showed one
+                       * cell's words over another.
+                       */
+                      if (editing !== null) finishEditing()
+                      item.run()
+                      setMenu(null)
+                      home()
+                    }}
+                  >
+                    <span>{item.label}</span>
+                  </button>
+                ))}
+              </div>
+            ))}
           </div>
-          <div className="of-table-edit__axis" role="group" aria-label="Rows">
-            <span className="of-table-edit__axis-name" aria-hidden="true">
-              rows
+        </Chrome>
+      )}
+
+      {/*
+       * THE CELL BAR, acting on the selection.
+       *
+       * Here rather than in the record panel: the panel's fields come from
+       * the registry's `styleProps` and apply to whole OBJECTS. A cell is
+       * not one, and teaching the panel about "the selected cells of the
+       * selected table" would put type knowledge in the one component that
+       * exists to have none — rule 21.
+       *
+       * Anchored to the WHOLE table and its letters and numbers, never to the
+       * selected cells: a bar anchored to the cells that found no room above
+       * dropped onto the very rows a shift-click was reaching for, and one
+       * that fell back to their side covered the next column.
+       */}
+      <Chrome
+        anchor={{
+          x: -(STRIP + 10) / Math.max(1, object.frame.width * zoom),
+          y: -(STRIP + 4) / Math.max(1, object.frame.height * zoom),
+          width: sx + (STRIP + 10) / Math.max(1, object.frame.width * zoom),
+          height: sy + (STRIP + 4) / Math.max(1, object.frame.height * zoom),
+        }}
+        /*
+         * Beside the table when neither above nor below has the room — a
+         * table on a short window — rather than clamped on top of the very
+         * cells it is changing.
+         */
+        prefer={['above', 'below', 'right', 'left']}
+      >
+        <div
+          className="of-cellbar of-surface"
+          data-testid="table-cell-style"
+          data-table-popup
+          /*
+           * A press on any BUTTON here leaves the caret where it was: pick a
+           * colour, keep typing. Only buttons — the custom colour's hex field
+           * has to be able to take focus to be typed in.
+           */
+          onMouseDown={(event) => {
+            if (event.target instanceof Element && event.target.closest('button') !== null) {
+              event.preventDefault()
+            }
+          }}
+        >
+          {/*
+           * The format bar every text has. It drives the cell with the caret;
+           * with none, it has nothing to act on and says so by being off.
+           */}
+          <FormatBar
+            embedded
+            state={editing === null ? rangeFormat : format}
+            onToggle={(mark) => {
+              if (editing !== null) field.current?.toggleMark(mark)
+              else toggleRangeMark(mark)
+            }}
+            onResize={(by) => {
+              if (editing !== null) field.current?.resize(by)
+              else
+                reformat((text) => {
+                  const end = plainTextOf(text).length
+                  const next = stepSize(sizeOfRange(text, 0, end), by)
+                  return applySize(text, 0, end, next === DEFAULT_SIZE ? undefined : next)
+                })
+            }}
+            onList={(kind) => {
+              if (editing !== null) field.current?.toggleList(kind)
+              else toggleRangeList(kind)
+            }}
+          />
+          <div className="of-cellbar__head">
+            <span className="of-cellbar__count" data-testid="table-selection-count">
+              {selectedCount === 1 ? '1 cell' : `${String(selectedCount)} cells`}
             </span>
+            <div
+              className="of-choice of-choice--text of-cellbar__target"
+              role="group"
+              aria-label="What to change"
+            >
+              {CELL_TARGETS.map((option) => (
+                <button
+                  key={option.key}
+                  type="button"
+                  className={`of-choice__item${target === option.key ? ' of-choice__item--on' : ''}`}
+                  aria-pressed={target === option.key}
+                  data-testid={`cell-target-${option.key}`}
+                  onClick={() => {
+                    setTarget(option.key)
+                  }}
+                >
+                  {option.label}
+                </button>
+              ))}
+            </div>
             <button
               type="button"
-              className="of-icon-button"
-              aria-label="Add a row"
-              data-testid="table-add-row"
-              onMouseDown={keepFocus}
+              className="of-button of-button--ghost of-cellbar__more"
+              aria-haspopup="menu"
+              aria-expanded={menu !== null}
+              aria-label="Rows, columns and merging"
+              data-tip="Rows, columns and merging"
+              data-testid="cell-table-menu"
               onClick={() => {
-                reshape('row', 1)
+                setMenu((open) =>
+                  open === null
+                    ? { x: region(range).x + region(range).width, y: region(range).y }
+                    : null,
+                )
               }}
             >
-              <PlusIcon />
+              ···
             </button>
-            <button
-              type="button"
-              className="of-icon-button"
-              aria-label="Remove the last row"
-              disabled={draft.rows.length <= 1}
-              data-testid="table-remove-row"
-              onMouseDown={keepFocus}
-              onClick={() => {
-                reshape('row', -1)
-              }}
-            >
-              <MinusIcon />
-            </button>
+            {!borders && (
+              <button
+                type="button"
+                className="of-button of-button--ghost of-cellbar__clear"
+                data-tip="Use the table's own colours"
+                aria-description="Use the table's own colours"
+                data-testid="cell-clear"
+                onClick={() => {
+                  dress({ fill: null, textColor: null })
+                }}
+              >
+                Reset
+              </button>
+            )}
           </div>
+
+          {target === 'borders' ? (
+            <div
+              className="of-borders"
+              data-testid="cell-borders-panel"
+              role="group"
+              aria-label="Borders"
+            >
+              <div className="of-borders__presets" role="group" aria-label="Which lines">
+                {LINE_PRESETS.map((preset) => (
+                  <button
+                    key={preset}
+                    type="button"
+                    className="of-icon-button"
+                    aria-label={PRESET_NAMES[preset]}
+                    data-tip={PRESET_NAMES[preset]}
+                    data-testid={`borders-${preset}`}
+                    onClick={() => {
+                      rule(preset)
+                    }}
+                  >
+                    <BorderPresetIcon preset={preset} />
+                  </button>
+                ))}
+              </div>
+              <div className="of-borders__pen">
+                <div className="of-choice" role="group" aria-label="Line weight">
+                  {WEIGHTS.map((weight) => (
+                    <button
+                      key={weight}
+                      type="button"
+                      className={`of-choice__item${pen.weight === weight ? ' of-choice__item--on' : ''}`}
+                      aria-pressed={pen.weight === weight}
+                      aria-label={`${weight} line`}
+                      data-testid={`borders-weight-${weight}`}
+                      onClick={() => {
+                        setPen((current) => ({ ...current, weight }))
+                      }}
+                    >
+                      <StrokeIcon variant={weight} />
+                    </button>
+                  ))}
+                </div>
+                <div className="of-choice" role="group" aria-label="Line pattern">
+                  {DASHES.map((dash) => (
+                    <button
+                      key={dash}
+                      type="button"
+                      className={`of-choice__item${pen.dash === dash ? ' of-choice__item--on' : ''}`}
+                      aria-pressed={pen.dash === dash}
+                      aria-label={`${dash} line`}
+                      data-testid={`borders-dash-${dash}`}
+                      onClick={() => {
+                        setPen((current) => ({ ...current, dash }))
+                      }}
+                    >
+                      <DashIcon variant={dash} />
+                    </button>
+                  ))}
+                </div>
+              </div>
+              <Swatches
+                kind="line"
+                label="Line colour"
+                testPrefix="borders-color"
+                current={pen.color}
+                against={groundOf(agreed('fill'))}
+                onPick={(colour) => {
+                  setPen((current) => ({ ...current, color: colour }))
+                }}
+              />
+            </div>
+          ) : (
+            <Swatches
+              kind={CELL_KIND[target]}
+              label={CELL_TARGETS.find((option) => option.key === target)?.name ?? 'Colour'}
+              testPrefix={`cell-${target}`}
+              current={agreed(CELL_KEY[target])}
+              against={target === 'fill' ? null : groundOf(agreed('fill'))}
+              onPick={(colour) => {
+                dress({ [CELL_KEY[target]]: colour })
+              }}
+            />
+          )}
         </div>
       </Chrome>
     </div>
   )
-}
-
-/** A region's span across the table, and the table's whole height. */
-function across(
-  region: { x: number; width: number } | null,
-): { x: number; y: number; width: number; height: number } | null {
-  return region === null ? null : { x: region.x, y: 0, width: region.width, height: 1 }
 }
 
 export const tableView = defineObjectView<TableData>({

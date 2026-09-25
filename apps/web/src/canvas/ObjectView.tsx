@@ -8,7 +8,7 @@ import { useOpenFrame } from '../runtime/context.js'
 import { useInteractionStore } from '../interaction/interaction-store.js'
 import { useRemoteDrag } from '../interaction/remote-drags.js'
 import { ObjectErrorBoundary } from './ObjectErrorBoundary.js'
-import { EditorChrome } from './EditorChrome.js'
+import { EditorChrome, EditorOverlay } from './EditorChrome.js'
 import { FallbackView } from '../views/FallbackView.js'
 import type { ObjectEditorProps, ObjectViewRegistry } from '../views/registry.js'
 
@@ -47,8 +47,20 @@ function useChrome(id: ObjectId): ObjectEditorProps['Chrome'] {
   )
 }
 
+/** The screen-space overlay, memoised on the id for the reason `useChrome` is. */
+function useOverlay(id: ObjectId): ObjectEditorProps['Overlay'] {
+  return useMemo(
+    () =>
+      function ObjectOverlay({ children }) {
+        return <EditorOverlay objectId={id}>{children}</EditorOverlay>
+      },
+    [id],
+  )
+}
+
 function ObjectViewInner({ id, views }: Props) {
   const chrome = useChrome(id)
+  const overlay = useOverlay(id)
   const object = useDocumentObject(id)
   const selected = useInteractionStore((state) => state.selection.has(id))
   const zoom = useInteractionStore((state) => state.viewport.zoom)
@@ -252,10 +264,18 @@ function ObjectViewInner({ id, views }: Props) {
             boundsOf={boundsOf}
             at={editingAt}
             Chrome={chrome}
-            onCommit={(patch) => {
+            Overlay={overlay}
+            onCommit={(patch, size) => {
               // Types name their editable field differently (`text`, `name`),
               // so the patch is passed through rather than picked apart here.
-              commands.updateData(id, patch)
+              if (
+                size === undefined ||
+                (size.width === object.frame.width && size.height === object.frame.height)
+              ) {
+                commands.updateData(id, patch)
+              } else {
+                commands.updateDataAndSize(id, patch, { ...object.frame, ...size })
+              }
               setEditing(null)
             }}
             onCancel={() => setEditing(null)}

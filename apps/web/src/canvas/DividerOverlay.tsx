@@ -3,7 +3,7 @@ import { useRef } from 'react'
 import { setTrackSize, worldRectToScreen, type TableData } from '@openframe/core'
 
 import { useCommands } from '../hooks/use-commands.js'
-import { fitColumnWidth, fitRowHeight } from '../scene/fit-track.js'
+import { cellsInTrack, fitColumnWidth, fitRowHeight } from '../scene/fit-track.js'
 import { useOpenFrame } from '../runtime/context.js'
 import { useBoardDocument } from '../hooks/use-document-object.js'
 import { useInteractionStore } from '../interaction/interaction-store.js'
@@ -76,13 +76,7 @@ export function DividerOverlay() {
     if (grid === null) return
 
     const data = object.data as TableData
-    const columns = data.columns.length
-    const cells = [...grid.children].filter(
-      (child): child is HTMLElement => child instanceof HTMLElement,
-    )
-    const inTrack = cells.filter((_, at) =>
-      across ? at % columns === index : Math.floor(at / columns) === index,
-    )
+    const inTrack = cellsInTrack(grid, across ? 'column' : 'row', index)
 
     const wanted = across ? fitColumnWidth(inTrack) : fitRowHeight(inTrack)
     if (wanted === null) return

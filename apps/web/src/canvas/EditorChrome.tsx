@@ -1,4 +1,5 @@
 import { type ReactNode } from 'react'
+import { createPortal } from 'react-dom'
 import { worldToScreen, type ObjectId, type Rect } from '@openframe/core'
 
 import { AnchoredSurface } from '../controls/AnchoredSurface.js'
@@ -117,5 +118,69 @@ export function EditorChrome({
     <ChromeSurface bounds={region} prefer={prefer}>
       {children}
     </ChromeSurface>
+  )
+}
+
+/**
+ * Apparatus drawn ON an object rather than beside it, in screen space.
+ *
+ * `EditorChrome` finds a free side and floats a surface there, which is right
+ * for a bar and wrong for anything that has to line up with the object's own
+ * geometry: a spreadsheet's column letters sit exactly over its columns, and a
+ * selection ring goes exactly round its cells. Those were drawn in the world
+ * before, and a ring divided by the zoom is the rule 24 failure — it cannot be
+ * painted thinner than one world pixel, so at 1600% it was sixteen on screen.
+ *
+ * So the view gets a `place` that turns a fraction of its own extent into a
+ * screen rectangle, and draws into the chrome layer with lengths that are what
+ * they say. Placement is still not the view's: it names fractions, as it does
+ * for `Chrome`, and never sees a viewport.
+ */
+export function EditorOverlay({
+  objectId,
+  children,
+}: {
+  readonly objectId: ObjectId
+  readonly children: (place: (fraction: Rect) => Rect) => ReactNode
+}) {
+  const { runtime } = useOpenFrame()
+  const document = useBoardDocument()
+  const viewport = useInteractionStore((state) => state.viewport)
+
+  const object = document.objects.get(objectId)
+  const target =
+    typeof window === 'undefined'
+      ? null
+      : window.document.querySelector<HTMLElement>('[data-chrome-layer]')
+  if (object === undefined || target === null) return null
+
+  const bounds = runtime.registry.boundsOf(object, document)
+  const place = (fraction: Rect): Rect => {
+    const topLeft = worldToScreen(viewport, {
+      x: bounds.x + bounds.width * fraction.x,
+      y: bounds.y + bounds.height * fraction.y,
+    })
+    const bottomRight = worldToScreen(viewport, {
+      x: bounds.x + bounds.width * (fraction.x + fraction.width),
+      y: bounds.y + bounds.height * (fraction.y + fraction.height),
+    })
+    return {
+      x: topLeft.x,
+      y: topLeft.y,
+      width: bottomRight.x - topLeft.x,
+      height: bottomRight.y - topLeft.y,
+    }
+  }
+
+  /*
+   * The same load-bearing `of-editor-chrome` marker the surfaces carry: a
+   * press on a column letter is the editor's, not the board's. The layer
+   * itself lets the pointer through, and what is drawn on it decides.
+   */
+  return createPortal(
+    <div className="of-editor-chrome of-editor-overlay" data-testid="object-overlay">
+      {children(place)}
+    </div>,
+    target,
   )
 }

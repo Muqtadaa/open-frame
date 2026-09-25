@@ -72,7 +72,10 @@ test('a table cell aligns its text down', async ({ page }) => {
   await page.keyboard.press('v')
 
   await page.locator('[data-object-id]').first().dblclick()
-  await page.getByTestId('table-cell-0').fill('hello')
+  // A spreadsheet: select the cell, and typing replaces it.
+  await page.getByTestId('table-cell-0').click()
+  await page.keyboard.type('hello')
+  await page.keyboard.press('Enter')
   await page.locator(CANVAS).click({ position: { x: 240, y: 630 } })
 
   const top = async (): Promise<number> =>
