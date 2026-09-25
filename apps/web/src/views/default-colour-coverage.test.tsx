@@ -71,7 +71,13 @@ describe('a fresh object is drawn in the colour its view declares', () => {
   }
 
   for (const definition of types.list()) {
-    if (!definition.capabilities.styleProps.includes('color')) continue
+    /*
+     * Every type with a surface must declare it, and every declaration there
+     * is must be true — a connector declares the colour its LINE is drawn in,
+     * which is what marks its line swatch.
+     */
+    const declared = views.get(definition.type)?.defaultColor !== undefined
+    if (!definition.capabilities.styleProps.includes('color') && !declared) continue
     if (UNPAINTED.has(definition.type)) continue
 
     it(`${definition.type} declares the colour it is drawn in`, () => {

@@ -583,19 +583,22 @@ test.describe('putting a line back', () => {
     if (after === null) throw new Error('no label')
     expect(Math.abs(after.x - before.x), 'the label did not move along').toBeGreaterThan(40)
 
-    const away = await page.locator('.of-connector__line').evaluate((element, at: number) => {
-      const path = element as unknown as SVGPathElement
-      const matrix = path.getScreenCTM()
-      if (matrix === null) throw new Error('the line is not on screen')
-      let nearest = Number.POSITIVE_INFINITY
-      const total = path.getTotalLength()
-      for (let step = 0; step <= 200; step += 1) {
-        const point = path.getPointAtLength((total * step) / 200)
-        const screen = new DOMPoint(point.x, point.y).matrixTransform(matrix)
-        nearest = Math.min(nearest, Math.abs(screen.y - at))
-      }
-      return nearest
-    }, after.y + after.height / 2)
+    const away = await page.locator('.of-connector__line').evaluate(
+      (element, at: number) => {
+        const path = element as unknown as SVGPathElement
+        const matrix = path.getScreenCTM()
+        if (matrix === null) throw new Error('the line is not on screen')
+        let nearest = Number.POSITIVE_INFINITY
+        const total = path.getTotalLength()
+        for (let step = 0; step <= 200; step += 1) {
+          const point = path.getPointAtLength((total * step) / 200)
+          const screen = new DOMPoint(point.x, point.y).matrixTransform(matrix)
+          nearest = Math.min(nearest, Math.abs(screen.y - at))
+        }
+        return nearest
+      },
+      after.y + after.height / 2,
+    )
     expect(away, 'the label came off the line').toBeLessThan(8)
 
     await page.getByTestId('action-centre-label').click()
@@ -886,7 +889,6 @@ test.describe('reshaping a line', () => {
     await expect(page.getByTestId('endpoint-from')).toBeVisible()
   }
 
-
   const route = async (page: Page): Promise<string> =>
     (await page.locator('.of-connector__line').getAttribute('d')) ?? ''
 
@@ -1079,10 +1081,9 @@ test.describe('reshaping a line', () => {
       const a = run[at - 1]
       const b = run[at]
       if (a === undefined || b === undefined) continue
-      expect(
-        Math.abs(a.x - b.x) < 0.01 || Math.abs(a.y - b.y) < 0.01,
-        'a leg ran diagonally',
-      ).toBe(true)
+      expect(Math.abs(a.x - b.x) < 0.01 || Math.abs(a.y - b.y) < 0.01, 'a leg ran diagonally').toBe(
+        true,
+      )
     }
   })
 
@@ -1129,4 +1130,28 @@ test.describe('reshaping a line', () => {
 
     await page.mouse.up()
   })
+})
+
+/**
+ * A connector IS a line. It declared a surface colour as well, which painted
+ * the same line through a fallback — so the record panel offered "surface"
+ * and "outline" for one stroke, overflowed its own width doing it, and marked
+ * no swatch for a line visibly drawn in grey.
+ */
+test('offers its line one colour, and marks the one it is drawn in', async ({ page }) => {
+  await connectedPair(page)
+  await page.locator(CANVAS).click({ position: MIDPOINT })
+  await expect(page.getByTestId('inspector-title')).toHaveText('Connector')
+
+  await expect(page.getByTestId('paint-color')).toHaveCount(0)
+  await expect(page.getByTestId('paint-strokeColor')).toHaveText('line')
+  await page.getByTestId('paint-strokeColor').click()
+  await expect(page.getByTestId('line-gray')).toHaveAttribute('aria-pressed', 'true')
+
+  const panel = await page.getByTestId('inspector').boundingBox()
+  const targets = await page.locator('.of-paint__target').boundingBox()
+  expect(panel).not.toBeNull()
+  expect(targets).not.toBeNull()
+  if (panel === null || targets === null) return
+  expect(targets.x + targets.width).toBeLessThanOrEqual(panel.x + panel.width)
 })

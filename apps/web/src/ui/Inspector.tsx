@@ -363,7 +363,16 @@ export function Inspector() {
    * not here: it is a separate field with its own control, because "none,
    * tint, solid" is a different question from "which colour".
    */
-  const paintTargets = PAINTABLE.filter((option) => props.has(option.prop))
+  /*
+   * A type with a surface has an OUTLINE round it; a type without one — a
+   * connector — simply is a line, and calling its colour "outline" named
+   * something it does not have.
+   */
+  const paintTargets = PAINTABLE.filter((option) => props.has(option.prop)).map((option) =>
+    option.prop === 'strokeColor' && !props.has('color')
+      ? { ...option, label: 'line', name: 'Line colour' }
+      : option,
+  )
   const painting = paintTargets.find((option) => option.prop === paint) ?? paintTargets[0]
 
   /*
@@ -538,7 +547,12 @@ export function Inspector() {
                    * or it reads as "no colour" beside a visibly yellow note.
                    * Only when every view in the selection agrees on it.
                    */
-                  if (picked === undefined && painting.prop === 'color') return surface
+                  // An outline or a line unset is drawn in the surface's own hue.
+                if (
+                  picked === undefined &&
+                  (painting.prop === 'color' || painting.prop === 'strokeColor')
+                )
+                  return surface
                   return picked
                 })()}
                 /*
@@ -600,7 +614,7 @@ export function Inspector() {
         )}
 
         {(props.has('bold') || props.has('italic') || props.has('underline')) && (
-          <Field name="text">
+          <Field name="marks">
             <div className="of-choice" role="group" aria-label="Text style">
               {MARK_PROPS.filter((mark) => props.has(mark.prop)).map((mark) => {
                 const on = value(mark.prop) === true

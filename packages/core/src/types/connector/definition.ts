@@ -208,8 +208,14 @@ export const connectorType = defineObjectType<typeof CONNECTOR_TYPE, ConnectorDa
      * whole-object marks — a sticky's body text takes its own per span,
      * through the rich-text editor, and no type declares both.
      */
+    /*
+     * `strokeColor` IS the line. It also declared `color`, which painted the
+     * same line through a fallback — two controls for one question, the second
+     * silently winning, and a record panel offering "surface" for something
+     * that has none. Boards that set `color` on a connector still draw it:
+     * the view falls back to it, it simply is not offered any more.
+     */
     styleProps: [
-      'color',
       'textColor',
       'strokeColor',
       'stroke',
