@@ -1,6 +1,7 @@
 import { expect, test, type Page } from '@playwright/test'
 
 import { BOARD_URL } from './routes.js'
+import { signedIn } from './signed-in.js'
 
 /**
  * The board's navigation, along the top.
@@ -201,5 +202,60 @@ test.describe('the zoom readout', () => {
     await expect(page.getByRole('alert')).toHaveText(/number/)
     await page.keyboard.press('Escape')
     await expect(page.getByTestId('zoom-percent')).toHaveText('100%')
+  })
+})
+
+/**
+ * What the bar carries (C3 #3). A count of objects nobody needs, a count of
+ * none selected that never went away, the source link run into the account,
+ * and a name that signed you out when you pressed it — while the one thing a
+ * local-first board most needs to say, that the work is safe, was nowhere.
+ */
+test.describe('what the bar carries', () => {
+  test('says the work is saved, and when it is being saved', async ({ page }) => {
+    await board(page)
+    const state = page.getByTestId('save-state')
+    await expect(state).toHaveText('Saved')
+    await expect(state).toHaveAttribute('data-tip', /on this device/)
+    await page.keyboard.press('s')
+    await page.locator(CANVAS).click({ position: { x: 500, y: 400 } })
+    await expect(state).toHaveText('Saving…')
+    await expect(state).toHaveText('Saved')
+    await expect(page.getByTestId('status-bar')).not.toContainText('objects')
+  })
+
+  test('counts a selection only when there is one', async ({ page }) => {
+    await board(page)
+    await expect(page.getByTestId('selection-count')).toHaveCount(0)
+    await page.keyboard.press('s')
+    await page.locator(CANVAS).click({ position: { x: 500, y: 400 } })
+    await page.keyboard.press('Escape')
+    await page.keyboard.press('v')
+    await page.locator(CANVAS).click({ position: { x: 510, y: 410 } })
+    await expect(page.getByTestId('selection-count')).toHaveText('1 selected')
+  })
+
+  test('sets the source link last, after the app’s own controls', async ({ page }) => {
+    await board(page)
+    const order = await page
+      .getByTestId('status-bar')
+      .evaluate((bar) =>
+        [...bar.querySelectorAll('[data-testid]')].map((el) => el.getAttribute('data-testid')),
+      )
+    const source = order.indexOf('source-link')
+    expect(source).toBeGreaterThan(order.indexOf('theme-toggle'))
+    expect(source).toBeGreaterThan(order.indexOf('sign-in'))
+  })
+
+  test('opens the account instead of signing out when the name is pressed', async ({ page }) => {
+    await signedIn(page, [])
+    await board(page)
+    await page.getByTestId('account').click()
+    const sheet = page.getByTestId('account-sheet')
+    await expect(sheet).toBeVisible()
+    await expect(sheet).toContainText('Muqtadaa Miandara')
+    // Still signed in: the name is still on the bar.
+    await expect(page.getByTestId('account')).toBeVisible()
+    await expect(sheet.getByRole('button', { name: 'Sign out' })).toBeVisible()
   })
 })

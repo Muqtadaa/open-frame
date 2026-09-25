@@ -1,9 +1,11 @@
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useRef, useState, useSyncExternalStore } from 'react'
 
 import { useBoardDocument } from '../hooks/use-document-object.js'
 import { useCommands } from '../hooks/use-commands.js'
 import { useUndoState } from '../hooks/use-document-object.js'
 import { useInteractionStore } from '../interaction/interaction-store.js'
+import { useOpenFrame } from '../runtime/context.js'
+import type { SaveState } from '../runtime/context.js'
 import { BENCH_TOOLS_ENABLED } from '../app/bench-flag.js'
 import { SOURCE_URL } from '../app/source-link.js'
 import { applyTheme, readTheme, type Theme } from '../app/theme.js'
@@ -19,6 +21,27 @@ import { MOD_KEY } from '../interaction/keymap.js'
 const mod = MOD_KEY
 
 /**
+ * What the bar says about the copy on this device, and what its tip adds.
+ *
+ * In the product's own words and nothing more: "Saved" is the whole of the
+ * reassurance a local-first board owes somebody, and the tip says where. A
+ * failed write says what to do, because it used to reach only the console.
+ */
+const SAVE_WORDS: Readonly<Record<SaveState, { label: string; tip: string }>> = {
+  saved: { label: 'Saved', tip: 'Saved on this device' },
+  pending: { label: 'Saving…', tip: 'Saving on this device' },
+  saving: { label: 'Saving…', tip: 'Saving on this device' },
+  failed: {
+    label: 'Not saved',
+    tip: 'The last change could not be saved on this device. Keep this tab open and try again.',
+  },
+  'read-only': {
+    label: 'Read only',
+    tip: 'This board could not be fully read, so nothing is written back to it',
+  },
+}
+
+/**
  * The record line: what is on the page, and the corrections made to it.
  *
  * History lives here rather than in the tool rail because undo is not something
@@ -29,6 +52,8 @@ export function StatusBar() {
   const document = useBoardDocument()
   const selection = useInteractionStore((state) => state.selection)
   const commands = useCommands()
+  const { runtime } = useOpenFrame()
+  const save = useSyncExternalStore(runtime.saveStatus.subscribe, runtime.saveStatus.get)
   const { canUndo, canRedo, undoLabel } = useUndoState()
   /*
    * The only piece of local state on this line, and it is a mirror rather than
@@ -148,12 +173,33 @@ export function StatusBar() {
 
       <span className="of-status__rule" aria-hidden="true" />
 
-      <span className="of-status__counts" data-testid="object-count">
-        <b>{document.objects.size}</b> objects
+      {/*
+       * Whether the work is safe, where a count of objects used to be. The
+       * count said nothing anybody acted on; this is the one fact a
+       * local-first board most needs to say, and a failed write used to
+       * reach only the console. Announced only when it fails: "Saving…" and
+       * "Saved" after every keystroke would be noise to a screen reader.
+       */}
+      <span
+        className={`of-status__save of-status__save--${save}`}
+        data-testid="save-state"
+        data-state={save}
+        data-tip={SAVE_WORDS[save].tip}
+        aria-description={SAVE_WORDS[save].tip}
+        aria-live={save === 'failed' ? 'assertive' : 'off'}
+      >
+        {SAVE_WORDS[save].label}
       </span>
-      <span className="of-status__counts">
-        <b>{selection.size}</b> selected
-      </span>
+      {/*
+       * A selection, when there is one. "0 selected" stood on the bar
+       * permanently, repeating what the record panel shows — and saying
+       * nothing at all whenever nothing was chosen.
+       */}
+      {selection.size > 0 && (
+        <span className="of-status__counts" data-testid="selection-count">
+          <b>{selection.size}</b> selected
+        </span>
+      )}
 
       {/*
        * The zoom is NOT repeated here. It was in both bottom bars at once —
@@ -165,20 +211,6 @@ export function StatusBar() {
        */}
 
       <span className="of-status__rule" aria-hidden="true" />
-
-      {/*
-       * The AGPL section 13 offer of source. A hosted, modified version has to
-       * make this available to the people using it — see app/source-link.ts.
-       */}
-      <a
-        className="of-status__source"
-        href={SOURCE_URL}
-        target="_blank"
-        rel="noreferrer"
-        data-testid="source-link"
-      >
-        Source
-      </a>
 
       {/*
        * Who else is here, and the way to invite them. Next to the source offer
@@ -215,6 +247,23 @@ export function StatusBar() {
       >
         <AfterHoursIcon />
       </button>
+
+      {/*
+       * The AGPL section 13 offer of source. A hosted, modified version has to
+       * make this available to the people using it — see app/source-link.ts.
+       * LAST and quietest: it must stay reachable, and it is the one thing on
+       * the bar nobody reaches for while working. Run in among the account
+       * controls, it read to a researcher as "data source".
+       */}
+      <a
+        className="of-status__source"
+        href={SOURCE_URL}
+        target="_blank"
+        rel="noreferrer"
+        data-testid="source-link"
+      >
+        Source
+      </a>
 
       {/*
        * Statically guarded, not runtime-guarded: the flag is replaced at build
