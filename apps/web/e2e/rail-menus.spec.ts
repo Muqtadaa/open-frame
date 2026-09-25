@@ -198,3 +198,37 @@ test.describe('opening, walking and leaving a rail menu', () => {
     expect(cell?.height).toBeGreaterThanOrEqual(24)
   })
 })
+
+/**
+ * The rail itself on a short window. It was a fixed 599 pixels, centred on
+ * the WINDOW: at 640 tall it met the record line, at 560 it began 19 pixels
+ * above the top, with Select and Image cut off and nothing to scroll.
+ */
+for (const viewport of [
+  { width: 1280, height: 720 },
+  { width: 1280, height: 640 },
+  { width: 1280, height: 560 },
+  { width: 760, height: 700 },
+]) {
+  test(`the rail fits a ${String(viewport.width)}×${String(viewport.height)} window`, async ({
+    page,
+  }) => {
+    await page.setViewportSize(viewport)
+    await board(page)
+    const rail = await page.getByRole('toolbar', { name: 'Board tools' }).boundingBox()
+    const line = await page.getByTestId('status-bar').boundingBox()
+    if (rail === null || line === null) throw new Error('rail or record line is not on screen')
+
+    expect(rail.y).toBeGreaterThanOrEqual(0)
+    // Above the record line, never under it.
+    expect(rail.y + rail.height).toBeLessThanOrEqual(line.y)
+    // Every tool whole, without scrolling to it.
+    for (const id of ['tool-select', 'tool-comment', 'tool-image']) {
+      const tool = await page.getByTestId(id).boundingBox()
+      expect(tool, id).not.toBeNull()
+      expect(tool?.y ?? -1, id).toBeGreaterThanOrEqual(rail.y)
+      expect((tool?.y ?? 0) + (tool?.height ?? 0), id).toBeLessThanOrEqual(rail.y + rail.height)
+      expect(tool?.height ?? 0, id).toBeGreaterThanOrEqual(30)
+    }
+  })
+}

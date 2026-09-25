@@ -30,6 +30,7 @@ import { AnchoredSurface } from '../controls/AnchoredSurface.js'
 import { useCommands } from '../hooks/use-commands.js'
 import { useBoardDocument } from '../hooks/use-document-object.js'
 import { useInteractionStore } from '../interaction/interaction-store.js'
+import { RAIL_CLEARANCE_PX } from '../scene/rail-footprint.js'
 import { PANEL_CLEARANCE_PX } from '../scene/connect-points.js'
 import { selectionMakeup, typeTitle } from '../scene/type-noun.js'
 import { useOpenFrame } from '../runtime/context.js'
@@ -63,12 +64,6 @@ const GAP_PX = PANEL_CLEARANCE_PX
 const PANEL_WIDTH = 360
 /** Keeps the panel off the viewport edge when the selection is near one. */
 const MARGIN_PX = 12
-/**
- * The tool rail's footprint. A selection wide enough to push the panel off both
- * sides — a connector spanning the board is enough — used to clamp it to the
- * left margin, which parked it squarely on top of the rail.
- */
-const RAIL_CLEARANCE_PX = 84
 /*
  * There WAS a PANEL_HEIGHT_PX here — 420, "roughly the panel's tallest form" —
  * because the placement it fed could not measure. A guess that must never

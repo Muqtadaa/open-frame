@@ -6,10 +6,8 @@ import { useOpenFrame } from '../runtime/context.js'
 import { useBoardDocument } from '../hooks/use-document-object.js'
 
 import { useInteractionStore } from '../interaction/interaction-store.js'
+import { RAIL_CLEARANCE_PX } from '../scene/rail-footprint.js'
 import { type Side } from '../scene/anchoring.js'
-
-/** The tool rail's footprint, which no floating surface may enter. */
-const RAIL_CLEARANCE_PX = 84
 
 /**
  * Apparatus placed beside a WORLD rectangle.

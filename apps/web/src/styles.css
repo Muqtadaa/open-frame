@@ -588,10 +588,19 @@ body {
   pointer-events: auto;
 }
 
+/*
+ * The rail's BAND: from the top gutter down to the record line, and the rail
+ * centred in it. It was centred on the WINDOW at a fixed 599 pixels, so at 640
+ * tall it met the record line and at 560 it started above the top of the
+ * window with Select cut off. The record line is under 50 pixels tall, so the
+ * band stops a tool's height and a step above the bottom gutter.
+ */
 .of-overlay--left {
-  top: 50%;
+  top: var(--of-gutter);
+  bottom: calc(var(--of-gutter) + var(--of-hit-lg) + var(--of-step));
   left: var(--of-gutter);
-  transform: translateY(-50%);
+  display: flex;
+  align-items: center;
 }
 
 .of-overlay--top {
@@ -617,6 +626,7 @@ body {
 .of-rail {
   display: flex;
   flex-direction: column;
+  max-height: 100%;
   gap: var(--of-space-2);
   /* The right-hand padding is where a tool's options strip lives. */
   padding: var(--of-space-6) var(--of-space-12) var(--of-space-6) var(--of-space-6);
@@ -626,6 +636,39 @@ body {
   border: 1px solid var(--of-panel-border);
   border-radius: var(--of-radius-apparatus);
   box-shadow: var(--of-shadow);
+}
+
+/*
+ * The tools step down a decade of the rule at a time as the window shortens —
+ * 50, then 40, then 30, which is still the secondary-control target — rather
+ * than shrinking continuously to sizes off the quadrille. Each threshold is
+ * the height at which the larger rail stops fitting its band.
+ */
+.of-app {
+  --of-tool: var(--of-hit-lg);
+}
+
+@media (max-height: 719px) {
+  .of-app {
+    --of-tool: var(--of-hit);
+  }
+}
+
+@media (max-height: 603px) {
+  .of-app {
+    --of-tool: var(--of-hit-sm);
+  }
+}
+
+/*
+ * The last resort, for a window too short for even the smallest tools: the
+ * rail scrolls. Only here, because a scrolling box clips everything that hangs
+ * outside it, and every tool's tip does.
+ */
+@media (max-height: 493px) {
+  .of-rail {
+    overflow-y: auto;
+  }
 }
 
 .of-rail__slot {
@@ -646,8 +689,8 @@ body {
    * The largest target in the product, and the one reached for most. The AA
    * 2.5.8 minimum is 24; this is a whole decade of the rule.
    */
-  width: var(--of-hit-lg);
-  height: var(--of-hit-lg);
+  width: var(--of-tool);
+  height: var(--of-tool);
   font: inherit;
   color: var(--of-ink-muted);
   background: transparent;
