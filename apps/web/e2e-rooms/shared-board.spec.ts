@@ -225,6 +225,9 @@ test('sharing leaves one board in the list, not two', async ({ browser }) => {
   await page.locator('[data-testid="board-title-input"]').press('Enter')
 
   await page.locator('[data-testid="share-board"]').click()
+  await page.locator('[data-testid="share-confirm"]').click()
+  // Onto the board itself, with the links: the page that was moved is gone.
+  await expect(page).toHaveURL(/room=brd_/, { timeout: 20_000 })
   await expect(page.locator('[data-testid="share-links"]')).toBeVisible({ timeout: 20_000 })
 
   await page.goto(HOME_URL)
@@ -716,4 +719,40 @@ test.describe('follow-mode', () => {
     // And bob still has alice, so he can let go again.
     await expect(faces(bob)).toHaveCount(1)
   })
+})
+
+/**
+ * Nothing typed after sharing is lost (rule 7).
+ *
+ * Sharing used to show the links over the page it had just moved away from,
+ * which still took edits and still said "Saved": a note written there was
+ * gone on reload. The move now lands on the shared board, so whatever comes
+ * next is written to the board that exists.
+ */
+test('what is written after sharing is kept', async ({ browser }) => {
+  const context = await browser.newContext()
+  const page = await context.newPage()
+  await signedIn(page, [])
+  await page.goto(BOARD_URL)
+  await page.waitForSelector('[data-testid="status-bar"]')
+
+  await page.locator('[data-testid="share-board"]').click()
+  await page.locator('[data-testid="share-confirm"]').click()
+  await expect(page).toHaveURL(/room=brd_/, { timeout: 20_000 })
+  await expect(page.locator('[data-testid="share-links"]')).toBeVisible({ timeout: 20_000 })
+  await page.locator('[data-testid="share-done"]').click()
+
+  await page.locator('[data-testid="tool-sticky"]').click()
+  await page.locator('[data-testid="canvas"]').click({ position: { x: 420, y: 320 } })
+  await page.keyboard.type('Written after sharing')
+  await page.keyboard.press('Escape')
+  await page.keyboard.press('Escape')
+  await expect(page.locator('[data-testid="canvas"]')).toContainText('Written after sharing')
+  await expect(page.locator('[data-testid="save-state"]')).toHaveAttribute('data-state', 'saved')
+
+  await page.reload()
+  await expect(page.locator('[data-testid="canvas"]')).toContainText('Written after sharing', {
+    timeout: 20_000,
+  })
+  await context.close()
 })
