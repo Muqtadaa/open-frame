@@ -231,3 +231,28 @@ export async function setBoardPassword(
   }
   return { ok: true }
 }
+
+/**
+ * The keys a board's OWNER holds beyond the link they opened it with, or
+ * `null` for anybody else.
+ *
+ * The view key makes the second link; the owner key authorizes the password.
+ * `my_boards()` returns both columns to the owner and to nobody else, so their
+ * presence is also the answer to "is this mine" — asked once, when the room
+ * chip mounts, rather than on every press.
+ */
+export async function ownedKeys(
+  boardId: BoardId,
+): Promise<{ readonly view: string; readonly owner: string | null } | null> {
+  let mine: Awaited<ReturnType<typeof listMyBoards>>
+  try {
+    mine = await listMyBoards()
+  } catch {
+    return null
+  }
+  const row = mine.find((candidate) => candidate.boardId === boardId)
+  const view = row?.viewKey ?? null
+  if (row === undefined || view === null) return null
+  if (row.ownerKey !== null) rememberOwnerKey(boardId, row.ownerKey)
+  return { view, owner: row.ownerKey ?? heldOwnerKey(boardId) }
+}

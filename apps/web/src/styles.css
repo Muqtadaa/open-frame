@@ -5862,12 +5862,6 @@ textarea.of-input {
   color: var(--of-danger);
 }
 
-/* A row's password field, when it is asking for one to set rather than telling. */
-.of-home__password {
-  flex: none;
-  width: 160px;
-}
-
 /*
  * A grid, not a flex row with `space-between`.
  *
@@ -6056,16 +6050,39 @@ textarea.of-input {
   width: 100%;
 }
 
-.of-share__error {
-  width: 320px;
+/*
+ * The password, under a rule below the links it protects: part of the same
+ * decision about who can open the board, and so part of the same sheet.
+ */
+.of-share__password {
+  display: grid;
+  gap: var(--of-space-8);
+  padding-top: var(--of-space-12);
+  margin: var(--of-space-12) 0;
+  border-top: 1px solid var(--of-rule);
+}
+
+.of-share__password .of-account__field {
+  margin-bottom: 0;
+}
+
+.of-share__password-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--of-space-8);
+}
+
+/* What happened, said inside the sheet rather than in a panel of its own. */
+.of-share__said,
+.of-share__problem {
   margin: 0;
-  padding: var(--of-space-16) var(--of-gutter);
-  font-size: var(--of-type-control);
-  line-height: 1.4;
+  font-size: var(--of-type-ui-small);
+  line-height: 1.35;
+  color: var(--of-ink-muted);
+}
+
+.of-share__problem {
   color: var(--of-danger);
-  background: var(--of-danger-wash);
-  border: 1px solid var(--of-danger-edge);
-  border-radius: var(--of-radius);
 }
 
 /*
@@ -6261,8 +6278,7 @@ textarea.of-input {
   }
 }
 
-.of-sheet,
-.of-share__error {
+.of-sheet {
   animation: of-raise var(--of-quick) var(--of-ease) backwards;
   transform-origin: bottom left;
 }
@@ -6311,7 +6327,6 @@ textarea.of-input {
 @media (prefers-reduced-motion: reduce) {
   .of-home__list li,
   .of-sheet,
-  .of-share__error,
   .of-picker,
   .of-cellbar {
     animation-name: of-fade;

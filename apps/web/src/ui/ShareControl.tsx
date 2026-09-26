@@ -6,6 +6,7 @@ import { useAnchoredTo } from '../controls/use-anchor.js'
 import { accessKey, COLLAB_ENABLED, shareLink } from '../app/collab-config.js'
 import { ACCOUNTS_ENABLED } from '../app/identity.js'
 import { guestIdentity } from '../app/guest.js'
+import { ownedKeys, setBoardPassword } from '../app/board-password.js'
 import { shareCurrentBoard, ShareFailed, type SharedBoard } from '../app/share.js'
 import { useIdentity } from '../hooks/use-identity.js'
 import { usePeers } from '../hooks/use-peers.js'
@@ -46,6 +47,11 @@ export function ShareControl() {
    */
   const [links, setLinks] = useState<SharedBoard | null>(() => takeHandedOver(runtime.boardId))
   const [asking, setAsking] = useState(false)
+  /*
+   * Whether this board is YOURS, which decides what the chip does. Asked once,
+   * of the account, when a signed-in person is on a board in a room.
+   */
+  const [owned, setOwned] = useState<{ view: string; owner: string | null } | null>(null)
   const [role, setRole] = useState(collaboration?.role ?? 'editor')
   /*
    * The links hang off the room chip, on the board a move lands on. A failed
@@ -61,6 +67,17 @@ export function ShareControl() {
     if (collaboration === null || collaboration === undefined) return
     return collaboration.onStatus(setStatus)
   }, [collaboration])
+
+  useEffect(() => {
+    if (collaboration === null || collaboration === undefined || identity === null) return
+    let live = true
+    void ownedKeys(runtime.boardId).then((keys) => {
+      if (live) setOwned(keys)
+    })
+    return () => {
+      live = false
+    }
+  }, [collaboration, identity, runtime.boardId])
 
   useEffect(() => {
     if (collaboration === null || collaboration === undefined) return
@@ -183,10 +200,28 @@ export function ShareControl() {
   const hidden = here.filter((person) => !shown.includes(person))
   const moreLabel = `Also here: ${hidden.map((person) => person.name).join(', ')}`
 
+  /*
+   * The chip says which link it hands over, because that is the whole risk of
+   * sharing. An owner gets both, and the password beside them; anybody else
+   * gets the link they arrived on, named for what it gives.
+   */
+  const linkKind = role === 'viewer' ? 'view' : 'edit'
+  const action =
+    owned !== null
+      ? 'Click for both links and the password.'
+      : `Click to copy the ${linkKind} link.`
   const roomHint =
     here.length === 1
-      ? 'You are the only one here. Click to copy the link.'
-      : `Here now: ${here.map((person) => person.name).join(', ')}. Click to copy the link.`
+      ? `You are the only one here. ${action}`
+      : `Here now: ${here.map((person) => person.name).join(', ')}. ${action}`
+  const ownLinks = (): SharedBoard => {
+    const origin = window.location.origin
+    return {
+      boardId: runtime.boardId,
+      editLink: shareLink(runtime.boardId, origin, accessKey(window.location.search)),
+      viewLink: shareLink(runtime.boardId, origin, owned?.view ?? null),
+    }
+  }
 
   return (
     <span className="of-status__room">
@@ -196,12 +231,21 @@ export function ShareControl() {
         className="of-status__share"
         data-testid="room-status"
         aria-label={
-          copyFailed ? 'Could not copy the link' : copied !== null ? 'Link copied' : roomLabel(status)
+          copyFailed
+            ? 'Could not copy the link'
+            : copied !== null
+              ? `${copied === 'edit' ? 'Edit' : 'View'} link copied`
+              : roomLabel(status)
         }
+        aria-expanded={owned !== null ? links !== null : undefined}
         data-status={status}
         data-tip={roomHint}
         aria-description={roomHint}
         onClick={() => {
+          if (owned !== null) {
+            setLinks((open) => (open === null ? ownLinks() : null))
+            return
+          }
           /*
            * The link you arrived on, key and all. Copying a bare board id
            * would hand somebody a URL that a claimed room refuses — the share
@@ -213,7 +257,7 @@ export function ShareControl() {
             )
             .then(
               () => {
-                setCopied('edit')
+                setCopied(linkKind)
                 setTimeout(() => setCopied(null), 1600)
               },
               () => {
@@ -225,7 +269,11 @@ export function ShareControl() {
       >
         <span className={`of-status__dot of-status__dot--${status}`} aria-hidden="true" />
         <span className="of-status__share-label">
-          {copyFailed ? 'Could not copy' : copied !== null ? 'Link copied' : roomLabel(status)}
+          {copyFailed
+            ? 'Could not copy'
+            : copied !== null
+              ? `${copied === 'edit' ? 'Edit' : 'View'} link copied`
+              : roomLabel(status)}
         </span>
       </button>
 
@@ -308,7 +356,18 @@ export function ShareControl() {
           prefer={['below', 'above']}
           testId="share-links-surface"
         >
-          <ShareLinks links={links} onDone={() => setLinks(null)} />
+          <ShareLinks
+            links={links}
+            password={{
+              boardId: runtime.boardId,
+              editor: accessKey(window.location.search) ?? '',
+              owner: owned?.owner ?? null,
+            }}
+            onDone={() => {
+              setLinks(null)
+              shareButton.current?.focus()
+            }}
+          />
         </AnchoredSurface>
       )}
     </span>
@@ -323,35 +382,64 @@ export function ShareControl() {
  * that says "edit" and "view" without saying what that MEANS is a chooser
  * somebody gets wrong once and then stops trusting.
  */
-function ShareLinks({ links, onDone }: { readonly links: SharedBoard; readonly onDone: () => void }) {
+function ShareLinks({
+  links,
+  password,
+  onDone,
+}: {
+  readonly links: SharedBoard
+  readonly password: { readonly boardId: SharedBoard['boardId']; readonly editor: string; readonly owner: string | null }
+  readonly onDone: () => void
+}) {
   const [copied, setCopied] = useState<'edit' | 'view' | null>(null)
+  const [copyFailed, setCopyFailed] = useState(false)
+  const first = useRef<HTMLButtonElement>(null)
+
+  // Into the sheet on arrival: it is what the press was for.
+  useEffect(() => {
+    first.current?.focus()
+  }, [])
 
   const copy = (which: 'edit' | 'view'): void => {
-    void navigator.clipboard
-      .writeText(which === 'edit' ? links.editLink : links.viewLink)
-      .then(() => {
+    void navigator.clipboard.writeText(which === 'edit' ? links.editLink : links.viewLink).then(
+      () => {
+        setCopyFailed(false)
         setCopied(which)
         setTimeout(() => setCopied(null), 1600)
-      })
+      },
+      // A refused clipboard said nothing, and the sheet looked broken.
+      () => setCopyFailed(true),
+    )
   }
 
   return (
-    <div className="of-sheet" role="dialog" aria-label="Share this board" data-testid="share-links">
-      {/*
-        * Said on the board that now exists, so there is nothing left to warn
-        * about: what matters here is only which link to send.
-        */}
+    <div
+      className="of-sheet"
+      role="dialog"
+      aria-label="Share this board"
+      data-testid="share-links"
+      onKeyDown={(event) => {
+        if (event.key !== 'Escape') return
+        event.preventDefault()
+        event.stopPropagation()
+        onDone()
+      }}
+    >
       <p className="of-share__lead">Shared. Send the link that gives what you mean to give.</p>
 
       <button
+        ref={first}
         type="button"
         className="of-share__link"
         data-testid="copy-edit"
         data-copied={copied === 'edit' ? 'yes' : 'no'}
         onClick={() => copy('edit')}
       >
-        <span className="of-share__link-name">{copied === 'edit' ? 'Copied' : 'Copy edit link'}</span>
-        <span className="of-share__link-what">They can change the board</span>
+        <span className="of-share__link-name">Copy edit link</span>
+        {/* The name stays: "Copied" in its place did not say which one. */}
+        <span className="of-share__link-what">
+          {copied === 'edit' ? 'Copied' : 'They can change the board'}
+        </span>
       </button>
 
       <button
@@ -361,14 +449,123 @@ function ShareLinks({ links, onDone }: { readonly links: SharedBoard; readonly o
         data-copied={copied === 'view' ? 'yes' : 'no'}
         onClick={() => copy('view')}
       >
-        <span className="of-share__link-name">{copied === 'view' ? 'Copied' : 'Copy view link'}</span>
-        <span className="of-share__link-what">They can watch, and be seen watching</span>
+        <span className="of-share__link-name">Copy view link</span>
+        <span className="of-share__link-what">
+          {copied === 'view' ? 'Copied' : 'They can watch, and be seen watching'}
+        </span>
       </button>
+
+      {copyFailed && (
+        <p className="of-share__problem" role="alert">
+          The link could not be copied. Your browser may be blocking the clipboard.
+        </p>
+      )}
+
+      <SharePassword {...password} />
 
       <button type="button" className="of-button of-share__open" data-testid="share-done" onClick={onDone}>
         Done
       </button>
     </div>
+  )
+}
+
+/**
+ * The board's password, beside the two links it protects.
+ *
+ * It lived on the board's row in the list, a place nobody sharing a board was
+ * looking. Setting it is a neutral action — it used to wear the correction red
+ * of a destructive one — and removing it is its own control, named for what it
+ * does rather than "No password" beside the field.
+ */
+function SharePassword({
+  boardId,
+  editor,
+  owner,
+}: {
+  readonly boardId: SharedBoard['boardId']
+  readonly editor: string
+  readonly owner: string | null
+}) {
+  const [secret, setSecret] = useState('')
+  const [busy, setBusy] = useState(false)
+  const [said, setSaid] = useState<{ readonly ok: boolean; readonly text: string } | null>(null)
+
+  const apply = (next: string | null): void => {
+    setBusy(true)
+    setSaid(null)
+    void setBoardPassword(boardId, { owner, editor }, next).then((outcome) => {
+      setBusy(false)
+      if (!outcome.ok) {
+        setSaid({ ok: false, text: outcome.reason })
+        return
+      }
+      setSecret('')
+      setSaid({
+        ok: true,
+        text: next === null ? 'Both links open without a password.' : 'Both links now ask for it.',
+      })
+    })
+  }
+
+  return (
+    <form
+      className="of-share__password"
+      onSubmit={(event) => {
+        event.preventDefault()
+        if (secret !== '') apply(secret)
+      }}
+    >
+      <label className="of-account__field">
+        <span className="of-account__label">password</span>
+        <input
+          className="of-input"
+          type="password"
+          autoComplete="off"
+          aria-label="A password for this board"
+          aria-describedby="of-share-password-what"
+          data-testid="password-input"
+          value={secret}
+          onChange={(event) => {
+            setSecret(event.target.value)
+          }}
+        />
+      </label>
+      <span className="of-share__link-what" id="of-share-password-what">
+        Both links ask for it. Anyone who already has the board open is signed out of it.
+      </span>
+      <span className="of-share__password-actions">
+        <button
+          type="submit"
+          className="of-button"
+          data-testid="password-save"
+          aria-disabled={busy || secret === ''}
+          aria-busy={busy}
+        >
+          Set password
+        </button>
+        <button
+          type="button"
+          className="of-button of-button--ghost"
+          data-testid="password-clear"
+          aria-disabled={busy}
+          onClick={() => {
+            if (!busy) apply(null)
+          }}
+        >
+          Remove password
+        </button>
+      </span>
+      {said !== null && (
+        <p
+          className={said.ok ? 'of-share__said' : 'of-share__problem'}
+          role={said.ok ? 'status' : 'alert'}
+          data-testid="password-said"
+        >
+          {said.text}
+        </p>
+      )}
+    </form>
   )
 }
 
