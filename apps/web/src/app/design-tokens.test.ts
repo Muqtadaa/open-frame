@@ -851,3 +851,54 @@ describe('face initials', () => {
     },
   )
 })
+
+/*
+ * The selection, the snap guides and a route's legs are thin lines of one
+ * colour, drawn over whatever is on the board. On their own they vanished
+ * where they were needed: the accent was 2.2:1 on a black note in the
+ * notebook, 1.7:1 on a white one After Hours, and 1.0–1.2:1 against every
+ * coloured connector — a line's legs disappeared into the line (C3 #7).
+ *
+ * So each one carries a HALO in the page's colour, and the pair is measured:
+ * on every ground a line can be drawn over — the page, every slip and every
+ * ink — either the line or its halo clears 3:1, and the line clears 3:1
+ * against its own halo, so wherever the halo shows, the line shows on it.
+ * Read off the rules, so a halo that is removed or recoloured fails here.
+ */
+describe.each(THEMES)('the apparatus reads on anything — $name', ({ token }) => {
+  const LINES: readonly { readonly rule: string; readonly ink: RegExp }[] = [
+    { rule: '.of-selection', ink: /(?<![\w-])outline:[^;]*var\(--of-([\w-]+)\)/ },
+    { rule: '.of-guide', ink: /(?<![\w-])background:\s*var\(--of-([\w-]+)\)/ },
+    { rule: '.of-endpoint--leg', ink: /(?<![\w-])background:[^;]*var\(--of-([\w-]+)\)/ },
+  ]
+  const GROUNDS = [
+    'page',
+    'bg',
+    ...COLOR_TOKENS.map((hue) => `s-${hue}`),
+    ...COLOR_TOKENS.map((hue) => `c-${hue}`),
+  ]
+
+  describe.each(LINES)('$rule', ({ rule, ink }) => {
+    const escaped = rule.replace(/[.-]/g, (c) => `\\${c}`)
+    const body = new RegExp(`${escaped}\\s*\\{([^}]*)\\}`).exec(CSS)?.[1] ?? ''
+    const line = ink.exec(body)?.[1]
+    const halo = /box-shadow:[^;]*var\(--of-([\w-]+)\)/.exec(body)?.[1]
+
+    it('names its colour and its halo as tokens', () => {
+      expect(line, `${rule} names its colour`).toBeDefined()
+      expect(halo, `${rule} carries a halo`).toBeDefined()
+    })
+
+    it('shows on its own halo (3:1)', () => {
+      expect(contrast(token(line ?? ''), token(halo ?? ''))).toBeGreaterThanOrEqual(3)
+    })
+
+    it.each(GROUNDS)('shows, or its halo does, over %s (3:1)', (ground) => {
+      const best = Math.max(
+        contrast(token(line ?? ''), token(ground)),
+        contrast(token(halo ?? ''), token(ground)),
+      )
+      expect(best).toBeGreaterThanOrEqual(3)
+    })
+  })
+})

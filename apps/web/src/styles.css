@@ -3497,6 +3497,13 @@ body {
   left: 0;
   outline: 1.5px solid var(--of-accent);
   outline-offset: 0;
+  /*
+   * A HALO in the page's colour, just outside the line. The accent alone was
+   * 2.2:1 on a black note and 1.7:1 on a white one After Hours; with the halo
+   * there is always one of the two against whatever the selection is over.
+   * Measured in design-tokens.test, both worlds, every slip and ink.
+   */
+  box-shadow: 0 0 0 3px var(--of-page);
   transform-origin: 50% 50%;
   /* The box itself must not swallow pointer events — only its handles do. */
   pointer-events: none;
@@ -4270,6 +4277,8 @@ body {
   left: 0;
   z-index: var(--of-z-guide);
   background: var(--of-guide);
+  /* The same halo as the selection, for the same reason: see `.of-selection`. */
+  box-shadow: 0 0 0 1px var(--of-page);
   /* Guides are feedback, never a target. */
   pointer-events: none;
 }
@@ -6305,10 +6314,13 @@ textarea.of-input {
   background: var(--of-accent);
   border: none;
   border-radius: var(--of-radius-capsule);
-  opacity: 0.55;
-}
-.of-endpoint--leg:hover {
-  opacity: 0.85;
+  /*
+   * Full strength with a page-coloured halo. It was the accent at 55%, which
+   * over a coloured line is the line's own colour give or take — 1.0 to 1.2:1
+   * — so the thing to push vanished into the thing it pushes. It only shows on
+   * the run under the pointer, so it can afford to be seen.
+   */
+  box-shadow: 0 0 0 1px var(--of-page);
 }
 
 /*
