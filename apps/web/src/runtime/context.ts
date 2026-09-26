@@ -9,6 +9,7 @@ import type {
   DocumentStore,
   IdGenerator,
   ObjectTypeRegistry,
+  QuarantineReason,
 } from '@openframe/core'
 
 import type { AssetService } from './asset-service.js'
@@ -51,6 +52,21 @@ export interface SaveStatus {
  * put every layer above the composition root and make the dependency direction
  * meaningless.
  */
+/**
+ * A board this build could not open, and what could be made out of it.
+ *
+ * `title` and `objects` are read off the stored record without trusting it —
+ * whatever is not plainly a string or a list is `null`, and the sheet says
+ * nothing rather than something wrong. `raw` is the record itself, so it can
+ * be handed back to its owner byte for byte.
+ */
+export interface Quarantine {
+  readonly reason: QuarantineReason
+  readonly title: string | null
+  readonly objects: number | null
+  readonly raw: unknown
+}
+
 export interface OpenFrameRuntime {
   readonly boardId: BoardId
   readonly store: DocumentStore
@@ -70,6 +86,8 @@ export interface OpenFrameRuntime {
   readonly notices: readonly string[]
   /** True when the board could not be read and must not be written back. */
   readonly readOnly: boolean
+  /** Why the board could not be read, or `null` for one that was. */
+  readonly quarantine: Quarantine | null
   /** Present only in development and benchmark builds. */
   readonly devTools?: OpenFrameDevTools
   /**

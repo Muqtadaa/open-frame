@@ -2695,6 +2695,22 @@ body {
   color: var(--of-ink-muted);
 }
 
+/*
+ * The panel takes focus only so that a gate with nothing to press first still
+ * moves the keyboard off the board behind it; the panel is not a control, so
+ * it draws no ring.
+ */
+.of-gone__panel:focus {
+  outline: none;
+}
+
+/* The one thing to do, then the way out, on one line. */
+.of-gone__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--of-space-8);
+}
+
 /* The password field, when the panel is asking for one rather than telling. */
 .of-home__password {
   flex: none;
