@@ -241,6 +241,15 @@ test.describe('cropping', () => {
     }
   })
 
+  // One step back at a time: out of the crop, and the picture still selected.
+  test('Escape leaves the crop and keeps the picture selected', async ({ page }) => {
+    await page.locator('[data-object-type="image"]').dblclick()
+    await expect(page.getByTestId('crop-overlay')).toBeVisible()
+    await page.keyboard.press('Escape')
+    await expect(page.getByTestId('crop-overlay')).toHaveCount(0)
+    await expect(page.getByTestId('selection-overlay')).toBeVisible()
+  })
+
   test('double-click opens crop brackets rather than resize squares', async ({ page }) => {
     await expect(page.getByTestId('crop-overlay')).toHaveCount(0)
     await page.locator('[data-object-type="image"]').dblclick()

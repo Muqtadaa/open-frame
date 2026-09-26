@@ -322,3 +322,30 @@ test.describe('the board from the keyboard', () => {
     await expect(announcer(page)).toHaveText('Unlocked')
   })
 })
+
+/*
+ * Escape is the "never mind" key. Mid-drag it cleared the selection and the
+ * move still committed on release; in crop mode one press both left the crop
+ * AND let go of the picture.
+ */
+test.describe('Escape backs out one step at a time', () => {
+  test('mid-drag it puts the object back and keeps it selected', async ({ page }) => {
+    await note(page, { x: 340, y: 260 }, 'Stay')
+    const object = page.locator('[data-object-type="sticky"]')
+    await object.click()
+    const start = await object.boundingBox()
+    if (start === null) throw new Error('no note')
+    const from = { x: start.x + start.width / 2, y: start.y + start.height / 2 }
+    await page.mouse.move(from.x, from.y)
+    await page.mouse.down()
+    await page.mouse.move(from.x + 120, from.y + 80, { steps: 6 })
+    await page.keyboard.press('Escape')
+    await page.mouse.move(from.x + 160, from.y + 100, { steps: 3 })
+    await page.mouse.up()
+
+    const end = await object.boundingBox()
+    expect(Math.abs((end?.x ?? 0) - start.x)).toBeLessThan(1)
+    expect(Math.abs((end?.y ?? 0) - start.y)).toBeLessThan(1)
+    await expect(page.getByTestId('selection-overlay')).toBeVisible()
+  })
+})

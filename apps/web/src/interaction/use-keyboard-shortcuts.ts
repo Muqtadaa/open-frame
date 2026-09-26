@@ -278,6 +278,11 @@ export function useKeyboardShortcuts(setSpaceHeld: (held: boolean) => void): voi
             store.closeContextMenu()
             return
           }
+          // Out of a crop, and the picture still selected: one step at a time.
+          if (store.croppingId !== null) {
+            store.setCropping(null)
+            return
+          }
           store.setEditing(null)
           store.clearSelection()
           store.closeContextMenu()
