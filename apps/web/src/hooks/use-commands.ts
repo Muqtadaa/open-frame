@@ -432,9 +432,17 @@ export function useCommands(): BoardCommands {
          * when that is free, and somewhere already on screen when it can be —
          * `placeDerived` says which.
          */
-        const occupied = [...doc.objects.values()]
-          .filter((object) => runtime.registry.get(object.type)?.capabilities.spatial !== false)
-          .map((object) => runtime.registry.boundsOf(object, doc))
+        const occupied = [...doc.objects.values()].flatMap((object) => {
+          const capabilities = runtime.registry.get(object.type)?.capabilities
+          if (capabilities?.spatial === false) return []
+          return [
+            {
+              ...runtime.registry.boundsOf(object, doc),
+              // A frame the cluster sits in is not in the way of what goes beside it.
+              container: capabilities?.canHaveChildren === true,
+            },
+          ]
+        })
         const { viewport, canvasSize } = store
         const view = {
           x: viewport.x,
@@ -442,8 +450,14 @@ export function useCommands(): BoardCommands {
           width: canvasSize.width / viewport.zoom,
           height: canvasSize.height / viewport.zoom,
         }
-        const origin = placeDerived(bounds, size, occupied, view, SYNTHESIS_GAP)
-        const at = store.snapToGrid ? snapPoint(origin) : origin
+        const at = placeDerived(
+          bounds,
+          size,
+          occupied,
+          view,
+          SYNTHESIS_GAP,
+          store.snapToGrid ? snapPoint : undefined,
+        )
 
         // Minted here because the relations must name the insight, and
         // `transact` takes its commands upfront — the grouping precedent.

@@ -42,4 +42,31 @@ describe('placeDerived', () => {
     const all = [everywhere]
     expect(placeDerived(source, size, all, everywhere, 80)).toEqual({ x: 50, y: 70 })
   })
+
+  /*
+   * A cluster inside a frame is inside the frame's bounds, and so is every
+   * place beside it: counted as occupied, the frame pushed the new slip out
+   * past its edge, often off screen.
+   */
+  it('ignores a container the source sits inside', () => {
+    const frame = { x: -300, y: -300, width: 900, height: 900, container: true }
+    expect(placeDerived(source, size, [frame], everywhere, 80)).toEqual({ x: 50, y: 70 })
+  })
+
+  it('still steps round a container the source is not inside', () => {
+    const beside = { x: -100, y: 0, width: 400, height: 150, container: true }
+    expect(placeDerived(source, size, [beside], everywhere, 80)).toEqual({ x: 280, y: 225 })
+  })
+
+  /*
+   * Checked where it will actually land. Snapping moved a checked place by
+   * up to half a cell, onto a neighbour or over the edge of the window.
+   */
+  it('checks the snapped place, not the one before snapping', () => {
+    const snap = (at: { x: number; y: number }) => ({ x: at.x, y: Math.round(at.y / 100) * 100 })
+    // Above snaps from y=70 to y=100, into the source's own row of neighbours.
+    const neighbour = { x: 0, y: 140, width: 200, height: 20 }
+    const at = placeDerived(source, size, [neighbour], everywhere, 80, snap)
+    expect(at).toEqual({ x: 280, y: 200 })
+  })
 })

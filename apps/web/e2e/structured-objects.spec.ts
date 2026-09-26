@@ -108,6 +108,35 @@ test.describe('structured objects', () => {
     await expect(record).toHaveText('journey stage')
   })
 
+  /*
+   * A cluster in a frame. The frame's bounds hold every place beside the
+   * cluster too, and counted as occupied it pushed the new slip out past the
+   * frame's edge, away from what it was derived from.
+   */
+  test('a slip derived from a note in a frame stays in the frame', async ({ page }) => {
+    await placeNote(page, 'Gave up at checkout')
+    await page.getByTestId('tool-frame').click()
+    await page.mouse.move(200, 150)
+    await page.mouse.down()
+    await page.mouse.move(1000, 600, { steps: 8 })
+    await page.mouse.up()
+    await page.keyboard.press('Escape')
+    await page.keyboard.press('Escape')
+
+    await page.locator('[data-object-type="sticky"]').click()
+    await page.locator('[data-object-type="sticky"]').click({ button: 'right' })
+    await page.getByTestId('menu-derive-insight').click()
+    await page.keyboard.press('Escape')
+
+    const frame = await page.locator('[data-object-type="frame"]').boundingBox()
+    const insight = await page.locator('[data-object-type="insight"]').boundingBox()
+    if (frame === null || insight === null) throw new Error('missing an object')
+    expect(insight.x).toBeGreaterThanOrEqual(frame.x)
+    expect(insight.y).toBeGreaterThanOrEqual(frame.y)
+    expect(insight.x + insight.width).toBeLessThanOrEqual(frame.x + frame.width)
+    expect(insight.y + insight.height).toBeLessThanOrEqual(frame.y + frame.height)
+  })
+
   test('the record panel gains the fields the type declares', async ({ page }) => {
     await placeNote(page, 'Could not find the price')
 
