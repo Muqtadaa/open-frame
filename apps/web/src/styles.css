@@ -3510,7 +3510,11 @@ body {
   position: absolute;
   top: 0;
   left: 0;
-  outline: 1.5px solid var(--of-accent);
+  /*
+   * 2px: at 1.5 it painted one device pixel on most screens, lighter than a
+   * collaborator's 2px dashed selection — your own read as the weaker claim.
+   */
+  outline: 2px solid var(--of-accent);
   outline-offset: 0;
   /*
    * A HALO in the page's colour, just outside the line. The accent alone was
@@ -6314,6 +6318,13 @@ textarea.of-input {
 .of-endpoint--control {
   background: var(--of-panel);
   border-radius: var(--of-radius-slip);
+  /*
+   * A control shapes the line rather than ending it, so it says "move" rather
+   * than the crosshair an end uses to aim — the two shared one cursor. And it
+   * fades in rather than popping, since it appears under the pointer.
+   */
+  cursor: move;
+  animation: of-fade var(--of-quick) var(--of-ease);
 }
 /*
  * A LEG of an orthogonal route: grabbed anywhere along its length, because
@@ -6385,6 +6396,54 @@ textarea.of-input {
 }
 
 /* Each member of a multi-selection: a quieter line than the selection's own. */
+/*
+ * What a press will take, before it is pressed: a hairline in the accent at
+ * half strength, lighter than a selection so the two are never confused.
+ */
+/*
+ * A grip answers the pointer: the accent's wash under it on hover, the
+ * accent itself while it is held. They were identical at rest, under the
+ * pointer and pressed, so nothing said a grip had been found before it moved.
+ */
+.of-handle:hover,
+.of-endpoint:hover,
+.of-connect-point:hover {
+  background: var(--of-accent-soft);
+}
+
+.of-handle:active,
+.of-endpoint:active,
+.of-connect-point:active {
+  background: var(--of-accent);
+}
+
+/*
+ * The board and its chrome are not text to select. A drag starting on the
+ * zoom cluster swept up the rail's labels and the board's hidden
+ * announcements. What is written into is given selection back.
+ */
+.of-canvas,
+.of-overlay {
+  user-select: none;
+}
+
+.of-canvas [contenteditable='true'],
+.of-overlay input,
+.of-overlay textarea,
+.of-overlay [contenteditable='true'] {
+  user-select: text;
+}
+
+.of-hover {
+  position: absolute;
+  top: 0;
+  left: 0;
+  outline: 1px solid color-mix(in srgb, var(--of-accent) 55%, transparent);
+  outline-offset: 0;
+  transform-origin: 50% 50%;
+  pointer-events: none;
+}
+
 .of-selection__member {
   position: absolute;
   outline: 1px solid var(--of-accent);

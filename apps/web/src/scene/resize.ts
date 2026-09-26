@@ -109,6 +109,25 @@ export const HANDLE_CURSORS: Record<HandleId, string> = {
   w: 'ew-resize',
 }
 
+/** The eight handles clockwise from the top, the order a turn moves them in. */
+const CLOCKWISE: readonly HandleId[] = ['n', 'ne', 'e', 'se', 's', 'sw', 'w', 'nw']
+/** The four resize cursors, in the same clockwise order; they repeat every half turn. */
+const CURSOR_CYCLE = ['ns-resize', 'nesw-resize', 'ew-resize', 'nwse-resize'] as const
+
+/**
+ * A handle's cursor on an object turned by `rotation` radians.
+ *
+ * A cursor names the way the handle pulls, and on a turned object that is not
+ * the way it pulls upright: the top handle of a shape turned a quarter pulls
+ * sideways. The handle is moved round the clock by the turn, to the nearest
+ * eighth, and takes the cursor of wherever it lands.
+ */
+export function cursorFor(handle: HandleId, rotation: number): string {
+  const eighths = Math.round(rotation / (Math.PI / 4))
+  const at = CLOCKWISE.indexOf(handle) + eighths
+  return CURSOR_CYCLE[((at % 4) + 4) % 4] ?? HANDLE_CURSORS[handle]
+}
+
 export interface ResizeOptions {
   /** Preserve the aspect ratio — corner handles, or Shift held. */
   readonly preserveAspect?: boolean

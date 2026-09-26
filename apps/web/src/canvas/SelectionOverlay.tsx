@@ -6,12 +6,12 @@ import { useInteractionStore } from '../interaction/interaction-store.js'
 import {
   CORNER_HANDLES,
   HANDLES,
-  HANDLE_CURSORS,
   EDGE_HANDLES,
   EDGE_HIT_PX,
   EDGE_INSET_PX,
   HANDLE_HIT_PX,
   ROTATE_OFFSET_PX,
+  cursorFor,
   handleAnchor,
   isCompact,
 } from '../scene/resize.js'
@@ -310,7 +310,7 @@ export function SelectionOverlay() {
             data-testid="selection-lock"
             aria-label="Unlock"
             data-tip="Locked — press to unlock"
-          aria-description="Locked — press to unlock"
+            aria-description="Locked — press to unlock"
             onPointerDown={(event) => {
               event.stopPropagation()
             }}
@@ -389,7 +389,7 @@ export function SelectionOverlay() {
                   top: `${String(across ? (handle === 's' ? screen.height : 0) - thick / 2 : inset)}px`,
                   width: `${String(across ? length : thick)}px`,
                   height: `${String(across ? thick : length)}px`,
-                  cursor: HANDLE_CURSORS[handle],
+                  cursor: cursorFor(handle, rotation),
                 }}
               />
             )
@@ -446,7 +446,7 @@ export function SelectionOverlay() {
                   top: `${String(drawn.top)}px`,
                   width: `${String(HANDLE_PX)}px`,
                   height: `${String(HANDLE_PX)}px`,
-                  cursor: HANDLE_CURSORS[handle],
+                  cursor: cursorFor(handle, rotation),
                 }}
               >
                 {/*
@@ -479,7 +479,7 @@ export function SelectionOverlay() {
                   aria-hidden="true"
                   style={{
                     ...outwardReach(anchor, drawn, screen),
-                    cursor: HANDLE_CURSORS[handle],
+                    cursor: cursorFor(handle, rotation),
                   }}
                 />
               </div>

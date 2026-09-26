@@ -411,3 +411,70 @@ test.describe('a selection says what it is', () => {
     await page.mouse.up()
   })
 })
+
+test.describe('the apparatus under the pointer', () => {
+  /*
+   * A handle's cursor names the way it pulls. On a turned object the cursors
+   * stayed upright, so the top handle of a shape turned a quarter said "up and
+   * down" while it pulled sideways.
+   */
+  test('cursors turn with the object', async ({ page }) => {
+    await page.getByTestId('tool-shape').click()
+    await page.mouse.move(340, 220)
+    await page.mouse.down()
+    await page.mouse.move(540, 360, { steps: 6 })
+    await page.mouse.up()
+    await page.keyboard.press('Escape')
+    await expect(page.getByTestId('handle-n')).toHaveCSS('cursor', 'ns-resize')
+    for (let press = 0; press < 6; press += 1) await page.keyboard.press('.')
+    await expect(page.getByTestId('handle-n')).toHaveCSS('cursor', 'ew-resize')
+    await expect(page.getByTestId('handle-ne')).toHaveCSS('cursor', 'nwse-resize')
+  })
+
+  /*
+   * An object said nothing under the pointer until it was clicked. It now
+   * shows a quiet outline, so what a press will take is visible before it.
+   */
+  test('an object under the pointer is outlined before it is pressed', async ({ page }) => {
+    await note(page, { x: 340, y: 260 }, 'Hover')
+    await page.keyboard.press('Escape')
+    await expect(page.getByTestId('hover-outline')).toHaveCount(0)
+    const box = await page.locator('[data-object-type="sticky"]').boundingBox()
+    if (box === null) throw new Error('no note')
+    await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2)
+    await expect(page.getByTestId('hover-outline')).toBeVisible()
+    // Not over what is already selected, which has its own.
+    await page.mouse.down()
+    await page.mouse.up()
+    await expect(page.getByTestId('hover-outline')).toHaveCount(0)
+  })
+
+  // Yours was 1.5px — a pixel on most screens — and a peer's 2px dashed.
+  test('your own selection is drawn at least as firmly as anyone else’s', async ({ page }) => {
+    await note(page, { x: 340, y: 260 }, 'Mine')
+    await page.locator('[data-object-type="sticky"]').click()
+    await expect(page.getByTestId('selection-overlay')).toHaveCSS('outline-width', '2px')
+  })
+
+  test('a grip answers the pointer', async ({ page }) => {
+    await note(page, { x: 340, y: 260 }, 'Grip')
+    await page.locator('[data-object-type="sticky"]').click()
+    const handle = page.getByTestId('handle-se')
+    const rest = await handle.evaluate((element) => getComputedStyle(element).backgroundColor)
+    await handle.hover()
+    await expect
+      .poll(() => handle.evaluate((element) => getComputedStyle(element).backgroundColor))
+      .not.toBe(rest)
+  })
+
+  // Dragging from the zoom cluster used to select the chrome's words.
+  test('a drag across the chrome selects no text', async ({ page }) => {
+    const cluster = await page.locator('.of-zoom').boundingBox()
+    if (cluster === null) throw new Error('no cluster')
+    await page.mouse.move(cluster.x + 4, cluster.y + cluster.height / 2)
+    await page.mouse.down()
+    await page.mouse.move(200, 120, { steps: 8 })
+    await page.mouse.up()
+    expect(await page.evaluate(() => window.getSelection()?.toString() ?? '')).toBe('')
+  })
+})

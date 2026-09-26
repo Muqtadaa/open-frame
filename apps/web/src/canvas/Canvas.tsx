@@ -21,6 +21,7 @@ import { CommentLayer } from './CommentLayer.js'
 import { PresenceLayer } from './PresenceLayer.js'
 import { usePresence } from './use-presence.js'
 import { useFollow } from './use-follow.js'
+import { HoverOverlay } from './HoverOverlay.js'
 import { SelectionOverlay } from './SelectionOverlay.js'
 import { useCanvasGestures } from './use-canvas-gestures.js'
 import { useImageDrop } from './use-image-drop.js'
@@ -164,6 +165,7 @@ export function Canvas() {
        * expressible — see `.of-apparatus` in styles.css for what fails.
        */}
       <div className="of-apparatus" data-apparatus-layer>
+        <HoverOverlay />
         <SelectionOverlay />
         <ConnectPoints />
         <DrawPreview />
