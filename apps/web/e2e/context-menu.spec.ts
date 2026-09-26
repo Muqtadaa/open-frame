@@ -82,6 +82,19 @@ test('Escape closes the menu and keeps the selection', async ({ page }) => {
   await expect(page.getByTestId('selection-count')).toContainText('1')
 })
 
+/*
+ * Tab leaves the menu AND moves on: the menu is not a stop in the page's
+ * order, so leaving it by Tab must not cost a second press.
+ */
+test('Tab closes the menu and moves focus on', async ({ page }) => {
+  await page.locator(CANVAS).click({ position: NOTE, button: 'right' })
+  await expect(item(page, 'Derive insight')).toBeFocused()
+  await page.keyboard.press('Tab')
+  await expect(menu(page)).toHaveCount(0)
+  const landed = await page.evaluate(() => document.activeElement?.tagName ?? 'BODY')
+  expect(landed).not.toBe('BODY')
+})
+
 test('Shift+F10 opens it on the selection, not in the corner', async ({ page }) => {
   await page.locator(CANVAS).click({ position: NOTE })
   await page.keyboard.press('Shift+F10')

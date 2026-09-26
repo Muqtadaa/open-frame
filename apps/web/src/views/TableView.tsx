@@ -59,6 +59,7 @@ import { FormatBar } from './FormatBar.js'
 import {
   RichTextField,
   sizeOfRange,
+  sizeReadout,
   stepSize,
   type FormatState,
   type RichTextFieldHandle,
@@ -813,7 +814,7 @@ function TableEditor({
     return kinds.every((kind) => kind === first) ? first : undefined
   }
   const sized = (): SizeToken | undefined => {
-    const sizes = rangeCells().map((cell) => sizeOfRange(cell.text, 0, whole(cell.text)))
+    const sizes = rangeCells().map((cell) => sizeReadout(cell.text, 0, whole(cell.text)))
     const first = sizes[0]
     return sizes.every((size) => size === first) ? first : undefined
   }

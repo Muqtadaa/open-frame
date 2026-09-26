@@ -167,7 +167,7 @@ export function RichTextField({
     reportRef.current?.({
       marks: MARK_LIST.filter((mark) => markCovers(text, from, to, mark)),
       list: listOf(text, from, to),
-      size: sizeOfRange(text, sized.from, sized.to),
+      size: sizeReadout(text, sized.from, sized.to),
     })
   }
 
@@ -491,6 +491,26 @@ export function sizeOfRange(text: RichText, from: number, to: number): SizeToken
     const size = span.size ?? DEFAULT_SIZE
     if (found === undefined) found = size
     else if (found !== size) return DEFAULT_SIZE
+  }
+  return found ?? DEFAULT_SIZE
+}
+
+/**
+ * The size to SHOW for a range: its one size, or undefined when its runs
+ * disagree. Not `sizeOfRange`, which answers the default for a mixed range
+ * because stepping has to start somewhere — the readout reused it and called
+ * an `xs` word beside an `xl` one "×1".
+ */
+export function sizeReadout(text: RichText, from: number, to: number): SizeToken | undefined {
+  let seen = 0
+  let found: SizeToken | undefined
+  for (const span of text) {
+    const start = seen
+    seen += span.text.length
+    if (seen <= from || start >= to) continue
+    const size = span.size ?? DEFAULT_SIZE
+    if (found === undefined) found = size
+    else if (found !== size) return undefined
   }
   return found ?? DEFAULT_SIZE
 }

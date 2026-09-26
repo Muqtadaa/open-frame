@@ -113,3 +113,16 @@ test('Alt+F10 reaches the bar from a table cell and Escape comes back to it', as
   await expect(page.getByTestId('table-editor')).toHaveAttribute('data-mode', 'edit')
   await expect(page.locator(EDITOR)).toBeFocused()
 })
+
+// A mixed selection is mixed. Stepping still starts from the object's size.
+test('says a selection of two sizes is mixed, not the default', async ({ page }) => {
+  await editingNote(page, 'ab')
+  await page.keyboard.press('Home')
+  await page.keyboard.press('Shift+ArrowRight')
+  await page.keyboard.press(`${MOD}+Shift+Period`)
+  await page.keyboard.press(`${MOD}+Shift+Period`)
+  await expect(page.getByTestId('format-size')).toHaveText('×2')
+  await page.keyboard.press(`${MOD}+a`)
+  await expect(page.getByTestId('format-size')).toHaveText('—')
+  await expect(page.getByTestId('format-size')).toHaveAttribute('aria-label', 'Text size mixed')
+})

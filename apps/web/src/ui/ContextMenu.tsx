@@ -102,6 +102,30 @@ export function ContextMenu() {
     returnTo.current?.focus()
   }
 
+  /*
+   * Tab closes the menu AND moves on, from where the menu was opened — the
+   * menu is not a stop in the page's order. Handing focus back and stopping
+   * there made leaving it by Tab cost a second press.
+   */
+  const tabAway = (backward: boolean): void => {
+    const inMenu = (element: Element): boolean =>
+      ref.current?.contains(element) === true || subRef.current?.contains(element) === true
+    const stops = [
+      ...document.querySelectorAll<HTMLElement>(
+        'a[href], button:not([disabled]), input:not([disabled]), select, textarea, [tabindex]:not([tabindex="-1"])',
+      ),
+    ].filter((element) => !inMenu(element) && element.getClientRects().length > 0)
+    const from = returnTo.current === null ? -1 : stops.indexOf(returnTo.current)
+    const next =
+      from === -1
+        ? backward
+          ? stops[stops.length - 1]
+          : stops[0]
+        : stops[(from + (backward ? -1 : 1) + stops.length) % stops.length]
+    close()
+    next?.focus()
+  }
+
   useEffect(() => {
     if (at === null) return
     const outside = (event: Event): void => {
@@ -317,6 +341,7 @@ export function ContextMenu() {
           }}
           onRun={dismiss}
           onClose={dismiss}
+          onTab={tabAway}
         />
       </AnchoredSurface>
       {open !== null && submenu !== undefined && (
@@ -338,6 +363,7 @@ export function ContextMenu() {
             onOpen={() => undefined}
             onHover={() => undefined}
             onRun={dismiss}
+            onTab={tabAway}
             onClose={() => {
               // Back to the item that opened it, as the menu pattern does.
               const parent = ref.current?.querySelector<HTMLElement>(
@@ -372,6 +398,7 @@ function MenuList({
   onHover,
   onRun,
   onClose,
+  onTab,
   closeOnLeft = false,
 }: {
   readonly list: RefObject<HTMLDivElement | null>
@@ -383,6 +410,7 @@ function MenuList({
   readonly onHover: (label: string) => void
   readonly onRun: () => void
   readonly onClose: () => void
+  readonly onTab: (backward: boolean) => void
   readonly closeOnLeft?: boolean
 }) {
   const openFrom = (element: HTMLElement, item: Item): void => {
@@ -426,9 +454,12 @@ function MenuList({
         }
         return
       case 'Escape':
-      case 'Tab':
         event.preventDefault()
         onClose()
+        return
+      case 'Tab':
+        event.preventDefault()
+        onTab(event.shiftKey)
         return
     }
     if (event.key.length === 1 && /\S/.test(event.key) && !event.metaKey && !event.ctrlKey) {
