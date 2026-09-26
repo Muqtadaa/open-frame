@@ -4026,10 +4026,24 @@ body {
   position: relative;
   width: 100%;
   height: 100%;
-  border: 1px solid var(--of-panel-border);
   border-radius: var(--of-radius-slip);
   /* The title sits ABOVE the frame, so it must not be clipped. */
   overflow: visible;
+}
+
+/*
+ * The edge, laid out at `zoom` times the frame and painted at `1 / zoom` (see
+ * FrameEdge), so this 1px is one screen pixel at every zoom (rule 24).
+ */
+.of-frame__edge {
+  position: absolute;
+  top: 0;
+  left: 0;
+  box-sizing: border-box;
+  border: 1px solid var(--of-panel-border);
+  border-radius: var(--of-radius-slip);
+  transform-origin: 0 0;
+  pointer-events: none;
 }
 
 /*

@@ -141,4 +141,48 @@ test.describe('apparatus is measured in screen pixels', () => {
     await zoomBy(page, 8, 'Control+=')
     expect(await band(), 'the selection band thickened with the zoom').toBeCloseTo(atHundred, 1)
   })
+
+  /*
+   * A frame's edge is content drawn in the world, but it is meant as a
+   * hairline at every zoom. It was held there by dividing its width by the
+   * zoom — which cannot go below one pixel, so at 1600% the edge came back as
+   * one WORLD pixel and painted sixteen on screen beside the selection line.
+   */
+  test("a frame's edge stays a hairline at 1600%", async ({ page }) => {
+    await page.goto(BOARD_URL)
+    await expect(page.locator(CANVAS)).toBeVisible()
+    await page.getByTestId('tool-frame').click()
+    await page.mouse.move(340, 220)
+    await page.mouse.down()
+    await page.mouse.move(940, 520, { steps: 12 })
+    await page.mouse.up()
+    await page.keyboard.press('Escape')
+    await page.keyboard.press('Escape')
+    await expect(page.locator('[data-object-type="frame"]')).toHaveCount(1)
+
+    // The thickest edge painted anywhere in the frame, title aside.
+    const thickest = async (): Promise<number> =>
+      page.evaluate(() => {
+        const frame = document.querySelector('[data-object-type="frame"]')
+        if (frame === null) return -1
+        let widest = 0
+        for (const element of [frame, ...frame.querySelectorAll('*')]) {
+          if (!(element instanceof HTMLElement) || element.closest('.of-frame__title')) continue
+          const style = window.getComputedStyle(element)
+          const declared = Number.parseFloat(style.borderTopWidth)
+          if (style.borderTopStyle === 'none' || declared === 0 || element.offsetWidth === 0) {
+            continue
+          }
+          const magnified = element.getBoundingClientRect().width / element.offsetWidth
+          widest = Math.max(widest, declared * magnified)
+        }
+        return widest
+      })
+
+    const atHundred = await thickest()
+    expect(atHundred).toBeGreaterThan(0)
+    await zoomBy(page, 8, 'Control+=')
+    await expect(page.getByTestId('zoom-percent')).toHaveText('1600%')
+    expect(await thickest(), 'the frame edge thickened with the zoom').toBeLessThan(1.5)
+  })
 })
