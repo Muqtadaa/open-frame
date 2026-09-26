@@ -1,6 +1,7 @@
 import { useCallback, useRef, useState, type RefObject } from 'react'
 
 import { ACCOUNTS_ENABLED, signOut } from '../app/identity.js'
+import { SOURCE_URL } from '../app/source-link.js'
 import { AnchoredSurface } from '../controls/AnchoredSurface.js'
 import { useAnchoredTo } from '../controls/use-anchor.js'
 import { useDismiss, useFocusOnOpen } from '../controls/use-dismiss.js'
@@ -129,6 +130,7 @@ function SignInSheet({
     <AnchoredSurface anchor={anchor} surface={surface} prefer={['below', 'above']} testId="account-surface">
       <div ref={sheet} className="of-sheet" role="dialog" aria-label="Account" data-testid="account-dialog">
         <AccountForm onDone={onClose} />
+        <SheetSource />
       </div>
     </AnchoredSurface>
   )
@@ -193,7 +195,20 @@ export function AccountSheet({
             Sign out
           </button>
         </div>
+        <SheetSource />
       </div>
     </AnchoredSurface>
+  )
+}
+
+/**
+ * The source offer, for the width where the bar has no room for it. Shown by
+ * the stylesheet only there; everywhere else the bar carries it.
+ */
+function SheetSource() {
+  return (
+    <a className="of-sheet__source" href={SOURCE_URL} target="_blank" rel="noreferrer">
+      Source
+    </a>
   )
 }

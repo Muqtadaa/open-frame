@@ -2988,6 +2988,17 @@ body {
   margin-bottom: var(--of-space-12);
 }
 
+/*
+ * The source offer, repeated in the account and sign-in sheets for the one
+ * width where the bar has no room for it. Hidden everywhere else.
+ */
+.of-sheet__source {
+  display: none;
+  margin-top: var(--of-space-12);
+  font-size: var(--of-type-record);
+  color: var(--of-ink-muted);
+}
+
 /* What a field is for, kept beside it once somebody has started typing. */
 .of-account__hint {
   display: block;
@@ -3143,6 +3154,20 @@ body {
 
   .of-status__rule {
     display: none;
+  }
+
+  /*
+   * The account shrinks to its face, and the source offer moves into the
+   * account sheet: both ran off the right edge of a phone, and the source
+   * link has to stay reachable from inside the running app (AGPL §13).
+   */
+  .of-status__account .of-status__share-label,
+  .of-status__source {
+    display: none;
+  }
+
+  .of-sheet__source {
+    display: block;
   }
 }
 
@@ -5446,6 +5471,12 @@ textarea.of-input {
   gap: 28px;
   width: 100%;
   min-height: 100dvh;
+  /*
+   * Never sideways. A tip is laid out even while it is invisible, and the
+   * ones on the header's far end reached past a narrow window and made the
+   * whole page scroll — with nothing visible out there to scroll to.
+   */
+  overflow-x: clip;
   padding: 48px 24px;
   font-family: var(--of-font);
   color: var(--of-ink);
@@ -5502,8 +5533,28 @@ textarea.of-input {
   gap: var(--of-space-6);
 }
 
+/*
+ * The account sits at the column's right edge, so its tip hangs from its
+ * right-hand side, like the zoom cluster's, and stays on screen.
+ */
+.of-home__lockup .of-home__account[data-tip]::after {
+  right: 0;
+  left: auto;
+  transform: translateY(var(--of-space-2));
+}
+
+.of-home__lockup .of-home__account[data-tip]:hover::after,
+.of-home__lockup .of-home__account[data-tip]:focus-visible::after {
+  transform: none;
+}
+
 .of-home__lockup {
   display: flex;
+  /*
+   * Wraps: the mark, the name, the account and the mentions do not fit a
+   * phone on one line, and unwrapped they made the whole page 480px wide.
+   */
+  flex-wrap: wrap;
   gap: var(--of-step);
   align-items: center;
 }
@@ -5970,6 +6021,19 @@ textarea.of-input {
 
   .of-home__column {
     gap: var(--of-space-16);
+  }
+
+  /*
+   * A confirmation says its sentence on a line of its own and answers under
+   * it. In one row with its two buttons it was one word per line on a phone.
+   */
+  .of-home__confirm {
+    flex-wrap: wrap;
+    padding-left: var(--of-space-8);
+  }
+
+  .of-home__confirm-what {
+    flex-basis: 100%;
   }
 
   /*
