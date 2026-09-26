@@ -133,3 +133,40 @@ test('a second comment from the same person travels as well as the first', async
     timeout: 20_000,
   })
 })
+
+/*
+ * Said EVERY time. The same person commenting twice produces the same words,
+ * and a live region set to the text it already holds does not change — so the
+ * second arrival was drawn and never announced.
+ */
+test('two comments in a row from the same person are both announced', async ({ browser }) => {
+  const room = newRoomId()
+  const alice = await join(browser, room, 'Muqtadaa Miandara')
+  const bob = await join(browser, room, 'Rowan', alice.server)
+  await bob.page.evaluate(() => {
+    const said: string[] = []
+    ;(window as unknown as { said: string[] }).said = said
+    const region = document.querySelector('[data-testid="comment-arrivals"]')
+    if (region === null) return
+    new MutationObserver(() => {
+      const text = region.textContent ?? ''
+      if (text !== '') said.push(text)
+    }).observe(region, { childList: true, characterData: true, subtree: true })
+  })
+
+  for (const [index, text] of ['first thing', 'second thing'].entries()) {
+    await alice.page.getByTestId('tool-comment').click()
+    await alice.page
+      .locator('[data-testid="canvas"]')
+      .click({ position: { x: 200 + index * 160, y: 200 } })
+    await alice.page.getByTestId('comment-input').fill(text)
+    await alice.page.getByTestId('comment-post').click()
+    await expect(bob.page.locator('[data-testid^="comment-pin-cmt_"]')).toHaveCount(index + 1, {
+      timeout: 20_000,
+    })
+  }
+
+  await expect
+    .poll(() => bob.page.evaluate(() => (window as unknown as { said: string[] }).said.length))
+    .toBe(2)
+})

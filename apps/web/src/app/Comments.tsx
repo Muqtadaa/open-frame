@@ -132,7 +132,20 @@ export function Comments() {
     seen.current = new Set(comments.map((comment) => comment.id))
     const last = fresh[fresh.length - 1]
     if (last === undefined) return
-    setArrived(`${last.authorName} ${last.parentId === null ? 'commented' : 'replied'}`)
+    /*
+     * Emptied, then said. The same person replying twice produces the same
+     * words, and setting a live region to the text it already holds changes
+     * nothing — so the second reply went unannounced. Clearing it first makes
+     * every arrival a change a screen reader hears.
+     */
+    const said = `${last.authorName} ${last.parentId === null ? 'commented' : 'replied'}`
+    setArrived('')
+    const later = window.setTimeout(() => {
+      setArrived(said)
+    }, 60)
+    return () => {
+      window.clearTimeout(later)
+    }
   }, [comments, me, mountedAt])
 
   if (!enabled) return null
@@ -143,7 +156,7 @@ export function Comments() {
 
   return (
     <>
-      <CommentPanel key={target} />
+      <CommentPanel key={target} author={me?.userId ?? null} />
       <p className="of-visually-hidden" aria-live="polite" data-testid="comment-arrivals">
         {arrived}
       </p>

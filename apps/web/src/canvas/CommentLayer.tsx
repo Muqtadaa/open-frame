@@ -5,7 +5,8 @@ import { worldToScreen, type Point } from '@openframe/core'
 import { useDiscussion } from '../app/comments-context.js'
 import { plainMentionText } from '../hooks/use-comments.js'
 import { useBoardDocument } from '../hooks/use-document-object.js'
-import { draftKey, useCommentDrafts } from '../interaction/comment-drafts.js'
+import { draftIsBy, draftKey, useCommentDrafts } from '../interaction/comment-drafts.js'
+import { useIdentity } from '../hooks/use-identity.js'
 import { useInteractionStore } from '../interaction/interaction-store.js'
 import { useRemoteDragStore } from '../interaction/remote-drags.js'
 import { useOpenFrame } from '../runtime/context.js'
@@ -45,6 +46,7 @@ export function CommentLayer() {
   const composing = useInteractionStore((state) => state.composing)
   const startComment = useInteractionStore((state) => state.startComment)
   const drafts = useCommentDrafts((state) => state.drafts)
+  const author = useIdentity()?.userId ?? null
 
   /*
    * A gesture in flight, mine and everybody else's.
@@ -108,9 +110,10 @@ export function CommentLayer() {
    * Escape has to be somewhere a person can find it again — nobody can click
    * the exact spot twice — so it stays on the board as a pin of its own.
    */
-  const current = draftKey(openThreadId, composing)
+  const current = draftKey(author, openThreadId, composing)
   const pending = [...drafts]
-    .filter(([key, draft]) => draft.at !== null && key !== current)
+    // Only this account's: another's unposted words are not yours to see.
+    .filter(([key, draft]) => draft.at !== null && key !== current && draftIsBy(key, author))
     .map(([key, draft]) => {
       const start = draft.at
       if (start === null) return null

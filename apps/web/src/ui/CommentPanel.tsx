@@ -34,7 +34,7 @@ import { MentionText } from './MentionText.js'
  * read at 25%. The pin is on the board because that is WHERE the remark is
  * about; the words are in the margin because that is where words are legible.
  */
-export function CommentPanel() {
+export function CommentPanel({ author }: { readonly author: string | null }) {
   const { comments, people, replyCounts, post, resolve, focusComment } = useDiscussion()
   const { runtime } = useOpenFrame()
   const me = useIdentity()
@@ -57,8 +57,12 @@ export function CommentPanel() {
   /*
    * The draft for what this panel writes into, if one was left unposted. Read
    * once, when the panel mounts — the panel is keyed on the same thing.
+   *
+   * The author is HANDED IN by the component that stays mounted. Asked here,
+   * `useIdentity` starts at null and fills in a moment later, so a panel that
+   * had just mounted looked up its draft as nobody's and found nothing.
    */
-  const key = draftKey(openThreadId, composing)
+  const key = draftKey(author, openThreadId, composing)
   const keepDraft = useCommentDrafts((state) => state.keep)
   const dropDraft = useCommentDrafts((state) => state.drop)
   const heading = useRef<HTMLHeadingElement>(null)

@@ -60,12 +60,25 @@ export const useCommentDrafts = create<CommentDraftState>((set) => ({
   },
 }))
 
-/** What a panel is writing into, as a draft's key. */
+/**
+ * What a panel is writing into, as a draft's key — for ONE account.
+ *
+ * The store outlives a sign-out, so a key that named only the thread or the
+ * spot handed the next account to sign in on the same page the last one's
+ * unfinished words, to read or to post under the wrong name.
+ */
 export function draftKey(
+  author: string | null,
   openThreadId: string | null,
   composing: ComposingComment | null,
 ): string | null {
-  if (openThreadId !== null) return `thread:${openThreadId}`
-  if (composing !== null) return `new:${String(composing.x)},${String(composing.y)}`
+  if (author === null) return null
+  if (openThreadId !== null) return `${author}|thread:${openThreadId}`
+  if (composing !== null) return `${author}|new:${String(composing.x)},${String(composing.y)}`
   return null
+}
+
+/** Whether a draft's key belongs to this account. */
+export function draftIsBy(key: string, author: string | null): boolean {
+  return author !== null && key.startsWith(`${author}|`)
 }
