@@ -539,3 +539,41 @@ menu restructure; and all three format-bar additions.
   record panel; a partly bold selection shows bold off rather than mixed; the
   menu still opens over the record panel (deliberately, per its test); Hide
   says nothing about where hidden objects go.
+
+### C3 #5 · Comments, mentions and presence (critique 21/40)
+
+A dual-agent critique, run in a live two-person room, scored the surface 21/40:
+- **P0:** Escape, or a click on another spot or pin, threw a comment or reply
+  draft away.
+- **P1:** a comment could not be started by keyboard; focus fell to the body
+  after every close; the mentions list could not be entered or dismissed; no
+  arrival was announced.
+- **P1:** nothing said when, how many replies, or brought a listed thread's
+  pin into view.
+- **P2:** reading a thread put the keyboard in Reply; no way back to the list.
+- **P2:** no direction — open pin in the guide hue, a solid accent bell, 22px
+  overlapping faces, mention initials at 1.5–3:1, the pin's point 26px below
+  its spot.
+
+The owner chose everything, minors included; drafts kept on Escape; relative
+time with the exact date in the tip; faces at 24px without overlap.
+
+- **Drafts** (`4685bf4`): kept outside the panel per spot or thread, restored
+  with "Draft kept from before.", cleared only by posting; an unposted new
+  comment stays as a dashed draft pin.
+- **Keyboard and announcements** (`50fa8df`): M on a selection starts a
+  comment; focus returns to what had it; Escape anywhere in the panel; the
+  mentions list is a sheet; arrivals announced politely.
+- **When, how many, where** (`c51ef31`): `Ago` on every remark, row and
+  mention; reply counts; list clicks go through focusComment.
+- **Reading a thread** (`9bdfce9`): heading focus, "All comments".
+- **Marks** (`dd9c8f2`): pin point on its spot, open pin in ink, quiet bell,
+  24px faces side by side capped at three plus "+N", initials guarded.
+- **Minors** (`504997e`): pin names and counts, no self-mention, dismissal per
+  mention, no doubled space, textbox role, hidden avatar initial, clearer
+  errors, room chip copy failure, panel at the gutter, inert disabled primary.
+- **Contract:** `apps/web/.impeccable/surfaces/apps-web-src-ui-commentpanel-tsx.md`.
+- **Left for later:** edit/delete a remark; next/previous thread; the
+  "Shared" chip copies rather than opening the chooser; a ghost face seen once
+  after a reload; the canvas presence layer is hidden from assistive tech.
+
