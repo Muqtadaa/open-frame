@@ -1,12 +1,16 @@
 import { type ZodType, z } from 'zod'
 
 import {
+  ALIGN_TOKENS,
   DASH_TOKENS,
   STROKE_TOKENS,
+  VALIGN_TOKENS,
   isColorValue,
+  type AlignToken,
   type ColorValue,
   type DashToken,
   type StrokeToken,
+  type VAlignToken,
 } from '../../domain/object.js'
 import { RichTextSchema, type RichText } from '../../domain/rich-text.js'
 
@@ -34,10 +38,15 @@ import { RichTextSchema, type RichText } from '../../domain/rich-text.js'
  * of document to say nothing.
  *
  * Deliberately NOT an `ObjectStyle`. A cell is not an object: it has no font
- * of its own (a table's type is the table's), no opacity, no alignment, and
- * giving it a style record would invite every one of those to be honoured
- * here — a capability declared and ignored, which is what rule 21 is about.
- * Two colours are what a cell can wear, and the type says so.
+ * of its own (a table's type is the table's), no opacity, and giving it a
+ * style record would invite every one of those to be honoured here — a
+ * capability declared and ignored, which is what rule 21 is about. Two
+ * colours and an alignment are what a cell can wear, and the type says so.
+ *
+ * Alignment is the cell's because a table is read by COLUMN: a column of
+ * figures sits right under headings that sit left, and a table that could
+ * only be aligned as a whole could not say that. Absent, like the colours,
+ * means the table's own.
  *
  * A cell has no border of its own (ADR 0015). The line between two cells
  * belongs to BOTH of them, so a colour stored on one cell had to lose to, or
@@ -51,12 +60,23 @@ export interface TableCell {
   readonly fill?: ColorValue
   /** The ink of this cell's text, overriding the table's. */
   readonly textColor?: ColorValue
+  /** Where the text sits across the cell, overriding the table's. */
+  readonly align?: AlignToken
+  /** Where the text sits down the cell, overriding the table's. */
+  readonly verticalAlign?: VAlignToken
 }
 
-/** The colours a cell may carry, as a patch. Absent keys are left alone. */
+/** What a cell may wear, as a patch. Absent keys are left alone. */
 export interface CellStyle {
   readonly fill?: ColorValue
   readonly textColor?: ColorValue
+  readonly align?: AlignToken
+  readonly verticalAlign?: VAlignToken
+}
+
+/** A patch to a cell's dress: a value sets, `null` clears, absent leaves alone. */
+export type CellStylePatch = {
+  readonly [K in keyof CellStyle]?: NonNullable<CellStyle[K]> | null
 }
 
 /**
@@ -69,6 +89,8 @@ export interface CellStyle {
 export const CELL_STYLE_KEYS: Readonly<Record<keyof CellStyle, true>> = {
   fill: true,
   textColor: true,
+  align: true,
+  verticalAlign: true,
 }
 
 /**
@@ -202,6 +224,8 @@ const TableCellSchema = z
     text: RichTextSchema,
     fill: ColorValueSchema.optional(),
     textColor: ColorValueSchema.optional(),
+    align: z.enum(ALIGN_TOKENS).optional(),
+    verticalAlign: z.enum(VALIGN_TOKENS).optional(),
   })
   .strict() as unknown as ZodType<TableCell>
 
@@ -448,7 +472,7 @@ export function cellRange(
 export function styleCells(
   data: TableData,
   indices: readonly number[],
-  patch: Readonly<Partial<Record<keyof CellStyle, ColorValue | null>>>,
+  patch: CellStylePatch,
 ): TableData {
   const touched = new Set(indices)
   if (touched.size === 0) return data
@@ -462,7 +486,7 @@ export function styleCells(
         const value = patch[key]
         if (value === undefined) continue
         if (value === null) delete next[key]
-        else next[key] = value
+        else (next as Record<keyof CellStyle, unknown>)[key] = value
       }
       return next
     }),

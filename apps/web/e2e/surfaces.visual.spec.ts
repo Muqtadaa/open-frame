@@ -288,6 +288,12 @@ for (const world of WORLDS) {
       await placeSticky(page, 'Customers do not understand pricing')
       await rewriteStoredBoard(page, 'newer')
       await expect(page.getByTestId('board-unreadable')).toBeVisible()
+      /*
+       * Whether the focused button draws its ring depends on whether the last
+       * input was a key, which a reload leaves to chance. A press on the
+       * sheet's words settles it: a pointer user, no ring.
+       */
+      await page.getByTestId('board-unreadable').locator('p').click()
       await snap(page, `${world}-board-unreadable`)
     })
 

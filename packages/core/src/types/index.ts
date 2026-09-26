@@ -49,6 +49,7 @@ export {
   resizeTrackAt,
   setTrackSize,
   type CellStyle,
+  type CellStylePatch,
   type LineAt,
   type Merge,
   type TableCell,

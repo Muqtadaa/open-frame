@@ -774,6 +774,12 @@ board throws words away; undo does that.
 - **The format bar works with no caret.** With a range selected, bold,
   size and lists apply to every cell in it, and read as on only when every
   cell already is.
+- **A cell is aligned on its own.** The cell bar's second row sets across
+  (left, centre, right) and down (top, middle, bottom) for the selected cells,
+  as radios showing what the selection has, or the table's own. A cell's own
+  alignment beats the table's: a column of figures can sit right under
+  headings that sit left, and the record panel then aligns only what nobody
+  aligned separately. Reset gives a cell back its colours AND alignment.
 
 ### Tips on Everything Else
 

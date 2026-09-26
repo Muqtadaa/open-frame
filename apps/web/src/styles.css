@@ -1762,6 +1762,13 @@ body {
   align-items: center;
 }
 
+/* Across, then down: the record panel's two rows, side by side. */
+.of-cellbar__align {
+  display: flex;
+  gap: var(--of-step);
+  align-items: center;
+}
+
 /* A count is a measurement, so it is set as one. */
 .of-cellbar__count {
   font-family: var(--of-mono);

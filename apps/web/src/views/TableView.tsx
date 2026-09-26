@@ -37,8 +37,13 @@ import {
   unmergeRange,
   type Axis,
   type CellRange,
+  ALIGN_TOKENS,
+  VALIGN_TOKENS,
+  type AlignToken,
   type CellStyle,
+  type CellStylePatch,
   type ColorValue,
+  type VAlignToken,
   type DashToken,
   type LinePreset,
   type ListKind,
@@ -79,7 +84,7 @@ import {
   verticalAlign,
 } from '../scene/style-tokens.js'
 import { Swatches, groundOf, type SwatchKind } from '../controls/Swatches.js'
-import { BorderPresetIcon, DashIcon, StrokeIcon } from '../controls/icons.js'
+import { AlignIcon, BorderPresetIcon, DashIcon, StrokeIcon, VAlignIcon } from '../controls/icons.js'
 
 /*
  * ---------------------------------------------------------------------------
@@ -129,14 +134,26 @@ function mergeIndex(data: TableData): {
 }
 
 /**
- * One cell's own colours, as a style object, or `undefined` for none.
+ * One cell's own dress — colours and alignment — as a style object, or
+ * `undefined` for none.
  *
  * `undefined` rather than an empty object: React treats `style={{}}` as a
  * value that changed on every render, and this runs once per cell per frame on
  * a grid that may hold hundreds.
+ *
+ * Alignment set here beats the table's because the table's is INHERITED: its
+ * `text-align` and its `--of-valign` come down from the grid, and a cell that
+ * states its own simply shadows them.
  */
 function cellPaint(cell: TableCell): CSSProperties | undefined {
-  if (cell.fill === undefined && cell.textColor === undefined) return undefined
+  if (
+    cell.fill === undefined &&
+    cell.textColor === undefined &&
+    cell.align === undefined &&
+    cell.verticalAlign === undefined
+  ) {
+    return undefined
+  }
   /*
    * The ink flips on the CELL's own fill, not the table's. A black cell in a
    * plain table is the case: the table says nothing about ink, so without this
@@ -146,6 +163,10 @@ function cellPaint(cell: TableCell): CSSProperties | undefined {
   return {
     ...(cell.fill === undefined ? {} : { background: surfaceOf(cell.fill, 'gray') }),
     ...(ink === undefined ? {} : { color: ink }),
+    ...(cell.align === undefined ? {} : { textAlign: textAlign(cell.align) }),
+    ...(cell.verticalAlign === undefined
+      ? {}
+      : { ['--of-valign' as string]: verticalAlign(cell.verticalAlign) }),
   }
 }
 
@@ -501,7 +522,7 @@ const CELL_TARGETS: readonly { key: CellTarget; label: string; name: string }[] 
 ]
 
 const CELL_KIND: Readonly<Record<ColourTarget, SwatchKind>> = { fill: 'surface', text: 'ink' }
-const CELL_KEY: Readonly<Record<ColourTarget, keyof CellStyle>> = {
+const CELL_KEY: Readonly<Record<ColourTarget, 'fill' | 'textColor'>> = {
   fill: 'fill',
   text: 'textColor',
 }
@@ -762,13 +783,13 @@ function TableEditor({
   const cellsOf = (area: CellRange): number[] => indicesOf(draft, area)
 
   /** What every selected cell agrees on, or `undefined` if they do not. */
-  const agreed = (key: keyof CellStyle): ColorValue | undefined => {
+  const agreed = <K extends keyof CellStyle>(key: K): CellStyle[K] | undefined => {
     const indices = cellsOf(range)
     const first = draft.cells[indices[0] ?? -1]?.[key]
     return indices.every((index) => draft.cells[index]?.[key] === first) ? first : undefined
   }
 
-  const dress = (patch: Partial<Record<keyof CellStyle, ColorValue | null>>): void => {
+  const dress = (patch: CellStylePatch): void => {
     setDraft((current) => styleCells(current, indicesOf(current, range), patch))
   }
 
@@ -1596,16 +1617,44 @@ function TableEditor({
                 type="button"
                 className="of-button of-button--ghost of-cellbar__clear"
                 aria-label="Reset"
-                data-tip="Use the table's own colours"
-                aria-description="Use the table's own colours"
+                data-tip="Use the table's own colours and alignment"
+                aria-description="Use the table's own colours and alignment"
                 data-testid="cell-clear"
                 onClick={() => {
-                  dress({ fill: null, textColor: null })
+                  dress({ fill: null, textColor: null, align: null, verticalAlign: null })
                 }}
               >
                 Reset
               </button>
             )}
+          </div>
+
+          {/*
+            Alignment, per cell, over the table's own. Always shown rather than
+            a target like the colours: it is one row of six, and a column of
+            figures is aligned as often as it is coloured.
+          */}
+          <div className="of-cellbar__align">
+            <CellChoice<AlignToken>
+              label="Align across"
+              name="cell-align"
+              options={ALIGN_TOKENS}
+              current={agreed('align') ?? object.style.align ?? 'start'}
+              onPick={(align) => {
+                dress({ align })
+              }}
+              render={(token) => <AlignIcon variant={token} />}
+            />
+            <CellChoice<VAlignToken>
+              label="Align down"
+              name="cell-valign"
+              options={VALIGN_TOKENS}
+              current={agreed('verticalAlign') ?? object.style.verticalAlign ?? 'top'}
+              onPick={(verticalAlign) => {
+                dress({ verticalAlign })
+              }}
+              render={(token) => <VAlignIcon variant={token} />}
+            />
           </div>
 
           {target === 'borders' ? (
@@ -1693,6 +1742,68 @@ function TableEditor({
           )}
         </div>
       </Chrome>
+    </div>
+  )
+}
+
+const ALIGN_NAMES: Readonly<Record<AlignToken | VAlignToken, string>> = {
+  start: 'Left',
+  center: 'Centre',
+  end: 'Right',
+  top: 'Top',
+  middle: 'Middle',
+  bottom: 'Bottom',
+}
+
+/**
+ * One row of alignment choices, as radios: one of three is always true, and
+ * the arrows move along it as the record panel's own rows do.
+ */
+function CellChoice<T extends AlignToken | VAlignToken>({
+  label,
+  name,
+  options,
+  current,
+  onPick,
+  render,
+}: {
+  readonly label: string
+  readonly name: string
+  readonly options: readonly T[]
+  readonly current: T
+  readonly onPick: (token: T) => void
+  readonly render: (token: T) => ReactNode
+}) {
+  const step = (event: KeyboardEvent<HTMLDivElement>): void => {
+    const by = event.key === 'ArrowRight' ? 1 : event.key === 'ArrowLeft' ? -1 : 0
+    if (by === 0) return
+    event.preventDefault()
+    const next = options[(options.indexOf(current) + by + options.length) % options.length]
+    if (next === undefined) return
+    onPick(next)
+    const button = event.currentTarget.querySelector<HTMLElement>(`[data-testid="${name}-${next}"]`)
+    button?.focus()
+  }
+  return (
+    <div className="of-choice" role="radiogroup" aria-label={label} onKeyDown={step}>
+      {options.map((option) => (
+        <button
+          key={option}
+          type="button"
+          role="radio"
+          className={`of-choice__item${option === current ? ' of-choice__item--on' : ''}`}
+          aria-checked={option === current}
+          aria-label={ALIGN_NAMES[option]}
+          data-tip={ALIGN_NAMES[option]}
+          tabIndex={option === current ? 0 : -1}
+          data-testid={`${name}-${option}`}
+          onClick={() => {
+            onPick(option)
+          }}
+        >
+          {render(option)}
+        </button>
+      ))}
     </div>
   )
 }
