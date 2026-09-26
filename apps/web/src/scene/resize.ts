@@ -8,6 +8,23 @@ export type HandleId = (typeof HANDLES)[number]
 
 export const CORNER_HANDLES: readonly HandleId[] = ['nw', 'ne', 'se', 'sw']
 
+/**
+ * Below this size on screen, in either direction, a selection is COMPACT: it
+ * keeps its four corners, drawn outside it, and nothing else.
+ *
+ * Eight squares, two kinds of strip, four connect points and a rotate grip
+ * need room a small selection does not have. At 25% a 40px shape was ten
+ * pixels across, its handles covered it, and a press in its middle landed on
+ * a handle and resized it instead of moving it. The rest come back as soon as
+ * there is room for them — zoom in, and they are there.
+ */
+export const COMPACT_PX = 48
+
+/** Whether a selection this size on screen is too small for its full set of grips. */
+export function isCompact(screen: { readonly width: number; readonly height: number }): boolean {
+  return screen.width < COMPACT_PX || screen.height < COMPACT_PX
+}
+
 const MIN_SIZE = 8
 
 const GRIPS: Record<HandleId, { readonly x: number; readonly y: number }> = {

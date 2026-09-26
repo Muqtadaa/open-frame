@@ -103,7 +103,15 @@ test.describe('apparatus is measured in screen pixels', () => {
 
     await zoomBy(page, 16, 'Control+-')
     await expect(page.getByTestId('zoom-percent')).toHaveText('5%')
-    expect(await grips(page), 'the grips shrank with the board').toEqual(atHundred)
+    /*
+     * At 5% the shape is thirty pixels across, which makes it a COMPACT
+     * selection: its corners stay and the rest wait for room (C3 #7). What is
+     * still drawn is still the size it is at 100%.
+     */
+    const atFive = await grips(page)
+    expect(atFive.corner, 'the corners shrank with the board').toEqual(atHundred.corner)
+    expect(atFive.edge, 'a compact selection kept its strips').toBeNull()
+    expect(atFive.rotate, 'a compact selection kept its rotate grip').toBeNull()
   })
 
   /**

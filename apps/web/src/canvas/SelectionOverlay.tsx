@@ -4,6 +4,7 @@ import { useOpenFrame } from '../runtime/context.js'
 import { useBoardDocument } from '../hooks/use-document-object.js'
 import { useInteractionStore } from '../interaction/interaction-store.js'
 import {
+  CORNER_HANDLES,
   HANDLES,
   HANDLE_CURSORS,
   EDGE_HANDLES,
@@ -12,6 +13,7 @@ import {
   HANDLE_HIT_PX,
   ROTATE_OFFSET_PX,
   handleAnchor,
+  isCompact,
 } from '../scene/resize.js'
 import { unionAll, worldRectToScreen, type Rect } from '@openframe/core'
 import { LockIcon, RotateIcon } from '../controls/icons.js'
@@ -21,6 +23,12 @@ import { useCommands } from '../hooks/use-commands.js'
 /** Handles stay this many SCREEN pixels across, whatever the zoom. */
 /** The drawn handle: small on purpose, so it marks a corner without claiming it. */
 const HANDLE_PX = 9
+/**
+ * The drawn handle's border. A target is positioned inside its handle's
+ * PADDING box, so it has to know how thick the border around that box is —
+ * every target was a pixel short on each side, 22 where it said 24.
+ */
+const HANDLE_BORDER_PX = 1
 /** The rotate grip, which carries a drawn glyph rather than being a mark. */
 const ROTATE_PX = 15
 /** The lock badge on a selection that cannot be moved. */
@@ -209,6 +217,8 @@ export function SelectionOverlay() {
   const screen = worldRectToScreen(viewport, box)
   const half = HANDLE_PX / 2
   const glyphPad = Math.max(0, (HANDLE_HIT_PX - ROTATE_PX) / 2)
+  const compact = isCompact(screen)
+  const handles = compact ? CORNER_HANDLES : HANDLES
 
   return (
     <div
@@ -252,6 +262,7 @@ export function SelectionOverlay() {
        * like the target.
        */}
       {resizable &&
+        !compact &&
         EDGE_HANDLES.map((handle) => {
           const thick = EDGE_HIT_PX
           const inset = EDGE_INSET_PX
@@ -279,8 +290,24 @@ export function SelectionOverlay() {
         })}
 
       {resizable &&
-        HANDLES.map((handle) => {
+        handles.map((handle) => {
           const anchor = handleAnchor(handle)
+          /*
+           * Centred on its corner, or — on a compact selection — sitting just
+           * OUTSIDE it, so the object's face is left entirely to the object.
+           */
+          const drawn = {
+            left: compact
+              ? anchor.x === 0
+                ? -HANDLE_PX
+                : screen.width
+              : anchor.x * screen.width - half,
+            top: compact
+              ? anchor.y === 0
+                ? -HANDLE_PX
+                : screen.height
+              : anchor.y * screen.height - half,
+          }
           return (
             <div
               key={handle}
@@ -309,8 +336,8 @@ export function SelectionOverlay() {
                 }
               }}
               style={{
-                left: `${String(anchor.x * screen.width - half)}px`,
-                top: `${String(anchor.y * screen.height - half)}px`,
+                left: `${String(drawn.left)}px`,
+                top: `${String(drawn.top)}px`,
                 width: `${String(HANDLE_PX)}px`,
                 height: `${String(HANDLE_PX)}px`,
                 cursor: HANDLE_CURSORS[handle],
@@ -345,7 +372,7 @@ export function SelectionOverlay() {
                 className="of-handle__target"
                 aria-hidden="true"
                 style={{
-                  ...outwardReach(anchor, half),
+                  ...outwardReach(anchor, drawn, screen),
                   cursor: HANDLE_CURSORS[handle],
                 }}
               />
@@ -353,7 +380,7 @@ export function SelectionOverlay() {
           )
         })}
 
-      {rotatable && (
+      {rotatable && !compact && (
         /*
          * Drawn LARGER than a resize handle, because it is a glyph rather than
          * a mark: a curved arrow rendered at 9px is an indistinct smudge, and
@@ -386,26 +413,39 @@ export function SelectionOverlay() {
 }
 
 /**
- * Where a handle's pointer target lies, given the corner it sits on.
+ * Where a handle's pointer target lies, as insets from its padding box.
  *
  * On an axis the handle is at an END of, the whole target is outside the
  * selection: it runs `HANDLE_HIT_PX` outward from the boundary and stops
- * there, which is why the inner side is pulled back by the handle's own half.
- * On an axis where it sits at the MIDDLE it spreads evenly, because that is
- * along the edge rather than into the object.
+ * there. On an axis where it sits at the MIDDLE it spreads evenly, because
+ * that is along the edge rather than into the object.
+ *
+ * Worked out as the rectangle the target SHOULD cover, then subtracted from
+ * the box it is positioned in — the handle's padding box, inside its border.
+ * The border is what the first version forgot, and every target came out a
+ * pixel short on each side.
  *
  * Returned as four insets rather than one, which is the only way to say
  * "24 across, but not there".
  */
 function outwardReach(
   anchor: { x: number; y: number },
-  half: number,
+  drawn: { left: number; top: number },
+  screen: { width: number; height: number },
 ): { left: number; right: number; top: number; bottom: number } {
-  const outward = HANDLE_HIT_PX - half
-  const even = (HANDLE_HIT_PX - half * 2) / 2
-  const spread = (at: number): [number, number] =>
-    at === 0 ? [-outward, half] : at === 1 ? [half, -outward] : [-even, -even]
-  const [left, right] = spread(anchor.x)
-  const [top, bottom] = spread(anchor.y)
+  const axis = (at: number, start: number, extent: number): [number, number] => {
+    const edge = at * extent
+    const [from, to] =
+      at === 0
+        ? [edge - HANDLE_HIT_PX, edge]
+        : at === 1
+          ? [edge, edge + HANDLE_HIT_PX]
+          : [edge - HANDLE_HIT_PX / 2, edge + HANDLE_HIT_PX / 2]
+    const inner = start + HANDLE_BORDER_PX
+    const outer = start + HANDLE_PX - HANDLE_BORDER_PX
+    return [from - inner, outer - to]
+  }
+  const [left, right] = axis(anchor.x, drawn.left, screen.width)
+  const [top, bottom] = axis(anchor.y, drawn.top, screen.height)
   return { left, right, top, bottom }
 }

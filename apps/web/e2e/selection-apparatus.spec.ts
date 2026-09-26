@@ -86,3 +86,134 @@ test('a lone connector is selected by its ends, not by a box', async ({ page }) 
   await expect(page.getByTestId('endpoint-from')).toBeVisible()
   await expect(page.getByTestId('selection-overlay')).toHaveCount(0)
 })
+
+/**
+ * The press target a grip really offers: its `__target` child if it has one,
+ * which is what receives the press, otherwise the grip itself.
+ */
+async function targets(
+  page: Page,
+  selector: string,
+): Promise<{ id: string; w: number; h: number }[]> {
+  return page.locator(selector).evaluateAll((grips) =>
+    grips.map((grip) => {
+      const target = grip.querySelector('[class$="__target"]') ?? grip
+      const box = target.getBoundingClientRect()
+      return {
+        id: grip.getAttribute('data-testid') ?? grip.className,
+        w: Math.round(box.width * 10) / 10,
+        h: Math.round(box.height * 10) / 10,
+      }
+    }),
+  )
+}
+
+function atLeast24(found: readonly { id: string; w: number; h: number }[]): void {
+  expect(found.length).toBeGreaterThan(0)
+  for (const grip of found) {
+    expect(
+      Math.min(grip.w, grip.h),
+      `${grip.id} is ${String(grip.w)}×${String(grip.h)}`,
+    ).toBeGreaterThanOrEqual(24)
+  }
+}
+
+/*
+ * WCAG 2.5.8: a pointer target is 24px, whatever is drawn. The grips were
+ * 24, 22, 14, 12, 10 and 9 depending on the family — and the finest gesture on
+ * the board, placing a line's end, had the smallest.
+ */
+test.describe('every grip is a 24px target', () => {
+  test('resize handles and connect points', async ({ page }) => {
+    await page.getByTestId('tool-shape').click()
+    await page.mouse.move(340, 220)
+    await page.mouse.down()
+    await page.mouse.move(700, 460, { steps: 10 })
+    await page.mouse.up()
+    await page.keyboard.press('Escape')
+    await expect(page.getByTestId('selection-overlay')).toBeVisible()
+    atLeast24(await targets(page, '[data-testid^="handle-"]'))
+    atLeast24(await targets(page, '.of-connect-point'))
+  })
+
+  test("a line's ends, bends and legs", async ({ page }) => {
+    await note(page, { x: 280, y: 250 }, 'A')
+    await note(page, { x: 780, y: 470 }, 'B')
+    await page.keyboard.press('c')
+    const from = await canvasPoint(page, { x: 280, y: 250 })
+    const to = await canvasPoint(page, { x: 780, y: 470 })
+    await page.mouse.move(from.x, from.y)
+    await page.mouse.down()
+    await page.mouse.move(to.x, to.y, { steps: 8 })
+    await page.mouse.up()
+    await page.keyboard.press('v')
+    await page.locator('.of-connector__line').click({ force: true })
+    await expect(page.getByTestId('endpoint-from')).toBeVisible()
+    atLeast24(await targets(page, '[data-testid="endpoint-from"], [data-testid="endpoint-to"]'))
+
+    await page.getByTestId('field-routing').selectOption('orthogonal')
+    const line = page.locator('.of-connector__line')
+    const middle = await line.evaluate((element) => {
+      const path = element as unknown as SVGPathElement
+      const point = path.getPointAtLength(path.getTotalLength() / 2)
+      const matrix = path.getScreenCTM()
+      if (matrix === null) throw new Error('off screen')
+      const screen = new DOMPoint(point.x, point.y).matrixTransform(matrix)
+      return { x: screen.x, y: screen.y }
+    })
+    await page.mouse.move(middle.x, middle.y)
+    await expect(page.locator('[data-testid^="endpoint-leg:"]')).toHaveCount(1)
+    atLeast24(await targets(page, '[data-testid^="endpoint-leg:"]'))
+  })
+
+  test("a table's dividers", async ({ page }) => {
+    await page.getByTestId('tool-table').click()
+    await page.locator(CANVAS).click({ position: { x: 340, y: 300 } })
+    await page.locator(CANVAS).click({ position: AWAY })
+    await expect(page.getByTestId('table-editor')).toHaveCount(0)
+    await page.locator('[data-object-type="table"]').click()
+    await expect(page.locator('[data-testid^="divider-"]').first()).toBeAttached()
+    atLeast24(await targets(page, '[data-testid^="divider-"]'))
+  })
+})
+
+/*
+ * Below about 48px on screen there is no room for eight squares, two
+ * families of strip, four connect points and a rotate grip — at 25% a 40px
+ * shape was ten pixels across, its handles covered it, and a press in its
+ * middle landed on a handle and RESIZED it. A small selection keeps its four
+ * corners, outside it, and its middle moves it.
+ */
+test('a small selection keeps its corners, and its middle moves it', async ({ page }) => {
+  await page.getByTestId('tool-shape').click()
+  await page.mouse.move(400, 300)
+  await page.mouse.down()
+  await page.mouse.move(440, 340, { steps: 4 })
+  await page.mouse.up()
+  await page.keyboard.press('Escape')
+  for (let press = 0; press < 2; press += 1) await page.keyboard.press('Control+-')
+  await expect(page.getByTestId('zoom-percent')).toHaveText('25%')
+  const shape = page.locator('[data-object-type="shape"]')
+  await shape.click({ force: true })
+  await expect(page.getByTestId('selection-overlay')).toBeVisible()
+
+  await expect(page.locator('[data-testid^="handle-"]')).toHaveCount(4)
+  await expect(page.getByTestId('handle-nw')).toBeVisible()
+  await expect(page.locator('[data-testid^="edge-"]')).toHaveCount(0)
+  await expect(page.getByTestId('handle-rotate')).toHaveCount(0)
+  await expect(page.locator('.of-connect-point')).toHaveCount(0)
+
+  const before = await shape.boundingBox()
+  if (before === null) throw new Error('no shape')
+  const middle = { x: before.x + before.width / 2, y: before.y + before.height / 2 }
+  await page.mouse.move(middle.x, middle.y)
+  await page.mouse.down()
+  await page.mouse.move(middle.x + 60, middle.y + 40, { steps: 6 })
+  await page.mouse.up()
+  const after = await shape.boundingBox()
+  if (after === null) throw new Error('no shape')
+  // Moved, not resized.
+  expect(after.x - before.x).toBeGreaterThan(40)
+  expect(Math.abs(after.width - before.width)).toBeLessThan(1)
+  expect(Math.abs(after.height - before.height)).toBeLessThan(1)
+})

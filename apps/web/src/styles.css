@@ -4950,6 +4950,13 @@ textarea.of-input {
  * the dot: the drawn size is a design decision and the 24px pointer target is
  * an accessibility one (WCAG 2.5.8), exactly as for the resize handles.
  */
+/* A line's end, bend or leg: the 24px target around what is drawn. */
+.of-endpoint__target {
+  position: absolute;
+  background: transparent;
+  border-radius: var(--of-radius-round);
+}
+
 .of-connect-point__target {
   position: absolute;
   background: transparent;
@@ -6382,6 +6389,13 @@ textarea.of-input {
   position: absolute;
   border-style: none;
   border-color: var(--of-accent);
+  pointer-events: none;
+}
+
+/* What a crop press lands on: 24px, outside the picture (see CropOverlay). */
+.of-crop__target {
+  position: absolute;
+  background: transparent;
   pointer-events: auto;
 }
 

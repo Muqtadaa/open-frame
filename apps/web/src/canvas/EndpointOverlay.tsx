@@ -1,4 +1,9 @@
-import { distanceToSegment, worldToScreen, type DraggableEndpoint, type Point } from '@openframe/core'
+import {
+  distanceToSegment,
+  worldToScreen,
+  type DraggableEndpoint,
+  type Point,
+} from '@openframe/core'
 
 import { useOpenFrame } from '../runtime/context.js'
 import { useBoardDocument } from '../hooks/use-document-object.js'
@@ -26,6 +31,10 @@ const REVEAL_PX = 20
  * that run, so it is never hunted for.
  */
 const GRIP_PX = 10
+/** Every grip's pointer target, whatever is drawn (WCAG 2.5.8). */
+const TARGET_PX = 24
+/** An end's border, which its target is positioned inside of. */
+const END_BORDER_PX = 1.5
 
 /**
  * Which of the handles that hide themselves is currently on offer.
@@ -161,7 +170,31 @@ export function EndpointOverlay() {
                 // Which way it can be pushed, which is across the way it runs.
                 cursor: horizontal ? 'ns-resize' : 'ew-resize',
               }}
-            />
+            >
+              {/*
+               * 24 across, however thin the bar is drawn: the drawn weight is
+               * about not reading as a second line, the target is WCAG 2.5.8.
+               */}
+              <span
+                className="of-endpoint__target"
+                aria-hidden="true"
+                style={
+                  horizontal
+                    ? {
+                        left: 0,
+                        right: 0,
+                        top: `${String(-(TARGET_PX - GRIP_PX) / 2)}px`,
+                        bottom: `${String(-(TARGET_PX - GRIP_PX) / 2)}px`,
+                      }
+                    : {
+                        top: 0,
+                        bottom: 0,
+                        left: `${String(-(TARGET_PX - GRIP_PX) / 2)}px`,
+                        right: `${String(-(TARGET_PX - GRIP_PX) / 2)}px`,
+                      }
+                }
+              />
+            </div>
           )
         }
         return (
@@ -186,7 +219,18 @@ export function EndpointOverlay() {
               width: `${String(size)}px`,
               height: `${String(size)}px`,
             }}
-          />
+          >
+            {/*
+             * The target. Placing a line's end is the most precise gesture on
+             * the board, and it had the smallest target on it — the drawn 9px
+             * dot and nothing more.
+             */}
+            <span
+              className="of-endpoint__target"
+              aria-hidden="true"
+              style={{ inset: `${String(-(TARGET_PX - size) / 2 - END_BORDER_PX)}px` }}
+            />
+          </div>
         )
       })}
     </>
