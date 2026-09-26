@@ -128,7 +128,7 @@ describe('runtime composition', () => {
 
     runtime = await createRuntime({ boardId: BOARD, repository, autosaveDelayMs: 0 })
     expect(runtime.readOnly).toBe(true)
-    expect(runtime.notices.length).toBeGreaterThan(0)
+    expect(runtime.quarantine?.reason).toBe('invalid-payload')
 
     runtime.dispatcher.dispatch({
       kind: 'CreateObjects',
@@ -138,6 +138,55 @@ describe('runtime composition', () => {
 
     const stillThere = await repository.getBoard(BOARD)
     expect(stillThere.status).toBe('quarantined')
+  })
+
+  /*
+   * An unreadable board used to open as an EMPTY board — the ground, the
+   * tools, nothing on it — with a line of jargon above. That looks exactly
+   * like the work is gone. The runtime now says what it could make out of the
+   * stored record, so the sheet can say whose board it is and that it is safe.
+   */
+  it('says what it could make out of a board it could not open', async () => {
+    const repository = new MemoryBoardRepository()
+    const stored = {
+      format: 'openframe.board',
+      schemaVersion: 999,
+      savedAt: 0,
+      board: {
+        id: BOARD,
+        meta: { title: 'Pricing research', createdAt: 0 },
+        objects: [{}, {}, {}],
+        assets: [],
+      },
+    }
+    repository.seedRaw(BOARD, stored)
+
+    runtime = await createRuntime({ boardId: BOARD, repository, autosaveDelayMs: 0 })
+    expect(runtime.quarantine).toEqual({
+      reason: 'newer-schema',
+      title: 'Pricing research',
+      objects: 3,
+      raw: stored,
+    })
+    // Nothing can be done to it, not merely nothing saved.
+    const result = runtime.dispatcher.dispatch({
+      kind: 'CreateObjects',
+      objects: [{ type: 'sticky', x: 0, y: 0 }],
+    })
+    expect(result.ok).toBe(false)
+  })
+
+  it('says nothing it cannot read, rather than guessing', async () => {
+    const repository = new MemoryBoardRepository()
+    repository.seedRaw(BOARD, { format: 'openframe.board', schemaVersion: 1, board: 'junk' })
+    runtime = await createRuntime({ boardId: BOARD, repository, autosaveDelayMs: 0 })
+    expect(runtime.quarantine).toMatchObject({ title: null, objects: null })
+  })
+
+  it('has no quarantine for a board it read', async () => {
+    const repository = new MemoryBoardRepository()
+    runtime = await createRuntime({ boardId: BOARD, repository, autosaveDelayMs: 0 })
+    expect(runtime.quarantine).toBeNull()
   })
 
   it('warns when a board contains objects this build cannot read', async () => {
@@ -170,7 +219,7 @@ describe('runtime composition', () => {
 
     runtime = await createRuntime({ boardId: BOARD, repository, autosaveDelayMs: 0 })
     expect(runtime.readOnly).toBe(false)
-    expect(runtime.notices.join(' ')).toContain('placeholders')
+    expect(runtime.notices.join(' ')).toContain('1 object could not be read')
   })
 })
 

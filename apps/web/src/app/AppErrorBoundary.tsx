@@ -1,5 +1,7 @@
 import { Component, type ErrorInfo, type ReactNode } from 'react'
 
+import { StartFailed } from '../ui/StartFailed.js'
+
 interface State {
   readonly error: Error | null
 }
@@ -18,13 +20,9 @@ export class AppErrorBoundary extends Component<{ children: ReactNode }, State> 
 
   override render(): ReactNode {
     if (this.state.error !== null) {
-      return (
-        <div className="of-fatal" role="alert">
-          <h1>OpenFrame could not start</h1>
-          <p>{this.state.error.message}</p>
-          <p className="of-fatal__hint">Your board data has not been modified.</p>
-        </div>
-      )
+      // The same panel as a board that would not open: one voice for "this
+      // stopped", and never the raw message, which was written for a console.
+      return <StartFailed heading="OpenFrame stopped" error={this.state.error} />
     }
     return this.props.children
   }

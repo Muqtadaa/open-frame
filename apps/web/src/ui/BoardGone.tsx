@@ -1,6 +1,9 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 
+import { keepCopy } from '../app/boards.js'
+import { boardHref } from '../app/route.js'
 import { useOpenFrame } from '../runtime/context.js'
+import { Gate, GateActions, GateBody } from './Gate.js'
 
 /**
  * What a member sees when the owner deletes the board under them.
@@ -20,11 +23,14 @@ import { useOpenFrame } from '../runtime/context.js'
  * is leave, so that is the only control.
  */
 export function BoardGone() {
-  const { collaboration } = useOpenFrame()
+  const { runtime, collaboration } = useOpenFrame()
   // Read once at mount as well as subscribed: the room can have put us out
   // before this ever rendered, and a subscription only reports what happens
   // NEXT.
   const [gone, setGone] = useState(collaboration?.status === 'gone')
+  const keep = useRef<HTMLButtonElement>(null)
+  const [keeping, setKeeping] = useState(false)
+  const [keepFailed, setKeepFailed] = useState(false)
 
   useEffect(() => {
     if (collaboration === null || collaboration === undefined) return
@@ -37,17 +43,53 @@ export function BoardGone() {
 
   if (!gone) return null
 
+  /*
+   * What is on screen is the last copy anybody has. The store still holds it
+   * — `dispose` only detached autosave from it — so it is read from there, at
+   * the moment of asking, and written under a new id of this browser's own.
+   */
+  const keepIt = (): void => {
+    if (keeping) return
+    setKeeping(true)
+    setKeepFailed(false)
+    keepCopy(runtime.repository, runtime.store.getDocument()).then(
+      (id) => {
+        window.location.assign(boardHref(id, false))
+      },
+      () => {
+        setKeeping(false)
+        setKeepFailed(true)
+      },
+    )
+  }
+
   return (
-    <div className="of-gone" role="alertdialog" aria-modal="true" data-testid="board-gone">
-      <div className="of-gone__panel">
-        <h2 className="of-gone__title">This board was deleted</h2>
-        <p className="of-gone__body">
-          Whoever owns it removed it while you had it open. Nothing you change here can be saved.
+    // Keeping takes the keyboard: it is the one thing here that saves anything.
+    <Gate heading="This board was deleted" testId="board-gone" initialFocus={keep}>
+      <GateBody>
+        Whoever owns it removed it while you had it open. Nothing you change here can be saved to
+        it, but you can keep what is on screen as a board of your own.
+      </GateBody>
+      {keepFailed && (
+        <p className="of-gone__problem" role="alert">
+          The copy could not be saved in this browser.
         </p>
-        <a className="of-button of-button--primary" href="/" data-testid="board-gone-exit">
+      )}
+      <GateActions>
+        <button
+          ref={keep}
+          type="button"
+          className="of-button of-button--primary"
+          aria-busy={keeping}
+          onClick={keepIt}
+          data-testid="board-gone-keep"
+        >
+          {keeping ? 'Keeping…' : 'Keep a copy'}
+        </button>
+        <a className="of-button" href="/" data-testid="board-gone-exit">
           All boards
         </a>
-      </div>
-    </div>
+      </GateActions>
+    </Gate>
   )
 }

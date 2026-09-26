@@ -98,14 +98,14 @@ export function dismissSplash(): void {
 }
 
 /**
- * Leaves the splash up, saying what went wrong.
+ * Takes the splash away NOW, for a board that is not going to open.
  *
- * Without this, a runtime that fails to open leaves "Opening your board" on
- * screen for as long as the tab is open — a loading screen that has stopped
- * being true, which is worse than the blank page it replaced.
+ * It used to stay up with its line of text swapped for the error — one small
+ * sentence across the artwork, which nobody reads as the page having stopped.
+ * The failure gets a panel of its own instead (`StartFailed`), and the brand
+ * hold is not spent on bad news.
  */
-export function failSplash(message: string): void {
-  const label = splashElement()?.querySelector('p')
-  if (label === null || label === undefined) return
-  label.textContent = message
+export function abandonSplash(): void {
+  document.getElementById('root')?.removeAttribute('inert')
+  splashElement()?.remove()
 }

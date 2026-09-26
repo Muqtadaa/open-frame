@@ -240,6 +240,32 @@ describe('cellRange', () => {
   })
 })
 
+describe('a cell\'s own alignment', () => {
+  const three = grid(3, 3) as TableData
+
+  it('is set and cleared per cell, beside its colours', () => {
+    const aligned = styleCells(three, [4], { align: 'end', verticalAlign: 'bottom', fill: 'blue' })
+    expect(aligned.cells[4]).toMatchObject({ align: 'end', verticalAlign: 'bottom', fill: 'blue' })
+    expect(aligned.cells[3]?.align).toBeUndefined()
+
+    const back = styleCells(aligned, [4], { align: null, verticalAlign: null })
+    expect('align' in (back.cells[4] ?? {})).toBe(false)
+    expect('verticalAlign' in (back.cells[4] ?? {})).toBe(false)
+    expect(back.cells[4]?.fill).toBe('blue')
+  })
+
+  it('is accepted at the boundary, and nothing but the tokens is', () => {
+    const cells = three.cells.map((cell, index) =>
+      index === 0 ? { ...cell, align: 'center', verticalAlign: 'middle' } : cell,
+    )
+    expect(TableDataSchema.safeParse({ ...three, cells }).success).toBe(true)
+    const wrong = three.cells.map((cell, index) =>
+      index === 0 ? { ...cell, align: 'justify' } : cell,
+    )
+    expect(TableDataSchema.safeParse({ ...three, cells: wrong }).success).toBe(false)
+  })
+})
+
 describe('styleCells', () => {
   const three = grid(3, 3) as TableData
 

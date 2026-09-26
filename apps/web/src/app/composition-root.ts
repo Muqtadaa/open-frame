@@ -7,6 +7,7 @@ import {
   createDocumentStore,
   createEmptyDocument,
   createIdGenerator,
+  readOnlyCapabilities,
   serializeBoard,
   systemClock,
   type BoardId,
@@ -23,7 +24,7 @@ import { heldOwnerKey, heldToken } from './board-password.js'
 import { IndexedDbBoardRepository } from '../adapters/indexeddb/indexeddb-board-repository.js'
 import { AssetService } from '../runtime/asset-service.js'
 import { BENCH_TOOLS_ENABLED } from './bench-flag.js'
-import type { OpenFrameRuntime, SaveState, SaveStatus } from '../runtime/context.js'
+import type { OpenFrameRuntime, Quarantine, SaveState, SaveStatus } from '../runtime/context.js'
 
 export type { OpenFrameRuntime } from '../runtime/context.js'
 
@@ -93,6 +94,7 @@ export async function createRuntime(options: CreateRuntimeOptions = {}): Promise
 
   const notices: string[] = []
   let readOnly = false
+  let quarantine: Quarantine | null = null
 
   const loaded = await repository.getBoard(boardId)
   let document = createEmptyDocument(boardId, 'Untitled board', systemClock.now())
@@ -100,22 +102,32 @@ export async function createRuntime(options: CreateRuntimeOptions = {}): Promise
   if (loaded.status === 'ok') {
     document = loaded.document
     if (loaded.degraded.length > 0) {
+      const n = loaded.degraded.length
       notices.push(
-        `${loaded.degraded.length} object(s) could not be read by this version and are shown as placeholders.`,
+        n === 1
+          ? '1 object could not be read by this version of OpenFrame, and is shown as a placeholder.'
+          : `${String(n)} objects could not be read by this version of OpenFrame, and are shown as placeholders.`,
       )
     }
     if (loaded.repairs.length > 0) {
+      const n = loaded.repairs.length
       notices.push(
-        `Repaired ${loaded.repairs.length} structural problem(s) while opening the board.`,
+        n === 1
+          ? 'One problem in how the board was stored was put right while opening it.'
+          : `${String(n)} problems in how the board was stored were put right while opening it.`,
       )
     }
   } else if (loaded.status === 'quarantined') {
     // CARDINAL RULE: never write back a document we could not fully read.
     // A partial save over an unreadable board destroys the user's work.
     readOnly = true
-    notices.push(
-      `This board could not be opened (${loaded.reason}). It is read-only to protect your data.`,
-    )
+    // Said by a sheet over the board rather than a notice above it: an empty
+    // ground with a line of jargon over it reads as the work being gone.
+    quarantine = { reason: loaded.reason, ...legible(loaded.raw), raw: loaded.raw }
+    // Named in the bar as it was named when saved, not "Untitled board".
+    if (quarantine.title !== null) {
+      document = createEmptyDocument(boardId, quarantine.title, systemClock.now())
+    }
   }
 
   const { store, writer } = createDocumentStore(document)
@@ -131,7 +143,12 @@ export async function createRuntime(options: CreateRuntimeOptions = {}): Promise
      * handed capabilities the room can narrow — and either way this check is a
      * UX affordance, never a control: the room re-authorizes every write.
      */
-    capabilities: options.capabilities ?? allowAllCapabilities,
+    capabilities: readOnly
+      ? // Nothing can be done to a board that is not there, so the tools go
+        // too — refusing each edit one by one would be a board that looked
+        // editable and silently was not.
+        readOnlyCapabilities()
+      : (options.capabilities ?? allowAllCapabilities),
   })
 
   const autosave = readOnly
@@ -180,6 +197,7 @@ export async function createRuntime(options: CreateRuntimeOptions = {}): Promise
     assets,
     notices,
     readOnly,
+    quarantine,
     flush: autosave.flush,
     saveStatus: autosave.status,
     dispose,
@@ -323,4 +341,22 @@ function fixedStatus(state: SaveState): SaveStatus {
 /** Exposed for the E2E suite and for debugging in the console. */
 export function snapshotForDebug(runtime: OpenFrameRuntime): string {
   return JSON.stringify(serializeBoard(runtime.store.getDocument(), Date.now()))
+}
+
+/**
+ * The board's name and size, if the record plainly has them.
+ *
+ * Not validation — the record has already failed that — just enough to say
+ * WHICH board this is. Anything unexpected is `null`, never a guess.
+ */
+function legible(raw: unknown): { title: string | null; objects: number | null } {
+  const board = isRecord(raw) && isRecord(raw.board) ? raw.board : null
+  const meta = board !== null && isRecord(board.meta) ? board.meta : null
+  const title = meta !== null && typeof meta.title === 'string' ? meta.title : null
+  const objects = board !== null && Array.isArray(board.objects) ? board.objects.length : null
+  return { title: title === null || title.trim() === '' ? null : title, objects }
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === 'object' && value !== null && !Array.isArray(value)
 }

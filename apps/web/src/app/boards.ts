@@ -1,6 +1,7 @@
 import {
   createEmptyDocument,
   systemClock,
+  type BoardDocument,
   type BoardId,
   type BoardRepository,
   type BoardSummary,
@@ -42,6 +43,27 @@ export async function createLocalBoard(
 ): Promise<BoardId> {
   const boardId = newLocalBoardId()
   await repository.saveBoard(createEmptyDocument(boardId, title, systemClock.now()))
+  return boardId
+}
+
+/**
+ * A board of this browser's own holding what another board held.
+ *
+ * For a board deleted out from under somebody: what is on screen is then the
+ * last copy anybody has, and it is theirs to keep. A NEW id rather than the
+ * old one, because the old one is being forgotten as this runs and belongs to
+ * a room that will refuse it; object ids are kept, being scoped to the board.
+ */
+export async function keepCopy(
+  repository: BoardRepository,
+  document: BoardDocument,
+): Promise<BoardId> {
+  const boardId = newLocalBoardId()
+  await repository.saveBoard({
+    ...document,
+    id: boardId,
+    meta: { ...document.meta, title: `${document.meta.title} (copy)` },
+  })
   return boardId
 }
 

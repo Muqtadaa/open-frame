@@ -36,7 +36,7 @@ const SAVE_WORDS: Readonly<Record<SaveState, { label: string; tip: string }>> = 
     tip: 'The last change could not be saved on this device. Keep this tab open and try again.',
   },
   'read-only': {
-    label: 'Read only',
+    label: 'Read-only',
     tip: 'This board could not be fully read, so nothing is written back to it',
   },
 }

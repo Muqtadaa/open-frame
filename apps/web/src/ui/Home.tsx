@@ -16,6 +16,7 @@ import { hueVar, initialOf } from '../scene/presence.js'
 import { AccountForm } from './AccountForm.js'
 import { BoardRow } from './BoardRow.js'
 import { ClaimLocalBoards } from './ClaimLocalBoards.js'
+import { describeStartFailure } from './StartFailed.js'
 // Imported rather than referenced by path: rule 12 keeps assets out of
 // `public/`, so the bundler is what puts this in the build and fingerprints it.
 import logoMark from '../assets/logo-mark-180.png'
@@ -45,6 +46,7 @@ export function Home({ repository }: { readonly repository: BoardRepository }) {
    * break React's purity rule and quietly re-date every row on an unrelated
    * re-render.
    */
+  const [listProblem, setListProblem] = useState<string | null>(null)
   const [listing, setListing] = useState<{
     readonly boards: readonly ListedBoard[]
     readonly readAt: number
@@ -133,7 +135,14 @@ export function Home({ repository }: { readonly repository: BoardRepository }) {
       for (const board of found) {
         if (board.ownerKey !== null) rememberOwnerKey(board.boardId, board.ownerKey)
       }
-      if (live) setListing({ boards: found, readAt: Date.now() })
+      if (!live) return
+      setListing({ boards: found, readAt: Date.now() })
+      // A read that works replaces any that failed before it.
+      setListProblem(null)
+    }, (error: unknown) => {
+      // Said, rather than "Looking for your boards…" for as long as the tab
+      // stays open.
+      if (live) setListProblem(describeStartFailure(error))
     })
     return () => {
       live = false
@@ -311,7 +320,11 @@ export function Home({ repository }: { readonly repository: BoardRepository }) {
               busy={starting}
             />
 
-            {listing === null ? (
+            {listProblem !== null ? (
+              <p className="of-home__row-problem" role="alert" data-testid="home-list-problem">
+                Your boards could not be listed. {listProblem} Nothing on this device was changed.
+              </p>
+            ) : listing === null ? (
               <p className="of-home__note">Looking for your boards…</p>
             ) : shown.length === 0 ? (
               <p className="of-home__note" data-testid="home-empty">

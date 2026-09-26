@@ -2,6 +2,7 @@ import { Canvas } from '../canvas/Canvas.js'
 import { Comments, CommentsProvider } from './Comments.js'
 import { BoardGone } from '../ui/BoardGone.js'
 import { BoardLocked } from '../ui/BoardLocked.js'
+import { BoardUnreadable } from '../ui/BoardUnreadable.js'
 import { ContextMenu } from '../ui/ContextMenu.js'
 import { Inspector } from '../ui/Inspector.js'
 import { NoticeBanner } from '../ui/NoticeBanner.js'
@@ -24,6 +25,22 @@ import { useOpenFrame } from '../runtime/context.js'
  */
 export function App() {
   const { runtime } = useOpenFrame()
+  /*
+   * A board this build could not read has nothing on it to work on, so it
+   * gets the navigation bar and a sheet saying the work is safe — no rail, no
+   * record panel, nothing that offers to act on a board that is not there.
+   */
+  if (runtime.quarantine !== null) {
+    return (
+      <div className="of-app">
+        <Canvas />
+        <div className="of-overlay of-overlay--nav" data-keep-clear="top">
+          <StatusBar />
+        </div>
+        <BoardUnreadable />
+      </div>
+    )
+  }
   return (
     <CommentsProvider>
       <div className="of-app">
@@ -45,7 +62,7 @@ export function App() {
         </div>
 
         <div className="of-overlay of-overlay--top">
-          <NoticeBanner notices={runtime.notices} readOnly={runtime.readOnly} />
+          <NoticeBanner notices={runtime.notices} />
           <Toast />
         </div>
 

@@ -1,8 +1,9 @@
-import { useEffect, useState, type FormEvent } from 'react'
+import { useEffect, useId, useRef, useState, type FormEvent } from 'react'
 
 import { recoverOwnerKey, unlockBoard } from '../app/board-password.js'
 import { readRoute } from '../app/route.js'
 import { useOpenFrame } from '../runtime/context.js'
+import { Gate, GateActions, GateBody } from './Gate.js'
 
 /**
  * The password prompt, for a board whose link is not enough on its own.
@@ -34,6 +35,8 @@ export function BoardLocked() {
   const [password, setPassword] = useState('')
   const [problem, setProblem] = useState<string | null>(null)
   const [trying, setTrying] = useState(false)
+  const field = useRef<HTMLInputElement>(null)
+  const problemId = useId()
 
   useEffect(() => {
     if (collaboration === null || collaboration === undefined) return
@@ -71,59 +74,80 @@ export function BoardLocked() {
     const route = readRoute(window.location.search)
     const key = route.kind === 'board' ? route.key : null
 
-    void unlockBoard(runtime.boardId, key, password).then(
-      (outcome) => {
-        if (outcome.ok) {
-          window.location.reload()
-          return
-        }
-        setTrying(false)
-        setPassword('')
-        setProblem(outcome.reason)
-      },
-    )
+    void unlockBoard(runtime.boardId, key, password).then((outcome) => {
+      if (outcome.ok) {
+        window.location.reload()
+        return
+      }
+      setTrying(false)
+      setPassword('')
+      setProblem(outcome.reason)
+      // Back in the field, ready for the next try. It was DISABLED while
+      // trying, which dropped the keyboard onto the page body.
+      field.current?.focus()
+    })
   }
 
   return (
-    <div className="of-gone" role="alertdialog" aria-modal="true" data-testid="board-locked">
-      <form className="of-gone__panel" onSubmit={submit}>
-        <h2 className="of-gone__title">This board has a password</h2>
-        <p className="of-gone__body">
-          The link is not enough on its own. Ask whoever sent it for the password.
-        </p>
+    <Gate
+      heading="This board has a password"
+      testId="board-locked"
+      as="form"
+      onSubmit={submit}
+      initialFocus={field}
+    >
+      <GateBody>The link is not enough on its own. Ask whoever sent it for the password.</GateBody>
 
-        <label className="of-visually-hidden" htmlFor="of-board-password">
-          Password
-        </label>
-        <input
-          id="of-board-password"
-          className="of-input of-input--large of-gone__input"
-          type="password"
-          autoComplete="off"
-          autoFocus
-          value={password}
-          disabled={trying}
-          onChange={(event) => {
-            setPassword(event.target.value)
-          }}
-          data-testid="board-password"
-        />
+      <label className="of-visually-hidden" htmlFor="of-board-password">
+        Password
+      </label>
+      {/*
+        Never disabled while the password is checked: a disabled field loses
+        the keyboard, and there is nowhere sensible for it to go. A second
+        press is refused by `trying` instead.
+      */}
+      <input
+        ref={field}
+        id="of-board-password"
+        className="of-input of-input--large of-gone__input"
+        type="password"
+        autoComplete="off"
+        value={password}
+        readOnly={trying}
+        aria-invalid={problem !== null}
+        aria-describedby={problem !== null ? problemId : undefined}
+        onChange={(event) => {
+          setPassword(event.target.value)
+          setProblem(null)
+        }}
+        data-testid="board-password"
+      />
 
-        {problem !== null && (
-          <p className="of-gone__problem" role="alert" data-testid="board-password-problem">
-            {problem}
-          </p>
-        )}
-
-        <button
-          type="submit"
-          className="of-button of-button--primary of-button--large of-gone__submit"
-          disabled={trying || password.length === 0}
-          data-testid="board-unlock"
+      {problem !== null && (
+        <p
+          id={problemId}
+          className="of-gone__problem"
+          role="alert"
+          data-testid="board-password-problem"
         >
-          {trying ? 'Opening…' : 'Open the board'}
-        </button>
-      </form>
-    </div>
+          {problem}
+        </p>
+      )}
+
+      <button
+        type="submit"
+        className="of-button of-button--primary of-button--large of-gone__submit"
+        disabled={password.length === 0}
+        aria-busy={trying}
+        data-testid="board-unlock"
+      >
+        {trying ? 'Opening…' : 'Open the board'}
+      </button>
+      <GateActions>
+        <a className="of-button of-button--ghost" href="/" data-testid="board-locked-exit">
+          All boards
+        </a>
+      </GateActions>
+    </Gate>
   )
 }

@@ -128,9 +128,7 @@ test('lets the owner straight in, without ever asking', async ({ page }) => {
 
   // `signed-in.ts` hands an owner 'd' * 32, exactly as `my_boards()` hands
   // back the column for an owner and null for everybody else.
-  await expect
-    .poll(() => sockets.some((url) => url.includes(`o=${'d'.repeat(32)}`)))
-    .toBe(true)
+  await expect.poll(() => sockets.some((url) => url.includes(`o=${'d'.repeat(32)}`))).toBe(true)
 
   // Never asked. Not a prompt that appears and is dismissed — one that is
   // never shown, because the board opens instead.
@@ -155,4 +153,66 @@ test('never puts the owner key in the page URL', async ({ page }) => {
 
   expect(page.url()).not.toContain('d'.repeat(32))
   expect(page.url()).toContain(`k=${KEY}`)
+})
+
+/**
+ * The gate is the only thing on the page.
+ *
+ * It was an unnamed dialog over a live board: it announced as "dialog" and
+ * nothing more, Tab walked out of it into the rail behind the scrim, and a
+ * wrong password disabled the field mid-press, which threw the keyboard onto
+ * the page body.
+ */
+test.describe('as a dialog', () => {
+  test.beforeEach(async ({ page }) => {
+    await signedIn(page, [])
+    await lockedRoom(page, { with: TOKEN })
+    await page.route('**/room/*/unlock', async (route) => {
+      await route.fulfill({
+        status: 403,
+        contentType: 'application/json',
+        body: JSON.stringify({ error: 'That is not the password' }),
+      })
+    })
+    await page.goto(`/?room=${BOARD}&k=${KEY}`)
+    await expect(page.getByTestId('board-locked')).toBeVisible()
+  })
+
+  test('is named by what it asks, and holds the keyboard', async ({ page }) => {
+    const gate = page.getByRole('alertdialog', { name: 'This board has a password' })
+    await expect(gate).toBeVisible()
+    await expect(gate).toHaveAccessibleDescription(/Ask whoever sent it/)
+    await expect(page.getByTestId('board-password')).toBeFocused()
+
+    for (let i = 0; i < 6; i++) {
+      await page.keyboard.press('Tab')
+      const inside = await page.evaluate(
+        () => document.activeElement?.closest('[data-testid="board-locked"]') !== null,
+      )
+      expect(inside).toBe(true)
+    }
+    // Behind it, nothing answers: the bar and the rail are inert.
+    const inert = await page
+      .getByTestId('status-bar')
+      .evaluate((element) => element.closest('[inert]') !== null)
+    expect(inert).toBe(true)
+  })
+
+  test('puts the keyboard back in the field after a wrong password, and says why', async ({
+    page,
+  }) => {
+    await page.getByTestId('board-password').fill('not it')
+    await page.keyboard.press('Enter')
+    await expect(page.getByTestId('board-password-problem')).toBeVisible()
+
+    const field = page.getByTestId('board-password')
+    await expect(field).toBeFocused()
+    await expect(field).toHaveAttribute('aria-invalid', 'true')
+    await expect(field).toHaveAccessibleDescription(/not the password/)
+  })
+
+  test('has a way out that is not the password', async ({ page }) => {
+    await expect(page.getByTestId('board-locked-exit')).toHaveAttribute('href', '/')
+    await expect(page.getByTestId('board-locked-exit')).toHaveText('All boards')
+  })
 })

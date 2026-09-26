@@ -662,6 +662,10 @@ body {
   top: var(--of-nav-band);
   left: 50%;
   transform: translateX(-50%);
+  display: flex;
+  flex-direction: column;
+  gap: var(--of-space-8);
+  align-items: center;
   max-width: min(720px, calc(100vw - 140px));
 }
 
@@ -1427,35 +1431,47 @@ body {
 
 /* ---------- notices and status ---------- */
 
+/*
+ * The top of the board holds two kinds of message, stacked in
+ * `.of-overlay--top` with a gap between them: the
+ * notice (the board opened with something it could not read — advice, on the
+ * panel stock) and the toast (something just tried did not work — a failure,
+ * in the danger colours). Red is only ever for the second.
+ */
 .of-notice {
   display: flex;
   gap: var(--of-space-12);
   align-items: center;
   padding: var(--of-step) var(--of-space-12);
   font-size: var(--of-type-ui);
-  background: var(--of-danger-wash);
-  border: 1px solid var(--of-danger-edge);
+  color: var(--of-ink);
+  background: var(--of-panel);
+  border: 1px solid var(--of-panel-border);
   border-radius: var(--of-radius-surface);
   box-shadow: var(--of-shadow);
-}
-
-.of-notice--danger {
-  color: var(--of-danger);
-  background: var(--of-danger-wash);
-  border-color: var(--of-danger-edge);
 }
 
 .of-notice__body {
   flex: 1;
 }
 
-/*
- * The board is gone. Covers everything, and is not dismissible.
- *
- * A scrim rather than a banner because there is nothing left to do underneath
- * it: the document on screen cannot be saved anywhere, so letting the user go
- * on working into it would be the interface lying. The one control leaves.
- */
+.of-toast {
+  display: flex;
+  gap: var(--of-space-8);
+  align-items: center;
+  padding: var(--of-space-4) var(--of-space-4) var(--of-space-4) var(--of-space-12);
+  font-size: var(--of-type-ui);
+  color: var(--of-danger);
+  background: var(--of-danger-wash);
+  border: 1px solid var(--of-danger-edge);
+  border-radius: var(--of-radius-surface);
+  box-shadow: var(--of-shadow);
+}
+
+.of-toast__body {
+  flex: 1;
+}
+
 /*
  * A face you can press, for following somebody around the board.
  *
@@ -1741,6 +1757,13 @@ body {
 }
 
 .of-cellbar__head {
+  display: flex;
+  gap: var(--of-step);
+  align-items: center;
+}
+
+/* Across, then down: the record panel's two rows, side by side. */
+.of-cellbar__align {
   display: flex;
   gap: var(--of-step);
   align-items: center;
@@ -2695,10 +2718,20 @@ body {
   color: var(--of-ink-muted);
 }
 
-/* The password field, when the panel is asking for one rather than telling. */
-.of-home__password {
-  flex: none;
-  width: 160px;
+/*
+ * The panel takes focus only so that a gate with nothing to press first still
+ * moves the keyboard off the board behind it; the panel is not a control, so
+ * it draws no ring.
+ */
+.of-gone__panel:focus {
+  outline: none;
+}
+
+/* The one thing to do, then the way out, on one line. */
+.of-gone__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--of-space-8);
 }
 
 .of-gone__input {
@@ -2714,6 +2747,12 @@ body {
 
 .of-gone__submit {
   width: 100%;
+}
+
+/* Under a full-width submit, the way out is centred on it, not hung left. */
+.of-gone__submit + .of-gone__actions {
+  justify-content: center;
+  margin-top: var(--of-space-8);
 }
 
 /*
@@ -3842,16 +3881,6 @@ body {
   font-size: var(--of-type-record);
 }
 
-.of-fatal {
-  max-width: 640px;
-  margin: 0 auto;
-  padding: 48px;
-}
-
-.of-fatal__hint {
-  color: var(--of-ink-muted);
-}
-
 /* ---------- development instrumentation (stripped from production) ---------- */
 
 .of-dev {
@@ -4182,14 +4211,28 @@ body {
 /* Toast ------------------------------------------------------------------- */
 
 
+/* A drawn × on a 24px target: it was a glyph with no size, in an 8×15 box. */
 .of-toast__dismiss {
-  padding: 0 var(--of-space-4);
-  font-size: var(--of-type-ui);
-  line-height: 1;
+  display: inline-grid;
+  flex: none;
+  place-items: center;
+  width: 24px;
+  height: 24px;
+  padding: 0;
   color: inherit;
   background: none;
   border: 0;
+  border-radius: var(--of-radius);
   cursor: pointer;
+}
+
+.of-toast__dismiss:hover {
+  background: var(--of-hover);
+}
+
+.of-toast__glyph {
+  width: 16px;
+  height: 16px;
 }
 
 /* Offscreen but still focusable and still clickable via `.click()`. */
@@ -5693,6 +5736,12 @@ textarea.of-input {
   color: var(--of-danger);
 }
 
+/* A row's password field, when it is asking for one to set rather than telling. */
+.of-home__password {
+  flex: none;
+  width: 160px;
+}
+
 /*
  * A grid, not a flex row with `space-between`.
  *
@@ -5956,10 +6005,20 @@ textarea.of-input {
   background: var(--of-hover);
 }
 
-/* A board that could not be fully read is never written back, so it is named. */
+/*
+ * A board that could not be fully read is never written back, so it is named
+ * but not offered for renaming. A span, not a button, so it centres its own
+ * line and takes no hover bed — it sat at the top of its 30px box.
+ */
 .of-status__title--fixed {
+  display: inline-flex;
+  align-items: center;
   color: var(--of-ink-muted);
   cursor: default;
+}
+
+.of-status__title--fixed:hover {
+  background: none;
 }
 
 /*

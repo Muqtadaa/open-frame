@@ -41,7 +41,16 @@ export function openDatabase(): Promise<IDBDatabase> {
     request.onerror = () =>
       reject(request.error ?? new Error('Could not open the OpenFrame database'))
   })
-  return connection
+  /*
+   * A connection that FAILED is not kept. Cached, one refused open rejected
+   * every read for the life of the page, so a board list that failed once
+   * could never come back without a reload, whatever changed in between.
+   */
+  const attempt = connection
+  attempt.catch(() => {
+    if (connection === attempt) connection = undefined
+  })
+  return attempt
 }
 
 export function promisify<T>(request: IDBRequest<T>): Promise<T> {

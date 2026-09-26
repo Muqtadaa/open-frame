@@ -1,5 +1,7 @@
 import { Component, type ErrorInfo, type ReactNode } from 'react'
 
+import { readableTypeName } from '@openframe/core'
+
 interface Props {
   readonly objectId: string
   readonly objectType: string
@@ -35,10 +37,15 @@ export class ObjectErrorBoundary extends Component<Props, State> {
 
   override render(): ReactNode {
     if (this.state.failed) {
+      const name = readableTypeName(this.props.objectType)
       return (
-        <div className="of-render-error" role="group" aria-label="Object failed to render">
-          <span className="of-render-error__label">Could not display</span>
-          <span className="of-render-error__type">{this.props.objectType}</span>
+        <div
+          className="of-render-error"
+          role="group"
+          aria-label={`This ${name.toLowerCase()} could not be drawn`}
+        >
+          <span className="of-render-error__label">{name} could not be drawn</span>
+          <span className="of-render-error__type">Reloading the page may help</span>
         </div>
       )
     }
