@@ -1807,20 +1807,34 @@ body {
 }
 
 /* The selection: a ring, and a wash over a range of more than one cell. */
+/*
+ * The selected cell, made obvious. It was a 2px accent line lying exactly on
+ * the grid lines, so it read as one more line, and a single cell got no fill
+ * at all. Now it is washed, and ringed with a page-coloured halo on both sides
+ * so the ring stands clear of the grid and of any cell colour — the same halo
+ * the board's own selection carries, measured in design-tokens.test.
+ */
 .of-table-ring {
   position: absolute;
   box-sizing: border-box;
+  background: color-mix(in srgb, var(--of-accent) 16%, transparent);
   border: 2px solid var(--of-accent);
+  box-shadow:
+    0 0 0 1px var(--of-page),
+    inset 0 0 0 1px var(--of-page);
   pointer-events: none;
 }
 
 .of-table-ring--range {
-  background: color-mix(in srgb, var(--of-accent) 10%, transparent);
+  background: color-mix(in srgb, var(--of-accent) 20%, transparent);
 }
 
-/* Where typing would go inside a range: the cell the range started from. */
+/*
+ * Where typing would go inside a range: the cell the range started from, by
+ * its own ring. No fill of its own — the ring is drawn over the cells, and a
+ * fill that cleared the range's wash would also veil the cell's text.
+ */
 .of-table-ring--cursor {
-  border-width: 1px;
   background: none;
 }
 
@@ -1854,8 +1868,10 @@ body {
 }
 
 .of-table-strip__item--within {
-  color: var(--of-ink);
+  font-weight: 600;
+  color: var(--of-accent);
   background: var(--of-accent-soft);
+  border-color: var(--of-accent);
 }
 
 .of-table-strip__item--on {

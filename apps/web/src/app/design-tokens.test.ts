@@ -870,6 +870,8 @@ describe.each(THEMES)('the apparatus reads on anything — $name', ({ token }) =
     { rule: '.of-selection', ink: /(?<![\w-])outline:[^;]*var\(--of-([\w-]+)\)/ },
     { rule: '.of-guide', ink: /(?<![\w-])background:\s*var\(--of-([\w-]+)\)/ },
     { rule: '.of-endpoint--leg', ink: /(?<![\w-])background:[^;]*var\(--of-([\w-]+)\)/ },
+    // A table's selected cell: its ring sat on the grid lines and got lost.
+    { rule: '.of-table-ring', ink: /(?<![\w-])border:[^;]*var\(--of-([\w-]+)\)/ },
   ]
   const GROUNDS = [
     'page',
