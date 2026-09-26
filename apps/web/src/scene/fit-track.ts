@@ -152,7 +152,8 @@ export function cellsInTrack(
   axis: 'row' | 'column',
   index: number,
 ): HTMLElement[] {
-  return [...grid.children].filter((cell): cell is HTMLElement => {
+  // Every cell, not the grid's children: the cells sit inside their rows.
+  return [...grid.querySelectorAll('[data-row]')].filter((cell): cell is HTMLElement => {
     if (!(cell instanceof HTMLElement)) return false
     const at = axis === 'column' ? cell.dataset.col : cell.dataset.row
     const span = axis === 'column' ? cell.dataset.cols : cell.dataset.rows

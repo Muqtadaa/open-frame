@@ -1,4 +1,4 @@
-import { isEmptyText, plainTextOf, type ColorValue, type StickyData } from '@openframe/core'
+import { isEmptyText, type ColorValue, type StickyData } from '@openframe/core'
 
 import { defineObjectView, type ObjectEditorProps, type ObjectViewProps } from './registry.js'
 import { RichTextEditor } from './RichTextEditor.js'
@@ -25,11 +25,9 @@ function StickyRenderer({ object }: ObjectViewProps<StickyData>) {
       // renderers cannot offer this at all, and retrofitting accessibility onto
       // a pixel buffer is far harder than keeping it from the start.
       role="group"
-      aria-label={
-        isEmptyText(object.data.text)
-          ? 'Empty sticky note'
-          : `Sticky note: ${plainTextOf(object.data.text)}`
-      }
+      // What it is, not what it says: the text is read as the group's content,
+      // and naming the group by it read every note twice.
+      aria-label={isEmptyText(object.data.text) ? 'Empty sticky note' : 'Sticky note'}
     >
       <div className="of-sticky__text" data-fit-text>
         <RichTextView value={object.data.text} />

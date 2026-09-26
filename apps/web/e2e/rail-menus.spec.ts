@@ -76,7 +76,7 @@ test('the size picker still picks a size', async ({ page }) => {
   await page.keyboard.press('v')
 
   // Three columns across, four rows down: twelve cells.
-  await expect(page.locator('[role="table"] > *')).toHaveCount(12)
+  await expect(page.locator('[role="table"] [data-row]')).toHaveCount(12)
 })
 
 test('the shape menu still picks a shape', async ({ page }) => {
@@ -165,7 +165,7 @@ test.describe('opening, walking and leaving a rail menu', () => {
 
     await page.locator(CANVAS).click({ position: { x: 600, y: 300 } })
     await page.keyboard.press('Escape')
-    await expect(page.locator('[role="table"] > *')).toHaveCount(16)
+    await expect(page.locator('[role="table"] [data-row]')).toHaveCount(16)
   })
 
   test('a size cell is one Tab stop, not sixty-four', async ({ page }) => {

@@ -1,4 +1,4 @@
-import { isEmptyText, plainTextOf, type ColorValue, type TextData } from '@openframe/core'
+import { isEmptyText, type ColorValue, type TextData } from '@openframe/core'
 
 import { fontFamily, textAlign, verticalAlign, inkOf } from '../scene/style-tokens.js'
 import { defineObjectView, type ObjectEditorProps, type ObjectViewProps } from './registry.js'
@@ -31,7 +31,7 @@ function TextRenderer({ object }: ObjectViewProps<TextData>) {
         opacity: object.style.opacity ?? 1,
       }}
       role="group"
-      aria-label={empty ? 'Empty text' : `Text: ${plainTextOf(object.data.text)}`}
+      aria-label={empty ? 'Empty text' : 'Text'}
     >
       {/*
         * The text is its own element rather than a bare child. The clamp that

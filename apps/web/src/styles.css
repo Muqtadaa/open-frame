@@ -1553,6 +1553,10 @@ body {
   background: var(--of-panel);
 }
 
+.of-table__row {
+  display: contents;
+}
+
 .of-table__cell {
   min-width: 0;
   min-height: 0;
@@ -2053,7 +2057,12 @@ body {
   height: 100%;
   padding: var(--of-space-8) var(--of-step);
   margin: 0;
-  overflow: auto;
+  /*
+   * Clipped, not scrolled. On the board the wheel belongs to the canvas, so
+   * nobody could reach the scroll — it only made a scroll region no keyboard
+   * could focus. The editor scrolls; the object is resized to show more.
+   */
+  overflow: hidden;
   tab-size: 2;
 }
 

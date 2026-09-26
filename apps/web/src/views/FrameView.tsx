@@ -1,4 +1,4 @@
-import { plainTextOf, type FrameData } from '@openframe/core'
+import { type FrameData } from '@openframe/core'
 
 import { defineObjectView, type ObjectEditorProps, type ObjectViewProps } from './registry.js'
 import { RichTextEditor } from './RichTextEditor.js'
@@ -53,7 +53,7 @@ function FrameRenderer({ object, zoom }: ObjectViewProps<FrameData>) {
         opacity: object.style.opacity ?? 1,
       }}
       role="group"
-      aria-label={`Frame: ${plainTextOf(object.data.name)}`}
+      aria-label="Frame"
     >
       <FrameEdge zoom={zoom} color={inkColor(object.style.strokeColor)} />
       <div

@@ -58,7 +58,11 @@ function ImageRenderer({ object, assetUrl }: ObjectViewProps<ImageData>) {
       <img
         className="of-image"
         src={state.url}
-        alt={object.data.alt}
+        /*
+         * Never empty: an empty alt marks an image as decoration, and one
+         * whose description was cleared vanished from assistive technology.
+         */
+        alt={object.data.alt.trim() === '' ? 'Image with no description' : object.data.alt}
         style={{
           width: `${String(100 / crop.width)}%`,
           height: `${String(100 / crop.height)}%`,

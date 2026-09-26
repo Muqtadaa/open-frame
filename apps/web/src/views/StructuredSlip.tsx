@@ -1,4 +1,4 @@
-import { isEmptyText, plainTextOf, type ColorToken, type RichText } from '@openframe/core'
+import { isEmptyText, type ColorToken, type RichText } from '@openframe/core'
 
 import { RichTextEditor } from './RichTextEditor.js'
 import { RichTextView } from './RichTextView.js'
@@ -67,14 +67,12 @@ export function StructuredSlip<TData extends { readonly text: RichText }>({
       }}
       role="group"
       /*
-       * The accessible name carries the record, not just the body. A screen
-       * reader user gets the same thing a sighted one does from the footer —
-       * which is the point of these types existing at all.
+       * The accessible name carries the type and the record — what a sighted
+       * reader gets from the footer, which is the point of these types. Not
+       * the body: that is the group's content and is read as such, and in the
+       * name as well it was read twice.
        */
-      aria-label={[
-        isEmptyText(text) ? `Empty ${noun.toLowerCase()}` : `${noun}: ${plainTextOf(text)}`,
-        ...parts,
-      ].join('. ')}
+      aria-label={[isEmptyText(text) ? `Empty ${noun.toLowerCase()}` : noun, ...parts].join('. ')}
     >
       <div
         className="of-slip__body"

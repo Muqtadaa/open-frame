@@ -110,9 +110,7 @@ function ShapeRenderer({ object }: ObjectViewProps<ShapeData>) {
       className="of-shape"
       style={{ opacity: object.style.opacity ?? 1 }}
       role="group"
-      aria-label={
-        plain.trim() === '' ? `${object.data.shape} shape` : `${object.data.shape}: ${plain}`
-      }
+      aria-label={`${object.data.shape} shape`}
     >
       <ShapeOutline object={object} />
       {plain.trim() !== '' && (

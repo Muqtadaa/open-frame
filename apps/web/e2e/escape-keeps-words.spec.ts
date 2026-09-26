@@ -98,7 +98,7 @@ test('keeps a table cell, and a second Escape leaves the table with it', async (
   await expect(page.getByTestId('table-cell-0')).toHaveText('kept')
   await page.keyboard.press('Escape')
   await expect(editor).toHaveCount(0)
-  await expect(page.locator('[role="table"] > div').nth(0)).toHaveText('kept')
+  await expect(page.locator('[role="table"] [data-row]').nth(0)).toHaveText('kept')
 })
 
 /*

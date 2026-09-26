@@ -97,7 +97,7 @@ function ConnectorRenderer({
   return (
     <svg
       className="of-connector"
-      aria-label={label.trim() === '' ? 'Connector' : `Connector: ${label}`}
+      aria-label="Connector"
       role="group"
       style={{ opacity: object.style.opacity ?? 1 }}
     >
