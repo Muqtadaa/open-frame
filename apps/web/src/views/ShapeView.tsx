@@ -163,6 +163,16 @@ function ShapeEditor({ object, Chrome, onCommit }: ObjectEditorProps<ShapeData>)
         className="of-shape__label of-shape__editor"
         style={{
           inset: labelInset(object.data.shape),
+          /*
+           * Placed where the label draws it, defaults included: the editor
+           * started at the top of the box while the label was centred, so a
+           * double-click moved the word somebody was aiming at. A column, so
+           * `justifyContent` is the vertical axis here.
+           */
+          display: 'flex',
+          flexDirection: 'column',
+          justifyContent: verticalAlign(object.style.verticalAlign ?? LABEL_VALIGN),
+          textAlign: textAlign(object.style.align ?? LABEL_ALIGN),
           fontFamily: fontFamily(object.style.font),
           color: inkColor(object.style.textColor) ?? readableInkOn(object.style.color),
         }}

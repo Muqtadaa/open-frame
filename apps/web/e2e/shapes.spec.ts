@@ -123,6 +123,26 @@ test.describe('shapes', () => {
     })
   }
 
+  /*
+   * The editor has to sit its text where the label drew it. It started at the
+   * top of the box while the label was centred, so a double-click moved the
+   * word somebody was aiming at, and it jumped back when they finished.
+   */
+  test('a label does not move when it is opened to edit', async ({ page }) => {
+    await place(page, 'rectangle', 'Pay')
+    const middleOf = async (selector: string): Promise<number> =>
+      page.locator(selector).first().evaluate((element) => {
+        const range = document.createRange()
+        range.selectNodeContents(element)
+        const box = range.getBoundingClientRect()
+        return box.y + box.height / 2
+      })
+    const drawn = await middleOf('.of-shape__label-text')
+    await page.locator('[data-object-type="shape"]').dblclick()
+    await expect(page.locator(EDITOR)).toBeFocused()
+    expect(Math.abs((await middleOf(EDITOR)) - drawn)).toBeLessThan(2)
+  })
+
   test('a triangle label sits low, where the shape is actually wide', async ({ page }) => {
     await place(page, 'triangle', 'Review')
 
