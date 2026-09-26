@@ -328,11 +328,13 @@ export function CloseIcon({ className }: IconProps) {
  * moon every theme toggle in the category already uses.
  */
 export function AfterHoursIcon({ className }: IconProps) {
+  /*
+   * A crescent: the evening the world is named for. The sun going down behind
+   * a horizon read, at 16 pixels, as a hat or a lamp.
+   */
   return (
     <svg {...base} className={className}>
-      <path d="M6 14a6 6 0 0112 0" />
-      <path d="M3 17.5h18" />
-      <path d="M7.5 11h9M6.4 14h11.2" />
+      <path d="M19.5 14.2A7.6 7.6 0 1 1 9.8 4.5a6.1 6.1 0 0 0 9.7 9.7z" />
     </svg>
   )
 }
@@ -428,10 +430,22 @@ export function LinkIcon({ className }: IconProps) {
   )
 }
 
-export function GridIcon({ className }: IconProps) {
+/**
+ * Snapping: a square set down on the points of a grid.
+ *
+ * Points, not lines. The grid drawn as lines was nearly the Frame tool's own
+ * glyph, 700 pixels away on the rail — and what a snap does is land corners
+ * on points, which is what this shows.
+ */
+export function SnapIcon({ className }: IconProps) {
   return (
     <svg {...base} className={className}>
-      <path d="M3 9h18M3 15h18M9 3v18M15 3v18" />
+      {[5, 12, 19].flatMap((x) =>
+        [5, 12, 19].map((y) => (
+          <circle key={`${String(x)}.${String(y)}`} cx={x} cy={y} r={1.1} fill="currentColor" stroke="none" />
+        )),
+      )}
+      <rect x="5" y="5" width="7" height="7" rx="1" />
     </svg>
   )
 }

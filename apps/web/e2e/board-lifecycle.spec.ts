@@ -62,7 +62,8 @@ test('creates a sticky note and shows its text', async ({ page }) => {
 
   await expect(page.locator(STICKY)).toHaveCount(1)
   await expect(page.locator(STICKY)).toContainText('Customers do not understand pricing')
-  await expect(page.getByTestId('object-count')).toHaveText('1 objects')
+  // The bar says the work is on this device rather than counting it.
+  await expect(page.getByTestId('save-state')).toHaveText('Saved')
 })
 
 test('persists across a reload', async ({ page }) => {

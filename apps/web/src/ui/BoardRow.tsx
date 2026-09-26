@@ -151,13 +151,13 @@ export function BoardRow({
           type="button"
           className="of-icon-button of-home__pin"
           aria-pressed={pinned}
+          aria-label={`${pinned ? 'Unpin' : 'Pin'} ${board.title}`}
           data-testid="pin-board"
           data-tip={pinned ? 'Unpin this board' : 'Pin this board to the top'}
           aria-description={pinned ? 'Unpin this board' : 'Pin this board to the top'}
           onClick={togglePin}
         >
           <PinIcon pressed={pinned} />
-          <span className="of-visually-hidden">{pinned ? 'Unpin' : 'Pin'} {board.title}</span>
         </button>
 
         {mode === 'renaming' ? (
@@ -221,6 +221,7 @@ export function BoardRow({
               <button
                 type="button"
                 className="of-icon-button"
+                aria-label={`Copy a view-only link to ${board.title}`}
                 data-testid="copy-view-link"
                 data-tip={`Copy a view-only link to ${board.title}. They can open it, not change it.`}
                 aria-description={`Copy a view-only link to ${board.title}. They can open it, not change it.`}
@@ -240,9 +241,6 @@ export function BoardRow({
                 }}
               >
                 <LinkIcon />
-                <span className="of-visually-hidden">
-                  Copy a view-only link to {board.title}
-                </span>
               </button>
             )}
 
@@ -257,6 +255,7 @@ export function BoardRow({
               <button
                 type="button"
                 className="of-icon-button"
+                aria-label={`Require a password for ${board.title}`}
                 data-testid="set-password"
                 data-tip={`Require a password for ${board.title}. Both links ask for it.`}
                 aria-description={`Require a password for ${board.title}. Both links ask for it.`}
@@ -267,7 +266,6 @@ export function BoardRow({
                 }}
               >
                 <KeyIcon />
-                <span className="of-visually-hidden">Require a password for {board.title}</span>
               </button>
             )}
 
@@ -275,15 +273,15 @@ export function BoardRow({
               type="button"
               className="of-icon-button"
               data-testid="rename-board"
+              // The tip IS the name, so it is announced once, as the name.
+              aria-label={`Rename ${board.title}`}
               data-tip={`Rename ${board.title}`}
-              aria-description={`Rename ${board.title}`}
               onClick={() => {
                 setDraft(board.title)
                 setMode('renaming')
               }}
             >
               <RenameIcon />
-              <span className="of-visually-hidden">Rename {board.title}</span>
             </button>
 
             {/*
@@ -297,26 +295,26 @@ export function BoardRow({
               <button
                 type="button"
                 className="of-icon-button"
+                aria-label={`Leave ${board.title}`}
                 data-testid="leave-board"
                 data-tip={`Leave ${board.title}. It carries on without you.`}
                 aria-description={`Leave ${board.title}. It carries on without you.`}
                 onClick={() => setMode('confirming')}
               >
                 <LeaveIcon />
-                <span className="of-visually-hidden">Leave {board.title}</span>
               </button>
             ) : (
               canDelete(board) && (
                 <button
                   type="button"
                   className="of-icon-button of-icon-button--destructive"
+                  aria-label={`Delete ${board.title}`}
                   data-testid="delete-board"
                   data-tip={`Delete ${board.title}. This cannot be undone.`}
                   aria-description={`Delete ${board.title}. This cannot be undone.`}
                   onClick={() => setMode('confirming')}
                 >
                   <TrashIcon />
-                  <span className="of-visually-hidden">Delete {board.title}</span>
                 </button>
               )
             )}

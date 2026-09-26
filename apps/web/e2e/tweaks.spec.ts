@@ -199,7 +199,7 @@ test('shows the zoom once, beside the control that changes it', async ({ page })
 
   // The status bar keeps what only it can say, and drops the repeat.
   const status = page.getByTestId('status-bar')
-  await expect(status).toContainText('objects')
+  await expect(status).toContainText('Saved')
   await expect(status).not.toContainText('100%')
 
   // And the one that is left is still live.

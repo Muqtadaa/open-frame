@@ -96,7 +96,7 @@
   --of-z-tip: 5; /* a tool tip, over the tools below it */
   --of-z-menu: 6; /* a menu, over every other surface beside the selection */
   --of-z-search: 8; /* find on board: under the chrome layer's notices */
-  --of-z-chrome: 10; /* rail, record line, zoom, notices */
+  --of-z-chrome: 10; /* rail, navigation bar, zoom, notices */
   --of-z-panel: 40; /* the comment panel */
   --of-z-apparatus: 60; /* the screen-space layer of an object's own apparatus */
   --of-z-reached: 70; /* chrome the pointer or keyboard is IN, so its tips read over apparatus */
@@ -538,6 +538,12 @@
 .of-icon-button--on {
   color: var(--of-accent);
   background: var(--of-accent-soft);
+  /*
+   * Its own boundary: the wash alone is 1.13:1 against the bar, so only the
+   * icon's colour said the toggle was on (design-tokens.test holds the ring
+   * to 3:1 in both worlds).
+   */
+  box-shadow: inset 0 0 0 1px var(--of-accent);
 }
 
 .of-icon-button--destructive:hover:not(:disabled) {
@@ -1352,6 +1358,52 @@ body {
   background: var(--of-accent-soft);
   outline: 1px solid var(--of-accent);
   cursor: text;
+}
+
+.of-zoom__field {
+  display: flex;
+}
+
+/*
+ * The common zooms, above the field while it is open: a row of readouts in
+ * the readout's own face, so they read as values to jump to rather than as
+ * commands. The reason a typed zoom was refused sits above them, in ink.
+ */
+.of-zoom__presets {
+  display: grid;
+  gap: var(--of-space-4);
+  padding: var(--of-space-4);
+  font-family: var(--of-mono);
+}
+
+.of-zoom__preset-row {
+  display: flex;
+  gap: var(--of-space-2);
+}
+
+.of-zoom__preset {
+  min-width: var(--of-hit);
+  height: var(--of-hit-sm);
+  padding: 0 var(--of-space-6);
+  font: inherit;
+  font-size: var(--of-type-record);
+  font-variant-numeric: tabular-nums;
+  color: var(--of-ink);
+  background: transparent;
+  border: none;
+  border-radius: var(--of-radius);
+  cursor: pointer;
+}
+
+.of-zoom__preset:hover {
+  background: var(--of-hover);
+}
+
+.of-zoom__refused {
+  margin: 0;
+  padding: 0 var(--of-space-4);
+  font-size: var(--of-type-record);
+  color: var(--of-ink);
 }
 
 /* ---------- notices and status ---------- */
@@ -2586,10 +2638,19 @@ body {
   width: 100%;
 }
 
+/*
+ * A 12px word is a 15px-tall target, so the link keeps its size of type and
+ * takes the bar's height to be pressed (WCAG 2.5.8). Underlined as TEXT, with
+ * a set offset, rather than with a bottom border — a border sits at the foot
+ * of the box, which is now the foot of the bar.
+ */
 .of-status__source {
+  display: inline-flex;
+  align-items: center;
+  min-height: var(--of-hit-sm);
   color: inherit;
-  text-decoration: none;
-  border-bottom: 1px solid currentcolor;
+  text-decoration: underline 1px;
+  text-underline-offset: 3px;
 }
 
 .of-status__source:hover {
@@ -2618,6 +2679,21 @@ body {
   border: 1px solid var(--of-panel-border);
   border-radius: var(--of-radius-apparatus);
   box-shadow: var(--of-shadow);
+}
+
+/*
+ * Whether the work is safe. A record like the counts it replaced — mono,
+ * muted — and wide enough for "Saving…" that the bar does not shift every
+ * time it says so. Only a failure is inked: it is the one state that asks
+ * somebody to do something.
+ */
+.of-status__save {
+  min-width: 8ch;
+}
+
+.of-status__save--failed {
+  font-weight: 600;
+  color: var(--of-danger);
 }
 
 .of-status b {
@@ -2688,13 +2764,13 @@ body {
 /* ---------- account ---------- */
 
 /*
- * A small sheet above the record line, not a modal. Signing in is never
+ * A small sheet under the navigation bar, not a modal. Signing in is never
  * required to use a board, so it must never take the screen — the craft floor
  * bans a modal for a task that needs neither interruption nor protected focus,
  * and this is the clearest possible case.
  */
 /*
- * A sheet: what comes out of the record line — the account sheet and the
+ * A sheet: what comes out of the navigation bar — the account sheet and the
  * share sheet. They were two byte-identical rules under two names, which is
  * how the next one would have become a third.
  *
@@ -2712,6 +2788,22 @@ body {
   border: 1px solid var(--of-panel-border);
   border-radius: var(--of-radius-surface);
   box-shadow: var(--of-shadow);
+}
+
+/* Who is signed in: a label, the name, and the address it came from. */
+.of-account-sheet__who {
+  display: grid;
+  gap: var(--of-space-2);
+  margin: 0 0 var(--of-space-16);
+  font-size: var(--of-type-control);
+}
+
+.of-account-sheet__label,
+.of-account-sheet__email {
+  font-family: var(--of-mono);
+  font-size: var(--of-type-record);
+  letter-spacing: 0.02em;
+  color: var(--of-ink-muted);
 }
 
 .of-account__field {
@@ -2792,17 +2884,81 @@ body {
   white-space: nowrap;
 }
 
-.of-status__title {
+.of-status__title,
+.of-status__heading {
   flex: 0 1 auto;
 }
 
+/*
+ * An icon button keeps its 30px floor on the bar. The rule above lets every
+ * child shrink, which squeezed the theme toggle to 28 — under the target the
+ * rest of the product keeps (DESIGN.md, Icon Buttons).
+ */
+.of-status > .of-icon-button {
+  min-width: var(--of-hit-sm);
+}
+
+/*
+ * The heading that holds the board's name: a landmark for a screen reader,
+ * no box of its own for anybody else. The name inside it sets the size.
+ */
+.of-status__heading {
+  display: flex;
+  min-width: 10ch;
+  margin: 0;
+  font: inherit;
+}
+
 .of-dev {
-  flex: 0 1 auto;
+  /*
+   * Gives all but nothing to the name: development instrumentation
+   * goes before the board's name loses a character. Shrinking at the same
+   * rate, the two split the loss and the name was cut beside a panel no user
+   * ever sees.
+   */
+  flex: 0 10000 auto;
 }
 
 /* Development instrumentation clips rather than pushes. */
 .of-dev {
   overflow: hidden;
+}
+
+/*
+ * A NARROW window: what the bar gives up, in order, when it truly runs out of
+ * room. The selection count first (the record panel says it too), then the
+ * exit's words (its arrow stays: it is the one control with no other route),
+ * then — on a phone-width window — the save state's word, leaving its state
+ * to the tip. Nothing ever runs out of the bar.
+ */
+@media (width < 640px) {
+  .of-status__counts {
+    display: none;
+  }
+
+  .of-status__exit-label {
+    display: none;
+  }
+}
+
+@media (width < 480px) {
+  .of-status {
+    gap: var(--of-space-4);
+    padding: var(--of-space-6);
+  }
+
+  /*
+   * The word goes, but never a FAILURE: `display: none` also removes the live
+   * region, so a phone-width window would be the one place a failed save said
+   * nothing at all.
+   */
+  .of-status__save:not(.of-status__save--failed) {
+    display: none;
+  }
+
+  .of-status__rule {
+    display: none;
+  }
 }
 
 /* ---------- other people ---------- */
@@ -2915,6 +3071,31 @@ body {
  * act somebody goes looking for, and a button loud enough to be noticed by
  * accident is a button that gets pressed by accident.
  */
+/*
+ * YOUR account, signed in or not: the app's own apparatus, set as quietly as
+ * the theme toggle beside it. It shared the share button's bordered chip, so
+ * "Sign in" was the only outlined control on the bar and the second loudest
+ * thing on it — louder than the board's own history.
+ */
+.of-status__account {
+  display: flex;
+  gap: var(--of-space-6);
+  align-items: center;
+  height: var(--of-hit-sm);
+  padding: 0 var(--of-space-8);
+  font: inherit;
+  color: var(--of-ink-muted);
+  background: transparent;
+  border: none;
+  border-radius: var(--of-radius-apparatus);
+  cursor: pointer;
+}
+
+.of-status__account:hover {
+  color: var(--of-ink);
+  background: var(--of-hover);
+}
+
 .of-status__share {
   display: flex;
   gap: var(--of-space-6);
@@ -4379,22 +4560,12 @@ textarea.of-input {
  * controls that remain are the ones with no other route.
  */
 @media (width < 820px) {
-  .of-overlay--nav {
-    left: 12px;
-  }
-
-  .of-status__counts {
-    display: none;
-  }
-
   /*
-   * The exit keeps its arrow and loses its words. It is the one control here
-   * with no other route, so it is never the thing that goes — but at this
-   * width the label is what it can afford to give.
+   * The exit keeps its words and the bar keeps the rail's gutter at this
+   * width. Both went at 820 once, with a quarter of the bar still empty — and
+   * the bar stepped in to 12px from the edge while the rail stayed at 20, so
+   * the two left edges no longer lined up.
    */
-  .of-status__exit-label {
-    display: none;
-  }
 
   .of-zoom__slider {
     display: none;
@@ -5608,9 +5779,8 @@ textarea.of-input {
 /* ---------- the board's name ---------- */
 
 /*
- * A specimen label at the head of the record line, the way the record panel
- * heads itself with the subject it is describing. Mono because it labels a
- * record, not to look technical.
+ * The board's name, heading the page's navigation. In the interface's own
+ * face: it names the page, it is not a readout on it.
  */
 .of-status__title {
   /*
@@ -5620,7 +5790,12 @@ textarea.of-input {
    */
   flex: 0 1 auto;
   min-width: 10ch;
-  max-width: 22ch;
+  /*
+   * The ROOM the bar has, up to a line you can read at a glance. It was 22
+   * characters, with half the bar's width empty beside it: a heading that
+   * gave up before it had to.
+   */
+  max-width: 48ch;
   overflow: hidden;
   height: var(--of-hit-sm);
   padding: 0 var(--of-space-8);
@@ -5656,7 +5831,9 @@ textarea.of-input {
  * this rather than two.
  */
 .of-status__title--editing {
-  width: 22ch;
+  /* As wide as what is being typed, within the same bounds as the name. */
+  field-sizing: content;
+  min-width: 22ch;
   background: var(--of-accent-soft);
   outline: 1px solid var(--of-accent);
 }

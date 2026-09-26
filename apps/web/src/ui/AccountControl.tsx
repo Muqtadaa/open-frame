@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 
 import { ACCOUNTS_ENABLED, signOut } from '../app/identity.js'
 import { AnchoredSurface } from '../controls/AnchoredSurface.js'
@@ -6,6 +6,7 @@ import { useAnchoredTo } from '../controls/use-anchor.js'
 import { useIdentity } from '../hooks/use-identity.js'
 import { AccountForm } from './AccountForm.js'
 import { hueVar, initialOf } from '../scene/presence.js'
+import type { Size } from '../scene/anchoring.js'
 
 /**
  * Signing in, and the fact that you do not have to.
@@ -24,25 +25,50 @@ export function AccountControl() {
 
   if (identity !== null) {
     return (
-      <button
-        type="button"
-        className="of-status__share"
-        data-testid="account"
-        data-tip={`Signed in as ${identity.displayName}${identity.email === null ? '' : ` (${identity.email})`}. Click to sign out.`}
-        aria-description={`Signed in as ${identity.displayName}${identity.email === null ? '' : ` (${identity.email})`}. Click to sign out.`}
-        onClick={() => {
-          void signOut()
-        }}
-      >
-        <span
-          className="of-status__person"
-          style={{ background: hueVar(identity.hue) }}
-          aria-hidden="true"
+      <>
+        {/*
+          * Pressing your own name OPENS your account. It used to sign you out
+          * on the spot — one click on the most natural thing on the bar to
+          * press, with nothing to confirm it.
+          */}
+        <button
+          ref={ref}
+          type="button"
+          className="of-status__account"
+          aria-label={identity.displayName}
+          aria-expanded={open}
+          aria-haspopup="dialog"
+          data-testid="account"
+          data-tip="Your account"
+          aria-description="Your account"
+          onClick={() => setOpen((was) => !was)}
         >
-          {initialOf(identity.displayName)}
-        </span>
-        <span className="of-status__share-label">{identity.displayName}</span>
-      </button>
+          <span
+            className="of-status__person"
+            style={{ background: hueVar(identity.hue) }}
+            aria-hidden="true"
+          >
+            {initialOf(identity.displayName)}
+          </span>
+          <span className="of-status__share-label">{identity.displayName}</span>
+        </button>
+        {open && (
+          <AccountSheet
+            anchor={anchor}
+            surface={surface}
+            name={identity.displayName}
+            email={identity.email}
+            onClose={() => {
+              setOpen(false)
+              ref.current?.focus()
+            }}
+            onSignOut={() => {
+              setOpen(false)
+              void signOut()
+            }}
+          />
+        )}
+      </>
     )
   }
 
@@ -51,8 +77,9 @@ export function AccountControl() {
       <button
         ref={ref}
         type="button"
-        className="of-status__share"
+        className="of-status__account"
         data-testid="sign-in"
+        aria-label="Sign in"
         aria-expanded={open}
         data-tip="Sign in to keep a list of your boards"
         aria-description="Sign in to keep a list of your boards"
@@ -91,5 +118,91 @@ export function AccountControl() {
         </AnchoredSurface>
       )}
     </>
+  )
+}
+
+/**
+ * Who you are signed in as, and the way out — behind a press, not on it.
+ *
+ * Closed by Escape or a press anywhere else, like every other sheet, and it
+ * hands the keyboard back to the name that opened it.
+ */
+function AccountSheet({
+  anchor,
+  surface,
+  name,
+  email,
+  onClose,
+  onSignOut,
+}: {
+  readonly anchor: DOMRect | null
+  readonly surface: Size
+  readonly name: string
+  readonly email: string | null
+  readonly onClose: () => void
+  readonly onSignOut: () => void
+}) {
+  const sheet = useRef<HTMLDivElement>(null)
+
+  useEffect(() => {
+    const dismiss = (event: Event): void => {
+      if (event.target instanceof Node && sheet.current?.contains(event.target) === true) return
+      if (event.target instanceof Element && event.target.closest('[data-testid="account"]') !== null)
+        return
+      onClose()
+    }
+    /*
+     * Escape is the SHEET's, and only the sheet's: the board's keymap also
+     * listens on the window and reads Escape as "clear the selection", so one
+     * press closed the sheet and changed the board. Taken in the capture
+     * phase and stopped there.
+     */
+    const escape = (event: KeyboardEvent): void => {
+      if (event.key !== 'Escape') return
+      event.preventDefault()
+      event.stopPropagation()
+      onClose()
+    }
+    // Capture phase: the canvas would otherwise consume the press first.
+    window.addEventListener('pointerdown', dismiss, true)
+    window.addEventListener('keydown', escape, true)
+    return () => {
+      window.removeEventListener('pointerdown', dismiss, true)
+      window.removeEventListener('keydown', escape, true)
+    }
+  }, [onClose])
+
+  return (
+    <AnchoredSurface anchor={anchor} surface={surface} prefer={['below', 'above']} testId="account-surface">
+      <div
+        ref={sheet}
+        className="of-sheet of-account-sheet"
+        role="dialog"
+        aria-label="Account"
+        data-testid="account-sheet"
+      >
+        <p className="of-account-sheet__who">
+          <span className="of-account-sheet__label">Signed in as</span>
+          <b>{name}</b>
+          {email !== null && <span className="of-account-sheet__email">{email}</span>}
+        </p>
+        <div className="of-account__actions">
+          <button
+            type="button"
+            className="of-button of-button--ghost"
+            onClick={() => {
+              /*
+               * Closed FIRST. Signing out swaps this control for "Sign in",
+               * and an `open` left true opened the sign-in form in its place
+               * — signing out landed somebody in a login they did not ask for.
+               */
+              onSignOut()
+            }}
+          >
+            Sign out
+          </button>
+        </div>
+      </div>
+    </AnchoredSurface>
   )
 }

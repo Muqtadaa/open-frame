@@ -5,7 +5,7 @@ import { signIn, signUp } from '../app/identity.js'
 /**
  * Signing in, without deciding where it appears.
  *
- * The same form serves a sheet above the record line and the entry surface,
+ * The same form serves a sheet under the navigation bar and the entry surface,
  * and it must: two sign-in forms would drift, and the one people see less
  * often is the one that would quietly stop reporting errors properly.
  *

@@ -8,7 +8,7 @@ import { BackIcon } from '../controls/icons.js'
  * The way out of a board.
  *
  * Until this existed there was none: you entered a board and the only exit was
- * editing the URL. It sits at the head of the record line, before the board
+ * editing the URL. It sits at the head of the navigation bar, before the board
  * names itself, because that is the order a bound notebook reads — which index
  * this page is in, then which page it is.
  *

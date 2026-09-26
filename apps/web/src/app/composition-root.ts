@@ -23,7 +23,7 @@ import { heldOwnerKey, heldToken } from './board-password.js'
 import { IndexedDbBoardRepository } from '../adapters/indexeddb/indexeddb-board-repository.js'
 import { AssetService } from '../runtime/asset-service.js'
 import { BENCH_TOOLS_ENABLED } from './bench-flag.js'
-import type { OpenFrameRuntime } from '../runtime/context.js'
+import type { OpenFrameRuntime, SaveState, SaveStatus } from '../runtime/context.js'
 
 export type { OpenFrameRuntime } from '../runtime/context.js'
 
@@ -138,7 +138,11 @@ export async function createRuntime(options: CreateRuntimeOptions = {}): Promise
     ? // A quarantined board is never written back, so there is nothing to
       // detach and nothing to flush. Both are no-ops rather than absent, so
       // that no caller has to ask which kind of board it is holding.
-      { flush: () => Promise.resolve(), dispose: () => undefined }
+      {
+        flush: () => Promise.resolve(),
+        dispose: () => undefined,
+        status: fixedStatus('read-only'),
+      }
     : subscribeAutosave(
         dispatcher,
         store,
@@ -177,6 +181,7 @@ export async function createRuntime(options: CreateRuntimeOptions = {}): Promise
     notices,
     readOnly,
     flush: autosave.flush,
+    saveStatus: autosave.status,
     dispose,
   }
 
@@ -221,8 +226,24 @@ function subscribeAutosave(
   store: DocumentStore,
   repository: BoardRepository,
   delayMs: number,
-): { readonly flush: () => Promise<void>; readonly dispose: () => void } {
+): {
+  readonly flush: () => Promise<void>
+  readonly dispose: () => void
+  readonly status: SaveStatus
+} {
   let timer: ReturnType<typeof setTimeout> | undefined
+  /*
+   * What the navigation bar says about all this. Kept beside the timer it
+   * describes, because it is exactly the timer's state and the write's
+   * outcome — derived anywhere else it would be a second opinion about them.
+   */
+  let state: SaveState = 'saved'
+  const listeners = new Set<() => void>()
+  const become = (next: SaveState): void => {
+    if (next === state) return
+    state = next
+    for (const listener of listeners) listener()
+  }
   /*
    * The write in flight, so a flush can WAIT for one rather than start a
    * second. Without it, leaving the board during a slow save resolves before
@@ -230,14 +251,33 @@ function subscribeAutosave(
    */
   let inFlight: Promise<void> = Promise.resolve()
 
+  /*
+   * Which write is the LATEST. Two can be in flight at once — a slow disk and
+   * an edit made after the debounce — and only the newest one writes what is
+   * on screen, so only its outcome may set the state. Letting whichever
+   * finished last decide meant an older write landing after a newer one had
+   * failed reported "Saved" over a change that was not on disk.
+   */
+  let generation = 0
   const save = (): Promise<void> => {
-    inFlight = repository.saveBoard(store.getDocument()).catch((error: unknown) => {
-      console.error('[openframe] failed to save board', error)
-    })
+    const mine = ++generation
+    become('saving')
+    inFlight = repository.saveBoard(store.getDocument()).then(
+      () => {
+        if (mine !== generation) return
+        // A change made while this was writing is still pending, not saved.
+        become(timer === undefined ? 'saved' : 'pending')
+      },
+      (error: unknown) => {
+        console.error('[openframe] failed to save board', error)
+        if (mine === generation) become('failed')
+      },
+    )
     return inFlight
   }
 
   const unsubscribe = dispatcher.subscribe(() => {
+    become('pending')
     if (timer !== undefined) clearTimeout(timer)
     timer = setTimeout(() => {
       timer = undefined
@@ -261,8 +301,23 @@ function subscribeAutosave(
     dispose: () => {
       if (timer !== undefined) clearTimeout(timer)
       unsubscribe()
+      listeners.clear()
+    },
+    status: {
+      get: () => state,
+      subscribe: (listener) => {
+        listeners.add(listener)
+        return () => {
+          listeners.delete(listener)
+        }
+      },
     },
   }
+}
+
+/** A save state that never changes, for a board that is never saved. */
+function fixedStatus(state: SaveState): SaveStatus {
+  return { get: () => state, subscribe: () => () => undefined }
 }
 
 /** Exposed for the E2E suite and for debugging in the console. */

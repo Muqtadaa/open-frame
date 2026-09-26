@@ -28,6 +28,22 @@ export interface OpenFrameDevTools {
 }
 
 /**
+ * Where the board on screen stands against the copy on this device.
+ *
+ * `pending` is a change autosave is still holding (it coalesces a burst into
+ * one write, half a second behind); `failed` is a write that did not land,
+ * which used to reach only the console; `read-only` is a board that could not
+ * be fully read and is never written back (rule 7).
+ */
+export type SaveState = 'saved' | 'pending' | 'saving' | 'failed' | 'read-only'
+
+/** The save state, and a way to hear when it changes. */
+export interface SaveStatus {
+  readonly get: () => SaveState
+  readonly subscribe: (listener: () => void) => () => void
+}
+
+/**
  * The wired application, as every layer below the composition root sees it.
  *
  * These types live here rather than beside `createRuntime` so that consuming a
@@ -66,6 +82,8 @@ export interface OpenFrameRuntime {
    * because a document we could not fully read is never written back.
    */
   flush(): Promise<void>
+  /** Whether what is on screen is on disk yet, for the navigation bar to say. */
+  readonly saveStatus: SaveStatus
   dispose(): void
 }
 

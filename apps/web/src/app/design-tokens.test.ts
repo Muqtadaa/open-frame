@@ -198,6 +198,19 @@ describe.each(THEMES)('palette contrast — $name', ({ token }) => {
     expect(contrast(token(fg ?? ''), token(bg ?? ''))).toBeGreaterThanOrEqual(3)
   })
 
+  /*
+   * A PRESSED toggle — snap, in the zoom cluster — draws its own boundary.
+   * Its bed alone was 1.13:1 against the bar in the notebook world, so only
+   * the icon's colour said it was on. The ring is read off the rule, and must
+   * reach 3:1 against the bar's own stock in both worlds.
+   */
+  it('a pressed toggle draws a boundary you can see (3:1)', () => {
+    const rule = /\.of-icon-button--on\s*\{([^}]*)\}/.exec(CSS)?.[1] ?? ''
+    const ring = /box-shadow:[^;]*var\(--of-([\w-]+)\)/.exec(rule)?.[1]
+    expect(ring, 'a pressed toggle rings itself in a token').toBeDefined()
+    expect(contrast(token(ring ?? ''), token('page'))).toBeGreaterThanOrEqual(3)
+  })
+
   /**
    * A shape's stroke and label on its own fill.
    */
@@ -771,5 +784,21 @@ describe('the stylesheet is well formed', () => {
 
   it('never leaves a conflict marker behind', () => {
     expect(/^(<{7}|={7}|>{7})/m.test(CSS)).toBe(false)
+  })
+})
+
+/*
+ * A narrow window drops the save state's word to make room — but never a
+ * FAILURE. `display: none` also takes the live region out of the tree, so a
+ * phone-width window was the one place a failed save said nothing at all.
+ */
+describe('a failed save survives a narrow window', () => {
+  it('hides the save state below 480px only when it has not failed', () => {
+    const css = readFileSync(resolve(process.cwd(), 'src/styles.css'), 'utf8')
+    const narrow = /@media \(width < 480px\)\s*\{([\s\S]*?)\n\}/.exec(css)?.[1] ?? ''
+    expect(narrow, 'the narrow block is found, so this is not vacuous').toContain('of-status__save')
+    const hides = [...narrow.matchAll(/([^{}]*of-status__save[^{}]*)\{[^}]*display:\s*none/g)].map((m) => m[1] ?? '')
+    expect(hides.length).toBeGreaterThan(0)
+    for (const selector of hides) expect(selector).toContain(':not(.of-status__save--failed)')
   })
 })

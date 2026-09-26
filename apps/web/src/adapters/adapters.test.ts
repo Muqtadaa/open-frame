@@ -247,3 +247,92 @@ describe('leaving a board', () => {
     runtime.dispose()
   })
 })
+
+/**
+ * The board says whether it is saved (C3 #3). A local-first board saves on
+ * its own, half a second behind what is on screen, and a failed write only
+ * ever reached the console — so the one fact that would reassure somebody
+ * returning to their work, and the one that should alarm them, were both
+ * invisible.
+ */
+describe('the save state', () => {
+  class FailingRepository extends MemoryBoardRepository {
+    override saveBoard(): Promise<void> {
+      return Promise.reject(new Error('disk full'))
+    }
+  }
+
+  it('reads saved, then pending while a change waits, then saved again', async () => {
+    const repository = new MemoryBoardRepository()
+    const runtime = await createRuntime({ boardId: BOARD, repository, autosaveDelayMs: 500 })
+    expect(runtime.saveStatus.get()).toBe('saved')
+
+    const seen: string[] = []
+    const stop = runtime.saveStatus.subscribe(() => seen.push(runtime.saveStatus.get()))
+    runtime.dispatcher.dispatch({ kind: 'CreateObjects', objects: [{ type: 'sticky', x: 0, y: 0 }] })
+    expect(runtime.saveStatus.get()).toBe('pending')
+
+    await runtime.flush()
+    expect(runtime.saveStatus.get()).toBe('saved')
+    expect(seen).toEqual(['pending', 'saving', 'saved'])
+    stop()
+    runtime.dispose()
+  })
+
+  it('says so when a save fails, rather than only telling the console', async () => {
+    const runtime = await createRuntime({
+      boardId: BOARD,
+      repository: new FailingRepository(),
+      autosaveDelayMs: 500,
+    })
+    runtime.dispatcher.dispatch({ kind: 'CreateObjects', objects: [{ type: 'sticky', x: 0, y: 0 }] })
+    await runtime.flush()
+    expect(runtime.saveStatus.get()).toBe('failed')
+    runtime.dispose()
+  })
+
+  /*
+   * Two writes can be in flight at once: a slow disk, and an edit made after
+   * the debounce. Whichever FINISHES last used to set the state, so an older
+   * write landing after a newer one failed reported "Saved" — assuring
+   * somebody that a change was on disk when the write carrying it had failed.
+   */
+  it('lets only the latest write decide, whatever order they finish in', async () => {
+    const pending: { resolve: () => void; reject: (error: Error) => void }[] = []
+    class SlowRepository extends MemoryBoardRepository {
+      override saveBoard(): Promise<void> {
+        return new Promise((resolve, reject) => {
+          pending.push({ resolve: () => resolve(), reject })
+        })
+      }
+    }
+    const runtime = await createRuntime({
+      boardId: BOARD,
+      repository: new SlowRepository(),
+      autosaveDelayMs: 0,
+    })
+    const tick = (): Promise<void> => new Promise((resolve) => setTimeout(resolve, 5))
+
+    runtime.dispatcher.dispatch({ kind: 'CreateObjects', objects: [{ type: 'sticky', x: 0, y: 0 }] })
+    await tick()
+    runtime.dispatcher.dispatch({ kind: 'CreateObjects', objects: [{ type: 'sticky', x: 9, y: 9 }] })
+    await tick()
+    expect(pending).toHaveLength(2)
+
+    // The newer write fails, then the older one lands.
+    pending[1]?.reject(new Error('disk full'))
+    await tick()
+    pending[0]?.resolve()
+    await tick()
+    expect(runtime.saveStatus.get()).toBe('failed')
+    runtime.dispose()
+  })
+
+  it('reads read-only on a board that is never written back', async () => {
+    const repository = new MemoryBoardRepository()
+    repository.seedRaw(BOARD, { format: 'openframe.board', schemaVersion: 1, savedAt: 0, board: { junk: true } })
+    const runtime = await createRuntime({ boardId: BOARD, repository, autosaveDelayMs: 500 })
+    expect(runtime.saveStatus.get()).toBe('read-only')
+    runtime.dispose()
+  })
+})

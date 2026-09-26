@@ -228,6 +228,7 @@ export function Home({ repository }: { readonly repository: BoardRepository }) {
               <button
                 type="button"
                 className="of-home__account"
+                aria-label={identity.displayName}
                 data-testid="home-account"
                 /*
                  * The colour is not decoration: it is the hue other people see

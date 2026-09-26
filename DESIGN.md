@@ -288,7 +288,7 @@ pad, cold stock, printed rule.
 night, lit by its own grid. The quadrille stops being printed rule and becomes a
 lit horizon; ink inverts to a violet-white that never reaches pure white; the
 synthwave palette earns its place because the GROUND is doing the glowing. It is
-opt-in from the record line and remembered, and it is deliberately not wired to
+opt-in from the navigation bar and remembered, and it is deliberately not wired to
 `prefers-color-scheme` — a system preference set for reading email at night is
 not a statement about how somebody wants to look at their research.
 
@@ -386,7 +386,7 @@ the only insistent hues in the whole system belong to the user's material.
 - **Control Edge** (`control-border`): boundaries you must see to operate a
   control, plus the scrollbar thumb. Held at 3:1 against page, panel and desk.
 - **Blue-Black Ink** (`ink`): all primary text, the slider index, tooltip bodies.
-- **Muted Ink** (`ink-muted`): field labels, record line, inactive tools, frame
+- **Muted Ink** (`ink-muted`): field labels, navigation bar, inactive tools, frame
   titles, shortcut glyphs.
 
 ### Content Colours
@@ -465,7 +465,7 @@ columns rather than as ransom text.
 - **UI** (400, 15px): menu items, notices, toasts, frame titles, alt-text editor.
 - **UI Small** (400, 13px): flyout items, connector labels, fallback and unknown
   object bodies.
-- **Record** (400, 12px, mono, 0.02em): the record line, the record panel's
+- **Record** (400, 12px, mono, 0.02em): the navigation bar, the record panel's
   subject and field labels, slider readings, keyboard shortcuts, the wheel-mode
   value. Lowercase, never uppercase-tracked.
 - **Title** (600, 17px): the one heading a gate or a sheet carries — "This board
@@ -504,8 +504,9 @@ no font fetch; the stacks above are the faces.
 The board is edge to edge and owns the viewport; chrome is a set of absolutely
 positioned overlays that are click-through except where they paint.
 
-- **Top left** — the navigation bar: the way out, the board's name, history
-  and the rest of the record line, 20px from both edges. Everything else
+- **Along the top, from the left** — the navigation bar: the way out, the
+  board's name, history, the save state and the app's own apparatus, 20px from
+  both edges at every width. Everything else
   anchored to the top starts under it, at `--of-nav-band` (80px).
 - **Left margin gutter** — the creation rail, centred in the band from under
   the navigation bar to the bottom gutter, 50px square tools in a rail with
@@ -556,9 +557,10 @@ a size, not rhythm. Tool icons are 21px inside a 50px target; secondary icons ar
 on it, and the decade rule marks the line the user is aiming at.
 
 **Responsive.** Two breakpoints, both structural rather than cosmetic. Below
-**820px** the navigation bar moves to 12px from the edge and drops its counts,
-and the zoom cluster drops its slider — both are readouts and coarse controls
-the canvas itself already provides; the controls with no other route stay.
+**820px** the zoom cluster drops its slider, a coarse control the canvas itself
+already provides. The navigation bar gives way separately, at 640px and 480px
+(see Navigation Bar), and never leaves the rail's 20px gutter; the controls
+with no other route always stay.
 
 ### Named Rules
 
@@ -575,7 +577,7 @@ things: apparatus is _printed near_ the page, and content slips _sit on_ it.
 ### Shadow Vocabulary
 
 - **Contact** (`--of-shadow`):
-  every piece of chrome — rail, record line, zoom cluster, record panel, menus,
+  every piece of chrome — rail, navigation bar, zoom cluster, record panel, menus,
   flyouts, notices, toasts. Just deep enough to separate apparatus from the ruling.
 - **Slip** (`--of-slip-shadow`):
   deeper and tighter. The one place the world asks for physical depth — a placed
@@ -639,8 +641,8 @@ read only the first one, which was the tool tip's.
 
 A person's name is arbitrary-length content on a fixed-height control, and this
 world has two places that carry one: the account chip on the front door and the
-same chip in the record line. Both cap it, ellipsise it and forbid wrapping,
-because "Muqtadaa Miandara" wrapped to two lines, grew the record line to two
+same chip in the navigation bar. Both cap it, ellipsise it and forbid wrapping,
+because "Muqtadaa Miandara" wrapped to two lines, grew the navigation bar to two
 rows, and starved the board title beside it down to `U…`.
 
 Avatars are `flex: none`. A flex child with no basis becomes an ellipse when
@@ -777,32 +779,71 @@ assistive tech while showing sighted keyboard users nothing, on forty-two
 controls. `title` survives only where it reveals content: an ellipsised field
 label and a comment pin's excerpt.
 
-### Navigation Bar (the Record Line)
+### Navigation Bar
 
-Along the top, where a page's heading is looked for: "All boards" and the
-board's name lead it, then undo/redo, ruled dividers, object and selection
-counts, the AGPL source link (underlined by a 1px `currentcolor` border, going
-accent on hover), sharing, mentions, account and theme. The name is the page's
-heading, so it is set in the interface's own voice — 15px sans at 600 in full
-ink — and "All boards" at the control size and 500; everything that is a
-readout stays a record, 12px mono and muted, with counts bolded to 600 in full
-ink. Its tips and sheets open downward. Its counts are the first thing dropped
-on a narrow viewport.
+A bar along the top, where a page's heading is looked for. It is marked as the
+page's `nav` ("Board"), with the board's name as its `h1`. The tab carries the
+name too, as "<name> — OpenFrame": a board found again among several open
+tabs, or in the history a week later, is found by its name.
+
+**Order.** "All boards" and the name lead; then history (undo/redo); then the
+record — the save state and, only when something is selected, "N selected";
+then, after a rule, the app's own apparatus: sharing, mentions, your account,
+the theme; and the AGPL source link last and quietest, underlined as text with
+a 3px offset.
+
+**Type.** The name is set in the interface's own voice, 15px sans at 600 in
+full ink, and takes the room the bar has up to 48ch. A name that still does
+not fit is shown whole in its tip. "All boards" is at the control size and 500;
+every readout stays a record, 12px mono and muted, bolded to 600 in full ink
+where it is a number.
+
+**The save state.** "Saved", "Saving…", "Not saved" or "Read only", with the
+where in its tip ("Saved on this device"). It stands where a count of objects
+used to, because it is the one thing a local-first board most needs to say.
+Only a failure is inked, in the danger colour at 600, and only a failure is
+announced.
+
+**Your account** is quiet apparatus like the theme toggle, never an outlined
+chip. Pressing your name opens a sheet with who you are signed in as and "Sign
+out"; it never signs you out on the press.
+
+**Keyboard.** Enter or Escape in the name or the zoom readout hands focus back
+to the control that opened it. The last undo moves focus to redo. Every tipped
+control names itself explicitly, because a tip drawn by `::after` is otherwise
+read into its name. Tips and sheets open downward. Shortcuts read "Ctrl+Z" off
+a Mac and "⌘Z" on one.
+
+**Narrow windows.** The bar keeps the rail's 20px gutter at every width, and it
+gives up in order: the selection count and the exit's words below 640px, then
+the save state's word and the rules below 480px. Nothing ever runs out of the
+bar.
 
 ### Zoom Cluster
 
 Bottom-right, mono throughout. 30px buttons (`--of-hit-sm`) carrying 16px
-icons, a ruled separator, a wheel-mode value at 12px (mono and small so it reads
-as a _setting_ beside its icon, not a panel title), a 104px measurement slider
-and a 60px, 13px tabular-numeral percentage that becomes an inline editor on an accent-soft bed with a 1px accent
-outline.
+icons. Two settings come first, then a ruled separator, then zoom itself.
+
+- **The settings.** "wheel: zoom" (or "wheel: pan") is set as a value in 12px
+  mono beside its mouse icon; a bare "zoom" read as the cluster's heading.
+  Snap is drawn as a square set down on a grid of points, never as grid lines,
+  which were nearly the Frame tool's glyph. A pressed toggle carries a 1px
+  accent ring as well as its wash, because the wash alone is not a visible
+  boundary.
+- **Zoom.** −, a 104px measurement slider read as its percentage, +, a 60px,
+  13px tabular percentage, and fit.
+- **The percentage** becomes an inline editor on an accent-soft bed with a 1px
+  accent outline. While it is open, the common zooms (50%, 100% and 200%) sit
+  above it for a pointer. A zoom it cannot take is refused with the reason
+  where it was typed: "Type a number, like 150" or "Zoom is 5–1600%". It is
+  never silently clamped.
 
 ### Icon Buttons
 
 A glyph on no ground that takes a bed when you reach for it: 30px
 (`--of-hit-sm`) at its smallest, muted ink at rest, ink on the hover wash,
 accent on the accent wash when pressed (the state an active tool takes), and
-correction red on hover only when it removes something. The record line's
+correction red on hover only when it removes something. The navigation bar's
 history, the zoom cluster, the arrange and format bars, the record panel's
 remove and the front door's row actions are all this one control; six private
 versions at 24, 26, 28 and 30px were folded into it, and the three under 30
@@ -925,7 +966,7 @@ control in the product where hitting the wrong one has a consequence — each
 naming what it gives away in the second line, at the 12px functional floor.
 
 **View-only is a record, not a badge**: 12px mono on page stock with a hairline
-and the apparatus radius, sitting in the record line beside the other readouts.
+and the apparatus radius, sitting in the navigation bar beside the other readouts.
 A pill would have been the third fully-round thing in a world where round means
 "grab me".
 

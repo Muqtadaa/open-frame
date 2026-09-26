@@ -62,6 +62,26 @@ describe('tips a keyboard can summon', () => {
     )
     expect(faults).toEqual([])
   })
+
+  /*
+   * A tip is drawn by `::after`, and generated content is part of how a
+   * browser computes an element's accessible NAME. So a control that took its
+   * name from its contents took its tip as well: the zoom readout was read out
+   * "100% Reset to 100% (Ctrl0)", the board's name "Untitled board Rename this
+   * board". A tipped control names itself explicitly, and the tip is only ever
+   * its description.
+   */
+  it('names every tipped control, so its tip is never read into the name', () => {
+    const unnamed = files.flatMap(({ path, source }) =>
+      tipped(source)
+        // Only what can be operated takes a name from its contents: a `<p>` or
+        // a `<span>` carrying a tip is described, never named.
+        .filter((tag) => /^<(button|a)\b/.test(tag) || /\srole=/.test(tag))
+        .filter((tag) => !/\saria-label(ledby)?=/.test(tag))
+        .map((tag) => `${path}: ${attribute(tag, 'data-tip') ?? tag.slice(0, 60)}`),
+    )
+    expect(unnamed).toEqual([])
+  })
 })
 
 /** Every JSX opening tag carrying a `data-tip`, braces and arrows included. */
@@ -84,6 +104,27 @@ function tipped(source: string): string[] {
 
 /** An attribute's value as written — `"red"` or `{token}` — or null when absent. */
 function attribute(tag: string, name: string): string | null {
-  const match = new RegExp(`\\s${name}=("[^"]*"|\\{[^}]*\\})`).exec(tag)
-  return match?.[1] ?? null
+  const at = new RegExp(`\\s${name}=`).exec(tag)
+  if (at === null) return null
+  const start = at.index + at[0].length
+  if (tag[start] === '"') {
+    const end = tag.indexOf('"', start + 1)
+    return tag.slice(start, end + 1)
+  }
+  if (tag[start] !== '{') return null
+  /*
+   * To the brace that CLOSES this expression, not the first one: a template
+   * literal's `${…}` has braces of its own, and stopping at the first cut
+   * "Copy a link to ${title}. They can open it" down to "Copy a link to
+   * ${title" — which then read as the same text as a shorter name.
+   */
+  let depth = 0
+  for (let end = start; end < tag.length; end++) {
+    if (tag[end] === '{') depth++
+    else if (tag[end] === '}') {
+      depth--
+      if (depth === 0) return tag.slice(start, end + 1)
+    }
+  }
+  return null
 }

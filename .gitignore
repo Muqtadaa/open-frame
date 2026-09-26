@@ -48,3 +48,10 @@ tools/bench/fixtures/
 .impeccable/live/deferred-svelte-component-accepts.json
 .impeccable/live/*.png
 # impeccable-ignore-end
+
+# The live server's runtime state, wherever .impeccable sits. The block above
+# anchors these to the repo root (a pattern with a slash in it is anchored),
+# so a critique run under apps/web left them untracked in every status.
+**/.impeccable/live/server.json
+**/.impeccable/live/sessions/
+**/.impeccable/live/annotations/
