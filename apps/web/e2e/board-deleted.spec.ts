@@ -62,7 +62,7 @@ test('says so, instead of freezing, when the owner deletes the board', async ({ 
  * the keyboard on the board it had just declared dead, and let Tab wander into
  * the rail behind the scrim.
  */
-test('is named, takes the keyboard to the way out, and holds it', async ({ page }) => {
+test('is named, takes the keyboard to Keep a copy, and holds it', async ({ page }) => {
   await signedIn(page, [])
   const deleteTheBoard = await roomThatCanBeDeleted(page)
   await page.goto(`/?room=${BOARD}&k=${KEY}`)
@@ -72,7 +72,7 @@ test('is named, takes the keyboard to the way out, and holds it', async ({ page 
   const gate = page.getByRole('alertdialog', { name: 'This board was deleted' })
   await expect(gate).toBeVisible()
   await expect(gate).toHaveAccessibleDescription(/removed it while you had it open/)
-  await expect(page.getByTestId('board-gone-exit')).toBeFocused()
+  await expect(page.getByTestId('board-gone-keep')).toBeFocused()
 
   for (let i = 0; i < 4; i++) {
     await page.keyboard.press('Tab')
@@ -124,6 +124,34 @@ test('drops the local copy of a board that was deleted under you', async ({ page
 
   await expect.poll(() => storedBoards(page)).not.toContain(BOARD)
   await expect.poll(() => storedCrdt(page)).not.toContain(BOARD)
+})
+
+/*
+ * What was on screen when it went is still on screen, and it is the last copy
+ * anybody has. "All boards" alone meant walking away from it.
+ */
+test('keeps a copy of what was on screen as a board of your own', async ({ page }) => {
+  await signedIn(page, [])
+  const deleteTheBoard = await roomThatCanBeDeleted(page)
+  await page.goto(`/?room=${BOARD}&k=${KEY}`)
+  await page.waitForSelector('[data-testid="status-bar"]')
+
+  await page.keyboard.press('s')
+  await page.locator('[data-testid="canvas"]').click({ position: { x: 300, y: 260 } })
+  await expect(page.locator('[contenteditable="true"]')).toBeFocused()
+  await page.keyboard.type('Last words')
+  await page.keyboard.press('Escape')
+  await page.keyboard.press('Escape')
+
+  await deleteTheBoard()
+  await page.getByRole('button', { name: 'Keep a copy' }).click()
+
+  await expect(page).toHaveURL(/[?&]board=/)
+  await expect(page.getByTestId('board-gone')).toHaveCount(0)
+  await expect(page.locator('[data-object-type="sticky"]')).toHaveText('Last words')
+  // A board of its own, not the deleted one come back.
+  expect(page.url()).not.toContain(BOARD)
+  await expect.poll(() => storedBoards(page)).not.toContain(BOARD)
 })
 
 /** The board ids this browser is holding documents for. */

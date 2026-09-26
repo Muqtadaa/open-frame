@@ -1,10 +1,18 @@
-import { asBoardId, type BoardId, type BoardRepository, type BoardSummary } from '@openframe/core'
+import {
+  asBoardId,
+  createEmptyDocument,
+  type BoardDocument,
+  type BoardId,
+  type BoardRepository,
+  type BoardSummary,
+} from '@openframe/core'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 import {
   canDelete,
   canLeave,
   createLocalBoard,
+  keepCopy,
   describeWhen,
   listAllBoards,
   listLocalBoards,
@@ -367,5 +375,26 @@ describe('a cached copy of somebody else’s board', () => {
     const listed = await listAllBoards(repository, true)
 
     expect(listed.map((board) => board.boardId)).toEqual([asBoardId('board_mine')])
+  })
+})
+
+describe('keeping a copy of a board', () => {
+  it('saves what was on screen under a new id and a name that says what it is', async () => {
+    const saved: BoardDocument[] = []
+    const repository = {
+      saveBoard: (document: BoardDocument) => {
+        saved.push(document)
+        return Promise.resolve()
+      },
+    } as unknown as BoardRepository
+    const original = createEmptyDocument(asBoardId('brd_gone'), 'Pricing research', 1)
+
+    const id = await keepCopy(repository, original)
+
+    expect(id).not.toBe(original.id)
+    expect(saved).toHaveLength(1)
+    expect(saved[0]?.id).toBe(id)
+    expect(saved[0]?.meta.title).toBe('Pricing research (copy)')
+    expect(saved[0]?.objects).toBe(original.objects)
   })
 })
