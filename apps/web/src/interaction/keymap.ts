@@ -1,5 +1,6 @@
 import type { Tool } from './interaction-store.js'
 import { IS_MAC } from '../scene/platform.js'
+import { GRID_SIZE } from '../scene/snapping.js'
 
 /**
  * Keyboard shortcuts, resolved as pure data.
@@ -39,6 +40,9 @@ export type KeyAction =
   | { readonly kind: 'deselect' }
   | { readonly kind: 'edit-selection' }
   | { readonly kind: 'nudge'; readonly dx: number; readonly dy: number }
+  /** Grows or shrinks the selection, in screen units like a nudge. */
+  | { readonly kind: 'resize-by'; readonly dw: number; readonly dh: number }
+  | { readonly kind: 'rotate-by'; readonly degrees: number }
   | { readonly kind: 'zoom-in' }
   | { readonly kind: 'zoom-out' }
   | { readonly kind: 'zoom-reset' }
@@ -48,6 +52,8 @@ export type KeyAction =
 
 const NUDGE = 1
 const NUDGE_COARSE = 10
+/** Degrees per press of `.` or `,`: the angles a pointer rotation snaps to with Shift. */
+const ROTATE_STEP = 15
 
 const TOOL_KEYS: Readonly<Record<string, Tool>> = {
   v: 'select',
@@ -137,12 +143,31 @@ export function resolveKeyAction(ctx: KeyContext): KeyAction | null {
       case '_':
       case 'Subtract':
         return { kind: 'zoom-out' }
+      /*
+       * Lock and unlock, the chord design tools use. Plain Mod+L is the
+       * browser's address bar and stays the browser's. The handler existed
+       * and nothing bound it, so the one way to unlock was the context menu.
+       */
+      case 'l':
+      case 'L':
+        return ctx.shiftKey ? { kind: 'toggle-lock' } : null
       default:
         return null
     }
   }
 
-  if (ctx.altKey) return null
+  /*
+   * RESIZE BY KEYBOARD: Alt with an arrow, by the grid step, or by a single
+   * unit with Shift as well. The arrow says which way the far edge goes —
+   * right and down grow, left and up shrink — so the near corner stays put,
+   * the way a drag on the far corner would leave it.
+   */
+  if (ctx.altKey) {
+    const by = NUDGE_KEYS[key]
+    if (by === undefined) return null
+    const step = ctx.shiftKey ? 1 : GRID_SIZE
+    return { kind: 'resize-by', dw: by.dx * step, dh: by.dy * step }
+  }
 
   const nudge = NUDGE_KEYS[key]
   if (nudge !== undefined) {
@@ -161,6 +186,15 @@ export function resolveKeyAction(ctx: KeyContext): KeyAction | null {
     default:
       break
   }
+
+  /*
+   * ROTATE BY KEYBOARD: period and comma, the keys under > and <, by fifteen
+   * degrees — or by one with Shift, which is what types > and <.
+   */
+  if (key === '.') return { kind: 'rotate-by', degrees: ROTATE_STEP }
+  if (key === ',') return { kind: 'rotate-by', degrees: -ROTATE_STEP }
+  if (key === '>') return { kind: 'rotate-by', degrees: 1 }
+  if (key === '<') return { kind: 'rotate-by', degrees: -1 }
 
   // Bracket keys for z-order, matching the convention in design tools.
   // Checked before the shift bail-out below, because Shift is part of them.

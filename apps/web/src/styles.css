@@ -1807,20 +1807,34 @@ body {
 }
 
 /* The selection: a ring, and a wash over a range of more than one cell. */
+/*
+ * The selected cell, made obvious. It was a 2px accent line lying exactly on
+ * the grid lines, so it read as one more line, and a single cell got no fill
+ * at all. Now it is washed, and ringed with a page-coloured halo on both sides
+ * so the ring stands clear of the grid and of any cell colour — the same halo
+ * the board's own selection carries, measured in design-tokens.test.
+ */
 .of-table-ring {
   position: absolute;
   box-sizing: border-box;
+  background: color-mix(in srgb, var(--of-accent) 16%, transparent);
   border: 2px solid var(--of-accent);
+  box-shadow:
+    0 0 0 1px var(--of-page),
+    inset 0 0 0 1px var(--of-page);
   pointer-events: none;
 }
 
 .of-table-ring--range {
-  background: color-mix(in srgb, var(--of-accent) 10%, transparent);
+  background: color-mix(in srgb, var(--of-accent) 20%, transparent);
 }
 
-/* Where typing would go inside a range: the cell the range started from. */
+/*
+ * Where typing would go inside a range: the cell the range started from, by
+ * its own ring. No fill of its own — the ring is drawn over the cells, and a
+ * fill that cleared the range's wash would also veil the cell's text.
+ */
 .of-table-ring--cursor {
-  border-width: 1px;
   background: none;
 }
 
@@ -1854,8 +1868,10 @@ body {
 }
 
 .of-table-strip__item--within {
-  color: var(--of-ink);
+  font-weight: 600;
+  color: var(--of-accent);
   background: var(--of-accent-soft);
+  border-color: var(--of-accent);
 }
 
 .of-table-strip__item--on {
@@ -3340,6 +3356,21 @@ body {
   overscroll-behavior: none;
 }
 
+/*
+ * The board takes focus so the keyboard can reach it. The global ring is
+ * drawn OUTSIDE, which for a full-window board is off the screen, so the
+ * board draws its own inside its edge. A pointer never shows it.
+ */
+.of-canvas:focus {
+  outline: none;
+}
+
+.of-canvas:focus-visible {
+  outline: 2px solid var(--of-accent);
+  outline-offset: -2px;
+  border-radius: 0;
+}
+
 .of-canvas--pan {
   cursor: grab;
 }
@@ -3495,8 +3526,19 @@ body {
   position: absolute;
   top: 0;
   left: 0;
-  outline: 1.5px solid var(--of-accent);
+  /*
+   * 2px: at 1.5 it painted one device pixel on most screens, lighter than a
+   * collaborator's 2px dashed selection — your own read as the weaker claim.
+   */
+  outline: 2px solid var(--of-accent);
   outline-offset: 0;
+  /*
+   * A HALO in the page's colour, just outside the line. The accent alone was
+   * 2.2:1 on a black note and 1.7:1 on a white one After Hours; with the halo
+   * there is always one of the two against whatever the selection is over.
+   * Measured in design-tokens.test, both worlds, every slip and ink.
+   */
+  box-shadow: 0 0 0 3px var(--of-page);
   transform-origin: 50% 50%;
   /* The box itself must not swallow pointer events — only its handles do. */
   pointer-events: none;
@@ -4026,10 +4068,24 @@ body {
   position: relative;
   width: 100%;
   height: 100%;
-  border: 1px solid var(--of-panel-border);
   border-radius: var(--of-radius-slip);
   /* The title sits ABOVE the frame, so it must not be clipped. */
   overflow: visible;
+}
+
+/*
+ * The edge, laid out at `zoom` times the frame and painted at `1 / zoom` (see
+ * FrameEdge), so this 1px is one screen pixel at every zoom (rule 24).
+ */
+.of-frame__edge {
+  position: absolute;
+  top: 0;
+  left: 0;
+  box-sizing: border-box;
+  border: 1px solid var(--of-panel-border);
+  border-radius: var(--of-radius-slip);
+  transform-origin: 0 0;
+  pointer-events: none;
 }
 
 /*
@@ -4256,6 +4312,8 @@ body {
   left: 0;
   z-index: var(--of-z-guide);
   background: var(--of-guide);
+  /* The same halo as the selection, for the same reason: see `.of-selection`. */
+  box-shadow: 0 0 0 1px var(--of-page);
   /* Guides are feedback, never a target. */
   pointer-events: none;
 }
@@ -4936,6 +4994,13 @@ textarea.of-input {
  * the dot: the drawn size is a design decision and the 24px pointer target is
  * an accessibility one (WCAG 2.5.8), exactly as for the resize handles.
  */
+/* A line's end, bend or leg: the 24px target around what is drawn. */
+.of-endpoint__target {
+  position: absolute;
+  background: transparent;
+  border-radius: var(--of-radius-round);
+}
+
 .of-connect-point__target {
   position: absolute;
   background: transparent;
@@ -6269,6 +6334,13 @@ textarea.of-input {
 .of-endpoint--control {
   background: var(--of-panel);
   border-radius: var(--of-radius-slip);
+  /*
+   * A control shapes the line rather than ending it, so it says "move" rather
+   * than the crosshair an end uses to aim — the two shared one cursor. And it
+   * fades in rather than popping, since it appears under the pointer.
+   */
+  cursor: move;
+  animation: of-fade var(--of-quick) var(--of-ease);
 }
 /*
  * A LEG of an orthogonal route: grabbed anywhere along its length, because
@@ -6284,10 +6356,13 @@ textarea.of-input {
   background: var(--of-accent);
   border: none;
   border-radius: var(--of-radius-capsule);
-  opacity: 0.55;
-}
-.of-endpoint--leg:hover {
-  opacity: 0.85;
+  /*
+   * Full strength with a page-coloured halo. It was the accent at 55%, which
+   * over a coloured line is the line's own colour give or take — 1.0 to 1.2:1
+   * — so the thing to push vanished into the thing it pushes. It only shows on
+   * the run under the pointer, so it can afford to be seen.
+   */
+  box-shadow: 0 0 0 1px var(--of-page);
 }
 
 /*
@@ -6301,9 +6376,115 @@ textarea.of-input {
   position: absolute;
   display: grid;
   place-items: center;
+  padding: 0;
   color: var(--of-panel);
   background: var(--of-ink-muted);
+  border: none;
   border-radius: var(--of-radius-grip);
+  cursor: pointer;
+  /* A button now: pressing it unlocks. */
+  pointer-events: auto;
+}
+
+.of-lock:hover {
+  background: var(--of-ink);
+}
+
+/*
+ * What a selection is, above it: "Group of 3". The record line's small mono
+ * on the panel stock, at the apparatus radius.
+ */
+.of-selection__badge {
+  position: absolute;
+  bottom: calc(100% + var(--of-space-6));
+  left: 0;
+  padding: var(--of-space-2) var(--of-space-6);
+  font-family: var(--of-mono);
+  font-size: var(--of-type-record);
+  line-height: 1.3;
+  white-space: nowrap;
+  color: var(--of-ink-muted);
+  background: var(--of-panel);
+  border: 1px solid var(--of-panel-border);
+  border-radius: var(--of-radius-apparatus);
+  /* Said, not pressed: it is outside the box, and nothing should land on it. */
+  pointer-events: none;
+}
+
+/* Each member of a multi-selection: a quieter line than the selection's own. */
+/*
+ * What a press will take, before it is pressed: a hairline in the accent at
+ * half strength, lighter than a selection so the two are never confused.
+ */
+/*
+ * A grip answers the pointer: the accent's wash under it on hover, the
+ * accent itself while it is held. They were identical at rest, under the
+ * pointer and pressed, so nothing said a grip had been found before it moved.
+ */
+.of-handle:hover,
+.of-endpoint:hover,
+.of-connect-point:hover {
+  background: var(--of-accent-soft);
+}
+
+.of-handle:active,
+.of-endpoint:active,
+.of-connect-point:active {
+  background: var(--of-accent);
+}
+
+/*
+ * The board and its chrome are not text to select. A drag starting on the
+ * zoom cluster swept up the rail's labels and the board's hidden
+ * announcements. What is written into is given selection back.
+ */
+.of-canvas,
+.of-overlay {
+  user-select: none;
+}
+
+.of-canvas [contenteditable='true'],
+.of-overlay input,
+.of-overlay textarea,
+.of-overlay [contenteditable='true'] {
+  user-select: text;
+}
+
+.of-hover {
+  position: absolute;
+  top: 0;
+  left: 0;
+  outline: 1px solid color-mix(in srgb, var(--of-accent) 55%, transparent);
+  outline-offset: 0;
+  transform-origin: 50% 50%;
+  pointer-events: none;
+}
+
+.of-selection__member {
+  position: absolute;
+  outline: 1px solid var(--of-accent);
+  outline-offset: 0;
+  opacity: 0.6;
+}
+
+/*
+ * The size or angle a gesture is reaching for, under the selection. Ink on
+ * the panel stock, so it reads over anything the board is showing.
+ */
+.of-selection__readout {
+  position: absolute;
+  top: 0;
+  left: 0;
+  padding: var(--of-space-2) var(--of-space-6);
+  font-family: var(--of-mono);
+  font-size: var(--of-type-record);
+  line-height: 1.3;
+  white-space: nowrap;
+  color: var(--of-ink);
+  background: var(--of-panel);
+  border: 1px solid var(--of-panel-border);
+  border-radius: var(--of-radius-apparatus);
+  transform: translateX(-50%);
   pointer-events: none;
 }
 
@@ -6368,6 +6549,13 @@ textarea.of-input {
   position: absolute;
   border-style: none;
   border-color: var(--of-accent);
+  pointer-events: none;
+}
+
+/* What a crop press lands on: 24px, outside the picture (see CropOverlay). */
+.of-crop__target {
+  position: absolute;
+  background: transparent;
   pointer-events: auto;
 }
 
