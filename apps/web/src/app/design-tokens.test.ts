@@ -904,3 +904,42 @@ describe.each(THEMES)('the apparatus reads on anything — $name', ({ token }) =
     })
   })
 })
+
+/*
+ * An object's EDGE is how you find it on the board, so it is a graphic you
+ * must perceive — 3:1 against what it sits on (PRODUCT.md's open gap, closed
+ * in C3 #8). A white shape in the notebook was 1.06:1 on the page and a black
+ * one After Hours 1.14:1; the frame's edge was 1.45:1; a table's inner grid
+ * 1.20:1 on its own ground. Read off the rule and the view that draw them, so
+ * an edge moved back onto a quieter token fails here.
+ */
+describe.each(THEMES)('edges that never vanish — $name', ({ token }) => {
+  const TABLE = readFileSync(resolve(process.cwd(), 'src/views/TableView.tsx'), 'utf8')
+
+  it.each(['line-black', 'line-white'])('a %s stroke shows on the page and the desk', (line) => {
+    expect(contrast(token(line), token('page'))).toBeGreaterThanOrEqual(3)
+    expect(contrast(token(line), token('bg'))).toBeGreaterThanOrEqual(3)
+  })
+
+  // PRODUCT.md's recorded gap: a fresh shape's outline on its own default fill.
+  it("a default shape's outline shows on its fill and on the page", () => {
+    expect(contrast(token('c-gray'), token('s-gray'))).toBeGreaterThanOrEqual(3)
+    expect(contrast(token('c-gray'), token('page'))).toBeGreaterThanOrEqual(3)
+  })
+
+  it("a frame's edge shows on the page, and on the white it can be filled with", () => {
+    const body = /\.of-frame__edge\s*\{([^}]*)\}/.exec(CSS)?.[1] ?? ''
+    const edge = /(?<![\w-])border:[^;]*var\(--of-([\w-]+)\)/.exec(body)?.[1] ?? ''
+    expect(contrast(token(edge), token('page'))).toBeGreaterThanOrEqual(3)
+    expect(contrast(token(edge), token('s-white'))).toBeGreaterThanOrEqual(3)
+  })
+
+  it("a table's lines show on its ground, inside and out", () => {
+    const resolve = /function resolveLine[\s\S]*?\n}/.exec(TABLE)?.[0] ?? ''
+    const [outer, inner] = [...resolve.matchAll(/'var\(--of-([\w-]+)\)'/g)].map((m) => m[1] ?? '')
+    expect(outer, 'the outer line names a token').toBeDefined()
+    expect(inner, 'the inner line names a token').toBeDefined()
+    expect(contrast(token(outer ?? ''), token('panel'))).toBeGreaterThanOrEqual(3)
+    expect(contrast(token(inner ?? ''), token('panel'))).toBeGreaterThanOrEqual(3)
+  })
+})

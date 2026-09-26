@@ -215,6 +215,19 @@
   --of-s-black: #16202b;
   --of-c-white: #ffffff;
   --of-s-white: #ffffff;
+  /*
+   * A LINE in black or white: a stroke, an outline, a connector. Each of the
+   * two is the page in one world, so there it is drawn in the gray ink
+   * instead — a white shape vanished into the notebook at 1.06:1. Held at 3:1
+   * on the page by design-tokens.test.
+   */
+  --of-line-black: #16202b;
+  --of-line-white: #3f5163;
+  /*
+   * The inner lines of a table: quieter than an outer edge, but still an
+   * edge you have to see to aim at a cell. Held at 3:1 on the panel.
+   */
+  --of-edge-inner: #8595a6;
 
   --of-c-yellow: #7a5c00;
   --of-c-green: #146045;
@@ -353,6 +366,10 @@
   --of-s-black: #07030f;
   --of-c-white: #ffffff;
   --of-s-white: #ffffff;
+  /* Black is the page here, so a black line is drawn in the gray ink. */
+  --of-line-black: #bcc8de;
+  --of-line-white: #ffffff;
+  --of-edge-inner: #7a64b8;
 
   --of-c-yellow: #ffd95e;
   --of-c-green: #5eeaba;
@@ -4091,7 +4108,8 @@ body {
   top: 0;
   left: 0;
   box-sizing: border-box;
-  border: 1px solid var(--of-panel-border);
+  /* An edge you find the frame by, so a boundary at 3:1, not a panel hairline. */
+  border: 1px solid var(--of-control-border);
   border-radius: var(--of-radius-slip);
   transform-origin: 0 0;
   pointer-events: none;

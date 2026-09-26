@@ -10,7 +10,7 @@ import {
   dashArray,
   fontFamily,
   inkColor,
-  inkOf,
+  lineOf,
   justifyAlign,
   readableInkOn,
   surfaceOf,
@@ -22,7 +22,7 @@ import {
 function ShapeOutline({ object }: { object: ObjectBase<string, ShapeData> }) {
   // `strokeColor` when it is set, the object's own colour otherwise — which
   // is what every shape drawn before the property existed still gets.
-  const stroke = inkOf(object.style.strokeColor ?? object.style.color)
+  const stroke = lineOf(object.style.strokeColor ?? object.style.color)
   const filled = (object.style.fill ?? 'tint') !== 'none'
   const fill = filled ? surfaceOf(object.style.color, 'gray') : 'transparent'
   const lineWidth = strokeWidth(object.style.stroke, 'medium')

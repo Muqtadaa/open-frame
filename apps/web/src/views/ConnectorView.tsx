@@ -6,7 +6,7 @@ import { labelScale } from '../scene/label-scale.js'
 import {
   dashArray,
   inkColor,
-  inkOf,
+  lineOf,
   readableInkOn,
   strokeWidth,
   surfaceColor,
@@ -57,7 +57,7 @@ function ConnectorRenderer({
    * worked its own out would draw a line somewhere it cannot be clicked.
    */
   const avoiding = [ends.startBox, ends.endBox].filter((box) => box !== null)
-  const stroke = inkOf(object.style.strokeColor ?? object.style.color)
+  const stroke = lineOf(object.style.strokeColor ?? object.style.color)
   const width = strokeWidth(object.style.stroke, 'medium')
   const held = object.data.points
   const path = connectorPath(start, end, object.data.routing, held, normals, avoiding)

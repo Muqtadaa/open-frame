@@ -78,6 +78,7 @@ import {
   fontFamily,
   inkColor,
   inkOf,
+  lineOf,
   readableInkOn,
   surfaceOf,
   textAlign,
@@ -188,12 +189,12 @@ function resolveLine(
   if (weight === 'none') return null
   const color =
     stored?.color !== undefined
-      ? inkOf(stored.color)
+      ? lineOf(stored.color)
       : style.strokeColor !== undefined
-        ? inkOf(style.strokeColor)
+        ? lineOf(style.strokeColor)
         : outer
           ? 'var(--of-control-border)'
-          : 'var(--of-rule)'
+          : 'var(--of-edge-inner)'
   return { width: STROKE_WIDTHS[weight], color, dash: stored?.dash }
 }
 
