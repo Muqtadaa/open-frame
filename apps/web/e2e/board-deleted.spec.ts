@@ -57,6 +57,32 @@ test('says so, instead of freezing, when the owner deletes the board', async ({ 
   await expect(page.getByTestId('board-gone-exit')).toBeVisible()
 })
 
+/*
+ * Named, and the only thing on the page: it used to announce as "dialog", leave
+ * the keyboard on the board it had just declared dead, and let Tab wander into
+ * the rail behind the scrim.
+ */
+test('is named, takes the keyboard to the way out, and holds it', async ({ page }) => {
+  await signedIn(page, [])
+  const deleteTheBoard = await roomThatCanBeDeleted(page)
+  await page.goto(`/?room=${BOARD}&k=${KEY}`)
+  await page.waitForSelector('[data-testid="status-bar"]')
+  await deleteTheBoard()
+
+  const gate = page.getByRole('alertdialog', { name: 'This board was deleted' })
+  await expect(gate).toBeVisible()
+  await expect(gate).toHaveAccessibleDescription(/removed it while you had it open/)
+  await expect(page.getByTestId('board-gone-exit')).toBeFocused()
+
+  for (let i = 0; i < 4; i++) {
+    await page.keyboard.press('Tab')
+    const inside = await page.evaluate(
+      () => document.activeElement?.closest('[data-testid="board-gone"]') !== null,
+    )
+    expect(inside).toBe(true)
+  }
+})
+
 /**
  * And it does not leave its document and CRDT behind in this browser.
  *

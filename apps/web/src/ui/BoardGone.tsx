@@ -1,6 +1,7 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 
 import { useOpenFrame } from '../runtime/context.js'
+import { Gate, GateActions, GateBody } from './Gate.js'
 
 /**
  * What a member sees when the owner deletes the board under them.
@@ -25,6 +26,7 @@ export function BoardGone() {
   // before this ever rendered, and a subscription only reports what happens
   // NEXT.
   const [gone, setGone] = useState(collaboration?.status === 'gone')
+  const exit = useRef<HTMLAnchorElement>(null)
 
   useEffect(() => {
     if (collaboration === null || collaboration === undefined) return
@@ -38,16 +40,21 @@ export function BoardGone() {
   if (!gone) return null
 
   return (
-    <div className="of-gone" role="alertdialog" aria-modal="true" data-testid="board-gone">
-      <div className="of-gone__panel">
-        <h2 className="of-gone__title">This board was deleted</h2>
-        <p className="of-gone__body">
-          Whoever owns it removed it while you had it open. Nothing you change here can be saved.
-        </p>
-        <a className="of-button of-button--primary" href="/" data-testid="board-gone-exit">
+    // The way out takes the keyboard: it is the one thing left to do.
+    <Gate heading="This board was deleted" testId="board-gone" initialFocus={exit}>
+      <GateBody>
+        Whoever owns it removed it while you had it open. Nothing you change here can be saved.
+      </GateBody>
+      <GateActions>
+        <a
+          ref={exit}
+          className="of-button of-button--primary"
+          href="/"
+          data-testid="board-gone-exit"
+        >
           All boards
         </a>
-      </div>
-    </div>
+      </GateActions>
+    </Gate>
   )
 }
