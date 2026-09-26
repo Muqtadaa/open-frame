@@ -1,6 +1,6 @@
 import { readFileSync } from 'node:fs'
 import { resolve } from 'node:path'
-import { COLOR_TOKENS } from '@openframe/core'
+import { COLOR_TOKENS, createDefaultRegistry } from '@openframe/core'
 import { describe, expect, it } from 'vitest'
 
 /**
@@ -976,3 +976,45 @@ describe.each(THEMES.filter((theme) => theme.name !== 'default'))(
     })
   },
 )
+
+/*
+ * The plain kit — shapes, code, images, tables — stays plain, but it is stock
+ * on the same page as the slips, so it is cut and laid the same way: the
+ * page's 2px corner and the one slip height (DESIGN.md). Code took the
+ * control radius, an image the apparatus radius, and none of them sat above
+ * the page at all. Shapes are held out: a box shadow is a rectangle, and a
+ * diamond's is not.
+ */
+describe('the plain kit is stock on the page', () => {
+  const rule = (selector: string): string =>
+    new RegExp(`${selector.replace(/[.-]/g, (c) => `\\${c}`)}\\s*\\{([^}]*)\\}`).exec(CSS)?.[1] ?? ''
+
+  it.each(['.of-code', '.of-image-frame', '.of-table'])('%s is cut and laid like a slip', (selector) => {
+    const body = rule(selector)
+    expect(body).toMatch(/border-radius:\s*var\(--of-radius-slip\)/)
+    expect(body).toMatch(/box-shadow:\s*var\(--of-slip-shadow\)/)
+  })
+
+  // A placeholder is text somebody has to read to know what to do: 4.5:1.
+  it("an empty text's placeholder is muted ink, not a faded one", () => {
+    const body = rule('.of-text--empty')
+    expect(body).not.toMatch(/opacity/)
+    expect(body).toMatch(/(?<![\w-])color:\s*var\(--of-ink-muted\)/)
+  })
+})
+
+/*
+ * A fresh text object's box, against the type it is set in. It was 48 units
+ * tall at 22px on a 1.3 line — one line — so the first sentence anybody typed
+ * wrapped straight out of sight.
+ */
+describe('a fresh text box', () => {
+  it('holds two lines of display type', () => {
+    const size = Number(/--of-type-display:\s*(\d+)px/.exec(CSS)?.[1])
+    const leading = Number(/\.of-text\s*\{[^}]*line-height:\s*([\d.]+)/.exec(CSS)?.[1])
+    const text = createDefaultRegistry().get('text')
+    expect(size).toBeGreaterThan(0)
+    expect(leading).toBeGreaterThan(0)
+    expect(text?.create().frame.height).toBeGreaterThanOrEqual(2 * size * leading)
+  })
+})

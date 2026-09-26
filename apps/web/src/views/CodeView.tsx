@@ -58,9 +58,12 @@ function CodeRenderer({ object }: ObjectViewProps<CodeData>) {
       role="group"
       aria-label={`Code block, ${language}`}
     >
-      <span className="of-code__language" aria-hidden="true">
-        {language}
-      </span>
+      {/* Not for plain text: "plain" in every corner only said nothing was set. */}
+      {language !== 'plain' && (
+        <span className="of-code__language" aria-hidden="true">
+          {language}
+        </span>
+      )}
       <pre className="of-code__pre" data-testid="code-block">
         {marked.of !== source || marked.html === null ? (
           <code className="of-code__code">{code}</code>

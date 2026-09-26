@@ -1551,6 +1551,9 @@ body {
   height: 100%;
   overflow: hidden;
   background: var(--of-panel);
+  /* A sheet laid on the page, as every object is. */
+  border-radius: var(--of-radius-slip);
+  box-shadow: var(--of-slip-shadow);
 }
 
 .of-table__row {
@@ -2041,7 +2044,9 @@ body {
   overflow: hidden;
   background: var(--of-s-gray);
   border: 1px solid var(--of-control-border);
-  border-radius: var(--of-radius);
+  /* Stock on the page, like every object: the page's corner and slip height. */
+  border-radius: var(--of-radius-slip);
+  box-shadow: var(--of-slip-shadow);
 }
 
 .of-code__language {
@@ -3833,7 +3838,12 @@ body {
 .of-shape__editor {
   overflow-wrap: anywhere;
   white-space: pre-wrap;
-  font: inherit;
+  /*
+   * The family only. `font: inherit` reset the object's own size and leading
+   * to the world's, so a note reflowed the moment it was opened and the word
+   * somebody aimed at moved.
+   */
+  font-family: inherit;
   border: none;
   resize: none;
   outline: 2px solid var(--of-accent);
@@ -3850,7 +3860,8 @@ body {
 }
 
 .of-text--empty {
-  opacity: 0.4;
+  /* Muted, not faded: faded ink was 1.95:1, and this is text to be read. */
+  color: var(--of-ink-muted);
 }
 
 .of-text__editor {
@@ -6558,7 +6569,9 @@ textarea.of-input {
   overflow: hidden;
   border-style: solid;
   border-color: transparent;
-  border-radius: var(--of-radius-apparatus);
+  /* A print laid on the page: the page's corner and the one slip height. */
+  border-radius: var(--of-radius-slip);
+  box-shadow: var(--of-slip-shadow);
 }
 
 .of-image-frame .of-image {

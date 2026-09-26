@@ -89,6 +89,13 @@ describe('object names', () => {
     expect(markup.split('A checkout page')).toHaveLength(2)
   })
 
+  // Plain text is what a code block is until it says otherwise; a corner
+  // label reading "plain" on every one only told people nothing had been set.
+  it('a code block names its language only when it has one', () => {
+    expect(render('code', { code: 'x = 1' })).not.toContain('of-code__language')
+    expect(render('code', { code: 'x = 1', language: 'python' })).toContain('of-code__language')
+  })
+
   it("a table's cells sit in rows", () => {
     const markup = render('table', {})
     const rows = markup.match(/role="row"/g) ?? []

@@ -24,7 +24,9 @@ function TextRenderer({ object }: ObjectViewProps<TextData>) {
     <div
       className={`of-text${empty ? ' of-text--empty' : ''}`}
       style={{
-        color: ink(object.style),
+        // The placeholder takes the stylesheet's muted ink rather than the
+        // object's, which faded was 1.95:1 on the page.
+        ...(empty ? {} : { color: ink(object.style) }),
         fontFamily: fontFamily(object.style.font),
         textAlign: textAlign(object.style.align),
         justifyContent: verticalAlign(object.style.verticalAlign),

@@ -6,13 +6,14 @@ import { defineObjectView, type ObjectEditorProps, type ObjectViewProps } from '
 /**
  * Everything the card says about where it came from, in reading order.
  *
- * Empty parts are dropped by the slip rather than rendered as blanks: a card
- * with only a quote must look like a plain slip, because structure is earned
- * and a row of empty labels is the form this product refuses to make anyone
- * fill in.
+ * The participant FIRST: it is the part people cite ("P07 said…"), and it is
+ * short. After the source it was the part a long study name pushed off the
+ * end of the line. Empty parts are dropped by the slip rather than rendered as
+ * blanks: structure is earned, and a row of empty labels is the form this
+ * product refuses to make anyone fill in.
  */
 function provenance(data: EvidenceData): string {
-  return [data.source, data.participant].filter((part) => part.trim() !== '').join(' · ')
+  return [data.participant, data.source].filter((part) => part.trim() !== '').join(' · ')
 }
 
 /**

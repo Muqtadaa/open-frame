@@ -133,7 +133,9 @@ test.describe('structured objects', () => {
     // Commit the last field by leaving it.
     await page.getByTestId('field-source').click()
 
-    await expect(page.locator(CANVAS)).toContainText('September usability study · P07')
+    // The participant first: it is the part people cite, and it is short, so a
+    // long source no longer ellipsises it off the end of the line.
+    await expect(page.locator(CANVAS)).toContainText('P07 · September usability study')
     await expect(page.locator(CANVAS)).toContainText('#pricing #comprehension')
   })
 

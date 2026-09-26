@@ -37,6 +37,7 @@ import { useOpenFrame } from '../runtime/context.js'
 import { useInteractionStore } from '../interaction/interaction-store.js'
 import { objectsInMarquee } from '../scene/hit-testing.js'
 import { snapPoint } from '../scene/snapping.js'
+import { placeDerived } from '../scene/derived-placement.js'
 import { panToReveal } from '../scene/zoom.js'
 
 export interface BoardCommands {
@@ -426,15 +427,22 @@ export function useCommands(): BoardCommands {
         const size = definition.create().frame
 
         /*
-         * Above the cluster, centred on it, with a gap. Placing it on top of
-         * the evidence would hide what the claim is made of at the moment the
-         * claim is made — and the spatial relationship IS the explanation until
-         * the user has read the panel.
+         * Beside the cluster, not on it: placing it over the evidence would
+         * hide what the claim is made of at the moment the claim is made. Above
+         * when that is free, and somewhere already on screen when it can be —
+         * `placeDerived` says which.
          */
-        const origin = {
-          x: bounds.x + bounds.width / 2 - size.width / 2,
-          y: bounds.y - size.height - SYNTHESIS_GAP,
+        const occupied = [...doc.objects.values()]
+          .filter((object) => runtime.registry.get(object.type)?.capabilities.spatial !== false)
+          .map((object) => runtime.registry.boundsOf(object, doc))
+        const { viewport, canvasSize } = store
+        const view = {
+          x: viewport.x,
+          y: viewport.y,
+          width: canvasSize.width / viewport.zoom,
+          height: canvasSize.height / viewport.zoom,
         }
+        const origin = placeDerived(bounds, size, occupied, view, SYNTHESIS_GAP)
         const at = store.snapToGrid ? snapPoint(origin) : origin
 
         // Minted here because the relations must name the insight, and
