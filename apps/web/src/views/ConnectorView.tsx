@@ -2,7 +2,15 @@ import { plainTextOf, resolveEndpoints, type ConnectorData } from '@openframe/co
 
 import { connectorPath, pathMidpoint, routeAngles } from '../scene/connector-path.js'
 import { capPath } from '../scene/connector-caps.js'
-import { dashArray, inkColor, inkOf, strokeWidth, surfaceColor } from '../scene/style-tokens.js'
+import { labelScale } from '../scene/label-scale.js'
+import {
+  dashArray,
+  inkColor,
+  inkOf,
+  readableInkOn,
+  strokeWidth,
+  surfaceColor,
+} from '../scene/style-tokens.js'
 import { defineObjectView, type ObjectEditorProps, type ObjectViewProps } from './registry.js'
 import { RichTextEditor } from './RichTextEditor.js'
 import { RichTextView } from './RichTextView.js'
@@ -75,7 +83,8 @@ function ConnectorRenderer({
   // `none` is a colour property's way of saying there is nothing there, which
   // is how a background that has been turned off is stored (see `sanitizeStyle`).
   const chosen = object.style.labelFill
-  const ground = chosen === undefined || chosen === 'none' ? undefined : surfaceColor(chosen)
+  const plate = chosen === 'none' ? undefined : chosen
+  const ground = plate === undefined ? undefined : surfaceColor(plate)
   // Both ends, resolved once. `angle` is the direction of travel as the line
   // arrives, so the near end is the same angle turned around.
   const caps = [
@@ -128,12 +137,15 @@ function ConnectorRenderer({
       )}
 
       {label.trim() !== '' && (
-        <g transform={`translate(${String(mid.x)} ${String(mid.y)}) scale(${String(1 / zoom)})`}>
+        <g
+          transform={`translate(${String(mid.x)} ${String(mid.y)}) scale(${String(labelScale(zoom))})`}
+        >
           {/*
            * HTML, in the SVG, so the label is rich text like every other
            * (ADR 0014): an SVG `<text>` has no paragraphs and no `<strong>`.
-           * Counter-scaled by the group, so it is the same size on the glass
-           * at every zoom (rule 24).
+           * Scaled by the group so it follows the board only between limits
+           * (`labelScale`), with a transform rather than divided lengths
+           * (rule 24).
            *
            * The PLATE, when one has been asked for, is the label's own
            * background — sized by the text because it IS the text's box, where
@@ -150,9 +162,15 @@ function ConnectorRenderer({
               <div
                 className={`of-connector__label${ground === undefined ? '' : ' of-connector__label--plated'}`}
                 style={{
-                  ...(object.style.textColor === undefined
-                    ? {}
-                    : { color: inkColor(object.style.textColor) }),
+                  /*
+                   * A plate is a surface, so unless an ink was chosen the
+                   * words take the one that reads on it, as a note's do.
+                   */
+                  ...(object.style.textColor !== undefined
+                    ? { color: inkColor(object.style.textColor) }
+                    : ground === undefined
+                      ? {}
+                      : { color: readableInkOn(plate) }),
                   ...(ground === undefined ? {} : { background: ground }),
                 }}
               >

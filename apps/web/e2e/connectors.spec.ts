@@ -672,6 +672,75 @@ test.describe('formatting a connector label', () => {
   })
 
   /*
+   * A label is part of the drawing, so it grows and shrinks with the board —
+   * but only so far. Held at one screen size it was the one thing on a board
+   * at 25% still printed full size, two labels shouting over pastel
+   * rectangles; left to scale freely it would be unreadable there and
+   * enormous at 1600%.
+   */
+  test('grows and shrinks with the board, within limits', async ({ page }) => {
+    await labelled(page, 'depends on')
+    await page.locator(CANVAS).click({ position: { x: 1180, y: 120 } })
+    const label = page.locator('.of-connector__label')
+    const height = async (): Promise<number> => {
+      const box = await label.boundingBox()
+      if (box === null) throw new Error('no label')
+      return box.height
+    }
+    const atHundred = await height()
+
+    const zoom = async (presses: number, key: string, readout: string): Promise<void> => {
+      for (let press = 0; press < presses; press += 1) await page.keyboard.press(key)
+      await expect(page.getByTestId('zoom-percent')).toHaveText(readout)
+    }
+    await zoom(8, 'Control+=', '1600%')
+    const atMost = await height()
+    expect(atMost, 'it did not grow with the board').toBeGreaterThan(atHundred * 1.5)
+    expect(atMost, 'it grew without limit').toBeLessThan(atHundred * 2.2)
+
+    await zoom(16, 'Control+-', '5%')
+    const atLeast = await height()
+    expect(atLeast, 'it did not shrink with the board').toBeLessThan(atHundred * 0.8)
+    expect(atLeast, 'it shrank without limit').toBeGreaterThan(atHundred * 0.4)
+  })
+
+  /*
+   * A plate is a surface, so the text on it takes the ink that reads on that
+   * surface — as a note's does. It took the board's ink, so a black plate
+   * carried near-black words.
+   */
+  test('takes an ink that reads on its background', async ({ page }) => {
+    await labelled(page, 'depends on')
+    await page.locator(CANVAS).click({ position: { x: 1180, y: 120 } })
+    await page.locator('.of-connector__line').click({ force: true })
+    const label = page.locator('.of-connector__label')
+    const ink = await label.evaluate((element) => getComputedStyle(element).color)
+
+    await page.getByTestId('paint-labelFill').click()
+    await page.getByTestId('label-black').click()
+    await expect(label).not.toHaveCSS('color', ink)
+  })
+
+  /*
+   * Unplated, a label wears a halo so it reads where it crosses its line. The
+   * halo was the ground BEHIND the page, a shade off the page it sits on, so
+   * every label wore a faint box of the wrong colour.
+   */
+  test('wears a halo the colour of the page', async ({ page }) => {
+    await labelled(page, 'depends on')
+    await page.locator(CANVAS).click({ position: { x: 1180, y: 120 } })
+    const { halo, pageColour } = await page.locator('.of-connector__label').evaluate((element) => {
+      const probe = document.createElement('div')
+      probe.style.color = 'var(--of-page)'
+      element.appendChild(probe)
+      const pageColour = getComputedStyle(probe).color
+      probe.remove()
+      return { halo: getComputedStyle(element).textShadow, pageColour }
+    })
+    expect(halo).toContain(pageColour)
+  })
+
+  /*
    * The colour was stored and never seen: the stylesheet gave the SVG label a
    * `fill`, and ANY CSS rule outranks an SVG presentation attribute, so every
    * choice rendered as the board's ink. Nothing asserted the label's colour,

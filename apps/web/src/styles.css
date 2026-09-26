@@ -4183,10 +4183,11 @@ body {
   text-align: center;
   overflow-wrap: anywhere;
   white-space: pre-wrap;
+  /* The page it sits on, not the ground behind the page a shade off it. */
   text-shadow:
-    0 0 2px var(--of-bg),
-    0 0 2px var(--of-bg),
-    0 0 3px var(--of-bg);
+    0 0 2px var(--of-page),
+    0 0 2px var(--of-page),
+    0 0 3px var(--of-page);
 }
 
 .of-connector__label--plated {
