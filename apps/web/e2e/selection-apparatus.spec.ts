@@ -269,6 +269,55 @@ test.describe('the board from the keyboard', () => {
     expect(left).toBe(true)
   })
 
+  /*
+   * A frame does not select as a unit: a press on a note in it takes the note.
+   * Tab left framed objects out altogether, so on a board organised in frames
+   * the keyboard reached the frames and none of what was in them.
+   */
+  test('Tab reaches what is inside a frame', async ({ page }) => {
+    // The note first, then a frame drawn round it: drawing one adopts what it lands on.
+    await note(page, { x: 380, y: 330 }, 'Inside')
+    await page.keyboard.press('Escape')
+    await page.getByTestId('tool-frame').click()
+    await page.mouse.move(200, 150)
+    await page.mouse.down()
+    await page.mouse.move(900, 560, { steps: 8 })
+    await page.mouse.up()
+    await page.keyboard.press('Escape')
+    await page.keyboard.press('Escape')
+    // Really inside: otherwise this passes whether or not framed notes are reached.
+    await expect
+      .poll(() =>
+        page.evaluate(() => {
+          const runtime = (
+            window as unknown as {
+              __openframe: {
+                runtime: {
+                  store: {
+                    getDocument: () => {
+                      objects: Map<string, { type: string; parentId: string | null }>
+                    }
+                  }
+                }
+              }
+            }
+          ).__openframe.runtime
+          return [...runtime.store.getDocument().objects.values()].find(
+            (object) => object.type === 'sticky',
+          )?.parentId
+        }),
+      )
+      .not.toBeNull()
+
+    await page.locator(CANVAS).focus()
+    const announcer = page.getByTestId('board-announcer')
+    // The frame first, being higher on the page; then what is in it.
+    await page.keyboard.press('Tab')
+    await expect(announcer).toContainText('Frame')
+    await page.keyboard.press('Tab')
+    await expect(announcer).toContainText('Inside')
+  })
+
   test('Alt with an arrow resizes, and says the new size', async ({ page }) => {
     await note(page, { x: 340, y: 260 }, 'Grow')
     const object = page.locator('[data-object-type="sticky"]')
@@ -368,6 +417,29 @@ test.describe('a selection says what it is', () => {
     await lock.click()
     await expect(page.getByTestId('selection-lock')).toHaveCount(0)
     await expect(page.getByTestId('handle-se')).toBeVisible()
+  })
+
+  /*
+   * A line on its own gets no box, because its ends are its apparatus — but a
+   * LOCKED line shows no ends, so it lost its box and its padlock with them and
+   * a selected locked line looked exactly like an unselected one.
+   */
+  test('a locked line keeps its box and its padlock', async ({ page }) => {
+    await note(page, { x: 280, y: 250 }, 'A')
+    await note(page, { x: 780, y: 470 }, 'B')
+    await page.keyboard.press('c')
+    const from = await canvasPoint(page, { x: 280, y: 250 })
+    const to = await canvasPoint(page, { x: 780, y: 470 })
+    await page.mouse.move(from.x, from.y)
+    await page.mouse.down()
+    await page.mouse.move(to.x, to.y, { steps: 8 })
+    await page.mouse.up()
+    await page.keyboard.press('v')
+    await page.locator('.of-connector__line').click({ force: true })
+    await expect(page.getByTestId('endpoint-from')).toBeVisible()
+    await page.keyboard.press('ControlOrMeta+Shift+L')
+    await expect(page.getByTestId('selection-lock')).toBeVisible()
+    await expect(page.getByTestId('selection-overlay')).toBeVisible()
   })
 
   test('a group says it is one, and how many it holds', async ({ page }) => {

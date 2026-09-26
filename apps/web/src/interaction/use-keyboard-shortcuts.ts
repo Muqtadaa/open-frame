@@ -13,6 +13,7 @@ import {
 import { useCommands } from '../hooks/use-commands.js'
 import { useInteractionStore } from './interaction-store.js'
 import { resolveKeyAction } from './keymap.js'
+import { readingOrder } from '../scene/reading-order.js'
 
 /** The smallest a keyboard resize makes a side, in world units. */
 const MIN_SIDE = 10
@@ -127,7 +128,7 @@ export function useKeyboardShortcuts(setSpaceHeld: (held: boolean) => void): voi
         event.target instanceof HTMLElement &&
         event.target.dataset.testid === 'canvas'
       ) {
-        const order = readingOrder()
+        const order = tabOrder()
         const [current] = [...store.selection]
         const at = current === undefined ? -1 : order.indexOf(current)
         const next =
@@ -356,21 +357,34 @@ export function useKeyboardShortcuts(setSpaceHeld: (held: boolean) => void): voi
     }
 
     /**
-     * Top-level objects in the order a page is read: by rows, then along each
-     * row. Rows are bands of the grid step so that two notes a pixel apart in
-     * height are one row rather than an arbitrary order.
+     * The objects Tab can land on, in reading order (scene/reading-order).
+     *
+     * Everything a PRESS could select: an object inside a container that
+     * selects as a unit — a group's member — is reached through that
+     * container, but one inside a frame is its own stop, because a press on
+     * it takes it. Leaving out every child left the notes on a framed board
+     * out of reach. Asked of the capabilities, not the type (rule 18).
      */
-    const readingOrder = (): ObjectId[] => {
+    const tabOrder = (): ObjectId[] => {
       const doc = runtime.store.getDocument()
-      return [...doc.objects.values()]
-        .filter((object) => object.parentId === null && !object.hidden)
+      const insideUnit = (object: { parentId: ObjectId | null }): boolean => {
+        let parentId = object.parentId
+        while (parentId !== null) {
+          const parent = doc.objects.get(parentId)
+          if (parent === undefined) return false
+          if (runtime.registry.get(parent.type)?.capabilities.selectsAsUnit === true) return true
+          parentId = parent.parentId
+        }
+        return false
+      }
+      const entries = [...doc.objects.values()]
+        .filter((object) => !object.hidden && !insideUnit(object))
         .filter((object) => runtime.registry.get(object.type)?.capabilities.spatial !== false)
-        .map((object) => ({ id: object.id, at: runtime.registry.boundsOf(object, doc) }))
-        .sort(
-          (a, b) =>
-            Math.round(a.at.y / ROW_BAND) - Math.round(b.at.y / ROW_BAND) || a.at.x - b.at.x,
-        )
-        .map((entry) => entry.id)
+        .map((object) => {
+          const at = runtime.registry.boundsOf(object, doc)
+          return { id: object.id, x: at.x, y: at.y }
+        })
+      return readingOrder(entries, ROW_BAND) as ObjectId[]
     }
 
     const onKeyUp = (event: KeyboardEvent): void => {

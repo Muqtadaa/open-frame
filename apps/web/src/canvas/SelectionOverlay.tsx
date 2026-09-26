@@ -153,7 +153,12 @@ export function SelectionOverlay() {
    * reshaped. Asked of the registry, so nothing here names a connector.
    */
   const lone = objects.length === 1 ? objects[0] : undefined
-  if (lone !== undefined && runtime.registry.endpointsOf(lone, document).length > 0) return null
+  /*
+   * Unless it is LOCKED: a locked line shows no ends, so without the box it
+   * would show nothing at all — and would lose the padlock that unlocks it.
+   */
+  if (lone !== undefined && !lone.locked && runtime.registry.endpointsOf(lone, document).length > 0)
+    return null
 
   /*
    * A single object with a real frame gets an ORIENTED box that turns with it.
