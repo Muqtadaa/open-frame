@@ -978,3 +978,75 @@ test.describe('drafts', () => {
     await expect(page.getByTestId('comment-input')).toHaveValue('Half a reply')
   })
 })
+
+test.describe('by keyboard', () => {
+  /*
+   * A comment could only be dropped with a pointer. M with something selected
+   * starts one on it; the keyboard is handed back whenever the panel closes.
+   */
+  test('M comments on the selection, and closing hands focus back', async ({ page }) => {
+    await signedIn(page, [{ id: BOARD, title: 'Shared', role: 'owner' }])
+    await openBoard(page)
+    await page.keyboard.press('s')
+    await page.locator('[data-testid="canvas"]').click({ position: { x: 320, y: 260 } })
+    await page.keyboard.type('A note')
+    await page.keyboard.press('Escape')
+    await expect(page.locator('[data-object-type="sticky"]')).toHaveCount(1)
+    await expect(page.getByTestId('selection-count')).toContainText('1')
+
+    await page.keyboard.press('m')
+    await expect(page.getByTestId('comment-pin-new')).toBeVisible()
+    await expect(page.getByTestId('comment-input')).toBeFocused()
+    await page.keyboard.type('Said without a mouse')
+    await page.keyboard.press('Control+Enter')
+
+    // Posted: the list, with the keyboard at its heading rather than lost.
+    await expect(page.locator('[data-testid^="comment-pin-cmt_"]')).toHaveCount(1)
+    await expect(page.getByRole('heading', { name: 'Comments' })).toBeFocused()
+    await page.keyboard.press('Escape')
+    await expect(page.getByTestId('comment-panel')).toHaveCount(0)
+    await expect(page.getByTestId('tool-comment')).toBeFocused()
+  })
+
+  test('a pin that opened a thread gets the keyboard back', async ({ page }) => {
+    await signedIn(page, [{ id: BOARD, title: 'Shared', role: 'owner' }])
+    await openBoard(page)
+    await page.getByTestId('tool-comment').click()
+    await page.locator('[data-testid="canvas"]').click({ position: { x: 320, y: 260 } })
+    await page.getByTestId('comment-input').fill('Thread')
+    await page.getByTestId('comment-post').click()
+    await page.keyboard.press('Escape')
+
+    const pin = page.locator('[data-testid^="comment-pin-cmt_"]').first()
+    await pin.focus()
+    await page.keyboard.press('Enter')
+    await expect(page.getByTestId('comment-panel')).toBeVisible()
+    await page.getByTestId('comment-close').click()
+    await expect(pin).toBeFocused()
+  })
+
+  test('the mentions list is a sheet: in, along, and out again', async ({ page }) => {
+    await signedIn(page, [{ id: BOARD, title: 'Shared', role: 'owner' }], 'Muqtadaa Miandara', {
+      mentions: [
+        { commentId: 'cmt_m1', boardId: BOARD, boardTitle: 'Shared', authorName: 'Rowan', body: 'first' },
+        { commentId: 'cmt_m2', boardId: BOARD, boardTitle: 'Shared', authorName: 'Wren', body: 'second' },
+      ],
+    })
+    await page.goto(HOME_URL)
+    const bell = page.getByTestId('mentions-button')
+    await bell.focus()
+    await page.keyboard.press('Enter')
+    await expect(page.getByRole('dialog', { name: 'Mentions' })).toBeVisible()
+    await expect(page.getByTestId('mention-cmt_m1')).toBeFocused()
+    await page.keyboard.press('ArrowDown')
+    await expect(page.getByTestId('mention-cmt_m2')).toBeFocused()
+    await page.keyboard.press('Escape')
+    await expect(page.getByTestId('mentions-list')).toHaveCount(0)
+    await expect(bell).toBeFocused()
+
+    await bell.click()
+    await expect(page.getByTestId('mentions-list')).toBeVisible()
+    await page.mouse.click(5, 700)
+    await expect(page.getByTestId('mentions-list')).toHaveCount(0)
+  })
+})

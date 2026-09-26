@@ -185,9 +185,23 @@ export function CommentPanel() {
     )
   }
 
+  const heading = useRef<HTMLHeadingElement>(null)
+
   // A composer that opens without focus is a composer you have to click twice.
   useEffect(() => {
     if (composing !== null || thread !== null) input.current?.focus()
+  }, [composing, thread])
+
+  /*
+   * The list, arrived at because what had the keyboard went away — a comment
+   * just posted, a thread resolved — takes the keyboard at its heading rather
+   * than leaving it on the page's body.
+   */
+  useEffect(() => {
+    if (composing !== null || thread !== null) return
+    if (document.activeElement === null || document.activeElement === document.body) {
+      heading.current?.focus()
+    }
   }, [composing, thread])
 
   /*
@@ -275,9 +289,24 @@ export function CommentPanel() {
     attachedTo !== null && !runtime.store.getDocument().objects.has(attachedTo)
 
   return (
-    <aside className="of-comment-panel" aria-label="Comments" data-testid="comment-panel">
+    <aside
+      className="of-comment-panel"
+      aria-label="Comments"
+      data-testid="comment-panel"
+      /*
+       * Escape closes the panel from anywhere in it — the heading, a list
+       * entry, Resolve — not only from the text box. Stopped here: the
+       * board's keymap reads Escape as "clear the selection".
+       */
+      onKeyDown={(event) => {
+        if (event.key !== 'Escape' || event.defaultPrevented) return
+        event.preventDefault()
+        event.stopPropagation()
+        close()
+      }}
+    >
       <header className="of-comment-panel__head">
-        <h2 className="of-comment-panel__title">
+        <h2 className="of-comment-panel__title" ref={heading} tabIndex={-1}>
           {browsing ? 'Comments' : thread === null ? 'New comment' : 'Comment'}
         </h2>
         <button

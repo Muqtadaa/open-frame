@@ -56,7 +56,7 @@ test('a comment reaches the other window without it being tabbed away and back',
   // Nothing on either board yet.
   await expect(bob.page.locator('[data-testid^="comment-pin-cmt_"]')).toHaveCount(0)
 
-  await alice.page.getByRole('button', { name: /comment/i }).first().click()
+  await alice.page.getByTestId('tool-comment').click()
   await alice.page.locator('[data-testid="canvas"]').click({ position: { x: 300, y: 220 } })
   await alice.page.getByTestId('comment-input').fill('Does this read from the back of the room?')
   await alice.page.getByTestId('comment-post').click()
@@ -76,6 +76,10 @@ test('a comment reaches the other window without it being tabbed away and back',
     'title',
     /Does this read from the back of the room\?/,
   )
+  // And it is SAID to Bob, not only drawn: arrivals are announced politely.
+  await expect(bob.page.getByTestId('comment-arrivals')).toHaveText('Muqtadaa Miandara commented')
+  // Never your own.
+  await expect(alice.page.getByTestId('comment-arrivals')).toHaveText('')
 })
 
 test('resolving a thread takes it off the other window too', async ({ browser }) => {
@@ -83,7 +87,7 @@ test('resolving a thread takes it off the other window too', async ({ browser })
   const alice = await join(browser, room, 'Muqtadaa Miandara')
   const bob = await join(browser, room, 'Rowan', alice.server)
 
-  await alice.page.getByRole('button', { name: /comment/i }).first().click()
+  await alice.page.getByTestId('tool-comment').click()
   await alice.page.locator('[data-testid="canvas"]').click({ position: { x: 300, y: 220 } })
   await alice.page.getByTestId('comment-input').fill('Settled?')
   await alice.page.getByTestId('comment-post').click()
@@ -116,7 +120,7 @@ test('a second comment from the same person travels as well as the first', async
   const bob = await join(browser, room, 'Rowan', alice.server)
 
   for (const [index, text] of ['first thing', 'second thing'].entries()) {
-    await alice.page.getByRole('button', { name: /comment/i }).first().click()
+    await alice.page.getByTestId('tool-comment').click()
     await alice.page
       .locator('[data-testid="canvas"]')
       .click({ position: { x: 200 + index * 160, y: 200 } })
