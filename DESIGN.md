@@ -1185,17 +1185,52 @@ carrying a 2px accent outline instead. Global `:focus-visible` is a 2px accent
 outline at 2px offset with the apparatus radius (4px). Browser surfaces are claimed, not
 defaulted: selection highlight, caret colour and thin `control-border` scrollbars.
 
-### Notices and Toasts
+### Blocked and Degraded States
 
-Top centre, 10px radius, 15px UI text, contact shadow. Both the advisory and the failure
-pair use the correction wash (`--of-danger-wash`) with a `--of-danger-edge`
-hairline; the failure pair adds correction-red text.
+Two tiers, and red only for the second.
 
-There is no separate amber family. A notice is corrective, so it belongs to the
-one red rather than to a second warm one — and the amber the banner used to
-carry (`#fff6dd` on `#f0dfae`) was the stationery register this world bans,
-surviving in a component the restyle never touched. It was found by documenting
-the build rather than by looking at it.
+- **Advice:** the board opened, and something on it could not be read. The
+  notice sits top centre on the panel stock (`--of-panel`, panel hairline,
+  ink text). It counts in words ("1 object", "3 objects"), never "object(s)"
+  or a code.
+- **Failure:** something just tried did not work. The toast sits under the
+  notice with an 8px gap, in the correction wash with correction-red text. Its
+  close is a drawn × on a 24px target. It clears after five seconds, but never
+  while a pointer is over it or the keyboard is in it. Dismissing either one
+  hands focus back to where it came from.
+
+There is still no amber family. The notice left the red because one
+unreadable note is not a board in trouble, not because a warmer colour was
+wanted.
+
+**Gates.** A board nobody can use gets a panel in front of it, never a banner
+above it. The panel is on the panel stock at the surface radius over
+`--of-scrim`, 360px wide:
+- a 600-weight title that names the dialog
+- one muted paragraph that describes it
+- a row of actions: the one thing to do (primary), then All boards
+
+Everything else in the app is inert and Tab goes round the panel. The
+keyboard starts on the thing to do. There are four gates:
+
+- **Your board is safe.** A board this version cannot read. It gives the name,
+  the object count and the reason in words, and says nothing here will change
+  it. It offers Download a copy (the stored record, byte for byte). It cannot
+  be dismissed; there is no rail, and the bar reads Read-only.
+- **This board has a password.** The field is never disabled. After a wrong
+  password the keyboard goes back into the field, which reads as invalid and
+  is described by the reason. All boards is centred under the full-width
+  submit.
+- **This board was deleted.** Offers Keep a copy, which saves what was on
+  screen as "<title> (copy)" and opens it.
+- **This board did not open** / **OpenFrame stopped.** Start-up and fatal
+  failures. It names storage being refused (a private window, blocked site
+  data) and otherwise says the cause is not known. It says the boards on this
+  device are unchanged, and offers Reload and All boards. The splash is taken
+  away at once rather than held.
+
+An object from a newer version is named in words ("Kanban card") under "From a
+newer version of OpenFrame". Double-clicking it says why it does not open.
 
 ## The Ruled Ground
 

@@ -577,3 +577,50 @@ time with the exact date in the tip; faces at 24px without overlap.
   "Shared" chip copies rather than opening the chooser; a ghost face seen once
   after a reload; the canvas presence layer is hidden from assistive tech.
 
+
+### C3 #6 · Blocked and degraded states (critique 20/40)
+
+A dual-agent critique of the password gate, the deleted board, a board this
+version cannot read, an object from a newer version, the notice, the toast and
+start-up failure scored 20/40 (`2026-09-26T05-30-44Z__src-ui-boardlocked-tsx.md`):
+
+- **P0:** an unreadable board opened as an empty board with every tool and a
+  "(newer-schema)" banner. It looked like the work was gone.
+- **P1:** the gates were unnamed dialogs over a live board. Tab left them, a
+  wrong password dropped focus, the password gate had no way out, and a
+  deleted board could only be walked away from.
+- **P1:** a start-up failure was one line over the splash artwork, and the
+  front door looked for boards forever.
+- **P2:** the notice wore the danger colours. The toast borrowed the notice's
+  classes and had a 0px close glyph.
+- **Minors:** type identifiers shown to people, "object(s)", "room",
+  "Read only".
+
+The owner chose everything, minors included; a read-only sheet over the
+board; "Keep a copy" beside All boards; a quiet gate-style start-up panel.
+
+- **Read-only sheet** (`9e0e36e`): "Your board is safe", the name and count,
+  the reason in words, Download a copy of the stored record, no rail and
+  viewer capabilities. The e2e test asserts the stored bytes never change.
+- **Gates** (`85398e7`): the shared `Gate` shell is named and described, the
+  app behind it is inert and Tab wraps. The password field is never disabled;
+  after a wrong password it takes focus back and reads as invalid. All boards
+  on every gate.
+- **Keep a copy** (`51c45f1`): saves what was on screen as "<title> (copy)"
+  under a new id, then opens it.
+- **Start-up failure** (`7f3d15f`): `StartFailed` names refused storage and
+  offers Reload and All boards. AppErrorBoundary uses it too (`.of-fatal`
+  retired), and Home says when it cannot list boards.
+- **Notice tiers and toast** (`d55a60d`): the notice is advice on the panel
+  stock; the toast is a failure with its own class, a 24px drawn ×, a paused
+  clock and an 8px gap. Dismissal hands focus back. Wording fixed.
+- **Minors** (`29f1b5e`): "Kanban card, from a newer version of OpenFrame",
+  and double-click says why it will not open (`cannotEdit` on the
+  description); fallback and render-error words; the read-only title as saved
+  and centred; "Read-only"; CSS tidy.
+- **Goldens:** the sheet, the deleted gate, the notice with a toast and the
+  start-up panel, in both worlds. The password gate moved (All boards).
+- **Contract:** `apps/web/.impeccable/surfaces/apps-web-src-ui-boardlocked-tsx.md`.
+- **Left for later:** the record panel stays hidden for a placeholder, which
+  has nothing to edit; the start-up panel's scrim covers an empty page; images
+  in a kept copy whose bytes only the deleted room held will not load.

@@ -2742,6 +2742,12 @@ body {
   width: 100%;
 }
 
+/* Under a full-width submit, the way out is centred on it, not hung left. */
+.of-gone__submit + .of-gone__actions {
+  justify-content: center;
+  margin-top: var(--of-space-8);
+}
+
 /*
  * A 12px word is a 15px-tall target, so the link keeps its size of type and
  * takes the bar's height to be pressed (WCAG 2.5.8). Underlined as TEXT, with

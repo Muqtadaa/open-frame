@@ -1,4 +1,4 @@
-import { expect, test, type Page } from '@playwright/test'
+import { expect, test, type Page, type WebSocketRoute } from '@playwright/test'
 
 import { seedLocalBoard } from './seed.js'
 import { BOARD_URL, HOME_URL } from './routes.js'
@@ -79,6 +79,44 @@ async function snap(page: Page, name: string): Promise<void> {
     caret: 'hide',
     threshold: 0.02,
   })
+}
+
+/** Rewrites the stored local board, then reopens it. */
+async function rewriteStoredBoard(page: Page, how: 'newer' | 'unknown-object'): Promise<void> {
+  await expect(page.getByTestId('save-state')).toHaveAttribute('data-state', 'saved')
+  await page.evaluate(async (mode) => {
+    const db: IDBDatabase = await new Promise((resolve, reject) => {
+      const request = indexedDB.open('openframe')
+      request.onsuccess = () => resolve(request.result)
+      request.onerror = () => reject(request.error ?? new Error('open failed'))
+    })
+    const transaction = db.transaction('boards', 'readwrite')
+    const store = transaction.objectStore('boards')
+    const request = store.get('board_local')
+    await new Promise((resolve) => {
+      request.onsuccess = resolve
+    })
+    const record = request.result as {
+      payload: {
+        schemaVersion: number
+        board: { meta: { title: string }; objects: { type: string }[] }
+      }
+    }
+    if (mode === 'newer') {
+      record.payload.schemaVersion = 999
+      record.payload.board.meta.title = 'Pricing research'
+    } else {
+      const first = record.payload.board.objects[0]
+      if (first !== undefined) first.type = 'kanban-card'
+    }
+    store.put(record)
+    await new Promise((resolve) => {
+      transaction.oncomplete = resolve
+    })
+    db.close()
+  }, how)
+  await page.reload()
+  await page.waitForSelector('[data-testid="status-bar"]')
 }
 
 for (const world of WORLDS) {
@@ -243,6 +281,64 @@ for (const world of WORLDS) {
       await page.goto(`/?room=${BOARD}&k=${KEY}`)
       await expect(page.getByTestId('board-locked')).toBeVisible()
       await snap(page, `${world}-board-locked`)
+    })
+
+    test('a board this version cannot read', async ({ page }) => {
+      await openLocalBoard(page)
+      await placeSticky(page, 'Customers do not understand pricing')
+      await rewriteStoredBoard(page, 'newer')
+      await expect(page.getByTestId('board-unreadable')).toBeVisible()
+      await snap(page, `${world}-board-unreadable`)
+    })
+
+    test('a board deleted under you', async ({ page }) => {
+      await signedIn(page, [])
+      let room: WebSocketRoute | null = null
+      await page.routeWebSocket(/\/room\//, (ws) => {
+        room = ws
+      })
+      await page.goto(`/?room=${BOARD}&k=${KEY}`)
+      await page.waitForSelector('[data-testid="status-bar"]')
+      await expect.poll(() => room !== null).toBe(true)
+      await (room as WebSocketRoute | null)?.close({ code: 4004, reason: 'This board was deleted' })
+      await expect(page.getByTestId('board-gone')).toBeVisible()
+      await snap(page, `${world}-board-gone`)
+    })
+
+    test('a notice, with a toast below it', async ({ page }) => {
+      await openLocalBoard(page)
+      await placeSticky(page, 'From the future')
+      await rewriteStoredBoard(page, 'unknown-object')
+      await page.locator('input[type="file"]').setInputFiles({
+        name: 'not-really.png',
+        mimeType: 'image/png',
+        buffer: Buffer.from('<svg xmlns="http://www.w3.org/2000/svg"><script/></svg>'),
+      })
+      await expect(page.getByTestId('toast')).toBeVisible()
+      // Held by the pointer over its words, so the photograph is not a race
+      // against its five seconds.
+      await page.getByTestId('toast').locator('.of-toast__body').hover()
+      await expect(page).toHaveScreenshot(`${world}-notice-and-toast.png`, {
+        animations: 'disabled',
+        caret: 'hide',
+        threshold: 0.02,
+      })
+    })
+
+    test('a board that would not open', async ({ page }) => {
+      await page.addInitScript(() => {
+        Object.defineProperty(window, 'indexedDB', {
+          configurable: true,
+          value: {
+            open() {
+              throw new DOMException('The operation is insecure.', 'SecurityError')
+            },
+          },
+        })
+      })
+      await page.goto(BOARD_URL)
+      await expect(page.getByTestId('start-failed')).toBeVisible()
+      await snap(page, `${world}-start-failed`)
     })
   })
 }
