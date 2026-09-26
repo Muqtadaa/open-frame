@@ -336,9 +336,9 @@ test('names a few people and counts the rest', async ({ page }) => {
   await page.locator('[data-testid="canvas"]').click({ position: { x: 320, y: 240 } })
 
   const hint = page.getByTestId('comment-people-hint')
-  await expect(hint).toContainText('and 2 more')
-  // The two it did not name are counted rather than listed.
-  await expect(hint).not.toContainText('Juno')
+  // Four named and the rest counted — you are not among them, since you are
+  // not somebody you would notify.
+  await expect(hint).toContainText('and 1 more')
   await expect(hint).not.toContainText('Tam')
 
   // And somebody the hint did not have room for is still mentionable, because
@@ -921,4 +921,312 @@ test('offers nothing to reveal when nothing has been resolved', async ({ page })
   await expect(page.getByTestId('comment-list')).toBeVisible()
   // A control that reveals nothing is one people press once and distrust.
   await expect(page.getByTestId('comment-show-resolved')).toHaveCount(0)
+})
+
+/*
+ * No key and no click throws words away. Escape — or a click on another spot
+ * or pin — remounted the panel and the draft went with it; C3 #4 removed that
+ * failure from every other editor, and a comment is the most considered thing
+ * anybody types here.
+ */
+test.describe('drafts', () => {
+  test('Escape keeps a new comment as a draft on the board', async ({ page }) => {
+    await signedIn(page, [{ id: BOARD, title: 'Shared', role: 'owner' }])
+    await openBoard(page)
+    await page.getByTestId('tool-comment').click()
+    await page.locator('[data-testid="canvas"]').click({ position: { x: 320, y: 260 } })
+    await page.getByTestId('comment-input').fill('A long considered thought')
+    await page.getByTestId('comment-input').press('Escape')
+    await expect(page.getByTestId('comment-panel')).toHaveCount(0)
+
+    const draft = page.getByTestId('comment-pin-draft')
+    await expect(draft).toHaveCount(1)
+    await draft.click()
+    await expect(page.getByTestId('comment-input')).toHaveValue('A long considered thought')
+    await expect(page.getByTestId('comment-draft-kept')).toBeVisible()
+
+    await page.getByTestId('comment-post').click()
+    await expect(page.locator('[data-testid^="comment-pin-cmt_"]')).toHaveCount(1)
+    await expect(page.getByTestId('comment-pin-draft')).toHaveCount(0)
+  })
+
+  test('starting a comment somewhere else keeps the first one', async ({ page }) => {
+    await signedIn(page, [{ id: BOARD, title: 'Shared', role: 'owner' }])
+    await openBoard(page)
+    await page.getByTestId('tool-comment').click()
+    await page.locator('[data-testid="canvas"]').click({ position: { x: 320, y: 260 } })
+    await page.getByTestId('comment-input').fill('First spot')
+    await page.locator('[data-testid="canvas"]').click({ position: { x: 620, y: 420 } })
+    await expect(page.getByTestId('comment-input')).toHaveValue('')
+    await expect(page.getByTestId('comment-pin-draft')).toHaveCount(1)
+  })
+
+  test('a half-typed reply survives closing its thread', async ({ page }) => {
+    await signedIn(page, [{ id: BOARD, title: 'Shared', role: 'owner' }])
+    await openBoard(page)
+    await page.getByTestId('tool-comment').click()
+    await page.locator('[data-testid="canvas"]').click({ position: { x: 320, y: 260 } })
+    await page.getByTestId('comment-input').fill('Thread')
+    await page.getByTestId('comment-post').click()
+
+    const pin = page.locator('[data-testid^="comment-pin-cmt_"]').first()
+    await pin.click()
+    await page.getByTestId('comment-input').fill('Half a reply')
+    await page.getByTestId('comment-input').press('Escape')
+    await expect(page.getByTestId('comment-panel')).toHaveCount(0)
+    await pin.click()
+    await expect(page.getByTestId('comment-input')).toHaveValue('Half a reply')
+  })
+})
+
+test.describe('by keyboard', () => {
+  /*
+   * A comment could only be dropped with a pointer. M with something selected
+   * starts one on it; the keyboard is handed back whenever the panel closes.
+   */
+  test('M comments on the selection, and closing hands focus back', async ({ page }) => {
+    await signedIn(page, [{ id: BOARD, title: 'Shared', role: 'owner' }])
+    await openBoard(page)
+    await page.keyboard.press('s')
+    await page.locator('[data-testid="canvas"]').click({ position: { x: 320, y: 260 } })
+    await page.keyboard.type('A note')
+    await page.keyboard.press('Escape')
+    await expect(page.locator('[data-object-type="sticky"]')).toHaveCount(1)
+    await expect(page.getByTestId('selection-count')).toContainText('1')
+
+    await page.keyboard.press('m')
+    await expect(page.getByTestId('comment-pin-new')).toBeVisible()
+    await expect(page.getByTestId('comment-input')).toBeFocused()
+    await page.keyboard.type('Said without a mouse')
+    await page.keyboard.press('Control+Enter')
+
+    // Posted: the list, with the keyboard at its heading rather than lost.
+    await expect(page.locator('[data-testid^="comment-pin-cmt_"]')).toHaveCount(1)
+    await expect(page.getByRole('heading', { name: 'Comments' })).toBeFocused()
+    await page.keyboard.press('Escape')
+    await expect(page.getByTestId('comment-panel')).toHaveCount(0)
+    await expect(page.getByTestId('tool-comment')).toBeFocused()
+  })
+
+  test('a pin that opened a thread gets the keyboard back', async ({ page }) => {
+    await signedIn(page, [{ id: BOARD, title: 'Shared', role: 'owner' }])
+    await openBoard(page)
+    await page.getByTestId('tool-comment').click()
+    await page.locator('[data-testid="canvas"]').click({ position: { x: 320, y: 260 } })
+    await page.getByTestId('comment-input').fill('Thread')
+    await page.getByTestId('comment-post').click()
+    await page.keyboard.press('Escape')
+
+    const pin = page.locator('[data-testid^="comment-pin-cmt_"]').first()
+    await pin.focus()
+    await page.keyboard.press('Enter')
+    await expect(page.getByTestId('comment-panel')).toBeVisible()
+    await page.getByTestId('comment-close').click()
+    await expect(pin).toBeFocused()
+  })
+
+  test('the mentions list is a sheet: in, along, and out again', async ({ page }) => {
+    await signedIn(page, [{ id: BOARD, title: 'Shared', role: 'owner' }], 'Muqtadaa Miandara', {
+      mentions: [
+        { commentId: 'cmt_m1', boardId: BOARD, boardTitle: 'Shared', authorName: 'Rowan', body: 'first' },
+        { commentId: 'cmt_m2', boardId: BOARD, boardTitle: 'Shared', authorName: 'Wren', body: 'second' },
+      ],
+    })
+    await page.goto(HOME_URL)
+    const bell = page.getByTestId('mentions-button')
+    await bell.focus()
+    await page.keyboard.press('Enter')
+    await expect(page.getByRole('dialog', { name: 'Mentions' })).toBeVisible()
+    await expect(page.getByTestId('mention-cmt_m1')).toBeFocused()
+    await page.keyboard.press('ArrowDown')
+    await expect(page.getByTestId('mention-cmt_m2')).toBeFocused()
+    await page.keyboard.press('Escape')
+    await expect(page.getByTestId('mentions-list')).toHaveCount(0)
+    await expect(bell).toBeFocused()
+
+    await bell.click()
+    await expect(page.getByTestId('mentions-list')).toBeVisible()
+    await page.mouse.click(5, 700)
+    await expect(page.getByTestId('mentions-list')).toHaveCount(0)
+  })
+})
+
+/*
+ * A board is returned to days later by somebody who was not there. Whether a
+ * discussion is still live is the first thing they need, and nothing said.
+ */
+test.describe('when, how many, and where', () => {
+  test('says when each remark was made, and how many replies a thread has', async ({
+    page,
+  }) => {
+    await signedIn(page, [{ id: BOARD, title: 'Shared', role: 'owner' }])
+    await openBoard(page)
+    await page.getByTestId('tool-comment').click()
+    await page.locator('[data-testid="canvas"]').click({ position: { x: 320, y: 260 } })
+    await page.getByTestId('comment-input').fill('First')
+    await page.getByTestId('comment-post').click()
+    const pin = page.locator('[data-testid^="comment-pin-cmt_"]').first()
+    await pin.click()
+    await page.getByTestId('comment-input').fill('Second')
+    await page.getByTestId('comment-post').click()
+
+    const times = page.locator('.of-comment time.of-ago')
+    await expect(times).toHaveCount(2)
+    await expect(times.first()).toHaveText('just now')
+    await expect(times.first()).toHaveAttribute('datetime', /^\d{4}-\d\d-\d\dT/)
+
+    await page.getByTestId('comment-close').click()
+    await page.getByTestId('tool-comment').click()
+    const entry = page.locator('[data-testid^="comment-entry-"]').first()
+    await expect(entry).toContainText('just now')
+    await expect(entry).toContainText('1 reply')
+  })
+
+  test('opening a thread from the list brings its pin into view', async ({ page }) => {
+    await signedIn(page, [{ id: BOARD, title: 'Shared', role: 'owner' }])
+    await openBoard(page)
+    await page.getByTestId('tool-comment').click()
+    await page.locator('[data-testid="canvas"]').click({ position: { x: 320, y: 260 } })
+    await page.getByTestId('comment-input').fill('Over here')
+    await page.getByTestId('comment-post').click()
+    await page.keyboard.press('Escape')
+
+    // Somewhere else entirely.
+    await page.keyboard.press('h')
+    for (let i = 0; i < 2; i++) {
+      await page.mouse.move(1100, 650)
+      await page.mouse.down()
+      await page.mouse.move(150, 120, { steps: 8 })
+      await page.mouse.up()
+    }
+    await page.keyboard.press('v')
+    const pin = page.locator('[data-testid^="comment-pin-cmt_"]').first()
+    await expect(pin).not.toBeInViewport()
+
+    await page.getByTestId('tool-comment').click()
+    await page.locator('[data-testid^="comment-entry-"]').first().click()
+    await expect(pin).toBeInViewport()
+  })
+})
+
+test.describe('reading a thread', () => {
+  /*
+   * Opening a thread to read it put the keyboard in Reply, so the board's
+   * shortcuts typed into a reply nobody meant to write — and Close was the
+   * only way out, closing everything.
+   */
+  test('takes the keyboard at its heading, and goes back to the list', async ({ page }) => {
+    await signedIn(page, [{ id: BOARD, title: 'Shared', role: 'owner' }])
+    await openBoard(page)
+    await page.getByTestId('tool-comment').click()
+    await page.locator('[data-testid="canvas"]').click({ position: { x: 320, y: 260 } })
+    await page.getByTestId('comment-input').fill('Read me')
+    await page.getByTestId('comment-post').click()
+    await page.keyboard.press('Escape')
+
+    await page.locator('[data-testid^="comment-pin-cmt_"]').first().click()
+    await expect(page.getByRole('heading', { name: 'Comment', exact: true })).toBeFocused()
+    await page.keyboard.press('v')
+    await expect(page.getByTestId('comment-input')).toHaveValue('')
+
+    await page.getByTestId('comment-back').click()
+    await expect(page.getByTestId('comment-list')).toBeVisible()
+    await expect(page.locator('[data-testid^="comment-entry-"]')).toHaveCount(1)
+  })
+})
+
+test.describe('the marks themselves', () => {
+  // The pointed corner is the spot; it sat 26px below where anybody clicked.
+  test('a pin points at the spot it was dropped on', async ({ page }) => {
+    await signedIn(page, [{ id: BOARD, title: 'Shared', role: 'owner' }])
+    await openBoard(page)
+    await page.getByTestId('tool-comment').click()
+    const canvas = await page.locator('[data-testid="canvas"]').boundingBox()
+    await page.locator('[data-testid="canvas"]').click({ position: { x: 400, y: 300 } })
+    await page.getByTestId('comment-input').fill('Here')
+    await page.getByTestId('comment-post').click()
+    const pin = await page.locator('[data-testid^="comment-pin-cmt_"]').first().boundingBox()
+    expect(pin).not.toBeNull()
+    expect(canvas).not.toBeNull()
+    if (pin === null || canvas === null) return
+    expect(Math.abs(pin.x - (canvas.x + 400))).toBeLessThan(2)
+    expect(Math.abs(pin.y + pin.height - (canvas.y + 300))).toBeLessThan(2)
+  })
+
+  // A chip in the UI face at control height — not a solid block, not mono.
+  test('the mentions bell is a quiet chip a hand can hit', async ({ page }) => {
+    await signedIn(page, [{ id: BOARD, title: 'Shared', role: 'owner' }], 'Muqtadaa Miandara', {
+      mentions: [
+        { commentId: 'cmt_m1', boardId: BOARD, boardTitle: 'Shared', authorName: 'Rowan', body: 'hi' },
+      ],
+    })
+    await openBoard(page)
+    const bell = page.getByTestId('mentions-button')
+    await expect(bell).toBeVisible()
+    const box = await bell.boundingBox()
+    expect(box?.height ?? 0).toBeGreaterThanOrEqual(30)
+    const font = await bell.evaluate((element) => getComputedStyle(element).fontFamily)
+    expect(font).not.toMatch(/mono/i)
+  })
+})
+
+test.describe('the small things', () => {
+  async function composing(page: Page): Promise<void> {
+    await signedIn(page, [{ id: BOARD, title: 'Shared', role: 'owner' }])
+    await openBoard(page)
+    await page.getByTestId('tool-comment').click()
+    await page.locator('[data-testid="canvas"]').click({ position: { x: 320, y: 260 } })
+  }
+
+  test('a pin names what it says and how many messages it holds', async ({ page }) => {
+    await composing(page)
+    await page.getByTestId('comment-input').fill('Pricing is unclear')
+    await page.getByTestId('comment-post').click()
+    const pin = page.locator('[data-testid^="comment-pin-cmt_"]').first()
+    await pin.click()
+    await page.getByTestId('comment-input').fill('Agreed')
+    await page.getByTestId('comment-post').click()
+    await expect(pin).toHaveText('2')
+    await expect(pin).toHaveAttribute('aria-label', /Pricing is unclear.*\(2 messages\)/)
+    await expect(pin).not.toHaveAttribute('title', /.*/)
+  })
+
+  test('you are not offered as somebody to mention', async ({ page }) => {
+    await composing(page)
+    await expect(page.getByTestId('comment-people-hint')).not.toContainText('Muqtadaa')
+    await page.getByTestId('comment-input').pressSequentially('@')
+    await expect(page.getByTestId('mention-menu')).toBeVisible()
+    await expect(page.getByTestId('mention-menu')).not.toContainText('Muqtadaa')
+  })
+
+  test('a dismissed menu comes back for the next mention', async ({ page }) => {
+    await composing(page)
+    const input = page.getByTestId('comment-input')
+    await input.pressSequentially('@Ro')
+    await expect(page.getByTestId('mention-menu')).toBeVisible()
+    await input.press('Escape')
+    await expect(page.getByTestId('mention-menu')).toHaveCount(0)
+    // The same place again: the dismissal was kept by position, forever.
+    await input.fill('')
+    await input.pressSequentially('@Ro')
+    await expect(page.getByTestId('mention-menu')).toBeVisible()
+  })
+
+  test('the space after a chosen name is not doubled', async ({ page }) => {
+    await composing(page)
+    const input = page.getByTestId('comment-input')
+    await input.pressSequentially('@Ro')
+    await input.press('Enter')
+    await input.pressSequentially(' in the data')
+    await expect(input).toHaveValue('@Rowan in the data')
+  })
+
+  test('the composer is a plain textbox, and an avatar is not read out', async ({ page }) => {
+    await composing(page)
+    await expect(page.getByTestId('comment-input')).not.toHaveAttribute('role', /.*/)
+    await page.getByTestId('comment-input').fill('One')
+    await page.getByTestId('comment-post').click()
+    await page.locator('[data-testid^="comment-pin-cmt_"]').first().click()
+    await expect(page.locator('.of-comment__who').first()).toHaveAttribute('aria-hidden', 'true')
+  })
 })

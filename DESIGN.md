@@ -956,6 +956,23 @@ focus goes in, the arrows walk it, Escape closes only it and hands focus back,
 unavailable items stay reachable. From the keyboard (Shift+F10) it hangs from
 the selection.
 
+### Discussion and Presence
+
+A remark is about a place on the board and is read in the margin. **Pins** are
+26px speech marks on the apparatus layer whose pointed corner is the spot —
+accent at rest, ink while open, a dashed outline for a comment written and not
+yet posted. The **panel** is a 300px surface at the gutter under the navigation
+bar: a remark is an avatar, the name, and how long ago in 12px mono (the exact
+date in its tip); the list reads author · when · N replies · excerpt. Nothing
+typed is lost: a draft is kept per spot or thread until it is posted. Reading a
+thread puts the keyboard at its heading; "All comments" goes back.
+
+The **mentions bell** is a quiet chip at control height — the accent's wash and
+a bold count while unread — and opens a sheet like account and share.
+**Presence** names people, not colours: a tag rides each peer's cursor and
+selection, dashed for selected and solid for editing; the bar shows 24px faces
+side by side, three at most and "+N", initials in page or panel colour.
+
 ### Search
 
 Mod+F, top centre under the navigation bar: a surface 440px wide holding one

@@ -105,9 +105,30 @@ export function useKeyboardShortcuts(setSpaceHeld: (held: boolean) => void): voi
       const { width, height } = store.canvasSize
 
       switch (action.kind) {
-        case 'tool':
+        case 'tool': {
           store.setTool(action.tool)
+          /*
+           * M with something selected starts a comment ON it, at its top
+           * right corner — the keyboard's way to write one. A comment could
+           * only be dropped with a pointer, so somebody working without one
+           * could read every discussion and never join any.
+           */
+          const [first] = [...store.selection]
+          if (action.tool === 'comment' && first !== undefined) {
+            const doc = runtime.store.getDocument()
+            const object = doc.objects.get(first)
+            if (object !== undefined) {
+              const bounds = runtime.registry.boundsOf(object, doc)
+              store.startComment({
+                x: bounds.x + bounds.width,
+                y: bounds.y,
+                objectId: object.id,
+                on: { fx: 1, fy: 0 },
+              })
+            }
+          }
           return
+        }
         case 'cycle-shape':
           store.cycleShape()
           return

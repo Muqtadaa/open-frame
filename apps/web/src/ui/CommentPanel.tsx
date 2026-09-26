@@ -18,9 +18,11 @@ import {
   type BoardPerson,
 } from '../hooks/use-comments.js'
 import { useIdentity } from '../hooks/use-identity.js'
+import { draftKey, useCommentDrafts } from '../interaction/comment-drafts.js'
 import { useInteractionStore } from '../interaction/interaction-store.js'
 import { useOpenFrame } from '../runtime/context.js'
 import { hueVar } from '../scene/presence.js'
+import { Ago } from './Ago.js'
 import { MentionPicker } from './MentionPicker.js'
 import { MentionText } from './MentionText.js'
 
@@ -32,9 +34,10 @@ import { MentionText } from './MentionText.js'
  * read at 25%. The pin is on the board because that is WHERE the remark is
  * about; the words are in the margin because that is where words are legible.
  */
-export function CommentPanel() {
-  const { comments, people, post, resolve } = useDiscussion()
+export function CommentPanel({ author }: { readonly author: string | null }) {
+  const { comments, people, replyCounts, post, resolve, focusComment } = useDiscussion()
   const { runtime } = useOpenFrame()
+  const me = useIdentity()
   const composing = useInteractionStore((state) => state.composing)
   const openThreadId = useInteractionStore((state) => state.openThreadId)
   const startComment = useInteractionStore((state) => state.startComment)
@@ -51,12 +54,26 @@ export function CommentPanel() {
     [comments, thread],
   )
 
-  const [body, setBody] = useState('')
+  /*
+   * The draft for what this panel writes into, if one was left unposted. Read
+   * once, when the panel mounts — the panel is keyed on the same thing.
+   *
+   * The author is HANDED IN by the component that stays mounted. Asked here,
+   * `useIdentity` starts at null and fills in a moment later, so a panel that
+   * had just mounted looked up its draft as nobody's and found nothing.
+   */
+  const key = draftKey(author, openThreadId, composing)
+  const keepDraft = useCommentDrafts((state) => state.keep)
+  const dropDraft = useCommentDrafts((state) => state.drop)
+  const heading = useRef<HTMLHeadingElement>(null)
+  const [kept] = useState(() =>
+    key === null ? undefined : useCommentDrafts.getState().drafts.get(key),
+  )
+  const [body, setBody] = useState(kept?.body ?? '')
   const [busy, setBusy] = useState(false)
   const [problem, setProblem] = useState<string | null>(null)
   const [invited, setInvited] = useState(false)
   const input = useRef<HTMLTextAreaElement>(null)
-  const me = useIdentity()
 
   /*
    * Where the caret is, tracked rather than read during render.
@@ -84,7 +101,13 @@ export function CommentPanel() {
    * and getting that wrong sends a notification to the wrong person, whereas
    * a stale entry here simply finds no name to replace.
    */
-  const [picked, setPicked] = useState<readonly BoardPerson[]>([])
+  const [picked, setPicked] = useState<readonly BoardPerson[]>(kept?.picked ?? [])
+
+  // Every change is kept, so no way out of the panel can lose it.
+  useEffect(() => {
+    if (key === null) return
+    keepDraft(key, { body, picked, at: openThreadId === null ? composing : null })
+  }, [key, body, picked, openThreadId, composing, keepDraft])
   /*
    * Resolving used to be indistinguishable from deleting: the pin came off
    * the board and the entry left the list, and there was nowhere left to read
@@ -108,14 +131,27 @@ export function CommentPanel() {
   const [settled, setSettled] = useState(false)
 
   const query = useMemo(() => activeMentionQuery(body, caret), [body, caret])
+  /*
+   * Everybody but you. You were the first, pre-highlighted choice, so "@"
+   * then Enter mentioned yourself — a notification to the one person who
+   * already knows.
+   */
+  const others = useMemo(
+    () => people.filter((person) => person.userId !== me?.userId),
+    [people, me],
+  )
   const candidates = useMemo(
-    () => (query === null ? [] : peopleMatching(query.query, people)),
-    [query, people],
+    () => (query === null ? [] : peopleMatching(query.query, others)),
+    [query, others],
   )
   const picking =
     query !== null && candidates.length > 0 && dismissed !== query.start && !settled
 
   const say = (next: string, at: number): void => {
+    // A dismissed menu stays dismissed for THAT mention only: once the caret
+    // is in no mention, or a different one, the next "@" is offered again.
+    const nextQuery = activeMentionQuery(next, at)
+    if (nextQuery?.start !== dismissed) setDismissed(null)
     setBody(next)
     setCaret(at)
     setHighlight(0)
@@ -168,9 +204,32 @@ export function CommentPanel() {
     )
   }
 
-  // A composer that opens without focus is a composer you have to click twice.
+  /*
+   * A NEW comment takes the keyboard in its box: a composer that opens
+   * without focus is one you have to click twice. A thread opened to READ
+   * takes it at its heading instead — it used to go to Reply, so the board's
+   * shortcuts pressed next typed into a reply nobody meant to write. A reply
+   * left unfinished is the exception: that is a sentence waiting for its end.
+   */
+  const threadId = thread?.id ?? null
   useEffect(() => {
-    if (composing !== null || thread !== null) input.current?.focus()
+    if (composing !== null || (threadId !== null && kept !== undefined)) {
+      input.current?.focus()
+    } else if (threadId !== null) {
+      heading.current?.focus()
+    }
+  }, [composing, threadId, kept])
+
+  /*
+   * The list, arrived at because what had the keyboard went away — a comment
+   * just posted, a thread resolved — takes the keyboard at its heading rather
+   * than leaving it on the page's body.
+   */
+  useEffect(() => {
+    if (composing !== null || thread !== null) return
+    if (document.activeElement === null || document.activeElement === document.body) {
+      heading.current?.focus()
+    }
   }, [composing, thread])
 
   /*
@@ -238,9 +297,12 @@ export function CommentPanel() {
     void write.then((ok) => {
       setBusy(false)
       if (!ok) {
-        setProblem('That could not be saved. A board you are a member of takes comments.')
+        setProblem(
+          'That could not be posted. Your words are kept here — check the connection and try again.',
+        )
         return
       }
+      if (key !== null) dropDraft(key)
       setBody('')
       setCaret(0)
       // A fresh composer has chosen nobody. Carrying these into the next
@@ -257,11 +319,44 @@ export function CommentPanel() {
     attachedTo !== null && !runtime.store.getDocument().objects.has(attachedTo)
 
   return (
-    <aside className="of-comment-panel" aria-label="Comments" data-testid="comment-panel">
+    <aside
+      className="of-comment-panel"
+      aria-label="Comments"
+      data-testid="comment-panel"
+      /*
+       * Escape closes the panel from anywhere in it — the heading, a list
+       * entry, Resolve — not only from the text box. Stopped here: the
+       * board's keymap reads Escape as "clear the selection".
+       */
+      onKeyDown={(event) => {
+        if (event.key !== 'Escape' || event.defaultPrevented) return
+        event.preventDefault()
+        event.stopPropagation()
+        close()
+      }}
+    >
       <header className="of-comment-panel__head">
-        <h2 className="of-comment-panel__title">
+        <h2 className="of-comment-panel__title" ref={heading} tabIndex={-1}>
           {browsing ? 'Comments' : thread === null ? 'New comment' : 'Comment'}
         </h2>
+        {/*
+          * Back to the list from a thread. Close was the only way out, and it
+          * closed everything — reading a second thread meant reopening the
+          * tool and finding your place again.
+          */}
+        {thread !== null && (
+          <button
+            type="button"
+            className="of-button of-button--ghost"
+            data-testid="comment-back"
+            onClick={() => {
+              openThread(null)
+              setCommentsOpen(true)
+            }}
+          >
+            All comments
+          </button>
+        )}
         <button
           type="button"
           className="of-button of-button--ghost"
@@ -309,11 +404,27 @@ export function CommentPanel() {
                 }
                 data-testid={`comment-entry-${open.id}`}
                 data-resolved={open.resolvedAt === null ? 'false' : 'true'}
+                /*
+                 * Through the same "take me to this comment" a mention uses,
+                 * so a thread whose pin is off screen is brought into view as
+                 * it opens. It opened in place, and where the discussion WAS
+                 * stayed somewhere you had to go looking.
+                 */
                 onClick={() => {
-                  openThread(open.id)
+                  if (!focusComment(open.id)) openThread(open.id)
                 }}
               >
-                <span className="of-comment-panel__who">{open.authorName}</span>
+                <span className="of-comment-panel__byline">
+                  <span className="of-comment-panel__who">{open.authorName}</span>
+                  <Ago at={open.createdAt} />
+                  {(replyCounts.get(open.id) ?? 0) > 0 && (
+                    <span className="of-comment-panel__replies">
+                      {(replyCounts.get(open.id) ?? 0) === 1
+                        ? '1 reply'
+                        : `${String(replyCounts.get(open.id) ?? 0)} replies`}
+                    </span>
+                  )}
+                </span>
                 <span className="of-comment-panel__said">
                   {plainMentionText(open.body).slice(0, 90)}
                 </span>
@@ -370,8 +481,11 @@ export function CommentPanel() {
           placeholder={thread === null ? 'Say something' : 'Reply'}
           aria-label={thread === null ? 'Your comment' : 'Your reply'}
           data-testid="comment-input"
-          role="combobox"
-          aria-expanded={picking}
+          /*
+           * A textbox that names the option under the arrows — not
+           * role="combobox", which a <textarea> may not take (axe:
+           * aria-allowed-role). The menu is still announced as it moves.
+           */
           aria-controls="of-mention-menu"
           aria-autocomplete="list"
           aria-activedescendant={
@@ -385,6 +499,15 @@ export function CommentPanel() {
             setCaret(event.currentTarget.selectionStart)
           }}
           onKeyDown={(event) => {
+            /*
+             * A name just chosen already ends in a space, so the space most
+             * people type next is swallowed rather than doubled ("@Rowan  in").
+             */
+            if (settled && event.key === ' ' && body[caret - 1] === ' ') {
+              event.preventDefault()
+              setSettled(false)
+              return
+            }
             /*
              * The menu takes the keys it needs and passes on the rest, so the
              * composer behaves exactly as it did whenever nothing is open.
@@ -435,9 +558,13 @@ export function CommentPanel() {
              */
             if (event.key === 'Escape') {
               event.preventDefault()
-              // Escape DISMISSES, panel and all. Dropping back to the list
-              // would leave you pressing it twice to get rid of something you
-              // have already said you do not want.
+              /*
+               * Escape closes the panel, panel and all, and KEEPS the words:
+               * the draft is held outside the panel and comes back when this
+               * spot or thread is opened again. It used to throw them away —
+               * the one failure this product does not accept, from the key
+               * that means "done" everywhere else on the board.
+               */
               close()
               return
             }
@@ -465,14 +592,14 @@ export function CommentPanel() {
           * hold a great many, and a hint that turns into a paragraph is one
           * nobody reads — including the part that says what to type.
           */}
-        {!picking && stranger === null && people.length > 1 && (
+        {!picking && stranger === null && others.length > 0 && (
           <p className="of-comment-panel__hint" data-testid="comment-people-hint">
             Type @ and a name to notify someone:{' '}
-            {people
+            {others
               .slice(0, 4)
               .map((person) => person.displayName)
               .join(', ')}
-            {people.length > 4 && ` and ${String(people.length - 4)} more`}
+            {others.length > 4 && ` and ${String(others.length - 4)} more`}
           </p>
         )}
 
@@ -507,6 +634,12 @@ export function CommentPanel() {
           </p>
         )}
 
+        {kept?.body === body && (
+          <p className="of-comment-panel__hint" data-testid="comment-draft-kept">
+            Draft kept from before.
+          </p>
+        )}
+
         {problem !== null && (
           <p className="of-comment-panel__problem" role="alert" data-testid="comment-problem">
             {problem}
@@ -533,7 +666,11 @@ export function CommentPanel() {
                 void resolve(thread.id, thread.resolvedAt === null).then((ok) => {
                   setBusy(false)
                   if (!ok) {
-                    setProblem('That could not be changed.')
+                    setProblem(
+                      thread.resolvedAt === null
+                        ? 'That could not be resolved. Try again in a moment.'
+                        : 'That could not be reopened. Try again in a moment.',
+                    )
                     return
                   }
                   openThread(null)
@@ -559,11 +696,19 @@ function Remark({
 }) {
   return (
     <article className="of-comment">
-      <span className="of-comment__who" style={{ background: hueVar(comment.authorHue) }}>
+      {/* The initial is the name again, in a circle: shown, not read out. */}
+      <span
+        className="of-comment__who"
+        style={{ background: hueVar(comment.authorHue) }}
+        aria-hidden="true"
+      >
         {(comment.authorName.trim()[0] ?? '?').toUpperCase()}
       </span>
       <div className="of-comment__body">
-        <span className="of-comment__name">{comment.authorName}</span>
+        <span className="of-comment__byline">
+          <span className="of-comment__name">{comment.authorName}</span>
+          <Ago at={comment.createdAt} />
+        </span>
         <p className="of-comment__text">
           <MentionText body={comment.body} whoIsMe={whoIsMe} />
         </p>

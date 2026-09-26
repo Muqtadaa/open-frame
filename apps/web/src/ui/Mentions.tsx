@@ -1,8 +1,9 @@
-import { useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 
 import { commentLink } from '../app/collab-config.js'
 import { useDiscussion } from '../app/comments-context.js'
 import { AnchoredSurface } from '../controls/AnchoredSurface.js'
+import { Ago } from './Ago.js'
 import { plainMentionText } from '../hooks/use-comments.js'
 import { useAnchoredTo } from '../controls/use-anchor.js'
 import { useMentions } from '../hooks/use-mentions.js'
@@ -37,6 +38,49 @@ export function Mentions() {
    */
   const { boardId: here, focusComment } = useDiscussion()
   const { ref: bell, anchor, surface } = useAnchoredTo<HTMLButtonElement>(open)
+  const list = useRef<HTMLDivElement>(null)
+
+  /*
+   * A sheet like the account and share sheets: the keyboard goes in when it
+   * opens, and Escape or a press anywhere else closes it and hands the
+   * keyboard back to the bell. It did none of that — it opened with focus left
+   * on the bell, eleven Tabs from its first item on the front door, and
+   * nothing but the bell itself would close it.
+   */
+  useEffect(() => {
+    if (!open) return
+    const shut = (): void => {
+      setOpen(false)
+      bell.current?.focus()
+    }
+    const escape = (event: KeyboardEvent): void => {
+      if (event.key !== 'Escape') return
+      // Taken in the capture phase and stopped: the board's keymap reads
+      // Escape as "clear the selection" and would act on the same press.
+      event.preventDefault()
+      event.stopPropagation()
+      shut()
+    }
+    const outside = (event: Event): void => {
+      if (!(event.target instanceof Node)) return
+      if (list.current?.contains(event.target) === true) return
+      if (bell.current?.contains(event.target) === true) return
+      setOpen(false)
+    }
+    window.addEventListener('keydown', escape, true)
+    window.addEventListener('pointerdown', outside, true)
+    return () => {
+      window.removeEventListener('keydown', escape, true)
+      window.removeEventListener('pointerdown', outside, true)
+    }
+  }, [open, bell])
+
+  // In once the list is PLACED: the surface renders a frame after the bell
+  // is measured, and a focus asked for before then finds nothing to take it.
+  const placed = anchor !== null
+  useEffect(() => {
+    if (open && placed) list.current?.querySelector<HTMLElement>('a')?.focus()
+  }, [open, placed])
 
   if (mentions.length === 0) return null
 
@@ -55,6 +99,7 @@ export function Mentions() {
         type="button"
         className={unread === 0 ? 'of-mentions__bell is-read' : 'of-mentions__bell'}
         aria-expanded={open}
+        aria-haspopup="dialog"
         aria-label={
           unread === 0
             ? `Mentions, none unread, ${String(mentions.length)} recent`
@@ -75,6 +120,20 @@ export function Mentions() {
           prefer={['below', 'above']}
           testId="mentions-surface"
         >
+          <div
+            ref={list}
+            role="dialog"
+            aria-label="Mentions"
+            onKeyDown={(event) => {
+              // Up and down the list, wrapping, as every other list here does.
+              if (event.key !== 'ArrowDown' && event.key !== 'ArrowUp') return
+              event.preventDefault()
+              const links = [...event.currentTarget.querySelectorAll<HTMLElement>('a')]
+              const at = links.indexOf(event.target as HTMLElement)
+              const step = event.key === 'ArrowDown' ? 1 : -1
+              links[(at + step + links.length) % links.length]?.focus()
+            }}
+          >
           <ul className="of-mentions__list" data-testid="mentions-list">
             {mentions.map((mention) => (
               <li key={mention.commentId}>
@@ -125,7 +184,9 @@ export function Mentions() {
                   }}
                 >
                   <span className="of-mentions__who">{mention.authorName}</span>
-                  <span className="of-mentions__where">{mention.boardTitle}</span>
+                  <span className="of-mentions__where">
+                    {mention.boardTitle} · <Ago at={mention.createdAt} />
+                  </span>
                   <span className="of-mentions__what">
                     {plainMentionText(mention.body).slice(0, 120)}
                   </span>
@@ -133,6 +194,7 @@ export function Mentions() {
               </li>
             ))}
           </ul>
+          </div>
         </AnchoredSurface>
       )}
     </div>

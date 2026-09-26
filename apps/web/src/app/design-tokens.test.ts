@@ -407,6 +407,16 @@ describe.each(THEMES)('palette contrast — $name', ({ token }) => {
         ).toBeGreaterThan(45)
       }
     })
+
+    /*
+     * A face's INITIAL is text on the person's hue, so it takes the text floor
+     * — in the page's or the panel's colour, never in ink, which reads at
+     * 1.5–3:1 on these hues. The mention menu's faces were set in ink.
+     */
+    it.each(HUES)('%s carries a readable initial', (hue) => {
+      expect(contrast(token('page'), token(hue))).toBeGreaterThanOrEqual(4.5)
+      expect(contrast(token('panel'), token(hue))).toBeGreaterThanOrEqual(4.5)
+    })
   })
 
   it('never uses pure black as ink', () => {
@@ -824,4 +834,20 @@ describe('the format bar names the sizes the stylesheet draws', () => {
       }
     }
   })
+})
+
+/*
+ * Which colour each face's initial is SET in. The token pairs above say page
+ * and panel are readable on every hue; this says those are what is used.
+ */
+describe('face initials', () => {
+  it.each(['of-status__person', 'of-comment__who', 'of-mention-menu__face'])(
+    '.%s sets its initial in page or panel colour',
+    (face) => {
+      const rule = new RegExp(`\\.${face}\\s*\\{([^}]*)\\}`).exec(CSS)
+      expect(rule, `.${face} rule`).not.toBeNull()
+      const colour = /(?:^|[;\s])color:\s*([^;]+);/.exec(rule?.[1] ?? '')?.[1]?.trim()
+      expect(['var(--of-page)', 'var(--of-panel)']).toContain(colour)
+    },
+  )
 })
