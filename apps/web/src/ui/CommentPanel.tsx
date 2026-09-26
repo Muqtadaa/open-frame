@@ -22,6 +22,7 @@ import { draftKey, useCommentDrafts } from '../interaction/comment-drafts.js'
 import { useInteractionStore } from '../interaction/interaction-store.js'
 import { useOpenFrame } from '../runtime/context.js'
 import { hueVar } from '../scene/presence.js'
+import { Ago } from './Ago.js'
 import { MentionPicker } from './MentionPicker.js'
 import { MentionText } from './MentionText.js'
 
@@ -34,7 +35,7 @@ import { MentionText } from './MentionText.js'
  * about; the words are in the margin because that is where words are legible.
  */
 export function CommentPanel() {
-  const { comments, people, post, resolve } = useDiscussion()
+  const { comments, people, replyCounts, post, resolve, focusComment } = useDiscussion()
   const { runtime } = useOpenFrame()
   const composing = useInteractionStore((state) => state.composing)
   const openThreadId = useInteractionStore((state) => state.openThreadId)
@@ -356,11 +357,27 @@ export function CommentPanel() {
                 }
                 data-testid={`comment-entry-${open.id}`}
                 data-resolved={open.resolvedAt === null ? 'false' : 'true'}
+                /*
+                 * Through the same "take me to this comment" a mention uses,
+                 * so a thread whose pin is off screen is brought into view as
+                 * it opens. It opened in place, and where the discussion WAS
+                 * stayed somewhere you had to go looking.
+                 */
                 onClick={() => {
-                  openThread(open.id)
+                  if (!focusComment(open.id)) openThread(open.id)
                 }}
               >
-                <span className="of-comment-panel__who">{open.authorName}</span>
+                <span className="of-comment-panel__byline">
+                  <span className="of-comment-panel__who">{open.authorName}</span>
+                  <Ago at={open.createdAt} />
+                  {(replyCounts.get(open.id) ?? 0) > 0 && (
+                    <span className="of-comment-panel__replies">
+                      {(replyCounts.get(open.id) ?? 0) === 1
+                        ? '1 reply'
+                        : `${String(replyCounts.get(open.id) ?? 0)} replies`}
+                    </span>
+                  )}
+                </span>
                 <span className="of-comment-panel__said">
                   {plainMentionText(open.body).slice(0, 90)}
                 </span>
@@ -620,7 +637,10 @@ function Remark({
         {(comment.authorName.trim()[0] ?? '?').toUpperCase()}
       </span>
       <div className="of-comment__body">
-        <span className="of-comment__name">{comment.authorName}</span>
+        <span className="of-comment__byline">
+          <span className="of-comment__name">{comment.authorName}</span>
+          <Ago at={comment.createdAt} />
+        </span>
         <p className="of-comment__text">
           <MentionText body={comment.body} whoIsMe={whoIsMe} />
         </p>

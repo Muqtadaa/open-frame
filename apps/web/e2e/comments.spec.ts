@@ -1050,3 +1050,61 @@ test.describe('by keyboard', () => {
     await expect(page.getByTestId('mentions-list')).toHaveCount(0)
   })
 })
+
+/*
+ * A board is returned to days later by somebody who was not there. Whether a
+ * discussion is still live is the first thing they need, and nothing said.
+ */
+test.describe('when, how many, and where', () => {
+  test('says when each remark was made, and how many replies a thread has', async ({
+    page,
+  }) => {
+    await signedIn(page, [{ id: BOARD, title: 'Shared', role: 'owner' }])
+    await openBoard(page)
+    await page.getByTestId('tool-comment').click()
+    await page.locator('[data-testid="canvas"]').click({ position: { x: 320, y: 260 } })
+    await page.getByTestId('comment-input').fill('First')
+    await page.getByTestId('comment-post').click()
+    const pin = page.locator('[data-testid^="comment-pin-cmt_"]').first()
+    await pin.click()
+    await page.getByTestId('comment-input').fill('Second')
+    await page.getByTestId('comment-post').click()
+
+    const times = page.locator('.of-comment time.of-ago')
+    await expect(times).toHaveCount(2)
+    await expect(times.first()).toHaveText('just now')
+    await expect(times.first()).toHaveAttribute('datetime', /^\d{4}-\d\d-\d\dT/)
+
+    await page.getByTestId('comment-close').click()
+    await page.getByTestId('tool-comment').click()
+    const entry = page.locator('[data-testid^="comment-entry-"]').first()
+    await expect(entry).toContainText('just now')
+    await expect(entry).toContainText('1 reply')
+  })
+
+  test('opening a thread from the list brings its pin into view', async ({ page }) => {
+    await signedIn(page, [{ id: BOARD, title: 'Shared', role: 'owner' }])
+    await openBoard(page)
+    await page.getByTestId('tool-comment').click()
+    await page.locator('[data-testid="canvas"]').click({ position: { x: 320, y: 260 } })
+    await page.getByTestId('comment-input').fill('Over here')
+    await page.getByTestId('comment-post').click()
+    await page.keyboard.press('Escape')
+
+    // Somewhere else entirely.
+    await page.keyboard.press('h')
+    for (let i = 0; i < 2; i++) {
+      await page.mouse.move(1100, 650)
+      await page.mouse.down()
+      await page.mouse.move(150, 120, { steps: 8 })
+      await page.mouse.up()
+    }
+    await page.keyboard.press('v')
+    const pin = page.locator('[data-testid^="comment-pin-cmt_"]').first()
+    await expect(pin).not.toBeInViewport()
+
+    await page.getByTestId('tool-comment').click()
+    await page.locator('[data-testid^="comment-entry-"]').first().click()
+    await expect(pin).toBeInViewport()
+  })
+})

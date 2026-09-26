@@ -2583,6 +2583,31 @@ body {
   border-radius: var(--of-radius-round);
 }
 
+/*
+ * When, in the mono every readout is set in — the ledger row's "how long ago"
+ * — beside the name it belongs to.
+ */
+.of-ago {
+  font-family: var(--of-mono);
+  font-size: var(--of-type-record);
+  font-variant-numeric: tabular-nums;
+  color: var(--of-ink-muted);
+  white-space: nowrap;
+}
+
+.of-comment__byline,
+.of-comment-panel__byline {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0 var(--of-space-8);
+  align-items: baseline;
+}
+
+.of-comment-panel__replies {
+  font-size: var(--of-type-record);
+  color: var(--of-ink-muted);
+}
+
 .of-comment__name {
   font-size: var(--of-type-record);
   font-weight: 600;

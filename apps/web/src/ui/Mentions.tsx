@@ -3,6 +3,7 @@ import { useEffect, useRef, useState } from 'react'
 import { commentLink } from '../app/collab-config.js'
 import { useDiscussion } from '../app/comments-context.js'
 import { AnchoredSurface } from '../controls/AnchoredSurface.js'
+import { Ago } from './Ago.js'
 import { plainMentionText } from '../hooks/use-comments.js'
 import { useAnchoredTo } from '../controls/use-anchor.js'
 import { useMentions } from '../hooks/use-mentions.js'
@@ -183,7 +184,9 @@ export function Mentions() {
                   }}
                 >
                   <span className="of-mentions__who">{mention.authorName}</span>
-                  <span className="of-mentions__where">{mention.boardTitle}</span>
+                  <span className="of-mentions__where">
+                    {mention.boardTitle} · <Ago at={mention.createdAt} />
+                  </span>
                   <span className="of-mentions__what">
                     {plainMentionText(mention.body).slice(0, 120)}
                   </span>
