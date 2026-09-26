@@ -336,9 +336,9 @@ test('names a few people and counts the rest', async ({ page }) => {
   await page.locator('[data-testid="canvas"]').click({ position: { x: 320, y: 240 } })
 
   const hint = page.getByTestId('comment-people-hint')
-  await expect(hint).toContainText('and 2 more')
-  // The two it did not name are counted rather than listed.
-  await expect(hint).not.toContainText('Juno')
+  // Four named and the rest counted — you are not among them, since you are
+  // not somebody you would notify.
+  await expect(hint).toContainText('and 1 more')
   await expect(hint).not.toContainText('Tam')
 
   // And somebody the hint did not have room for is still mentionable, because
@@ -1167,5 +1167,66 @@ test.describe('the marks themselves', () => {
     expect(box?.height ?? 0).toBeGreaterThanOrEqual(30)
     const font = await bell.evaluate((element) => getComputedStyle(element).fontFamily)
     expect(font).not.toMatch(/mono/i)
+  })
+})
+
+test.describe('the small things', () => {
+  async function composing(page: Page): Promise<void> {
+    await signedIn(page, [{ id: BOARD, title: 'Shared', role: 'owner' }])
+    await openBoard(page)
+    await page.getByTestId('tool-comment').click()
+    await page.locator('[data-testid="canvas"]').click({ position: { x: 320, y: 260 } })
+  }
+
+  test('a pin names what it says and how many messages it holds', async ({ page }) => {
+    await composing(page)
+    await page.getByTestId('comment-input').fill('Pricing is unclear')
+    await page.getByTestId('comment-post').click()
+    const pin = page.locator('[data-testid^="comment-pin-cmt_"]').first()
+    await pin.click()
+    await page.getByTestId('comment-input').fill('Agreed')
+    await page.getByTestId('comment-post').click()
+    await expect(pin).toHaveText('2')
+    await expect(pin).toHaveAttribute('aria-label', /Pricing is unclear.*\(2 messages\)/)
+    await expect(pin).not.toHaveAttribute('title', /.*/)
+  })
+
+  test('you are not offered as somebody to mention', async ({ page }) => {
+    await composing(page)
+    await expect(page.getByTestId('comment-people-hint')).not.toContainText('Muqtadaa')
+    await page.getByTestId('comment-input').pressSequentially('@')
+    await expect(page.getByTestId('mention-menu')).toBeVisible()
+    await expect(page.getByTestId('mention-menu')).not.toContainText('Muqtadaa')
+  })
+
+  test('a dismissed menu comes back for the next mention', async ({ page }) => {
+    await composing(page)
+    const input = page.getByTestId('comment-input')
+    await input.pressSequentially('@Ro')
+    await expect(page.getByTestId('mention-menu')).toBeVisible()
+    await input.press('Escape')
+    await expect(page.getByTestId('mention-menu')).toHaveCount(0)
+    // The same place again: the dismissal was kept by position, forever.
+    await input.fill('')
+    await input.pressSequentially('@Ro')
+    await expect(page.getByTestId('mention-menu')).toBeVisible()
+  })
+
+  test('the space after a chosen name is not doubled', async ({ page }) => {
+    await composing(page)
+    const input = page.getByTestId('comment-input')
+    await input.pressSequentially('@Ro')
+    await input.press('Enter')
+    await input.pressSequentially(' in the data')
+    await expect(input).toHaveValue('@Rowan in the data')
+  })
+
+  test('the composer is a plain textbox, and an avatar is not read out', async ({ page }) => {
+    await composing(page)
+    await expect(page.getByTestId('comment-input')).not.toHaveAttribute('role', /.*/)
+    await page.getByTestId('comment-input').fill('One')
+    await page.getByTestId('comment-post').click()
+    await page.locator('[data-testid^="comment-pin-cmt_"]').first().click()
+    await expect(page.locator('.of-comment__who').first()).toHaveAttribute('aria-hidden', 'true')
   })
 })

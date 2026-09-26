@@ -33,6 +33,8 @@ export function ShareControl() {
   // conditionally changes the order between renders.
   const identity = useIdentity()
   const [copied, setCopied] = useState<'edit' | 'view' | null>(null)
+  // The clipboard can refuse; saying nothing made the chip look broken.
+  const [copyFailed, setCopyFailed] = useState(false)
   const [sharing, setSharing] = useState(false)
   const [shareError, setShareError] = useState<string | null>(null)
   const [links, setLinks] = useState<SharedBoard | null>(null)
@@ -196,7 +198,9 @@ export function ShareControl() {
         type="button"
         className="of-status__share"
         data-testid="room-status"
-        aria-label={copied !== null ? 'Link copied' : roomLabel(status)}
+        aria-label={
+          copyFailed ? 'Could not copy the link' : copied !== null ? 'Link copied' : roomLabel(status)
+        }
         data-status={status}
         data-tip={roomHint}
         aria-description={roomHint}
@@ -210,15 +214,21 @@ export function ShareControl() {
             .writeText(
               shareLink(runtime.boardId, window.location.origin, accessKey(window.location.search)),
             )
-            .then(() => {
-              setCopied('edit')
-              setTimeout(() => setCopied(null), 1600)
-            })
+            .then(
+              () => {
+                setCopied('edit')
+                setTimeout(() => setCopied(null), 1600)
+              },
+              () => {
+                setCopyFailed(true)
+                setTimeout(() => setCopyFailed(false), 2400)
+              },
+            )
         }}
       >
         <span className={`of-status__dot of-status__dot--${status}`} aria-hidden="true" />
         <span className="of-status__share-label">
-          {copied !== null ? 'Link copied' : roomLabel(status)}
+          {copyFailed ? 'Could not copy' : copied !== null ? 'Link copied' : roomLabel(status)}
         </span>
       </button>
 

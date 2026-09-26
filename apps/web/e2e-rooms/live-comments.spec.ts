@@ -73,7 +73,7 @@ test('a comment reaches the other window without it being tabbed away and back',
     timeout: 20_000,
   })
   await expect(bob.page.locator('[data-testid^="comment-pin-cmt_"]')).toHaveAttribute(
-    'title',
+    'data-tip',
     /Does this read from the back of the room\?/,
   )
   // And it is SAID to Bob, not only drawn: arrivals are announced politely.

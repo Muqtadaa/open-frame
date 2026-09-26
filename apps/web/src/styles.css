@@ -464,6 +464,18 @@
   border-color: var(--of-accent);
 }
 
+/*
+ * Not yet pressable, and looking it: an outlined wash rather than the accent
+ * faded to 38%, which read as the live button seen through fog — "Reply" on
+ * an empty box looked like it was about to send.
+ */
+.of-button--primary:disabled {
+  color: var(--of-ink-muted);
+  background: var(--of-hover);
+  border-color: var(--of-control-border);
+  opacity: 1;
+}
+
 /* Toward the ink, in either world: deeper blue on the page, paler cyan at night. */
 .of-button--primary:hover:not(:disabled) {
   background: color-mix(in srgb, var(--of-accent) 84%, var(--of-ink));
@@ -2452,7 +2464,8 @@ body {
 .of-comment-panel {
   position: absolute;
   top: var(--of-nav-band);
-  right: 12px;
+  /* The gutter every other edge of the chrome keeps; it was 8px off the bar. */
+  right: var(--of-gutter);
   z-index: var(--of-z-panel);
   display: flex;
   flex-direction: column;

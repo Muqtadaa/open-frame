@@ -132,6 +132,14 @@ export function CommentLayer() {
       {pins.map((pin) => {
         const replies = replyCounts.get(pin.id) ?? 0
         const at = worldToScreen(viewport, pin.at)
+        /*
+         * Who, what, and — when there is more than the one remark — how many,
+         * counted as the pin counts them. The label said "1 replies" beside a
+         * pin reading "2", and the excerpt lived only in a mouse-only title.
+         */
+        const label = `Comment from ${pin.authorName}: ${plainMentionText(pin.body).slice(0, 80)}${
+          replies > 0 ? ` (${String(replies + 1)} messages)` : ''
+        }`
         return (
           <button
             key={pin.id}
@@ -142,10 +150,8 @@ export function CommentLayer() {
             style={{
               transform: `translate(${String(at.x)}px, ${String(at.y)}px)`,
             }}
-            title={`${pin.authorName}: ${plainMentionText(pin.body).slice(0, 80)}`}
-            aria-label={`Comment from ${pin.authorName}${
-              replies > 0 ? `, ${String(replies)} replies` : ''
-            }`}
+            data-tip={label}
+            aria-label={label}
             data-testid={`comment-pin-${pin.id}`}
             onClick={() => {
               openThread(openThreadId === pin.id ? null : pin.id)
