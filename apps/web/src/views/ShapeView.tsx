@@ -94,6 +94,14 @@ function ShapeOutline({ object }: { object: ObjectBase<string, ShapeData> }) {
   )
 }
 
+/*
+ * A label names the shape it is in, so it sits in the middle of it. Unset
+ * alignment used to fall through to `flex-start` and override the centring
+ * the stylesheet gave it.
+ */
+const LABEL_ALIGN = 'center'
+const LABEL_VALIGN = 'middle'
+
 function ShapeRenderer({ object }: ObjectViewProps<ShapeData>) {
   const label = object.data.text
   const plain = plainTextOf(label)
@@ -119,15 +127,15 @@ function ShapeRenderer({ object }: ObjectViewProps<ShapeData>) {
             // block inside the flex box, `textAlign` places each line inside
             // the block. Without the first, a shape label is permanently
             // centred no matter what the panel says.
-            justifyContent: justifyAlign(object.style.align),
+            justifyContent: justifyAlign(object.style.align ?? LABEL_ALIGN),
             /*
              * The shape's label box is a COLUMN of one item, so the cross axis
              * is the horizontal one and `alignItems` is what places the text
              * up and down — the opposite of every other view here, where the
              * box stacks downward.
              */
-            alignItems: verticalAlign(object.style.verticalAlign),
-            textAlign: textAlign(object.style.align),
+            alignItems: verticalAlign(object.style.verticalAlign ?? LABEL_VALIGN),
+            textAlign: textAlign(object.style.align ?? LABEL_ALIGN),
             color: inkColor(object.style.textColor) ?? readableInkOn(object.style.color),
           }}
         >
@@ -170,6 +178,8 @@ function ShapeEditor({ object, Chrome, onCommit }: ObjectEditorProps<ShapeData>)
 export const shapeView = defineObjectView<ShapeData>({
   type: 'shape',
   defaultColor: 'gray',
+  defaultAlign: LABEL_ALIGN,
+  defaultVerticalAlign: LABEL_VALIGN,
   Renderer: ShapeRenderer,
   InlineEditor: ShapeEditor,
 })

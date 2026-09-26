@@ -1,10 +1,12 @@
 import type { ComponentType, ReactNode } from 'react'
 
 import type {
+  AlignToken,
   AnyOpenFrameObject,
   AssetRef,
   BoardDocument,
   ColorToken,
+  VAlignToken,
   ObjectBase,
   Point,
   Rect,
@@ -164,6 +166,15 @@ export interface ObjectViewDefinition {
    * that takes a colour with none set and holds the two to the same answer.
    */
   readonly defaultColor?: ColorToken
+  /**
+   * Where text sits before anybody places it, when that is not the top left.
+   *
+   * Declared for the same reason as `defaultColor`: a shape's label is drawn
+   * centred, and the panel marked "start" and "top" over it — so the first
+   * press of the centre button appeared to do nothing.
+   */
+  readonly defaultAlign?: AlignToken
+  readonly defaultVerticalAlign?: VAlignToken
 }
 
 /**
@@ -177,6 +188,8 @@ export function defineObjectView<TData>(definition: {
   InlineEditor?: ComponentType<ObjectEditorProps<TData>>
   usesAssets?: boolean
   defaultColor?: ColorToken
+  defaultAlign?: AlignToken
+  defaultVerticalAlign?: VAlignToken
 }): ObjectViewDefinition {
   /*
    * Spread one optional at a time. Every member has to be listed or it is
@@ -189,6 +202,10 @@ export function defineObjectView<TData>(definition: {
     Renderer: definition.Renderer as ComponentType<ObjectViewProps>,
     ...(definition.usesAssets === true ? { usesAssets: true } : {}),
     ...(definition.defaultColor === undefined ? {} : { defaultColor: definition.defaultColor }),
+    ...(definition.defaultAlign === undefined ? {} : { defaultAlign: definition.defaultAlign }),
+    ...(definition.defaultVerticalAlign === undefined
+      ? {}
+      : { defaultVerticalAlign: definition.defaultVerticalAlign }),
     ...(definition.InlineEditor === undefined
       ? {}
       : { InlineEditor: definition.InlineEditor as ComponentType<ObjectEditorProps> }),

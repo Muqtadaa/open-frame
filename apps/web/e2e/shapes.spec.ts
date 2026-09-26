@@ -100,6 +100,29 @@ test.describe('shapes', () => {
     })
   }
 
+  /*
+   * DESIGN.md says a shape's label is centred, and the CSS centred it — then
+   * the view passed the unset alignment through as `flex-start` and every
+   * "Pay" and "Retry" hugged the top-left corner of its diamond. Measured on
+   * the text itself, because the label BOX fills the inset either way.
+   */
+  for (const kind of ['rectangle', 'diamond'] as const) {
+    test(`a ${kind} label sits in the middle until told otherwise`, async ({ page }) => {
+      await place(page, kind, 'Pay')
+
+      const box = await page.locator('.of-shape__label').boundingBox()
+      const text = await page.locator('.of-shape__label-text').boundingBox()
+      if (box === null || text === null) throw new Error('missing geometry')
+      expect(Math.abs(text.x + text.width / 2 - (box.x + box.width / 2))).toBeLessThan(2)
+      expect(Math.abs(text.y + text.height / 2 - (box.y + box.height / 2))).toBeLessThan(2)
+
+      // And the panel marks what is drawn, not the fallback of a type that has none.
+      await page.locator('[data-object-type="shape"]').click()
+      await expect(page.getByTestId('align-center')).toHaveAttribute('aria-checked', 'true')
+      await expect(page.getByTestId('verticalAlign-middle')).toHaveAttribute('aria-checked', 'true')
+    })
+  }
+
   test('a triangle label sits low, where the shape is actually wide', async ({ page }) => {
     await place(page, 'triangle', 'Review')
 
