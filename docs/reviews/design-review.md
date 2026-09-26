@@ -682,3 +682,56 @@ The owner chose everything, minors included:
   - crop in the record panel;
   - the record panel over a line's target;
   - axe's `meta-viewport` and `region` (outside this surface).
+
+### C3 #8 · The object views (critique 24/40)
+
+A dual-agent critique scored the object views 24/40
+(`2026-09-26T21-39-39Z__src-views-stickyview-tsx.md`): a real slip system
+beside a generic kit, carried by colour alone. The paper and ink system was
+sound (every ink on every paper, both worlds). Its problems:
+
+- **P1:** a type was only a colour. Gray meant five things, a promoted note
+  looked unchanged, and a journey stage could not be made at all.
+- **P1:** shape labels hugged the top-left corner against DESIGN.md's
+  "centred".
+- **P1:** connector labels were counter-scaled, so they were the largest text
+  at 25% and the smallest at 200%, and a plate kept the board's ink (1:1 on
+  black).
+- **P2:** edges that vanished: white shapes by day, black lines at night, the
+  frame edge at 1.45:1, the table grid at 1.2:1.
+- **P2:** After Hours: violet and blue slips at 1.2:1 on the page; white paper
+  at 18:1.
+- **Accessibility:** names repeated whole bodies; a cleared alt vanished;
+  table cells had no rows (axe critical); code scrolled unfocusably (axe
+  serious).
+- **Minors:** four radii, only slips at slip height, "plain" on every code
+  block, a one-line text box, a faded placeholder, a truncated participant,
+  derived slips landing on other clusters, and editors that reflowed text.
+
+The owner chose everything, minors included; a type word in the record line;
+labels that scale with the board within limits; and a plain kit made
+consistent rather than restyled.
+
+- **Type words** (`3482709`): the record band always names the type;
+  experiment pink, journey stage brown, a filled frame white; "Promote to" as
+  one submenu with journey stage in it.
+- **Shape labels** (`447008f`) centre by default, and the panel says so.
+- **Connector labels** (`7ed5681`) scale ×0.5–×2, take a plate's ink, and a
+  page halo.
+- **Edges** (`c142c2d`): `lineOf` and `--of-line-*`, control-border frame
+  edges, `--of-edge-inner`; PRODUCT.md's fill-against-stroke gap closed.
+- **After Hours** (`58f3341`): the slip ring and dimmed white paper.
+- **Reading** (`dbcae20`): names without bodies, an alt that is never empty,
+  table rows, clipped code.
+- **Minors** (`e6dd43a`): one corner and slip height for the plain kit, the
+  code label only when set, a muted placeholder, a two-line text box,
+  participant first, `placeDerived`, and editors that keep the object's type.
+- **Contract:** `apps/web/.impeccable/surfaces/apps-web-src-views-stickyview-tsx.md`.
+- **Declined, with reasons:** default stroke weight at 200% (a stroke is
+  content and scales with the board, rule 24); a later frame painting over
+  earlier objects (stacking order, which Arrange controls).
+- **Left for later:**
+  - relations drawn on the board (provenance is still panel-only);
+  - a fixed type mark that colour cannot override;
+  - the connector editor still scales with the world while the label is
+    clamped.
