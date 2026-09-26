@@ -349,3 +349,65 @@ test.describe('Escape backs out one step at a time', () => {
     await expect(page.getByTestId('selection-overlay')).toBeVisible()
   })
 })
+
+/*
+ * What a selection says about itself. A group was a bare box; the padlock
+ * explained the missing handles but could not be pressed, and its tip never
+ * showed; members of a multi-selection looked like bystanders; and a resize
+ * or a turn said nothing about the size or angle it was reaching for.
+ */
+test.describe('a selection says what it is', () => {
+  test('the padlock unlocks what it is on', async ({ page }) => {
+    await note(page, { x: 340, y: 260 }, 'Held')
+    await page.locator('[data-object-type="sticky"]').click()
+    await page.keyboard.press('ControlOrMeta+Shift+L')
+    const lock = page.getByRole('button', { name: 'Unlock' })
+    await expect(lock).toBeVisible()
+    const box = await lock.boundingBox()
+    expect(Math.min(box?.width ?? 0, box?.height ?? 0)).toBeGreaterThanOrEqual(24)
+    await lock.click()
+    await expect(page.getByTestId('selection-lock')).toHaveCount(0)
+    await expect(page.getByTestId('handle-se')).toBeVisible()
+  })
+
+  test('a group says it is one, and how many it holds', async ({ page }) => {
+    await note(page, { x: 300, y: 260 }, 'One')
+    await note(page, { x: 600, y: 260 }, 'Two')
+    await page.keyboard.press('ControlOrMeta+a')
+    await page.keyboard.press('ControlOrMeta+g')
+    await expect(page.getByTestId('selection-group')).toHaveText('Group of 2')
+  })
+
+  test('each member of a multi-selection is marked', async ({ page }) => {
+    await note(page, { x: 300, y: 260 }, 'One')
+    await note(page, { x: 600, y: 260 }, 'Two')
+    await page.keyboard.press('ControlOrMeta+a')
+    await expect(page.locator('.of-selection__member')).toHaveCount(2)
+  })
+
+  test('a resize shows the size it is reaching for, and a turn its angle', async ({ page }) => {
+    await page.getByTestId('tool-shape').click()
+    await page.mouse.move(340, 220)
+    await page.mouse.down()
+    await page.mouse.move(540, 360, { steps: 6 })
+    await page.mouse.up()
+    await page.keyboard.press('Escape')
+
+    const corner = await page.getByTestId('handle-se').boundingBox()
+    if (corner === null) throw new Error('no handle')
+    await page.mouse.move(corner.x + corner.width / 2, corner.y + corner.height / 2)
+    await page.mouse.down()
+    await page.mouse.move(corner.x + 60, corner.y + 40, { steps: 5 })
+    await expect(page.getByTestId('selection-readout')).toHaveText(/^\d+ × \d+$/)
+    await page.mouse.up()
+    await expect(page.getByTestId('selection-readout')).toHaveCount(0)
+
+    const grip = await page.getByTestId('handle-rotate').boundingBox()
+    if (grip === null) throw new Error('no grip')
+    await page.mouse.move(grip.x + grip.width / 2, grip.y + grip.height / 2)
+    await page.mouse.down()
+    await page.mouse.move(grip.x + 120, grip.y + 60, { steps: 6 })
+    await expect(page.getByTestId('selection-readout')).toHaveText(/^-?\d+°$/)
+    await page.mouse.up()
+  })
+})

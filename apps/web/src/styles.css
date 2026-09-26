@@ -6349,9 +6349,67 @@ textarea.of-input {
   position: absolute;
   display: grid;
   place-items: center;
+  padding: 0;
   color: var(--of-panel);
   background: var(--of-ink-muted);
+  border: none;
   border-radius: var(--of-radius-grip);
+  cursor: pointer;
+  /* A button now: pressing it unlocks. */
+  pointer-events: auto;
+}
+
+.of-lock:hover {
+  background: var(--of-ink);
+}
+
+/*
+ * What a selection is, above it: "Group of 3". The record line's small mono
+ * on the panel stock, at the apparatus radius.
+ */
+.of-selection__badge {
+  position: absolute;
+  bottom: calc(100% + var(--of-space-6));
+  left: 0;
+  padding: var(--of-space-2) var(--of-space-6);
+  font-family: var(--of-mono);
+  font-size: var(--of-type-record);
+  line-height: 1.3;
+  white-space: nowrap;
+  color: var(--of-ink-muted);
+  background: var(--of-panel);
+  border: 1px solid var(--of-panel-border);
+  border-radius: var(--of-radius-apparatus);
+  /* Said, not pressed: it is outside the box, and nothing should land on it. */
+  pointer-events: none;
+}
+
+/* Each member of a multi-selection: a quieter line than the selection's own. */
+.of-selection__member {
+  position: absolute;
+  outline: 1px solid var(--of-accent);
+  outline-offset: 0;
+  opacity: 0.6;
+}
+
+/*
+ * The size or angle a gesture is reaching for, under the selection. Ink on
+ * the panel stock, so it reads over anything the board is showing.
+ */
+.of-selection__readout {
+  position: absolute;
+  top: 0;
+  left: 0;
+  padding: var(--of-space-2) var(--of-space-6);
+  font-family: var(--of-mono);
+  font-size: var(--of-type-record);
+  line-height: 1.3;
+  white-space: nowrap;
+  color: var(--of-ink);
+  background: var(--of-panel);
+  border: 1px solid var(--of-panel-border);
+  border-radius: var(--of-radius-apparatus);
+  transform: translateX(-50%);
   pointer-events: none;
 }
 
