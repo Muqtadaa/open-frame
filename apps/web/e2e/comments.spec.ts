@@ -1108,3 +1108,29 @@ test.describe('when, how many, and where', () => {
     await expect(pin).toBeInViewport()
   })
 })
+
+test.describe('reading a thread', () => {
+  /*
+   * Opening a thread to read it put the keyboard in Reply, so the board's
+   * shortcuts typed into a reply nobody meant to write — and Close was the
+   * only way out, closing everything.
+   */
+  test('takes the keyboard at its heading, and goes back to the list', async ({ page }) => {
+    await signedIn(page, [{ id: BOARD, title: 'Shared', role: 'owner' }])
+    await openBoard(page)
+    await page.getByTestId('tool-comment').click()
+    await page.locator('[data-testid="canvas"]').click({ position: { x: 320, y: 260 } })
+    await page.getByTestId('comment-input').fill('Read me')
+    await page.getByTestId('comment-post').click()
+    await page.keyboard.press('Escape')
+
+    await page.locator('[data-testid^="comment-pin-cmt_"]').first().click()
+    await expect(page.getByRole('heading', { name: 'Comment', exact: true })).toBeFocused()
+    await page.keyboard.press('v')
+    await expect(page.getByTestId('comment-input')).toHaveValue('')
+
+    await page.getByTestId('comment-back').click()
+    await expect(page.getByTestId('comment-list')).toBeVisible()
+    await expect(page.locator('[data-testid^="comment-entry-"]')).toHaveCount(1)
+  })
+})

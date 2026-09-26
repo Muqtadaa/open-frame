@@ -2449,9 +2449,13 @@ body {
 
 .of-comment-panel__head {
   display: flex;
-  gap: var(--of-space-8);
+  gap: var(--of-space-4);
   align-items: center;
-  justify-content: space-between;
+}
+
+/* The title takes the room, so Back and Close sit together at the end. */
+.of-comment-panel__head .of-comment-panel__title {
+  flex: 1;
 }
 
 .of-comment-panel__title {

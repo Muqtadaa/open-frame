@@ -60,6 +60,7 @@ export function CommentPanel() {
   const key = draftKey(openThreadId, composing)
   const keepDraft = useCommentDrafts((state) => state.keep)
   const dropDraft = useCommentDrafts((state) => state.drop)
+  const heading = useRef<HTMLHeadingElement>(null)
   const [kept] = useState(() =>
     key === null ? undefined : useCommentDrafts.getState().drafts.get(key),
   )
@@ -186,12 +187,21 @@ export function CommentPanel() {
     )
   }
 
-  const heading = useRef<HTMLHeadingElement>(null)
-
-  // A composer that opens without focus is a composer you have to click twice.
+  /*
+   * A NEW comment takes the keyboard in its box: a composer that opens
+   * without focus is one you have to click twice. A thread opened to READ
+   * takes it at its heading instead — it used to go to Reply, so the board's
+   * shortcuts pressed next typed into a reply nobody meant to write. A reply
+   * left unfinished is the exception: that is a sentence waiting for its end.
+   */
+  const threadId = thread?.id ?? null
   useEffect(() => {
-    if (composing !== null || thread !== null) input.current?.focus()
-  }, [composing, thread])
+    if (composing !== null || (threadId !== null && kept !== undefined)) {
+      input.current?.focus()
+    } else if (threadId !== null) {
+      heading.current?.focus()
+    }
+  }, [composing, threadId, kept])
 
   /*
    * The list, arrived at because what had the keyboard went away — a comment
@@ -310,6 +320,24 @@ export function CommentPanel() {
         <h2 className="of-comment-panel__title" ref={heading} tabIndex={-1}>
           {browsing ? 'Comments' : thread === null ? 'New comment' : 'Comment'}
         </h2>
+        {/*
+          * Back to the list from a thread. Close was the only way out, and it
+          * closed everything — reading a second thread meant reopening the
+          * tool and finding your place again.
+          */}
+        {thread !== null && (
+          <button
+            type="button"
+            className="of-button of-button--ghost"
+            data-testid="comment-back"
+            onClick={() => {
+              openThread(null)
+              setCommentsOpen(true)
+            }}
+          >
+            All comments
+          </button>
+        )}
         <button
           type="button"
           className="of-button of-button--ghost"
