@@ -18,6 +18,7 @@ import {
   type BoardPerson,
 } from '../hooks/use-comments.js'
 import { useIdentity } from '../hooks/use-identity.js'
+import { draftKey, useCommentDrafts } from '../interaction/comment-drafts.js'
 import { useInteractionStore } from '../interaction/interaction-store.js'
 import { useOpenFrame } from '../runtime/context.js'
 import { hueVar } from '../scene/presence.js'
@@ -51,7 +52,17 @@ export function CommentPanel() {
     [comments, thread],
   )
 
-  const [body, setBody] = useState('')
+  /*
+   * The draft for what this panel writes into, if one was left unposted. Read
+   * once, when the panel mounts — the panel is keyed on the same thing.
+   */
+  const key = draftKey(openThreadId, composing)
+  const keepDraft = useCommentDrafts((state) => state.keep)
+  const dropDraft = useCommentDrafts((state) => state.drop)
+  const [kept] = useState(() =>
+    key === null ? undefined : useCommentDrafts.getState().drafts.get(key),
+  )
+  const [body, setBody] = useState(kept?.body ?? '')
   const [busy, setBusy] = useState(false)
   const [problem, setProblem] = useState<string | null>(null)
   const [invited, setInvited] = useState(false)
@@ -84,7 +95,13 @@ export function CommentPanel() {
    * and getting that wrong sends a notification to the wrong person, whereas
    * a stale entry here simply finds no name to replace.
    */
-  const [picked, setPicked] = useState<readonly BoardPerson[]>([])
+  const [picked, setPicked] = useState<readonly BoardPerson[]>(kept?.picked ?? [])
+
+  // Every change is kept, so no way out of the panel can lose it.
+  useEffect(() => {
+    if (key === null) return
+    keepDraft(key, { body, picked, at: openThreadId === null ? composing : null })
+  }, [key, body, picked, openThreadId, composing, keepDraft])
   /*
    * Resolving used to be indistinguishable from deleting: the pin came off
    * the board and the entry left the list, and there was nowhere left to read
@@ -241,6 +258,7 @@ export function CommentPanel() {
         setProblem('That could not be saved. A board you are a member of takes comments.')
         return
       }
+      if (key !== null) dropDraft(key)
       setBody('')
       setCaret(0)
       // A fresh composer has chosen nobody. Carrying these into the next
@@ -435,9 +453,13 @@ export function CommentPanel() {
              */
             if (event.key === 'Escape') {
               event.preventDefault()
-              // Escape DISMISSES, panel and all. Dropping back to the list
-              // would leave you pressing it twice to get rid of something you
-              // have already said you do not want.
+              /*
+               * Escape closes the panel, panel and all, and KEEPS the words:
+               * the draft is held outside the panel and comes back when this
+               * spot or thread is opened again. It used to throw them away —
+               * the one failure this product does not accept, from the key
+               * that means "done" everywhere else on the board.
+               */
               close()
               return
             }
@@ -504,6 +526,12 @@ export function CommentPanel() {
             >
               {invited ? 'Link copied' : 'Copy invite link'}
             </button>
+          </p>
+        )}
+
+        {kept?.body === body && (
+          <p className="of-comment-panel__hint" data-testid="comment-draft-kept">
+            Draft kept from before.
           </p>
         )}
 

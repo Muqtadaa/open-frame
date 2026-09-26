@@ -2420,6 +2420,15 @@ body {
   background: var(--of-ink-muted);
 }
 
+/*
+ * A comment written and not posted: the pin's outline, dashed, on the panel's
+ * stock — present enough to be found again, and plainly not yet said.
+ */
+.of-comments__pin--draft {
+  background: var(--of-panel);
+  border: 2px dashed var(--of-ink-muted);
+}
+
 .of-comment-panel {
   position: absolute;
   top: var(--of-nav-band);

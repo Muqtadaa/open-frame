@@ -922,3 +922,59 @@ test('offers nothing to reveal when nothing has been resolved', async ({ page })
   // A control that reveals nothing is one people press once and distrust.
   await expect(page.getByTestId('comment-show-resolved')).toHaveCount(0)
 })
+
+/*
+ * No key and no click throws words away. Escape — or a click on another spot
+ * or pin — remounted the panel and the draft went with it; C3 #4 removed that
+ * failure from every other editor, and a comment is the most considered thing
+ * anybody types here.
+ */
+test.describe('drafts', () => {
+  test('Escape keeps a new comment as a draft on the board', async ({ page }) => {
+    await signedIn(page, [{ id: BOARD, title: 'Shared', role: 'owner' }])
+    await openBoard(page)
+    await page.getByTestId('tool-comment').click()
+    await page.locator('[data-testid="canvas"]').click({ position: { x: 320, y: 260 } })
+    await page.getByTestId('comment-input').fill('A long considered thought')
+    await page.getByTestId('comment-input').press('Escape')
+    await expect(page.getByTestId('comment-panel')).toHaveCount(0)
+
+    const draft = page.getByTestId('comment-pin-draft')
+    await expect(draft).toHaveCount(1)
+    await draft.click()
+    await expect(page.getByTestId('comment-input')).toHaveValue('A long considered thought')
+    await expect(page.getByTestId('comment-draft-kept')).toBeVisible()
+
+    await page.getByTestId('comment-post').click()
+    await expect(page.locator('[data-testid^="comment-pin-cmt_"]')).toHaveCount(1)
+    await expect(page.getByTestId('comment-pin-draft')).toHaveCount(0)
+  })
+
+  test('starting a comment somewhere else keeps the first one', async ({ page }) => {
+    await signedIn(page, [{ id: BOARD, title: 'Shared', role: 'owner' }])
+    await openBoard(page)
+    await page.getByTestId('tool-comment').click()
+    await page.locator('[data-testid="canvas"]').click({ position: { x: 320, y: 260 } })
+    await page.getByTestId('comment-input').fill('First spot')
+    await page.locator('[data-testid="canvas"]').click({ position: { x: 620, y: 420 } })
+    await expect(page.getByTestId('comment-input')).toHaveValue('')
+    await expect(page.getByTestId('comment-pin-draft')).toHaveCount(1)
+  })
+
+  test('a half-typed reply survives closing its thread', async ({ page }) => {
+    await signedIn(page, [{ id: BOARD, title: 'Shared', role: 'owner' }])
+    await openBoard(page)
+    await page.getByTestId('tool-comment').click()
+    await page.locator('[data-testid="canvas"]').click({ position: { x: 320, y: 260 } })
+    await page.getByTestId('comment-input').fill('Thread')
+    await page.getByTestId('comment-post').click()
+
+    const pin = page.locator('[data-testid^="comment-pin-cmt_"]').first()
+    await pin.click()
+    await page.getByTestId('comment-input').fill('Half a reply')
+    await page.getByTestId('comment-input').press('Escape')
+    await expect(page.getByTestId('comment-panel')).toHaveCount(0)
+    await pin.click()
+    await expect(page.getByTestId('comment-input')).toHaveValue('Half a reply')
+  })
+})

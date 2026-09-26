@@ -63,9 +63,9 @@ export function CommentsProvider({ children }: { readonly children: ReactNode })
  * The conversation itself, beside the board rather than on it.
  *
  * KEYED on what is being written into, so React remounts the panel when that
- * changes. Clearing a half-typed draft is then something the component does by
- * being new, rather than an effect that reaches back into its own state — the
- * draft belongs to the thing it was being typed into.
+ * changes and it starts from that target's own state. The words typed into it
+ * are the exception: they live in `useCommentDrafts`, outside the panel, so a
+ * remount restores them instead of losing them.
  */
 export function Comments() {
   const { enabled } = useDiscussion()

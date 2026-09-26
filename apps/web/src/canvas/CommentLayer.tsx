@@ -5,6 +5,7 @@ import { worldToScreen, type Point } from '@openframe/core'
 import { useDiscussion } from '../app/comments-context.js'
 import { plainMentionText } from '../hooks/use-comments.js'
 import { useBoardDocument } from '../hooks/use-document-object.js'
+import { draftKey, useCommentDrafts } from '../interaction/comment-drafts.js'
 import { useInteractionStore } from '../interaction/interaction-store.js'
 import { useRemoteDragStore } from '../interaction/remote-drags.js'
 import { useOpenFrame } from '../runtime/context.js'
@@ -42,6 +43,8 @@ export function CommentLayer() {
   const openThreadId = useInteractionStore((state) => state.openThreadId)
   const openThread = useInteractionStore((state) => state.openThread)
   const composing = useInteractionStore((state) => state.composing)
+  const startComment = useInteractionStore((state) => state.startComment)
+  const drafts = useCommentDrafts((state) => state.drafts)
 
   /*
    * A gesture in flight, mine and everybody else's.
@@ -100,8 +103,29 @@ export function CommentLayer() {
     return placed
   }, [comments, document, runtime, held, myDx, myDy, remoteDrags])
 
+  /*
+   * New comments left unposted, where they were started. A draft kept by
+   * Escape has to be somewhere a person can find it again — nobody can click
+   * the exact spot twice — so it stays on the board as a pin of its own.
+   */
+  const current = draftKey(openThreadId, composing)
+  const pending = [...drafts]
+    .filter(([key, draft]) => draft.at !== null && key !== current)
+    .map(([key, draft]) => {
+      const start = draft.at
+      if (start === null) return null
+      const object = start.objectId === null ? undefined : document.objects.get(start.objectId)
+      const bounds = object === undefined ? null : runtime.registry.boundsOf(object, document)
+      const at = pinPosition(
+        { x: start.x, y: start.y, fx: start.on?.fx ?? null, fy: start.on?.fy ?? null },
+        bounds,
+      )
+      return at === null ? null : { key, start, at, body: draft.body }
+    })
+    .filter((draft) => draft !== null)
+
   if (!enabled) return null
-  if (pins.length === 0 && composing === null) return null
+  if (pins.length === 0 && composing === null && pending.length === 0) return null
 
   return (
     <div className="of-comments">
@@ -129,6 +153,26 @@ export function CommentLayer() {
           >
             {replies > 0 ? String(replies + 1) : ''}
           </button>
+        )
+      })}
+
+      {pending.map((draft) => {
+        const at = worldToScreen(viewport, draft.at)
+        const said = `Unposted: ${draft.body.slice(0, 80)}`
+        return (
+          <button
+            key={draft.key}
+            type="button"
+            className="of-comments__pin of-comments__pin--draft"
+            style={{ transform: `translate(${String(at.x)}px, ${String(at.y)}px)` }}
+            aria-label="Your unposted comment"
+            data-tip={said}
+            aria-description={said}
+            data-testid="comment-pin-draft"
+            onClick={() => {
+              startComment(draft.start)
+            }}
+          />
         )
       })}
 
