@@ -62,7 +62,7 @@ export function App() {
         </div>
 
         <div className="of-overlay of-overlay--top">
-          <NoticeBanner notices={runtime.notices} readOnly={runtime.readOnly} />
+          <NoticeBanner notices={runtime.notices} />
           <Toast />
         </div>
 

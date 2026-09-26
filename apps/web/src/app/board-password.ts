@@ -166,7 +166,7 @@ export async function unlockBoard(
       body: JSON.stringify({ key, password }),
     })
   } catch {
-    return { ok: false, reason: 'The room could not be reached.' }
+    return { ok: false, reason: 'OpenFrame could not be reached. Check the connection and try again.' }
   }
 
   if (!response.ok) {
@@ -179,7 +179,7 @@ export async function unlockBoard(
   const body: unknown = await response.json().catch(() => null)
   const token = (body as { token?: unknown } | null)?.token
   if (typeof token !== 'string') {
-    return { ok: false, reason: 'The room did not answer with a token.' }
+    return { ok: false, reason: 'OpenFrame did not answer as expected. Try again in a moment.' }
   }
 
   rememberToken(boardId, token)
@@ -219,7 +219,7 @@ export async function setBoardPassword(
       body: JSON.stringify({ key, password }),
     })
   } catch {
-    return { ok: false, reason: 'The room could not be reached.' }
+    return { ok: false, reason: 'OpenFrame could not be reached. Check the connection and try again.' }
   }
 
   forgetToken(boardId)

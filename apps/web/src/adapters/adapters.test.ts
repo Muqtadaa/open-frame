@@ -219,7 +219,7 @@ describe('runtime composition', () => {
 
     runtime = await createRuntime({ boardId: BOARD, repository, autosaveDelayMs: 0 })
     expect(runtime.readOnly).toBe(false)
-    expect(runtime.notices.join(' ')).toContain('placeholders')
+    expect(runtime.notices.join(' ')).toContain('1 object could not be read')
   })
 })
 

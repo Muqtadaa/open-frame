@@ -662,6 +662,10 @@ body {
   top: var(--of-nav-band);
   left: 50%;
   transform: translateX(-50%);
+  display: flex;
+  flex-direction: column;
+  gap: var(--of-space-8);
+  align-items: center;
   max-width: min(720px, calc(100vw - 140px));
 }
 
@@ -1427,35 +1431,47 @@ body {
 
 /* ---------- notices and status ---------- */
 
+/*
+ * The top of the board holds two kinds of message, stacked in
+ * `.of-overlay--top` with a gap between them: the
+ * notice (the board opened with something it could not read — advice, on the
+ * panel stock) and the toast (something just tried did not work — a failure,
+ * in the danger colours). Red is only ever for the second.
+ */
 .of-notice {
   display: flex;
   gap: var(--of-space-12);
   align-items: center;
   padding: var(--of-step) var(--of-space-12);
   font-size: var(--of-type-ui);
-  background: var(--of-danger-wash);
-  border: 1px solid var(--of-danger-edge);
+  color: var(--of-ink);
+  background: var(--of-panel);
+  border: 1px solid var(--of-panel-border);
   border-radius: var(--of-radius-surface);
   box-shadow: var(--of-shadow);
-}
-
-.of-notice--danger {
-  color: var(--of-danger);
-  background: var(--of-danger-wash);
-  border-color: var(--of-danger-edge);
 }
 
 .of-notice__body {
   flex: 1;
 }
 
-/*
- * The board is gone. Covers everything, and is not dismissible.
- *
- * A scrim rather than a banner because there is nothing left to do underneath
- * it: the document on screen cannot be saved anywhere, so letting the user go
- * on working into it would be the interface lying. The one control leaves.
- */
+.of-toast {
+  display: flex;
+  gap: var(--of-space-8);
+  align-items: center;
+  padding: var(--of-space-4) var(--of-space-4) var(--of-space-4) var(--of-space-12);
+  font-size: var(--of-type-ui);
+  color: var(--of-danger);
+  background: var(--of-danger-wash);
+  border: 1px solid var(--of-danger-edge);
+  border-radius: var(--of-radius-surface);
+  box-shadow: var(--of-shadow);
+}
+
+.of-toast__body {
+  flex: 1;
+}
+
 /*
  * A face you can press, for following somebody around the board.
  *
@@ -4188,14 +4204,28 @@ body {
 /* Toast ------------------------------------------------------------------- */
 
 
+/* A drawn × on a 24px target: it was a glyph with no size, in an 8×15 box. */
 .of-toast__dismiss {
-  padding: 0 var(--of-space-4);
-  font-size: var(--of-type-ui);
-  line-height: 1;
+  display: inline-grid;
+  flex: none;
+  place-items: center;
+  width: 24px;
+  height: 24px;
+  padding: 0;
   color: inherit;
   background: none;
   border: 0;
+  border-radius: var(--of-radius);
   cursor: pointer;
+}
+
+.of-toast__dismiss:hover {
+  background: var(--of-hover);
+}
+
+.of-toast__glyph {
+  width: 16px;
+  height: 16px;
 }
 
 /* Offscreen but still focusable and still clickable via `.click()`. */
