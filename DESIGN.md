@@ -1094,6 +1094,55 @@ apex moves freely and the curve passes exactly under the handle, because a line
 that only follows part of the way slides out from under the pointer and reads as
 broken.
 
+### Selection and Its Apparatus
+
+Everything that manipulates an object is drawn on the apparatus layer, outside
+the world transform, in screen pixels: the same size at 5% and at 1600%
+(rule 24).
+
+**The line.** 2px of the accent, with a 3px page-coloured halo just outside
+it. With the halo, one of the two always reads against whatever the selection
+is over: a black note, a white one After Hours, or a coloured line. The snap
+guides and a route's legs carry the same halo. design-tokens.test measures
+every slip and ink in both worlds.
+
+**The grips.** Each family has its own silhouette:
+- Resize: 9px panel squares with an accent edge and a 2px radius.
+- Rotate: a 15px glyph chip.
+- Connect: 8px circles.
+- A line's ends: filled dots. Its bends: hollow squares. Its legs: capsules.
+- Crop: brackets, lying just outside the picture.
+
+Every grip's pointer target is 24px (WCAG 2.5.8). Resize and crop targets
+are spent outside the object, so its face is left for moving it. A grip
+answers the pointer: the accent's wash on hover and the accent while held. A
+handle's cursor turns with the object.
+
+**Small selections.** Below 48px on screen, in either direction, a selection
+is compact: four corners, drawn just outside it, and nothing else. The rest
+return when there is room.
+
+**What a selection says:**
+- A move carries the box with it. Your own box is never left behind.
+- A line on its own is selected by its ends, not by a box.
+- A group reads "Group of N" above its box.
+- Each member of a multi-selection gets a quieter line of its own.
+- A resize shows the size it is reaching for and a turn its angle, below the
+  selection's upright bounds.
+- The object under the pointer gets a half-strength hairline before it is
+  pressed.
+
+**From the keyboard.** The board is a stop in the page's order, and its
+focus ring is drawn inside its edge.
+- Tab and Shift+Tab walk its objects in reading order and let go past the
+  last one.
+- Arrows move the selection, and Alt+arrows resize it by the grid step.
+- Period and comma rotate by 15°, and > and < by 1°.
+- Mod+Shift+L locks and unlocks.
+- A polite announcer says what is selected and what a key did.
+- Escape backs out one step at a time: a drag in flight, then a crop, then
+  the selection.
+
 ### Cursors on an Object
 
 An object shows the ARROW at rest and `move` once selected. It never shows a
@@ -1110,10 +1159,10 @@ and snap back on release, because the handler refused the move only after the
 drag had run — which reads as the app dropping a change rather than as the
 object being held.
 
-A selected locked object carries a **padlock badge** above its top-left corner,
-counter-scaled like every other piece of chrome. It answers the question the
-missing handles raise; a selection with no grips and no explanation reads as a
-bug.
+A selected locked object carries a **padlock** above its top-left corner, at
+screen size like every other grip. It answers the question the missing handles
+raise; a selection with no grips and no explanation reads as a bug. It is a
+24px button that unlocks, and Mod+Shift+L does the same from the keyboard.
 
 ### Cropping an Image
 
@@ -1128,8 +1177,12 @@ you see is the object's size — and the pixels that survive do not move, which
 is the whole point: a crop that rescales what is left feels like stretching a
 rubber sheet rather than using scissors.
 
-Crop mode belongs to the selected object and ends the moment the selection
-changes or Escape is pressed.
+The brackets and their 24px targets lie just outside the picture, corners and
+edges alike, so a press on the picture slides it under the window rather than
+catching a grip.
+
+Crop mode belongs to the selected object. It ends the moment the selection
+changes, or on Escape, which leaves the crop and keeps the picture selected.
 
 A trimmed image offers **reset**, which grows the frame back as it restores the
 window. Restoring one without the other would squeeze the whole picture into

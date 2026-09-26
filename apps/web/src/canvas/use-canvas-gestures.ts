@@ -20,6 +20,7 @@ import {
 } from '@openframe/core'
 import {
   useCallback,
+  useEffect,
   useRef,
   type MouseEvent as ReactMouseEvent,
   type PointerEvent as ReactPointerEvent,
@@ -494,6 +495,29 @@ export function useCanvasGestures(containerRef: RefObject<HTMLElement | null>) {
   const { runtime } = useOpenFrame()
   const commands = useCommands()
   const gesture = useRef<Gesture | null>(null)
+
+  /*
+   * ESCAPE CANCELS A GESTURE IN FLIGHT: whatever was being dragged goes back
+   * where it was, nothing is written, and the selection it was about stays.
+   * It used to reach the keymap instead, which cleared the selection while the
+   * drag carried on and committed on release.
+   *
+   * Capture phase on the window, so this runs before the keymap's own Escape
+   * and can keep it from also letting go of the selection.
+   */
+  useEffect(() => {
+    const onKeyDown = (event: KeyboardEvent): void => {
+      if (event.key !== 'Escape' || gesture.current === null) return
+      gesture.current = null
+      useInteractionStore.getState().endDrag()
+      event.preventDefault()
+      event.stopPropagation()
+    }
+    window.addEventListener('keydown', onKeyDown, true)
+    return () => {
+      window.removeEventListener('keydown', onKeyDown, true)
+    }
+  }, [])
   /**
    * Whether the last press landed on a handle.
    *

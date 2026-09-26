@@ -530,3 +530,31 @@ test('builds a table in one undo entry', async ({ page }) => {
   await expect(page.locator('[role="table"]')).toHaveAttribute('aria-label', /3 columns by 3 rows/)
   await expect(drawn(page).nth(0)).toHaveText('')
 })
+
+/*
+ * Which cell is selected has to be obvious at a glance. The ring was a 2px
+ * accent line sitting exactly on the grid lines, a single cell got no fill at
+ * all, and the headers of the selected row and column only took a faint wash.
+ */
+test.describe('the selected cell stands out', () => {
+  test('a single cell is ringed with a halo and washed', async ({ page }) => {
+    await newTable(page)
+    const ring = page.getByTestId('table-selection')
+    await expect(ring).toBeVisible()
+    const look = await ring.evaluate((element) => {
+      const style = getComputedStyle(element)
+      return { background: style.backgroundColor, shadow: style.boxShadow }
+    })
+    expect(look.background).not.toBe('rgba(0, 0, 0, 0)')
+    expect(look.shadow).not.toBe('none')
+  })
+
+  test('the selected row and column are marked in their headers', async ({ page }) => {
+    await newTable(page)
+    const ring = await page
+      .getByTestId('table-selection')
+      .evaluate((element) => getComputedStyle(element).borderTopColor)
+    const header = page.locator('.of-table-strip__item--within').first()
+    await expect(header).toHaveCSS('border-top-color', ring)
+  })
+})

@@ -187,7 +187,8 @@ test('is selectable and labellable', async ({ page }) => {
   // Clicked through the canvas rather than the SVG node: selection is decided
   // by geometric hit testing, which is what this is exercising.
   await page.locator(CANVAS).click({ position: MIDPOINT })
-  await expect(page.getByTestId('selection-overlay')).toBeVisible()
+  // Selected shows as its ends: a line on its own gets no box (C3 #7).
+  await expect(page.getByTestId('endpoint-from')).toBeVisible()
 
   await page.locator(CANVAS).dblclick({ position: MIDPOINT })
   await expect(page.locator(EDITOR)).toBeFocused()
@@ -216,11 +217,13 @@ test('is not selected by a click far from the line but inside its bounds', async
   // of the canvas. Clear the selection first so this tests hit testing rather
   // than which pixels a panel happens to cover.
   await page.locator(CANVAS).click({ position: { x: 1120, y: 150 } })
-  await expect(page.getByTestId('selection-overlay')).toHaveCount(0)
+  // Its ends, not a box: a line on its own is never boxed, so a box count of
+  // zero would pass whether or not it was selected.
+  await expect(page.getByTestId('endpoint-from')).toHaveCount(0)
 
   // Inside the bounding rectangle of the diagonal, nowhere near the line.
   await page.locator(CANVAS).click({ position: { x: B_AT.x - 40, y: A_AT.y + 20 } })
-  await expect(page.getByTestId('selection-overlay')).toHaveCount(0)
+  await expect(page.getByTestId('endpoint-from')).toHaveCount(0)
 })
 
 /**

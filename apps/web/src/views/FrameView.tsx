@@ -5,6 +5,35 @@ import { RichTextEditor } from './RichTextEditor.js'
 import { RichTextView } from './RichTextView.js'
 import { inkColor, surfaceOf } from '../scene/style-tokens.js'
 
+/**
+ * A frame's edge: a HAIRLINE with a 2px corner, at every zoom.
+ *
+ * The frame is drawn in world space, so a 1px border is 4px of ink at 400%
+ * and the 2px corner an 8px curve — at which point a frame stops reading as a
+ * ruled boundary and starts reading as a rounded card, which this world
+ * refuses. It used to be held there by dividing the width by the zoom, which
+ * works down to one pixel and then stops: at 1600% the border came back as
+ * one WORLD pixel and painted sixteen beside the selection line (rule 24).
+ *
+ * So the edge is the one counter-scale that works: an element laid out at
+ * `zoom` times the frame's size, with an ordinary 1px border, and PAINTED at
+ * `1 / zoom`. Nothing is ever asked for a sub-pixel border.
+ */
+function FrameEdge({ zoom, color }: { readonly zoom: number; readonly color: string | undefined }) {
+  return (
+    <div
+      className="of-frame__edge"
+      aria-hidden="true"
+      style={{
+        width: `${String(zoom * 100)}%`,
+        height: `${String(zoom * 100)}%`,
+        transform: `scale(${String(1 / zoom)})`,
+        ...(color === undefined ? {} : { borderColor: color }),
+      }}
+    />
+  )
+}
+
 function FrameRenderer({ object, zoom }: ObjectViewProps<FrameData>) {
   const filled = (object.style.fill ?? 'solid') !== 'none'
   return (
@@ -12,24 +41,14 @@ function FrameRenderer({ object, zoom }: ObjectViewProps<FrameData>) {
       className="of-frame"
       style={{
         background: filled ? surfaceOf(object.style.color, 'gray') : 'transparent',
-        borderColor: inkColor(object.style.strokeColor),
-        /*
-         * A HAIRLINE at every zoom, and a 2px corner at every zoom.
-         *
-         * The box is drawn in world space, so a 1px border is 4px of ink at
-         * 400% and the 2px corner becomes an 8px curve — at which point a
-         * frame stops reading as a ruled boundary and starts reading as a
-         * rounded card, which is the shape this world refuses. Dividing by the
-         * zoom is the same counter-scale the title gets, expressed in the two
-         * properties a transform cannot reach without scaling the contents.
-         */
-        borderWidth: `${String(1 / zoom)}px`,
+        // The corner is the edge's, drawn by `FrameEdge` below.
         borderRadius: `${String(2 / zoom)}px`,
         opacity: object.style.opacity ?? 1,
       }}
       role="group"
       aria-label={`Frame: ${plainTextOf(object.data.name)}`}
     >
+      <FrameEdge zoom={zoom} color={inkColor(object.style.strokeColor)} />
       <div
         className="of-frame__title"
         style={{
@@ -74,22 +93,12 @@ function FrameEditor({ object, zoom, Chrome, onCommit }: ObjectEditorProps<Frame
       className="of-frame"
       style={{
         background: filled ? surfaceOf(object.style.color, 'gray') : 'transparent',
-        borderColor: inkColor(object.style.strokeColor),
-        /*
-         * A HAIRLINE at every zoom, and a 2px corner at every zoom.
-         *
-         * The box is drawn in world space, so a 1px border is 4px of ink at
-         * 400% and the 2px corner becomes an 8px curve — at which point a
-         * frame stops reading as a ruled boundary and starts reading as a
-         * rounded card, which is the shape this world refuses. Dividing by the
-         * zoom is the same counter-scale the title gets, expressed in the two
-         * properties a transform cannot reach without scaling the contents.
-         */
-        borderWidth: `${String(1 / zoom)}px`,
+        // The corner is the edge's, drawn by `FrameEdge` below.
         borderRadius: `${String(2 / zoom)}px`,
         opacity: object.style.opacity ?? 1,
       }}
     >
+      <FrameEdge zoom={zoom} color={inkColor(object.style.strokeColor)} />
       <RichTextEditor
         initialText={object.data.name}
         className="of-frame__title of-frame__editor"

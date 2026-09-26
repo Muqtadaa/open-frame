@@ -207,6 +207,49 @@ test.describe('cropping', () => {
     await expect(page.locator('[data-object-type="image"]')).toHaveCount(1)
   })
 
+  /*
+   * A crop grip's target is 24px, and it reaches OUTWARD like every other
+   * grip's: they used to reach up to 21px into the picture, which is where
+   * somebody presses to move the picture under the window.
+   */
+  test('crop grips are 24px targets spent outside the picture', async ({ page }) => {
+    const image = page.locator('[data-object-type="image"]')
+    await image.dblclick()
+    await expect(page.getByTestId('crop-overlay')).toBeVisible()
+    const picture = await image.boundingBox()
+    if (picture === null) throw new Error('no picture')
+    const grips = await page
+      .locator('[data-testid^="crop-"].of-crop__target')
+      .evaluateAll((all) =>
+        all.map((grip) => {
+          const box = grip.getBoundingClientRect()
+          const id = grip.getAttribute('data-testid') ?? ''
+          return { id, x: box.x, y: box.y, w: box.width, h: box.height }
+        }),
+      )
+    expect(grips).toHaveLength(8)
+    for (const grip of grips) {
+      expect(Math.min(grip.w, grip.h), `${grip.id} target`).toBeGreaterThanOrEqual(24)
+      // How far it reaches into the picture, on the axes it sits at an end of.
+      const into = Math.max(
+        grip.id.includes('w') ? grip.x + grip.w - picture.x : 0,
+        grip.id.includes('e') ? picture.x + picture.width - grip.x : 0,
+        grip.id.includes('n') ? grip.y + grip.h - picture.y : 0,
+        grip.id.includes('s') ? picture.y + picture.height - grip.y : 0,
+      )
+      expect(into, `${grip.id} reaches into the picture`).toBeLessThanOrEqual(4)
+    }
+  })
+
+  // One step back at a time: out of the crop, and the picture still selected.
+  test('Escape leaves the crop and keeps the picture selected', async ({ page }) => {
+    await page.locator('[data-object-type="image"]').dblclick()
+    await expect(page.getByTestId('crop-overlay')).toBeVisible()
+    await page.keyboard.press('Escape')
+    await expect(page.getByTestId('crop-overlay')).toHaveCount(0)
+    await expect(page.getByTestId('selection-overlay')).toBeVisible()
+  })
+
   test('double-click opens crop brackets rather than resize squares', async ({ page }) => {
     await expect(page.getByTestId('crop-overlay')).toHaveCount(0)
     await page.locator('[data-object-type="image"]').dblclick()
@@ -218,7 +261,8 @@ test.describe('cropping', () => {
      * so it reads as the edge you are about to move rather than as the resize
      * handle it used to be mistaken for.
      */
-    const corner = page.getByTestId('crop-nw')
+    // The bracket is drawn; the press lands on its target beside it.
+    const corner = page.locator('.of-crop__grip--nw')
     await expect(corner).toHaveCSS('border-top-style', 'solid')
     await expect(corner).toHaveCSS('border-left-style', 'solid')
     await expect(corner).toHaveCSS('border-right-style', 'none')

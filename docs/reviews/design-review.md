@@ -624,3 +624,61 @@ board; "Keep a copy" beside All boards; a quiet gate-style start-up panel.
 - **Left for later:** the record panel stays hidden for a placeholder, which
   has nothing to edit; the start-up panel's scrim covers an empty page; images
   in a kept copy whose bytes only the deleted room held will not load.
+
+### C3 #7 · The selection apparatus (critique 24/40)
+
+A dual-agent critique scored the selection apparatus 24/40
+(`2026-09-26T07-26-00Z__src-canvas-selectionoverlay-tsx.md`). Its engineering
+was sound: every overlay was the same size at 25% and at 1600%. Its problems:
+
+- **P1:** the box stayed behind during a move and during a line's reshape.
+- **P1:** a frame's edge divided by the zoom and painted 16px at 1600% (rule
+  24).
+- **P1:** no keyboard path. Objects were never focusable, resize, rotate and
+  lock were pointer-only, the lock key was never bound, and selection changed
+  in silence.
+- **P2:** press targets of 24, 22, 14, 12, 10 and 9px; a small shape at 25%
+  resized instead of moving.
+- **P2:** the accent below 3:1 on black and white fills and against every
+  coloured connector.
+- **Minors:** a bare group box, an inert padlock, a box around a lone line,
+  upright cursors on a turned object, Escape that deselected mid-drag and
+  left crop and selection at once, members indistinguishable from bystanders,
+  your own line lighter than a peer's, no hover tier, no size or angle
+  readout, chrome text swept into a selection.
+
+The owner chose everything, minors included:
+- keys on the board, with announcements;
+- keep the look and fix contrast with a halo;
+- corners only below about 48px.
+
+- **The box follows a move** (`b41dda5`). A lone line is selected by its ends.
+- **The frame's edge** (`583eedb`) is laid out at zoom× and painted at 1/zoom.
+- **Targets** (`6b1cd88`):
+  - every grip presses as 24px, border-aware;
+  - crop brackets and targets sit outside the picture;
+  - table dividers are 24px;
+  - compact selections below 48px.
+- **The halo** (`1c30c81`): a page-coloured halo under the selection, guides
+  and legs, measured on every slip and ink in both worlds.
+- **The keyboard** (`7fcd905`):
+  - Tab walks objects in reading order;
+  - Alt+arrows resize, period and comma rotate, Mod+Shift+L locks;
+  - an announcer and a focus ring.
+- **Escape** (`2d4850d`): a drag, then a crop, then the selection.
+- **What a selection says** (`b5cbea7`): an unlocking padlock, "Group of N",
+  member marks, a size or angle readout.
+- **Under the pointer** (`2ebc9b2`):
+  - turning cursors and a hover outline;
+  - a 2px line;
+  - grip hover and press states and a "move" cursor on route controls;
+  - unselectable chrome.
+- **Contract:**
+  `apps/web/.impeccable/surfaces/apps-web-src-canvas-selectionoverlay-tsx.md`.
+- **Left for later:**
+  - connect points and attached ends on a rotated object's turned edges
+    (core connector geometry);
+  - distances on guides;
+  - crop in the record panel;
+  - the record panel over a line's target;
+  - axe's `meta-viewport` and `region` (outside this surface).

@@ -8,8 +8,12 @@ import { useOpenFrame } from '../runtime/context.js'
 import { useBoardDocument } from '../hooks/use-document-object.js'
 import { useInteractionStore } from '../interaction/interaction-store.js'
 
-/** How wide a boundary is to grab, in screen pixels (WCAG 2.5.8). */
-const GRAB_PX = 14
+/**
+ * How wide a boundary is to grab, in screen pixels: the 24 every other grip
+ * offers (WCAG 2.5.8). It was 14, the one family short of it without a
+ * reason; it straddles the boundary, so each cell gives up twelve.
+ */
+const GRAB_PX = 24
 
 /**
  * Grab handles on the divisions INSIDE a selected object — a table's column

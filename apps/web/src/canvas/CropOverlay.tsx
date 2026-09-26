@@ -1,3 +1,5 @@
+import { Fragment } from 'react'
+
 import {
   cropByHandle,
   FULL_CROP,
@@ -88,9 +90,6 @@ export function CropOverlay() {
   const corner = CORNER_PX
   const thick = CORNER_THICK_PX
   const edge = EDGE_PX
-  // The 24px pointer target (WCAG 2.5.8), as for every other handle: the drawn
-  // size is a design decision and the target is not.
-  const pad = Math.max(0, HANDLE_HIT_PX - thick) / 2
 
   const crop: ImageCrop = (object.data as { crop?: ImageCrop | null }).crop ?? FULL_CROP
   const trimmed = crop.x > 0 || crop.y > 0 || crop.width < 1 || crop.height < 1
@@ -146,35 +145,65 @@ export function CropOverlay() {
           const isCorner = handle.length === 2
           /*
            * A bracket is drawn with BORDERS on the two sides it owns, so the
-           * corner piece is an L and an edge piece is a bar.
+           * corner piece is an L and an edge piece is a bar — and every piece
+           * lies just OUTSIDE the picture, hugging its edge. The corners used
+           * to be centred on the corner while the edge bars sat on the edge,
+           * two different ideas of where the crop line is.
            */
           const across = isCorner ? corner : handle === 'n' || handle === 's' ? edge : thick
           const down = isCorner ? corner : handle === 'e' || handle === 'w' ? edge : thick
+          const place = (at: number, extent: number, size: number): number =>
+            at === 0 ? -thick : at === 1 ? extent + thick - size : extent / 2 - size / 2
+          const left = place(anchor.x, screen.width, across)
+          const top = place(anchor.y, screen.height, down)
+          /*
+           * The 24px target, spent OUTSIDE the picture like a resize handle's
+           * (WCAG 2.5.8). Centred on the bracket it reached up to 21px in,
+           * which is exactly where somebody presses to slide the picture
+           * under the window. Along an edge it spreads evenly.
+           */
+          const reach = (at: number, extent: number): [number, number] =>
+            at === 0
+              ? [-HANDLE_HIT_PX, 0]
+              : at === 1
+                ? [extent, extent + HANDLE_HIT_PX]
+                : [extent / 2 - HANDLE_HIT_PX / 2, extent / 2 + HANDLE_HIT_PX / 2]
+          const [targetLeft, targetRight] = reach(anchor.x, screen.width)
+          const [targetTop, targetBottom] = reach(anchor.y, screen.height)
 
           return (
-            <div
-              key={handle}
-              className={`of-crop__grip of-crop__grip--${handle}`}
-              // Read back by the gesture, which does not otherwise know what was
-              // grabbed — the same handshake the resize and divider grips use.
-              data-handle="crop"
-              data-crop-handle={handle}
-              data-testid={`crop-${handle}`}
-              style={{
-                left: `${String(anchor.x * screen.width - across / 2)}px`,
-                top: `${String(anchor.y * screen.height - down / 2)}px`,
-                width: `${String(across)}px`,
-                height: `${String(down)}px`,
-                borderWidth: `${String(thick)}px`,
-                cursor: HANDLE_CURSORS[handle],
-              }}
-            >
-              <span
-                className="of-handle__target"
+            <Fragment key={handle}>
+              <div
+                className={`of-crop__grip of-crop__grip--${handle}`}
                 aria-hidden="true"
-                style={{ inset: `${String(-pad)}px`, cursor: HANDLE_CURSORS[handle] }}
+                style={{
+                  left: `${String(left)}px`,
+                  top: `${String(top)}px`,
+                  width: `${String(across)}px`,
+                  height: `${String(down)}px`,
+                  borderWidth: `${String(thick)}px`,
+                }}
               />
-            </div>
+              {/*
+               * The target is its own element beside the bracket rather than
+               * inside it, so it can be exactly where it should be rather than
+               * inset from a box with borders on two of its sides. It carries
+               * the handshake the gesture reads.
+               */}
+              <span
+                className="of-crop__target"
+                data-handle="crop"
+                data-crop-handle={handle}
+                data-testid={`crop-${handle}`}
+                style={{
+                  left: `${String(targetLeft)}px`,
+                  top: `${String(targetTop)}px`,
+                  width: `${String(targetRight - targetLeft)}px`,
+                  height: `${String(targetBottom - targetTop)}px`,
+                  cursor: HANDLE_CURSORS[handle],
+                }}
+              />
+            </Fragment>
           )
         })}
       </div>

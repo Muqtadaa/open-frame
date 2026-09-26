@@ -10,9 +10,12 @@ import {
   SIDES,
   connectPointAt,
 } from '../scene/connect-points.js'
+import { isCompact } from '../scene/resize.js'
 
 /** Drawn small; the hit area around it is much larger — see `.of-connect-point`. */
 const POINT_PX = 8
+/** The dot's border, which the target is positioned inside of. */
+const POINT_BORDER_PX = 1
 
 /**
  * The four places a connector can be started from — or aimed AT.
@@ -86,6 +89,13 @@ export function ConnectPoints() {
   const world = runtime.registry.boundsOf(object, document)
   const bounds = worldRectToScreen(viewport, world)
   /*
+   * A COMPACT selection keeps its corners and nothing else (see `isCompact`):
+   * four dots around ten pixels bury what they are attached to. While a line
+   * is being AIMED at an object they stay, whatever its size — they are how
+   * the aim is taken.
+   */
+  if (over === null && isCompact(bounds)) return null
+  /*
    * WHICH ONE the drop would take, asked of the type rather than worked out
    * here. `auto` means no anchor is being aimed at and nothing is marked.
    */
@@ -137,7 +147,10 @@ export function ConnectPoints() {
             <span
               className="of-connect-point__target"
               aria-hidden="true"
-              style={{ inset: `${String(-(CONNECT_TARGET_PX - POINT_PX) / 2)}px` }}
+              style={{
+                // From the padding box, so the dot's own border counts too.
+                inset: `${String(-(CONNECT_TARGET_PX - POINT_PX) / 2 - POINT_BORDER_PX)}px`,
+              }}
             />
           </div>
         )

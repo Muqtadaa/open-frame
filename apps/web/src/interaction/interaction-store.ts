@@ -297,6 +297,12 @@ interface InteractionState {
    */
   readonly toast: string | null
   /**
+   * What the board last said to a screen reader about something done from the
+   * keyboard — "Width 180, height 120", "Locked". `serial` makes the same
+   * words said twice a new announcement rather than no change.
+   */
+  readonly announcement: { readonly text: string; readonly serial: number } | null
+  /**
    * Alignment guides for the gesture in flight. Empty between gestures, and
    * the SAME empty array each time — a fresh `[]` would fail `Object.is` and
    * re-render every subscriber on every pointer move (rule 9).
@@ -444,6 +450,7 @@ interface InteractionState {
   setWheelMode(mode: WheelMode): void
   setSnapToGrid(enabled: boolean): void
   showToast(message: string | null): void
+  announce(text: string): void
   setGuides(guides: readonly AlignmentGuide[]): void
   toggleSnapToGrid(): void
   toggleWheelMode(): void
@@ -513,6 +520,7 @@ export const useInteractionStore = create<InteractionState>((set) => ({
   wheelMode: readWheelMode(),
   snapToGrid: readSnap(),
   toast: null,
+  announcement: null,
   guides: NO_GUIDES,
   selection: new Set<ObjectId>(),
   hoveredId: null,
@@ -560,6 +568,8 @@ export const useInteractionStore = create<InteractionState>((set) => ({
   },
 
   showToast: (toast) => set({ toast }),
+  announce: (text) =>
+    set((state) => ({ announcement: { text, serial: (state.announcement?.serial ?? 0) + 1 } })),
 
   setGuides: (guides) => set({ guides: guides.length === 0 ? NO_GUIDES : guides }),
 
