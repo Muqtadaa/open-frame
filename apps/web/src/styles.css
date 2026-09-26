@@ -78,6 +78,8 @@
    * sitting on the rule rather than printed into it.
    */
   --of-slip-shadow: 0 1px 1px rgb(22 32 43 / 18%), 0 3px 7px rgb(22 32 43 / 14%);
+  /* Nothing by day: a pale slip on a pale page is parted by its shadow. */
+  --of-slip-ring: 0 0 transparent;
   /* A segmented control's selected index, pressed into its bed. */
   --of-pressed-shadow: 0 1px 2px rgb(22 32 43 / 12%);
   /*
@@ -354,18 +356,29 @@
    */
   --of-slip-shadow:
     inset 0 1px 0 rgb(255 255 255 / 9%), 0 1px 2px rgb(5 2 14 / 65%), 0 4px 12px rgb(5 2 14 / 55%);
+  /*
+   * A slip is a deep colour on a deep page here, so the shadow alone cannot
+   * part them: violet and blue were 1.2:1 on the page. A hairline at 3:1 is
+   * what does, and a second lit top edge doubles the first, so the slip still
+   * reads as catching the light rather than as outlined. Slips only — the
+   * gates and pins that share the shadow have edges of their own.
+   */
+  --of-slip-edge: #6b5a98;
+  --of-slip-ring: inset 0 1px 0 rgb(255 255 255 / 9%), 0 0 0 1px var(--of-slip-edge);
   --of-pressed-shadow: 0 1px 2px rgb(5 2 14 / 50%);
 
   /*
    * Black and white do not invert. A black fill is black in both worlds and a
    * white fill is white — they are the two colours that mean themselves.
    * Black is pushed below the night page so a black slip reads as laid ON it
-   * rather than as a hole cut in it.
+   * rather than as a hole cut in it. White PAPER is paper under a lamp: at
+   * full white it was 18:1 on the page, brighter than the ink and the
+   * brightest thing on the board. A white line stays white.
    */
   --of-c-black: #07030f;
   --of-s-black: #07030f;
   --of-c-white: #ffffff;
-  --of-s-white: #ffffff;
+  --of-s-white: #d6d9e2;
   /* Black is the page here, so a black line is drawn in the gray ink. */
   --of-line-black: #bcc8de;
   --of-line-white: #ffffff;
@@ -3668,7 +3681,7 @@ body {
   border-radius: var(--of-radius-slip);
   /* A slip laid on the page. Shared token so every placed object sits at the
      same height above the rule. */
-  box-shadow: var(--of-slip-shadow);
+  box-shadow: var(--of-slip-ring), var(--of-slip-shadow);
 }
 
 /*
@@ -3718,7 +3731,7 @@ body {
   padding: var(--of-space-12);
   overflow: hidden;
   border-radius: var(--of-radius-slip);
-  box-shadow: var(--of-slip-shadow);
+  box-shadow: var(--of-slip-ring), var(--of-slip-shadow);
 }
 
 .of-slip__body {

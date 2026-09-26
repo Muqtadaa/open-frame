@@ -927,11 +927,10 @@ describe.each(THEMES)('edges that never vanish — $name', ({ token }) => {
     expect(contrast(token('c-gray'), token('page'))).toBeGreaterThanOrEqual(3)
   })
 
-  it("a frame's edge shows on the page, and on the white it can be filled with", () => {
+  it("a frame's edge shows on the page", () => {
     const body = /\.of-frame__edge\s*\{([^}]*)\}/.exec(CSS)?.[1] ?? ''
     const edge = /(?<![\w-])border:[^;]*var\(--of-([\w-]+)\)/.exec(body)?.[1] ?? ''
     expect(contrast(token(edge), token('page'))).toBeGreaterThanOrEqual(3)
-    expect(contrast(token(edge), token('s-white'))).toBeGreaterThanOrEqual(3)
   })
 
   it("a table's lines show on its ground, inside and out", () => {
@@ -943,3 +942,37 @@ describe.each(THEMES)('edges that never vanish — $name', ({ token }) => {
     expect(contrast(token(inner ?? ''), token('panel'))).toBeGreaterThanOrEqual(3)
   })
 })
+
+/*
+ * AFTER HOURS, where a slip is a deep colour on a deep page. Violet and blue —
+ * a hypothesis and an insight, the slips that matter most — were 1.2:1 on the
+ * night page, held apart only by a 9% lit edge; and a white slip was 18:1,
+ * the brightest thing on the board by some way. So a slip carries a hairline
+ * that clears 3:1 on the page, read off the slip shadow itself, and white
+ * paper is dimmed until it is no brighter than the ink.
+ */
+describe.each(THEMES.filter((theme) => theme.name !== 'default'))(
+  'slips at night — $name',
+  ({ name, token }) => {
+    const block =
+      new RegExp(`:root\\[data-theme=['"]${name}['"]\\]\\s*\\{([^}]*)\\}`).exec(CSS)?.[1] ?? ''
+
+    it('carries a hairline that shows on the page (3:1)', () => {
+      const ring = /--of-slip-ring:([^;]*);/.exec(block)?.[1] ?? ''
+      const edge = /0 0 0 1px var\(--of-([\w-]+)\)/.exec(ring)?.[1]
+      expect(edge, 'the night slip ring names its hairline as a token').toBeDefined()
+      // And the ring is actually worn, by the note and by every typed slip.
+      for (const slip of ['of-sticky', 'of-slip']) {
+        const body = new RegExp(`\\.${slip}\\s*\\{([^}]*)\\}`).exec(CSS)?.[1] ?? ''
+        expect(body, slip).toMatch(/box-shadow:[^;]*var\(--of-slip-ring\)/)
+      }
+      expect(contrast(token(edge ?? ''), token('page'))).toBeGreaterThanOrEqual(3)
+    })
+
+    it('white paper is no brighter than the ink', () => {
+      expect(contrast(token('s-white'), token('page'))).toBeLessThanOrEqual(
+        contrast(token('ink'), token('page')),
+      )
+    })
+  },
+)
