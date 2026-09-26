@@ -2988,6 +2988,14 @@ body {
   margin-bottom: var(--of-space-12);
 }
 
+/* What a field is for, kept beside it once somebody has started typing. */
+.of-account__hint {
+  display: block;
+  margin-top: var(--of-space-4);
+  font-size: var(--of-type-record);
+  color: var(--of-ink-muted);
+}
+
 /* A field label, set the way the record panel sets one. */
 .of-account__field span {
   display: block;

@@ -44,6 +44,11 @@ export function BoardRow({
   const [problem, setProblem] = useState<string | null>(null)
   const [copied, setCopied] = useState(false)
   const input = useRef<HTMLInputElement>(null)
+  const removeButton = useRef<HTMLButtonElement>(null)
+  const keep = useRef<HTMLButtonElement>(null)
+  // Set when a confirmation is answered with "keep", so the keyboard goes back
+  // to the control that asked rather than falling to the page.
+  const returnFocus = useRef(false)
 
   // The copied note clears itself. A bare `setTimeout` in the handler outlives
   // the row when the list re-renders under it.
@@ -55,6 +60,12 @@ export function BoardRow({
 
   useEffect(() => {
     if (mode === 'renaming') input.current?.select()
+    // The safe answer takes the keyboard; it fell to the page before.
+    if (mode === 'confirming') keep.current?.focus()
+    if (mode === 'rest' && returnFocus.current) {
+      returnFocus.current = false
+      removeButton.current?.focus()
+    }
   }, [mode])
 
   const href = board.shared
@@ -254,6 +265,7 @@ export function BoardRow({
                 data-testid="leave-board"
                 data-tip={`Leave ${board.title}. It carries on without you.`}
                 aria-description={`Leave ${board.title}. It carries on without you.`}
+                ref={removeButton}
                 onClick={() => setMode('confirming')}
               >
                 <LeaveIcon />
@@ -267,7 +279,8 @@ export function BoardRow({
                   data-testid="delete-board"
                   data-tip={`Delete ${board.title}. This cannot be undone.`}
                   aria-description={`Delete ${board.title}. This cannot be undone.`}
-                  onClick={() => setMode('confirming')}
+                  ref={removeButton}
+                onClick={() => setMode('confirming')}
                 >
                   <TrashIcon />
                 </button>
@@ -285,7 +298,17 @@ export function BoardRow({
       </div>
 
       {mode === 'confirming' && (
-        <p className="of-home__confirm" data-testid="confirm-remove" role="alert">
+        <p
+          className="of-home__confirm"
+          data-testid="confirm-remove"
+          role="alert"
+          onKeyDown={(event) => {
+            if (event.key !== 'Escape') return
+            event.preventDefault()
+            returnFocus.current = true
+            setMode('rest')
+          }}
+        >
           <span className="of-home__confirm-what">
             {canLeave(board)
               ? 'Leave this board? It carries on without you.'
@@ -301,9 +324,13 @@ export function BoardRow({
           </button>
           <button
             type="button"
+            ref={keep}
             className="of-home__confirm-no"
             data-testid="confirm-no"
-            onClick={() => setMode('rest')}
+            onClick={() => {
+              returnFocus.current = true
+              setMode('rest')
+            }}
           >
             Keep
           </button>

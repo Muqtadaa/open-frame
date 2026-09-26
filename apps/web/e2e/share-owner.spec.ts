@@ -26,6 +26,8 @@ test.beforeEach(async ({ context }) => {
 test("the owner's chip offers both links, and the password beside them", async ({ page }) => {
   await signedIn(page, [{ id: MINE, title: 'Mine', role: 'owner' }])
   await page.goto(`/?room=${MINE}&k=${EDIT}`)
+  // Mine once the account has said so; until then the chip is an editor's.
+  await expect(page.getByTestId('room-status')).toHaveAttribute('aria-description', /both links/)
   await page.getByTestId('room-status').click()
 
   const sheet = page.getByTestId('share-links')

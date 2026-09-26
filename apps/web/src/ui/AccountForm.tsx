@@ -1,4 +1,4 @@
-import { useState, type FormEvent } from 'react'
+import { useId, useRef, useState, type FormEvent } from 'react'
 
 import { signIn, signUp } from '../app/identity.js'
 
@@ -22,21 +22,47 @@ export function AccountForm({
   const [displayName, setDisplayName] = useState('')
   const [error, setError] = useState<string | null>(null)
   const [busy, setBusy] = useState(false)
+  /* Which field the error is about, so it can point at that field. */
+  const [wrong, setWrong] = useState<'email' | 'password' | 'both' | null>(null)
+  const id = useId()
+  const emailField = useRef<HTMLInputElement>(null)
+  const passwordField = useRef<HTMLInputElement>(null)
 
   const submit = (event: FormEvent): void => {
     event.preventDefault()
+    /*
+     * Checked here rather than by the browser. Its own bubble was the one
+     * thing on the page in a different register, it vanished on the next
+     * keystroke, and no assistive technology could find it afterwards.
+     */
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim())) {
+      setWrong('email')
+      setError('Enter an email address, like name@example.com.')
+      emailField.current?.focus()
+      return
+    }
+    if (password.length < 6) {
+      setWrong('password')
+      setError('Use at least six characters for the password.')
+      passwordField.current?.focus()
+      return
+    }
     setBusy(true)
+    setWrong(null)
     setError(null)
     const attempt = mode === 'in' ? signIn(email, password) : signUp(email, password, displayName)
     void attempt.then((result) => {
       setBusy(false)
       if (result.ok) onDone()
-      else setError(result.message ?? 'That did not work. Check the email and password and try again.')
+      else {
+        setWrong('both')
+        setError(result.message ?? 'That did not work. Check the email and password and try again.')
+      }
     })
   }
 
   return (
-    <form onSubmit={submit}>
+    <form onSubmit={submit} noValidate>
 
       {mode === 'up' && (
         <label className="of-account__field">
@@ -46,9 +72,13 @@ export function AccountForm({
             type="text"
             value={displayName}
             autoComplete="name"
-            placeholder="What people will see on your cursor"
+            aria-describedby={`${id}-name`}
             onChange={(event) => setDisplayName(event.target.value)}
           />
+          {/* Beside the field, not inside it: a placeholder went on the first keystroke. */}
+          <small className="of-account__hint" id={`${id}-name`}>
+            What people see on your cursor
+          </small>
         </label>
       )}
 
@@ -56,9 +86,12 @@ export function AccountForm({
         <span>Email</span>
         <input
           className="of-input of-input--large"
+          ref={emailField}
           type="email"
           required
           value={email}
+          aria-invalid={wrong === 'email' || wrong === 'both' ? true : undefined}
+          aria-describedby={wrong === 'email' || wrong === 'both' ? `${id}-error` : undefined}
           autoComplete="email"
           onChange={(event) => setEmail(event.target.value)}
         />
@@ -68,10 +101,13 @@ export function AccountForm({
         <span>Password</span>
         <input
           className="of-input of-input--large"
+          ref={passwordField}
           type="password"
           required
           minLength={6}
           value={password}
+          aria-invalid={wrong === 'password' || wrong === 'both' ? true : undefined}
+          aria-describedby={wrong === 'password' || wrong === 'both' ? `${id}-error` : undefined}
           autoComplete={mode === 'in' ? 'current-password' : 'new-password'}
           onChange={(event) => setPassword(event.target.value)}
         />
@@ -83,7 +119,7 @@ export function AccountForm({
         nothing.
       */}
       {error !== null && (
-        <p className="of-account__error" role="alert">
+        <p className="of-account__error" role="alert" id={`${id}-error`}>
           {error}
         </p>
       )}

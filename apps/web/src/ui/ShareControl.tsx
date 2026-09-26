@@ -1,8 +1,9 @@
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useRef, useState, type RefObject } from 'react'
 import { createPortal } from 'react-dom'
 
 import { AnchoredSurface } from '../controls/AnchoredSurface.js'
 import { useAnchoredTo } from '../controls/use-anchor.js'
+import { useDismiss, useFocusOnOpen } from '../controls/use-dismiss.js'
 import { accessKey, COLLAB_ENABLED, shareLink } from '../app/collab-config.js'
 import { ACCOUNTS_ENABLED } from '../app/identity.js'
 import { guestIdentity } from '../app/guest.js'
@@ -358,6 +359,7 @@ export function ShareControl() {
         >
           <ShareLinks
             links={links}
+            trigger={shareButton}
             password={{
               boardId: runtime.boardId,
               editor: accessKey(window.location.search) ?? '',
@@ -384,21 +386,23 @@ export function ShareControl() {
  */
 function ShareLinks({
   links,
+  trigger,
   password,
   onDone,
 }: {
   readonly links: SharedBoard
+  readonly trigger: RefObject<HTMLElement | null>
   readonly password: { readonly boardId: SharedBoard['boardId']; readonly editor: string; readonly owner: string | null }
   readonly onDone: () => void
 }) {
   const [copied, setCopied] = useState<'edit' | 'view' | null>(null)
   const [copyFailed, setCopyFailed] = useState(false)
   const first = useRef<HTMLButtonElement>(null)
-
-  // Into the sheet on arrival: it is what the press was for.
-  useEffect(() => {
-    first.current?.focus()
-  }, [])
+  const sheet = useRef<HTMLDivElement>(null)
+  // Into the sheet on arrival, since it is what the press was for; and out on
+  // Escape or a press elsewhere, which it used to ignore.
+  useFocusOnOpen(sheet, first)
+  useDismiss(sheet, trigger, onDone)
 
   const copy = (which: 'edit' | 'view'): void => {
     void navigator.clipboard.writeText(which === 'edit' ? links.editLink : links.viewLink).then(
@@ -413,18 +417,7 @@ function ShareLinks({
   }
 
   return (
-    <div
-      className="of-sheet"
-      role="dialog"
-      aria-label="Share this board"
-      data-testid="share-links"
-      onKeyDown={(event) => {
-        if (event.key !== 'Escape') return
-        event.preventDefault()
-        event.stopPropagation()
-        onDone()
-      }}
-    >
+    <div ref={sheet} className="of-sheet" role="dialog" aria-label="Share this board" data-testid="share-links">
       <p className="of-share__lead">Shared. Send the link that gives what you mean to give.</p>
 
       <button
