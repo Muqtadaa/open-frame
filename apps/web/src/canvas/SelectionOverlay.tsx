@@ -70,6 +70,18 @@ export function SelectionOverlay() {
   const previewFrames = useInteractionStore((state) =>
     state.drag.kind === 'resize' || state.drag.kind === 'rotate' ? state.drag.frames : null,
   )
+  /*
+   * A MOVE, previewed like the others. The box and its handles used to stay
+   * where the selection WAS while the objects moved under the pointer — on
+   * the most frequent gesture on the board, a detached frame that read as a
+   * glitch. Primitives, so the selectors stay stable (rule 9).
+   */
+  const moveDx = useInteractionStore((state) =>
+    state.drag.kind === 'translate' ? state.drag.dx : 0,
+  )
+  const moveDy = useInteractionStore((state) =>
+    state.drag.kind === 'translate' ? state.drag.dy : 0,
+  )
 
   const objects = useMemo(
     () =>
@@ -101,6 +113,15 @@ export function SelectionOverlay() {
   if (bounds === null || dragKind === 'marquee' || editingId !== null) return null
 
   /*
+   * A LINE ON ITS OWN IS SELECTED BY ITS ENDS. A type whose shape is its ends
+   * (rule 16) draws them as its apparatus, so a box around it as well was a
+   * rectangle nobody could use — and one that went stale while the line was
+   * reshaped. Asked of the registry, so nothing here names a connector.
+   */
+  const lone = objects.length === 1 ? objects[0] : undefined
+  if (lone !== undefined && runtime.registry.endpointsOf(lone, document).length > 0) return null
+
+  /*
    * A single object with a real frame gets an ORIENTED box that turns with it.
    * Anything else — a multi-selection, or a type with no frame of its own —
    * gets the axis-aligned bounds, since there is no shared orientation to use.
@@ -120,7 +141,11 @@ export function SelectionOverlay() {
   const cropping = croppingId !== null && croppingId === single?.id
 
   const rotation = single?.frame.rotation ?? 0
-  const box = single === undefined ? bounds : single.frame
+  const resting = single === undefined ? bounds : single.frame
+  const box =
+    moveDx === 0 && moveDy === 0
+      ? resting
+      : { ...resting, x: resting.x + moveDx, y: resting.y + moveDy }
   const rotatable =
     !cropping &&
     single !== undefined &&
