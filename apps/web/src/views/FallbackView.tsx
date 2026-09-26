@@ -1,3 +1,5 @@
+import { readableTypeName } from '@openframe/core'
+
 import type { ObjectViewProps } from './registry.js'
 
 /**
@@ -10,10 +12,11 @@ import type { ObjectViewProps } from './registry.js'
  * their content.
  */
 export function FallbackView({ object }: ObjectViewProps) {
+  const name = readableTypeName(object.type)
   return (
-    <div className="of-fallback" role="group" aria-label={`Object of type ${object.type}`}>
-      <span className="of-fallback__type">{object.type}</span>
-      <span className="of-fallback__hint">No view registered</span>
+    <div className="of-fallback" role="group" aria-label={`${name} that this version cannot show`}>
+      <span className="of-fallback__type">{name}</span>
+      <span className="of-fallback__hint">This version cannot show it yet</span>
     </div>
   )
 }

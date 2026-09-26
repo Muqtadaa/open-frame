@@ -272,6 +272,12 @@ export interface ObjectDescription {
   readonly gist: string
   /** Named semantic fields, for structured consumers. */
   readonly fields: Readonly<Record<string, string | number | readonly string[]>>
+  /**
+   * Why this object cannot be opened for editing, in a sentence, for a type
+   * that can never be. Said when somebody double-clicks it — the gesture that
+   * opens everything else, and which otherwise did nothing at all.
+   */
+  readonly cannotEdit?: string
 }
 
 /**

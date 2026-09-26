@@ -61,8 +61,11 @@ async function fromTheFuture(page: Page): Promise<void> {
     await new Promise((resolve) => {
       request.onsuccess = resolve
     })
-    const record = request.result as { payload: { schemaVersion: number } }
+    const record = request.result as {
+      payload: { schemaVersion: number; board: { meta: { title: string } } }
+    }
     record.payload.schemaVersion = 999
+    record.payload.board.meta.title = 'Pricing research'
     store.put(record)
     await new Promise((resolve) => {
       transaction.oncomplete = resolve
@@ -81,7 +84,7 @@ test('says the board is safe, whose it is and why it will not open', async ({ pa
   const sheet = page.getByRole('dialog', { name: 'Your board is safe' })
   await expect(sheet).toBeVisible()
   await expect(sheet).toContainText('a newer version of OpenFrame')
-  await expect(sheet).toContainText('2 objects')
+  await expect(sheet).toContainText('“Pricing research”, with 2 objects on it,')
   // No codes: "newer-schema" is the program talking to itself.
   await expect(sheet).not.toContainText('newer-schema')
   await expect(page.getByTestId('notice-banner')).toHaveCount(0)
@@ -91,6 +94,9 @@ test('offers no tools for a board nothing can be done to', async ({ page }) => {
   await expect(page.getByTestId('board-unreadable')).toBeVisible()
   await expect(page.getByTestId('tool-sticky')).toHaveCount(0)
   await expect(page.getByTestId('save-state')).toHaveAttribute('data-state', 'read-only')
+  await expect(page.getByTestId('save-state')).toContainText('Read-only')
+  // Named as it was saved, not "Untitled board".
+  await expect(page.getByTestId('board-title')).toHaveText('Pricing research')
 })
 
 test('cannot be dismissed, and its way out is All boards', async ({ page }) => {

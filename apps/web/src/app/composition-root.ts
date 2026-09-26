@@ -124,6 +124,10 @@ export async function createRuntime(options: CreateRuntimeOptions = {}): Promise
     // Said by a sheet over the board rather than a notice above it: an empty
     // ground with a line of jargon over it reads as the work being gone.
     quarantine = { reason: loaded.reason, ...legible(loaded.raw), raw: loaded.raw }
+    // Named in the bar as it was named when saved, not "Untitled board".
+    if (quarantine.title !== null) {
+      document = createEmptyDocument(boardId, quarantine.title, systemClock.now())
+    }
   }
 
   const { store, writer } = createDocumentStore(document)

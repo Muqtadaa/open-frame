@@ -78,6 +78,31 @@ test.describe('the notice', () => {
   })
 })
 
+/*
+ * The placeholder read "Unsupported / kanban-card / Open in a newer version of
+ * OpenFrame to edit": an identifier, and a word that sounds like a refusal.
+ */
+test.describe('an object this version cannot read', () => {
+  test.beforeEach(async ({ page }) => {
+    await boardWithAnUnknownObject(page)
+  })
+
+  test('is named in words and says what can still be done with it', async ({ page }) => {
+    const placeholder = page.locator('[data-object-type="unknown"]')
+    await expect(placeholder).toContainText('Kanban card')
+    await expect(placeholder).not.toContainText('kanban-card')
+    await expect(placeholder).not.toContainText('Unsupported')
+    await expect(placeholder.getByRole('group')).toHaveAccessibleName(
+      /Kanban card from a newer version of OpenFrame/,
+    )
+  })
+
+  test('explains itself when somebody tries to open it', async ({ page }) => {
+    await page.locator('[data-object-type="unknown"]').dblclick()
+    await expect(page.getByTestId('toast')).toContainText('newer version of OpenFrame')
+  })
+})
+
 test.describe('the toast', () => {
   test('has a close you can see and press', async ({ page }) => {
     await page.goto(BOARD_URL)

@@ -573,7 +573,20 @@ export function useCanvasGestures(containerRef: RefObject<HTMLElement | null>) {
         case 'begin-draw':
           store.beginDraw(intent.objectType, intent.at, intent.data)
           return 'draw'
-        case 'begin-edit':
+        case 'begin-edit': {
+          /*
+           * A type that can never be opened says why, rather than the gesture
+           * that opens everything else doing nothing at all. Asked of the
+           * registry, so the canvas names no type.
+           */
+          const target = runtime.store.getDocument().objects.get(intent.id)
+          const refusal =
+            target === undefined ? undefined : runtime.registry.describeObject(target).cannotEdit
+          if (refusal !== undefined) {
+            store.setSelection([intent.id])
+            store.showToast(refusal)
+            return 'none'
+          }
           // Selected as well as edited: a double-click into a group targets the
           // MEMBER, and leaving the group selected while editing a note inside
           // it would show a selection box around the wrong thing.
@@ -582,6 +595,7 @@ export function useCanvasGestures(containerRef: RefObject<HTMLElement | null>) {
           // place to put a caret can put it where the pointer was.
           store.setEditing(intent.id, worldPoint)
           return 'none'
+        }
         case 'begin-connect': {
           // Attaching by `auto` rather than a fixed side, so the connector picks
           // the sensible edge as either end moves.

@@ -164,7 +164,7 @@ export { STICKY_TYPE, stickyType } from './sticky/definition.js'
 export { TEXT_TYPE, textType } from './text/definition.js'
 export { TextDataSchema, type TextData } from './text/schema.js'
 export { StickyDataSchema, type StickyData } from './sticky/schema.js'
-export { UNKNOWN_TYPE, unknownType } from './unknown/definition.js'
+export { readableTypeName, UNKNOWN_TYPE, unknownType } from './unknown/definition.js'
 export { UnknownDataSchema, type UnknownData } from './unknown/schema.js'
 
 /**

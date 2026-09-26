@@ -2727,12 +2727,6 @@ body {
   gap: var(--of-space-8);
 }
 
-/* The password field, when the panel is asking for one rather than telling. */
-.of-home__password {
-  flex: none;
-  width: 160px;
-}
-
 .of-gone__input {
   width: 100%;
   margin-bottom: var(--of-space-12);
@@ -5729,6 +5723,12 @@ textarea.of-input {
   color: var(--of-danger);
 }
 
+/* A row's password field, when it is asking for one to set rather than telling. */
+.of-home__password {
+  flex: none;
+  width: 160px;
+}
+
 /*
  * A grid, not a flex row with `space-between`.
  *
@@ -5992,10 +5992,20 @@ textarea.of-input {
   background: var(--of-hover);
 }
 
-/* A board that could not be fully read is never written back, so it is named. */
+/*
+ * A board that could not be fully read is never written back, so it is named
+ * but not offered for renaming. A span, not a button, so it centres its own
+ * line and takes no hover bed — it sat at the top of its 30px box.
+ */
 .of-status__title--fixed {
+  display: inline-flex;
+  align-items: center;
   color: var(--of-ink-muted);
   cursor: default;
+}
+
+.of-status__title--fixed:hover {
+  background: none;
 }
 
 /*
