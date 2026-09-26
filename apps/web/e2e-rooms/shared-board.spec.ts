@@ -118,6 +118,35 @@ test('each window counts everyone in the room, including itself', async ({ brows
  * Undo reverts YOUR change, not the most recent one — which is the whole reason
  * `origin` and `skipUndo` have been on the command envelope since Phase 1.
  */
+/*
+ * A face can be pressed to follow somebody, so it is a TARGET: 24px, side by
+ * side. Overlapped 22px faces left an 18px pitch. Three at most, and a count
+ * for the rest, so a full room does not push the bar off a narrow window.
+ */
+test('faces are targets, side by side, and a crowd is counted', async ({ browser }) => {
+  const room = newRoomId()
+  const pages = [await join(browser, room)]
+  for (let i = 0; i < 3; i++) pages.push(await join(browser, room))
+  const [me] = pages
+  if (me === undefined) return
+  await expect(me.locator('[data-testid="room-people"]')).toHaveAttribute('data-count', '4', {
+    timeout: 20_000,
+  })
+
+  const faces = me.locator('[data-testid="room-people"] .of-status__person')
+  await expect(faces).toHaveCount(3)
+  const boxes = await faces.evaluateAll((all) =>
+    all.map((face) => face.getBoundingClientRect().toJSON() as DOMRect),
+  )
+  for (const [i, box] of boxes.entries()) {
+    expect(box.width).toBeGreaterThanOrEqual(24)
+    expect(box.height).toBeGreaterThanOrEqual(24)
+    const next = boxes[i + 1]
+    if (next !== undefined) expect(next.x).toBeGreaterThanOrEqual(box.x + box.width)
+  }
+  await expect(me.getByTestId('room-more')).toHaveText('+1')
+})
+
 test('undo takes back your own change, not the last one made', async ({ browser }) => {
   const room = newRoomId()
   const alice = await join(browser, room)

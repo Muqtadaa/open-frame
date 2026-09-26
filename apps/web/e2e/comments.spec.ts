@@ -1134,3 +1134,38 @@ test.describe('reading a thread', () => {
     await expect(page.locator('[data-testid^="comment-entry-"]')).toHaveCount(1)
   })
 })
+
+test.describe('the marks themselves', () => {
+  // The pointed corner is the spot; it sat 26px below where anybody clicked.
+  test('a pin points at the spot it was dropped on', async ({ page }) => {
+    await signedIn(page, [{ id: BOARD, title: 'Shared', role: 'owner' }])
+    await openBoard(page)
+    await page.getByTestId('tool-comment').click()
+    const canvas = await page.locator('[data-testid="canvas"]').boundingBox()
+    await page.locator('[data-testid="canvas"]').click({ position: { x: 400, y: 300 } })
+    await page.getByTestId('comment-input').fill('Here')
+    await page.getByTestId('comment-post').click()
+    const pin = await page.locator('[data-testid^="comment-pin-cmt_"]').first().boundingBox()
+    expect(pin).not.toBeNull()
+    expect(canvas).not.toBeNull()
+    if (pin === null || canvas === null) return
+    expect(Math.abs(pin.x - (canvas.x + 400))).toBeLessThan(2)
+    expect(Math.abs(pin.y + pin.height - (canvas.y + 300))).toBeLessThan(2)
+  })
+
+  // A chip in the UI face at control height — not a solid block, not mono.
+  test('the mentions bell is a quiet chip a hand can hit', async ({ page }) => {
+    await signedIn(page, [{ id: BOARD, title: 'Shared', role: 'owner' }], 'Muqtadaa Miandara', {
+      mentions: [
+        { commentId: 'cmt_m1', boardId: BOARD, boardTitle: 'Shared', authorName: 'Rowan', body: 'hi' },
+      ],
+    })
+    await openBoard(page)
+    const bell = page.getByTestId('mentions-button')
+    await expect(bell).toBeVisible()
+    const box = await bell.boundingBox()
+    expect(box?.height ?? 0).toBeGreaterThanOrEqual(30)
+    const font = await bell.evaluate((element) => getComputedStyle(element).fontFamily)
+    expect(font).not.toMatch(/mono/i)
+  })
+})

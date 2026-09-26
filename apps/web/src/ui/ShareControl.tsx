@@ -168,6 +168,23 @@ export function ShareControl() {
     })),
   ]
 
+  /*
+   * Three faces at most, and a count for the rest: at 24px without overlap a
+   * whole room would push the bar's other controls off a narrow window. The
+   * person you are following is always among the three, so the control that
+   * stops following is never hidden behind "+2".
+   */
+  const MAX_FACES = 3
+  const followed = here.find(
+    (person) => person.clientId !== null && person.clientId === following,
+  )
+  const shown =
+    followed === undefined || here.indexOf(followed) < MAX_FACES
+      ? here.slice(0, MAX_FACES)
+      : [...here.slice(0, MAX_FACES - 1), followed]
+  const hidden = here.filter((person) => !shown.includes(person))
+  const moreLabel = `Also here: ${hidden.map((person) => person.name).join(', ')}`
+
   const roomHint =
     here.length === 1
       ? 'You are the only one here. Click to copy the link.'
@@ -222,7 +239,7 @@ export function ShareControl() {
        * room that appears empty.
        */}
       <span className="of-status__people" data-testid="room-people" data-count={here.length}>
-        {here.map((person) => {
+        {shown.map((person) => {
           const isFollowed = person.clientId !== null && person.clientId === following
           if (person.clientId === null || !person.followable) {
             /*
@@ -265,6 +282,17 @@ export function ShareControl() {
             </button>
           )
         })}
+        {hidden.length > 0 && (
+          <span
+            className="of-status__more"
+            data-testid="room-more"
+            data-tip={moreLabel}
+            role="img"
+            aria-label={moreLabel}
+          >
+            +{hidden.length}
+          </span>
+        )}
       </span>
     </span>
   )

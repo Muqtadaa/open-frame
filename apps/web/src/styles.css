@@ -2192,15 +2192,23 @@ body {
   position: relative;
 }
 
+/*
+ * Unread as a quiet chip — the accent's wash and its ink, the count in bold —
+ * not a solid accent block. That block was the loudest thing in a bar DESIGN.md
+ * keeps quiet, louder than the board's own name. In the UI face at control
+ * height wherever it sits: it inherited mono from the bar and sans at home.
+ */
 .of-mentions__bell {
-  padding: var(--of-space-4) var(--of-step);
-  font: inherit;
+  min-height: var(--of-hit-sm);
+  padding: 0 var(--of-step);
+  font-family: var(--of-font);
   font-size: var(--of-type-record);
-  color: var(--of-panel);
+  font-weight: 600;
+  color: var(--of-accent);
   cursor: pointer;
-  background: var(--of-accent);
+  background: var(--of-accent-soft);
   border: 1px solid transparent;
-  border-radius: var(--of-radius-apparatus);
+  border-radius: var(--of-radius);
 }
 
 /*
@@ -2212,6 +2220,7 @@ body {
  * the way back with it.
  */
 .of-mentions__bell.is-read {
+  font-weight: 400;
   color: var(--of-ink-muted);
   background: transparent;
   border-color: var(--of-control-border);
@@ -2358,7 +2367,8 @@ body {
   height: 20px;
   font-size: var(--of-type-record);
   font-weight: 600;
-  color: var(--of-ink);
+  /* Page stock, as every face: ink read at 1.5–3:1 on these hues. */
+  color: var(--of-panel);
   border-radius: var(--of-radius-round);
 }
 
@@ -2384,10 +2394,9 @@ body {
 
 .of-comments__pin {
   /*
-   * `transform-origin` at the top left and a counter-scale on the transform
-   * keep a pin the same size on screen at any zoom — the same rule the
-   * presence cursors follow, and for the same reason: one that shrank with the
-   * board would be a dot at 25%.
+   * On the apparatus layer, placed in screen pixels, so a pin is the same size
+   * at any zoom — the same rule the presence cursors follow, and for the same
+   * reason: one that shrank with the board would be a dot at 25%.
    */
   position: absolute;
   top: 0;
@@ -2409,10 +2418,21 @@ body {
     var(--of-radius-slip);
   box-shadow: var(--of-slip-shadow);
   transform-origin: top left;
+  /*
+   * Lifted by its own height, so the pointed corner — bottom left — is the
+   * spot the remark is about. The box's top left was, which put the point
+   * 26px below where anybody clicked.
+   */
+  margin-top: -26px;
 }
 
+/*
+ * The one being read: ink, not the alignment guide's hue — that colour MEANS
+ * "lined up", and the presence palette keeps clear of it for the same reason.
+ */
 .of-comments__pin--open {
-  background: var(--of-guide);
+  color: var(--of-page);
+  background: var(--of-ink);
 }
 
 /* Not yet said, so not yet solid. */
@@ -3195,11 +3215,19 @@ body {
 .of-status__people {
   display: flex;
   /*
-   * Overlapped, so six people take the width of about four. The ring is the
-   * page's own colour rather than a border, which keeps the faces separable
-   * where they touch without adding a line to the world.
+   * Side by side, never overlapped: a face you can press to follow somebody
+   * is a TARGET, and overlapping 22px faces left an 18px pitch — under the
+   * 24px minimum, with nothing between them to aim at. Three at most, and a
+   * count for the rest, keeps the bar from paying for it in width.
    */
-  gap: -2px;
+  gap: var(--of-space-4);
+  align-items: center;
+}
+
+.of-status__more {
+  font-family: var(--of-mono);
+  font-size: var(--of-type-record);
+  color: var(--of-ink-muted);
 }
 
 .of-status__person {
@@ -3208,20 +3236,15 @@ body {
      row is tight, which is what a long name did to it. */
   flex: none;
   place-items: center;
-  /* 22px: a label, not a target. Nothing here is clickable. */
-  width: 22px;
-  height: 22px;
-  margin-right: -4px;
+  /* The AA target minimum: a face can be pressed to follow somebody. */
+  width: 24px;
+  height: 24px;
   font-family: var(--of-font);
   font-size: var(--of-type-record);
   font-weight: 600;
   color: var(--of-page);
   border: 1.5px solid var(--of-page);
   border-radius: var(--of-radius-round);
-}
-
-.of-status__person:last-child {
-  margin-right: 0;
 }
 
 /*
