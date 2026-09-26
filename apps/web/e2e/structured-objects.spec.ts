@@ -55,7 +55,8 @@ async function promote(page: Page, at: { x: number; y: number }): Promise<void> 
   await page.locator(CANVAS).click({ position: at })
   await page.locator(CANVAS).click({ position: at, button: 'right' })
   await expect(page.getByTestId('context-menu')).toBeVisible()
-  await page.getByTestId('menu-promote-to-evidence').click()
+  await page.getByTestId('menu-promote-to').click()
+  await page.getByTestId('menu-evidence').click()
   await expect(page.getByTestId('context-menu')).toHaveCount(0)
 }
 
@@ -82,6 +83,31 @@ test.describe('structured objects', () => {
    * card's also has the fields that make it a record — and they come from the
    * registry, so this fails if the declaration stops reaching the interface.
    */
+  /*
+   * A promoted note used to change nothing but its colour — to the gray a
+   * plain note could already be — and a journey stage could not be made at
+   * all. The type is now said in words, and survives a change of colour.
+   */
+  test('a promoted note says what it has become, whatever its colour', async ({ page }) => {
+    await placeNote(page, 'Gave up at checkout')
+    await page.locator(CANVAS).click({ position: NOTE })
+    await page.locator(CANVAS).click({ position: NOTE, button: 'right' })
+    await page.getByTestId('menu-promote-to').click()
+    await page.getByTestId('menu-journey-stage').click()
+
+    await expect(
+      page.getByRole('button', { name: /^Undo promote 1 object to journey stage/ }),
+    ).toBeVisible()
+    const record = page.locator('.of-slip__record')
+    await expect(record).toHaveText('journey stage')
+    await expect(record.locator('.of-slip__type')).toHaveCSS('font-weight', '600')
+
+    await page.locator(CANVAS).click({ position: NOTE })
+    await page.getByTestId('inspector-appearance').click()
+    await page.getByTestId('swatch-blue').click()
+    await expect(record).toHaveText('journey stage')
+  })
+
   test('the record panel gains the fields the type declares', async ({ page }) => {
     await placeNote(page, 'Could not find the price')
 
@@ -193,11 +219,11 @@ test.describe('structured objects', () => {
     await expect(page.locator(CANVAS)).toContainText('September usability study')
   })
 
-  test('an empty evidence card shows no record line at all', async ({ page }) => {
+  test('an empty evidence card names its type and nothing else', async ({ page }) => {
     await placeNote(page, 'Nothing filled in')
     await promote(page, NOTE)
-    // Structure is earned: a card carrying only a quote looks like a plain slip.
-    await expect(page.locator('.of-slip__record')).toHaveCount(0)
+    // Structure is earned: no row of empty labels, only what the slip now is.
+    await expect(page.locator('.of-slip__record')).toHaveText('evidence')
   })
 })
 

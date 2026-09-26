@@ -1,14 +1,16 @@
-import {
-  isEmptyText,
-  plainTextOf,
-  type ColorToken,
-  type RichText,
-} from '@openframe/core'
+import { isEmptyText, plainTextOf, type ColorToken, type RichText } from '@openframe/core'
 
 import { RichTextEditor } from './RichTextEditor.js'
 import { RichTextView } from './RichTextView.js'
 import type { ObjectEditorProps, ObjectViewProps } from './registry.js'
-import { fontFamily, textAlign, verticalAlign, inkColor, readableInkOn, surfaceOf } from '../scene/style-tokens.js'
+import {
+  fontFamily,
+  textAlign,
+  verticalAlign,
+  inkColor,
+  readableInkOn,
+  surfaceOf,
+} from '../scene/style-tokens.js'
 
 /**
  * The card every structured type is drawn as.
@@ -53,6 +55,7 @@ export function StructuredSlip<TData extends { readonly text: RichText }>({
   readonly className?: string
 }) {
   const parts = record.filter((part) => part.trim() !== '')
+  const [first, ...rest] = parts
 
   return (
     <div
@@ -78,7 +81,7 @@ export function StructuredSlip<TData extends { readonly text: RichText }>({
         style={{
           fontFamily: fontFamily(object.style.font),
           textAlign: textAlign(object.style.align),
-        justifyContent: verticalAlign(object.style.verticalAlign),
+          justifyContent: verticalAlign(object.style.verticalAlign),
         }}
       >
         {/* Its own element, so the clamp that marks hidden text has something
@@ -89,15 +92,23 @@ export function StructuredSlip<TData extends { readonly text: RichText }>({
         </div>
       </div>
 
-      {parts.length > 0 && (
-        <div className="of-slip__record" aria-hidden="true">
-          {parts.map((part) => (
-            <span key={part} className="of-slip__trail">
-              {part}
-            </span>
-          ))}
-        </div>
-      )}
+      {/*
+       * Always drawn, and always led by the type's name. Colour alone said
+       * what a slip was, so a freshly promoted evidence slip looked exactly
+       * like a gray note and re-colouring one erased its type. The word
+       * survives both, and the first part of the record rides beside it.
+       */}
+      <div className="of-slip__record" aria-hidden="true">
+        <span className="of-slip__trail">
+          <span className="of-slip__type">{noun.toLowerCase()}</span>
+          {first !== undefined && ` · ${first}`}
+        </span>
+        {rest.map((part) => (
+          <span key={part} className="of-slip__trail">
+            {part}
+          </span>
+        ))}
+      </div>
     </div>
   )
 }

@@ -41,7 +41,6 @@ test('moves focus in and walks the items with arrows, Home, End and a letter', a
 
   await page.keyboard.press('ArrowDown')
   await page.keyboard.press('ArrowDown')
-  await page.keyboard.press('ArrowDown')
   await expect(item(page, 'Cut')).toBeFocused()
   await page.keyboard.press('ArrowDown')
   await expect(item(page, 'Copy')).toBeFocused()
@@ -136,11 +135,12 @@ test.describe('what it offers', () => {
   test('leads with what the selection can become', async ({ page }) => {
     await page.locator(CANVAS).click({ position: NOTE, button: 'right' })
     const names = await menu(page).locator('[role="menuitem"] > span:first-child').allTextContents()
-    expect(names.slice(0, 3)).toEqual([
-      'Derive insight',
-      'Promote to evidence',
-      'Promote to insight',
-    ])
+    expect(names.slice(0, 2)).toEqual(['Derive insight', 'Promote to'])
+    // One entry, whatever the type can become: flat, they pushed the menu off the window.
+    await item(page, 'Promote to').click()
+    await expect(
+      page.getByTestId('context-submenu').locator('[role="menuitem"] > span:first-child'),
+    ).toHaveText(['Evidence', 'Insight', 'Journey stage'])
   })
 
   test('folds the stacking order into one Arrange submenu', async ({ page }) => {

@@ -5,6 +5,13 @@ import { RichTextEditor } from './RichTextEditor.js'
 import { RichTextView } from './RichTextView.js'
 import { inkColor, surfaceOf } from '../scene/style-tokens.js'
 
+/*
+ * White: a filled frame is a sheet laid on the page. It was gray, the same
+ * stock as a shape, a code block and an evidence slip, so a filled frame read
+ * as one more of them rather than as the place they sit.
+ */
+const FRAME_FILL = 'white'
+
 /**
  * A frame's edge: a HAIRLINE with a 2px corner, at every zoom.
  *
@@ -40,7 +47,7 @@ function FrameRenderer({ object, zoom }: ObjectViewProps<FrameData>) {
     <div
       className="of-frame"
       style={{
-        background: filled ? surfaceOf(object.style.color, 'gray') : 'transparent',
+        background: filled ? surfaceOf(object.style.color, FRAME_FILL) : 'transparent',
         // The corner is the edge's, drawn by `FrameEdge` below.
         borderRadius: `${String(2 / zoom)}px`,
         opacity: object.style.opacity ?? 1,
@@ -92,7 +99,7 @@ function FrameEditor({ object, zoom, Chrome, onCommit }: ObjectEditorProps<Frame
     <div
       className="of-frame"
       style={{
-        background: filled ? surfaceOf(object.style.color, 'gray') : 'transparent',
+        background: filled ? surfaceOf(object.style.color, FRAME_FILL) : 'transparent',
         // The corner is the edge's, drawn by `FrameEdge` below.
         borderRadius: `${String(2 / zoom)}px`,
         opacity: object.style.opacity ?? 1,
@@ -119,7 +126,7 @@ function FrameEditor({ object, zoom, Chrome, onCommit }: ObjectEditorProps<Frame
 
 export const frameView = defineObjectView<FrameData>({
   type: 'frame',
-  defaultColor: 'gray',
+  defaultColor: FRAME_FILL,
   Renderer: FrameRenderer,
   InlineEditor: FrameEditor,
 })

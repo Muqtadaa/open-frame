@@ -3774,6 +3774,15 @@ body {
 }
 
 /*
+ * What the slip IS, leading its record. Weight rather than size or colour: the
+ * band is already the smallest functional text on the board, and the slip's
+ * own ink is the one colour guaranteed to read on whatever stock it is given.
+ */
+.of-slip__type {
+  font-weight: 600;
+}
+
+/*
  * Every in-place editor inherits the object's own type and drops its border,
  * carrying an accent outline instead. The rich editors are `contenteditable`
  * divs rather than textareas — a textarea cannot show a bold word — so they

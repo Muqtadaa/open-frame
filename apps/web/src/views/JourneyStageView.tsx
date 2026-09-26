@@ -11,7 +11,7 @@ function JourneyStageRenderer(props: ObjectViewProps<JourneyStageData>) {
       text={object.data.text}
       noun="Journey stage"
       record={[statusLine(object.data.sentiment, 'unstated')]}
-      defaultColor="yellow"
+      defaultColor="brown"
       className="of-journey-stage"
     />
   )
@@ -23,7 +23,7 @@ function JourneyStageEditor(props: ObjectEditorProps<JourneyStageData>) {
       {...props}
       text={props.object.data.text}
       label="Edit journey stage"
-      defaultColor="yellow"
+      defaultColor="brown"
       className="of-journey-stage"
     />
   )
@@ -31,7 +31,7 @@ function JourneyStageEditor(props: ObjectEditorProps<JourneyStageData>) {
 
 export const journeyStageView = defineObjectView<JourneyStageData>({
   type: 'journey-stage',
-  defaultColor: 'yellow',
+  defaultColor: 'brown',
   Renderer: JourneyStageRenderer,
   InlineEditor: JourneyStageEditor,
 })

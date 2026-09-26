@@ -31,6 +31,10 @@ function itemsIn(menu: HTMLElement | null): HTMLElement[] {
     : [...menu.querySelectorAll<HTMLElement>(':scope > .of-menu__group > [role="menuitem"]')]
 }
 
+/** A type as a word: "journey stage", not "journey-stage". */
+const nounOf = (type: string): string => type.replace(/-/g, ' ')
+const capitalised = (text: string): string => text.charAt(0).toUpperCase() + text.slice(1)
+
 const testIdOf = (label: string): string =>
   `menu-${label
     .toLowerCase()
@@ -245,19 +249,31 @@ export function ContextMenu() {
      */
     [
       ...derivations.map((derivation) => ({
-        label: `Derive ${derivation.type}`,
+        label: `Derive ${nounOf(derivation.type)}`,
         run: () => {
           commands.derive(derivation.type, derivation.predicate)
         },
       })),
-      ...promotions.map((target) => ({
-        // "Promote", not "Convert": the note turns out to have BEEN evidence.
-        label: `Promote to ${target}`,
-        run: () => {
-          commands.promoteSelection(target)
-        },
-        disabled: locked,
-      })),
+      /*
+       * "Promote", not "Convert": the note turns out to have BEEN evidence.
+       * One entry however many a type offers — flat, the third target pushed
+       * the menu off a laptop-sized window, and every type added later would
+       * have pushed it further.
+       */
+      ...(promotions.length === 0
+        ? []
+        : [
+            {
+              label: 'Promote to',
+              disabled: locked,
+              submenu: promotions.map((target) => ({
+                label: capitalised(nounOf(target)),
+                run: () => {
+                  commands.promoteSelection(target)
+                },
+              })),
+            },
+          ]),
     ],
     [
       { label: 'Cut', shortcut: 'Mod+X', run: () => commands.cutSelection() },
