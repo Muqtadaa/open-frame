@@ -5537,10 +5537,13 @@ textarea.of-input {
   font-family: var(--of-font);
   font-size: var(--of-type-control);
   color: var(--of-ink);
-  background: var(--of-page);
-  /* Apparatus radius. Fully round is reserved for the rotate handle and
-     connector endpoints, where it signals a grab point. */
-  border: 1px solid var(--of-panel-border);
+  /*
+   * Borderless, like the board's account chip: apparatus, not an outlined
+   * chip. The outline it had was a boundary at 1.45:1, drawn but not seen.
+   * Apparatus radius, because fully round is reserved for grab points.
+   */
+  background: transparent;
+  border: none;
   border-radius: var(--of-radius-apparatus);
   cursor: pointer;
 }

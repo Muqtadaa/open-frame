@@ -95,3 +95,23 @@ test('the sign-up name says who sees it, and keeps saying so', async ({ page }) 
   await name.fill('Sam')
   await expect(page.getByText('What people see on your cursor')).toBeVisible()
 })
+
+/*
+ * The front door's account chip signed you out on a single press, the same
+ * fault already fixed on the board's chip (and DESIGN.md: "never signs you out
+ * on the press"). It opens the same account sheet now.
+ */
+test('the front door account chip opens the account, it does not sign out', async ({ page }) => {
+  await signedIn(page, [])
+  await page.goto(HOME_URL)
+  const chip = page.getByTestId('home-account')
+  await chip.click()
+  const sheet = page.getByTestId('account-sheet')
+  await expect(sheet).toBeVisible()
+  await expect(sheet.getByRole('button', { name: 'Sign out' })).toBeFocused()
+  await page.keyboard.press('Escape')
+  await expect(sheet).toHaveCount(0)
+  await expect(chip).toBeFocused()
+  // An apparatus chip, not an outlined one.
+  await expect(chip).toHaveCSS('border-top-style', 'none')
+})

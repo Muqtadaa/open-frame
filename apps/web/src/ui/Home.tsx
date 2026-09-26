@@ -13,7 +13,9 @@ import { useWorkspaces } from '../hooks/use-workspaces.js'
 import { joinWorkspace } from '../app/workspaces.js'
 import { workspaceInvite } from '../app/collab-config.js'
 import { hueVar, initialOf } from '../scene/presence.js'
+import { AccountSheet } from './AccountControl.js'
 import { AccountForm } from './AccountForm.js'
+import { useAnchoredTo } from '../controls/use-anchor.js'
 import { BoardRow } from './BoardRow.js'
 import { ClaimLocalBoards } from './ClaimLocalBoards.js'
 import { describeStartFailure } from './StartFailed.js'
@@ -234,31 +236,7 @@ export function Home({ repository }: { readonly repository: BoardRepository }) {
             <h1 className="of-home__title">OpenFrame</h1>
 
             {identity !== null && (
-              <button
-                type="button"
-                className="of-home__account"
-                aria-label={identity.displayName}
-                data-testid="home-account"
-                /*
-                 * The colour is not decoration: it is the hue other people see
-                 * on your cursor when you are on a board together, so saying so
-                 * turns a swatch into a fact about yourself.
-                 */
-                data-tip={`Signed in as ${identity.displayName}. Click to sign out.`}
-                aria-description={`Signed in as ${identity.displayName}. Click to sign out.`}
-                onClick={() => {
-                  void signOut()
-                }}
-              >
-                <span
-                  className="of-home__person"
-                  style={{ background: hueVar(identity.hue) }}
-                  aria-hidden="true"
-                >
-                  {initialOf(identity.displayName)}
-                </span>
-                <span className="of-home__account-name">{identity.displayName}</span>
-              </button>
+              <HomeAccount name={identity.displayName} hue={identity.hue} email={identity.email} />
             )}
 
             {/* Only worth showing to somebody who has an account to be told. */}
@@ -396,5 +374,69 @@ export function Home({ repository }: { readonly repository: BoardRepository }) {
         */}
       <div className="of-chrome-layer" data-chrome-layer />
     </main>
+  )
+}
+
+/**
+ * Your name on the front door, and your account behind it.
+ *
+ * It signed you out on a single press — the fault already fixed on the board's
+ * chip, and against DESIGN.md's "never signs you out on the press". It opens
+ * the same sheet as the board's now, so the two chips mean one thing.
+ */
+function HomeAccount({
+  name,
+  hue,
+  email,
+}: {
+  readonly name: string
+  readonly hue: number
+  readonly email: string | null
+}) {
+  const [open, setOpen] = useState(false)
+  const { ref, anchor, surface } = useAnchoredTo<HTMLButtonElement>(open)
+  const close = useCallback(() => {
+    setOpen(false)
+    ref.current?.focus()
+  }, [ref])
+
+  return (
+    <>
+      <button
+        ref={ref}
+        type="button"
+        className="of-home__account"
+        aria-label={name}
+        aria-expanded={open}
+        aria-haspopup="dialog"
+        data-testid="home-account"
+        data-tip="Your account"
+        aria-description="Your account"
+        onClick={() => setOpen((was) => !was)}
+      >
+        {/*
+         * The colour is not decoration: it is the hue other people see on your
+         * cursor when you are on a board together.
+         */}
+        <span className="of-home__person" style={{ background: hueVar(hue) }} aria-hidden="true">
+          {initialOf(name)}
+        </span>
+        <span className="of-home__account-name">{name}</span>
+      </button>
+      {open && (
+        <AccountSheet
+          anchor={anchor}
+          surface={surface}
+          name={name}
+          email={email}
+          trigger={ref}
+          onClose={close}
+          onSignOut={() => {
+            setOpen(false)
+            void signOut()
+          }}
+        />
+      )}
+    </>
   )
 }

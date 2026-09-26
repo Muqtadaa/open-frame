@@ -140,7 +140,7 @@ function SignInSheet({
  * Closed by Escape or a press anywhere else, like every other sheet, and it
  * hands the keyboard back to the name that opened it.
  */
-function AccountSheet({
+export function AccountSheet({
   anchor,
   surface,
   name,
