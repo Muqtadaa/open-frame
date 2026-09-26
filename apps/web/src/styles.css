@@ -3858,16 +3858,6 @@ body {
   font-size: var(--of-type-record);
 }
 
-.of-fatal {
-  max-width: 640px;
-  margin: 0 auto;
-  padding: 48px;
-}
-
-.of-fatal__hint {
-  color: var(--of-ink-muted);
-}
-
 /* ---------- development instrumentation (stripped from production) ---------- */
 
 .of-dev {

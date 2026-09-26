@@ -13,10 +13,11 @@ import { createRuntime } from './app/composition-root.js'
 import { markLocalOpened } from './app/board-prefs.js'
 import { joinBoard, touchBoardOpened } from './app/remote-boards.js'
 import { readRoute } from './app/route.js'
-import { dismissSplash, failSplash } from './app/splash.js'
+import { abandonSplash, dismissSplash } from './app/splash.js'
 import { restoreTheme } from './app/theme.js'
 import { OpenFrameContext } from './runtime/context.js'
 import { Home } from './ui/Home.js'
+import { StartFailed } from './ui/StartFailed.js'
 import { createDefaultViewRegistry } from './views/index.js'
 import './styles.css'
 
@@ -58,8 +59,10 @@ if (route.kind === 'home') {
     runtime = await createRuntime({ boardId: route.boardId, capabilities })
   } catch (error) {
     // The splash is still up and still claiming to be opening a board. Say what
-    // actually happened rather than leaving a cheerful lie on screen.
-    failSplash('OpenFrame could not open this board. Reloading may help.')
+    // actually happened, in a panel of its own, rather than leaving a cheerful
+    // lie on screen.
+    abandonSplash()
+    root.render(<StartFailed heading="This board did not open" error={error} />)
     throw error
   }
   const views = createDefaultViewRegistry()
