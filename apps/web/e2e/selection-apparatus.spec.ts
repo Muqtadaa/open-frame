@@ -217,3 +217,108 @@ test('a small selection keeps its corners, and its middle moves it', async ({ pa
   expect(Math.abs(after.width - before.width)).toBeLessThan(1)
   expect(Math.abs(after.height - before.height)).toBeLessThan(1)
 })
+
+/*
+ * The board without a pointer (C3 #7). Objects could not be reached from the
+ * keyboard at all, the only thing a key could do to a selection was nudge it,
+ * the lock key was handled and never bound, and nothing was ever announced.
+ */
+test.describe('the board from the keyboard', () => {
+  const announcer = (page: Page) => page.getByTestId('board-announcer')
+
+  test('Tab reaches the board, walks its objects in reading order, and lets go', async ({
+    page,
+  }) => {
+    await note(page, { x: 600, y: 260 }, 'Second')
+    await note(page, { x: 300, y: 260 }, 'First')
+    await note(page, { x: 300, y: 480 }, 'Third')
+    await page.keyboard.press('Escape')
+
+    // From the top of the page, the board is a stop in the order.
+    await page.locator('body').focus()
+    let reached = false
+    for (let press = 0; press < 60 && !reached; press += 1) {
+      await page.keyboard.press('Tab')
+      reached = await page.evaluate(
+        () => document.activeElement?.getAttribute('data-testid') === 'canvas',
+      )
+    }
+    expect(reached).toBe(true)
+    await expect(page.locator(CANVAS)).toHaveAttribute(
+      'aria-description',
+      /Tab moves between objects/,
+    )
+
+    const selected = page.locator('.of-object--selected')
+    await page.keyboard.press('Tab')
+    await expect(selected).toContainText('First')
+    await expect(announcer(page)).toContainText('First')
+    await page.keyboard.press('Tab')
+    await expect(selected).toContainText('Second')
+    await page.keyboard.press('Tab')
+    await expect(selected).toContainText('Third')
+    await page.keyboard.press('Shift+Tab')
+    await expect(selected).toContainText('Second')
+    await page.keyboard.press('Tab')
+
+    // Past the last one, Tab leaves the board rather than trapping the keyboard.
+    await page.keyboard.press('Tab')
+    const left = await page.evaluate(
+      () => document.activeElement?.getAttribute('data-testid') !== 'canvas',
+    )
+    expect(left).toBe(true)
+  })
+
+  test('Alt with an arrow resizes, and says the new size', async ({ page }) => {
+    await note(page, { x: 340, y: 260 }, 'Grow')
+    const object = page.locator('[data-object-type="sticky"]')
+    await object.click()
+    const before = await object.boundingBox()
+    await page.keyboard.press('Alt+ArrowRight')
+    await page.keyboard.press('Alt+ArrowDown')
+    await page.keyboard.press('Alt+ArrowDown')
+    const after = await object.boundingBox()
+    if (before === null || after === null) throw new Error('no note')
+    expect(Math.round(after.width - before.width)).toBe(10)
+    expect(Math.round(after.height - before.height)).toBe(20)
+    await expect(announcer(page)).toHaveText(/^Width \d+, height \d+$/)
+
+    // One undo per press, like a nudge.
+    await page.keyboard.press('ControlOrMeta+z')
+    const undone = await object.boundingBox()
+    expect(Math.round((undone?.height ?? 0) - before.height)).toBe(10)
+  })
+
+  test('period and comma rotate, and say the angle', async ({ page }) => {
+    await page.getByTestId('tool-shape').click()
+    await page.mouse.move(340, 220)
+    await page.mouse.down()
+    await page.mouse.move(540, 360, { steps: 6 })
+    await page.mouse.up()
+    await page.keyboard.press('Escape')
+    await expect(page.getByTestId('selection-overlay')).toBeVisible()
+
+    await page.keyboard.press('.')
+    await expect(announcer(page)).toHaveText('Rotated to 15 degrees')
+    await page.keyboard.press('.')
+    await page.keyboard.press('Shift+<')
+    await expect(announcer(page)).toHaveText('Rotated to 29 degrees')
+    await page.keyboard.press(',')
+    await expect(announcer(page)).toHaveText('Rotated to 14 degrees')
+    const transform = await page
+      .getByTestId('selection-overlay')
+      .evaluate((element) => (element as HTMLElement).style.transform)
+    expect(transform).toMatch(/rotate\(0\.24\d*rad\)/)
+  })
+
+  test('Mod+Shift+L locks and unlocks, and says which', async ({ page }) => {
+    await note(page, { x: 340, y: 260 }, 'Keep')
+    await page.locator('[data-object-type="sticky"]').click()
+    await page.keyboard.press('ControlOrMeta+Shift+L')
+    await expect(page.getByTestId('selection-lock')).toBeVisible()
+    await expect(announcer(page)).toHaveText('Locked')
+    await page.keyboard.press('ControlOrMeta+Shift+L')
+    await expect(page.getByTestId('selection-lock')).toHaveCount(0)
+    await expect(announcer(page)).toHaveText('Unlocked')
+  })
+})

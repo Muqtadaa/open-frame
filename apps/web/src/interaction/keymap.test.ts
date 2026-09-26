@@ -333,3 +333,44 @@ describe('every placing tool carries its own cursor', () => {
     expect(diamond).toContain(shapePath('diamond') ?? 'no path')
   })
 })
+
+/*
+ * Resize, rotate and lock had no keys (C3 #7): the only thing a keyboard could
+ * do to a selection was nudge it, so everything else took a pointer — WCAG
+ * 2.1.1 and 2.5.7.
+ */
+describe('transforming the selection without a pointer', () => {
+  it.each([
+    ['ArrowRight', { dw: 10, dh: 0 }],
+    ['ArrowLeft', { dw: -10, dh: 0 }],
+    ['ArrowDown', { dw: 0, dh: 10 }],
+    ['ArrowUp', { dw: 0, dh: -10 }],
+  ])('Alt+%s resizes by the grid step', (pressed, by) => {
+    expect(resolveKeyAction(key(pressed, { altKey: true }))).toEqual({ kind: 'resize-by', ...by })
+  })
+
+  it('Alt+Shift+arrow resizes by a single unit', () => {
+    expect(resolveKeyAction(key('ArrowRight', { altKey: true, shiftKey: true }))).toEqual({
+      kind: 'resize-by',
+      dw: 1,
+      dh: 0,
+    })
+  })
+
+  it.each([
+    ['.', 15],
+    [',', -15],
+    ['>', 1],
+    ['<', -1],
+  ])('%s rotates by %i degrees', (pressed, degrees) => {
+    const shiftKey = pressed === '>' || pressed === '<'
+    expect(resolveKeyAction(key(pressed, { shiftKey }))).toEqual({ kind: 'rotate-by', degrees })
+  })
+
+  it('Mod+Shift+L locks and unlocks, and plain Mod+L is left to the browser', () => {
+    expect(resolveKeyAction(key('L', { ctrlKey: true, shiftKey: true }))).toEqual({
+      kind: 'toggle-lock',
+    })
+    expect(resolveKeyAction(key('l', { ctrlKey: true }))).toBeNull()
+  })
+})

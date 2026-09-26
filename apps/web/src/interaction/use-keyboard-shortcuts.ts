@@ -1,5 +1,7 @@
 import { useEffect } from 'react'
 
+import type { ObjectId } from '@openframe/core'
+
 import { useOpenFrame } from '../runtime/context.js'
 import {
   fitToDocument,
@@ -11,6 +13,18 @@ import {
 import { useCommands } from '../hooks/use-commands.js'
 import { useInteractionStore } from './interaction-store.js'
 import { resolveKeyAction } from './keymap.js'
+
+/** The smallest a keyboard resize makes a side, in world units. */
+const MIN_SIDE = 10
+/** How far apart two tops can be and still read as one row, in world units. */
+const ROW_BAND = 40
+
+/** An angle in (-π, π], so a keyboard turn never accumulates whole revolutions. */
+function normalise(radians: number): number {
+  const turn = Math.PI * 2
+  const wrapped = ((radians % turn) + turn) % turn
+  return wrapped > Math.PI ? wrapped - turn : wrapped
+}
 
 function isTextEntry(target: EventTarget | null): boolean {
   if (!(target instanceof HTMLElement)) return false
@@ -98,6 +112,36 @@ export function useKeyboardShortcuts(setSpaceHeld: (held: boolean) => void): voi
       // which must always be able to end editing.
       if (isTextEntry(event.target) && event.key !== 'Escape') return
 
+      /*
+       * TAB WALKS THE BOARD while the board has focus: the next object in
+       * reading order, or the previous one with Shift, selected and brought
+       * into view. Past the last one it lets Tab go, so the keyboard is never
+       * trapped on the board. Objects could not be reached from the keyboard
+       * at all — Tab went from the navigation bar through the rail and out.
+       */
+      if (
+        event.key === 'Tab' &&
+        !event.metaKey &&
+        !event.ctrlKey &&
+        !event.altKey &&
+        event.target instanceof HTMLElement &&
+        event.target.dataset.testid === 'canvas'
+      ) {
+        const order = readingOrder()
+        const [current] = [...store.selection]
+        const at = current === undefined ? -1 : order.indexOf(current)
+        const next =
+          current === undefined
+            ? event.shiftKey
+              ? order[order.length - 1]
+              : order[0]
+            : order[at + (event.shiftKey ? -1 : 1)]
+        if (next === undefined) return
+        event.preventDefault()
+        commands.reveal(next)
+        return
+      }
+
       const action = resolveKeyAction(event)
       if (action === null) return
       event.preventDefault()
@@ -163,10 +207,50 @@ export function useKeyboardShortcuts(setSpaceHeld: (held: boolean) => void): voi
           commands.reorder(action.placement)
           return
         case 'toggle-lock': {
+          if (store.selection.size === 0) return
           const anyLocked = [...store.selection].some(
             (id) => runtime.store.getObject(id)?.locked === true,
           )
           commands.setLocked(!anyLocked)
+          store.announce(anyLocked ? 'Unlocked' : 'Locked')
+          return
+        }
+        case 'resize-by': {
+          /*
+           * In SCREEN units, like a nudge, so a press grows the object by the
+           * same visible amount at any zoom. The near corner stays put.
+           */
+          const scale = 1 / store.viewport.zoom
+          const resizes = transformable('resizable').map((object) => ({
+            id: object.id,
+            frame: {
+              ...object.frame,
+              width: Math.max(MIN_SIDE, object.frame.width + action.dw * scale),
+              height: Math.max(MIN_SIDE, object.frame.height + action.dh * scale),
+            },
+          }))
+          commands.resizeObjects(resizes)
+          const [only] = resizes
+          if (resizes.length === 1 && only !== undefined) {
+            store.announce(
+              `Width ${String(Math.round(only.frame.width))}, height ${String(Math.round(only.frame.height))}`,
+            )
+          }
+          return
+        }
+        case 'rotate-by': {
+          const turn = (action.degrees * Math.PI) / 180
+          const rotations = transformable('rotatable').map((object) => ({
+            id: object.id,
+            rotation: normalise(object.frame.rotation + turn),
+          }))
+          commands.rotateObjects(rotations)
+          const [only] = rotations
+          if (rotations.length === 1 && only !== undefined) {
+            store.announce(
+              `Rotated to ${String(Math.round((only.rotation * 180) / Math.PI))} degrees`,
+            )
+          }
           return
         }
         case 'select-all':
@@ -249,6 +333,39 @@ export function useKeyboardShortcuts(setSpaceHeld: (held: boolean) => void): voi
           return
         }
       }
+    }
+
+    /**
+     * The selected objects a keyboard transform applies to: unlocked, and
+     * able to do it — the same test the handles use before they are drawn.
+     */
+    const transformable = (capability: 'resizable' | 'rotatable') => {
+      const doc = runtime.store.getDocument()
+      return [...useInteractionStore.getState().selection]
+        .map((id) => doc.objects.get(id))
+        .filter((object) => object !== undefined)
+        .filter(
+          (object) =>
+            !object.locked && runtime.registry.get(object.type)?.capabilities[capability] === true,
+        )
+    }
+
+    /**
+     * Top-level objects in the order a page is read: by rows, then along each
+     * row. Rows are bands of the grid step so that two notes a pixel apart in
+     * height are one row rather than an arbitrary order.
+     */
+    const readingOrder = (): ObjectId[] => {
+      const doc = runtime.store.getDocument()
+      return [...doc.objects.values()]
+        .filter((object) => object.parentId === null && !object.hidden)
+        .filter((object) => runtime.registry.get(object.type)?.capabilities.spatial !== false)
+        .map((object) => ({ id: object.id, at: runtime.registry.boundsOf(object, doc) }))
+        .sort(
+          (a, b) =>
+            Math.round(a.at.y / ROW_BAND) - Math.round(b.at.y / ROW_BAND) || a.at.x - b.at.x,
+        )
+        .map((entry) => entry.id)
     }
 
     const onKeyUp = (event: KeyboardEvent): void => {

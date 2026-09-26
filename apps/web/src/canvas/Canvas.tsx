@@ -5,6 +5,8 @@ import { cursorFor } from '../interaction/tool-cursor.js'
 import { useCursorInk } from '../hooks/use-cursor-ink.js'
 import { useKeyboardShortcuts } from '../interaction/use-keyboard-shortcuts.js'
 import { gridStyle } from '../scene/grid.js'
+import { formatKeys } from '../scene/shortcuts.js'
+import { BoardAnnouncer } from './BoardAnnouncer.js'
 import { AlignmentOverlay } from './AlignmentOverlay.js'
 import { ConnectorPreview } from './ConnectorPreview.js'
 import { ConnectPoints } from './ConnectPoints.js'
@@ -51,6 +53,20 @@ import { useMoving } from './use-moving.js'
  * zoomed out. Offsetting by the viewport modulo the cell gives the same result
  * at constant cost. How the levels themselves are chosen lives in `scene/grid.ts`.
  */
+/**
+ * What the board's keys do, as its description says it — the one place the
+ * keyboard's way through the board is written down for somebody who cannot
+ * see the handles.
+ */
+const BOARD_KEYS = [
+  'Tab moves between objects.',
+  'Arrow keys move the selection;',
+  `${formatKeys('Alt')} with an arrow resizes it;`,
+  'comma and period rotate it;',
+  `${formatKeys('Mod+Shift+L')} locks it;`,
+  'Enter edits it, and Escape lets it go.',
+].join(' ')
+
 export function Canvas() {
   const containerRef = useRef<HTMLDivElement>(null)
   const { width, height } = useCanvasSize(containerRef)
@@ -110,6 +126,14 @@ export function Canvas() {
       data-testid="canvas"
       role="application"
       aria-label="OpenFrame board canvas"
+      /*
+       * A STOP IN THE PAGE'S ORDER, so the keyboard can reach the board at
+       * all; once there, Tab walks its objects (see use-keyboard-shortcuts)
+       * and lets go after the last one. The description is how anybody finds
+       * out what the keys are.
+       */
+      tabIndex={0}
+      aria-description={BOARD_KEYS}
       onPointerDown={gestures.onPointerDown}
       onPointerMove={gestures.onPointerMove}
       onPointerUp={gestures.onPointerUp}
@@ -128,6 +152,8 @@ export function Canvas() {
       >
         <ObjectLayer width={width} height={height} />
       </div>
+
+      <BoardAnnouncer />
 
       {/*
        * APPARATUS, at screen size.
