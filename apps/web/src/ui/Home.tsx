@@ -135,7 +135,10 @@ export function Home({ repository }: { readonly repository: BoardRepository }) {
       for (const board of found) {
         if (board.ownerKey !== null) rememberOwnerKey(board.boardId, board.ownerKey)
       }
-      if (live) setListing({ boards: found, readAt: Date.now() })
+      if (!live) return
+      setListing({ boards: found, readAt: Date.now() })
+      // A read that works replaces any that failed before it.
+      setListProblem(null)
     }, (error: unknown) => {
       // Said, rather than "Looking for your boards…" for as long as the tab
       // stays open.

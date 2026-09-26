@@ -48,8 +48,8 @@ function storedRecord(page: Page): Promise<string> {
 }
 
 /** Marks the stored board as written by a later version, then reopens it. */
-async function fromTheFuture(page: Page): Promise<void> {
-  await page.evaluate(async () => {
+async function fromTheFuture(page: Page, withBigInt = false): Promise<void> {
+  await page.evaluate(async (bigint) => {
     const db: IDBDatabase = await new Promise((resolve, reject) => {
       const request = indexedDB.open('openframe')
       request.onsuccess = () => resolve(request.result)
@@ -66,12 +66,14 @@ async function fromTheFuture(page: Page): Promise<void> {
     }
     record.payload.schemaVersion = 999
     record.payload.board.meta.title = 'Pricing research'
+    // Structured clone keeps what JSON cannot; a newer version might store one.
+    if (bigint) (record.payload.board as Record<string, unknown>).size = 10n
     store.put(record)
     await new Promise((resolve) => {
       transaction.oncomplete = resolve
     })
     db.close()
-  })
+  }, withBigInt)
   await page.reload()
 }
 
@@ -127,4 +129,23 @@ test('is never written back, whatever happens on the page', async ({ page }) => 
   await page.reload()
   await expect(page.getByTestId('board-unreadable')).toBeVisible()
   expect(await storedRecord(page)).toBe(before)
+})
+
+test.describe('a record JSON cannot spell', () => {
+  test.beforeEach(async ({ page }) => {
+    await fromTheFuture(page, true)
+  })
+
+  test('still hands back a copy, and says it is not byte for byte', async ({ page }) => {
+    const [download] = await Promise.all([
+      page.waitForEvent('download'),
+      page.getByRole('button', { name: 'Download a copy' }).click(),
+    ])
+    const { readFile } = await import('node:fs/promises')
+    const written = JSON.parse(await readFile(await download.path(), 'utf8')) as {
+      board: { size: unknown }
+    }
+    expect(written.board.size).toEqual({ $bigint: '10' })
+    await expect(page.getByTestId('board-unreadable')).toContainText('not exactly as stored')
+  })
 })

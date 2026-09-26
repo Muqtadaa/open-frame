@@ -1,8 +1,9 @@
-import { useRef } from 'react'
+import { useRef, useState } from 'react'
 
 import type { QuarantineReason } from '@openframe/core'
 
 import { useOpenFrame, type Quarantine } from '../runtime/context.js'
+import { copyOfRecord } from './download-copy.js'
 import { Gate, GateActions, GateBody } from './Gate.js'
 
 /**
@@ -54,13 +55,14 @@ function fileName(title: string | null): string {
 export function BoardUnreadable() {
   const { runtime } = useOpenFrame()
   const download = useRef<HTMLButtonElement>(null)
+  const [inexact, setInexact] = useState(false)
   const quarantine = runtime.quarantine
   if (quarantine === null) return null
 
   const save = (): void => {
-    const blob = new Blob([JSON.stringify(quarantine.raw, null, 2)], {
-      type: 'application/json',
-    })
+    const copy = copyOfRecord(quarantine.raw)
+    setInexact(!copy.exact)
+    const blob = new Blob([copy.text], { type: 'application/json' })
     const url = URL.createObjectURL(blob)
     const link = document.createElement('a')
     link.href = url
@@ -80,6 +82,12 @@ export function BoardUnreadable() {
       initialFocus={download}
     >
       <GateBody>{describe(quarantine)} Nothing here will change it.</GateBody>
+      {inexact && (
+        <p className="of-gone__body" role="status">
+          Some of it could not be written as plain text, so the copy is not exactly as stored. The
+          places it differs are marked.
+        </p>
+      )}
       <GateActions>
         <button
           ref={download}
