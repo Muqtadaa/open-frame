@@ -91,6 +91,7 @@ export const imageType = defineObjectType<typeof IMAGE_TYPE, ImageData>({
   describe: (object) => ({
     searchText: object.data.alt,
     summary: object.data.alt.trim() === '' ? 'Image (no description)' : `Image: ${object.data.alt}`,
+    gist: object.data.alt.trim(),
     fields: { alt: object.data.alt },
   }),
 })

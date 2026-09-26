@@ -67,6 +67,7 @@ export const stickyType = defineObjectType<typeof STICKY_TYPE, StickyData>({
     return {
       searchText: text,
       summary: text.trim() === '' ? 'Empty sticky note' : text.slice(0, 120),
+      gist: text.trim().slice(0, 120),
       fields: { text },
     }
   },

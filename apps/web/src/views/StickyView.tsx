@@ -38,7 +38,7 @@ function StickyRenderer({ object }: ObjectViewProps<StickyData>) {
   )
 }
 
-function StickyEditor({ object, Chrome, onCommit, onCancel }: ObjectEditorProps<StickyData>) {
+function StickyEditor({ object, Chrome, onCommit }: ObjectEditorProps<StickyData>) {
   return (
     <RichTextEditor
       initialText={object.data.text}
@@ -53,7 +53,6 @@ function StickyEditor({ object, Chrome, onCommit, onCancel }: ObjectEditorProps<
       }}
       ariaLabel="Edit sticky note text"
       onCommit={(text) => onCommit({ text })}
-      onCancel={onCancel}
     />
   )
 }

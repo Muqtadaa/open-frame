@@ -47,6 +47,7 @@ import {
   type ObjectStyle,
   type Rect,
   type RichText,
+  type SizeToken,
   type StrokeToken,
   type TableCell,
   type TableData,
@@ -58,6 +59,7 @@ import { FormatBar } from './FormatBar.js'
 import {
   RichTextField,
   sizeOfRange,
+  sizeReadout,
   stepSize,
   type FormatState,
   type RichTextFieldHandle,
@@ -575,7 +577,6 @@ function TableEditor({
    */
   const [editing, setEditing] = useState<{
     readonly cell: Cell
-    readonly before: RichText
     readonly seed: RichText
     readonly caret: 'end' | 'select-all'
     readonly turn: number
@@ -584,9 +585,6 @@ function TableEditor({
       ? null
       : {
           cell: opened,
-          before: object.data.cells[opened.row * object.data.columns.length + opened.col]?.text ?? [
-            { text: '' },
-          ],
           seed: object.data.cells[opened.row * object.data.columns.length + opened.col]?.text ?? [
             { text: '' },
           ],
@@ -595,7 +593,7 @@ function TableEditor({
         },
   )
   const field = useRef<RichTextFieldHandle | null>(null)
-  const [format, setFormat] = useState<FormatState>({ marks: [], list: undefined })
+  const [format, setFormat] = useState<FormatState>({ marks: [], list: undefined, size: undefined })
 
   const [menu, setMenu] = useState<{ x: number; y: number } | null>(null)
   const [target, setTarget] = useState<CellTarget>('fill')
@@ -671,7 +669,6 @@ function TableEditor({
     select(anchor)
     setEditing((current) => ({
       cell: anchor,
-      before: text,
       seed: seed ?? text,
       caret: 'end',
       turn: (current?.turn ?? 0) + 1,
@@ -816,9 +813,15 @@ function TableEditor({
     const first = kinds[0]
     return kinds.every((kind) => kind === first) ? first : undefined
   }
+  const sized = (): SizeToken | undefined => {
+    const sizes = rangeCells().map((cell) => sizeReadout(cell.text, 0, whole(cell.text)))
+    const first = sizes[0]
+    return sizes.every((size) => size === first) ? first : undefined
+  }
   const rangeFormat: FormatState = {
     marks: hasText ? MARKS.filter((mark) => covers(mark)) : [],
     list: listed(),
+    size: sized(),
   }
   const toggleRangeMark = (mark: Mark): void => {
     const on = !covers(mark)
@@ -848,13 +851,14 @@ function TableEditor({
    * The spreadsheet's keys while a cell is being typed in. The field stops
    * every key from reaching the board, so these are claimed from inside it:
    * Tab moves on rather than nesting a list item, Enter finishes and moves
-   * down, and Escape puts back what the cell said before.
+   * down, and Escape goes back to moving between cells KEEPING what was
+   * typed. It used to put back what the cell said before — one key throwing
+   * away words, the same fault every other editor on the board had.
    */
   const editingKey = (event: KeyboardEvent<HTMLDivElement>): void => {
     if (editing === null) return
     if (event.key === 'Escape') {
       event.preventDefault()
-      writeCell(editing.cell, editing.before)
       finishEditing()
       return
     }
@@ -1524,6 +1528,9 @@ function TableEditor({
           <FormatBar
             embedded
             state={editing === null ? rangeFormat : format}
+            onReturn={() => {
+              if (editing !== null) field.current?.focus()
+            }}
             onToggle={(mark) => {
               if (editing !== null) field.current?.toggleMark(mark)
               else toggleRangeMark(mark)
@@ -1588,7 +1595,7 @@ function TableEditor({
               <button
                 type="button"
                 className="of-button of-button--ghost of-cellbar__clear"
-              aria-label="Reset"
+                aria-label="Reset"
                 data-tip="Use the table's own colours"
                 aria-description="Use the table's own colours"
                 data-testid="cell-clear"

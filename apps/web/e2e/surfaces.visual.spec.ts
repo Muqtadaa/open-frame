@@ -61,6 +61,14 @@ async function snap(page: Page, name: string): Promise<void> {
   // The pointer is parked off every control so no hover bed is photographed.
   await page.mouse.move(1270, 5)
   /*
+   * Never mid-save: "Saving…" is wider than "Saved", so a photograph taken
+   * during the half-second autosave moves everything after it in the bar.
+   */
+  const save = page.getByTestId('save-state')
+  if ((await save.count()) > 0) {
+    await expect(save).not.toHaveAttribute('data-state', /^(pending|saving)$/)
+  }
+  /*
    * Strict. Playwright's default per-pixel tolerance (0.2) let a whole
    * radius-scale change through on all but one surface — a 2px difference in a
    * corner is exactly the kind of change this net exists to show. Stable at
@@ -158,7 +166,7 @@ for (const world of WORLDS) {
       await page.keyboard.press('Shift+Tab')
       await page.keyboard.press('Enter')
       await page.keyboard.type('- bullet')
-      // Committed by leaving: Escape would discard the edit.
+      // Committed by leaving.
       await page.mouse.click(1100, 600)
       await expect(page.locator('[data-object-type="sticky"] [role="listitem"]')).toHaveCount(4)
       await snap(page, `${world}-note-lists`)
@@ -221,10 +229,7 @@ for (const world of WORLDS) {
 
     test('comment composer', async ({ page }) => {
       await openSharedBoard(page)
-      await page
-        .getByRole('button', { name: /comment/i })
-        .first()
-        .click()
+      await page.getByTestId('tool-comment').click()
       await page.locator('[data-testid="canvas"]').click({ position: { x: 420, y: 260 } })
       await expect(page.getByTestId('comment-panel')).toBeVisible()
       await snap(page, `${world}-comment-composer`)

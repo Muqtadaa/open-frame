@@ -46,7 +46,7 @@ function TextRenderer({ object }: ObjectViewProps<TextData>) {
   )
 }
 
-function TextEditor({ object, Chrome, onCommit, onCancel }: ObjectEditorProps<TextData>) {
+function TextEditor({ object, Chrome, onCommit }: ObjectEditorProps<TextData>) {
   return (
     <RichTextEditor
       initialText={object.data.text}
@@ -60,7 +60,6 @@ function TextEditor({ object, Chrome, onCommit, onCancel }: ObjectEditorProps<Te
       }}
       ariaLabel="Edit text"
       onCommit={(text) => onCommit({ text })}
-      onCancel={onCancel}
     />
   )
 }

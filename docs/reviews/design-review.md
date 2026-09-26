@@ -498,3 +498,44 @@ cluster, clarified.
 - **Contract:** `apps/web/.impeccable/surfaces/apps-web-src-ui-statusbar-tsx.md`.
 - **Left for later:** the front door's account chip still signs out on a press
   (C3 #9, Home).
+
+### C3 #4 · Context menu, search, arrange bar, format bar (critique 22/40)
+
+A dual-agent critique scored the four surfaces 22/40. It found:
+- **P0:** Escape silently discarded typed text, and could not be undone.
+- **P1:** the context menu was not a keyboard menu.
+- **P1:** the context menu had no hierarchy: 16 flat rows, and an
+  all-disabled menu on empty board.
+- **P2:** search had no focus ring, no listbox semantics and lost focus.
+- **P2:** the format bar had no size readout and no keyboard reach.
+
+The owner chose everything, minors included; Escape commits; the full
+menu restructure; and all three format-bar additions.
+
+- **Escape keeps words** (`ee3bde4`, `e9f2626`): every editor commits on
+  Escape. An edit that changed nothing commits nothing. The surface goldens
+  had been photographing a note Escape emptied.
+- **Context menu, keyboard** (`95677c8`): focus in, arrows, Home/End and
+  typeahead; Escape closes only the menu; Shift+F10 hangs it from the
+  selection; `aria-disabled`, `aria-keyshortcuts`, one shortcut notation.
+- **Context menu, hierarchy** (`d3010a9`): Derive and Promote lead; the
+  stacking order becomes "Arrange ›"; Delete stands alone as danger; an
+  empty-board menu; 30px rows so it fits under the pointer.
+- **Search** (`bcc37ec`): combobox over a listbox, a focus ring, closes on a
+  press elsewhere, focus handed back, a content line instead of the typed
+  summary, a `type:` hint.
+- **Format bar** (`1019a64`): a size readout held to the stylesheet's ladder,
+  ends switched off, shortcuts in every tip, Mod+Shift+X and Mod+Shift+>/<,
+  Alt+F10 into the bar. One `--of-disabled` opacity across the app.
+- **Minors:** the arrange bar's alignments grouped in threes; distribute's
+  reason reachable; redundant descriptions removed; one hover wash for
+  "about to choose".
+- **Owner note, same pass** (`c76e2de`): the record panel said "Frame: Frame".
+  Each type now gives a `gist` — its content alone — which the panel and
+  search print; the summary keeps its label for MCP and provenance.
+- **Contract:** `apps/web/.impeccable/surfaces/apps-web-src-ui-contextmenu-tsx.md`.
+- **Left for later:** the arrange bar is first in tab order (the chrome layer
+  precedes the navigation bar in the DOM); at 760px it can still sit over the
+  record panel; a partly bold selection shows bold off rather than mixed; the
+  menu still opens over the record panel (deliberately, per its test); Hide
+  says nothing about where hidden objects go.

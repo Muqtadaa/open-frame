@@ -26,7 +26,7 @@ async function write(page: Page, tool: string, at: { x: number; y: number }, tex
   await page.getByTestId(`tool-${tool}`).click()
   await page.locator(CANVAS).click({ position: at })
   await page.keyboard.type(text)
-  // Clicking away commits. Escape would discard every character.
+  // Clicking away commits (as Escape now does too).
   await page.locator(CANVAS).click({ position: { x: 240, y: 630 } })
   await page.keyboard.press('v')
 }

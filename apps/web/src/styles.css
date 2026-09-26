@@ -157,6 +157,12 @@
   --of-step: 10px;
   /* A secondary control inside apparatus — the AA 2.5.8 floor is 24. */
   --of-hit-sm: 30px;
+  /*
+   * How far an unavailable control fades — ONE value. The menu used 0.38 and
+   * the icon buttons 0.35, so the same state looked different across a gap
+   * of a few pixels.
+   */
+  --of-disabled: 0.38;
   /* Anything you operate. */
   --of-hit: 40px;
   /* A row, or a primary action. Clears the 44px AAA target with room over. */
@@ -448,7 +454,7 @@
 }
 
 .of-button:disabled {
-  opacity: 0.35;
+  opacity: var(--of-disabled);
   cursor: default;
 }
 
@@ -524,13 +530,14 @@
   height: 16px;
 }
 
-.of-icon-button:hover:not(:disabled) {
+.of-icon-button:hover:not(:disabled, [aria-disabled='true']) {
   color: var(--of-ink);
   background: var(--of-hover);
 }
 
-.of-icon-button:disabled {
-  opacity: 0.35;
+.of-icon-button:disabled,
+.of-icon-button[aria-disabled='true'] {
+  opacity: var(--of-disabled);
   cursor: default;
 }
 
@@ -916,7 +923,7 @@ body {
 }
 
 .of-tool:disabled {
-  opacity: 0.35;
+  opacity: var(--of-disabled);
   cursor: default;
 }
 
@@ -1293,7 +1300,7 @@ body {
 }
 
 .of-swatch:disabled {
-  opacity: 0.35;
+  opacity: var(--of-disabled);
   cursor: default;
 }
 
@@ -3838,14 +3845,20 @@ body {
   border-top: 1px solid var(--of-panel-border);
 }
 
+/*
+ * Rows at the small target, not the tool target: a menu is read down a
+ * column and pressed once, and at 40px a selection's thirteen entries were
+ * taller than the space under a pointer halfway down a laptop screen — so the
+ * menu was clamped up over the very object it was about.
+ */
 .of-menu__item {
   display: flex;
-  min-height: var(--of-hit);
+  min-height: var(--of-hit-sm);
   gap: var(--of-space-16);
   align-items: center;
   justify-content: space-between;
   width: 100%;
-  padding: var(--of-space-6) var(--of-step);
+  padding: var(--of-space-4) var(--of-step);
   font: inherit;
   font-size: var(--of-type-ui);
   color: var(--of-ink);
@@ -3856,18 +3869,52 @@ body {
   cursor: pointer;
 }
 
-.of-menu__item:hover:not(:disabled) {
+.of-menu__item:hover:not([aria-disabled='true']) {
   background: var(--of-accent-soft);
 }
 
-.of-menu__item:disabled {
-  opacity: 0.38;
+/*
+ * The keyboard's item gets the SAME bed as the pointer's, plus the ring. It
+ * had the ring alone, on a menu whose hover was a wash — so the item somebody
+ * arrowed to looked less chosen than the one a mouse happened to cross.
+ */
+.of-menu__item:focus-visible {
+  background: var(--of-accent-soft);
+}
+
+.of-menu__item[aria-disabled='true'] {
+  opacity: var(--of-disabled);
   cursor: default;
 }
 
+/*
+ * Shortcuts in the mono DESIGN.md gives every readout, so the column reads as
+ * keys rather than as a second, fainter label.
+ */
 .of-menu__shortcut {
+  font-family: var(--of-mono);
   font-size: var(--of-type-record);
   color: var(--of-ink-muted);
+}
+
+.of-menu__more {
+  width: 16px;
+  height: 16px;
+  color: var(--of-ink-muted);
+}
+
+.of-menu__item[aria-expanded='true'] {
+  background: var(--of-accent-soft);
+}
+
+/*
+ * Delete is the one entry that destroys, so it says so the moment it is
+ * aimed at — not at rest, where a red word in every menu would shout.
+ */
+.of-menu__item--danger:hover:not([aria-disabled='true']),
+.of-menu__item--danger:focus-visible {
+  color: var(--of-danger);
+  background: var(--of-danger-wash);
 }
 
 /* ---------- frames ---------- */
@@ -4999,6 +5046,16 @@ textarea.of-input {
   font-size: var(--of-type-ui);
 }
 
+/* A readout, so the mono every readout is set in; wide enough for ×7.6. */
+.of-format-bar__size {
+  min-width: 36px;
+  font-family: var(--of-mono);
+  font-size: var(--of-type-record);
+  font-variant-numeric: tabular-nums;
+  color: var(--of-ink-muted);
+  text-align: center;
+}
+
 /*
  * The editable surface. A contenteditable, not a textarea — a textarea cannot
  * show a bold word. `pre-wrap` makes a newline character a line break, which is
@@ -5026,11 +5083,18 @@ textarea.of-input {
   flex-direction: column;
   width: min(440px, calc(100vw - 32px));
   overflow: hidden;
-  background: var(--of-panel);
-  border: 1px solid var(--of-panel-border);
-  border-radius: var(--of-radius);
-  box-shadow: var(--of-shadow);
   transform: translateX(-50%);
+}
+
+/*
+ * The box's focus is the PANEL's ring. The input had `outline: none` and
+ * nothing in its place — the one text field in the product with no sign it
+ * had the keyboard. On the panel rather than the input, whose edges are the
+ * panel's own and would draw a ring inside a ring.
+ */
+.of-search:has(.of-search__input:focus-visible) {
+  outline: 2px solid var(--of-accent);
+  outline-offset: 2px;
 }
 
 .of-search__input {
@@ -5072,12 +5136,10 @@ textarea.of-input {
 
 .of-search__result {
   display: flex;
-  min-height: var(--of-hit);
+  min-height: var(--of-hit-sm);
   gap: var(--of-step);
   align-items: baseline;
   width: 100%;
-  /* The AA 2.5.8 target minimum, like every other control in the system. */
-  min-height: 32px;
   padding: var(--of-space-6) var(--of-space-12);
   font-family: var(--of-font);
   font-size: var(--of-type-ui);
@@ -5088,9 +5150,10 @@ textarea.of-input {
   cursor: pointer;
 }
 
+/* The same wash as the menu's: one look for "the one you are about to choose". */
 .of-search__result--on,
 .of-search__result:hover {
-  background: var(--of-hover);
+  background: var(--of-accent-soft);
 }
 
 /* Mono marks the record — here, which KIND of thing was found. */

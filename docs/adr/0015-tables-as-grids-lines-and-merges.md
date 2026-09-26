@@ -103,7 +103,9 @@ very start. It does not copy the words.
   - Enter finishes the cell and moves down; Shift+Enter makes a new line or
     list item.
   - Tab finishes and moves across.
-  - Escape puts back what that one cell said before.
+  - Escape puts back what that one cell said before. _Superseded by C3 #4:
+    Escape now keeps the cell's text and returns to navigation, like every
+    other editor on the board — undo is how an edit is taken back._
 - Every other cell is drawn exactly as the board draws it. That also ends the
   old editor's bug where a field kept by index showed a neighbour's text
   after a column was inserted.

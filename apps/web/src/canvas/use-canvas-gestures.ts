@@ -15,6 +15,8 @@ import {
   type Rect,
   type Viewport,
   type ImageCrop,
+  unionAll,
+  worldRectToScreen,
 } from '@openframe/core'
 import {
   useCallback,
@@ -1372,6 +1374,40 @@ export function useCanvasGestures(containerRef: RefObject<HTMLElement | null>) {
     (event: ReactMouseEvent<HTMLElement>): void => {
       event.preventDefault()
       const store = useInteractionStore.getState()
+      /*
+       * From the KEYBOARD — Shift+F10 or the menu key — the browser still
+       * sends a contextmenu event, with `button` -1 rather than 2 and a
+       * position at the corner of whatever had focus. Hit testing that point
+       * would select whatever happened to be there; the menu belongs on what
+       * is already selected, or mid-board when nothing is.
+       */
+      if (event.button !== 2) {
+        const rect = containerRef.current?.getBoundingClientRect()
+        const left = rect?.left ?? 0
+        const top = rect?.top ?? 0
+        const doc = runtime.store.getDocument()
+        const selected = unionAll(
+          [...store.selection]
+            .map((id) => doc.objects.get(id))
+            .filter((object): object is AnyOpenFrameObject => object !== undefined)
+            .map((object) => runtime.registry.boundsOf(object, doc)),
+        )
+        const box =
+          selected === null
+            ? { x: store.canvasSize.width / 2, y: store.canvasSize.height / 2, width: 0, height: 0 }
+            : worldRectToScreen(store.viewport, selected)
+        store.openContextMenu({
+          ...box,
+          x: box.x + left,
+          y: box.y + top,
+          via: 'keyboard',
+          world: screenToWorld(store.viewport, {
+            x: box.x + box.width / 2,
+            y: box.y + box.height / 2,
+          }),
+        })
+        return
+      }
       const worldPoint = toWorld(event.clientX, event.clientY)
       const hit =
         hitTest(runtime.store.getDocument(), runtime.registry, worldPoint) ??
@@ -1382,9 +1418,16 @@ export function useCanvasGestures(containerRef: RefObject<HTMLElement | null>) {
       if (hit !== null && !store.selection.has(hit)) store.setSelection([hit])
       if (hit === null) store.clearSelection()
 
-      store.openContextMenu({ x: event.clientX, y: event.clientY })
+      store.openContextMenu({
+        x: event.clientX,
+        y: event.clientY,
+        width: 0,
+        height: 0,
+        via: 'pointer',
+        world: worldPoint,
+      })
     },
-    [runtime.registry, runtime.store, toWorld],
+    [containerRef, runtime.registry, runtime.store, toWorld],
   )
 
   const setSpaceHeld = useCallback((held: boolean): void => {

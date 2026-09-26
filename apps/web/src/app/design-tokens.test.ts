@@ -802,3 +802,26 @@ describe('a failed save survives a narrow window', () => {
     for (const selector of hides) expect(selector).toContain(':not(.of-status__save--failed)')
   })
 })
+
+/*
+ * The format bar's size readout names each step of the type ladder as a
+ * multiple of the object's own size. Those multiples ARE the `.of-size--*`
+ * rules, so the readout is held to the stylesheet: change a step's em and
+ * leave the readout alone, and the bar would name a size the text is not.
+ */
+describe('the format bar names the sizes the stylesheet draws', () => {
+  it('matches every .of-size rule, and md is the object itself', async () => {
+    const { SIZE_SCALE } = await import('../views/FormatBar.js')
+    for (const [token, scale] of Object.entries(SIZE_SCALE)) {
+      const rule = new RegExp(`\\.of-size--${token}\\s*\\{\\s*font-size:\\s*([\\d.]+)em`).exec(
+        CSS,
+      )
+      if (token === 'md') {
+        expect(rule, 'md is the object size and has no rule').toBeNull()
+        expect(scale).toBe(1)
+      } else {
+        expect(rule?.[1], `.of-size--${token}`).toBe(String(scale))
+      }
+    }
+  })
+})

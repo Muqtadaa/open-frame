@@ -46,6 +46,7 @@ export const hypothesisType = defineObjectType<typeof HYPOTHESIS_TYPE, Hypothesi
     return {
       searchText: [text, status].filter(Boolean).join(' '),
       summary: text.trim() === '' ? 'Empty hypothesis' : text.slice(0, 120),
+      gist: text.trim().slice(0, 120),
       fields: { text, status },
     }
   },

@@ -45,6 +45,7 @@ export const requirementType = defineObjectType<typeof REQUIREMENT_TYPE, Require
     return {
       searchText: [text, priority].filter(Boolean).join(' '),
       summary: text.trim() === '' ? 'Empty requirement' : text.slice(0, 120),
+      gist: text.trim().slice(0, 120),
       fields: { text, priority },
     }
   },

@@ -52,6 +52,7 @@ export const codeType = defineObjectType<typeof CODE_TYPE, CodeData>({
         code.trim() === ''
           ? 'Empty code block'
           : `${object.data.language}: ${firstLine.trim().slice(0, 100)}`,
+      gist: firstLine.trim().slice(0, 100),
       fields: { language: object.data.language, code },
     }
   },

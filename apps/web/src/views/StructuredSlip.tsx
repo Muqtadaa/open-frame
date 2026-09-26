@@ -111,7 +111,6 @@ export function StructuredEditor<TData extends { readonly text: RichText }>({
   defaultColor,
   className,
   onCommit,
-  onCancel,
 }: ObjectEditorProps<TData> & {
   readonly text: RichText
   readonly label: string
@@ -137,7 +136,6 @@ export function StructuredEditor<TData extends { readonly text: RichText }>({
       }}
       ariaLabel={label}
       onCommit={(next) => onCommit({ text: next } as Partial<TData>)}
-      onCancel={onCancel}
     />
   )
 }

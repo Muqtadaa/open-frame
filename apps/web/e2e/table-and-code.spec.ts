@@ -266,11 +266,7 @@ test('colours a range of cells, in one undo entry', async ({ page }) => {
   await page.getByTestId('cell-target-text').click()
   await page.getByTestId('cell-text-red').click()
 
-  /*
-   * Committed by leaving, NOT by Escape — Escape cancels, and a first draft of
-   * this test pressed it and then asserted against a table that had correctly
-   * thrown the colours away.
-   */
+  // Committed by leaving the table.
   await page.locator(CANVAS).click({ position: { x: 900, y: 600 } })
   await page.locator('[data-object-id]').first().click()
 

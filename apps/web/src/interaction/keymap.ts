@@ -192,3 +192,6 @@ export function formatShortcut(keys: string, isMac: boolean): string {
  * one of them would eventually have disagreed with the others.
  */
 export const MOD_KEY = formatShortcut('Mod', IS_MAC)
+
+// Chords as labels and as `aria-keyshortcuts`: pure, so views can use them too.
+export { ariaKeys, formatKeys } from '../scene/shortcuts.js'

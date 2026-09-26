@@ -105,7 +105,14 @@ export function ArrangeBar() {
       avoid={panel}
     >
       <div className="of-arrange of-surface" role="group" aria-label="Arrange selection">
-        {ALIGNMENTS.map(({ edge, label, Icon }) => (
+        {ALIGNMENTS.map(({ edge, label, Icon }, index) => [
+          /*
+           * Two groups of three — across, then down — with a rule between.
+           * Six identical glyphs in a row read as one undifferentiated strip,
+           * and the pair a hand is looking for is "left or right", not "the
+           * fourth one".
+           */
+          index === 3 && <span key="across" className="of-arrange__rule" aria-hidden="true" />,
           <button
             key={edge}
             type="button"
@@ -118,8 +125,8 @@ export function ArrangeBar() {
             }}
           >
             <Icon className="of-arrange__glyph" />
-          </button>
-        ))}
+          </button>,
+        ])}
 
         <span className="of-arrange__rule" aria-hidden="true" />
 
@@ -133,14 +140,19 @@ export function ArrangeBar() {
              * between the ends to even out, and a control that disappears as
              * the selection changes size reads as a glitch — the same call the
              * code box's format button makes.
+             *
+             * By `aria-disabled`, so the reason can be heard: a natively
+             * disabled button leaves the tab order, and the "needs three or
+             * more" it carried reached nobody who needed it. Enabled, the name
+             * says it all, and describing it too read the name out twice.
              */
-            disabled={!canDistribute}
+            aria-disabled={canDistribute ? undefined : true}
             data-tip={canDistribute ? label : `${label} (needs three or more)`}
-            aria-description={canDistribute ? label : `${label} (needs three or more)`}
+            aria-description={canDistribute ? undefined : 'Needs three or more'}
             aria-label={label}
             data-testid={`distribute-${axis}`}
             onClick={() => {
-              commands.distribute(axis)
+              if (canDistribute) commands.distribute(axis)
             }}
           >
             <Icon className="of-arrange__glyph" />

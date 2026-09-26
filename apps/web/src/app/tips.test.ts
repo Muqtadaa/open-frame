@@ -54,7 +54,25 @@ describe('tips a keyboard can summon', () => {
         const tip = attribute(tag, 'data-tip')
         const name = attribute(tag, 'aria-label')
         const description = attribute(tag, 'aria-description')
-        if (description === null && tip !== name) return [`${path}: ${tip ?? ''} is never announced`]
+        /*
+         * A tip that is the name PLUS its shortcut — `tip(label, keys)` beside
+         * `aria-label={label}` — reaches assistive tech in two halves: the
+         * name, and `aria-keyshortcuts` built from the same keys. Describing
+         * it as well would read the name twice.
+         */
+        const composed = /^\{tip\((.+?),\s*(.+)\)\}$/.exec(tip ?? '')
+        if (
+          description === null &&
+          composed !== null &&
+          [`{${composed[1] ?? ''}}`, `"${(composed[1] ?? '').replace(/^'|'$/g, '')}"`].includes(
+            name ?? '',
+          ) &&
+          attribute(tag, 'aria-keyshortcuts') === `{ariaKeys(${composed[2] ?? ''})}`
+        ) {
+          return []
+        }
+        if (description === null && tip !== name)
+          return [`${path}: ${tip ?? ''} is never announced`]
         if (description !== null && description === name)
           return [`${path}: ${description} is announced twice`]
         return []

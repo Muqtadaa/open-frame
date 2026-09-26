@@ -266,6 +266,23 @@ function ObjectViewInner({ id, views }: Props) {
             Chrome={chrome}
             Overlay={overlay}
             onCommit={(patch, size) => {
+              /*
+               * An edit that changed nothing ends without a command. Every
+               * way out of an editor commits now — Escape included — so
+               * opening a note and leaving it would otherwise put a no-op on
+               * the undo stack, and the next undo would appear to do nothing.
+               */
+              const data = object.data as Readonly<Record<string, unknown>>
+              const unchanged =
+                Object.entries(patch).every(
+                  ([key, value]) => JSON.stringify(value) === JSON.stringify(data[key]),
+                ) &&
+                (size === undefined ||
+                  (size.width === object.frame.width && size.height === object.frame.height))
+              if (unchanged) {
+                setEditing(null)
+                return
+              }
               // Types name their editable field differently (`text`, `name`),
               // so the patch is passed through rather than picked apart here.
               if (
@@ -278,7 +295,6 @@ function ObjectViewInner({ id, views }: Props) {
               }
               setEditing(null)
             }}
-            onCancel={() => setEditing(null)}
           />
         ) : (
           <Renderer

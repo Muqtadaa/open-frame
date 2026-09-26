@@ -32,6 +32,6 @@ export const frameType = defineObjectType<typeof FRAME_TYPE, FrameData>({
 
   describe: (object) => {
     const name = plainTextOf(object.data.name)
-    return { searchText: name, summary: `Frame: ${name}`, fields: { name } }
+    return { searchText: name, summary: `Frame: ${name}`, gist: name.trim(), fields: { name } }
   },
 })

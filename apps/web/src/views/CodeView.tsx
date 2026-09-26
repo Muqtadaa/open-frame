@@ -86,8 +86,15 @@ function CodeRenderer({ object }: ObjectViewProps<CodeData>) {
  * means indentation, and a browser's default would make the one character
  * that matters most impossible to type.
  */
-function CodeEditor({ object, Chrome, onCommit, onCancel }: ObjectEditorProps<CodeData>) {
+function CodeEditor({ object, Chrome, onCommit }: ObjectEditorProps<CodeData>) {
   const [code, setCode] = useState(object.data.code)
+  // Escape commits, and the unmount that follows can blur the box: one commit.
+  const done = useRef(false)
+  const commit = (): void => {
+    if (done.current) return
+    done.current = true
+    onCommit({ code, language })
+  }
   const [language, setLanguage] = useState(object.data.language)
   const area = useRef<HTMLTextAreaElement>(null)
 
@@ -151,7 +158,7 @@ function CodeEditor({ object, Chrome, onCommit, onCancel }: ObjectEditorProps<Co
         ) {
           return
         }
-        onCommit({ code, language })
+        commit()
       }}
     >
       {/*
@@ -218,8 +225,11 @@ function CodeEditor({ object, Chrome, onCommit, onCancel }: ObjectEditorProps<Co
         onKeyDown={(event) => {
           // The board's own shortcuts must not fire while typing code.
           event.stopPropagation()
+          // Escape LEAVES, and leaving keeps the code: it used to throw away
+          // everything pasted or typed since the block was opened.
           if (event.key === 'Escape') {
-            onCancel()
+            event.preventDefault()
+            commit()
             return
           }
           /*

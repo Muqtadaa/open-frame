@@ -35,6 +35,7 @@ export const unknownType = defineObjectType<typeof UNKNOWN_TYPE, UnknownData>({
   describe: (object) => ({
     searchText: '',
     summary: `Unsupported object (${object.data.originalType})`,
+    gist: `Unsupported object (${object.data.originalType})`,
     fields: { originalType: object.data.originalType },
   }),
 })

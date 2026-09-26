@@ -138,7 +138,6 @@ export interface ObjectEditorProps<TData = unknown> {
     patch: Partial<TData>,
     size?: { readonly width: number; readonly height: number },
   ) => void
-  readonly onCancel: () => void
 }
 
 export interface ObjectViewDefinition {

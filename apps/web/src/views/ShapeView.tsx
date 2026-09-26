@@ -147,7 +147,7 @@ function ShapeRenderer({ object }: ObjectViewProps<ShapeData>) {
   )
 }
 
-function ShapeEditor({ object, Chrome, onCommit, onCancel }: ObjectEditorProps<ShapeData>) {
+function ShapeEditor({ object, Chrome, onCommit }: ObjectEditorProps<ShapeData>) {
   return (
     <div className="of-shape" style={{ opacity: object.style.opacity ?? 1 }}>
       <ShapeOutline object={object} />
@@ -162,7 +162,6 @@ function ShapeEditor({ object, Chrome, onCommit, onCancel }: ObjectEditorProps<S
         }}
         ariaLabel="Edit shape label"
         onCommit={(text) => onCommit({ text })}
-        onCancel={onCancel}
       />
     </div>
   )

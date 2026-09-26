@@ -38,6 +38,8 @@ import {
 export interface FormatState {
   readonly marks: readonly Mark[]
   readonly list: ListKind | undefined
+  /** The size the next step starts from; undefined when the text disagrees. */
+  readonly size: SizeToken | undefined
 }
 
 /** The commands a format bar sends to whichever field it is driving. */
@@ -47,6 +49,8 @@ export interface RichTextFieldHandle {
   readonly toggleList: (kind: ListKind) => void
   /** The text as it stands, read from the element. */
   readonly read: () => RichText
+  /** Takes the keyboard back, with the selection it had — Escape from the bar. */
+  readonly focus: () => void
 }
 
 interface Props {
@@ -157,9 +161,13 @@ export function RichTextField({
   }, [])
 
   const report = (text: RichText, from: number, to: number): void => {
+    // A caret with nothing selected resizes the WHOLE text (see `reformat`),
+    // so that is the size the readout names.
+    const sized = to > from ? { from, to } : { from: 0, to: plainTextOf(text).length }
     reportRef.current?.({
       marks: MARK_LIST.filter((mark) => markCovers(text, from, to, mark)),
       list: listOf(text, from, to),
+      size: sizeReadout(text, sized.from, sized.to),
     })
   }
 
@@ -247,11 +255,26 @@ export function RichTextField({
     )
   }
 
+  /*
+   * Where the selection was when the field last had it. Focusing a
+   * contenteditable does not reliably put a selection back, and coming home
+   * from the format bar to a caret at the start of the note would lose
+   * somebody's place.
+   */
+  const lastSelection = useRef<{ from: number; to: number } | null>(null)
+
   useImperativeHandle(handle, () => ({
     toggleMark,
     resize,
     toggleList,
     read: () => (ref.current === null ? initialText : spansFromElement(ref.current)),
+    focus: () => {
+      const element = ref.current
+      if (element === null) return
+      const at = selectionOffsets(element) ?? lastSelection.current
+      element.focus()
+      if (at !== null) setSelectionOffsets(element, at.from, at.to)
+    },
   }))
 
   /** The paragraph a collapsed caret is in, and where in it, or null. */
@@ -286,6 +309,39 @@ export function RichTextField({
         toggleList(kind)
         return
       }
+      /*
+       * The rest of the bar, from the keyboard: strikethrough as the editors
+       * that have one bind it, and size as a word processor steps it
+       * (Mod+Shift+> and <). Every button had a shortcut but these three.
+       */
+      if (event.code === 'KeyX') {
+        event.preventDefault()
+        toggleMark('strike')
+        return
+      }
+      if (event.code === 'Period' || event.code === 'Comma') {
+        event.preventDefault()
+        resize(event.code === 'Period' ? 1 : -1)
+        return
+      }
+    }
+
+    /*
+     * Alt+F10 into the format bar — the ARIA toolbar key, as document
+     * editors bind it. The bar was out of the keyboard's reach: Tab left the
+     * text, which ended the edit and took the bar away with it.
+     */
+    if (event.altKey && event.key === 'F10') {
+      const bar = ref.current?.ownerDocument.querySelector<HTMLElement>(
+        '[data-testid="format-bar"] button',
+      )
+      if (bar !== null && bar !== undefined) {
+        event.preventDefault()
+        const element = ref.current
+        lastSelection.current = element === null ? null : selectionOffsets(element)
+        bar.focus()
+        return
+      }
     }
 
     if (event.key === 'Tab') {
@@ -293,7 +349,11 @@ export function RichTextField({
       const at = element === null ? null : selectionOffsets(element)
       // Only a list nests. A Tab anywhere else leaves the field, as it leaves
       // every other one.
-      if (element !== null && at !== null && listOf(spansFromElement(element), at.from, at.to) !== undefined) {
+      if (
+        element !== null &&
+        at !== null &&
+        listOf(spansFromElement(element), at.from, at.to) !== undefined
+      ) {
         event.preventDefault()
         reshape((current, from, to) => indentBy(current, from, to, event.shiftKey ? -1 : 1))
         return
@@ -431,6 +491,26 @@ export function sizeOfRange(text: RichText, from: number, to: number): SizeToken
     const size = span.size ?? DEFAULT_SIZE
     if (found === undefined) found = size
     else if (found !== size) return DEFAULT_SIZE
+  }
+  return found ?? DEFAULT_SIZE
+}
+
+/**
+ * The size to SHOW for a range: its one size, or undefined when its runs
+ * disagree. Not `sizeOfRange`, which answers the default for a mixed range
+ * because stepping has to start somewhere — the readout reused it and called
+ * an `xs` word beside an `xl` one "×1".
+ */
+export function sizeReadout(text: RichText, from: number, to: number): SizeToken | undefined {
+  let seen = 0
+  let found: SizeToken | undefined
+  for (const span of text) {
+    const start = seen
+    seen += span.text.length
+    if (seen <= from || start >= to) continue
+    const size = span.size ?? DEFAULT_SIZE
+    if (found === undefined) found = size
+    else if (found !== size) return undefined
   }
   return found ?? DEFAULT_SIZE
 }
