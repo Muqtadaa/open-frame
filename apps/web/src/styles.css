@@ -2995,6 +2995,16 @@ body {
   border: 1px solid var(--of-panel-border);
   border-radius: var(--of-radius-surface);
   box-shadow: var(--of-shadow);
+  /*
+   * A sheet hangs below the bar and grows with what it holds — the owner's
+   * links plus the password form outgrow a phone on its side. The surface
+   * that places it only clamps its position, so the sheet bounds its own
+   * height and scrolls, or Done ends up below the window where nothing can
+   * reach it.
+   */
+  max-height: calc(100dvh - var(--of-nav-band) - var(--of-gutter));
+  overflow-y: auto;
+  overscroll-behavior: contain;
 }
 
 /* Who is signed in: a label, the name, and the address it came from. */

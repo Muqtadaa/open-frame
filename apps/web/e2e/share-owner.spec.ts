@@ -71,3 +71,22 @@ test('an owner who arrived on the view link is still handed the edit link', asyn
   expect(copied).toContain(`k=${EDIT}`)
   expect(copied).not.toContain(`k=${VIEW}`)
 })
+
+test('the share sheet scrolls rather than clipping in a short window', async ({ page }) => {
+  // A phone on its side: the links and the password form do not fit.
+  await page.setViewportSize({ width: 740, height: 360 })
+  await signedIn(page, [{ id: MINE, title: 'Mine', role: 'owner' }])
+  await page.goto(`/?room=${MINE}&k=${EDIT}`)
+  await expect(page.getByTestId('room-status')).toHaveAttribute('aria-description', /both links/)
+  await page.getByTestId('room-status').click()
+
+  const sheet = page.getByTestId('share-links')
+  const done = sheet.getByRole('button', { name: 'Done' })
+  await done.scrollIntoViewIfNeeded()
+  const box = await done.boundingBox()
+  expect(box).not.toBeNull()
+  expect(box!.y + box!.height).toBeLessThanOrEqual(360)
+  expect(box!.y).toBeGreaterThanOrEqual(0)
+  await done.click()
+  await expect(sheet).toHaveCount(0)
+})
