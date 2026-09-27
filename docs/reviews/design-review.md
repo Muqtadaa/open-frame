@@ -787,3 +787,53 @@ The owner chose everything, minors included:
   worker to say); a world toggle on the front door; a focused row action's
   tip covering the row above.
 
+
+### C3 #10 · The boot splash (critique 16/32)
+
+Snapshot `apps/web/.impeccable/critique/2026-09-27T15-34-27Z__src-app-splash-ts.md`,
+dual-agent. The score is out of 32: heuristics 6 and 10 do not apply to a
+two-second sheet with nothing to recall or document. The detector's three hits
+in `index.html` were false positives (the pre-load opacity, and two literals
+pinned to tokens by `brand-splash.test.ts`), and axe found no violations.
+
+- **P1:** the splash could stay up forever. `startCollaboration` was awaited
+  outside the try, and a room that refused the socket left it over an inert,
+  empty root, still saying "Opening your board".
+- **P1:** the two-second hold was paid on every page load, including every
+  board opened from the front door: about 1.2s of pure waiting each time, and
+  a dark neon flash between two pale pages in the Notebook.
+- **P2:** "Opening your board" on the front door, and "your" on somebody
+  else's board.
+- **P2:** the error boundary's panel and the front door's failure waited out
+  the hold. Focus landed on nothing, and an alert rendered into the inert root
+  was never announced.
+- **Minors:** a 999px capsule; fades off the motion scale; `theme-color` stuck
+  at violet in both worlds; a comment naming a function that no longer
+  existed.
+
+The owner chose everything, minors included; the artwork once per session and
+then a quiet sheet; and a route-aware label with no capsule, plus a watchdog.
+
+- **Never hangs** (`bed1598`): one try around every start-up await, and an
+  inline watchdog that says "Still opening" and offers Reload at 12s.
+- **Once per session** (`c90c30d`): later loads get a quiet sheet in the
+  world's page colour, gone as soon as the page is ready.
+- **Browser chrome** (`b8b2d75`): `theme-color` follows the world.
+- **The label** (`2c684ea`): says what is opening, has the control radius,
+  and sits under the picture in portrait.
+- **Failures not held** (`705a1ee`): StartFailed and the front door take the
+  splash away first.
+- **Motion** (`d0ffd2c`): `--of-settle` on `--of-ease`, pinned.
+- **Quiet and stalled** (`591d949`): found while photographing it. A quiet
+  sheet whose watchdog fired brought the artwork back; the picture is now
+  always hidden there.
+- **Contract:** `apps-web-src-app-splash-ts.md` (new). DESIGN.md's "The
+  brand" is rewritten for once per session, the quiet sheet and the
+  watchdog.
+- **Left for later:** at 844×390 the label brushes the bottom of the
+  wordmark's reflection.
+- **For the QA track:** under a loaded run, a key pressed the moment the rail
+  is visible can arrive before the keyboard listener's effect has attached.
+  `notices.spec.ts:90` and `rail-keyboard.spec.ts:147` each failed once in 80
+  loaded repeats. Main shows the same race: 1 failure in 160, on the same two
+  files. Specs should wait for the board to be ready, not merely drawn.

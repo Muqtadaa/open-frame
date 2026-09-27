@@ -40,12 +40,89 @@ describe('the boot splash', () => {
     expect(inlineStyle).toContain('#of-splash')
   })
 
-  it('paints only in brand colours', () => {
-    const allowed = new Set([token('brand-void'), afterHoursToken('ink')])
+  /*
+   * Brand colours, plus each world's page colour for the quiet sheet a tab
+   * gets once it has seen the artwork — a handover from the page to the page.
+   */
+  it('paints only in brand colours and the worlds’ page colours', () => {
+    const allowed = new Set([
+      token('brand-void'),
+      afterHoursToken('ink'),
+      token('page'),
+      afterHoursToken('page'),
+    ])
     const used = (inlineStyle.match(/#[0-9a-fA-F]{6}\b/g) ?? []).map((hex) => hex.toLowerCase())
 
     expect(used.length).toBeGreaterThan(0)
     for (const hex of used) expect(allowed).toContain(hex)
+  })
+
+  it('draws the quiet sheet in each world’s own page colour', () => {
+    const notebook =
+      /\[data-splash='quiet'\] #of-splash \{[^}]*background-color: (#[0-9a-fA-F]{6})/.exec(
+        inlineStyle,
+      )?.[1]
+    const afterHours =
+      /\[data-splash-world='after-hours'\] #of-splash \{[^}]*background-color: (#[0-9a-fA-F]{6})/.exec(
+        inlineStyle,
+      )?.[1]
+    expect(notebook?.toLowerCase()).toBe(token('page'))
+    expect(afterHours?.toLowerCase()).toBe(afterHoursToken('page'))
+  })
+
+  it('tells the browser chrome the quiet sheet’s colours, and only those', () => {
+    const script = /<script>\s*try \{[\s\S]*?<\/script>/.exec(HTML)?.[0] ?? ''
+    const used = (script.match(/#[0-9a-fA-F]{6}\b/g) ?? []).map((hex) => hex.toLowerCase())
+    expect(new Set(used)).toEqual(new Set([token('page'), afterHoursToken('page')]))
+  })
+
+  /*
+   * A bed with the product's control radius, not a 999px capsule: in this
+   * product round means grab me, and the label does nothing when pressed.
+   */
+  it('beds the label with the control radius', () => {
+    const label = /#of-splash p \{([^}]*)\}/.exec(inlineStyle)?.[1] ?? ''
+    const radius = /border-radius:\s*(\d+px)/.exec(label)?.[1]
+    const control = /--of-radius:\s*(\d+px)/.exec(CSS)?.[1]
+    expect(control).toBeDefined()
+    expect(radius).toBe(control)
+  })
+
+  /*
+   * The splash's fades are the product's own motion, written as literals for
+   * the same reason as its colours. They were 220ms and 320ms `ease-out`, off
+   * the scale and off the curve every other surface uses.
+   */
+  it('moves on the product’s curve and its settle duration', () => {
+    const settle = /--of-settle:\s*(\d+ms)/.exec(CSS)?.[1]
+    const ease = /--of-ease:\s*(cubic-bezier\([^)]*\))/.exec(CSS)?.[1]
+    const transitions = [...inlineStyle.matchAll(/transition:\s*opacity ([^;]+);/g)].map(
+      (match) => match[1],
+    )
+    expect(transitions.length).toBeGreaterThan(0)
+    for (const transition of transitions) expect(transition).toBe(`${settle ?? ''} ${ease ?? ''}`)
+
+    const script = readFileSync(resolve(process.cwd(), 'src/app/splash.ts'), 'utf8')
+    expect(/const FADE_MS = (\d+)/.exec(script)?.[1]).toBe(settle?.replace('ms', ''))
+  })
+
+  /*
+   * The label promises a board only where one opens. The inline check cannot
+   * import the router, so its two patterns are held to the router's own.
+   */
+  it('recognises a board link exactly as the router does', () => {
+    const source = (path: string, name: string): string => {
+      const file = readFileSync(resolve(process.cwd(), path), 'utf8')
+      const found = new RegExp(`const ${name} = (/[^\\n]+/)\\n`).exec(file)?.[1]
+      if (found === undefined) throw new Error(`${name} not found in ${path}`)
+      return found
+    }
+    expect(HTML).toContain(
+      `room !== null && ${source('src/app/collab-config.ts', 'SHARED_ID')}.test(room)`,
+    )
+    expect(HTML).toContain(
+      `board !== null && ${source('src/app/route.ts', 'LOCAL_ID')}.test(board)`,
+    )
   })
 
   /** The label's scrim is the void at 82%, written in channels rather than hex. */
@@ -91,9 +168,10 @@ describe('the boot splash', () => {
 
     for (const path of referenced) {
       expect(path).not.toContain('/public/')
-      expect(existsSync(resolve(process.cwd(), `.${String(path)}`)), `missing ${String(path)}`).toBe(
-        true,
-      )
+      expect(
+        existsSync(resolve(process.cwd(), `.${String(path)}`)),
+        `missing ${String(path)}`,
+      ).toBe(true)
     }
     expect(existsSync(resolve(process.cwd(), 'public'))).toBe(false)
   })

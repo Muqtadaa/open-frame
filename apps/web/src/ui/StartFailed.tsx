@@ -1,5 +1,7 @@
 import { useEffect, useId, useRef } from 'react'
 
+import { abandonSplash } from '../app/splash.js'
+
 interface Props {
   readonly heading: string
   readonly error: unknown
@@ -37,6 +39,14 @@ export function StartFailed({ heading, error }: Props) {
   const reload = useRef<HTMLButtonElement>(null)
 
   useEffect(() => {
+    /*
+     * Bad news is not held behind the artwork, whichever path brought it here.
+     * The error boundary rendered this without taking the splash away, so it
+     * waited out the two-second hold — and this focus call landed on nothing,
+     * because the root is inert until the splash goes. Idempotent: a board
+     * that would not open has already done it.
+     */
+    abandonSplash()
     reload.current?.focus()
   }, [])
 

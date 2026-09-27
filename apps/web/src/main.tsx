@@ -54,36 +54,42 @@ if (route.kind === 'home') {
    */
   const capabilities = createBoardCapabilities()
 
+  /*
+   * EVERY await before the first render sits in this one try. The splash is up
+   * over an inert root until the end of this module, so a rejection that
+   * escaped — the room refusing the socket was one — left it there for good,
+   * still claiming to be opening a board. Say what actually happened, in a
+   * panel of its own, rather than leaving a cheerful lie on screen.
+   */
   let runtime: Awaited<ReturnType<typeof createRuntime>>
+  let collaboration: Awaited<ReturnType<typeof startCollaboration>> | null
   try {
     runtime = await createRuntime({ boardId: route.boardId, capabilities })
+
+    /*
+     * Attached after the runtime exists and before the first render, so the
+     * board is already syncing by the time anyone can touch it. A build with no
+     * room server configured never connects — `VITE_COLLAB_URL` absent means
+     * this deployment does not collaborate, rather than one that fails to,
+     * forever.
+     */
+    collaboration =
+      route.shared && COLLAB_ENABLED
+        ? await startCollaboration(
+            runtime,
+            route.boardId,
+            (error) => {
+              console.error('A change from the room could not be applied', error)
+            },
+            route.key,
+          )
+        : null
   } catch (error) {
-    // The splash is still up and still claiming to be opening a board. Say what
-    // actually happened, in a panel of its own, rather than leaving a cheerful
-    // lie on screen.
     abandonSplash()
     root.render(<StartFailed heading="This board did not open" error={error} />)
     throw error
   }
   const views = createDefaultViewRegistry()
-
-  /*
-   * Attached after the runtime exists and before the first render, so the board
-   * is already syncing by the time anyone can touch it. A build with no room
-   * server configured never connects — `VITE_COLLAB_URL` absent means this
-   * deployment does not collaborate, rather than one that fails to, forever.
-   */
-  const collaboration =
-    route.shared && COLLAB_ENABLED
-      ? await startCollaboration(
-          runtime,
-          route.boardId,
-          (error) => {
-            console.error('A change from the room could not be applied', error)
-          },
-          route.key,
-        )
-      : null
 
   // The room is the authority on this; the browser only mirrors what it said.
   collaboration?.onRole((role) => {

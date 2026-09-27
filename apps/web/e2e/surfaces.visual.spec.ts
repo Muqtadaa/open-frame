@@ -346,5 +346,30 @@ for (const world of WORLDS) {
       await expect(page.getByTestId('start-failed')).toBeVisible()
       await snap(page, `${world}-start-failed`)
     })
+
+    /*
+     * The splash, held still by an entry module that never arrives: the
+     * artwork a tab sees first, and the quiet sheet every later load gets —
+     * photographed with the watchdog's words and Reload on it, since the
+     * sheet alone is one flat colour.
+     */
+    test('the splash, first load in a tab', async ({ page }) => {
+      await page.route('**/main.tsx*', (route) => route.abort())
+      await page.goto(BOARD_URL)
+      await page.locator('#of-splash img[data-loaded="true"]').waitFor()
+      await snap(page, `${world}-splash-artwork`)
+    })
+
+    test('the quiet splash, stalled', async ({ page }) => {
+      await page.addInitScript(() => {
+        sessionStorage.setItem('openframe:splash-seen', 'yes')
+      })
+      await page.clock.install()
+      await page.route('**/main.tsx*', (route) => route.abort())
+      await page.goto(BOARD_URL)
+      await page.clock.fastForward(13_000)
+      await page.locator('#of-splash button').waitFor()
+      await snap(page, `${world}-splash-quiet-stalled`)
+    })
   })
 }

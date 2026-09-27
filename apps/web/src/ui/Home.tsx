@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState } from 'react'
 import type { BoardRepository } from '@openframe/core'
 
 import { rememberOwnerKey } from '../app/board-password.js'
+import { abandonSplash } from '../app/splash.js'
 import { createLocalBoard, listAllBoards, type ListedBoard } from '../app/boards.js'
 import { ACCOUNTS_ENABLED, signOut } from '../app/identity.js'
 import { boardHref } from '../app/route.js'
@@ -143,8 +144,12 @@ export function Home({ repository }: { readonly repository: BoardRepository }) {
       setListProblem(null)
     }, (error: unknown) => {
       // Said, rather than "Looking for your boards…" for as long as the tab
-      // stays open.
-      if (live) setListProblem(describeStartFailure(error))
+      // stays open — and said NOW, not after the splash's hold: under the
+      // splash the root is inert, and an alert rendered there is never
+      // announced.
+      if (!live) return
+      abandonSplash()
+      setListProblem(describeStartFailure(error))
     })
     return () => {
       live = false
