@@ -114,3 +114,41 @@ test.describe('once per session', () => {
     await context.close()
   })
 })
+
+/**
+ * The line under the artwork says what is actually opening (C3 #10). It said
+ * "Opening your board" on the front door, where no board opens, and "your"
+ * on somebody else's shared one.
+ */
+test.describe('the label', () => {
+  test.beforeEach(async ({ page }) => {
+    await page.route('**/main.tsx*', async (route) => {
+      await new Promise((resolve) => setTimeout(resolve, 1500))
+      await route.continue()
+    })
+  })
+
+  for (const [url, text] of [
+    [BOARD_URL, 'Opening the board'],
+    [SHARED, 'Opening the board'],
+    [HOME_URL, 'Opening OpenFrame'],
+  ] as const) {
+    test(`says "${text}" on ${url}`, async ({ page }) => {
+      await page.goto(url, { waitUntil: 'commit' })
+      await expect(page.locator('#of-splash p')).toHaveText(text)
+    })
+  }
+
+  test('sits under the picture on a phone held upright, not at the foot of the void', async ({
+    page,
+  }) => {
+    await page.setViewportSize({ width: 390, height: 844 })
+    await page.goto(BOARD_URL, { waitUntil: 'commit' })
+    const label = await page.locator('#of-splash p').boundingBox()
+    // The artwork is 4:3 and letterboxed: it ends at half the height plus 3/8 of the width.
+    const pictureBottom = 844 / 2 + (390 * 3) / 8
+    expect(label).not.toBeNull()
+    expect(label!.y).toBeGreaterThan(pictureBottom)
+    expect(label!.y - pictureBottom).toBeLessThan(40)
+  })
+})

@@ -105,11 +105,24 @@
         align-self: end;
         margin: 0 0 max(32px, env(safe-area-inset-bottom));
         padding: 7px 14px;
-        border-radius: 999px;
+        /* The product's control radius, not a capsule: round means grab me. */
+        border-radius: 6px;
         background: rgb(21 10 46 / 82%);
         color: #ece8fb;
         font: 13px/1.3 ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
         letter-spacing: 0.01em;
+      }
+      /*
+       * Under the picture on a phone held upright, rather than at the foot of
+       * the void: letterboxed at 4:3, it ends half the height plus
+       * three-eighths of the width down. After the rule above, which it
+       * overrides.
+       */
+      @media (max-aspect-ratio: 8 / 7) {
+        #of-splash p {
+          align-self: start;
+          margin: calc(50vh + 37.5vw + 16px) 0 0;
+        }
       }
       /*
        * The watchdog's way out. Brand colours only, like everything else here:
@@ -194,7 +207,18 @@
         fetchpriority="high"
         onload="this.dataset.loaded = 'true'"
       />
-      <p aria-live="polite">Opening your board</p>
+      <p aria-live="polite">Opening OpenFrame</p>
+      <!--
+        Says what is actually opening, before the first frame. The markup's own
+        words are the neutral ones, so a page where this never ran is still
+        telling the truth. Mirrors `app/route.ts`: `board` and `room` are the
+        two parameters that open a board, and anything else is the front door.
+      -->
+      <script>
+        if (/[?&](board|room)=/.test(location.search)) {
+          document.currentScript.previousElementSibling.textContent = 'Opening the board'
+        }
+      </script>
     </div>
     <!--
       The watchdog. Inline, and before the module graph, because the case it

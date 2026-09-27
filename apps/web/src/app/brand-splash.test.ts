@@ -76,6 +76,18 @@ describe('the boot splash', () => {
     expect(new Set(used)).toEqual(new Set([token('page'), afterHoursToken('page')]))
   })
 
+  /*
+   * A bed with the product's control radius, not a 999px capsule: in this
+   * product round means grab me, and the label does nothing when pressed.
+   */
+  it('beds the label with the control radius', () => {
+    const label = /#of-splash p \{([^}]*)\}/.exec(inlineStyle)?.[1] ?? ''
+    const radius = /border-radius:\s*(\d+px)/.exec(label)?.[1]
+    const control = /--of-radius:\s*(\d+px)/.exec(CSS)?.[1]
+    expect(control).toBeDefined()
+    expect(radius).toBe(control)
+  })
+
   /** The label's scrim is the void at 82%, written in channels rather than hex. */
   it('writes the scrim from the same void the background uses', () => {
     const scrim = /rgb\((\d+) (\d+) (\d+) \/ \d+%\)/.exec(inlineStyle)
