@@ -70,6 +70,9 @@ function ImageRenderer({ object, assetUrl }: ObjectViewProps<ImageData>) {
           top: `${String((-crop.y / crop.height) * 100)}%`,
         }}
         draggable={false}
+        // Off the main thread: a large photograph decoded synchronously held
+        // up the frame it first painted in, once per picture panned onto.
+        decoding="async"
       />
     </div>
   )
