@@ -46,3 +46,29 @@ test('clicking the canvas gives it the keyboard', async ({ page }) => {
   await page.locator(CANVAS).click({ position: { x: 500, y: 400 } })
   await expect(page.locator(CANVAS)).toBeFocused()
 })
+
+/*
+ * The record panel goes when the selection does, and it took the keyboard
+ * with it: Escape from a swatch, or its own Delete, left focus on BODY.
+ */
+test.describe('when the record panel goes', () => {
+  test.beforeEach(async ({ page }) => {
+    await page.keyboard.press('s')
+    await page.locator(CANVAS).click({ position: { x: 300, y: 250 } })
+    await page.keyboard.press('Escape')
+    await expect(page.getByTestId('inspector')).toBeVisible()
+  })
+
+  test('Escape from one of its controls returns focus to the canvas', async ({ page }) => {
+    await page.getByTestId('inspector').getByRole('radio').first().focus()
+    await page.keyboard.press('Escape')
+    await expect(page.getByTestId('inspector')).toHaveCount(0)
+    await expect(page.locator(CANVAS)).toBeFocused()
+  })
+
+  test('its Delete returns focus to the canvas', async ({ page }) => {
+    await page.getByTestId('inspector-delete').click()
+    await expect(page.locator('[data-object-type="sticky"]')).toHaveCount(0)
+    await expect(page.locator(CANVAS)).toBeFocused()
+  })
+})

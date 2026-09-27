@@ -183,7 +183,27 @@ export function Inspector() {
   const tallest = docked
     ? Math.floor(canvasSize.height * DOCK_SHARE)
     : Math.max(120, canvasSize.height - bands.top - bands.bottom - 2 * MARGIN_PX)
-  const panel = useRef<HTMLDivElement>(null)
+  const panel = useRef<HTMLDivElement | null>(null)
+  /*
+   * WHEN THE PANEL GOES, the keyboard goes back to the board. It unmounts
+   * with the selection — Escape from a swatch, its own Delete — and took
+   * focus with it to the page's body, so the next Tab started at the top of
+   * the document. Only when focus was inside it, and nothing has taken it
+   * since.
+   */
+  const placePanel = useCallback((element: HTMLDivElement | null): void => {
+    const leaving = panel.current
+    panel.current = element
+    if (element !== null || leaving === null) return
+    if (!leaving.contains(window.document.activeElement)) return
+    requestAnimationFrame(() => {
+      const active = window.document.activeElement
+      if (active !== null && active !== window.document.body) return
+      window.document
+        .querySelector<HTMLElement>('[data-testid="canvas"]')
+        ?.focus({ preventScroll: true })
+    })
+  }, [])
   const [scrolls, setScrolls] = useState(false)
   // Every render, on purpose: what the panel holds changes with the
   // selection. It sets state only when the answer changes, so it settles.
@@ -479,7 +499,7 @@ export function Inspector() {
       testId="inspector-surface"
     >
       <div
-        ref={panel}
+        ref={placePanel}
         className={`of-inspector of-surface${yielding ? ' of-inspector--yielding' : ''}${
           docked ? ' of-inspector--docked' : ''
         }${scrolls ? ' of-inspector--scrolls' : ''}`}
