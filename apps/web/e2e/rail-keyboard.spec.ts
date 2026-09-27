@@ -13,6 +13,13 @@ import { BOARD_URL } from './routes.js'
 async function board(page: Page): Promise<void> {
   await page.goto(BOARD_URL)
   await expect(page.getByTestId('tool-select')).toBeVisible()
+  /*
+   * Drawn is not ready: a key pressed the moment the rail appears can arrive
+   * before the keyboard's listener is attached, and is dropped — once in
+   * about eighty loaded runs. The splash goes two frames after the board
+   * renders, by which point its effects have run.
+   */
+  await expect(page.locator('#of-splash')).toHaveCount(0)
 }
 
 test.describe('the rail from the keyboard', () => {
