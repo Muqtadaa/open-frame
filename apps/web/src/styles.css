@@ -299,6 +299,19 @@
 }
 
 /*
+ * FOR A FINGER, the secondary floor is the operating size. 30px is a fair
+ * target for a mouse and a poor one for a thumb, and nothing grew for a
+ * coarse pointer: the zoom cluster, history, swatches and segmented
+ * controls were all 30 on a phone (audit 2026-09-27). 40 rather than the
+ * 44 of some platform guides, because this product's sizes step in tens.
+ */
+@media (pointer: coarse) {
+  :root {
+    --of-hit-sm: var(--of-hit);
+  }
+}
+
+/*
  * AFTER HOURS — the second world, opt-in.
  *
  * The same notebook at night, lit by its own grid: the quadrille stops being
@@ -2206,8 +2219,9 @@ body {
 .of-spaces__tab {
   display: inline-flex;
   gap: var(--of-space-6);
-  align-items: baseline;
-  min-height: 26px;
+  align-items: center;
+  /* A target, not a label: it was 26px, under the secondary floor. */
+  min-height: var(--of-hit-sm);
   padding: var(--of-space-4) var(--of-step);
   font: inherit;
   font-size: var(--of-type-record);

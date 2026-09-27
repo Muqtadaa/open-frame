@@ -162,3 +162,42 @@ test('the comments panel is a sheet along the bottom, clear of Find', async ({ p
   if (find === null) throw new Error('no search')
   expect(find.y + find.height).toBeLessThanOrEqual(box.y)
 })
+
+/*
+ * Targets for a finger (audit 2026-09-27). Nothing grew for a coarse pointer:
+ * most of the chrome was 30px — the secondary-control floor for a mouse — and
+ * the workspace tabs were 26px tall, under even that. On a touch screen the
+ * secondary floor is the product's operating size, 40.
+ */
+test('a finger gets 40px targets on the board', async ({ page }) => {
+  await page.goto(BOARD_URL)
+  await page.waitForSelector('[data-testid="status-bar"]')
+  await page.getByTestId('tool-sticky').tap()
+  await page.locator('[data-testid="canvas"]').tap({ position: { x: 200, y: 220 } })
+  await page.keyboard.press('Escape')
+  await expect(page.getByTestId('inspector')).toBeVisible()
+  for (const id of [
+    'zoom-in',
+    'zoom-out',
+    'zoom-fit',
+    'undo',
+    'theme-toggle',
+    'inspector-delete',
+  ]) {
+    const box = await page.getByTestId(id).boundingBox()
+    expect(box?.width, id).toBeGreaterThanOrEqual(40)
+    expect(box?.height, id).toBeGreaterThanOrEqual(40)
+  }
+  // And the bar still fits the phone.
+  const bar = await page.getByTestId('status-bar').boundingBox()
+  expect((bar?.x ?? 0) + (bar?.width ?? 0)).toBeLessThanOrEqual(390)
+})
+
+test('the workspace tabs are a target, not a label', async ({ page }) => {
+  await signedIn(page, BOARDS)
+  await page.goto(HOME_URL)
+  const tab = page.getByTestId('workspace-all')
+  await expect(tab).toBeVisible()
+  const box = await tab.boundingBox()
+  expect(box?.height).toBeGreaterThanOrEqual(40)
+})
