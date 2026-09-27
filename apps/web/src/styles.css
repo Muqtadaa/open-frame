@@ -664,6 +664,14 @@ body {
 }
 
 /* Overlays float over the canvas and are click-through except where they paint. */
+/*
+ * The board's landmark draws no box: the canvas and the overlays inside it are
+ * placed against the app exactly as they were before it existed.
+ */
+.of-board-main {
+  display: contents;
+}
+
 .of-overlay {
   position: absolute;
   z-index: var(--of-z-chrome);
