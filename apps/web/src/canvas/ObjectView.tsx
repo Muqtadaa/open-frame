@@ -7,6 +7,7 @@ import { useCommands } from '../hooks/use-commands.js'
 import { useOpenFrame } from '../runtime/context.js'
 import { useInteractionStore } from '../interaction/interaction-store.js'
 import { useRemoteDrag } from '../interaction/remote-drags.js'
+import { translateOffset } from '../interaction/drag-offset.js'
 import { ObjectErrorBoundary } from './ObjectErrorBoundary.js'
 import { EditorChrome, EditorOverlay } from './EditorChrome.js'
 import { FallbackView } from '../views/FallbackView.js'
@@ -88,12 +89,9 @@ function ObjectViewInner({ id, views }: Props) {
   const isDragging = useInteractionStore(
     (state) => state.drag.kind === 'translate' && state.drag.ids.has(id),
   )
-  const dragDx = useInteractionStore((state) =>
-    state.drag.kind === 'translate' ? state.drag.dx : 0,
-  )
-  const dragDy = useInteractionStore((state) =>
-    state.drag.kind === 'translate' ? state.drag.dy : 0,
-  )
+  // Gated on membership: every visible object runs these on every move.
+  const dragDx = useInteractionStore((state) => translateOffset(state.drag, id, 'dx'))
+  const dragDy = useInteractionStore((state) => translateOffset(state.drag, id, 'dy'))
   // `Map.get` returns a stable reference while the map is unchanged, so this is
   // a safe selector despite looking like it constructs something.
   /*
