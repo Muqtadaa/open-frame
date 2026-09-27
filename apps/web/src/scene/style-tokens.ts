@@ -126,7 +126,6 @@ export function surfaceColor(value: ColorValue | undefined): string | undefined 
   return value === undefined ? undefined : surfaceOf(value, 'gray')
 }
 
-
 /**
  * Ink that can be read on a given fill, when nobody has chosen one.
  *
@@ -168,9 +167,9 @@ function relativeLuminance(hex: string): number {
 export function fontFamily(token: FontToken | undefined): string {
   switch (token) {
     case 'serif':
-      return 'ui-serif, Georgia, serif'
+      return 'var(--of-serif)'
     case 'mono':
-      return 'ui-monospace, SFMono-Regular, Menlo, monospace'
+      return 'var(--of-mono)'
     default:
       return 'inherit'
   }
@@ -197,7 +196,9 @@ export function textAlign(token: AlignToken | undefined): 'left' | 'center' | 'r
  * property is what lets a view's own stylesheet decide, and a table cell and a
  * sticky do not start from the same place.
  */
-export function verticalAlign(token: VAlignToken | undefined): 'flex-start' | 'center' | 'flex-end' {
+export function verticalAlign(
+  token: VAlignToken | undefined,
+): 'flex-start' | 'center' | 'flex-end' {
   return token === 'middle' ? 'center' : token === 'bottom' ? 'flex-end' : 'flex-start'
 }
 

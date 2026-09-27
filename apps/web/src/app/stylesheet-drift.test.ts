@@ -44,4 +44,39 @@ describe('the stylesheet', () => {
     )
     expect(dead).toEqual([])
   })
+
+  /*
+   * One stack per face, named once. The face picker drew its "serif" specimen
+   * in one stack while the board set a serif note in another, so the sample
+   * could show a face the note would never get; the code block and the body
+   * spelled out stacks the tokens already held.
+   */
+  it('sets every face from a token', () => {
+    const families = [...PLAIN.matchAll(/font-family:\s*([^;]+);/g)].map((match) =>
+      (match[1] ?? '').trim(),
+    )
+    expect(families.length).toBeGreaterThan(20)
+    expect(families.filter((family) => !/^var\(--of-[\w-]+\)$|^inherit$/.test(family))).toEqual([])
+  })
+
+  it('gives the board the same faces as the interface', () => {
+    const tokens = readFileSync(resolve(ROOT, 'src/scene/style-tokens.ts'), 'utf8')
+    const body = /export function fontFamily[\s\S]*?\n}/.exec(tokens)?.[0] ?? ''
+    expect(body).toContain("'var(--of-serif)'")
+    expect(body).toContain("'var(--of-mono)'")
+    expect(CSS).toContain('--of-serif:')
+  })
+
+  /*
+   * Weights are four decisions, not a number typed wherever it was wanted.
+   */
+  it('sets every weight from a token', () => {
+    const weights = [...PLAIN.matchAll(/font-weight:\s*([^;]+);/g)].map((match) =>
+      (match[1] ?? '').trim(),
+    )
+    expect(weights.length).toBeGreaterThan(20)
+    expect(
+      weights.filter((weight) => !/^var\(--of-weight-[a-z]+\)$|^inherit$/.test(weight)),
+    ).toEqual([])
+  })
 })
