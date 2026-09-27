@@ -336,19 +336,43 @@ The splash is the one full-bleed brand moment the product has. It lives in
 frame as a 146-byte inlined thumbnail — a loading screen that waits on the
 network to prove it is loading has the logic backwards.
 
-It then **holds for two seconds**, and that part is not free. On a warm load the
-board is ready well inside it, so the hold IS the loading time. It was chosen
-knowingly: a moment nobody sees is not a moment, and the first build flashed the
-artwork past in under 300ms. Whichever finishes last wins, so a slow board is
-never delayed further. If the wait ever starts to grate, spend it once per
-session rather than shaving it back to a flicker — a shorter splash is worse
-than no splash.
+It then **holds for two seconds, once per tab session**. On a warm load the
+board is ready well inside that, so on the first load the hold IS the loading
+time. It was chosen knowingly: a moment nobody sees is not a moment, and the
+first build flashed the artwork past in under 300ms. Whichever finishes last
+wins, so a slow board is never delayed further. It used to be paid on every
+page load, which cost about 1.2s of pure waiting every time a board was opened
+from the front door. So the moment is now spent once, as this section always
+said it should be if it began to grate: a shorter splash is worse than no
+splash.
 
-Two things follow from covering a live board for that long. `#root` is `inert`
-until the splash goes, because a sheet blocks the mouse but not the Tab key. And
-the end-to-end suite turns the hold off through `storageState`, since 154 specs
-each waiting behind it would add five minutes to a two-minute run; the splash
-still appears there and is still really removed.
+Every later load in the tab gets the **quiet sheet**. An inline head script
+reads the session flag before the body is parsed. The splash is then the
+world's own page colour with nothing on it, and it leaves on the first frame the
+page is ready. The handover is from the page to the page. `theme-color` matches
+it from the first frame, and after load `applyTheme` keeps the browser's chrome
+on the world's page colour rather than the splash's violet.
+
+The line under the artwork says what is actually opening: "Opening the board"
+for a `board` or `room` link, and otherwise "Opening OpenFrame", the markup's
+own neutral words. It sits on the void scrim with the control radius, not a
+capsule, and in portrait it sits just under the letterboxed picture.
+
+**The splash always ends.** Every await before the first render sits in one
+try, so a start-up failure takes the splash away for the StartFailed panel, and
+so does a crash caught by the error boundary. Bad news is never held behind the
+artwork. The front door's own failure does the same, because an alert rendered
+under the splash sits in an inert root and is never announced. For the case no
+try can catch, such as an entry module the network dropped, an inline watchdog
+admits it after twelve seconds: the live label says it is taking longer than
+usual, and a Reload button appears.
+
+Two things follow from covering a live board. `#root` is `inert` until the
+splash goes, because a sheet blocks the mouse but not the Tab key. And the
+end-to-end suite turns the hold off through `storageState`, since every spec
+waiting behind it would add minutes to the run; the splash still appears there
+and is still really removed. Its fades are `--of-settle` on `--of-ease`, as
+literals pinned to those tokens like its colours.
 
 ## Colors
 
