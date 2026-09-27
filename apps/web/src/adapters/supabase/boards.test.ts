@@ -22,7 +22,7 @@ function answering(result: { data?: unknown; error?: unknown }): ReturnType<type
   const rpc = vi.fn(() =>
     Promise.resolve({ data: result.data ?? null, error: result.error ?? null }),
   )
-  client.mockReturnValue({ rpc } as never)
+  client.mockResolvedValue({ rpc } as never)
   return rpc
 }
 
@@ -168,7 +168,7 @@ describe('listing the boards behind an account', () => {
    * local boards — and every board in it still opens and edits offline.
    */
   it('answers with nothing when this build has no accounts', async () => {
-    client.mockReturnValue(null)
+    client.mockResolvedValue(null)
 
     await expect(listMyBoards()).resolves.toEqual([])
   })

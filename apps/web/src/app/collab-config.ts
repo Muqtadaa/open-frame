@@ -1,4 +1,9 @@
-import { roomSocketUrl as roomUrl, KEY_PARAM as ROOM_KEY_PARAM } from '@openframe/collab'
+/*
+ * From the subpath, not the package: the package's index re-exports the Yjs
+ * machinery, so importing two URL helpers through it kept the whole of Yjs in
+ * the entry chunk of every page (audit 2026-09-27).
+ */
+import { roomSocketUrl as roomUrl, KEY_PARAM as ROOM_KEY_PARAM } from '@openframe/collab/room-url'
 import { asBoardId, type BoardId } from '@openframe/core'
 
 /**

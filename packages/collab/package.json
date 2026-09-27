@@ -6,7 +6,8 @@
   "type": "module",
   "description": "The only place Yjs exists. Translates OpenFrame patches to and from a Y.Doc, so no CRDT type ever reaches the domain, the command layer or the UI.",
   "exports": {
-    ".": "./src/index.ts"
+    ".": "./src/index.ts",
+    "./room-url": "./src/room-url.ts"
   },
   "scripts": {
     "typecheck": "tsc -p tsconfig.json --noEmit",

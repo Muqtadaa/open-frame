@@ -76,7 +76,7 @@ function readWorkspace(row: unknown): Workspace | null {
 }
 
 export async function listMyWorkspaces(): Promise<readonly Workspace[]> {
-  const client = supabaseClient()
+  const client = await supabaseClient()
   if (client === null) return []
 
   const response = (await client.rpc('my_workspaces')) as { data: unknown; error: unknown }
@@ -92,7 +92,7 @@ export async function listMyWorkspaces(): Promise<readonly Workspace[]> {
 
 /** Creates one and makes you its admin, in a single call. Its id, or null. */
 export async function createWorkspace(name: string): Promise<string | null> {
-  const client = supabaseClient()
+  const client = await supabaseClient()
   if (client === null) return null
 
   const response = (await client.rpc('create_workspace', { p_name: name })) as {
@@ -111,7 +111,7 @@ export async function createWorkspace(name: string): Promise<string | null> {
 export async function shareWorkspace(
   id: string,
 ): Promise<{ editorKey: string; viewerKey: string } | null> {
-  const client = supabaseClient()
+  const client = await supabaseClient()
   if (client === null) return null
 
   const response = (await client.rpc('share_workspace', { p_id: id })) as {
@@ -133,7 +133,7 @@ export async function shareWorkspace(
 
 /** Redeems a workspace link. The role now held, or null if the key is wrong. */
 export async function joinWorkspace(id: string, key: string): Promise<WorkspaceRole | null> {
-  const client = supabaseClient()
+  const client = await supabaseClient()
   if (client === null) return null
 
   const response = (await client.rpc('join_workspace', { p_id: id, p_key: key })) as {

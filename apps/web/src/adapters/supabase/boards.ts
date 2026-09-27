@@ -143,7 +143,7 @@ function readBoard(row: unknown): RemoteBoard | null {
 }
 
 export async function listMyBoards(): Promise<readonly RemoteBoard[]> {
-  const client = supabaseClient()
+  const client = await supabaseClient()
   if (client === null) return []
 
   /*
@@ -190,7 +190,7 @@ export async function recordSharedBoard(board: {
    */
   readonly workspaceId?: string
 }): Promise<boolean> {
-  const client = supabaseClient()
+  const client = await supabaseClient()
   if (client === null) return false
 
   const response = (await client.rpc('record_shared_board', {
@@ -214,7 +214,7 @@ export async function recordSharedBoard(board: {
  * must not be used as though it were authority.
  */
 export async function recordOwnerKey(boardId: BoardId, ownerKey: string): Promise<boolean> {
-  const client = supabaseClient()
+  const client = await supabaseClient()
   if (client === null) return false
 
   const response = (await client.rpc('record_owner_key', {
@@ -243,7 +243,7 @@ export async function joinBoard(
   boardId: BoardId,
   key: string,
 ): Promise<RemoteBoard['role'] | null> {
-  const client = supabaseClient()
+  const client = await supabaseClient()
   if (client === null) return null
 
   const response = (await client.rpc('join_board', { p_id: boardId, p_key: key })) as {
@@ -267,7 +267,7 @@ export async function joinBoard(
  * door.
  */
 export async function setBoardPinned(boardId: BoardId, pinned: boolean): Promise<boolean> {
-  const client = supabaseClient()
+  const client = await supabaseClient()
   if (client === null) return false
 
   const response = (await client.rpc('set_board_pinned', {
@@ -284,7 +284,7 @@ export async function setBoardPinned(boardId: BoardId, pinned: boolean): Promise
  * the board is already open by then, and a slow round trip must not hold it up.
  */
 export async function touchBoardOpened(boardId: BoardId): Promise<void> {
-  const client = supabaseClient()
+  const client = await supabaseClient()
   if (client === null) return
   await client.rpc('touch_board_opened', { p_id: boardId })
 }
@@ -303,7 +303,7 @@ export async function touchBoardOpened(boardId: BoardId): Promise<void> {
  * spent.
  */
 export async function deleteRemoteBoard(boardId: BoardId): Promise<boolean> {
-  const client = supabaseClient()
+  const client = await supabaseClient()
   if (client === null) return false
 
   const response = (await client.rpc('delete_board', { p_id: boardId })) as {
@@ -314,7 +314,7 @@ export async function deleteRemoteBoard(boardId: BoardId): Promise<boolean> {
 }
 
 export async function leaveRemoteBoard(boardId: BoardId): Promise<boolean> {
-  const client = supabaseClient()
+  const client = await supabaseClient()
   if (client === null) return false
 
   const response = (await client.rpc('leave_board', { p_id: boardId })) as {
@@ -332,7 +332,7 @@ export async function leaveRemoteBoard(boardId: BoardId): Promise<boolean> {
  * here too, and the database refuses it from anyone but the owner.
  */
 export async function renameRemoteBoard(boardId: BoardId, title: string): Promise<boolean> {
-  const client = supabaseClient()
+  const client = await supabaseClient()
   if (client === null) return false
 
   const response = (await client.rpc('rename_board', {
