@@ -20,6 +20,9 @@
  */
 :root {
   color-scheme: light;
+  caret-color: var(--of-accent);
+  scrollbar-color: var(--of-control-border) transparent;
+  scrollbar-width: thin;
 
   /* Ground. The desk the page sits on, and the page itself. */
   --of-bg: #eef2f6;
@@ -457,12 +460,6 @@
   color: var(--of-ink);
 }
 
-:root {
-  caret-color: var(--of-accent);
-  scrollbar-color: var(--of-control-border) transparent;
-  scrollbar-width: thin;
-}
-
 :focus-visible {
   outline: 2px solid var(--of-accent);
   outline-offset: 2px;
@@ -759,6 +756,8 @@ body {
   border: 1px solid var(--of-panel-border);
   border-radius: var(--of-radius-apparatus);
   box-shadow: var(--of-shadow);
+  /* A tool's size, stepped down below as the window shortens. */
+  --of-tool: var(--of-hit-lg);
 }
 
 /*
@@ -767,18 +766,14 @@ body {
  * than shrinking continuously to sizes off the quadrille. Each threshold is
  * the height at which the larger rail stops fitting its band.
  */
-.of-app {
-  --of-tool: var(--of-hit-lg);
-}
-
 @media (max-height: 719px) {
-  .of-app {
+  .of-rail {
     --of-tool: var(--of-hit);
   }
 }
 
 @media (max-height: 603px) {
-  .of-app {
+  .of-rail {
     --of-tool: var(--of-hit-sm);
   }
 }
@@ -787,14 +782,7 @@ body {
  * The last resort, for a window too short for even the smallest tools: the
  * rail scrolls. Only here, because a scrolling box clips everything that hangs
  * outside it, and every tool's tip does.
- */
-@media (max-height: 493px) {
-  .of-rail {
-    overflow-y: auto;
-  }
-}
-
-/*
+ *
  * A scrolling rail keeps its end space INSIDE the scroll, as margins on the
  * first and last groups, rather than as padding. The fade below is sticky,
  * and a sticky box cannot leave its containing block, which stops at the
@@ -803,6 +791,7 @@ body {
  */
 @media (max-height: 493px) {
   .of-rail {
+    overflow-y: auto;
     padding-block: 0;
   }
 
@@ -1692,6 +1681,25 @@ body {
   overflow: hidden;
   font-size: var(--of-type-record);
   /*
+   * A cell aligns its own text up and down.
+   *
+   * The table used to set `justify-content` on itself, which is a GRID — there
+   * the property distributes tracks along the inline axis, so it moved nothing
+   * and the cells stayed `display: block` with `align-items: normal`. Vertical
+   * alignment in a table did nothing from the day it shipped.
+   *
+   * The value still arrives as ONE declaration on the table, as a custom
+   * property: those inherit, and `justify-content` does not. Setting it per cell
+   * would rebuild a style object four hundred times on a twenty-by-twenty grid.
+   *
+   * Not the textarea: `display: flex` on a form control is meaningless, and
+   * size containment would stop it scrolling with what is typed.
+   */
+  display: flex;
+  flex-direction: column;
+  justify-content: var(--of-valign, flex-start);
+  container-type: size;
+  /*
    * INHERITED, not set. `color: var(--of-ink)` here won every text colour the
    * table was given, because the ink is applied to the table as a whole and a
    * property set on the child beats one inherited into it. `body` is the ink,
@@ -1711,28 +1719,6 @@ body {
   left: 0;
   overflow: visible;
   pointer-events: none;
-}
-
-/*
- * A cell aligns its own text up and down.
- *
- * The table used to set `justify-content` on itself, which is a GRID — there
- * the property distributes tracks along the inline axis, so it moved nothing
- * and the cells stayed `display: block` with `align-items: normal`. Vertical
- * alignment in a table did nothing from the day it shipped.
- *
- * The value still arrives as ONE declaration on the table, as a custom
- * property: those inherit, and `justify-content` does not. Setting it per cell
- * would rebuild a style object four hundred times on a twenty-by-twenty grid.
- *
- * Not the textarea: `display: flex` on a form control is meaningless, and
- * size containment would stop it scrolling with what is typed.
- */
-.of-table__cell {
-  display: flex;
-  flex-direction: column;
-  justify-content: var(--of-valign, flex-start);
-  container-type: size;
 }
 
 .of-table__cell--head {
@@ -3009,6 +2995,8 @@ body {
 }
 
 .of-status {
+  /* The dialog's positioning context. */
+  position: relative;
   display: flex;
   gap: var(--of-step);
   align-items: center;
@@ -3232,11 +3220,6 @@ body {
   color: var(--of-ink);
 }
 
-/* The status line is the dialog's positioning context. */
-.of-status {
-  position: relative;
-}
-
 /*
  * Capping the line's WIDTH is not the same as keeping its contents inside it.
  *
@@ -3286,21 +3269,6 @@ body {
   min-width: 10ch;
   margin: 0;
   font: inherit;
-}
-
-.of-dev {
-  /*
-   * Gives all but nothing to the name: development instrumentation
-   * goes before the board's name loses a character. Shrinking at the same
-   * rate, the two split the loss and the name was cut beside a panel no user
-   * ever sees.
-   */
-  flex: 0 10000 auto;
-}
-
-/* Development instrumentation clips rather than pushes. */
-.of-dev {
-  overflow: hidden;
 }
 
 /*
@@ -4239,8 +4207,16 @@ body {
 
 .of-dev {
   display: flex;
+  /*
+   * Gives all but nothing to the name in the bar: development
+   * instrumentation goes before the board's name loses a character.
+   * Shrinking at the same rate, the two split the loss and the name was cut
+   * beside a panel no user ever sees. And it clips rather than pushes.
+   */
+  flex: 0 10000 auto;
   gap: var(--of-space-4);
   align-items: center;
+  overflow: hidden;
   font-size: var(--of-type-record);
 }
 
@@ -4652,6 +4628,8 @@ body {
  * tax on board space for something only relevant when something is selected.
  */
 .of-inspector {
+  /* For Delete, drawn in the top corner — see .of-inspector__delete. */
+  position: relative;
   display: flex;
   flex-direction: column;
   gap: var(--of-space-2);
@@ -4712,10 +4690,6 @@ body {
  * first thing Tab reached from the board — one Enter from removing the
  * selection — while the place it is drawn is right where people look for it.
  */
-.of-inspector {
-  position: relative;
-}
-
 .of-inspector__delete {
   position: absolute;
   top: var(--of-step);
@@ -5180,15 +5154,6 @@ textarea.of-input {
   background: var(--of-ink);
   border: none;
   border-radius: var(--of-radius-hair);
-}
-
-/*
- * Swatches as index-slip stock rather than paint dots. Seven saturated circles
- * read as a paint app; a slip is a rectangle, and the page already speaks that
- * language.
- */
-.of-swatch {
-  border-radius: var(--of-radius-slip);
 }
 
 /*

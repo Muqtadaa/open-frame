@@ -79,4 +79,47 @@ describe('the stylesheet', () => {
       weights.filter((weight) => !/^var\(--of-weight-[a-z]+\)$|^inherit$/.test(weight)),
     ).toEqual([])
   })
+
+  /*
+   * A selector is argued in ONE place. Split across a stylesheet this long, a
+   * second block reads as the whole story to whoever finds it first — the
+   * inspector's positioning context sat seventy lines below its layout, a
+   * swatch's shape three thousand. Motion is the exception by design: the
+   * motion section keeps every animation together so it can be read as one
+   * thesis, so a block that only moves things may repeat a selector.
+   */
+  it('argues each selector in one place, motion aside', () => {
+    const MOTION =
+      /^(animation|transition|transform-origin|will-change)[\w-]*$|^--of-(ease|quick|settle|hold|stagger|dwell)$/
+    const blocks = new Map<string, number>()
+    const walk = (text: string, context: string): void => {
+      let at = 0
+      while (at < text.length) {
+        const open = text.indexOf('{', at)
+        if (open < 0) return
+        const selector = text.slice(at, open).trim().replace(/\s+/g, ' ')
+        let depth = 1
+        let close = open + 1
+        while (depth > 0 && close < text.length) {
+          if (text[close] === '{') depth++
+          else if (text[close] === '}') depth--
+          close++
+        }
+        const body = text.slice(open + 1, close - 1)
+        if (/^@(media|supports|container)/.test(selector)) walk(body, `${context}${selector} `)
+        else if (!selector.startsWith('@')) {
+          const properties = [...body.matchAll(/(?:^|;)\s*([\w-]+)\s*:/g)].map((m) => m[1] ?? '')
+          if (!properties.every((property) => MOTION.test(property))) {
+            const key = `${context}${selector}`
+            blocks.set(key, (blocks.get(key) ?? 0) + 1)
+          }
+        }
+        at = close
+      }
+    }
+    walk(PLAIN, '')
+    // Not vacuous: the whole sheet was walked, media queries included.
+    expect(blocks.size).toBeGreaterThan(500)
+    expect([...blocks].filter(([, count]) => count > 1).map(([key]) => key)).toEqual([])
+  })
 })
