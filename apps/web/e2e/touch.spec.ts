@@ -128,3 +128,39 @@ test('a cancelled touch puts a drag back instead of committing it', async ({ pag
   expect(after.y).toBeCloseTo(at.y, 0)
   await expect(page.getByTestId('undo')).toHaveAttribute('aria-label', /Undo create/)
 })
+
+/*
+ * A pinch belongs to the two fingers that began it (Codex, on #11). With a
+ * third finger down, lifting one of the two left two touches on the board,
+ * so the pinch carried on — measuring the finger that was still there and
+ * the new one against a start that held the finger that had gone, and the
+ * view leapt. Lifting either of its fingers ends it, and the two that remain
+ * start again from where the board is.
+ */
+test('lifting one of a pinch’s fingers does not throw the view', async ({ page }) => {
+  const cdp = await board(page)
+  const at = await placeNote(page)
+  await touch(cdp, 'touchStart', [
+    { id: 1, x: 150, y: 600 },
+    { id: 2, x: 250, y: 600 },
+  ])
+  await touch(cdp, 'touchStart', [
+    { id: 1, x: 150, y: 600 },
+    { id: 2, x: 250, y: 600 },
+    { id: 3, x: 200, y: 700 },
+  ])
+  // Finger 1 — one of the pair — lifts; 2 and 3 stay down. (A CDP touchEnd
+  // releases the points it names.)
+  await touch(cdp, 'touchEnd', [{ id: 1, x: 150, y: 600 }])
+  // The two that remain move together by a single pixel.
+  await touch(cdp, 'touchMove', [
+    { id: 2, x: 250, y: 601 },
+    { id: 3, x: 200, y: 701 },
+  ])
+  await touch(cdp, 'touchEnd', [])
+  await expect(page.getByTestId('zoom-percent')).toHaveText('100%')
+  const moved = await page.locator('[data-object-type="sticky"]').boundingBox()
+  if (moved === null) throw new Error('no note')
+  expect(Math.abs(moved.x - at.x)).toBeLessThanOrEqual(2)
+  expect(Math.abs(moved.y - at.y)).toBeLessThanOrEqual(2)
+})

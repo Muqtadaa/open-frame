@@ -543,7 +543,41 @@ export function useCanvasGestures(containerRef: RefObject<HTMLElement | null>) {
    * rather than taking it over.
    */
   const touches = useRef(new Map<number, Point>())
-  const pinch = useRef<PinchStart | null>(null)
+  /*
+   * A pinch belongs to the TWO fingers that began it, named by pointer id. It
+   * used to read "the first two touches on the board", so with a third finger
+   * down, lifting one of the pair left two touches and the pinch carried on,
+   * measuring a finger it never started with against a start that held one
+   * that had gone — and the view leapt (Codex, on #11).
+   */
+  const pinch = useRef<{
+    readonly start: PinchStart
+    readonly ids: readonly [number, number]
+  } | null>(null)
+  /*
+   * Begins a pinch from the first two fingers now on the board, at the view as
+   * it is; with fewer than two there is none. Called when a second finger
+   * lands, and again when one of a pinch's own fingers lifts, so the two that
+   * remain carry on from where the board is rather than from a stale start.
+   */
+  const beginPinch = useCallback((): void => {
+    const [first, second] = [...touches.current.entries()]
+    pinch.current =
+      first === undefined || second === undefined
+        ? null
+        : {
+            start: { viewport: useInteractionStore.getState().viewport, a: first[1], b: second[1] },
+            ids: [first[0], second[0]],
+          }
+  }, [])
+  /* A finger has left the board: a pinch it was part of starts again. */
+  const liftFinger = useCallback(
+    (pointerId: number): void => {
+      touches.current.delete(pointerId)
+      if (pinch.current?.ids.includes(pointerId) === true) beginPinch()
+    },
+    [beginPinch],
+  )
   const canvasPoint = useCallback(
     (clientX: number, clientY: number): Point => {
       const rect = containerRef.current?.getBoundingClientRect()
@@ -704,10 +738,8 @@ export function useCanvasGestures(containerRef: RefObject<HTMLElement | null>) {
           // A second finger: this is a pinch, and whatever the first began
           // is put back rather than committed.
           abandon()
-          const [a, b] = [...touches.current.values()]
-          if (a !== undefined && b !== undefined) {
-            pinch.current = { viewport: useInteractionStore.getState().viewport, a, b }
-          }
+          // A third finger joins nothing: the pinch keeps its own two.
+          if (pinch.current === null) beginPinch()
           event.currentTarget.setPointerCapture(event.pointerId)
           event.preventDefault()
           return
@@ -951,7 +983,7 @@ export function useCanvasGestures(containerRef: RefObject<HTMLElement | null>) {
         }
       }
     },
-    [abandon, applyIntent, canvasPoint, runtime, toWorld],
+    [abandon, applyIntent, beginPinch, canvasPoint, runtime, toWorld],
   )
 
   const onPointerMove = useCallback(
@@ -961,8 +993,11 @@ export function useCanvasGestures(containerRef: RefObject<HTMLElement | null>) {
         touches.current.set(event.pointerId, canvasPoint(event.clientX, event.clientY))
         const started = pinch.current
         if (started !== null) {
-          const [a, b] = [...touches.current.values()]
-          if (a !== undefined && b !== undefined) store.setViewport(pinchViewport(started, a, b))
+          const a = touches.current.get(started.ids[0])
+          const b = touches.current.get(started.ids[1])
+          if (a !== undefined && b !== undefined) {
+            store.setViewport(pinchViewport(started.start, a, b))
+          }
           return
         }
       }
@@ -1178,11 +1213,10 @@ export function useCanvasGestures(containerRef: RefObject<HTMLElement | null>) {
       const worldPointOf = (e: ReactPointerEvent<HTMLElement>): Point =>
         toWorld(e.clientX, e.clientY)
       if (event.pointerType === 'touch') {
-        touches.current.delete(event.pointerId)
-        if (pinch.current !== null) {
-          // The pinch ends with its first lifted finger; the one left behind
-          // starts nothing until it too is lifted.
-          if (touches.current.size < 2) pinch.current = null
+        const pinching = pinch.current !== null
+        liftFinger(event.pointerId)
+        if (pinching) {
+          // A finger left behind alone starts nothing until it too is lifted.
           if (event.currentTarget.hasPointerCapture(event.pointerId)) {
             event.currentTarget.releasePointerCapture(event.pointerId)
           }
@@ -1429,7 +1463,7 @@ export function useCanvasGestures(containerRef: RefObject<HTMLElement | null>) {
 
       store.endDrag()
     },
-    [commands, runtime.registry, runtime.store, toWorld],
+    [commands, liftFinger, runtime.registry, runtime.store, toWorld],
   )
 
   const onDoubleClick = useCallback(
@@ -1572,11 +1606,10 @@ export function useCanvasGestures(containerRef: RefObject<HTMLElement | null>) {
    */
   const onPointerCancel = useCallback(
     (event: ReactPointerEvent<HTMLElement>): void => {
-      touches.current.delete(event.pointerId)
-      if (touches.current.size < 2) pinch.current = null
+      liftFinger(event.pointerId)
       abandon()
     },
-    [abandon],
+    [abandon, liftFinger],
   )
 
   /*
@@ -1586,14 +1619,12 @@ export function useCanvasGestures(containerRef: RefObject<HTMLElement | null>) {
    */
   const onLostPointerCapture = useCallback(
     (event: ReactPointerEvent<HTMLElement>): void => {
-      touches.current.delete(event.pointerId)
-      if (pinch.current !== null) {
-        if (touches.current.size < 2) pinch.current = null
-        return
-      }
+      const pinching = pinch.current !== null
+      liftFinger(event.pointerId)
+      if (pinching) return
       abandon()
     },
-    [abandon],
+    [abandon, liftFinger],
   )
 
   const onPointerLeave = useCallback((): void => {
