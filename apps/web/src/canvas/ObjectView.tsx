@@ -64,7 +64,16 @@ function ObjectViewInner({ id, views }: Props) {
   const overlay = useOverlay(id)
   const object = useDocumentObject(id)
   const selected = useInteractionStore((state) => state.selection.has(id))
-  const zoom = useInteractionStore((state) => state.viewport.zoom)
+  /*
+   * The zoom only for a view that draws by it, or an object being edited —
+   * editors place their chrome by it. Everything else gets a constant, so a
+   * wheel step no longer re-renders every object on the board.
+   */
+  const editingThis = useInteractionStore((state) => state.editingId === id)
+  const zoomed = object !== undefined && views.get(object.type)?.usesZoom === true
+  const zoom = useInteractionStore((state) =>
+    zoomed || editingThis ? state.viewport.zoom : 1,
+  )
   // Subscribes to the objects this one's rendering depends on — a connector's
   // endpoints — so it redraws when they move. Without this, per-object
   // subscriptions would leave dependent objects stale.

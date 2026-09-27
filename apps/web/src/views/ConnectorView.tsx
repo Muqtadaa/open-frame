@@ -224,6 +224,8 @@ function ConnectorEditor({
 
 export const connectorView = defineObjectView<ConnectorData>({
   type: 'connector',
+  // Its label keeps a readable size on screen as the board zooms.
+  usesZoom: true,
   defaultColor: 'gray',
   Renderer: ConnectorRenderer,
   InlineEditor: ConnectorEditor,

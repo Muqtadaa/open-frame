@@ -126,6 +126,8 @@ function FrameEditor({ object, zoom, Chrome, onCommit }: ObjectEditorProps<Frame
 
 export const frameView = defineObjectView<FrameData>({
   type: 'frame',
+  // Its hairline edge is laid out at the zoom and painted back down.
+  usesZoom: true,
   defaultColor: FRAME_FILL,
   Renderer: FrameRenderer,
   InlineEditor: FrameEditor,
