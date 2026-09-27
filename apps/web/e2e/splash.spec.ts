@@ -152,3 +152,50 @@ test.describe('the label', () => {
     expect(label!.y - pictureBottom).toBeLessThan(40)
   })
 })
+
+/**
+ * Bad news is never held behind the artwork (C3 #10). A board that would not
+ * open already took the splash away at once; the front door's failure and a
+ * crash caught by the application's error boundary both waited out the
+ * two-second hold — under an inert root, where an alert is never announced
+ * and focus cannot land.
+ */
+test.describe('failures are not held', () => {
+  test.beforeEach(async ({ page }) => {
+    await page.addInitScript(() => {
+      localStorage.removeItem('openframe:splash-hold')
+    })
+  })
+
+  test('the front door says its boards could not be listed without waiting', async ({ page }) => {
+    await page.addInitScript(() => {
+      Object.defineProperty(window, 'indexedDB', {
+        configurable: true,
+        value: {
+          open() {
+            throw new DOMException('The operation is insecure.', 'SecurityError')
+          },
+        },
+      })
+    })
+    await page.goto(HOME_URL)
+    await expect(page.getByTestId('home-list-problem')).toBeVisible()
+    await expect(page.locator('#of-splash')).toHaveCount(0)
+    await expect(page.locator('#root')).not.toHaveAttribute('inert', /.*/)
+    expect(await page.evaluate(() => performance.now())).toBeLessThan(1_800)
+  })
+
+  test('a crash is shown at once, with focus on Reload', async ({ page }) => {
+    // Thrown from an effect, which the application's error boundary catches.
+    await page.addInitScript(() => {
+      window.ResizeObserver = function broken() {
+        throw new Error('broken')
+      } as unknown as typeof ResizeObserver
+    })
+    await page.goto(BOARD_URL)
+    await expect(page.getByRole('alertdialog', { name: 'OpenFrame stopped' })).toBeVisible()
+    await expect(page.locator('#of-splash')).toHaveCount(0)
+    expect(await page.evaluate(() => performance.now())).toBeLessThan(1_800)
+    await expect(page.getByRole('button', { name: 'Reload' })).toBeFocused()
+  })
+})
