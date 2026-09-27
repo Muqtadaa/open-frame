@@ -19,6 +19,8 @@ async function board(page: Page): Promise<void> {
   await expect(page.getByTestId('tool-select')).toBeVisible()
 }
 
+const SHARED = 'brd_abcdefgh12345678'
+
 test('sits along the top of the window, above the rail', async ({ page }) => {
   await board(page)
   const bar = await page.getByTestId('status-bar').boundingBox()
@@ -335,6 +337,34 @@ test.describe('a narrow window', () => {
           .filter((child) => child.getBoundingClientRect().width > 0)
           .filter((child) => child.getBoundingClientRect().right > edge + 0.5)
           .map((child) => child.getAttribute('data-testid') ?? child.className)
+      })
+      expect(escaped).toEqual([])
+    })
+  }
+
+  /*
+   * A SHARED board carries more — the room chip and whoever is here — and the
+   * steps down at 640 and 480 were measured without it: the source link ran
+   * out of the bar at 760, and the theme toggle at 390 (audit 2026-09-27).
+   * Every labelled control, however deep, and the bar itself inside the
+   * window.
+   */
+  for (const width of [390, 480, 560, 640, 760]) {
+    test(`keeps a shared board's controls inside the bar at ${String(width)}px`, async ({
+      page,
+    }) => {
+      await page.setViewportSize({ width, height: 720 })
+      await signedIn(page, [{ id: SHARED, title: 'Pricing research', role: 'owner' }])
+      await page.routeWebSocket(/\/room\//, () => undefined)
+      await page.goto(`/?room=${SHARED}&k=${'e'.repeat(32)}`)
+      await page.waitForSelector('[data-testid="status-bar"]')
+      await expect(page.getByTestId('room-status')).toBeVisible()
+      const escaped = await page.getByTestId('status-bar').evaluate((bar) => {
+        const edge = Math.min(bar.getBoundingClientRect().right, window.innerWidth)
+        return [...bar.querySelectorAll('[data-testid]')]
+          .filter((child) => child.getBoundingClientRect().width > 0)
+          .filter((child) => child.getBoundingClientRect().right > edge + 0.5)
+          .map((child) => child.getAttribute('data-testid'))
       })
       expect(escaped).toEqual([])
     })

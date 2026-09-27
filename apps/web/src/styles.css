@@ -3185,9 +3185,22 @@ body {
   .of-status__exit-label {
     display: none;
   }
+
+  /*
+   * A shared board's chip keeps its dot — green, amber, grey say the same
+   * thing the word did — and its name and tip carry the rest.
+   */
+  .of-status__room .of-status__share-label {
+    display: none;
+  }
 }
 
-@media (width < 480px) {
+/*
+ * The second step, at 560 rather than 480: between the two a shared board's
+ * bar — the room chip, whoever is here — ran out of room with the full gaps
+ * and the save word still standing (audit 2026-09-27).
+ */
+@media (width < 560px) {
   .of-status {
     gap: var(--of-space-4);
     padding: var(--of-space-6);
@@ -3206,16 +3219,21 @@ body {
     display: none;
   }
 
-  /*
-   * The account shrinks to its face, and the source offer moves into the
-   * account sheet: both ran off the right edge of a phone, and the source
-   * link has to stay reachable from inside the running app (AGPL §13).
-   */
-  /*
-   * Only a signed-in account has a face to shrink to. Signed out, the label
-   * is the whole button, so it stays — and with it the sheet that carries
-   * the source link (audit 2026-09-27).
-   */
+}
+
+/*
+ * The account shrinks to its face, and the source offer moves into the
+ * account sheet: both ran off the right edge — a phone at first, and then
+ * any window under about 820px once the bar carried a shared board's chip
+ * and the people in it (audit 2026-09-27). The source link has to stay
+ * reachable from inside the running app (AGPL §13), and the sheet is where
+ * it goes.
+ *
+ * Only a signed-in account has a face to shrink to. Signed out, the label
+ * is the whole button, so it stays — and with it the sheet that carries the
+ * source link.
+ */
+@media (width < 820px) {
   .of-status__account:not([data-testid='sign-in']) .of-status__share-label,
   .of-status__source {
     display: none;
