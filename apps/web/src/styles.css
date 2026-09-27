@@ -3203,7 +3203,12 @@ body {
    * account sheet: both ran off the right edge of a phone, and the source
    * link has to stay reachable from inside the running app (AGPL §13).
    */
-  .of-status__account .of-status__share-label,
+  /*
+   * Only a signed-in account has a face to shrink to. Signed out, the label
+   * is the whole button, so it stays — and with it the sheet that carries
+   * the source link (audit 2026-09-27).
+   */
+  .of-status__account:not([data-testid='sign-in']) .of-status__share-label,
   .of-status__source {
     display: none;
   }

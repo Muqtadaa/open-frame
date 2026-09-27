@@ -80,6 +80,28 @@ test("the board's bar fits, with the account as a face and the source in its she
   ).toBeVisible()
 })
 
+/*
+ * Signed out, the label IS the button (audit 2026-09-27). The rule that
+ * shrinks the account to its face hid it here too, leaving a 16px invisible
+ * button — and the source link, whose other home is that button's sheet.
+ */
+test('signed out, the bar still says Sign in, and the source is behind it', async ({ page }) => {
+  await page.goto(BOARD_URL)
+  await page.waitForSelector('[data-testid="status-bar"]')
+  const signIn = page.getByTestId('sign-in')
+  await expect(signIn).toHaveText('Sign in')
+  await expect(signIn.locator('.of-status__share-label')).toBeVisible()
+  const box = await signIn.boundingBox()
+  if (box === null) throw new Error('no sign in')
+  expect(box.width).toBeGreaterThanOrEqual(30)
+  expect(box.x + box.width).toBeLessThanOrEqual(390)
+
+  await signIn.click()
+  await expect(
+    page.getByTestId('account-dialog').getByRole('link', { name: 'Source' }),
+  ).toBeVisible()
+})
+
 test('the page can be zoomed', async ({ page }) => {
   await page.goto(HOME_URL)
   const viewport = await page.locator('meta[name="viewport"]').getAttribute('content')
