@@ -49,7 +49,7 @@ export function Gate({
 }: Props) {
   const id = useId()
   const gate = useRef<HTMLDivElement>(null)
-  const panel = useRef<HTMLElement>(null)
+  const panel = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
     const own = gate.current
@@ -67,11 +67,22 @@ export function Gate({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
-  const Panel = as
+  const title = (
+    <h2 className="of-gone__title" id={`${id}-title`}>
+      {heading}
+    </h2>
+  )
+  const body = <GateBodyId.Provider value={`${id}-body`}>{children}</GateBodyId.Provider>
   return (
     <div className="of-gone" ref={gate}>
-      <Panel
-        ref={panel as RefObject<HTMLDivElement & HTMLFormElement>}
+      {/*
+        The ROLE is on a div, and a gate that asks for something holds a form
+        inside it. A form given `alertdialog` loses its own implicit role, so
+        Enter still submitted but nothing told a screen reader a form was
+        there (audit 2026-09-27).
+      */}
+      <div
+        ref={panel}
         className="of-gone__panel"
         role={role}
         aria-modal="true"
@@ -79,14 +90,11 @@ export function Gate({
         aria-describedby={`${id}-body`}
         tabIndex={-1}
         data-testid={testId}
-        onSubmit={onSubmit}
         onKeyDown={wrapTab}
       >
-        <h2 className="of-gone__title" id={`${id}-title`}>
-          {heading}
-        </h2>
-        <GateBodyId.Provider value={`${id}-body`}>{children}</GateBodyId.Provider>
-      </Panel>
+        {title}
+        {as === 'form' ? <form onSubmit={onSubmit}>{body}</form> : body}
+      </div>
     </div>
   )
 }
