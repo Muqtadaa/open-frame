@@ -1018,3 +1018,52 @@ describe('a fresh text box', () => {
     expect(text?.create().frame.height).toBeGreaterThanOrEqual(2 * size * leading)
   })
 })
+
+/*
+ * The front door, the account and the share controls (C3 #9). Every boundary
+ * one of them DRAWS is a boundary somebody has to see to find the control, so
+ * it clears 3:1 on the page and on the panel it may sit on. They were drawn in
+ * the panel hairline or a wash, at 1.1–1.8:1: an edge that was there and did
+ * nothing. Controls that draw no boundary at all are identified by their words.
+ */
+describe.each(THEMES)('the front door’s controls are seen — $name', ({ token }) => {
+  // Every rule the selector ends, joined: a shared rule comes first and a
+  // selector's own declarations after it.
+  const rule = (selector: string): string =>
+    [
+      ...CSS.matchAll(
+        new RegExp(`${selector.replace(/[.-]/g, (c) => `\\${c}`)}\\s*\\{([^}]*)\\}`, 'g'),
+      ),
+    ]
+      .map((match) => match[1] ?? '')
+      .join('\n')
+
+  it.each([
+    '.of-status__share',
+    '.of-home__confirm-yes',
+    '.of-home__confirm-no',
+    '.of-mentions__bell',
+    '.of-spaces__tab--on',
+  ])('%s draws its edge at 3:1', (selector) => {
+    const edge = /(?<![\w-])border:[^;]*var\(--of-([\w-]+)\)/.exec(rule(selector))?.[1]
+    expect(edge, `${selector} draws a border in a token`).toBeDefined()
+    expect(contrast(token(edge ?? ''), token('page'))).toBeGreaterThanOrEqual(3)
+    expect(contrast(token(edge ?? ''), token('panel'))).toBeGreaterThanOrEqual(3)
+  })
+
+  // An unpinned pin is a control that is always there, so its glyph is seen.
+  it('an unpinned pin is drawn at 3:1, not faded', () => {
+    const body = rule('.of-home__pin')
+    expect(body).not.toMatch(/opacity/)
+    const ink = /(?<![\w-])color:\s*var\(--of-([\w-]+)\)/.exec(body)?.[1]
+    expect(ink, 'the pin names its colour').toBeDefined()
+    expect(contrast(token(ink ?? ''), token('panel'))).toBeGreaterThanOrEqual(3)
+  })
+})
+
+describe('the front door’s targets', () => {
+  it('"Create an account" is a whole target, not a 23px line of text', () => {
+    const body = /\.of-account__switch\s*\{([^}]*)\}/.exec(CSS)?.[1] ?? ''
+    expect(body).toMatch(/min-height:\s*var\(--of-hit-sm\)/)
+  })
+})

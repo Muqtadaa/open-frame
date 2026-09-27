@@ -2213,6 +2213,8 @@ body {
 .of-spaces__tab--on {
   color: var(--of-accent);
   background: var(--of-panel);
+  /* The chosen workspace is seen by its edge too, not only by a 1.12:1 fill. */
+  border: 1px solid var(--of-control-border);
   box-shadow: var(--of-pressed-shadow);
 }
 
@@ -2302,7 +2304,8 @@ body {
   color: var(--of-accent);
   cursor: pointer;
   background: var(--of-accent-soft);
-  border: 1px solid transparent;
+  /* Its own edge in the accent: the wash alone was 1.13:1 on the page. */
+  border: 1px solid var(--of-accent);
   border-radius: var(--of-radius);
 }
 
@@ -3041,6 +3044,8 @@ body {
   background: none;
   border: none;
   cursor: pointer;
+  /* A whole target: as a bare line of text it was 23px tall. */
+  min-height: var(--of-hit-sm);
 }
 
 .of-account__switch:hover {
@@ -3315,7 +3320,8 @@ body {
   font: inherit;
   color: var(--of-ink-muted);
   background: transparent;
-  border: 1px solid var(--of-panel-border);
+  /* A boundary you must see to find the control: 3:1, not the panel hairline. */
+  border: 1px solid var(--of-control-border);
   border-radius: var(--of-radius-apparatus);
   cursor: pointer;
 }
@@ -5707,19 +5713,18 @@ textarea.of-input {
  * board has to READ as pinned when nobody is pointing at it, and a control
  * that only exists under the cursor cannot be found on a touch screen.
  */
-/* Faint at rest, so a column of pins does not read as a column of warnings. */
+/*
+ * Quiet at rest, so a column of pins does not read as a column of warnings —
+ * but in the control boundary's colour rather than faded ink. Faded, an
+ * unpinned pin was 1.68:1: a control that is always there, and nearly unseen.
+ */
 .of-home__pin {
-  opacity: 0.35;
+  color: var(--of-control-border);
 }
 
 .of-home__pin:hover,
 .of-home__pin:focus-visible {
-  opacity: 1;
-}
-
-/* Pinned reads as pinned without the cursor anywhere near it. */
-.of-home__pin[aria-pressed='true'] {
-  opacity: 1;
+  color: var(--of-ink);
 }
 
 /*
@@ -5824,7 +5829,7 @@ textarea.of-input {
 .of-home__confirm-yes {
   color: var(--of-danger);
   background: var(--of-danger-wash);
-  border: 1px solid var(--of-danger-edge);
+  border: 1px solid var(--of-danger);
 }
 
 .of-home__confirm-yes:hover {
@@ -5837,7 +5842,7 @@ textarea.of-input {
 .of-home__confirm-no {
   color: var(--of-ink);
   background: var(--of-page);
-  border: 1px solid var(--of-panel-border);
+  border: 1px solid var(--of-control-border);
 }
 
 /*
