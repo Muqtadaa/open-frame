@@ -193,9 +193,9 @@ test('offers the view-only link for a board you own, and for nobody else’s', a
  *
  * The block is right-aligned with a fixed width, so actions too wide for it do
  * not clip — they spill LEFTWARD, over the column beside them. A row you own
- * carries four of them and a member's carries two, so the reserved width is
- * sized for four, and adding a fifth without widening it would put a button on
- * top of the board's tag.
+ * carries three of them and a member's carries two, so the reserved width is
+ * sized for three, and adding a fourth without widening it would put a button
+ * on top of the board's tag.
  *
  * Asserted separately from the column alignment because the two are different
  * properties, and a comment here once claimed they were the same one: the
@@ -203,8 +203,7 @@ test('offers the view-only link for a board you own, and for nobody else’s', a
  */
 test('keeps a row’s actions inside the space reserved for them', async ({ page }) => {
   await signedIn(page, [
-    // An owner's row, which carries the most: view link, password, rename,
-    // delete.
+    // An owner's row, which carries the most: view link, rename, delete.
     { id: 'brd_aaaaaaaa11111111', title: 'Mine', role: 'owner' },
   ])
 

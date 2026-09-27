@@ -231,3 +231,34 @@ export async function setBoardPassword(
   }
   return { ok: true }
 }
+
+/**
+ * The keys a board's OWNER holds, or `null` for anybody else.
+ *
+ * The edit key comes from the account rather than the address bar: an owner
+ * who arrived on the view link would otherwise be handed an "edit link" that
+ * only views. The view key makes the second link; the owner key authorizes
+ * the password.
+ * `my_boards()` returns both columns to the owner and to nobody else, so their
+ * presence is also the answer to "is this mine" — asked once, when the room
+ * chip mounts, rather than on every press.
+ */
+export async function ownedKeys(
+  boardId: BoardId,
+): Promise<{
+  readonly edit: string | null
+  readonly view: string
+  readonly owner: string | null
+} | null> {
+  let mine: Awaited<ReturnType<typeof listMyBoards>>
+  try {
+    mine = await listMyBoards()
+  } catch {
+    return null
+  }
+  const row = mine.find((candidate) => candidate.boardId === boardId)
+  const view = row?.viewKey ?? null
+  if (row === undefined || view === null) return null
+  if (row.ownerKey !== null) rememberOwnerKey(boardId, row.ownerKey)
+  return { edit: row.accessKey, view, owner: row.ownerKey ?? heldOwnerKey(boardId) }
+}

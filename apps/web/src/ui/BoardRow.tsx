@@ -5,10 +5,9 @@ import { canDelete, canLeave, describeWhen, type ListedBoard } from '../app/boar
 import { setLocalPin } from '../app/board-prefs.js'
 import { deleteBoardEverywhere, leaveBoard, renameBoard } from '../app/board-lifecycle.js'
 import { shareLink } from '../app/collab-config.js'
-import { setBoardPassword } from '../app/board-password.js'
 import { setBoardPinned } from '../app/remote-boards.js'
 import { boardHref } from '../app/route.js'
-import { KeyIcon, LeaveIcon, LinkIcon, PinIcon, RenameIcon, TrashIcon } from '../controls/icons.js'
+import { LeaveIcon, LinkIcon, PinIcon, RenameIcon, TrashIcon } from '../controls/icons.js'
 
 /**
  * One board, and the things you can do to it without opening it.
@@ -24,7 +23,7 @@ import { KeyIcon, LeaveIcon, LinkIcon, PinIcon, RenameIcon, TrashIcon } from '..
  * destroyed is named is a better confirmation anyway — nobody has to remember
  * which board the dialog is about.
  */
-type Mode = 'rest' | 'renaming' | 'confirming' | 'working' | 'password'
+type Mode = 'rest' | 'renaming' | 'confirming' | 'working'
 
 export function BoardRow({
   board,
@@ -44,8 +43,12 @@ export function BoardRow({
   const [pinned, setPinned] = useState(board.pinned)
   const [problem, setProblem] = useState<string | null>(null)
   const [copied, setCopied] = useState(false)
-  const [secret, setSecret] = useState('')
   const input = useRef<HTMLInputElement>(null)
+  const removeButton = useRef<HTMLButtonElement>(null)
+  const keep = useRef<HTMLButtonElement>(null)
+  // Set when a confirmation is answered with "keep", so the keyboard goes back
+  // to the control that asked rather than falling to the page.
+  const returnFocus = useRef(false)
 
   // The copied note clears itself. A bare `setTimeout` in the handler outlives
   // the row when the list re-renders under it.
@@ -57,6 +60,12 @@ export function BoardRow({
 
   useEffect(() => {
     if (mode === 'renaming') input.current?.select()
+    // The safe answer takes the keyboard; it fell to the page before.
+    if (mode === 'confirming') keep.current?.focus()
+    if (mode === 'rest' && returnFocus.current) {
+      returnFocus.current = false
+      removeButton.current?.focus()
+    }
   }, [mode])
 
   const href = board.shared
@@ -102,25 +111,6 @@ export function BoardRow({
    * what `accessKey` is for a board you own, and the strongest thing such a
    * board has.
    */
-  const applyPassword = async (next: string | null): Promise<void> => {
-    if (board.accessKey === null) {
-      setProblem('This board has no link to protect.')
-      return
-    }
-    const outcome = await setBoardPassword(
-      board.boardId,
-      { owner: board.ownerKey, editor: board.accessKey },
-      next,
-    )
-    if (!outcome.ok) {
-      setProblem(outcome.reason)
-      return
-    }
-    setProblem(null)
-    setSecret('')
-    setMode('rest')
-  }
-
   const remove = (): void => {
     setMode('working')
     setProblem(null)
@@ -198,7 +188,9 @@ export function BoardRow({
                 : board.role === 'viewer'
                   ? 'view only'
                   : board.role === 'owner'
-                    ? 'shared'
+                    ? // Yours, not "shared": every board is born in a room
+                      // now, so "shared" was on every row and said nothing.
+                      'yours'
                     : 'shared with you'}
             </span>
             <span className="of-home__board-when">{describeWhen(board.updatedAt, readAt)}</span>
@@ -244,30 +236,6 @@ export function BoardRow({
               </button>
             )}
 
-            {/*
-              * A PASSWORD on the links, for a board you own.
-              *
-              * Gated on the same signal as the view-only link — a board whose
-              * second key came back is one you own — because the room takes
-              * the EDITOR key for this, and that is the key an owner holds.
-              */}
-            {board.viewKey !== null && (
-              <button
-                type="button"
-                className="of-icon-button"
-                aria-label={`Require a password for ${board.title}`}
-                data-testid="set-password"
-                data-tip={`Require a password for ${board.title}. Both links ask for it.`}
-                aria-description={`Require a password for ${board.title}. Both links ask for it.`}
-                onClick={() => {
-                  setSecret('')
-                  setProblem(null)
-                  setMode('password')
-                }}
-              >
-                <KeyIcon />
-              </button>
-            )}
 
             <button
               type="button"
@@ -299,6 +267,7 @@ export function BoardRow({
                 data-testid="leave-board"
                 data-tip={`Leave ${board.title}. It carries on without you.`}
                 aria-description={`Leave ${board.title}. It carries on without you.`}
+                ref={removeButton}
                 onClick={() => setMode('confirming')}
               >
                 <LeaveIcon />
@@ -312,7 +281,8 @@ export function BoardRow({
                   data-testid="delete-board"
                   data-tip={`Delete ${board.title}. This cannot be undone.`}
                   aria-description={`Delete ${board.title}. This cannot be undone.`}
-                  onClick={() => setMode('confirming')}
+                  ref={removeButton}
+                onClick={() => setMode('confirming')}
                 >
                   <TrashIcon />
                 </button>
@@ -329,53 +299,18 @@ export function BoardRow({
         )}
       </div>
 
-      {mode === 'password' && (
-        <form
+      {mode === 'confirming' && (
+        <p
           className="of-home__confirm"
-          data-testid="password-form"
-          onSubmit={(event) => {
+          data-testid="confirm-remove"
+          role="alert"
+          onKeyDown={(event) => {
+            if (event.key !== 'Escape') return
             event.preventDefault()
-            void applyPassword(secret)
+            returnFocus.current = true
+            setMode('rest')
           }}
         >
-          <span className="of-home__confirm-what">
-            Both links will ask for this. Anyone who has already opened the board is signed out
-            of it.
-          </span>
-          <input
-            className="of-input of-home__password"
-            type="password"
-            autoComplete="off"
-            aria-label={`A password for ${board.title}`}
-            data-testid="password-input"
-            value={secret}
-            onChange={(event) => {
-              setSecret(event.target.value)
-            }}
-          />
-          <button type="submit" className="of-home__confirm-yes" data-testid="password-save">
-            Set
-          </button>
-          {/*
-            * Clearing is the same authority and the same request with a null
-            * body, so it lives here rather than behind a second control that
-            * would have to be enabled by state this row does not have.
-            */}
-          <button
-            type="button"
-            className="of-home__confirm-no"
-            data-testid="password-clear"
-            onClick={() => {
-              void applyPassword(null)
-            }}
-          >
-            No password
-          </button>
-        </form>
-      )}
-
-      {mode === 'confirming' && (
-        <p className="of-home__confirm" data-testid="confirm-remove" role="alert">
           <span className="of-home__confirm-what">
             {canLeave(board)
               ? 'Leave this board? It carries on without you.'
@@ -391,9 +326,13 @@ export function BoardRow({
           </button>
           <button
             type="button"
+            ref={keep}
             className="of-home__confirm-no"
             data-testid="confirm-no"
-            onClick={() => setMode('rest')}
+            onClick={() => {
+              returnFocus.current = true
+              setMode('rest')
+            }}
           >
             Keep
           </button>

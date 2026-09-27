@@ -1,43 +1,54 @@
 ---
-version: 1
+version: 2
 slug: "apps-web-src-ui-sharecontrol-tsx"
 primary_target: "apps/web/src/ui/ShareControl.tsx"
-related_targets: ["apps/web/src/app/share.ts"]
+related_targets: ["apps/web/src/app/share.ts", "apps/web/src/app/board-password.ts", "apps/web/src/controls/use-dismiss.ts"]
 ---
 
-THESIS: Sharing is a choice between two links, and the whole risk of the
-feature is sending the wrong one. So the surface is a chooser that says what
-each link gives away in the words somebody would use, not a pair of buttons
-labelled "edit" and "view" that a person gets wrong once and then stops
-trusting.
+THESIS (REWRITTEN 2026-09-27, C3 #9): Every board is born in a room, so
+sharing is not a moment but a record of who holds which link, and whether
+they need a password. The whole risk of the feature is still sending the
+wrong link, so the owner is always shown both, each saying what it gives
+away, with the password beside them; nobody else is ever handed a link
+silently.
 
-MODE: Operate. One decision, made once per board, in the middle of other work.
+MODE: Operate. A decision made in the middle of other work, and revisited.
 
-FORM: A sheet under its button in the navigation bar, cut from panel white with the contact
-shadow, matching the account sheet exactly — the same shape for the same kind
-of moment. NOT a modal: the craft floor bans one for a task that needs neither
-interruption nor protected focus, and this is the clearest case of that in the
-product.
+THE OWNER'S CHIP opens the links sheet: copy edit link, copy view link, at
+50px (`--of-hit-lg`) because this is the one control where missing costs
+something, each with its consequence on the second line ("they can change the
+board", "they can watch, and be seen watching"). A copied link keeps its name
+and says "Copied" beneath — the word in place of the name did not say which.
+Ownership is asked of the account once, when the chip mounts; until it
+answers, the chip behaves as an editor's.
 
-Each link is a row on page stock with a `control-border` hairline, 50px minimum
-(`--of-hit-lg`) rather than the 24px AA floor, because this is the one control in OpenFrame
-where missing costs something. The row carries its name and, below it at the
-12px functional floor, what it does to the person who receives it: "they can
-change the board", "they can watch, and be seen watching". That second line is
-the deciding information, not decoration, which is why it sits at the floor and
-not below it.
+THE PASSWORD lives in the same sheet, under a rule below the links it
+protects: a neutral "Set password", which refuses an empty value, and a
+separate "Remove password". Whether one is set is known only to the room,
+which does not yet say — logged, not faked.
 
-VIEW-ONLY: a record, not a badge. 12px mono, muted ink, page stock, hairline,
-apparatus radius — it sits in the record line beside the other readouts, which
-are all mono and muted. A pill would also have been the third fully-round thing
-in a world where round means "grab me": only the rotate handle and connector
-endpoints are round.
+ANYBODY ELSE'S CHIP copies the link they arrived on and names it: "Click to
+copy the edit link" / "View link copied".
 
-FAILURE: sharing fails loudly. The correction wash and edge, with `role="alert"`
-— falling back to a link without keys would hand somebody an unprotected board
-at the moment they asked for a view-only one, which is the failure mode where
-the interface says a thing it is not doing.
+MOVING a board that lives only in this browser asks first, in the gates'
+shell ("Move this board to share it?"), with the board INERT until the page
+has left for the board that exists, and lands on that board with the links
+sheet open. It used to move on the press and leave the old page editable,
+saying "Saved" over edits that were then lost — rule 7's one unacceptable
+failure. A failed move says so in the question and offers "Try again".
 
-FINISH: the room is the authority, not this surface. Three end-to-end specs
-through a real Durable Object, one of which dispatches straight past the
-disabled button, because the interface is not the thing being trusted.
+SHEET: panel white with the contact shadow, hanging below its control. It
+takes the keyboard on arrival, closes on Escape, Done or a press elsewhere,
+and gives the keyboard back to the chip (`useDismiss`, `useFocusOnOpen`).
+
+VIEW-ONLY: a record, not a badge — 12px mono, muted, page stock, hairline,
+apparatus radius, in the bar beside the other readouts.
+
+EDGES: the Share and room triggers draw their boundary in the control border,
+held at 3:1 by `design-tokens.test`.
+
+FINISH: `share-confirm.spec` (the question, Escape, a failed move),
+`share-owner.spec` (both links and the password; an editor's named copy),
+`sheets-keyboard.spec`, and in `e2e-rooms` a real move after which what is
+written is still there on reload. The room remains the authority; this
+surface is never the thing being trusted.

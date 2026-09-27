@@ -906,6 +906,14 @@ body {
   transform: translate(-50%, 0);
 }
 
+/*
+ * A control whose sheet is open says nothing more: its tip peeked out from
+ * behind every open sheet, over the sheet's own edge.
+ */
+[data-tip][aria-expanded='true']::after {
+  display: none;
+}
+
 [data-tip-side='below']::after,
 .of-overlay--nav [data-tip]::after {
   top: calc(100% + var(--of-space-6));
@@ -2213,6 +2221,8 @@ body {
 .of-spaces__tab--on {
   color: var(--of-accent);
   background: var(--of-panel);
+  /* The chosen workspace is seen by its edge too, not only by a 1.12:1 fill. */
+  border: 1px solid var(--of-control-border);
   box-shadow: var(--of-pressed-shadow);
 }
 
@@ -2268,6 +2278,17 @@ body {
 .of-spaces__naming {
   display: flex;
   gap: var(--of-space-6);
+  align-items: flex-end;
+}
+
+.of-spaces__label {
+  flex: 1 1 auto;
+  min-width: 0;
+  margin-bottom: 0;
+}
+
+.of-spaces__label .of-spaces__name {
+  width: 100%;
 }
 
 .of-spaces__name,
@@ -2278,8 +2299,16 @@ body {
 
 .of-spaces__share {
   display: flex;
+  flex-wrap: wrap;
   gap: var(--of-space-6);
   align-items: center;
+}
+
+/* What the invite gives, on its own line under the link it describes. */
+.of-spaces__invite-what {
+  flex-basis: 100%;
+  font-size: var(--of-type-record);
+  color: var(--of-ink-muted);
 }
 
 /* What somebody wanted you to see, on the front door. */
@@ -2302,7 +2331,8 @@ body {
   color: var(--of-accent);
   cursor: pointer;
   background: var(--of-accent-soft);
-  border: 1px solid transparent;
+  /* Its own edge in the accent: the wash alone was 1.13:1 on the page. */
+  border: 1px solid var(--of-accent);
   border-radius: var(--of-radius);
 }
 
@@ -2965,6 +2995,16 @@ body {
   border: 1px solid var(--of-panel-border);
   border-radius: var(--of-radius-surface);
   box-shadow: var(--of-shadow);
+  /*
+   * A sheet hangs below the bar and grows with what it holds — the owner's
+   * links plus the password form outgrow a phone on its side. The surface
+   * that places it only clamps its position, so the sheet bounds its own
+   * height and scrolls, or Done ends up below the window where nothing can
+   * reach it.
+   */
+  max-height: calc(100dvh - var(--of-nav-band) - var(--of-gutter));
+  overflow-y: auto;
+  overscroll-behavior: contain;
 }
 
 /* Who is signed in: a label, the name, and the address it came from. */
@@ -2986,6 +3026,25 @@ body {
 .of-account__field {
   display: block;
   margin-bottom: var(--of-space-12);
+}
+
+/*
+ * The source offer, repeated in the account and sign-in sheets for the one
+ * width where the bar has no room for it. Hidden everywhere else.
+ */
+.of-sheet__source {
+  display: none;
+  margin-top: var(--of-space-12);
+  font-size: var(--of-type-record);
+  color: var(--of-ink-muted);
+}
+
+/* What a field is for, kept beside it once somebody has started typing. */
+.of-account__hint {
+  display: block;
+  margin-top: var(--of-space-4);
+  font-size: var(--of-type-record);
+  color: var(--of-ink-muted);
 }
 
 /* A field label, set the way the record panel sets one. */
@@ -3022,6 +3081,8 @@ body {
   background: none;
   border: none;
   cursor: pointer;
+  /* A whole target: as a bare line of text it was 23px tall. */
+  min-height: var(--of-hit-sm);
 }
 
 .of-account__switch:hover {
@@ -3135,6 +3196,20 @@ body {
 
   .of-status__rule {
     display: none;
+  }
+
+  /*
+   * The account shrinks to its face, and the source offer moves into the
+   * account sheet: both ran off the right edge of a phone, and the source
+   * link has to stay reachable from inside the running app (AGPL §13).
+   */
+  .of-status__account .of-status__share-label,
+  .of-status__source {
+    display: none;
+  }
+
+  .of-sheet__source {
+    display: block;
   }
 }
 
@@ -3282,7 +3357,8 @@ body {
   font: inherit;
   color: var(--of-ink-muted);
   background: transparent;
-  border: 1px solid var(--of-panel-border);
+  /* A boundary you must see to find the control: 3:1, not the panel hairline. */
+  border: 1px solid var(--of-control-border);
   border-radius: var(--of-radius-apparatus);
   cursor: pointer;
 }
@@ -5438,6 +5514,12 @@ textarea.of-input {
   gap: 28px;
   width: 100%;
   min-height: 100dvh;
+  /*
+   * Never sideways. A tip is laid out even while it is invisible, and the
+   * ones on the header's far end reached past a narrow window and made the
+   * whole page scroll — with nothing visible out there to scroll to.
+   */
+  overflow-x: clip;
   padding: 48px 24px;
   font-family: var(--of-font);
   color: var(--of-ink);
@@ -5494,8 +5576,28 @@ textarea.of-input {
   gap: var(--of-space-6);
 }
 
+/*
+ * The account sits at the column's right edge, so its tip hangs from its
+ * right-hand side, like the zoom cluster's, and stays on screen.
+ */
+.of-home__lockup .of-home__account[data-tip]::after {
+  right: 0;
+  left: auto;
+  transform: translateY(var(--of-space-2));
+}
+
+.of-home__lockup .of-home__account[data-tip]:hover::after,
+.of-home__lockup .of-home__account[data-tip]:focus-visible::after {
+  transform: none;
+}
+
 .of-home__lockup {
   display: flex;
+  /*
+   * Wraps: the mark, the name, the account and the mentions do not fit a
+   * phone on one line, and unwrapped they made the whole page 480px wide.
+   */
+  flex-wrap: wrap;
   gap: var(--of-step);
   align-items: center;
 }
@@ -5529,10 +5631,13 @@ textarea.of-input {
   font-family: var(--of-font);
   font-size: var(--of-type-control);
   color: var(--of-ink);
-  background: var(--of-page);
-  /* Apparatus radius. Fully round is reserved for the rotate handle and
-     connector endpoints, where it signals a grab point. */
-  border: 1px solid var(--of-panel-border);
+  /*
+   * Borderless, like the board's account chip: apparatus, not an outlined
+   * chip. The outline it had was a boundary at 1.45:1, drawn but not seen.
+   * Apparatus radius, because fully round is reserved for grab points.
+   */
+  background: transparent;
+  border: none;
   border-radius: var(--of-radius-apparatus);
   cursor: pointer;
 }
@@ -5645,19 +5750,18 @@ textarea.of-input {
  * board has to READ as pinned when nobody is pointing at it, and a control
  * that only exists under the cursor cannot be found on a touch screen.
  */
-/* Faint at rest, so a column of pins does not read as a column of warnings. */
+/*
+ * Quiet at rest, so a column of pins does not read as a column of warnings —
+ * but in the control boundary's colour rather than faded ink. Faded, an
+ * unpinned pin was 1.68:1: a control that is always there, and nearly unseen.
+ */
 .of-home__pin {
-  opacity: 0.35;
+  color: var(--of-control-border);
 }
 
 .of-home__pin:hover,
 .of-home__pin:focus-visible {
-  opacity: 1;
-}
-
-/* Pinned reads as pinned without the cursor anywhere near it. */
-.of-home__pin[aria-pressed='true'] {
-  opacity: 1;
+  color: var(--of-ink);
 }
 
 /*
@@ -5683,11 +5787,12 @@ textarea.of-input {
    *
    * What the number does is stop the buttons overflowing the box they were
    * given. The block is right-aligned, so content too wide for it spills
-   * LEFTWARD into the column beside it rather than being clipped. Four 30px
-   * targets and three 2px gaps is 126, exactly.
+   * LEFTWARD into the column beside it rather than being clipped. Three 30px
+   * targets and two 2px gaps is 94, exactly — the password moved into the
+   * share sheet, and the 32px it no longer needs went back to the name.
    */
   justify-content: flex-end;
-  width: 126px;
+  width: 94px;
   gap: var(--of-space-2);
   opacity: 0;
 }
@@ -5762,7 +5867,7 @@ textarea.of-input {
 .of-home__confirm-yes {
   color: var(--of-danger);
   background: var(--of-danger-wash);
-  border: 1px solid var(--of-danger-edge);
+  border: 1px solid var(--of-danger);
 }
 
 .of-home__confirm-yes:hover {
@@ -5775,7 +5880,7 @@ textarea.of-input {
 .of-home__confirm-no {
   color: var(--of-ink);
   background: var(--of-page);
-  border: 1px solid var(--of-panel-border);
+  border: 1px solid var(--of-control-border);
 }
 
 /*
@@ -5862,12 +5967,6 @@ textarea.of-input {
   color: var(--of-danger);
 }
 
-/* A row's password field, when it is asking for one to set rather than telling. */
-.of-home__password {
-  flex: none;
-  width: 160px;
-}
-
 /*
  * A grid, not a flex row with `space-between`.
  *
@@ -5897,9 +5996,10 @@ textarea.of-input {
    * and took every one of them from the name.
    *
    * 118px fits the longest tag ("shared with you", 15 mono characters plus its
-   * padding); 96px fits the longest time ("11 months ago").
+   * padding); 108px fits the longest time ("11 months ago") WITH the mono's
+   * 0.02em tracking, which 96 forgot — "9 minutes ago" wrapped at 1280.
    */
-  grid-template-columns: minmax(0, 1fr) 118px 96px;
+  grid-template-columns: minmax(0, 1fr) 118px 108px;
   /* 36px rather than the 24px AA floor: a list row is a large target that costs
      nothing to make comfortable. */
   min-height: var(--of-hit-lg);
@@ -5965,6 +6065,19 @@ textarea.of-input {
 
   .of-home__column {
     gap: var(--of-space-16);
+  }
+
+  /*
+   * A confirmation says its sentence on a line of its own and answers under
+   * it. In one row with its two buttons it was one word per line on a phone.
+   */
+  .of-home__confirm {
+    flex-wrap: wrap;
+    padding-left: var(--of-space-8);
+  }
+
+  .of-home__confirm-what {
+    flex-basis: 100%;
   }
 
   /*
@@ -6056,16 +6169,39 @@ textarea.of-input {
   width: 100%;
 }
 
-.of-share__error {
-  width: 320px;
+/*
+ * The password, under a rule below the links it protects: part of the same
+ * decision about who can open the board, and so part of the same sheet.
+ */
+.of-share__password {
+  display: grid;
+  gap: var(--of-space-8);
+  padding-top: var(--of-space-12);
+  margin: var(--of-space-12) 0;
+  border-top: 1px solid var(--of-rule);
+}
+
+.of-share__password .of-account__field {
+  margin-bottom: 0;
+}
+
+.of-share__password-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--of-space-8);
+}
+
+/* What happened, said inside the sheet rather than in a panel of its own. */
+.of-share__said,
+.of-share__problem {
   margin: 0;
-  padding: var(--of-space-16) var(--of-gutter);
-  font-size: var(--of-type-control);
-  line-height: 1.4;
+  font-size: var(--of-type-ui-small);
+  line-height: 1.35;
+  color: var(--of-ink-muted);
+}
+
+.of-share__problem {
   color: var(--of-danger);
-  background: var(--of-danger-wash);
-  border: 1px solid var(--of-danger-edge);
-  border-radius: var(--of-radius);
 }
 
 /*
@@ -6261,10 +6397,17 @@ textarea.of-input {
   }
 }
 
-.of-sheet,
-.of-share__error {
-  animation: of-raise var(--of-quick) var(--of-ease) backwards;
-  transform-origin: bottom left;
+.of-sheet {
+  animation: of-drop var(--of-quick) var(--of-ease) backwards;
+  /* Sheets hang BELOW their control now the bar runs along the top. */
+  transform-origin: top left;
+}
+
+@keyframes of-drop {
+  from {
+    opacity: 0;
+    transform: translateY(-4px) scale(0.985);
+  }
 }
 
 /*
@@ -6311,7 +6454,6 @@ textarea.of-input {
 @media (prefers-reduced-motion: reduce) {
   .of-home__list li,
   .of-sheet,
-  .of-share__error,
   .of-picker,
   .of-cellbar {
     animation-name: of-fade;

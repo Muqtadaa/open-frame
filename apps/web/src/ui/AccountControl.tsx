@@ -1,8 +1,10 @@
-import { useEffect, useRef, useState } from 'react'
+import { useCallback, useRef, useState, type RefObject } from 'react'
 
 import { ACCOUNTS_ENABLED, signOut } from '../app/identity.js'
+import { SOURCE_URL } from '../app/source-link.js'
 import { AnchoredSurface } from '../controls/AnchoredSurface.js'
 import { useAnchoredTo } from '../controls/use-anchor.js'
+import { useDismiss, useFocusOnOpen } from '../controls/use-dismiss.js'
 import { useIdentity } from '../hooks/use-identity.js'
 import { AccountForm } from './AccountForm.js'
 import { hueVar, initialOf } from '../scene/presence.js'
@@ -20,6 +22,10 @@ export function AccountControl() {
   const identity = useIdentity()
   const [open, setOpen] = useState(false)
   const { ref, anchor, surface } = useAnchoredTo<HTMLButtonElement>(open)
+  const close = useCallback(() => {
+    setOpen(false)
+    ref.current?.focus()
+  }, [ref])
 
   if (!ACCOUNTS_ENABLED) return null
 
@@ -58,10 +64,8 @@ export function AccountControl() {
             surface={surface}
             name={identity.displayName}
             email={identity.email}
-            onClose={() => {
-              setOpen(false)
-              ref.current?.focus()
-            }}
+            trigger={ref}
+            onClose={close}
             onSignOut={() => {
               setOpen(false)
               void signOut()
@@ -97,27 +101,38 @@ export function AccountControl() {
         * it, and nothing stopped it running off the right on a narrow window.
         */}
       {open && (
-        <AnchoredSurface
-          anchor={anchor}
-          surface={surface}
-          prefer={['below', 'above']}
-          testId="account-surface"
-        >
-          <div
-            className="of-sheet"
-            role="dialog"
-            aria-label="Account"
-            data-testid="account-dialog"
-          >
-            <AccountForm
-              onDone={() => {
-                setOpen(false)
-              }}
-            />
-          </div>
-        </AnchoredSurface>
+        <SignInSheet anchor={anchor} surface={surface} trigger={ref} onClose={close} />
       )}
     </>
+  )
+}
+
+/**
+ * Signing in, from a board. Takes the keyboard on arrival — the email field —
+ * and lets go of it like every other sheet: it ignored Escape and any press
+ * elsewhere, so a sheet opened by mistake stayed over the board.
+ */
+function SignInSheet({
+  anchor,
+  surface,
+  trigger,
+  onClose,
+}: {
+  readonly anchor: DOMRect | null
+  readonly surface: Size
+  readonly trigger: RefObject<HTMLElement | null>
+  readonly onClose: () => void
+}) {
+  const sheet = useRef<HTMLDivElement>(null)
+  useDismiss(sheet, trigger, onClose)
+  useFocusOnOpen(sheet)
+  return (
+    <AnchoredSurface anchor={anchor} surface={surface} prefer={['below', 'above']} testId="account-surface">
+      <div ref={sheet} className="of-sheet" role="dialog" aria-label="Account" data-testid="account-dialog">
+        <AccountForm onDone={onClose} />
+        <SheetSource />
+      </div>
+    </AnchoredSurface>
   )
 }
 
@@ -127,11 +142,12 @@ export function AccountControl() {
  * Closed by Escape or a press anywhere else, like every other sheet, and it
  * hands the keyboard back to the name that opened it.
  */
-function AccountSheet({
+export function AccountSheet({
   anchor,
   surface,
   name,
   email,
+  trigger,
   onClose,
   onSignOut,
 }: {
@@ -139,38 +155,15 @@ function AccountSheet({
   readonly surface: Size
   readonly name: string
   readonly email: string | null
+  readonly trigger: RefObject<HTMLElement | null>
   readonly onClose: () => void
   readonly onSignOut: () => void
 }) {
   const sheet = useRef<HTMLDivElement>(null)
 
-  useEffect(() => {
-    const dismiss = (event: Event): void => {
-      if (event.target instanceof Node && sheet.current?.contains(event.target) === true) return
-      if (event.target instanceof Element && event.target.closest('[data-testid="account"]') !== null)
-        return
-      onClose()
-    }
-    /*
-     * Escape is the SHEET's, and only the sheet's: the board's keymap also
-     * listens on the window and reads Escape as "clear the selection", so one
-     * press closed the sheet and changed the board. Taken in the capture
-     * phase and stopped there.
-     */
-    const escape = (event: KeyboardEvent): void => {
-      if (event.key !== 'Escape') return
-      event.preventDefault()
-      event.stopPropagation()
-      onClose()
-    }
-    // Capture phase: the canvas would otherwise consume the press first.
-    window.addEventListener('pointerdown', dismiss, true)
-    window.addEventListener('keydown', escape, true)
-    return () => {
-      window.removeEventListener('pointerdown', dismiss, true)
-      window.removeEventListener('keydown', escape, true)
-    }
-  }, [onClose])
+  useDismiss(sheet, trigger, onClose)
+  // Into the sheet: "Sign out" was 31 Tabs away, past the whole board.
+  useFocusOnOpen(sheet)
 
   return (
     <AnchoredSurface anchor={anchor} surface={surface} prefer={['below', 'above']} testId="account-surface">
@@ -202,7 +195,20 @@ function AccountSheet({
             Sign out
           </button>
         </div>
+        <SheetSource />
       </div>
     </AnchoredSurface>
+  )
+}
+
+/**
+ * The source offer, for the width where the bar has no room for it. Shown by
+ * the stylesheet only there; everywhere else the bar carries it.
+ */
+function SheetSource() {
+  return (
+    <a className="of-sheet__source" href={SOURCE_URL} target="_blank" rel="noreferrer">
+      Source
+    </a>
   )
 }

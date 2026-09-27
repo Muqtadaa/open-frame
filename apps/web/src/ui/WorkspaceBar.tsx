@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useRef, useState } from 'react'
 
 import { PlusIcon } from '../controls/icons.js'
 import type { Workspace } from '../hooks/use-workspaces.js'
@@ -40,6 +40,14 @@ export function WorkspaceBar({
 }: Props) {
   const [naming, setNaming] = useState(false)
   const [name, setName] = useState('')
+  const [copied, setCopied] = useState<'yes' | 'no' | null>(null)
+  const [copiedOf, setCopiedOf] = useState(invite)
+  // A new link has not been copied yet: reset while rendering, not in an effect.
+  if (copiedOf !== invite) {
+    setCopiedOf(invite)
+    setCopied(null)
+  }
+  const newButton = useRef<HTMLButtonElement>(null)
 
   // One workspace and no way to make another is not a choice; it is a label
   // taking up the space the boards should have.
@@ -84,6 +92,7 @@ export function WorkspaceBar({
           type="button"
           className="of-spaces__new"
           aria-expanded={naming}
+          ref={newButton}
           data-testid="workspace-new"
           onClick={() => {
             setNaming((was) => !was)
@@ -106,20 +115,43 @@ export function WorkspaceBar({
             setNaming(false)
           }}
         >
-          <input
-            className="of-input of-spaces__name"
-            value={name}
-            maxLength={80}
-            placeholder="What is it for?"
-            aria-label="Name for the new workspace"
-            data-testid="workspace-name"
-            autoFocus
-            onChange={(event) => {
-              setName(event.target.value)
-            }}
-          />
+          {/* A label that stays, and a way back: its only label was a placeholder. */}
+          <label className="of-account__field of-spaces__label">
+            <span>name</span>
+            <input
+              className="of-input of-spaces__name"
+              value={name}
+              maxLength={80}
+              placeholder="What is it for?"
+              aria-label="Name for the new workspace"
+              data-testid="workspace-name"
+              autoFocus
+              onChange={(event) => {
+                setName(event.target.value)
+              }}
+              onKeyDown={(event) => {
+                if (event.key !== 'Escape') return
+                event.preventDefault()
+                setName('')
+                setNaming(false)
+                requestAnimationFrame(() => newButton.current?.focus())
+              }}
+            />
+          </label>
           <button type="submit" className="of-button" disabled={busy} data-testid="workspace-create">
             Create
+          </button>
+          <button
+            type="button"
+            className="of-button of-button--ghost"
+            data-testid="workspace-cancel"
+            onClick={() => {
+              setName('')
+              setNaming(false)
+              requestAnimationFrame(() => newButton.current?.focus())
+            }}
+          >
+            Cancel
           </button>
         </form>
       )}
@@ -143,16 +175,37 @@ export function WorkspaceBar({
             Invite people to {current.name}
           </button>
           {invite !== null && (
-            <input
-              className="of-input of-spaces__link"
-              readOnly
-              value={invite}
-              aria-label={`Invite link for ${current.name}`}
-              data-testid="workspace-invite"
-              onFocus={(event) => {
-                event.target.select()
-              }}
-            />
+            <>
+              <input
+                className="of-input of-spaces__link"
+                readOnly
+                value={invite}
+                aria-label={`Invite link for ${current.name}`}
+                data-testid="workspace-invite"
+                onFocus={(event) => {
+                  event.target.select()
+                }}
+              />
+              <button
+                type="button"
+                className="of-button"
+                data-testid="workspace-copy"
+                onClick={() => {
+                  void navigator.clipboard.writeText(invite).then(
+                    () => setCopied('yes'),
+                    () => setCopied('no'),
+                  )
+                }}
+              >
+                {copied === 'yes' ? 'Copied' : 'Copy'}
+              </button>
+              {/* What the link gives, said where it is handed over. */}
+              <span className="of-spaces__invite-what" role="status">
+                {copied === 'no'
+                  ? 'The link could not be copied; select it and copy it yourself.'
+                  : 'People who open it join as editors of every board in it.'}
+              </span>
+            </>
           )}
         </div>
       )}
