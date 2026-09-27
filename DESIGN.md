@@ -487,10 +487,21 @@ misleading one.
 
 ## Typography
 
-**Body Font:** system UI sans (`ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto`)
-**Record Font:** system mono (`ui-monospace, SFMono-Regular, Menlo, Consolas, Liberation Mono`)
-**Object Faces:** the same sans, plus `ui-serif, Georgia` and the system mono,
-offered per object through the record panel's face field.
+**Body Font:** system UI sans (`--of-font`: `ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto`)
+**Record Font:** system mono (`--of-mono`: `ui-monospace, SFMono-Regular, Menlo, Consolas, Liberation Mono`)
+**Object Faces:** the same sans, plus the serif (`--of-serif`: `ui-serif, Georgia,
+Times New Roman`) and the mono, offered per object through the record panel's
+face field. The board sets them from the same tokens as the face picker's
+specimens, so a sample never shows a face the note would not get; each face and
+each weight (`--of-weight-regular/medium/semibold/bold`, 400–700) is written
+once, and `stylesheet-drift.test.ts` fails on one spelled out.
+
+**The Reader's Size Rule.** The interface ramp is set in `rem` — 0.75rem record
+to 1.1875rem headline, the same pixels at the default 16px root — so a browser's
+text-size preference reaches every label, field and menu. The board's ramp is
+redefined in px on `.of-world`: what is on the board is content in world units,
+and a reader's preference must not reflow somebody else's board. The 22px
+display size stays in px on purpose. `design-tokens.test.ts` holds both halves.
 
 **Character:** the faces are the machine's own. Local-first forbids a font
 request, so the type personality comes from scale, rhythm and tabular numerals
@@ -598,11 +609,22 @@ a size, not rhythm. Tool icons are 21px inside a 50px target; secondary icons ar
 **World rhythm** is the quadrille: `GRID_SIZE` is 10 world units, snapping lands
 on it, and the decade rule marks the line the user is aiming at.
 
-**Responsive.** Two breakpoints, both structural rather than cosmetic. Below
+**Responsive.** Breakpoints are structural rather than cosmetic. Below
 **820px** the zoom cluster drops its slider, a coarse control the canvas itself
-already provides. The navigation bar gives way separately, at 640px and 480px
-(see Navigation Bar), and never leaves the rail's 20px gutter; the controls
-with no other route always stay.
+already provides, and the account shrinks to its face with Source in its sheet.
+The navigation bar gives way at 640px and 560px (see Navigation Bar) and never
+leaves the rail's 20px gutter; the controls with no other route always stay.
+Below **560px** the record panel and the comments panel become sheets along the
+bottom, and the front door's rows stack.
+
+**Touch is in scope.** Under a coarse pointer `--of-hit-sm` becomes 40px, so
+every secondary control, the workspace tabs and the rail's smallest tools grow
+with it — and any breakpoint worked out from a 30px size must be re-checked for
+a finger (the rail's was not, and overran its box between 493 and 603px tall).
+Two fingers pinch-zoom and pan about their midpoint; a second finger landing
+abandons whatever the first had started, and a `pointercancel`,
+`lostpointercapture` or window blur puts a gesture back exactly as Escape does
+— an interrupted touch never commits a half-finished drag.
 
 ### Named Rules
 
@@ -747,7 +769,11 @@ is measured off the rule in `design-tokens.test.ts`. The rail is centred in the 
 navigation bar and the bottom gutter and never crosses either: as the window
 shortens the tools step down a decade at a time — 40px below 720 tall, 30px
 below 604 — and only below 494 does the rail scroll, because a scrolling box
-clips the tips.
+clips the tips. Under a finger the smallest tools are still 40px, so there the
+rail scrolls from 603px. A rail that scrolls says so: the end with more beyond
+it fades into the rail's stock (`data-more-before`/`-after`, written by
+`use-scroll-edges`), because a phone draws no scrollbar and a clipped rail
+otherwise looks like a rail with fewer tools.
 
 Shape and Table have options. Pressing the ARMED tool opens them; a 12px strip
 in the rail's padding, beside the tool and never inside it, is the pointer's
@@ -881,11 +907,12 @@ read into its name. Tips and sheets open downward. Shortcuts read "Ctrl+Z" off
 a Mac and "⌘Z" on one.
 
 **Narrow windows.** The bar keeps the rail's 20px gutter at every width, and it
-gives up in order: the selection count and the exit's words below 640px, then
-the save state's word, the rules and the account's name below 480px — the
-account keeps its face, and the source offer moves into the account and
-sign-in sheets, so it is still reachable from inside the running app. Nothing
-ever runs out of the bar.
+gives up in order: the account's name below 820px (it keeps its face, and the
+source offer moves into the account and sign-in sheets, so it is still
+reachable from inside the running app); the selection count, the exit's words
+and a shared board's room label below 640px; then the save state's word and the
+rules below 560px. Signed out, "Sign in" stays a visible word at every width.
+Nothing ever runs out of the bar, on a local board or a shared one.
 
 ### Zoom Cluster
 
@@ -895,9 +922,10 @@ icons. Two settings come first, then a ruled separator, then zoom itself.
 - **The settings.** "wheel: zoom" (or "wheel: pan") is set as a value in 12px
   mono beside its mouse icon; a bare "zoom" read as the cluster's heading.
   Snap is drawn as a square set down on a grid of points, never as grid lines,
-  which were nearly the Frame tool's glyph. A pressed toggle carries a 1px
-  accent ring as well as its wash, because the wash alone is not a visible
-  boundary.
+  which were nearly the Frame tool's glyph. A pressed toggle carries a 2px
+  accent bar along its foot as well as its wash, because the wash alone is not
+  a visible boundary — a bar and not a ring, because a ring is what focus
+  draws, and a pressed toggle must never read as a focused one.
 - **Zoom.** −, a 104px measurement slider read as its percentage, +, a 60px,
   13px tabular percentage, and fit.
 - **The percentage** becomes an inline editor on an accent-soft bed with a 1px
@@ -929,6 +957,14 @@ to a ruled page.
 The signature component. A 360px panel on panel white that floats beside the
 selection and exists only while something is selected, cut from the one
 contextual surface (10px, below).
+
+**It always fits its window.** Its height is capped to the tallest band beside
+the selection, and past that it scrolls, with its rows kept at their own
+height rather than squeezed. Below 560px wide — or when no side of the
+selection has room for it — it docks as a sheet along the bottom, on the chrome
+layer, taking at most half the window, so the selection's handles stay in view
+above it. When it goes (Escape, Delete, a click away) and the keyboard was in
+it, the keyboard goes back to the board.
 
 **Its head names the thing.** The type as a title in the interface's own
 voice (15px, 600, ink — "Evidence", "Journey stage") with what the object says
@@ -1024,7 +1060,11 @@ yet posted. The **panel** is a 300px surface at the gutter under the navigation
 bar: a remark is an avatar, the name, and how long ago in 12px mono (the exact
 date in its tip); the list reads author · when · N replies · excerpt. Nothing
 typed is lost: a draft is kept per spot or thread until it is posted. Reading a
-thread puts the keyboard at its heading; "All comments" goes back.
+thread puts the keyboard at its heading; "All comments" goes back. Below 560px
+the panel is a sheet along the bottom, sized in `dvh` so a phone's toolbar
+cannot push it off the screen, and clear of the rail and Find. Typing `@`
+makes the composer a combobox for the mention list: `aria-expanded` and
+`aria-controls` only while the list is there, and a count that is announced.
 
 The **mentions bell** is a quiet chip at control height — the accent's wash and
 a bold count while unread — and opens a sheet like account and share.
@@ -1071,8 +1111,10 @@ sees. Ruling it and collapsing the panels into one sheet is what made it belong.
   link somebody sends you opens without an account.
 - **Phone width** — the header wraps, the page never scrolls sideways (a tip
   is laid out even while invisible), and a row's confirmation says its
-  sentence on a line of its own. Pinch-zoom is allowed everywhere; the canvas
-  claims its own touches.
+  sentence on a line of its own. A board's name has the whole row and may take
+  two lines; its tag and time flow beneath it, the time never breaking, and the
+  row's actions sit at the end of that line. Pinch-zoom is allowed everywhere;
+  the canvas claims its own touches and pinches the board itself.
 - **Every drawn edge clears 3:1**: the Share and room triggers, Keep and
   Delete, the mentions badge, the chosen workspace. An unpinned pin is drawn
   in the control boundary's colour, not faded ink.
@@ -1356,6 +1398,12 @@ time presenting as a control that was visible and could not be used.
 No key throws words away. Every way out of an editor — Escape included —
 commits; undo is how an edit is taken back, and an edit that changed nothing
 commits nothing.
+
+When an edit ends, however it ends, the keyboard goes back to the board, and a
+click on the board takes it there too — never left on the page body, where the
+next Tab started thirty stops away. The board page reads in order: the
+navigation and its h1, then the board as the `main` landmark (canvas, rail and
+zoom), then everything that floats over it.
 
 Every in-place editor inherits the object's own type and drops its border,
 carrying a 2px accent outline instead. Global `:focus-visible` is a 2px accent

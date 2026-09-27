@@ -837,3 +837,108 @@ then a quiet sheet; and a route-aware label with no capsule, plus a watchdog.
   `notices.spec.ts:90` and `rail-keyboard.spec.ts:147` each failed once in 80
   loaded repeats. Main shows the same race: 1 failure in 160, on the same two
   files. Specs should wait for the board to be ready, not merely drawn.
+
+
+### Cross-cutting audit · `apps/web/src` (14/20 → 19/20)
+
+Report `docs/reviews/audit-2026-09-27.md` (`fd36c88`), taken from three
+isolated agents on the running app in both worlds: accessibility, performance
+and theming, and responsive, touch and integrity. The owner chose to fix
+everything: real two-finger pinch and pan, a bottom sheet for the record panel
+on narrow screens, and the bundle split in this pass.
+
+**P1**
+
+- **Drag** (`1115ea6`): an object subscribes to the drag offset only while it
+  is being dragged. 576 renders per 10 moves → 18.
+- **Focus after an edit** (`3bfacc7`): the board takes the keyboard back when
+  an edit ends, and takes it on a click.
+- **Signed out on a phone** (`a88c5fa`): "Sign in" stays a word, and Source
+  stays reachable.
+- **Rail disclosures** (`76875cb`): the options strip is a 24px target
+  (`--of-hit-min`).
+- **Record panel** (`06be69a`): height-capped and scrolling, and a sheet along
+  the bottom below 560px or wherever it cannot fit beside the selection.
+- **Touch** (`03e4774`, `ce82b3c`): two fingers pinch and pan about their
+  midpoint; a second finger abandons a one-finger gesture; `pointercancel`,
+  `lostpointercapture` and blur revert as Escape does.
+
+**P2**
+
+- **Focus when the record panel goes** (`4759c33`): back to the board.
+- **Mention combobox** (`cab4b37`): `aria-controls` and `aria-expanded` only
+  while the list exists, and an announced count.
+- **A shared board's bar** (`4b72f76`) fits every width.
+- **Comments on a phone** (`7729cf1`): a `dvh` bottom sheet, clear of the rail
+  and Find.
+- **Coarse targets** (`a5b9f6e`): 40px under a finger; the workspace tabs are
+  a target.
+- **Zoom** (`11104b7`): only views that declare `usesZoom` receive it. 640
+  renders per 10 wheel steps → 0.
+- **Hover** (`58d9e28`): paint order is cached per document (`bench:cull`
+  board-10000 5.69ms → 0.17ms; board-mixed-10000 4.52ms → 2.57ms), and the
+  store is written only on change.
+- **Bundle** (`83777a3`): Supabase and the collaboration code load when used.
+  Entry chunk 1,002,571 B → 516,425 B (288,150 → 154,937 gzipped).
+- **Text size** (`ecf41bf`): the interface ramp is in `rem`; the board's is
+  redefined in px on `.of-world`. No golden moved.
+
+**P3**
+
+- **Overlays** (`9f060e2`): the apparatus is one memoised, prop-less
+  component. 240 overlay renders per 60-move pan → 120.
+- **Semantics** (`8bd8af6`, `5c65b20`, `f4b6242`): the password gate is a
+  dialog holding a form; the board is the `main` landmark, after the
+  navigation and its h1; an empty table header is named "Column A"….
+- **Pressed toggle** (`e9fcec7`): a 2px bar along its foot, not a ring that
+  reads as focus.
+- **Images** (`7a46f10`): `decoding="async"`.
+- **Front door at 390** (`1814dbe`): the name has the row and may take two
+  lines, and the time never breaks.
+- **Rail** (`274c393`): a rail that scrolls fades at the end with more. Found
+  while testing it: under a finger the rail overran its box between 493 and
+  603px tall — a regression from `a5b9f6e` — and it now scrolls from 603.
+- **Stylesheet drift** (`c46e3bf`, `064827e`, `6c5d158`, `f7bead1`): three
+  dead classes gone; every face and weight a token, with the board sharing the
+  interface's serif and mono; spaces above the scale on the rule; each
+  selector argued in one place, motion aside. `stylesheet-drift.test.ts`
+  guards all four.
+
+**Not done, and why**
+
+- **The pan ground** (step 13) was moved to a composited layer and
+  **reverted**: in headless software raster it measured about 25% worse in
+  raster and wall time. It needs a GPU measurement before another attempt.
+- **A forced layout per drag or wheel event** did not reproduce: CDP
+  LayoutCount rose by 1 over 60 moves.
+- **The After Hours frame fill** (a bright white slab, compliant with
+  DESIGN.md) is a design question for the owner, not a fix.
+
+**Found on the way.**
+
+- **The load race** from C3 #10 (a key pressed before the keyboard listener
+  attached). It was first patched in two specs (`5324542`), and then the full
+  run found it in a third, `board-unreadable`. The root cause is in the app
+  (`a4a3c94`): the listener was attached in a passive effect, after paint, so
+  a person pressing S the moment a board appeared lost the key too. It is now
+  a layout effect. `keys-at-load.spec.ts` makes the race deterministic; it
+  failed 3 of 3 before the change, and the three racy files then passed 132 of
+  132 at `--repeat-each=6`.
+- **Splash timing under load.** Under three loaded workers the splash spec's
+  millisecond budgets can miss; alone, all 14 pass.
+
+**Verification.** `pnpm verify` gated every commit. The full e2e run gave
+738 passed and 1 failed (the load race above, since fixed at its root); the
+40 visual goldens hold, and the rooms suite passes 28 of 28.
+
+**Re-score** — the same rubric, re-scored by me against the fixes rather than
+by a fresh independent audit:
+
+| # | Dimension | Before | After | What holds it back |
+|---|---|---|---|---|
+| 1 | Accessibility | 3 | 4 | Untested with a real screen reader |
+| 2 | Performance | 2 | 3 | The pan ground still repaints (step 13 reverted) |
+| 3 | Responsive design | 2 | 4 | Untested on real devices and WebKit |
+| 4 | Theming | 4 | 4 | The After Hours frame fill is an open question |
+| 5 | Implementation integrity | 3 | 4 | — |
+| | **Total** | **14/20** | **19/20** | |
