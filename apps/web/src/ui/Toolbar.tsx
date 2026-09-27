@@ -3,6 +3,7 @@ import { Fragment, useEffect, useRef, useState } from 'react'
 
 import { AnchoredSurface } from '../controls/AnchoredSurface.js'
 import { useImageImport } from '../hooks/use-image-import.js'
+import { useScrollEdges } from '../hooks/use-scroll-edges.js'
 import { TableSizePicker } from './TableSizePicker.js'
 import { useInteractionStore, type Tool } from '../interaction/interaction-store.js'
 import { ALLOWED_IMAGE_TYPES } from '../runtime/asset-validation.js'
@@ -91,6 +92,9 @@ export function Toolbar() {
    * tries until a user does.
    */
   const [openMenu, setOpenMenu] = useState<'shape' | 'table' | null>(null)
+  // Says which end has more tools, on a window too short for all of them.
+  const rail = useRef<HTMLDivElement>(null)
+  useScrollEdges(rail)
   /*
    * The button the open menu hangs off, in screen pixels.
    *
@@ -360,7 +364,13 @@ export function Toolbar() {
   )
 
   return (
-    <div className="of-rail" role="toolbar" aria-label="Board tools" aria-orientation="vertical">
+    <div
+      ref={rail}
+      className="of-rail"
+      role="toolbar"
+      aria-label="Board tools"
+      aria-orientation="vertical"
+    >
       {GROUPS.map((group, index) => (
         <Fragment key={group.label}>
           {index > 0 && <div className="of-rail__rule" role="separator" />}

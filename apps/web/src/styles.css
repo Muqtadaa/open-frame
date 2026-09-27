@@ -791,6 +791,84 @@ body {
   }
 }
 
+/*
+ * A scrolling rail keeps its end space INSIDE the scroll, as margins on the
+ * first and last groups, rather than as padding. The fade below is sticky,
+ * and a sticky box cannot leave its containing block, which stops at the
+ * padding — so with padding the fade stuck six pixels short of the edge and
+ * the next tool showed through underneath it.
+ */
+@media (max-height: 493px) {
+  .of-rail {
+    padding-block: 0;
+  }
+
+  .of-rail > .of-rail__group:first-of-type {
+    margin-top: var(--of-space-6);
+  }
+
+  .of-rail > .of-rail__group:last-of-type {
+    margin-bottom: var(--of-space-6);
+  }
+}
+
+/*
+ * Under a finger the smallest tools are 40px, not 30 (see `--of-hit-sm`), so
+ * the rail runs out of room at the height where a mouse's would step down —
+ * and without this it overran its own box between 493 and 603, the last tools
+ * drawn off the end of it and out of reach (audit 2026-09-27).
+ */
+@media (pointer: coarse) and (max-height: 603px) {
+  .of-rail {
+    overflow-y: auto;
+    padding-block: 0;
+  }
+
+  .of-rail > .of-rail__group:first-of-type {
+    margin-top: var(--of-space-6);
+  }
+
+  .of-rail > .of-rail__group:last-of-type {
+    margin-bottom: var(--of-space-6);
+  }
+}
+
+/*
+ * A rail that scrolls says so. A phone draws no scrollbar, so the tools past
+ * the edge looked like tools that did not exist. The end with more beyond it
+ * fades into the rail's stock, drawn by `use-scroll-edges` marking which end
+ * that is. Sticky, so the fade stays at the edge while the tools move under
+ * it, and laid over the tools rather than taking room from them.
+ */
+.of-rail[data-more-before]::before,
+.of-rail[data-more-after]::after {
+  --of-rail-fade: calc(2 * var(--of-space-12));
+
+  position: sticky;
+  z-index: var(--of-z-lifted);
+  flex: none;
+  height: var(--of-rail-fade);
+  /* Across the side padding too, where the options strip's chevrons live;
+     that padding is inside the scroll area, so this overflows nothing. */
+  margin-inline: calc(-1 * var(--of-space-6)) calc(-1 * var(--of-hit-min));
+  content: '';
+  pointer-events: none;
+}
+
+/* The negative margins take back the fade's height AND the rail's gap, so a
+   fade arriving does not nudge a single tool. */
+.of-rail[data-more-before]::before {
+  top: 0;
+  margin-bottom: calc(-1 * (var(--of-rail-fade) + var(--of-space-2)));
+  background: linear-gradient(to top, transparent, var(--of-page));
+}
+
+.of-rail[data-more-after]::after {
+  bottom: 0;
+  margin-top: calc(-1 * (var(--of-rail-fade) + var(--of-space-2)));
+  background: linear-gradient(to bottom, transparent, var(--of-page));
+}
+
 .of-rail__group {
   display: flex;
   flex-direction: column;
@@ -1415,7 +1493,6 @@ body {
   margin: 0 var(--of-space-4);
   background: var(--of-panel-border);
 }
-
 
 /*
  * The wheel-mode VALUE, not a heading. Mono and small so it reads as a setting
@@ -3029,7 +3106,6 @@ body {
   gap: var(--of-space-2);
 }
 
-
 /* ---------- account ---------- */
 
 /*
@@ -3151,8 +3227,6 @@ body {
   color: var(--of-ink);
 }
 
-
-
 /* The status line is the dialog's positioning context. */
 .of-status {
   position: relative;
@@ -3272,7 +3346,6 @@ body {
   .of-status__rule {
     display: none;
   }
-
 }
 
 /*
@@ -3740,7 +3813,6 @@ body {
   /* Selected and draggable, so the cursor says what the next press does. */
   cursor: move;
 }
-
 
 .of-selection {
   position: absolute;
@@ -4451,7 +4523,6 @@ body {
   cursor: crosshair;
 }
 
-
 /* Images ------------------------------------------------------------------ */
 
 .of-image {
@@ -4502,7 +4573,6 @@ body {
 }
 
 /* Toast ------------------------------------------------------------------- */
-
 
 /* A drawn × on a 24px target: it was a glyph with no size, in an 8×15 box. */
 .of-toast__dismiss {
@@ -4767,7 +4837,6 @@ body {
 .of-inspector__disclosure[aria-expanded='true'] svg {
   transform: rotate(90deg);
 }
-
 
 /*
  * A record row: label column, value column.
@@ -5948,7 +6017,6 @@ textarea.of-input {
   }
 }
 
-
 .of-home__rename {
   flex: 1;
   min-width: 0;
@@ -6697,7 +6765,6 @@ textarea.of-input {
   align-items: center;
   padding: var(--of-space-4);
 }
-
 
 .of-arrange__glyph {
   width: 17px;
