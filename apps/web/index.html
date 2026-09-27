@@ -74,6 +74,7 @@
       }
       #of-splash p {
         position: relative;
+        grid-area: 1 / 1;
         align-self: end;
         margin: 0 0 max(32px, env(safe-area-inset-bottom));
         padding: 7px 14px;
@@ -82,6 +83,32 @@
         color: #ece8fb;
         font: 13px/1.3 ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
         letter-spacing: 0.01em;
+      }
+      /*
+       * The watchdog's way out. Brand colours only, like everything else here:
+       * the stylesheet may be the very thing that never arrived.
+       */
+      #of-splash button {
+        position: relative;
+        align-self: end;
+        grid-area: 1 / 1;
+        min-height: 30px;
+        margin: 0 0 max(32px, env(safe-area-inset-bottom));
+        padding: 0 16px;
+        border: 1px solid #ece8fb;
+        border-radius: 6px;
+        background: #150a2e;
+        color: #ece8fb;
+        font: 13px/1.3 ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+        cursor: pointer;
+      }
+      /* Stalled: the label steps up to make room for the button under it. */
+      #of-splash[data-state='stalled'] p {
+        margin-bottom: calc(max(32px, env(safe-area-inset-bottom)) + 42px);
+      }
+      #of-splash button:focus-visible {
+        outline: 2px solid #ece8fb;
+        outline-offset: 2px;
       }
       @media (prefers-reduced-motion: reduce) {
         #of-splash,
@@ -100,8 +127,9 @@
       buying nothing here.
 
       The LABEL keeps `aria-live`, because the one thing worth announcing is the
-      one thing that changes — `failSplash()` replacing it when the board cannot
-      be opened.
+      one thing that changes — the watchdog below replacing it when opening runs
+      long. A board that cannot open takes the splash away instead
+      (`abandonSplash`), for a panel of its own.
     -->
     <div id="of-splash">
       <!--
@@ -126,6 +154,30 @@
       />
       <p aria-live="polite">Opening your board</p>
     </div>
+    <!--
+      The watchdog. Inline, and before the module graph, because the case it
+      exists for is the one where the application never arrives: an entry
+      module the network dropped, or a start-up that stalled rather than
+      failed. A splash over an inert root that never goes is a page that cannot
+      be used and does not say so. After twelve seconds it admits it, in the
+      live label, and offers the one thing that helps.
+    -->
+    <script>
+      setTimeout(function () {
+        var splash = document.getElementById('of-splash')
+        if (splash === null) return
+        splash.querySelector('p').textContent =
+          'Still opening. This is taking longer than usual.'
+        var reload = document.createElement('button')
+        reload.type = 'button'
+        reload.textContent = 'Reload'
+        reload.onclick = function () {
+          location.reload()
+        }
+        splash.dataset.state = 'stalled'
+        splash.appendChild(reload)
+      }, 12000)
+    </script>
     <!--
       `inert` until the splash goes. The splash covers the board and swallows
       the mouse, but focus is not blocked by a sheet on top of it — without
