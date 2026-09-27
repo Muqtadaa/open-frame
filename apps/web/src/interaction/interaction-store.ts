@@ -514,7 +514,7 @@ interface InteractionState {
   pruneSelection(exists: (id: ObjectId) => boolean): void
 }
 
-export const useInteractionStore = create<InteractionState>((set) => ({
+export const useInteractionStore = create<InteractionState>((set, get) => ({
   tool: 'select',
   shapeKind: 'rectangle',
   wheelMode: readWheelMode(),
@@ -604,8 +604,24 @@ export const useInteractionStore = create<InteractionState>((set) => ({
       return { selection: next, croppingId: croppingWithin(state.croppingId, next) }
     }),
   clearSelection: () => set({ selection: new Set<ObjectId>(), croppingId: null }),
-  setHovered: (hoveredId) => set({ hoveredId }),
-  setPointer: (pointerWorld) => set({ pointerWorld }),
+  /*
+   * Both run on every pointer move, and every write re-runs every
+   * subscriber's selector — about twenty per visible object. A move that
+   * changes nothing writes nothing (audit 2026-09-27).
+   */
+  setHovered: (hoveredId) => {
+    if (get().hoveredId !== hoveredId) set({ hoveredId })
+  },
+  setPointer: (pointerWorld) => {
+    const was = get().pointerWorld
+    const same =
+      was === pointerWorld ||
+      (was !== null &&
+        pointerWorld !== null &&
+        was.x === pointerWorld.x &&
+        was.y === pointerWorld.y)
+    if (!same) set({ pointerWorld })
+  },
   setEditing: (editingId, at) =>
     set((state) => {
       // Refused, not queued. Somebody else has the note open, and the right
