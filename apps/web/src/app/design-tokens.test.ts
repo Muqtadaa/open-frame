@@ -213,6 +213,23 @@ describe.each(THEMES)('palette contrast — $name', ({ token }) => {
   })
 
   /**
+   * ...and that boundary is not a second focus ring.
+   *
+   * It was an accent ring all the way round, one pixel inside the focus ring's
+   * accent ring two pixels outside — so a focused toggle and a pressed one
+   * looked like the same state at two weights, and a focused PRESSED one wore
+   * both (audit 2026-09-27). Pressed is a bar along one edge: a different
+   * shape, so the two can never be read for each other.
+   */
+  it('a pressed toggle is marked by an edge, not by a ring', () => {
+    const rule = /\.of-icon-button--on\s*\{([^}]*)\}/.exec(CSS)?.[1] ?? ''
+    const shadow = /box-shadow:([^;]*);/.exec(rule)?.[1] ?? ''
+    expect(shadow, 'a pressed toggle marks itself with an inset shadow').toContain('inset')
+    // An all-round ring is `inset 0 0 0 <spread>`; an edge bar has an offset.
+    expect(shadow).not.toMatch(/inset\s+0\s+0\s+0\s/)
+  })
+
+  /**
    * A shape's stroke and label on its own fill.
    */
   it.each(HUES)('%s ink on its own surface meets AA for text', (name) => {
