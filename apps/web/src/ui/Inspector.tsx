@@ -22,9 +22,19 @@ import {
   type StrokeToken,
   type StyleProp,
 } from '@openframe/core'
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import {
+  useCallback,
+  useEffect,
+  useLayoutEffect,
+  useMemo,
+  useRef,
+  useState,
+  type ComponentProps,
+} from 'react'
+import { createPortal } from 'react-dom'
 
 import { AnchoredSurface } from '../controls/AnchoredSurface.js'
+import { furnitureBands, watchFurnitureBands } from '../controls/screen-furniture.js'
 import { useCommands } from '../hooks/use-commands.js'
 import { useBoardDocument } from '../hooks/use-document-object.js'
 import { useInteractionStore } from '../interaction/interaction-store.js'
@@ -62,6 +72,16 @@ const GAP_PX = PANEL_CLEARANCE_PX
 const PANEL_WIDTH = 360
 /** Keeps the panel off the viewport edge when the selection is near one. */
 const MARGIN_PX = 12
+/*
+ * Below this width the panel stops floating and docks along the bottom as a
+ * sheet (audit 2026-09-27). A 360px panel beside a selection needs about 560
+ * of window to go anywhere; on a phone it ran off the right edge, taking
+ * Delete, the swatches and opacity with it, and sat on the selection's own
+ * handles.
+ */
+const DOCK_BELOW_PX = 560
+/** A docked sheet takes at most this much of the window's height. */
+const DOCK_SHARE = 0.5
 /*
  * There WAS a PANEL_HEIGHT_PX here — 420, "roughly the panel's tallest form" —
  * because the placement it fed could not measure. A guess that must never
@@ -149,6 +169,31 @@ export function Inspector() {
    * object between updates, so the reference is stable (rule 9).
    */
   const aimed = useInteractionStore((state) => state.stylePreview?.style)
+  /*
+   * HOW TALL IT MAY BE: the room between the furniture at the top and the
+   * bottom of the window, less a margin each side — or, docked, half the
+   * window. It had no limit, so on a short window or at 200% zoom its lower
+   * rows ran under the zoom cluster and off the screen, unreachable. It
+   * scrolls only when its content needs more than that, since scrolling
+   * clips, and a tip hung outside the panel would be clipped with it.
+   */
+  const [bands, setBands] = useState(furnitureBands)
+  useEffect(() => watchFurnitureBands(setBands), [])
+  const docked = canvasSize.width > 0 && canvasSize.width < DOCK_BELOW_PX
+  const tallest = docked
+    ? Math.floor(canvasSize.height * DOCK_SHARE)
+    : Math.max(120, canvasSize.height - bands.top - bands.bottom - 2 * MARGIN_PX)
+  const panel = useRef<HTMLDivElement>(null)
+  const [scrolls, setScrolls] = useState(false)
+  // Every render, on purpose: what the panel holds changes with the
+  // selection. It sets state only when the answer changes, so it settles.
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  useLayoutEffect(() => {
+    const element = panel.current
+    if (element === null) return
+    const needs = element.scrollHeight > tallest + 1
+    if (needs !== scrolls) setScrolls(needs)
+  })
   const settle = useCallback((): void => {
     const aimed = useInteractionStore.getState().stylePreview
     if (aimed === null) return
@@ -417,7 +462,8 @@ export function Inspector() {
   const blanks = only === undefined ? 0 : recordFields.filter((field) => blank(only, field)).length
 
   return (
-    <AnchoredSurface
+    <PanelPlace
+      docked={docked}
       anchor={selectionBox}
       surface={canvasSize}
       /*
@@ -433,11 +479,17 @@ export function Inspector() {
       testId="inspector-surface"
     >
       <div
-        className={`of-inspector of-surface${yielding ? ' of-inspector--yielding' : ''}`}
+        ref={panel}
+        className={`of-inspector of-surface${yielding ? ' of-inspector--yielding' : ''}${
+          docked ? ' of-inspector--docked' : ''
+        }${scrolls ? ' of-inspector--scrolls' : ''}`}
         data-testid="inspector"
         role="group"
         aria-label="Selected object properties"
-        style={{ width: `${String(PANEL_WIDTH)}px` }}
+        style={{
+          width: docked ? '100%' : `${String(PANEL_WIDTH)}px`,
+          maxHeight: `${String(tallest)}px`,
+        }}
       >
         <div className="of-inspector__head">
           <div className="of-inspector__heading">
@@ -765,7 +817,34 @@ export function Inspector() {
           <TrashIcon />
         </button>
       </div>
-    </AnchoredSurface>
+    </PanelPlace>
+  )
+}
+
+/**
+ * Where the panel goes: beside the selection, or docked along the bottom of a
+ * narrow window. Docked, it is still in the chrome layer and still marked as
+ * editor chrome, so a press inside it is never read as a board gesture.
+ */
+function PanelPlace({
+  docked,
+  children,
+  ...surface
+}: { readonly docked: boolean } & ComponentProps<typeof AnchoredSurface>) {
+  if (!docked) return <AnchoredSurface {...surface}>{children}</AnchoredSurface>
+  const layer =
+    typeof window === 'undefined'
+      ? null
+      : window.document.querySelector<HTMLElement>('[data-chrome-layer]')
+  if (layer === null || surface.anchor === null) return null
+  return createPortal(
+    <div
+      className="of-chrome of-editor-chrome of-inspector-dock"
+      data-testid={surface.testId ?? 'object-chrome'}
+    >
+      {children}
+    </div>,
+    layer,
   )
 }
 

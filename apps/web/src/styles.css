@@ -4509,6 +4509,40 @@ body {
 }
 
 /*
+ * Taller than the room it has: it scrolls inside rather than running off the
+ * window. Only then — scrolling clips, and the panel's tips hang outside it.
+ */
+/*
+ * Its rows keep their height under a cap: in a flex column they would shrink
+ * instead, and overlap one another rather than overflow and scroll.
+ */
+.of-inspector > * {
+  flex-shrink: 0;
+}
+
+.of-inspector--scrolls {
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+
+/*
+ * Docked along the bottom of a narrow window: the full width, square to the
+ * edges it meets, and still the panel's own stock.
+ */
+.of-inspector-dock {
+  top: auto;
+  right: 0;
+  bottom: 0;
+}
+
+.of-inspector--docked {
+  border-bottom: none;
+  border-right: none;
+  border-left: none;
+  border-radius: var(--of-radius-surface) var(--of-radius-surface) 0 0;
+}
+
+/*
  * Holding Shift is building a selection, and the panel beside the first
  * object is usually over the next one: the shift-click landed on the panel
  * and the selection never grew. It steps aside while Shift is held — faint,
