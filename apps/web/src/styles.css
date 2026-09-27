@@ -5642,6 +5642,11 @@ textarea.of-input {
  * asserts. Ground you cannot ignore is a cage the content has to fight.
  */
 .of-home {
+  /* The most actions a ledger row carries — three targets and two 2px gaps,
+     so 94px under a mouse and wider under a finger, whose targets grow.
+     See .of-home__row-actions. */
+  --of-home-actions: calc(3 * var(--of-hit-sm) + 2 * var(--of-space-2));
+
   box-sizing: border-box;
   display: flex;
   flex-direction: column;
@@ -5926,7 +5931,7 @@ textarea.of-input {
    * share sheet, and the 32px it no longer needs went back to the name.
    */
   justify-content: flex-end;
-  width: 94px;
+  width: var(--of-home-actions);
   gap: var(--of-space-2);
   opacity: 0;
 }
@@ -6224,26 +6229,74 @@ textarea.of-input {
    * repeating down the page. So the name takes its own line and the two
    * readouts share the one below it.
    */
+  /*
+   * And the stack has to leave the name room to BE read. Stacked, it still
+   * lost everything past about sixteen characters to a single line beside an
+   * action block, and "an hour ago" stood in a column one word wide, three
+   * lines tall (audit 2026-09-27).
+   *
+   * So on a phone the name has the whole row and may take two lines; the
+   * readouts flow, the time dropping under the tag WHOLE rather than breaking;
+   * and the actions sit at the end of the last readout line, under the name
+   * rather than beside it. The spacer after the readouts keeps that line's end
+   * clear for them — sized for the most a row carries, since a flowing line
+   * cannot know how many its own row has.
+   */
+  .of-home__row-main {
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr) auto;
+    align-items: center;
+  }
+
+  .of-home__row-main > .of-home__board,
+  .of-home__row-main > .of-home__rename {
+    grid-row: 1;
+    grid-column: 2 / 4;
+  }
+
+  .of-home__row-main > .of-home__row-actions {
+    grid-row: 1;
+    grid-column: 3;
+    align-self: end;
+    width: auto;
+    /* Level with the spacer, which sits inside the link's padding. */
+    margin-bottom: var(--of-step);
+  }
+
+  .of-home__row-main > .of-home__row-note {
+    grid-column: 2 / 4;
+  }
+
   .of-home__board {
-    grid-template-columns: auto 1fr;
-    grid-template-areas:
-      'title title'
-      'tag when';
-    row-gap: var(--of-space-2);
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: var(--of-space-2) var(--of-step);
     padding: var(--of-step) var(--of-space-8);
   }
 
-  .of-home__board-title {
-    grid-area: title;
+  /* As tall as the actions too: a spacer that wraps onto a line of its own
+     has to MAKE that line, or the actions hang over the readouts above it. */
+  .of-home__board::after {
+    flex: 0 0 var(--of-home-actions);
+    height: var(--of-hit-sm);
+    content: '';
   }
 
-  .of-home__board-tag {
-    grid-area: tag;
+  .of-home__board-title {
+    display: -webkit-box;
+    flex-basis: 100%;
+    overflow-wrap: anywhere;
+    white-space: normal;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 2;
+    line-clamp: 2;
   }
 
   .of-home__board-when {
-    grid-area: when;
     min-width: 0;
+    white-space: nowrap;
+    text-align: left;
   }
 }
 

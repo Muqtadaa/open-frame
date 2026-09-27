@@ -43,6 +43,58 @@ test('the front door does not scroll sideways', async ({ page }) => {
   expect(await overflow(page)).toBeLessThanOrEqual(0)
 })
 
+test('a board is named in full and dated on one line', async ({ page }) => {
+  // At 390 the name was cut at about sixteen characters and "an hour ago"
+  // stood in a column one word wide, three lines tall (audit 2026-09-27).
+  await signedIn(page, [
+    ...BOARDS,
+    { id: 'brd_cccccccccccccccc', title: 'Q4 roadmap', role: 'viewer' as const },
+  ])
+  await page.goto(HOME_URL)
+  await page.waitForSelector('[data-testid="home-boards"] li')
+
+  const rows = await page.evaluate(() =>
+    [...document.querySelectorAll('.of-home__board')].map((row) => {
+      const title = row.querySelector<HTMLElement>('.of-home__board-title')
+      const when = row.querySelector<HTMLElement>('.of-home__board-when')
+      // One rect per line the words occupy.
+      const range = document.createRange()
+      if (when !== null) range.selectNodeContents(when)
+      const lines = new Set([...range.getClientRects()].map((rect) => Math.round(rect.top)))
+      return {
+        text: title?.textContent ?? '',
+        clipped:
+          title === null ||
+          title.scrollWidth > title.clientWidth + 1 ||
+          title.scrollHeight > title.clientHeight + 1,
+        whenLines: lines.size,
+        // And the actions, on the same row, never lie over the time.
+        overlaps: (() => {
+          const time = when?.getBoundingClientRect()
+          const actions = row.parentElement
+            ?.querySelector('.of-home__row-actions')
+            ?.getBoundingClientRect()
+          if (time === undefined || actions === undefined) return false
+          return (
+            time.right > actions.left &&
+            time.left < actions.right &&
+            time.bottom > actions.top &&
+            time.top < actions.bottom
+          )
+        })(),
+      }
+    }),
+  )
+  expect(rows.length).toBe(3)
+  // Not vacuous: the longest name is longer than what used to fit.
+  expect(rows.some((row) => row.text.length > 30)).toBe(true)
+  for (const row of rows) {
+    expect(row.clipped, row.text).toBe(false)
+    expect(row.whenLines, row.text).toBe(1)
+    expect(row.overlaps, row.text).toBe(false)
+  }
+})
+
 test('a confirmation reads as a sentence, inside the screen', async ({ page }) => {
   await signedIn(page, BOARDS)
   await page.goto(HOME_URL)
