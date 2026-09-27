@@ -46,12 +46,29 @@ export function applyTheme(theme: Theme): void {
   const root = document.documentElement
   if (theme === DEFAULT_THEME) delete root.dataset.theme
   else root.dataset.theme = theme
+  tellBrowserChrome()
 
   try {
     localStorage.setItem(STORAGE_KEY, theme)
   } catch {
     // Not being able to remember the choice must never stop it taking effect.
   }
+}
+
+/**
+ * Paints the browser's own chrome — a phone's address bar, some desktop tab
+ * strips — in the world's page colour.
+ *
+ * `index.html` starts it at the splash's void, which is right for the artwork
+ * and wrong for everything after: it stayed violet over the Notebook's pale
+ * page for the life of the tab. Read from the token rather than written
+ * again, so the world stays the one place its colours are decided.
+ */
+function tellBrowserChrome(): void {
+  const meta = document.querySelector<HTMLMetaElement>('meta[name="theme-color"]')
+  const page = getComputedStyle(document.documentElement).getPropertyValue('--of-page').trim()
+  // No stylesheet yet means no answer yet; leave what the document said.
+  if (meta !== null && page !== '') meta.content = page
 }
 
 /** Restores the remembered theme. Called once, before the first render. */

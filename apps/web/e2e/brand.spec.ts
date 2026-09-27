@@ -117,6 +117,27 @@ test.describe('after hours', () => {
     await expect(page.locator(TOGGLE)).toHaveAttribute('aria-pressed', 'true')
   })
 
+  /*
+   * The browser's own chrome — the address bar on a phone, the tab strip in
+   * some desktop browsers — is painted from `theme-color`. It used to stay the
+   * splash's violet after the board loaded, in both worlds (C3 #10).
+   */
+  test("tells the browser chrome the world's page colour, and follows a switch", async ({
+    page,
+  }) => {
+    await page.goto(BOARD_URL)
+    await page.waitForSelector(STATUS_BAR)
+    const meta = page.locator('meta[name="theme-color"]')
+    await expect(meta).toHaveAttribute('content', '#f7f9fb')
+
+    await page.click(TOGGLE)
+    await expect(meta).toHaveAttribute('content', '#1b1033')
+
+    await page.reload()
+    await page.waitForSelector(STATUS_BAR)
+    await expect(meta).toHaveAttribute('content', '#1b1033')
+  })
+
   test('switches back, and the default world carries no attribute at all', async ({ page }) => {
     await page.goto(BOARD_URL)
     await page.waitForSelector(STATUS_BAR)

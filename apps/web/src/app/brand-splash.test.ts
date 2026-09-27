@@ -70,6 +70,12 @@ describe('the boot splash', () => {
     expect(afterHours?.toLowerCase()).toBe(afterHoursToken('page'))
   })
 
+  it('tells the browser chrome the quiet sheet’s colours, and only those', () => {
+    const script = /<script>\s*try \{[\s\S]*?<\/script>/.exec(HTML)?.[0] ?? ''
+    const used = (script.match(/#[0-9a-fA-F]{6}\b/g) ?? []).map((hex) => hex.toLowerCase())
+    expect(new Set(used)).toEqual(new Set([token('page'), afterHoursToken('page')]))
+  })
+
   /** The label's scrim is the void at 82%, written in channels rather than hex. */
   it('writes the scrim from the same void the background uses', () => {
     const scrim = /rgb\((\d+) (\d+) (\d+) \/ \d+%\)/.exec(inlineStyle)

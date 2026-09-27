@@ -77,6 +77,7 @@ test.describe('once per session', () => {
     await expect(splash).toHaveCSS('background-image', 'none')
     await expect(splash.locator('img')).toBeHidden()
     await expect(splash.locator('p')).toBeHidden()
+    await expect(page.locator('meta[name="theme-color"]')).toHaveAttribute('content', '#f7f9fb')
 
     // Gone as soon as the page is, rather than at two seconds.
     await page.getByTestId('home').waitFor()

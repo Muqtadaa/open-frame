@@ -37,10 +37,14 @@
     <script>
       try {
         if (sessionStorage.getItem('openframe:splash-seen') === 'yes') {
+          var night = localStorage.getItem('openframe:theme') === 'after-hours'
           document.documentElement.dataset.splash = 'quiet'
-          if (localStorage.getItem('openframe:theme') === 'after-hours') {
-            document.documentElement.dataset.splashWorld = 'after-hours'
-          }
+          if (night) document.documentElement.dataset.splashWorld = 'after-hours'
+          // The browser's chrome matches the sheet from the first frame; the
+          // same two page colours the quiet sheet's CSS uses, pinned alike.
+          document
+            .querySelector('meta[name="theme-color"]')
+            .setAttribute('content', night ? '#1b1033' : '#f7f9fb')
         }
       } catch (error) {
         // Storage refused: the artwork every time is the safe answer.
