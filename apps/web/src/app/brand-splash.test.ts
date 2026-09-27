@@ -40,12 +40,34 @@ describe('the boot splash', () => {
     expect(inlineStyle).toContain('#of-splash')
   })
 
-  it('paints only in brand colours', () => {
-    const allowed = new Set([token('brand-void'), afterHoursToken('ink')])
+  /*
+   * Brand colours, plus each world's page colour for the quiet sheet a tab
+   * gets once it has seen the artwork — a handover from the page to the page.
+   */
+  it('paints only in brand colours and the worlds’ page colours', () => {
+    const allowed = new Set([
+      token('brand-void'),
+      afterHoursToken('ink'),
+      token('page'),
+      afterHoursToken('page'),
+    ])
     const used = (inlineStyle.match(/#[0-9a-fA-F]{6}\b/g) ?? []).map((hex) => hex.toLowerCase())
 
     expect(used.length).toBeGreaterThan(0)
     for (const hex of used) expect(allowed).toContain(hex)
+  })
+
+  it('draws the quiet sheet in each world’s own page colour', () => {
+    const notebook =
+      /\[data-splash='quiet'\] #of-splash \{[^}]*background-color: (#[0-9a-fA-F]{6})/.exec(
+        inlineStyle,
+      )?.[1]
+    const afterHours =
+      /\[data-splash-world='after-hours'\] #of-splash \{[^}]*background-color: (#[0-9a-fA-F]{6})/.exec(
+        inlineStyle,
+      )?.[1]
+    expect(notebook?.toLowerCase()).toBe(token('page'))
+    expect(afterHours?.toLowerCase()).toBe(afterHoursToken('page'))
   })
 
   /** The label's scrim is the void at 82%, written in channels rather than hex. */
@@ -91,9 +113,10 @@ describe('the boot splash', () => {
 
     for (const path of referenced) {
       expect(path).not.toContain('/public/')
-      expect(existsSync(resolve(process.cwd(), `.${String(path)}`)), `missing ${String(path)}`).toBe(
-        true,
-      )
+      expect(
+        existsSync(resolve(process.cwd(), `.${String(path)}`)),
+        `missing ${String(path)}`,
+      ).toBe(true)
     }
     expect(existsSync(resolve(process.cwd(), 'public'))).toBe(false)
   })

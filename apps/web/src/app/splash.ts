@@ -46,11 +46,33 @@ function prefersReducedMotion(): boolean {
   return typeof matchMedia === 'function' && matchMedia('(prefers-reduced-motion: reduce)').matches
 }
 
+/**
+ * Set when the artwork has been shown, for the rest of this tab's session.
+ * `index.html` reads it before the body is parsed and marks the document
+ * `data-splash="quiet"`; this module only ever reads that attribute, so the
+ * two cannot disagree about which splash is on screen.
+ */
+const SEEN_KEY = 'openframe:splash-seen'
+
+function isQuiet(): boolean {
+  return document.documentElement.dataset.splash === 'quiet'
+}
+
 function holdWanted(): boolean {
+  // The quiet sheet is not a brand moment; it leaves the moment it can.
+  if (isQuiet()) return false
   try {
     return localStorage.getItem(HOLD_KEY) !== 'off'
   } catch {
     return true
+  }
+}
+
+function markSeen(): void {
+  try {
+    sessionStorage.setItem(SEEN_KEY, 'yes')
+  } catch {
+    // Storage refused: the next load shows the artwork again, which is fine.
   }
 }
 
@@ -81,11 +103,13 @@ function fadeOut(splash: HTMLElement): void {
  * Takes the splash away once the board is ready AND it has been seen.
  *
  * Whichever finishes last wins: a slow board is never held up further, and a
- * fast one does not flash the artwork past in 200ms.
+ * fast one does not flash the artwork past in 200ms. Only the artwork is held,
+ * and only once per session — see `SEEN_KEY`.
  */
 export function dismissSplash(): void {
   const splash = splashElement()
   if (splash === null) return
+  markSeen()
 
   const remaining = holdWanted() ? MINIMUM_VISIBLE_MS - performance.now() : 0
   if (remaining <= 0) {

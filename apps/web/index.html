@@ -23,6 +23,29 @@
       is never waited for. A loading screen that delays loading is a joke at the
       user's expense.
     -->
+    <!--
+      Once per session. The artwork is the one full-bleed brand moment and it
+      holds for two seconds, which on a warm load IS the loading time — paid
+      again for every board opened from the front door, because each is a full
+      page load. So a tab that has already seen it gets a quiet sheet in the
+      person's own world instead, gone the moment the page is ready.
+
+      Decided here, before the body is parsed, so the first frame is already
+      the right one. `splash.ts` sets the flag when the artwork leaves, and
+      reads this attribute rather than asking storage a second time.
+    -->
+    <script>
+      try {
+        if (sessionStorage.getItem('openframe:splash-seen') === 'yes') {
+          document.documentElement.dataset.splash = 'quiet'
+          if (localStorage.getItem('openframe:theme') === 'after-hours') {
+            document.documentElement.dataset.splashWorld = 'after-hours'
+          }
+        }
+      } catch (error) {
+        // Storage refused: the artwork every time is the safe answer.
+      }
+    </script>
     <style>
       #of-splash {
         position: fixed;
@@ -109,6 +132,21 @@
       #of-splash button:focus-visible {
         outline: 2px solid #ece8fb;
         outline-offset: 2px;
+      }
+      /*
+       * The quiet sheet: the world's own page colour and nothing on it, so the
+       * handover is from the page to the page. The label comes back only if
+       * the watchdog has something to say.
+       */
+      [data-splash='quiet'] #of-splash {
+        background-color: #f7f9fb;
+        background-image: none;
+      }
+      [data-splash='quiet'][data-splash-world='after-hours'] #of-splash {
+        background-color: #1b1033;
+      }
+      [data-splash='quiet'] #of-splash:not([data-state='stalled']) > * {
+        display: none;
       }
       @media (prefers-reduced-motion: reduce) {
         #of-splash,
