@@ -29,6 +29,7 @@ import {
 
 import { useOpenFrame } from '../runtime/context.js'
 import { pinFraction } from '../scene/comment-pin.js'
+import { pinchViewport, type PinchStart } from '../scene/pinch.js'
 import { useCommands } from '../hooks/use-commands.js'
 import { useInteractionStore } from '../interaction/interaction-store.js'
 import {
@@ -513,10 +514,48 @@ export function useCanvasGestures(containerRef: RefObject<HTMLElement | null>) {
       event.preventDefault()
       event.stopPropagation()
     }
+    /*
+     * A window that loses focus mid-gesture — a system dialog, a switch of
+     * app — will never send the pointer-up. The gesture is put back, as
+     * Escape would, rather than left running for a release that never comes.
+     */
+    const onBlur = (): void => {
+      if (gesture.current === null) return
+      gesture.current = null
+      useInteractionStore.getState().endDrag()
+    }
     window.addEventListener('keydown', onKeyDown, true)
+    window.addEventListener('blur', onBlur)
     return () => {
       window.removeEventListener('keydown', onKeyDown, true)
+      window.removeEventListener('blur', onBlur)
     }
+  }, [])
+
+  /*
+   * FINGERS ON THE BOARD, by pointer id, in canvas pixels.
+   *
+   * `touch-action: none` on the canvas turns off the browser's own pinch so a
+   * one-finger drag can move an object instead of scrolling the page — and
+   * nothing replaced it, so a board on a phone could not be zoomed with the
+   * hand at all. Two fingers now pinch AND pan in one gesture (`pinchViewport`),
+   * and a second finger landing mid-drag puts the drag back, as Escape does,
+   * rather than taking it over.
+   */
+  const touches = useRef(new Map<number, Point>())
+  const pinch = useRef<PinchStart | null>(null)
+  const canvasPoint = useCallback(
+    (clientX: number, clientY: number): Point => {
+      const rect = containerRef.current?.getBoundingClientRect()
+      return { x: clientX - (rect?.left ?? 0), y: clientY - (rect?.top ?? 0) }
+    },
+    [containerRef],
+  )
+  /** Puts back whatever one-finger gesture was running, writing nothing. */
+  const abandon = useCallback((): void => {
+    if (gesture.current === null) return
+    gesture.current = null
+    useInteractionStore.getState().endDrag()
   }, [])
   /**
    * Whether the last press landed on a handle.
@@ -656,6 +695,25 @@ export function useCanvasGestures(containerRef: RefObject<HTMLElement | null>) {
        * earlier ones passed because they never left comment mode.
        */
       if (event.target instanceof Element && event.target.closest('.of-comments') !== null) {
+        return
+      }
+
+      if (event.pointerType === 'touch') {
+        touches.current.set(event.pointerId, canvasPoint(event.clientX, event.clientY))
+        if (touches.current.size >= 2) {
+          // A second finger: this is a pinch, and whatever the first began
+          // is put back rather than committed.
+          abandon()
+          const [a, b] = [...touches.current.values()]
+          if (a !== undefined && b !== undefined) {
+            pinch.current = { viewport: useInteractionStore.getState().viewport, a, b }
+          }
+          event.currentTarget.setPointerCapture(event.pointerId)
+          event.preventDefault()
+          return
+        }
+      } else if (gesture.current !== null) {
+        // A second pointer of any other kind never takes over the first.
         return
       }
 
@@ -893,12 +951,21 @@ export function useCanvasGestures(containerRef: RefObject<HTMLElement | null>) {
         }
       }
     },
-    [applyIntent, runtime, toWorld],
+    [abandon, applyIntent, canvasPoint, runtime, toWorld],
   )
 
   const onPointerMove = useCallback(
     (event: ReactPointerEvent<HTMLElement>): void => {
       const store = useInteractionStore.getState()
+      if (event.pointerType === 'touch' && touches.current.has(event.pointerId)) {
+        touches.current.set(event.pointerId, canvasPoint(event.clientX, event.clientY))
+        const started = pinch.current
+        if (started !== null) {
+          const [a, b] = [...touches.current.values()]
+          if (a !== undefined && b !== undefined) store.setViewport(pinchViewport(started, a, b))
+          return
+        }
+      }
       const active = gesture.current
 
       if (active === null) {
@@ -1103,13 +1170,25 @@ export function useCanvasGestures(containerRef: RefObject<HTMLElement | null>) {
         )
       }
     },
-    [runtime, toWorld],
+    [canvasPoint, runtime, toWorld],
   )
 
   const onPointerUp = useCallback(
     (event: ReactPointerEvent<HTMLElement>): void => {
       const worldPointOf = (e: ReactPointerEvent<HTMLElement>): Point =>
         toWorld(e.clientX, e.clientY)
+      if (event.pointerType === 'touch') {
+        touches.current.delete(event.pointerId)
+        if (pinch.current !== null) {
+          // The pinch ends with its first lifted finger; the one left behind
+          // starts nothing until it too is lifted.
+          if (touches.current.size < 2) pinch.current = null
+          if (event.currentTarget.hasPointerCapture(event.pointerId)) {
+            event.currentTarget.releasePointerCapture(event.pointerId)
+          }
+          return
+        }
+      }
       const active = gesture.current
       gesture.current = null
       if (active === null) return
@@ -1484,6 +1563,39 @@ export function useCanvasGestures(containerRef: RefObject<HTMLElement | null>) {
    * where it last was. Chrome that appears only under the pointer would
    * otherwise hang over the board after the hand had gone.
    */
+  /*
+   * A CANCELLED pointer puts the gesture back. The browser sends
+   * `pointercancel` when something else takes the pointer — an incoming call,
+   * a palm, the system claiming the touch — and it was wired to pointer-up,
+   * which COMMITTED a half-finished move. Escape already put a gesture back;
+   * an interruption the person did not choose now does the same.
+   */
+  const onPointerCancel = useCallback(
+    (event: ReactPointerEvent<HTMLElement>): void => {
+      touches.current.delete(event.pointerId)
+      if (touches.current.size < 2) pinch.current = null
+      abandon()
+    },
+    [abandon],
+  )
+
+  /*
+   * Capture lost without a release — the element holding it went away, or the
+   * browser took it back. Pointer-up clears the gesture before it releases
+   * capture, so this only ever finds one that was interrupted.
+   */
+  const onLostPointerCapture = useCallback(
+    (event: ReactPointerEvent<HTMLElement>): void => {
+      touches.current.delete(event.pointerId)
+      if (pinch.current !== null) {
+        if (touches.current.size < 2) pinch.current = null
+        return
+      }
+      abandon()
+    },
+    [abandon],
+  )
+
   const onPointerLeave = useCallback((): void => {
     useInteractionStore.getState().setPointer(null)
   }, [])
@@ -1492,6 +1604,8 @@ export function useCanvasGestures(containerRef: RefObject<HTMLElement | null>) {
     onPointerDown,
     onPointerMove,
     onPointerUp,
+    onPointerCancel,
+    onLostPointerCapture,
     onPointerLeave,
     onDoubleClick,
     onContextMenu,
