@@ -306,7 +306,8 @@ export function Home({ repository }: { readonly repository: BoardRepository }) {
               <p className="of-home__note">Looking for your boards…</p>
             ) : shown.length === 0 ? (
               <p className="of-home__note" data-testid="home-empty">
-                Nothing here yet.
+                {/* An empty list says what to do next, not only that it is empty. */}
+                {canStart ? 'Nothing here yet. Start a board below.' : 'Nothing here yet.'}
               </p>
             ) : (
               <ul className="of-home__list" data-testid="home-boards">
@@ -352,6 +353,12 @@ export function Home({ repository }: { readonly repository: BoardRepository }) {
               <h2 className="of-home__heading" id="of-home-signin">
                 sign in
               </h2>
+              {/*
+                * The one thing the door must not imply: that somebody holding a
+                * link needs an account to open it. The contract promised this
+                * line, and it had gone.
+                */}
+              <p className="of-home__note">A link somebody sends you opens without an account.</p>
               <AccountForm
                 onDone={() => {
                   // The board list is about to mean something different.

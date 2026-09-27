@@ -188,7 +188,9 @@ export function BoardRow({
                 : board.role === 'viewer'
                   ? 'view only'
                   : board.role === 'owner'
-                    ? 'shared'
+                    ? // Yours, not "shared": every board is born in a room
+                      // now, so "shared" was on every row and said nothing.
+                      'yours'
                     : 'shared with you'}
             </span>
             <span className="of-home__board-when">{describeWhen(board.updatedAt, readAt)}</span>

@@ -906,6 +906,14 @@ body {
   transform: translate(-50%, 0);
 }
 
+/*
+ * A control whose sheet is open says nothing more: its tip peeked out from
+ * behind every open sheet, over the sheet's own edge.
+ */
+[data-tip][aria-expanded='true']::after {
+  display: none;
+}
+
 [data-tip-side='below']::after,
 .of-overlay--nav [data-tip]::after {
   top: calc(100% + var(--of-space-6));
@@ -2270,6 +2278,17 @@ body {
 .of-spaces__naming {
   display: flex;
   gap: var(--of-space-6);
+  align-items: flex-end;
+}
+
+.of-spaces__label {
+  flex: 1 1 auto;
+  min-width: 0;
+  margin-bottom: 0;
+}
+
+.of-spaces__label .of-spaces__name {
+  width: 100%;
 }
 
 .of-spaces__name,
@@ -2280,8 +2299,16 @@ body {
 
 .of-spaces__share {
   display: flex;
+  flex-wrap: wrap;
   gap: var(--of-space-6);
   align-items: center;
+}
+
+/* What the invite gives, on its own line under the link it describes. */
+.of-spaces__invite-what {
+  flex-basis: 100%;
+  font-size: var(--of-type-record);
+  color: var(--of-ink-muted);
 }
 
 /* What somebody wanted you to see, on the front door. */
@@ -5750,11 +5777,12 @@ textarea.of-input {
    *
    * What the number does is stop the buttons overflowing the box they were
    * given. The block is right-aligned, so content too wide for it spills
-   * LEFTWARD into the column beside it rather than being clipped. Four 30px
-   * targets and three 2px gaps is 126, exactly.
+   * LEFTWARD into the column beside it rather than being clipped. Three 30px
+   * targets and two 2px gaps is 94, exactly — the password moved into the
+   * share sheet, and the 32px it no longer needs went back to the name.
    */
   justify-content: flex-end;
-  width: 126px;
+  width: 94px;
   gap: var(--of-space-2);
   opacity: 0;
 }
@@ -5958,9 +5986,10 @@ textarea.of-input {
    * and took every one of them from the name.
    *
    * 118px fits the longest tag ("shared with you", 15 mono characters plus its
-   * padding); 96px fits the longest time ("11 months ago").
+   * padding); 108px fits the longest time ("11 months ago") WITH the mono's
+   * 0.02em tracking, which 96 forgot — "9 minutes ago" wrapped at 1280.
    */
-  grid-template-columns: minmax(0, 1fr) 118px 96px;
+  grid-template-columns: minmax(0, 1fr) 118px 108px;
   /* 36px rather than the 24px AA floor: a list row is a large target that costs
      nothing to make comfortable. */
   min-height: var(--of-hit-lg);
@@ -6359,8 +6388,16 @@ textarea.of-input {
 }
 
 .of-sheet {
-  animation: of-raise var(--of-quick) var(--of-ease) backwards;
-  transform-origin: bottom left;
+  animation: of-drop var(--of-quick) var(--of-ease) backwards;
+  /* Sheets hang BELOW their control now the bar runs along the top. */
+  transform-origin: top left;
+}
+
+@keyframes of-drop {
+  from {
+    opacity: 0;
+    transform: translateY(-4px) scale(0.985);
+  }
 }
 
 /*
