@@ -98,7 +98,8 @@ const HUES = COLOR_TOKENS.filter(
 )
 
 /** Every theme must define a palette; a typo in the selector would silently skip one. */
-if (THEMES.length < 2) throw new Error(`expected the default world and After Hours, got ${String(THEMES.length)}`)
+if (THEMES.length < 2)
+  throw new Error(`expected the default world and After Hours, got ${String(THEMES.length)}`)
 
 function channels(hex: string): [number, number, number] {
   const n = Number.parseInt(hex.slice(1), 16)
@@ -214,12 +215,9 @@ describe.each(THEMES)('palette contrast — $name', ({ token }) => {
   /**
    * A shape's stroke and label on its own fill.
    */
-  it.each(HUES)(
-    '%s ink on its own surface meets AA for text',
-    (name) => {
-      expect(contrast(token(`c-${name}`), token(`s-${name}`))).toBeGreaterThanOrEqual(4.5)
-    },
-  )
+  it.each(HUES)('%s ink on its own surface meets AA for text', (name) => {
+    expect(contrast(token(`c-${name}`), token(`s-${name}`))).toBeGreaterThanOrEqual(4.5)
+  })
 
   /**
    * And the pair a STICKY renders, which is a different one.
@@ -231,12 +229,9 @@ describe.each(THEMES)('palette contrast — $name', ({ token }) => {
    * and stayed invisible. On a dark page it is the pair that can actually fail,
    * because `s-*` and `ink` are now both moving.
    */
-  it.each(HUES)(
-    'sticky text on a %s slip meets AA for text',
-    (name) => {
-      expect(contrast(token('ink'), token(`s-${name}`))).toBeGreaterThanOrEqual(4.5)
-    },
-  )
+  it.each(HUES)('sticky text on a %s slip meets AA for text', (name) => {
+    expect(contrast(token('ink'), token(`s-${name}`))).toBeGreaterThanOrEqual(4.5)
+  })
 
   /**
    * EVERY ink on EVERY surface, because a text colour can be picked freely.
@@ -254,23 +249,21 @@ describe.each(THEMES)('palette contrast — $name', ({ token }) => {
    * also why this has to be a test: nothing about the palette FORCES it, and a
    * later ink chosen for its own sake would break it silently.
    */
-  it.each(
-    HUES.flatMap((ink) => HUES.map((surface) => [ink, surface] as const)),
-  )('%s text on a %s slip meets AA for text', (ink, surface) => {
-    expect(contrast(token(`c-${ink}`), token(`s-${surface}`))).toBeGreaterThanOrEqual(4.5)
-  })
+  it.each(HUES.flatMap((ink) => HUES.map((surface) => [ink, surface] as const)))(
+    '%s text on a %s slip meets AA for text',
+    (ink, surface) => {
+      expect(contrast(token(`c-${ink}`), token(`s-${surface}`))).toBeGreaterThanOrEqual(4.5)
+    },
+  )
 
   /**
    * And on the two grounds text can sit on without a slip under it: a frame's
    * title hangs above the frame on the page, and a connector's label rides
    * the line over the board itself.
    */
-  it.each(HUES)(
-    '%s text on the board meets AA for text',
-    (ink) => {
-      expect(contrast(token(`c-${ink}`), token('bg'))).toBeGreaterThanOrEqual(4.5)
-    },
-  )
+  it.each(HUES)('%s text on the board meets AA for text', (ink) => {
+    expect(contrast(token(`c-${ink}`), token('bg'))).toBeGreaterThanOrEqual(4.5)
+  })
 
   /**
    * THE TWO THAT MEAN THEMSELVES.
@@ -480,8 +473,8 @@ describe('no colour literals outside the token block', () => {
    * `.of-picker__contrast` and watching the test above fail.
    */
   it('exempts only the three selectors that paint the spectrum', () => {
-    const exempted = [...CSS.matchAll(COLOUR_SPACE)].map((match) =>
-      /\.of-picker__\w+(::\w+)?/.exec(match[0])?.[0],
+    const exempted = [...CSS.matchAll(COLOUR_SPACE)].map(
+      (match) => /\.of-picker__\w+(::\w+)?/.exec(match[0])?.[0],
     )
     expect(new Set(exempted)).toEqual(
       new Set([
@@ -546,15 +539,16 @@ describe('the record panel fits what it promises to show', () => {
     const panelWidth = Number(widthMatch?.[1])
 
     const size = String.raw`(\d+px|var\(--of-[\w-]+\))`
-    const read = (pattern: string): number =>
-      px(new RegExp(pattern.replace('SIZE', size)))
+    const read = (pattern: string): number => px(new RegExp(pattern.replace('SIZE', size)))
 
     const labelColumn = read(String.raw`\.of-field \{[^}]*grid-template-columns:\s*SIZE`)
     const columnGap = read(String.raw`\.of-field \{[^}]*\n\s*gap:\s*SIZE`)
     const columns = /\.of-swatches \{[^}]*grid-template-columns:\s*repeat\((\d+),/.exec(CSS)?.[1]
     expect(columns).toBeDefined()
     const perRow = Number(columns)
-    const swatch = read(String.raw`\.of-swatches \{[^}]*grid-template-columns:\s*repeat\(\d+,\s*SIZE`)
+    const swatch = read(
+      String.raw`\.of-swatches \{[^}]*grid-template-columns:\s*repeat\(\d+,\s*SIZE`,
+    )
     const swatchGap = read(String.raw`\.of-swatches \{[^}]*gap:\s*SIZE`)
     const sidePadding = read(String.raw`\.of-inspector \{[^}]*\n\s*padding:\s*SIZE`)
     // The panel's own 1px border, both sides.
@@ -638,7 +632,6 @@ describe('the twelve pixel floor', () => {
       .map(([selector, size]) => `${selector}: ${size}`)
     expect(off).toEqual([])
   })
-
 })
 
 /**
@@ -805,9 +798,15 @@ describe('the stylesheet is well formed', () => {
 describe('a failed save survives a narrow window', () => {
   it('hides the save state below 560px only when it has not failed', () => {
     const css = readFileSync(resolve(process.cwd(), 'src/styles.css'), 'utf8')
-    const narrow = /@media \(width < 560px\)\s*\{([\s\S]*?)\n\}/.exec(css)?.[1] ?? ''
+    // The bar's own block at that width; other surfaces have theirs too.
+    const narrow =
+      [...css.matchAll(/@media \(width < 560px\)\s*\{([\s\S]*?)\n\}/g)]
+        .map((match) => match[1] ?? '')
+        .find((block) => block.includes('of-status__save')) ?? ''
     expect(narrow, 'the narrow block is found, so this is not vacuous').toContain('of-status__save')
-    const hides = [...narrow.matchAll(/([^{}]*of-status__save[^{}]*)\{[^}]*display:\s*none/g)].map((m) => m[1] ?? '')
+    const hides = [...narrow.matchAll(/([^{}]*of-status__save[^{}]*)\{[^}]*display:\s*none/g)].map(
+      (m) => m[1] ?? '',
+    )
     expect(hides.length).toBeGreaterThan(0)
     for (const selector of hides) expect(selector).toContain(':not(.of-status__save--failed)')
   })
@@ -823,9 +822,7 @@ describe('the format bar names the sizes the stylesheet draws', () => {
   it('matches every .of-size rule, and md is the object itself', async () => {
     const { SIZE_SCALE } = await import('../views/FormatBar.js')
     for (const [token, scale] of Object.entries(SIZE_SCALE)) {
-      const rule = new RegExp(`\\.of-size--${token}\\s*\\{\\s*font-size:\\s*([\\d.]+)em`).exec(
-        CSS,
-      )
+      const rule = new RegExp(`\\.of-size--${token}\\s*\\{\\s*font-size:\\s*([\\d.]+)em`).exec(CSS)
       if (token === 'md') {
         expect(rule, 'md is the object size and has no rule').toBeNull()
         expect(scale).toBe(1)
@@ -987,13 +984,17 @@ describe.each(THEMES.filter((theme) => theme.name !== 'default'))(
  */
 describe('the plain kit is stock on the page', () => {
   const rule = (selector: string): string =>
-    new RegExp(`${selector.replace(/[.-]/g, (c) => `\\${c}`)}\\s*\\{([^}]*)\\}`).exec(CSS)?.[1] ?? ''
+    new RegExp(`${selector.replace(/[.-]/g, (c) => `\\${c}`)}\\s*\\{([^}]*)\\}`).exec(CSS)?.[1] ??
+    ''
 
-  it.each(['.of-code', '.of-image-frame', '.of-table'])('%s is cut and laid like a slip', (selector) => {
-    const body = rule(selector)
-    expect(body).toMatch(/border-radius:\s*var\(--of-radius-slip\)/)
-    expect(body).toMatch(/box-shadow:\s*var\(--of-slip-shadow\)/)
-  })
+  it.each(['.of-code', '.of-image-frame', '.of-table'])(
+    '%s is cut and laid like a slip',
+    (selector) => {
+      const body = rule(selector)
+      expect(body).toMatch(/border-radius:\s*var\(--of-radius-slip\)/)
+      expect(body).toMatch(/box-shadow:\s*var\(--of-slip-shadow\)/)
+    },
+  )
 
   // A placeholder is text somebody has to read to know what to do: 4.5:1.
   it("an empty text's placeholder is muted ink, not a faded one", () => {

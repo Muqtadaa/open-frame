@@ -134,3 +134,31 @@ test.describe('a narrow window with a mouse', () => {
     expect(await overflow(page)).toBeLessThanOrEqual(0)
   })
 })
+
+/*
+ * The comments panel on a phone (audit 2026-09-27): a 300px card pinned
+ * under the bar sat across the rail and over Find when both were open, and
+ * measured its height from `100vh`, which on a phone includes the browser's
+ * own bar. It is a sheet along the bottom here, like the record panel.
+ */
+test('the comments panel is a sheet along the bottom, clear of Find', async ({ page }) => {
+  await signedIn(page, [{ id: 'brd_abcdefgh12345678', title: 'Shared', role: 'owner' }])
+  await page.routeWebSocket(/\/room\//, () => undefined)
+  await page.goto(`/?room=brd_abcdefgh12345678&k=${'e'.repeat(32)}`)
+  await page.waitForSelector('[data-testid="status-bar"]')
+  await page.getByTestId('tool-comment').click()
+  const panel = page.getByTestId('comment-panel')
+  await expect(panel).toBeVisible()
+
+  const box = await panel.boundingBox()
+  if (box === null) throw new Error('no panel')
+  expect(box.x).toBeGreaterThanOrEqual(0)
+  expect(box.x + box.width).toBeLessThanOrEqual(390)
+  expect(Math.round(box.y + box.height)).toBeGreaterThanOrEqual(843)
+  expect(box.height).toBeLessThanOrEqual(844 * 0.6 + 1)
+
+  await page.keyboard.press('Control+f')
+  const find = await page.getByTestId('search-panel').boundingBox()
+  if (find === null) throw new Error('no search')
+  expect(find.y + find.height).toBeLessThanOrEqual(box.y)
+})

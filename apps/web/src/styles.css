@@ -2592,13 +2592,37 @@ body {
   flex-direction: column;
   gap: var(--of-step);
   width: 300px;
-  max-height: calc(100vh - 120px);
+  /*
+   * The dynamic viewport, like everything else here: `100vh` on a phone
+   * includes the browser's own bar, so the panel's foot sat under it.
+   */
+  max-height: calc(100dvh - var(--of-nav-band) - var(--of-gutter));
   padding: var(--of-space-16);
   overflow-y: auto;
   background: var(--of-panel);
   border: 1px solid var(--of-panel-border);
   border-radius: var(--of-radius-surface);
   box-shadow: var(--of-shadow);
+}
+
+/*
+ * On a phone it is a sheet along the bottom, as the record panel is below
+ * the same width: a 300px card pinned under the bar sat across the rail,
+ * and over Find when both were open (audit 2026-09-27).
+ */
+@media (width < 560px) {
+  .of-comment-panel {
+    top: auto;
+    right: 0;
+    bottom: 0;
+    left: 0;
+    width: auto;
+    max-height: 60dvh;
+    border-right: none;
+    border-bottom: none;
+    border-left: none;
+    border-radius: var(--of-radius-surface) var(--of-radius-surface) 0 0;
+  }
 }
 
 .of-comment-panel__head {
