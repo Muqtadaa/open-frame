@@ -16,7 +16,11 @@ import { BOARD_URL } from './routes.js'
  */
 test.use({ viewport: { width: 390, height: 844 }, hasTouch: true, isMobile: true })
 
-type Finger = { readonly id: number; readonly x: number; readonly y: number }
+interface Finger {
+  readonly id: number
+  readonly x: number
+  readonly y: number
+}
 
 async function touch(
   cdp: CDPSession,
