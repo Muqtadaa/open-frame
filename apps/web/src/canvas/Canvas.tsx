@@ -101,6 +101,27 @@ export function Canvas() {
    * should the pointer — a cursor showing a rectangle while the rail shows a
    * diamond is the interface disagreeing with itself.
    */
+  /*
+   * WHEN AN EDIT ENDS, the keyboard comes back to the board. The editor
+   * unmounts with focus inside it, which leaves focus on BODY — and Tab then
+   * started again at "All boards", thirty stops away, after every keyboard
+   * edit. Only when nothing else has taken focus: a click into the record
+   * panel that ended the edit keeps its field.
+   */
+  useEffect(
+    () =>
+      useInteractionStore.subscribe((state, previous) => {
+        if (previous.editingId === null || state.editingId !== null) return
+        requestAnimationFrame(() => {
+          const active = window.document.activeElement
+          if (active === null || active === window.document.body) {
+            containerRef.current?.focus({ preventScroll: true })
+          }
+        })
+      }),
+    [containerRef],
+  )
+
   const ink = useCursorInk()
   const toolCursor = useMemo(() => cursorFor(tool, shapeKind, ink), [tool, shapeKind, ink])
 

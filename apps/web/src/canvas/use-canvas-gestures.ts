@@ -685,6 +685,13 @@ export function useCanvasGestures(containerRef: RefObject<HTMLElement | null>) {
       const active = window.document.activeElement
       if (active instanceof HTMLElement && isTextEntry(active)) active.blur()
       else if (store.editingId !== null) store.setEditing(null)
+      /*
+       * And the board takes the keyboard, which `preventDefault` above stopped
+       * the browser doing: a click then Tab started again at the top of the
+       * page. Anything opened by this gesture — a note's editor — focuses
+       * itself afterwards, so this never takes the caret away from it.
+       */
+      event.currentTarget.focus({ preventScroll: true })
 
       const grabbed = handleUnderPointer(event.target)
       /*

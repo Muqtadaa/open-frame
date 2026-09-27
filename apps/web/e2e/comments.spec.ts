@@ -1005,7 +1005,9 @@ test.describe('by keyboard', () => {
     await expect(page.getByRole('heading', { name: 'Comments' })).toBeFocused()
     await page.keyboard.press('Escape')
     await expect(page.getByTestId('comment-panel')).toHaveCount(0)
-    await expect(page.getByTestId('tool-comment')).toBeFocused()
+    // Back where M was pressed: the board, which keeps the keyboard after an
+    // edit now (audit 2026-09-27) rather than dropping it on the page.
+    await expect(page.getByTestId('canvas')).toBeFocused()
   })
 
   test('a pin that opened a thread gets the keyboard back', async ({ page }) => {
