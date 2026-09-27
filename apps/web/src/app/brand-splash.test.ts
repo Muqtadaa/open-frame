@@ -106,6 +106,25 @@ describe('the boot splash', () => {
     expect(/const FADE_MS = (\d+)/.exec(script)?.[1]).toBe(settle?.replace('ms', ''))
   })
 
+  /*
+   * The label promises a board only where one opens. The inline check cannot
+   * import the router, so its two patterns are held to the router's own.
+   */
+  it('recognises a board link exactly as the router does', () => {
+    const source = (path: string, name: string): string => {
+      const file = readFileSync(resolve(process.cwd(), path), 'utf8')
+      const found = new RegExp(`const ${name} = (/[^\\n]+/)\\n`).exec(file)?.[1]
+      if (found === undefined) throw new Error(`${name} not found in ${path}`)
+      return found
+    }
+    expect(HTML).toContain(
+      `room !== null && ${source('src/app/collab-config.ts', 'SHARED_ID')}.test(room)`,
+    )
+    expect(HTML).toContain(
+      `board !== null && ${source('src/app/route.ts', 'LOCAL_ID')}.test(board)`,
+    )
+  })
+
   /** The label's scrim is the void at 82%, written in channels rather than hex. */
   it('writes the scrim from the same void the background uses', () => {
     const scrim = /rgb\((\d+) (\d+) (\d+) \/ \d+%\)/.exec(inlineStyle)

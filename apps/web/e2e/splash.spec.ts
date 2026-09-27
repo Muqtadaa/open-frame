@@ -147,6 +147,9 @@ test.describe('the label', () => {
     [BOARD_URL, 'Opening the board'],
     [SHARED, 'Opening the board'],
     [HOME_URL, 'Opening OpenFrame'],
+    // Malformed links open the front door (`readRoute`), so the label says so.
+    ['/?board=../../etc/passwd', 'Opening OpenFrame'],
+    ['/?room=brd_short', 'Opening OpenFrame'],
   ] as const) {
     test(`says "${text}" on ${url}`, async ({ page }) => {
       await page.goto(url, { waitUntil: 'commit' })

@@ -212,13 +212,23 @@
       <!--
         Says what is actually opening, before the first frame. The markup's own
         words are the neutral ones, so a page where this never ran is still
-        telling the truth. Mirrors `app/route.ts`: `board` and `room` are the
-        two parameters that open a board, and anything else is the front door.
+        telling the truth. Mirrors `readRoute()` exactly, validation and all: a
+        truncated or mangled link opens the front door, so it must not promise
+        a board. `brand-splash.test.ts` holds these patterns to the ones the
+        router uses.
       -->
       <script>
-        if (/[?&](board|room)=/.test(location.search)) {
-          document.currentScript.previousElementSibling.textContent = 'Opening the board'
-        }
+        ;(function () {
+          var params = new URLSearchParams(location.search)
+          var room = params.get('room')
+          var board = params.get('board')
+          if (
+            (room !== null && /^brd_[A-Za-z0-9]{8,48}$/.test(room)) ||
+            (board !== null && /^board_[A-Za-z0-9-]{1,48}$/.test(board))
+          ) {
+            document.currentScript.previousElementSibling.textContent = 'Opening the board'
+          }
+        })()
       </script>
     </div>
     <!--
