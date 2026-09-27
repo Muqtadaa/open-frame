@@ -63,6 +63,20 @@ export function inkOf(value: ColorValue | undefined, fallback: ColorToken = 'gra
   return isColorToken(value) ? COLOR_VARS[value] : value
 }
 
+/**
+ * The colour a LINE is drawn in: a stroke, an outline, a connector.
+ *
+ * The same as `inkOf` except for black and white, which are each the page in
+ * one of the two worlds and so vanish there as a line. They take
+ * `--of-line-*`, which is the gray ink in the world where they would vanish.
+ * A fill keeps the colour that was chosen; only its edge moves.
+ */
+export function lineOf(value: ColorValue | undefined, fallback: ColorToken = 'gray'): string {
+  const token = value ?? fallback
+  if (token === 'black' || token === 'white') return `var(--of-line-${token})`
+  return inkOf(token)
+}
+
 export function surfaceOf(value: ColorValue | undefined, fallback: ColorToken): string {
   if (value === undefined) return SURFACE_VARS[fallback]
   return isColorToken(value) ? SURFACE_VARS[value] : value

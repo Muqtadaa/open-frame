@@ -12,7 +12,7 @@ import { BOARD_URL } from './routes.js'
 const CANVAS = '[data-testid="canvas"]'
 const AWAY = { x: 1100, y: 640 }
 
-const drawn = (page: Page): Locator => page.locator('[role="table"] > div')
+const drawn = (page: Page): Locator => page.locator('[role="table"] [data-row]')
 
 async function tableWith(page: Page, values: readonly string[]): Promise<void> {
   await page.goto(BOARD_URL)

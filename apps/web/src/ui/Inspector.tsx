@@ -398,6 +398,17 @@ export function Inspector() {
     return drawn.size === 1 ? [...drawn][0] : undefined
   })()
 
+  /**
+   * Where every view in the selection draws text that nobody has placed — a
+   * shape centres its label — so the panel marks what is on the board.
+   */
+  const agreed = <T,>(pick: (type: string) => T | undefined): T | undefined => {
+    const drawn = new Set(objects.map((object) => pick(object.type)))
+    return drawn.size === 1 ? [...drawn][0] : undefined
+  }
+  const drawnAlign = agreed((type) => views.get(type)?.defaultAlign)
+  const drawnVerticalAlign = agreed((type) => views.get(type)?.defaultVerticalAlign)
+
   // A type that carries a record gets it named, above how it looks.
   // What the object says, apart from how it is drawn (`FieldDefinition.meaning`).
   const recordFields = fields.filter((field) => field.meaning === 'record')
@@ -658,7 +669,6 @@ export function Inspector() {
               </Field>
             )}
 
-
             {props.has('font') && (
               <Field name="face">
                 <Choice<FontToken>
@@ -675,7 +685,7 @@ export function Inspector() {
               <Field name="align">
                 <Choice<AlignToken>
                   options={ALIGN_TOKENS}
-                  current={value('align') ?? 'start'}
+                  current={value('align') ?? drawnAlign ?? 'start'}
                   name="align"
                   onPick={(align) => apply({ align })}
                   render={(token) => <AlignIcon variant={token} />}
@@ -687,7 +697,7 @@ export function Inspector() {
               <Field name="vertical">
                 <Choice<VAlignToken>
                   options={VALIGN_TOKENS}
-                  current={value('verticalAlign') ?? 'top'}
+                  current={value('verticalAlign') ?? drawnVerticalAlign ?? 'top'}
                   name="verticalAlign"
                   onPick={(verticalAlign) => apply({ verticalAlign })}
                   render={(token) => <VAlignIcon variant={token} />}

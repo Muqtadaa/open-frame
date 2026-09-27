@@ -37,6 +37,7 @@ import { useOpenFrame } from '../runtime/context.js'
 import { useInteractionStore } from '../interaction/interaction-store.js'
 import { objectsInMarquee } from '../scene/hit-testing.js'
 import { snapPoint } from '../scene/snapping.js'
+import { placeDerived } from '../scene/derived-placement.js'
 import { panToReveal } from '../scene/zoom.js'
 
 export interface BoardCommands {
@@ -426,16 +427,37 @@ export function useCommands(): BoardCommands {
         const size = definition.create().frame
 
         /*
-         * Above the cluster, centred on it, with a gap. Placing it on top of
-         * the evidence would hide what the claim is made of at the moment the
-         * claim is made — and the spatial relationship IS the explanation until
-         * the user has read the panel.
+         * Beside the cluster, not on it: placing it over the evidence would
+         * hide what the claim is made of at the moment the claim is made. Above
+         * when that is free, and somewhere already on screen when it can be —
+         * `placeDerived` says which.
          */
-        const origin = {
-          x: bounds.x + bounds.width / 2 - size.width / 2,
-          y: bounds.y - size.height - SYNTHESIS_GAP,
+        const occupied = [...doc.objects.values()].flatMap((object) => {
+          const capabilities = runtime.registry.get(object.type)?.capabilities
+          if (capabilities?.spatial === false) return []
+          return [
+            {
+              ...runtime.registry.boundsOf(object, doc),
+              // A frame the cluster sits in is not in the way of what goes beside it.
+              container: capabilities?.canHaveChildren === true,
+            },
+          ]
+        })
+        const { viewport, canvasSize } = store
+        const view = {
+          x: viewport.x,
+          y: viewport.y,
+          width: canvasSize.width / viewport.zoom,
+          height: canvasSize.height / viewport.zoom,
         }
-        const at = store.snapToGrid ? snapPoint(origin) : origin
+        const at = placeDerived(
+          bounds,
+          size,
+          occupied,
+          view,
+          SYNTHESIS_GAP,
+          store.snapToGrid ? snapPoint : undefined,
+        )
 
         // Minted here because the relations must name the insight, and
         // `transact` takes its commands upfront — the grouping precedent.

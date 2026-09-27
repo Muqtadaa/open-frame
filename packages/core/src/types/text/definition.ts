@@ -19,7 +19,9 @@ export const textType = defineObjectType<typeof TEXT_TYPE, TextData>({
 
   create: (init) => ({
     data: { text: init?.text ?? [{ text: '' }] },
-    frame: { width: 240, height: 48 },
+    // Two lines of display type, on the grid: at 48 a fresh box held one,
+    // and the first sentence typed wrapped out of sight.
+    frame: { width: 240, height: 60 },
   }),
 
   capabilities: {

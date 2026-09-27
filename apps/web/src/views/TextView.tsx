@@ -1,4 +1,4 @@
-import { isEmptyText, plainTextOf, type ColorValue, type TextData } from '@openframe/core'
+import { isEmptyText, type ColorValue, type TextData } from '@openframe/core'
 
 import { fontFamily, textAlign, verticalAlign, inkOf } from '../scene/style-tokens.js'
 import { defineObjectView, type ObjectEditorProps, type ObjectViewProps } from './registry.js'
@@ -24,14 +24,16 @@ function TextRenderer({ object }: ObjectViewProps<TextData>) {
     <div
       className={`of-text${empty ? ' of-text--empty' : ''}`}
       style={{
-        color: ink(object.style),
+        // The placeholder takes the stylesheet's muted ink rather than the
+        // object's, which faded was 1.95:1 on the page.
+        ...(empty ? {} : { color: ink(object.style) }),
         fontFamily: fontFamily(object.style.font),
         textAlign: textAlign(object.style.align),
         justifyContent: verticalAlign(object.style.verticalAlign),
         opacity: object.style.opacity ?? 1,
       }}
       role="group"
-      aria-label={empty ? 'Empty text' : `Text: ${plainTextOf(object.data.text)}`}
+      aria-label={empty ? 'Empty text' : 'Text'}
     >
       {/*
         * The text is its own element rather than a bare child. The clamp that

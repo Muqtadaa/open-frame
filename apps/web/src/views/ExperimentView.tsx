@@ -21,7 +21,7 @@ function ExperimentRenderer(props: ObjectViewProps<ExperimentData>) {
       text={object.data.text}
       noun="Experiment"
       record={[object.data.method, statusLine(object.data.status, 'planned')]}
-      defaultColor="gray"
+      defaultColor="pink"
       className="of-experiment"
     />
   )
@@ -33,7 +33,7 @@ function ExperimentEditor(props: ObjectEditorProps<ExperimentData>) {
       {...props}
       text={props.object.data.text}
       label="Edit experiment"
-      defaultColor="gray"
+      defaultColor="pink"
       className="of-experiment"
     />
   )
@@ -41,7 +41,7 @@ function ExperimentEditor(props: ObjectEditorProps<ExperimentData>) {
 
 export const experimentView = defineObjectView<ExperimentData>({
   type: 'experiment',
-  defaultColor: 'gray',
+  defaultColor: 'pink',
   Renderer: ExperimentRenderer,
   InlineEditor: ExperimentEditor,
 })

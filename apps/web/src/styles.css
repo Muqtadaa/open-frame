@@ -78,6 +78,8 @@
    * sitting on the rule rather than printed into it.
    */
   --of-slip-shadow: 0 1px 1px rgb(22 32 43 / 18%), 0 3px 7px rgb(22 32 43 / 14%);
+  /* Nothing by day: a pale slip on a pale page is parted by its shadow. */
+  --of-slip-ring: 0 0 transparent;
   /* A segmented control's selected index, pressed into its bed. */
   --of-pressed-shadow: 0 1px 2px rgb(22 32 43 / 12%);
   /*
@@ -215,6 +217,19 @@
   --of-s-black: #16202b;
   --of-c-white: #ffffff;
   --of-s-white: #ffffff;
+  /*
+   * A LINE in black or white: a stroke, an outline, a connector. Each of the
+   * two is the page in one world, so there it is drawn in the gray ink
+   * instead — a white shape vanished into the notebook at 1.06:1. Held at 3:1
+   * on the page by design-tokens.test.
+   */
+  --of-line-black: #16202b;
+  --of-line-white: #3f5163;
+  /*
+   * The inner lines of a table: quieter than an outer edge, but still an
+   * edge you have to see to aim at a cell. Held at 3:1 on the panel.
+   */
+  --of-edge-inner: #8595a6;
 
   --of-c-yellow: #7a5c00;
   --of-c-green: #146045;
@@ -341,18 +356,33 @@
    */
   --of-slip-shadow:
     inset 0 1px 0 rgb(255 255 255 / 9%), 0 1px 2px rgb(5 2 14 / 65%), 0 4px 12px rgb(5 2 14 / 55%);
+  /*
+   * A slip is a deep colour on a deep page here, so the shadow alone cannot
+   * part them: violet and blue were 1.2:1 on the page. A hairline at 3:1 is
+   * what does, and a second lit top edge doubles the first, so the slip still
+   * reads as catching the light rather than as outlined. Slips only — the
+   * gates and pins that share the shadow have edges of their own.
+   */
+  --of-slip-edge: #6b5a98;
+  --of-slip-ring: inset 0 1px 0 rgb(255 255 255 / 9%), 0 0 0 1px var(--of-slip-edge);
   --of-pressed-shadow: 0 1px 2px rgb(5 2 14 / 50%);
 
   /*
    * Black and white do not invert. A black fill is black in both worlds and a
    * white fill is white — they are the two colours that mean themselves.
    * Black is pushed below the night page so a black slip reads as laid ON it
-   * rather than as a hole cut in it.
+   * rather than as a hole cut in it. White PAPER is paper under a lamp: at
+   * full white it was 18:1 on the page, brighter than the ink and the
+   * brightest thing on the board. A white line stays white.
    */
   --of-c-black: #07030f;
   --of-s-black: #07030f;
   --of-c-white: #ffffff;
-  --of-s-white: #ffffff;
+  --of-s-white: #d6d9e2;
+  /* Black is the page here, so a black line is drawn in the gray ink. */
+  --of-line-black: #bcc8de;
+  --of-line-white: #ffffff;
+  --of-edge-inner: #7a64b8;
 
   --of-c-yellow: #ffd95e;
   --of-c-green: #5eeaba;
@@ -1521,6 +1551,13 @@ body {
   height: 100%;
   overflow: hidden;
   background: var(--of-panel);
+  /* A sheet laid on the page, as every object is. */
+  border-radius: var(--of-radius-slip);
+  box-shadow: var(--of-slip-shadow);
+}
+
+.of-table__row {
+  display: contents;
 }
 
 .of-table__cell {
@@ -2007,7 +2044,9 @@ body {
   overflow: hidden;
   background: var(--of-s-gray);
   border: 1px solid var(--of-control-border);
-  border-radius: var(--of-radius);
+  /* Stock on the page, like every object: the page's corner and slip height. */
+  border-radius: var(--of-radius-slip);
+  box-shadow: var(--of-slip-shadow);
 }
 
 .of-code__language {
@@ -2023,7 +2062,12 @@ body {
   height: 100%;
   padding: var(--of-space-8) var(--of-step);
   margin: 0;
-  overflow: auto;
+  /*
+   * Clipped, not scrolled. On the board the wheel belongs to the canvas, so
+   * nobody could reach the scroll — it only made a scroll region no keyboard
+   * could focus. The editor scrolls; the object is resized to show more.
+   */
+  overflow: hidden;
   tab-size: 2;
 }
 
@@ -3651,7 +3695,7 @@ body {
   border-radius: var(--of-radius-slip);
   /* A slip laid on the page. Shared token so every placed object sits at the
      same height above the rule. */
-  box-shadow: var(--of-slip-shadow);
+  box-shadow: var(--of-slip-ring), var(--of-slip-shadow);
 }
 
 /*
@@ -3701,7 +3745,7 @@ body {
   padding: var(--of-space-12);
   overflow: hidden;
   border-radius: var(--of-radius-slip);
-  box-shadow: var(--of-slip-shadow);
+  box-shadow: var(--of-slip-ring), var(--of-slip-shadow);
 }
 
 .of-slip__body {
@@ -3774,6 +3818,15 @@ body {
 }
 
 /*
+ * What the slip IS, leading its record. Weight rather than size or colour: the
+ * band is already the smallest functional text on the board, and the slip's
+ * own ink is the one colour guaranteed to read on whatever stock it is given.
+ */
+.of-slip__type {
+  font-weight: 600;
+}
+
+/*
  * Every in-place editor inherits the object's own type and drops its border,
  * carrying an accent outline instead. The rich editors are `contenteditable`
  * divs rather than textareas — a textarea cannot show a bold word — so they
@@ -3785,7 +3838,12 @@ body {
 .of-shape__editor {
   overflow-wrap: anywhere;
   white-space: pre-wrap;
-  font: inherit;
+  /*
+   * The family only. `font: inherit` reset the object's own size and leading
+   * to the world's, so a note reflowed the moment it was opened and the word
+   * somebody aimed at moved.
+   */
+  font-family: inherit;
   border: none;
   resize: none;
   outline: 2px solid var(--of-accent);
@@ -3802,7 +3860,8 @@ body {
 }
 
 .of-text--empty {
-  opacity: 0.4;
+  /* Muted, not faded: faded ink was 1.95:1, and this is text to be read. */
+  color: var(--of-ink-muted);
 }
 
 .of-text__editor {
@@ -4082,7 +4141,8 @@ body {
   top: 0;
   left: 0;
   box-sizing: border-box;
-  border: 1px solid var(--of-panel-border);
+  /* An edge you find the frame by, so a boundary at 3:1, not a panel hairline. */
+  border: 1px solid var(--of-control-border);
   border-radius: var(--of-radius-slip);
   transform-origin: 0 0;
   pointer-events: none;
@@ -4174,10 +4234,11 @@ body {
   text-align: center;
   overflow-wrap: anywhere;
   white-space: pre-wrap;
+  /* The page it sits on, not the ground behind the page a shade off it. */
   text-shadow:
-    0 0 2px var(--of-bg),
-    0 0 2px var(--of-bg),
-    0 0 3px var(--of-bg);
+    0 0 2px var(--of-page),
+    0 0 2px var(--of-page),
+    0 0 3px var(--of-page);
 }
 
 .of-connector__label--plated {
@@ -6508,7 +6569,9 @@ textarea.of-input {
   overflow: hidden;
   border-style: solid;
   border-color: transparent;
-  border-radius: var(--of-radius-apparatus);
+  /* A print laid on the page: the page's corner and the one slip height. */
+  border-radius: var(--of-radius-slip);
+  box-shadow: var(--of-slip-shadow);
 }
 
 .of-image-frame .of-image {

@@ -78,6 +78,7 @@ import {
   fontFamily,
   inkColor,
   inkOf,
+  lineOf,
   readableInkOn,
   surfaceOf,
   textAlign,
@@ -188,12 +189,12 @@ function resolveLine(
   if (weight === 'none') return null
   const color =
     stored?.color !== undefined
-      ? inkOf(stored.color)
+      ? lineOf(stored.color)
       : style.strokeColor !== undefined
-        ? inkOf(style.strokeColor)
+        ? lineOf(style.strokeColor)
         : outer
           ? 'var(--of-control-border)'
-          : 'var(--of-rule)'
+          : 'var(--of-edge-inner)'
   return { width: STROKE_WIDTHS[weight], color, dash: stored?.dash }
 }
 
@@ -393,46 +394,55 @@ function TableGrid({
         role="table"
         aria-label={label}
       >
-        {cells.map((cell, index) => {
-          if (merges.covered.has(index)) return null
-          const row = Math.floor(index / width_)
-          const col = index % width_
-          const merge = merges.anchors.get(index)
-          const head = headerRow && row === 0
-          const paint = cellPaint(cell)
-          return (
-            <div
-              // The index IS the identity: cells have no ids, and their
-              // position is what they are.
-              key={index}
-              className={`of-table__cell${head ? ' of-table__cell--head' : ''}`}
-              role={head ? 'columnheader' : 'cell'}
-              // Where it is and how far it reaches, read back by fitting a
-              // track: with merges, a cell's position among its siblings no
-              // longer says which column it is in.
-              data-row={row}
-              data-col={col}
-              data-rows={merge?.rows ?? 1}
-              data-cols={merge?.cols ?? 1}
-              {...(cellProps?.(index) ?? {})}
-              style={
-                placed
-                  ? {
-                      ...paint,
-                      gridRow: `${String(row + 1)} / span ${String(merge?.rows ?? 1)}`,
-                      gridColumn: `${String(col + 1)} / span ${String(merge?.cols ?? 1)}`,
-                    }
-                  : paint
-              }
-            >
-              {content?.(index, cell) ?? (
-                <div className="of-table__cell-text">
-                  <RichTextView value={cell.text} />
+        {/*
+         * Each row its own element, laid out as if it were not there
+         * (`display: contents`), so the cells still sit on the table's grid.
+         * A cell outside a row has no table to belong to: assistive
+         * technology could not read the grid as one.
+         */}
+        {rows.map((_, row) => (
+          <div key={row} role="row" className="of-table__row">
+            {cells.slice(row * width_, (row + 1) * width_).map((cell, col) => {
+              const index = row * width_ + col
+              if (merges.covered.has(index)) return null
+              const merge = merges.anchors.get(index)
+              const head = headerRow && row === 0
+              const paint = cellPaint(cell)
+              return (
+                <div
+                  // The index IS the identity: cells have no ids, and their
+                  // position is what they are.
+                  key={index}
+                  className={`of-table__cell${head ? ' of-table__cell--head' : ''}`}
+                  role={head ? 'columnheader' : 'cell'}
+                  // Where it is and how far it reaches, read back by fitting a
+                  // track: with merges, a cell's position among its siblings no
+                  // longer says which column it is in.
+                  data-row={row}
+                  data-col={col}
+                  data-rows={merge?.rows ?? 1}
+                  data-cols={merge?.cols ?? 1}
+                  {...(cellProps?.(index) ?? {})}
+                  style={
+                    placed
+                      ? {
+                          ...paint,
+                          gridRow: `${String(row + 1)} / span ${String(merge?.rows ?? 1)}`,
+                          gridColumn: `${String(col + 1)} / span ${String(merge?.cols ?? 1)}`,
+                        }
+                      : paint
+                  }
+                >
+                  {content?.(index, cell) ?? (
+                    <div className="of-table__cell-text">
+                      <RichTextView value={cell.text} />
+                    </div>
+                  )}
                 </div>
-              )}
-            </div>
-          )
-        })}
+              )
+            })}
+          </div>
+        ))}
       </div>
       <GridLines data={data} style={style} width={width} height={height} />
     </div>

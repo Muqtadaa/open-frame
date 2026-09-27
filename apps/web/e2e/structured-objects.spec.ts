@@ -55,7 +55,8 @@ async function promote(page: Page, at: { x: number; y: number }): Promise<void> 
   await page.locator(CANVAS).click({ position: at })
   await page.locator(CANVAS).click({ position: at, button: 'right' })
   await expect(page.getByTestId('context-menu')).toBeVisible()
-  await page.getByTestId('menu-promote-to-evidence').click()
+  await page.getByTestId('menu-promote-to').click()
+  await page.getByTestId('menu-evidence').click()
   await expect(page.getByTestId('context-menu')).toHaveCount(0)
 }
 
@@ -82,6 +83,60 @@ test.describe('structured objects', () => {
    * card's also has the fields that make it a record — and they come from the
    * registry, so this fails if the declaration stops reaching the interface.
    */
+  /*
+   * A promoted note used to change nothing but its colour — to the gray a
+   * plain note could already be — and a journey stage could not be made at
+   * all. The type is now said in words, and survives a change of colour.
+   */
+  test('a promoted note says what it has become, whatever its colour', async ({ page }) => {
+    await placeNote(page, 'Gave up at checkout')
+    await page.locator(CANVAS).click({ position: NOTE })
+    await page.locator(CANVAS).click({ position: NOTE, button: 'right' })
+    await page.getByTestId('menu-promote-to').click()
+    await page.getByTestId('menu-journey-stage').click()
+
+    await expect(
+      page.getByRole('button', { name: /^Undo promote 1 object to journey stage/ }),
+    ).toBeVisible()
+    const record = page.locator('.of-slip__record')
+    await expect(record).toHaveText('journey stage')
+    await expect(record.locator('.of-slip__type')).toHaveCSS('font-weight', '600')
+
+    await page.locator(CANVAS).click({ position: NOTE })
+    await page.getByTestId('inspector-appearance').click()
+    await page.getByTestId('swatch-blue').click()
+    await expect(record).toHaveText('journey stage')
+  })
+
+  /*
+   * A cluster in a frame. The frame's bounds hold every place beside the
+   * cluster too, and counted as occupied it pushed the new slip out past the
+   * frame's edge, away from what it was derived from.
+   */
+  test('a slip derived from a note in a frame stays in the frame', async ({ page }) => {
+    await placeNote(page, 'Gave up at checkout')
+    await page.getByTestId('tool-frame').click()
+    await page.mouse.move(200, 150)
+    await page.mouse.down()
+    await page.mouse.move(1000, 600, { steps: 8 })
+    await page.mouse.up()
+    await page.keyboard.press('Escape')
+    await page.keyboard.press('Escape')
+
+    await page.locator('[data-object-type="sticky"]').click()
+    await page.locator('[data-object-type="sticky"]').click({ button: 'right' })
+    await page.getByTestId('menu-derive-insight').click()
+    await page.keyboard.press('Escape')
+
+    const frame = await page.locator('[data-object-type="frame"]').boundingBox()
+    const insight = await page.locator('[data-object-type="insight"]').boundingBox()
+    if (frame === null || insight === null) throw new Error('missing an object')
+    expect(insight.x).toBeGreaterThanOrEqual(frame.x)
+    expect(insight.y).toBeGreaterThanOrEqual(frame.y)
+    expect(insight.x + insight.width).toBeLessThanOrEqual(frame.x + frame.width)
+    expect(insight.y + insight.height).toBeLessThanOrEqual(frame.y + frame.height)
+  })
+
   test('the record panel gains the fields the type declares', async ({ page }) => {
     await placeNote(page, 'Could not find the price')
 
@@ -107,7 +162,9 @@ test.describe('structured objects', () => {
     // Commit the last field by leaving it.
     await page.getByTestId('field-source').click()
 
-    await expect(page.locator(CANVAS)).toContainText('September usability study · P07')
+    // The participant first: it is the part people cite, and it is short, so a
+    // long source no longer ellipsises it off the end of the line.
+    await expect(page.locator(CANVAS)).toContainText('P07 · September usability study')
     await expect(page.locator(CANVAS)).toContainText('#pricing #comprehension')
   })
 
@@ -193,11 +250,11 @@ test.describe('structured objects', () => {
     await expect(page.locator(CANVAS)).toContainText('September usability study')
   })
 
-  test('an empty evidence card shows no record line at all', async ({ page }) => {
+  test('an empty evidence card names its type and nothing else', async ({ page }) => {
     await placeNote(page, 'Nothing filled in')
     await promote(page, NOTE)
-    // Structure is earned: a card carrying only a quote looks like a plain slip.
-    await expect(page.locator('.of-slip__record')).toHaveCount(0)
+    // Structure is earned: no row of empty labels, only what the slip now is.
+    await expect(page.locator('.of-slip__record')).toHaveText('evidence')
   })
 })
 

@@ -408,6 +408,14 @@ that one of the two always reads on any slip, in either world, and
 `readableInkOn` returns it without being asked — which is why a black sticky
 comes out legible rather than needing to be fixed.
 
+As a LINE, each of the two is the page in one world — a white outline in the
+notebook, a black connector After Hours — so a stroke, outline or connector
+drawn in either goes through `lineOf` and takes `--of-line-*`, which is the
+gray ink where the colour would vanish. Fills keep the colour chosen; only the
+edge moves. And After Hours, white PAPER is paper under a lamp (`#d6d9e2`): at
+full white it was 18:1 on the night page, brighter than the ink and the
+brightest thing on any board. A white line stays white.
+
 The values were searched rather than picked. Brown's paper is the
 best-separated tan that all eleven inks still read on; constrained only by
 contrast, the search returned a pale olive, which separates beautifully and is
@@ -442,6 +450,17 @@ restyle must preserve it.
 **The Never-Black Rule.** Ink carries a blue cast and never reaches `#000000`;
 the build fails if the blue and red channels of ink are within 4 of each other.
 
+**The Edge Rule.** An object's edge is how it is found, so it is a graphic you
+must perceive: 3:1 against what it sits on. A black or white line, a frame's
+edge (the control border), a table's outer and inner lines (`--of-edge-inner`
+inside) and a default shape's outline on its default fill are all read off
+the rule or view that draws them and held there by `design-tokens.test`.
+
+**The Distinct Defaults Rule.** No two slips share a default colour, and a
+filled frame (white) shares none with any other type. Colour is the second
+signal of a type, after its word; two types in one colour make it a
+misleading one.
+
 ## Typography
 
 **Body Font:** system UI sans (`ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto`)
@@ -463,8 +482,7 @@ columns rather than as ransom text.
 - **Shape Label** (400, 14px, 1.3): text inside a shape, centred, inset per shape
   geometry rather than by a shared box.
 - **UI** (400, 15px): menu items, notices, toasts, frame titles, alt-text editor.
-- **UI Small** (400, 13px): flyout items, connector labels, fallback and unknown
-  object bodies.
+- **UI Small** (400, 13px): flyout items, fallback and unknown object bodies.
 - **Record** (400, 12px, mono, 0.02em): the navigation bar, the record panel's
   subject and field labels, slider readings, keyboard shortcuts, the wheel-mode
   value. Lowercase, never uppercase-tracked.
@@ -593,7 +611,16 @@ capsule with a heavy blur over the board is the failure mode this world exists t
 refuse.
 
 **The One Slip Height Rule.** Every placed object shares the one slip shadow, so
-everything on the board sits at the same height above the rule.
+everything on the board sits at the same height above the rule — notes, slips,
+code, images and tables alike. Shapes are held out: a box shadow is a
+rectangle, and a diamond is not.
+
+**The Night Ring Rule.** After Hours a slip is a deep colour on a deep page,
+and violet and blue were 1.2:1 on it. Notes and slips wear `--of-slip-ring`
+there: a hairline at 3:1 on the night page and a second lit top edge, so the
+slip reads as catching the light rather than as outlined. By day the ring is
+nothing. Gates and comment pins share the slip shadow but not the ring; they
+have edges of their own.
 
 ## Motion
 
@@ -1028,17 +1055,46 @@ next surface inherits automatically — it has to be applied.
 
 ### Board Objects
 
-- **Sticky** — content surface with its own ink, 13px padding, 2px radius, the
+All stock on the page: the page's 2px corner and the one slip height, shapes
+excepted (a box shadow is a rectangle).
+
+- **Sticky** — content surface with its own ink, 12px padding, 2px radius, the
   slip shadow. 15px/1.35.
-- **Text** — transparent, 22px/1.3, 0.4 opacity while empty.
-- **Shape** — SVG stroke and fill from the content pair, with a centred 14px label
-  inset per shape geometry.
-- **Frame** — a 1px `panel-border` rectangle at 2px radius with its title _above_
-  it in 13px muted ink, counter-scaled and never clipped.
-- **Connector** — a drawn path with a 12px label that knocks itself out of the
-  ground with a 4px desk-coloured paint-order stroke.
-- **Image** — 4px radius, `object-fit: fill`, with dashed hatched placeholders for
-  loading and correction-red ones for missing.
+- **Typed slips** (evidence, insight, hypothesis, experiment, decision, task,
+  requirement, journey stage) — the sticky's stock with a record band under a
+  currentcolor hairline, in 12px mono. The band is ALWAYS drawn and always
+  led by the type's name in 600 weight — "evidence", "decision · accepted" —
+  because colour alone said what a slip was, and re-colouring one erased it.
+  Empty fields are dropped, so an empty slip says its type and nothing else.
+  Each type has a default colour no other slip shares (experiment pink,
+  journey stage brown). Evidence reads participant before source.
+- **Text** — transparent, 22px/1.3, in a fresh 240×60 box (two lines). Empty,
+  it shows "Text" in muted ink, never faded ink.
+- **Shape** — SVG stroke and fill from the content pair, with a 14px label
+  CENTRED on both axes until placed elsewhere, inset per shape geometry. The
+  view declares that default, so the panel marks centre and middle.
+- **Frame** — a 1px control-border rectangle at 2px radius, screen-constant at
+  every zoom, filled white when filled. Its title sits _above_ it in 15px muted
+  ink, counter-scaled and never clipped.
+- **Connector** — a drawn path with a 12px label that grows and shrinks with
+  the board between half and twice its size, with a page-coloured halo; on a
+  plate, it takes the ink that reads on the plate.
+- **Image** — 2px radius, `object-fit: fill`, with dashed hatched placeholders
+  for loading and correction-red ones for missing. An image with no
+  description is still an image to assistive technology.
+- **Code** — `s-gray` stock with a control-border edge, clipped rather than
+  scrolled on the board; the language is named in its corner only when it is
+  not plain text.
+- **Table** — the panel, lines on its grid (control border outside,
+  `edge-inner` within), cells in rows.
+
+Every object is a group named by what it IS, and its record where it has one —
+never by its body, which is the group's content and would otherwise be read
+twice.
+
+A slip DERIVED from a cluster goes beside it: above when that is free, else
+the next side and then further out, preferring a place already on screen so
+the camera does not jump.
 
 ### Text That Does Not Fit
 

@@ -234,7 +234,8 @@ test('a structured slip aligns its text down', async ({ page }) => {
   await page.locator(CANVAS).click({ position: { x: 500, y: 300 } })
   await page.locator(CANVAS).click({ position: { x: 500, y: 300 }, button: 'right' })
   await expect(page.getByTestId('context-menu')).toBeVisible()
-  await page.getByTestId('menu-promote-to-evidence').click()
+  await page.getByTestId('menu-promote-to').click()
+  await page.getByTestId('menu-evidence').click()
   await expect(page.locator('.of-slip')).toHaveCount(1)
 
   const top = async (): Promise<number> =>

@@ -59,6 +59,8 @@ test('keeps a code block as plain text, with its indentation', async ({ page }) 
   await page.locator(CANVAS).click({ position: { x: 900, y: 560 } })
 
   const block = page.getByTestId('code-block')
+  // Not a scroll region: the wheel is the canvas's, so none could be reached.
+  await expect(block).toHaveCSS('overflow-y', 'hidden')
   await expect(block).toContainText('function add')
   /*
    * The two leading spaces SURVIVE. Whitespace is the content in a code block,
@@ -133,6 +135,9 @@ test('drops a table at the size picked from the grid', async ({ page }) => {
   const table = page.locator('[role="table"]')
   await expect(table).toHaveAttribute('aria-label', /5 columns by 2 rows/)
   await expect(table.locator('[role="cell"], [role="columnheader"]')).toHaveCount(10)
+  // In rows, or assistive technology cannot read them as a table at all.
+  await expect(table.getByRole('row')).toHaveCount(2)
+  await expect(table.getByRole('row').first().getByRole('columnheader')).toHaveCount(5)
 })
 
 /**
@@ -270,7 +275,7 @@ test('colours a range of cells, in one undo entry', async ({ page }) => {
   await page.locator(CANVAS).click({ position: { x: 900, y: 600 } })
   await page.locator('[data-object-id]').first().click()
 
-  const cells = page.locator('[role="table"] > div')
+  const cells = page.locator('[role="table"] [data-row]')
   await expect(cells.nth(0)).toHaveCSS('background-color', 'rgb(191, 240, 212)')
   await expect(cells.nth(1)).toHaveCSS('background-color', 'rgb(191, 240, 212)')
   await expect(cells.nth(4)).toHaveCSS('color', 'rgb(138, 64, 56)')
@@ -302,7 +307,7 @@ test('puts a cell back to the colour the table gives it', async ({ page }) => {
   await page.locator(CANVAS).click({ position: { x: 900, y: 600 } })
   await page.locator('[data-object-id]').first().click()
 
-  const cleared = page.locator('[role="table"] > div').nth(4)
+  const cleared = page.locator('[role="table"] [data-row]').nth(4)
   /*
    * Transparent, not "the blue put back as a literal" — the cell follows the
    * table again.
@@ -501,7 +506,7 @@ test('keeps a cell’s colours when its text is typed', async ({ page }) => {
   await page.keyboard.type('kept')
   await page.locator(CANVAS).click({ position: { x: 900, y: 600 } })
 
-  const cell = page.locator('[role="table"] > div').nth(4)
+  const cell = page.locator('[role="table"] [data-row]').nth(4)
   await expect(cell).toContainText('kept')
   await expect(cell).toHaveCSS('background-color', 'rgb(191, 240, 212)')
 })

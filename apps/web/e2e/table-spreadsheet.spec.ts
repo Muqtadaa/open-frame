@@ -28,7 +28,7 @@ async function newTable(page: Page, size?: string): Promise<void> {
 }
 
 /** The cells on the board, once the editor has closed. */
-const drawn = (page: Page): Locator => page.locator('[role="table"] > div')
+const drawn = (page: Page): Locator => page.locator('[role="table"] [data-row]')
 const cell = (page: Page, index: number): Locator => page.getByTestId(`table-cell-${String(index)}`)
 const selected = (page: Page): Locator =>
   page.locator('[data-testid="table-editor"] [aria-selected="true"]')

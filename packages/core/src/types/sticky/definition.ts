@@ -44,9 +44,11 @@ export const stickyType = defineObjectType<typeof STICKY_TYPE, StickyData>({
    * A note becomes evidence once the user knows what it was. This is the
    * "structure is earned, never demanded" principle in one line: nothing asks
    * for a classification up front, and the promotion keeps the object's
-   * identity, so anything already citing it still does.
+   * identity, so anything already citing it still does. A journey stage is
+   * the same discovery about a different note — "this is where they gave up"
+   * — and without it here the type could not be made from the interface.
    */
-  promotions: ['evidence', 'insight'],
+  promotions: ['evidence', 'insight', 'journey-stage'],
 
   /*
    * Plain text is DERIVED here, never stored (ADR 0012). Keeping a flattened

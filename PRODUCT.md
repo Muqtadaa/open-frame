@@ -167,8 +167,13 @@ Already committed in the product: an image's editable field is its **alt text**,
 because a board is a document someone else will read, and images are the content
 most often left meaningless to a screen reader.
 
-Known gaps against this target, recorded rather than claimed fixed: default
-shape fill against its stroke has not been contrast-checked.
+Known gaps against this target, recorded rather than claimed fixed: none open.
+
+Closed on 2026-09-26: default shape fill against its stroke is now measured
+(6.4:1 in the notebook, 7.7:1 After Hours), along with every other edge an
+object is found by. A white shape in the notebook and a black one After Hours
+had vanished into the page; their lines now fall back to the gray ink there.
+The frame's edge and a table's inner grid moved onto tokens held at 3:1.
 
 Closed on 2026-09-19: colour swatches were below the AA target-size minimum,
 then sat exactly on it at 24px, which is a control standing on the floor. The

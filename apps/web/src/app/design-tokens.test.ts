@@ -1,6 +1,6 @@
 import { readFileSync } from 'node:fs'
 import { resolve } from 'node:path'
-import { COLOR_TOKENS } from '@openframe/core'
+import { COLOR_TOKENS, createDefaultRegistry } from '@openframe/core'
 import { describe, expect, it } from 'vitest'
 
 /**
@@ -902,5 +902,119 @@ describe.each(THEMES)('the apparatus reads on anything — $name', ({ token }) =
       )
       expect(best).toBeGreaterThanOrEqual(3)
     })
+  })
+})
+
+/*
+ * An object's EDGE is how you find it on the board, so it is a graphic you
+ * must perceive — 3:1 against what it sits on (PRODUCT.md's open gap, closed
+ * in C3 #8). A white shape in the notebook was 1.06:1 on the page and a black
+ * one After Hours 1.14:1; the frame's edge was 1.45:1; a table's inner grid
+ * 1.20:1 on its own ground. Read off the rule and the view that draw them, so
+ * an edge moved back onto a quieter token fails here.
+ */
+describe.each(THEMES)('edges that never vanish — $name', ({ token }) => {
+  const TABLE = readFileSync(resolve(process.cwd(), 'src/views/TableView.tsx'), 'utf8')
+
+  it.each(['line-black', 'line-white'])('a %s stroke shows on the page and the desk', (line) => {
+    expect(contrast(token(line), token('page'))).toBeGreaterThanOrEqual(3)
+    expect(contrast(token(line), token('bg'))).toBeGreaterThanOrEqual(3)
+  })
+
+  // PRODUCT.md's recorded gap: a fresh shape's outline on its own default fill.
+  it("a default shape's outline shows on its fill and on the page", () => {
+    expect(contrast(token('c-gray'), token('s-gray'))).toBeGreaterThanOrEqual(3)
+    expect(contrast(token('c-gray'), token('page'))).toBeGreaterThanOrEqual(3)
+  })
+
+  it("a frame's edge shows on the page", () => {
+    const body = /\.of-frame__edge\s*\{([^}]*)\}/.exec(CSS)?.[1] ?? ''
+    const edge = /(?<![\w-])border:[^;]*var\(--of-([\w-]+)\)/.exec(body)?.[1] ?? ''
+    expect(contrast(token(edge), token('page'))).toBeGreaterThanOrEqual(3)
+  })
+
+  it("a table's lines show on its ground, inside and out", () => {
+    const resolve = /function resolveLine[\s\S]*?\n}/.exec(TABLE)?.[0] ?? ''
+    const [outer, inner] = [...resolve.matchAll(/'var\(--of-([\w-]+)\)'/g)].map((m) => m[1] ?? '')
+    expect(outer, 'the outer line names a token').toBeDefined()
+    expect(inner, 'the inner line names a token').toBeDefined()
+    expect(contrast(token(outer ?? ''), token('panel'))).toBeGreaterThanOrEqual(3)
+    expect(contrast(token(inner ?? ''), token('panel'))).toBeGreaterThanOrEqual(3)
+  })
+})
+
+/*
+ * AFTER HOURS, where a slip is a deep colour on a deep page. Violet and blue —
+ * a hypothesis and an insight, the slips that matter most — were 1.2:1 on the
+ * night page, held apart only by a 9% lit edge; and a white slip was 18:1,
+ * the brightest thing on the board by some way. So a slip carries a hairline
+ * that clears 3:1 on the page, read off the slip shadow itself, and white
+ * paper is dimmed until it is no brighter than the ink.
+ */
+describe.each(THEMES.filter((theme) => theme.name !== 'default'))(
+  'slips at night — $name',
+  ({ name, token }) => {
+    const block =
+      new RegExp(`:root\\[data-theme=['"]${name}['"]\\]\\s*\\{([^}]*)\\}`).exec(CSS)?.[1] ?? ''
+
+    it('carries a hairline that shows on the page (3:1)', () => {
+      const ring = /--of-slip-ring:([^;]*);/.exec(block)?.[1] ?? ''
+      const edge = /0 0 0 1px var\(--of-([\w-]+)\)/.exec(ring)?.[1]
+      expect(edge, 'the night slip ring names its hairline as a token').toBeDefined()
+      // And the ring is actually worn, by the note and by every typed slip.
+      for (const slip of ['of-sticky', 'of-slip']) {
+        const body = new RegExp(`\\.${slip}\\s*\\{([^}]*)\\}`).exec(CSS)?.[1] ?? ''
+        expect(body, slip).toMatch(/box-shadow:[^;]*var\(--of-slip-ring\)/)
+      }
+      expect(contrast(token(edge ?? ''), token('page'))).toBeGreaterThanOrEqual(3)
+    })
+
+    it('white paper is no brighter than the ink', () => {
+      expect(contrast(token('s-white'), token('page'))).toBeLessThanOrEqual(
+        contrast(token('ink'), token('page')),
+      )
+    })
+  },
+)
+
+/*
+ * The plain kit — shapes, code, images, tables — stays plain, but it is stock
+ * on the same page as the slips, so it is cut and laid the same way: the
+ * page's 2px corner and the one slip height (DESIGN.md). Code took the
+ * control radius, an image the apparatus radius, and none of them sat above
+ * the page at all. Shapes are held out: a box shadow is a rectangle, and a
+ * diamond's is not.
+ */
+describe('the plain kit is stock on the page', () => {
+  const rule = (selector: string): string =>
+    new RegExp(`${selector.replace(/[.-]/g, (c) => `\\${c}`)}\\s*\\{([^}]*)\\}`).exec(CSS)?.[1] ?? ''
+
+  it.each(['.of-code', '.of-image-frame', '.of-table'])('%s is cut and laid like a slip', (selector) => {
+    const body = rule(selector)
+    expect(body).toMatch(/border-radius:\s*var\(--of-radius-slip\)/)
+    expect(body).toMatch(/box-shadow:\s*var\(--of-slip-shadow\)/)
+  })
+
+  // A placeholder is text somebody has to read to know what to do: 4.5:1.
+  it("an empty text's placeholder is muted ink, not a faded one", () => {
+    const body = rule('.of-text--empty')
+    expect(body).not.toMatch(/opacity/)
+    expect(body).toMatch(/(?<![\w-])color:\s*var\(--of-ink-muted\)/)
+  })
+})
+
+/*
+ * A fresh text object's box, against the type it is set in. It was 48 units
+ * tall at 22px on a 1.3 line — one line — so the first sentence anybody typed
+ * wrapped straight out of sight.
+ */
+describe('a fresh text box', () => {
+  it('holds two lines of display type', () => {
+    const size = Number(/--of-type-display:\s*(\d+)px/.exec(CSS)?.[1])
+    const leading = Number(/\.of-text\s*\{[^}]*line-height:\s*([\d.]+)/.exec(CSS)?.[1])
+    const text = createDefaultRegistry().get('text')
+    expect(size).toBeGreaterThan(0)
+    expect(leading).toBeGreaterThan(0)
+    expect(text?.create().frame.height).toBeGreaterThanOrEqual(2 * size * leading)
   })
 })
