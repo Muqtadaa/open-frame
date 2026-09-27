@@ -88,6 +88,24 @@ describe('the boot splash', () => {
     expect(radius).toBe(control)
   })
 
+  /*
+   * The splash's fades are the product's own motion, written as literals for
+   * the same reason as its colours. They were 220ms and 320ms `ease-out`, off
+   * the scale and off the curve every other surface uses.
+   */
+  it('moves on the product’s curve and its settle duration', () => {
+    const settle = /--of-settle:\s*(\d+ms)/.exec(CSS)?.[1]
+    const ease = /--of-ease:\s*(cubic-bezier\([^)]*\))/.exec(CSS)?.[1]
+    const transitions = [...inlineStyle.matchAll(/transition:\s*opacity ([^;]+);/g)].map(
+      (match) => match[1],
+    )
+    expect(transitions.length).toBeGreaterThan(0)
+    for (const transition of transitions) expect(transition).toBe(`${settle ?? ''} ${ease ?? ''}`)
+
+    const script = readFileSync(resolve(process.cwd(), 'src/app/splash.ts'), 'utf8')
+    expect(/const FADE_MS = (\d+)/.exec(script)?.[1]).toBe(settle?.replace('ms', ''))
+  })
+
   /** The label's scrim is the void at 82%, written in channels rather than hex. */
   it('writes the scrim from the same void the background uses', () => {
     const scrim = /rgb\((\d+) (\d+) (\d+) \/ \d+%\)/.exec(inlineStyle)

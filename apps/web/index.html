@@ -61,7 +61,7 @@
         background-image: url('data:image/webp;base64,UklGRo4AAABXRUJQVlA4IIIAAAAwBQCdASoYABIAPu1kqE2ppaOiMBgMATAdiWoAnTLdfKghXssFItj6UHAZumzur+O/gAD+5ZBLROkoLMV5aN0H4uyjF99t/C/sWl2sp1YHh2Gazof1flbww1S/yfDhNrGkednUzoyev4lTPfHoN+21k02H6RCI+iB/zwaKH3IqEAAA');
         background-size: cover;
         background-position: center;
-        transition: opacity 220ms ease-out;
+        transition: opacity 240ms cubic-bezier(0.16, 1, 0.3, 1);
       }
       #of-splash[data-state='leaving'] {
         opacity: 0;
@@ -74,7 +74,7 @@
         height: 100%;
         object-fit: cover;
         opacity: 0;
-        transition: opacity 320ms ease-out;
+        transition: opacity 240ms cubic-bezier(0.16, 1, 0.3, 1);
       }
       #of-splash img[data-loaded='true'] {
         opacity: 1;

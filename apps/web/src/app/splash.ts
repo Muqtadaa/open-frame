@@ -7,7 +7,7 @@
  * therefore in the document itself, and this module only takes it away again.
  */
 const SPLASH_ID = 'of-splash'
-const FADE_MS = 220
+const FADE_MS = 240
 
 /**
  * How long the artwork stays up before the board may take the screen.
@@ -42,6 +42,11 @@ function splashElement(): HTMLElement | null {
   return document.getElementById(SPLASH_ID)
 }
 
+/*
+ * Reduced motion removes the fades — the artwork cuts in and out — but keeps
+ * the hold. The hold is a length of time on a still picture, not movement,
+ * and it is already spent only once per session.
+ */
 function prefersReducedMotion(): boolean {
   return typeof matchMedia === 'function' && matchMedia('(prefers-reduced-motion: reduce)').matches
 }
