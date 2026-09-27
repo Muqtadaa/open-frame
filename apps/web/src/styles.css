@@ -114,12 +114,18 @@
    * objects; content INSIDE an object scales in `em` from its object's size
    * and is not on this ramp at all. 12px is the floor (rule 22).
    */
-  --of-type-record: 12px; /* mono records: labels, readouts, shortcuts, counts */
-  --of-type-ui-small: 13px; /* secondary lines: a hint, a row's second line */
-  --of-type-control: 14px; /* what you operate: buttons, fields, a shape's label */
-  --of-type-ui: 15px; /* menus, notices, toasts, a sticky's body */
-  --of-type-title: 17px; /* the title of a gate or a sheet */
-  --of-type-headline: 19px; /* the wordmark on the front door */
+  --of-type-record: 0.75rem; /* mono records: labels, readouts, shortcuts, counts */
+  --of-type-ui-small: 0.8125rem; /* secondary lines: a hint, a row's second line */
+  --of-type-control: 0.875rem; /* what you operate: buttons, fields, a shape's label */
+  --of-type-ui: 0.9375rem; /* menus, notices, toasts, a sticky's body */
+  --of-type-title: 1.0625rem; /* the title of a gate or a sheet */
+  --of-type-headline: 1.1875rem; /* the wordmark on the front door */
+  /*
+   * In px, unlike the rest: a text object's size is CONTENT, in world units,
+   * and a board must lay out the same for everybody looking at it. The ramp
+   * above is the interface's, in rem, so it follows a reader's text size;
+   * each is written as its px at the default 16px root.
+   */
   --of-type-display: 22px; /* a text object: the largest type, and the user's */
 
   /*
@@ -3599,6 +3605,21 @@ body {
   position: absolute;
   inset: 0;
   transform-origin: 0 0;
+
+  /*
+   * THE SAME RAMP, IN WORLD UNITS. The interface's type is in rem so it
+   * follows a reader's text size; what is ON the board — a note's body, a
+   * shape's label, a cell — is content, and a board must lay out the same
+   * for everybody looking at it (rule 24: inside the world a length is a
+   * world unit). `design-tokens.test.ts` holds each to its rem step at the
+   * default 16px root.
+   */
+  --of-type-record: 12px;
+  --of-type-ui-small: 13px;
+  --of-type-control: 14px;
+  --of-type-ui: 15px;
+  --of-type-title: 17px;
+  --of-type-headline: 19px;
 }
 
 /*

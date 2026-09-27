@@ -585,8 +585,13 @@ describe('the twelve pixel floor', () => {
    * literals left in it, whatever the ramp said.
    */
   const RAMP = new Map<string, number>()
-  for (const [, name = '', value = ''] of CSS.matchAll(/(--of-type-[\w-]+):\s*(\d+)px;/g)) {
-    RAMP.set(name, Number(value))
+  // In px at the default 16px root: the interface's steps are written in rem.
+  for (const [, name = '', value = '', unit = ''] of CSS.matchAll(
+    /(--of-type-[\w-]+):\s*([\d.]+)(px|rem);/g,
+  )) {
+    // The root's definition only: the board redefines the ramp in world
+    // units, and letting that overwrite this would compare it with itself.
+    if (!RAMP.has(name)) RAMP.set(name, unit === 'rem' ? Number(value) * 16 : Number(value))
   }
   const sizeOf = (value: string): number | null => {
     const token = /^var\((--of-type-[\w-]+)\)$/.exec(value)
@@ -604,6 +609,42 @@ describe('the twelve pixel floor', () => {
     }
     return found
   }
+
+  /*
+   * The INTERFACE's type follows the reader's text size (audit 2026-09-27):
+   * set in px, a browser's text-size preference changed nothing. Display type
+   * is a text object's size — content, in world units — and stays in px, or
+   * one board would lay out differently for two people looking at it.
+   */
+  it('sets the interface ramp in rem, and content in px', () => {
+    // Each token's first definition — the root's; the board redefines its own.
+    const units = new Map<string, string>()
+    for (const [, name = '', unit = ''] of CSS.matchAll(/(--of-type-[\w-]+):\s*[\d.]+(px|rem);/g)) {
+      if (!units.has(name)) units.set(name, unit)
+    }
+    expect(units.size).toBeGreaterThan(5)
+    for (const [name, unit] of units) {
+      expect(`${name} ${unit}`).toBe(`${name} ${name === '--of-type-display' ? 'px' : 'rem'}`)
+    }
+  })
+
+  /*
+   * ...but inside the board it is content, and set in world units: the same
+   * steps, in px, on `.of-world`. Held equal, so the two never drift apart.
+   */
+  it('gives the board the same ramp in world units', () => {
+    const world = /\.of-world\s*\{([^}]*)\}/.exec(CSS)?.[1] ?? ''
+    const inWorld = new Map(
+      [...world.matchAll(/(--of-type-[\w-]+):\s*([\d.]+)px;/g)].map(([, name = '', px = '']) => [
+        name,
+        Number(px),
+      ]),
+    )
+    const interfaceSteps = [...RAMP].filter(([name]) => name !== '--of-type-display')
+    expect(interfaceSteps.length).toBeGreaterThan(5)
+    for (const [name, px] of interfaceSteps)
+      expect(`${name} ${String(inWorld.get(name))}`).toBe(`${name} ${String(px)}`)
+  })
 
   it('sets no functional text below 12px', () => {
     const below = rules()
