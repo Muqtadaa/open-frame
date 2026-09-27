@@ -52,7 +52,7 @@ export function ShareControl() {
    * Whether this board is YOURS, which decides what the chip does. Asked once,
    * of the account, when a signed-in person is on a board in a room.
    */
-  const [owned, setOwned] = useState<{ view: string; owner: string | null } | null>(null)
+  const [owned, setOwned] = useState<Awaited<ReturnType<typeof ownedKeys>>>(null)
   const [role, setRole] = useState(collaboration?.role ?? 'editor')
   /*
    * The links hang off the room chip, on the board a move lands on. A failed
@@ -219,7 +219,11 @@ export function ShareControl() {
     const origin = window.location.origin
     return {
       boardId: runtime.boardId,
-      editLink: shareLink(runtime.boardId, origin, accessKey(window.location.search)),
+      editLink: shareLink(
+        runtime.boardId,
+        origin,
+        owned?.edit ?? accessKey(window.location.search),
+      ),
       viewLink: shareLink(runtime.boardId, origin, owned?.view ?? null),
     }
   }
@@ -362,7 +366,7 @@ export function ShareControl() {
             trigger={shareButton}
             password={{
               boardId: runtime.boardId,
-              editor: accessKey(window.location.search) ?? '',
+              editor: owned?.edit ?? accessKey(window.location.search) ?? '',
               owner: owned?.owner ?? null,
             }}
             onDone={() => {

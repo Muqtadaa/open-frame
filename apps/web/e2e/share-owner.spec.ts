@@ -58,3 +58,16 @@ test("an editor's chip copies the edit link, and says so", async ({ page }) => {
   await expect(chip).toHaveAccessibleName('Edit link copied')
   expect(await page.evaluate(() => navigator.clipboard.readText())).toContain(`k=${EDIT}`)
 })
+
+test('an owner who arrived on the view link is still handed the edit link', async ({ page }) => {
+  await signedIn(page, [{ id: MINE, title: 'Mine', role: 'owner' }])
+  // The URL carries the VIEW key; the account knows this person owns the board.
+  await page.goto(`/?room=${MINE}&k=${VIEW}`)
+  await expect(page.getByTestId('room-status')).toHaveAttribute('aria-description', /both links/)
+  await page.getByTestId('room-status').click()
+
+  await page.getByTestId('share-links').getByTestId('copy-edit').click()
+  const copied = await page.evaluate(() => navigator.clipboard.readText())
+  expect(copied).toContain(`k=${EDIT}`)
+  expect(copied).not.toContain(`k=${VIEW}`)
+})
