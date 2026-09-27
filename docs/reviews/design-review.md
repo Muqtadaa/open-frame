@@ -735,3 +735,55 @@ consistent rather than restyled.
   - a fixed type mark that colour cannot override;
   - the connector editor still scales with the world while the label is
     clamped.
+
+### C3 #9 · The front door, the account and sharing (critique 21/40)
+
+A dual-agent re-critique of Home, the account sheet and the share sheet
+scored 21/40 (`2026-09-26T23-19-32Z__src-ui-home-tsx.md`). Both surfaces
+already had contracts from 2026-09-19; the ledger's form still honoured its
+contract, but the edges had drifted and sharing no longer matched its own.
+
+- **P0:** sharing a local board moved it on the press, then left the old
+  page editable while it said "Saved". A note written there was gone on
+  reload.
+- **P1:** the sheets and the row's modes trapped the keyboard. No sheet
+  took focus, three ignored Escape, and focus fell to the page after every
+  row action.
+- **P1:** the front door's account chip signed you out on one press.
+- **P1:** at 390px the home page scrolled sideways and the board's bar ran
+  off both edges. `user-scalable=no` disabled zoom everywhere.
+- **P1:** the share contract described a path only legacy boards reached.
+  The owner's everyday chip silently copied the edit link.
+- **P2:** control edges at 1.1–1.8:1, and a 23px target.
+- **Minors:** "shared" on every row, wrapping times, the empty state, the
+  lost "a link needs nothing" line, workspace naming and invite copy,
+  native validation, the sign-up hint as a placeholder, tips over open
+  sheets, and sheets animating from the wrong edge.
+
+The owner chose everything, minors included:
+- confirm, then land on the shared board;
+- the owner's chip opens both links with the password beside them;
+- at phone width, the account shrinks to its face and Source moves into its
+  sheet.
+
+- **Share asks first** (`a7b7895`): a gate with the board inert, then land
+  on the shared board with the links open. The rule-7 test runs against a
+  real room.
+- **The owner's chip** (`559e4df`): both links, the password beside them
+  (moved out of the row), and a named copy for everybody else.
+- **Sheets** (`5c7e239`): `useDismiss` and `useFocusOnOpen` for every sheet;
+  Keep takes the keyboard; the sign-in form does its own validation, tied
+  to its fields.
+- **The home chip** (`5074551`) opens the account sheet, borderless.
+- **Phone width** (`4ac5d06`): zoom allowed, the header wraps, the page
+  clips, confirmations wrap, and below 480px the bar shows the account's
+  face with Source in the sheets.
+- **Edges** (`45a17a5`): every drawn boundary clears 3:1, guarded in
+  `design-tokens.test`.
+- **Minors** (`3732116`).
+- **Contracts:** the share contract is rewritten (v2); the Home contract has
+  a revision section; DESIGN.md gains a Sheets section.
+- **Left for later:** whether a board has a password (it needs the rooms
+  worker to say); a world toggle on the front door; a focused row action's
+  tip covering the row above.
+

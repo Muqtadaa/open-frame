@@ -858,8 +858,10 @@ a Mac and "⌘Z" on one.
 
 **Narrow windows.** The bar keeps the rail's 20px gutter at every width, and it
 gives up in order: the selection count and the exit's words below 640px, then
-the save state's word and the rules below 480px. Nothing ever runs out of the
-bar.
+the save state's word, the rules and the account's name below 480px — the
+account keeps its face, and the source offer moves into the account and
+sign-in sheets, so it is still reachable from inside the running app. Nothing
+ever runs out of the bar.
 
 ### Zoom Cluster
 
@@ -1035,13 +1037,40 @@ sees. Ruling it and collapsing the panels into one sheet is what made it belong.
 - **Ground** — tiled `linear-gradient` with `background-size`, never
   `repeating-linear-gradient`, whose stops accumulate in floating point across
   the box and band into visible plaid at the 10px pitch.
+- **The account chip** opens the account sheet, exactly as the board's does.
+  It signed you out on one press; a chip that means two things in two places
+  means nothing reliably.
+- **Tags say what is true of the row**: "yours", "shared with you", "view
+  only", "this browser". "shared" was on every row once every board was born
+  in a room.
+- **Signed out**, the door says the one thing it must not imply otherwise: a
+  link somebody sends you opens without an account.
+- **Phone width** — the header wraps, the page never scrolls sideways (a tip
+  is laid out even while invisible), and a row's confirmation says its
+  sentence on a line of its own. Pinch-zoom is allowed everywhere; the canvas
+  claims its own touches.
+- **Every drawn edge clears 3:1**: the Share and room triggers, Keep and
+  Delete, the mentions badge, the chosen workspace. An unpinned pin is drawn
+  in the control boundary's colour, not faded ink.
 
 ### Sharing
 
-A sheet under its button in the navigation bar, the same shape as the account sheet. Two link
-rows at 50px (`--of-hit-lg`) — the largest target, because this is the one
-control in the product where hitting the wrong one has a consequence — each
-naming what it gives away in the second line, at the 12px functional floor.
+Every board is born in a room, so sharing is not an event but a sheet the
+OWNER opens from the room chip: copy edit link, copy view link, each naming
+what it gives away on its second line, at 50px (`--of-hit-lg`) — the largest
+target, because this is the one control where hitting the wrong one has a
+consequence. A copied link keeps its name and says "Copied" underneath.
+
+**The password lives beside the links it protects**, under a rule in the same
+sheet: a neutral "Set password" (never the correction red of a destructive
+act) and a separate "Remove password". Anybody who is not the owner gets no
+sheet: the chip copies the link they arrived on and names it — "Edit link
+copied", "View link copied".
+
+**Moving an old local board into a room asks first**, in the gates' shell,
+with the board inert until the page has left for the board that exists. It
+used to move on the press and leave the old page editable, saying "Saved"
+over edits that were lost.
 
 **View-only is a record, not a badge**: 12px mono on page stock with a hairline
 and the apparatus radius, sitting in the navigation bar beside the other readouts.
@@ -1052,6 +1081,15 @@ That refusal was written down and then broken anyway: the workspace filters
 shipped as fully-round pills, and the action beside them as a fourth. Both are
 segmented-choice shapes now. A rule recorded in this file is not a rule the
 next surface inherits automatically — it has to be applied.
+
+### Sheets
+
+Account, sign-in, share and the mentions list are one kind of thing, and
+behave as one: they take the keyboard as they open (`useFocusOnOpen`), close
+on Escape or a press anywhere else (`useDismiss`, captured before the board's
+keymap can also read the key), and hand the keyboard back to the control
+that opened them. They hang below that control, animate down from it, and
+the control's own tip is hidden while its sheet is open.
 
 ### Board Objects
 

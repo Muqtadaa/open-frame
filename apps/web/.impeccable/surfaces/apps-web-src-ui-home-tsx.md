@@ -2,7 +2,7 @@
 version: 1
 slug: "apps-web-src-ui-home-tsx"
 primary_target: "apps/web/src/ui/Home.tsx"
-related_targets: ["apps/web/src/ui/AccountForm.tsx","apps/web/src/app/boards.ts","apps/web/src/app/route.ts"]
+related_targets: ["apps/web/src/ui/AccountForm.tsx","apps/web/src/ui/BoardRow.tsx","apps/web/src/ui/WorkspaceBar.tsx","apps/web/src/ui/AccountControl.tsx","apps/web/src/app/boards.ts","apps/web/src/app/route.ts"]
 ---
 
 THESIS: The front door is a page, not a portal. A product whose whole argument
@@ -106,3 +106,34 @@ for every pair this surface introduces, both worlds. End-to-end specs including
 that a share link somebody already holds still opens its board, and that a pin
 beats recency — the fixture pins the OLDEST board, so a test that pinned the
 newest would pass with the feature deleted.
+
+REVISED 2026-09-27 (C3 #9 re-critique, 21/40). What drifted, and what it is now:
+
+- THE HEADER'S ACCOUNT CHIP opens the account sheet, exactly as the board's
+  does, borderless. It had grown an outline and signed you out on one press.
+- TAGS say what is true of the row: "yours", "shared with you", "view only",
+  "this browser". "shared" was on every row once every board was born in a
+  room, which told nobody anything.
+- THE LINK LINE is back for a signed-out visitor: "A link somebody sends you
+  opens without an account." The door must never imply otherwise.
+- THE PASSWORD left the row for the share sheet, beside the links it
+  protects. The row keeps three verbs (view link, rename, remove), so the
+  actions' reserve is 94px, not 126; the time column is 108px, allowing for
+  the mono's tracking, and a time never wraps.
+- A CONFIRMATION gives the keyboard to Keep, the safe answer; Escape keeps
+  the board; focus returns to the control that asked. Below 560px it says its
+  sentence on its own line and answers under it.
+- WORKSPACES: naming one has a visible label, Cancel and Escape; an invite
+  link has a Copy button and says it makes people editors of every board in
+  the workspace.
+- PHONE WIDTH: the header wraps; the page never scrolls sideways (hidden tips
+  are laid out, so the page clips and the account's tip hangs from its right
+  edge); pinch-zoom is allowed.
+- EDGES: every boundary a control here draws clears 3:1 (the mentions badge
+  in the accent, the chosen workspace and Keep in the control border, Delete
+  in the one red); an unpinned pin is drawn in the control boundary's colour.
+- AN EMPTY LIST says what to do next.
+
+Still owed: nothing on this surface says whether a board has a password (the
+room knows and does not tell); the front door has no world toggle.
+
