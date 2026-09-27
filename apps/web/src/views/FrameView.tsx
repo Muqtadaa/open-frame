@@ -3,14 +3,23 @@ import { type FrameData } from '@openframe/core'
 import { defineObjectView, type ObjectEditorProps, type ObjectViewProps } from './registry.js'
 import { RichTextEditor } from './RichTextEditor.js'
 import { RichTextView } from './RichTextView.js'
-import { inkColor, surfaceOf } from '../scene/style-tokens.js'
+import { FRAME_PAPER, inkColor, surfaceOf } from '../scene/style-tokens.js'
 
 /*
- * White: a filled frame is a sheet laid on the page. It was gray, the same
- * stock as a shape, a code block and an evidence slip, so a filled frame read
- * as one more of them rather than as the place they sit.
+ * A filled frame is a sheet laid on the page — the world's paper until
+ * somebody colours it. It was gray, the same stock as a shape, a code block
+ * and an evidence slip, so a filled frame read as one more of them rather than
+ * as the place they sit; then white, which After Hours turned into a bright
+ * slab under everything on it (audit 2026-09-27). The paper is white by day
+ * and the panel stock at night, and a colour somebody chose — white included —
+ * is painted exactly as chosen.
  */
-const FRAME_FILL = 'white'
+function frameSurface(style: FrameViewStyle): string {
+  if ((style.fill ?? 'solid') === 'none') return 'transparent'
+  return style.color === undefined ? FRAME_PAPER : surfaceOf(style.color, 'white')
+}
+
+type FrameViewStyle = ObjectViewProps<FrameData>['object']['style']
 
 /**
  * A frame's edge: a HAIRLINE with a 2px corner, at every zoom.
@@ -42,12 +51,11 @@ function FrameEdge({ zoom, color }: { readonly zoom: number; readonly color: str
 }
 
 function FrameRenderer({ object, zoom }: ObjectViewProps<FrameData>) {
-  const filled = (object.style.fill ?? 'solid') !== 'none'
   return (
     <div
       className="of-frame"
       style={{
-        background: filled ? surfaceOf(object.style.color, FRAME_FILL) : 'transparent',
+        background: frameSurface(object.style),
         // The corner is the edge's, drawn by `FrameEdge` below.
         borderRadius: `${String(2 / zoom)}px`,
         opacity: object.style.opacity ?? 1,
@@ -84,7 +92,6 @@ function FrameRenderer({ object, zoom }: ObjectViewProps<FrameData>) {
 }
 
 function FrameEditor({ object, zoom, Chrome, onCommit }: ObjectEditorProps<FrameData>) {
-  const filled = (object.style.fill ?? 'solid') !== 'none'
   return (
     /*
      * The frame is drawn while it is being named, exactly as it will look
@@ -99,7 +106,7 @@ function FrameEditor({ object, zoom, Chrome, onCommit }: ObjectEditorProps<Frame
     <div
       className="of-frame"
       style={{
-        background: filled ? surfaceOf(object.style.color, FRAME_FILL) : 'transparent',
+        background: frameSurface(object.style),
         // The corner is the edge's, drawn by `FrameEdge` below.
         borderRadius: `${String(2 / zoom)}px`,
         opacity: object.style.opacity ?? 1,
@@ -128,7 +135,11 @@ export const frameView = defineObjectView<FrameData>({
   type: 'frame',
   // Its hairline edge is laid out at the zoom and painted back down.
   usesZoom: true,
-  defaultColor: FRAME_FILL,
+  /*
+   * No `defaultColor`: an unset frame is on the world's paper, which no
+   * swatch is. Marking `white` would mark a colour that, at night, pressing
+   * would CHANGE the frame to — so the record panel marks nothing.
+   */
   Renderer: FrameRenderer,
   InlineEditor: FrameEditor,
 })

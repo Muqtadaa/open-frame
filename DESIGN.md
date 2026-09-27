@@ -438,7 +438,12 @@ drawn in either goes through `lineOf` and takes `--of-line-*`, which is the
 gray ink where the colour would vanish. Fills keep the colour chosen; only the
 edge moves. And After Hours, white PAPER is paper under a lamp (`#d6d9e2`): at
 full white it was 18:1 on the night page, brighter than the ink and the
-brightest thing on any board. A white line stays white.
+brightest thing on any board. A white line stays white. A frame nobody has
+coloured is not white at all but the world's paper (`--of-frame-paper`):
+white in the Notebook and the panel stock After Hours, because even dimmed,
+white paper under a frame was a bright slab the size of a region of the board.
+A white somebody chose stays white, and the record panel marks no swatch for
+an uncoloured frame, since at night none is what it is drawn in.
 
 The values were searched rather than picked. Brown's paper is the
 best-separated tan that all eleven inks still read on; constrained only by
@@ -481,7 +486,7 @@ inside) and a default shape's outline on its default fill are all read off
 the rule or view that draws them and held there by `design-tokens.test`.
 
 **The Distinct Defaults Rule.** No two slips share a default colour, and a
-filled frame (white) shares none with any other type. Colour is the second
+filled frame (the world's paper) shares none with any other type. Colour is the second
 signal of a type, after its word; two types in one colour make it a
 misleading one.
 
@@ -1178,7 +1183,8 @@ excepted (a box shadow is a rectangle).
   CENTRED on both axes until placed elsewhere, inset per shape geometry. The
   view declares that default, so the panel marks centre and middle.
 - **Frame** — a 1px control-border rectangle at 2px radius, screen-constant at
-  every zoom, filled white when filled. Its title sits _above_ it in 15px muted
+  every zoom, filled with the world's paper when filled — white by day, the
+  panel stock at night — or the colour chosen. Its title sits _above_ it in 15px muted
   ink, counter-scaled and never clipped.
 - **Connector** — a drawn path with a 12px label that grows and shrinks with
   the board between half and twice its size, with a page-coloured halo; on a

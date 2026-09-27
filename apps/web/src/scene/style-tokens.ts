@@ -45,6 +45,14 @@ export const SURFACE_VARS: Record<ColorToken, string> = {
 }
 
 /**
+ * The paper a frame nobody has coloured is laid on: white in the Notebook, the
+ * panel stock After Hours. It belongs to the WORLD, not the palette — which is
+ * why it is not `SURFACE_VARS.white`: a white somebody chose stays white, at
+ * night included, and only the default follows the lamp being off.
+ */
+export const FRAME_PAPER = 'var(--of-frame-paper)'
+
+/**
  * A colour, as CSS.
  *
  * A TOKEN goes through the map above, so it follows the theme. A LITERAL is

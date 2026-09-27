@@ -250,6 +250,12 @@
   --of-line-black: #16202b;
   --of-line-white: #3f5163;
   /*
+   * The paper a frame nobody has coloured is laid on: a sheet of the page's
+   * own stock, which in this world is white. Not the `white` token — After
+   * Hours gives it a different sheet, and a white somebody chose stays white.
+   */
+  --of-frame-paper: var(--of-s-white);
+  /*
    * The inner lines of a table: quieter than an outer edge, but still an
    * edge you have to see to aim at a cell. Held at 3:1 on the panel.
    */
@@ -419,6 +425,13 @@
   /* Black is the page here, so a black line is drawn in the gray ink. */
   --of-line-black: #bcc8de;
   --of-line-white: #ffffff;
+  /*
+   * Night paper. Even dimmed, white paper under a frame was a bright slab the
+   * size of a region of the board, under everything laid on it. An uncoloured
+   * frame is cut from the panel stock instead — the dark sheet the board's own
+   * panels are — and its control-border edge says where it ends.
+   */
+  --of-frame-paper: var(--of-panel);
   --of-edge-inner: #7a64b8;
 
   --of-c-yellow: #ffd95e;

@@ -145,6 +145,20 @@ for (const world of WORLDS) {
       await snap(page, `${world}-selection-inspector`)
     })
 
+    // An uncoloured frame on the world's paper, with a note laid on it.
+    test('a frame holding a note', async ({ page }) => {
+      await openLocalBoard(page)
+      await page.keyboard.press('f')
+      // Centred low enough that its title, hung above it, clears the bar.
+      await page.locator('[data-testid="canvas"]').click({ position: { x: 640, y: 380 } })
+      await page.keyboard.type('Discovery')
+      await page.keyboard.press('Escape')
+      await expect(page.locator('.of-frame')).toHaveCount(1)
+      await placeSticky(page, 'Customers do not understand pricing')
+      await page.keyboard.press('Escape')
+      await snap(page, `${world}-frame`)
+    })
+
     test('context menu', async ({ page }) => {
       await openLocalBoard(page)
       await placeSticky(page, 'Right-click me')

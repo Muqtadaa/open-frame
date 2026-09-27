@@ -911,8 +911,8 @@ on narrow screens, and the bundle split in this pass.
   raster and wall time. It needs a GPU measurement before another attempt.
 - **A forced layout per drag or wheel event** did not reproduce: CDP
   LayoutCount rose by 1 over 60 moves.
-- **The After Hours frame fill** (a bright white slab, compliant with
-  DESIGN.md) is a design question for the owner, not a fix.
+- **The After Hours frame fill** was a design question, not a fix. The owner
+  chose **night paper**, and it has since landed (see below).
 
 **Found on the way.**
 
@@ -939,6 +939,21 @@ by a fresh independent audit:
 | 1 | Accessibility | 3 | 4 | Untested with a real screen reader |
 | 2 | Performance | 2 | 3 | The pan ground still repaints (step 13 reverted) |
 | 3 | Responsive design | 2 | 4 | Untested on real devices and WebKit |
-| 4 | Theming | 4 | 4 | The After Hours frame fill is an open question |
+| 4 | Theming | 4 | 4 | — |
 | 5 | Implementation integrity | 3 | 4 | — |
 | | **Total** | **14/20** | **19/20** | |
+
+**Night paper** (the owner's answer to the frame-fill question). A frame nobody
+has coloured is laid on the world's paper, `--of-frame-paper`: `--of-s-white`
+by day, so the Notebook is unchanged, and the panel stock `#231645` After
+Hours in place of the lit `#d6d9e2`. A chosen white still paints white. The
+frame no longer declares `defaultColor`, so the record panel marks no swatch
+for an uncoloured frame; marking `white` would have marked a colour that,
+pressed at night, changes the frame. Guarded by `design-tokens.test`:
+- the paper is white by day and the panel at night;
+- it is never brighter than the ink or white paper;
+- the control-border edge reaches 3:1 on it.
+
+`default-colour-coverage` and `typed-notes` hold the view to the same;
+`frame-paper.spec.ts` fails on the previous code in exactly its two After
+Hours cases. Two goldens (`*-frame`) are new, and none of the other 40 moved.

@@ -11,7 +11,7 @@ import { renderToStaticMarkup } from 'react-dom/server'
 import { describe, expect, it } from 'vitest'
 
 import { createDefaultViewRegistry } from './index.js'
-import { COLOR_VARS, SURFACE_VARS } from '../scene/style-tokens.js'
+import { COLOR_VARS, FRAME_PAPER, SURFACE_VARS } from '../scene/style-tokens.js'
 
 /**
  * Every type that takes a colour says what colour a fresh one IS.
@@ -35,8 +35,13 @@ describe('a fresh object is drawn in the colour its view declares', () => {
    * Hours, and no swatch is that. They paint a colour once one is chosen
    * (ADR 0015), and the second test below holds them to both halves: no
    * palette colour when unset, the chosen one when set.
+   *
+   * A frame joined them when its default became the world's paper: white in
+   * the Notebook, the panel stock After Hours. At night no swatch is what an
+   * unset frame is drawn in, so marking `white` would be marking a colour that
+   * pressing would CHANGE the frame to.
    */
-  const ON_THE_PANEL = new Set(['table'])
+  const ON_THE_PANEL = new Set(['table', 'frame'])
 
   const render = (type: string, style: Record<string, unknown>): string => {
     const definition = types.get(type)
@@ -102,5 +107,15 @@ describe('a fresh object is drawn in the colour its view declares', () => {
         expect(render(type, { color: token }), `${type} in ${token}`).toContain(SURFACE_VARS[token])
       }
     }
+  })
+
+  /*
+   * An unset frame is laid on the world's paper, which is not a palette
+   * colour — so a CHOSEN white still means white, at night included.
+   */
+  it("lays an unset frame on the world's paper, and a chosen white on white", () => {
+    expect(render('frame', {})).toContain(FRAME_PAPER)
+    expect(render('frame', { color: 'white' })).not.toContain(FRAME_PAPER)
+    expect(render('frame', { fill: 'none' })).not.toContain(FRAME_PAPER)
   })
 })

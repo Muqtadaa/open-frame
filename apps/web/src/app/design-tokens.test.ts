@@ -1051,6 +1051,45 @@ describe.each(THEMES.filter((theme) => theme.name !== 'default'))(
 )
 
 /*
+ * A FRAME nobody has coloured is laid on the world's paper (audit 2026-09-27).
+ *
+ * At night it was white paper under a lamp — dimmed, and still a bright slab
+ * the size of a region of the board, under everything placed on it. The
+ * owner chose night paper: in the Notebook the paper is white, as it always
+ * was; After Hours it is the panel stock, the same dark sheet the board's own
+ * panels are cut from. A white somebody CHOSE stays white — this is the
+ * default, not the palette.
+ */
+describe.each(THEMES)("a frame's paper — $name", ({ name, token }) => {
+  const block =
+    name === 'default'
+      ? [...CSS.matchAll(/:root\s*\{([^}]*)\}/g)].map((match) => match[1] ?? '').join('\n')
+      : (new RegExp(`:root\\[data-theme=['"]${name}['"]\\]\\s*\\{([^}]*)\\}`).exec(CSS)?.[1] ?? '')
+  const paper = /--of-frame-paper:\s*var\(--of-([\w-]+)\)/.exec(block)?.[1]
+
+  it('is named in this world, as another token', () => {
+    expect(paper, 'the frame paper names the stock it is').toBeDefined()
+  })
+
+  it(name === 'default' ? 'is white paper by day' : 'is the panel stock at night', () => {
+    expect(paper).toBe(name === 'default' ? 's-white' : 'panel')
+  })
+
+  it('is never brighter than the ink, and never brighter than white paper', () => {
+    const sheet = token(paper ?? '')
+    expect(contrast(sheet, token('page'))).toBeLessThanOrEqual(
+      contrast(token('ink'), token('page')),
+    )
+    expect(luminance(sheet)).toBeLessThanOrEqual(luminance(token('s-white')))
+  })
+
+  // Its edge is the control border (the Edge Rule), and it must show on it.
+  it('shows its edge (3:1)', () => {
+    expect(contrast(token('control-border'), token(paper ?? ''))).toBeGreaterThanOrEqual(3)
+  })
+})
+
+/*
  * The plain kit — shapes, code, images, tables — stays plain, but it is stock
  * on the same page as the slips, so it is cut and laid the same way: the
  * page's 2px corner and the one slip height (DESIGN.md). Code took the

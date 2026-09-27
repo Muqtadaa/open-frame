@@ -10,6 +10,7 @@ import { renderToStaticMarkup } from 'react-dom/server'
 import { describe, expect, it } from 'vitest'
 
 import { createDefaultViewRegistry } from './index.js'
+import { FRAME_PAPER } from '../scene/style-tokens.js'
 
 /**
  * A typed note says what it is, in words.
@@ -88,11 +89,17 @@ describe('typed notes', () => {
     ).toBe(slips.length)
   })
 
+  /*
+   * A frame is the place things sit, so its fill must never be what something
+   * sitting on it is drawn in. It is the world's paper, which no palette
+   * colour is, and no other type lays itself on.
+   */
   it("a frame's fill is not any other type's default", () => {
-    const frame = views.get('frame')?.defaultColor
+    expect(views.get('frame')?.defaultColor).toBeUndefined()
+    expect(render('frame')).toContain(FRAME_PAPER)
     for (const definition of types.list()) {
       if (definition.type === 'frame' || views.get(definition.type) === undefined) continue
-      expect(views.get(definition.type)?.defaultColor, definition.type).not.toBe(frame)
+      expect(render(definition.type), definition.type).not.toContain(FRAME_PAPER)
     }
   })
 
