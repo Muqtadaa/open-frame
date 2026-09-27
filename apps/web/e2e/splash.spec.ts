@@ -40,6 +40,7 @@ test('a splash that outlasts the watchdog says so, and offers a way out', async 
 
   await page.clock.fastForward(13_000)
   await expect(splash).toContainText('Still opening')
+  await expect(splash.locator('img')).toBeVisible()
   const reload = splash.getByRole('button', { name: 'Reload' })
   await expect(reload).toBeVisible()
   await page.keyboard.press('Tab')
@@ -99,6 +100,20 @@ test.describe('once per session', () => {
     })
     await page.goto(HOME_URL, { waitUntil: 'commit' })
     await expect(page.locator('#of-splash')).toHaveCSS('background-color', 'rgb(27, 16, 51)')
+  })
+
+  test('a quiet sheet that stalls says so without bringing the artwork back', async ({ page }) => {
+    await page.addInitScript(() => {
+      sessionStorage.setItem('openframe:splash-seen', 'yes')
+    })
+    await page.clock.install()
+    await page.route('**/main.tsx*', (route) => route.abort())
+    await page.goto(BOARD_URL, { waitUntil: 'commit' })
+    await page.clock.fastForward(13_000)
+    const splash = page.locator('#of-splash')
+    await expect(splash).toContainText('Still opening')
+    await expect(splash.locator('img')).toBeHidden()
+    await expect(splash).toHaveCSS('background-color', 'rgb(247, 249, 251)')
   })
 
   test('a new session sees the artwork again', async ({ browser }) => {
