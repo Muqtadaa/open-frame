@@ -2644,10 +2644,12 @@ body {
   position: absolute;
   top: 0;
   left: 0;
+  --of-pin: 26px;
+
   display: grid;
   place-items: center;
-  width: 26px;
-  height: 26px;
+  width: var(--of-pin);
+  height: var(--of-pin);
   padding: 0;
   font-size: var(--of-type-record);
   font-weight: var(--of-weight-semibold);
@@ -2666,7 +2668,7 @@ body {
    * spot the remark is about. The box's top left was, which put the point
    * 26px below where anybody clicked.
    */
-  margin-top: -26px;
+  margin-top: calc(-1 * var(--of-pin));
 }
 
 /*
@@ -5699,7 +5701,9 @@ textarea.of-input {
   box-sizing: border-box;
   display: flex;
   flex-direction: column;
-  gap: 28px;
+  /* On the rule, like every other offset in the chrome: three steps between
+     the header and the ledger, five above it, the gutter at the sides. */
+  gap: calc(3 * var(--of-step));
   width: 100%;
   min-height: 100dvh;
   /*
@@ -5708,7 +5712,7 @@ textarea.of-input {
    * whole page scroll — with nothing visible out there to scroll to.
    */
   overflow-x: clip;
-  padding: 48px 24px;
+  padding: calc(5 * var(--of-step)) var(--of-gutter);
   font-family: var(--of-font);
   color: var(--of-ink);
   background-color: var(--of-page);
@@ -6247,7 +6251,7 @@ textarea.of-input {
 /* Below the rail's own breakpoint, the page stops being a margin exercise. */
 @media (width <= 560px) {
   .of-home {
-    padding: 24px var(--of-space-16);
+    padding: var(--of-gutter) var(--of-space-16);
   }
 
   .of-home__column {

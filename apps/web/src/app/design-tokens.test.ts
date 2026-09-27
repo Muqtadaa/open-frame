@@ -778,6 +778,24 @@ describe('the spacing scale', () => {
     expect(off).toEqual([])
   })
 
+  /*
+   * Above the scale a space is a size — but a size on the page's own rule:
+   * DESIGN.md says every offset in the chrome is a multiple of ten. The front
+   * door's 28px gap and 48px/24px page margins, and a pin lifted by -26px,
+   * were each a number chosen by eye (audit 2026-09-27).
+   */
+  it('spaces everything above the scale on the rule', () => {
+    const source = CSS.replace(/\/\*[\s\S]*?\*\//g, '')
+    const off: string[] = []
+    const property = /(?<![\w-])((?:padding|margin)[\w-]*|gap|row-gap|column-gap):\s*([^;]+);/g
+    for (const [, name = '', value = ''] of source.matchAll(property)) {
+      for (const [, px = ''] of value.matchAll(/(?<![\w.(])-?(\d+)px/g)) {
+        if (Number(px) > 20 && Number(px) % 10 !== 0) off.push(`${name}: ${value.trim()}`)
+      }
+    }
+    expect(off).toEqual([])
+  })
+
   it('defines every step it asks for', () => {
     const defined = new Set([...CSS.matchAll(/(--of-space-\d+):/g)].map((m) => m[1]))
     const used = new Set([...CSS.matchAll(/var\((--of-space-\d+)\)/g)].map((m) => m[1]))
