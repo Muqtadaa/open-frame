@@ -157,6 +157,11 @@
    * quiet, no longer cramped.
    */
   --of-step: 10px;
+  /*
+   * The AA 2.5.8 floor itself, for a control that has to sit beside a larger
+   * one — the rail's disclosures. Anything that can be 30 is.
+   */
+  --of-hit-min: 24px;
   /* A secondary control inside apparatus — the AA 2.5.8 floor is 24. */
   --of-hit-sm: 30px;
   /*
@@ -711,8 +716,11 @@ body {
   flex-direction: column;
   max-height: 100%;
   gap: var(--of-space-2);
-  /* The right-hand padding is where a tool's options strip lives. */
-  padding: var(--of-space-6) var(--of-space-12) var(--of-space-6) var(--of-space-6);
+  /*
+   * The right-hand padding is where a tool's options strip lives, as wide as
+   * a target may be: it was 12px, which failed WCAG 2.5.8 on every board.
+   */
+  padding: var(--of-space-6) var(--of-hit-min) var(--of-space-6) var(--of-space-6);
   /* The page's own stock, with a margin rule down its inner edge — the way a
      ruled pad prints its margin — rather than a white card hovering over it. */
   background: var(--of-page);
@@ -992,10 +1000,10 @@ body {
 .of-rail__more {
   position: absolute;
   top: 0;
-  right: calc(-1 * var(--of-space-12));
+  right: calc(-1 * var(--of-hit-min));
   display: grid;
   place-items: center;
-  width: var(--of-space-12);
+  width: var(--of-hit-min);
   height: 100%;
   padding: 0;
   color: var(--of-ink-muted);

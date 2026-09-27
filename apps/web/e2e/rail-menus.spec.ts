@@ -186,6 +186,9 @@ test.describe('opening, walking and leaving a rail menu', () => {
       const owner = await page.getByTestId(tool).boundingBox()
       if (strip === null || owner === null) throw new Error(`${menu} is not on screen`)
       expect(strip.height).toBeGreaterThanOrEqual(24)
+      // Both ways: a 12px-wide strip beside a 50px tool fails WCAG 2.5.8, which
+      // axe reported on every board (audit 2026-09-27).
+      expect(strip.width).toBeGreaterThanOrEqual(24)
       // Beside the tool, never inside it: a press on the tool's edge arms it.
       expect(strip.x).toBeGreaterThanOrEqual(owner.x + owner.width)
     }
