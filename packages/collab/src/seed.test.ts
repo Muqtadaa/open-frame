@@ -1,8 +1,10 @@
 import { richFromPlain } from '@openframe/core'
 import { createTestHarness } from '@openframe/core/testing'
 import { describe, expect, it } from 'vitest'
+import * as Y from 'yjs'
 
 import { connectBoard } from './connect.js'
+import { holdsBoard, metaOf, objectsOf, roomOf } from './document-map.js'
 import type { RoomRole } from './protocol.js'
 import type { RoomSocket } from './provider.js'
 import { BoardRoom, type RoomPeer } from './room.js'
@@ -59,7 +61,7 @@ class Wire {
 let joined = 0
 
 /** A browser opening the board: `title` is what it had on screen before the room answered. */
-async function open(room: BoardRoom, title: string, notes: readonly string[] = []) {
+async function open(room: BoardRoom, title: string, notes: readonly string[] = [], seed = true) {
   const h = createTestHarness()
   const renamed = h.dispatcher.dispatch({ kind: 'SetBoardTitle', title })
   if (!renamed.ok) throw renamed.error
@@ -74,6 +76,7 @@ async function open(room: BoardRoom, title: string, notes: readonly string[] = [
   const connection = await connectBoard({
     store: h.store,
     dispatcher: h.dispatcher,
+    seed,
     connect: () => {
       const wire = new Wire()
       setTimeout(() => {
@@ -120,5 +123,48 @@ describe('opening a shared board for the first time', () => {
     expect(other.store.getDocument().objects.size).toBe(1)
     owner.connection.destroy()
     other.connection.destroy()
+  })
+
+  /*
+   * A board shared from one browser stays only there until that browser opens
+   * it, and its row can be renamed from the list meanwhile. The rename joins
+   * the room and writes a title — and a title alone must not read as "a board
+   * is here", or the browser holding the board never publishes it and nobody
+   * else ever sees its notes (Codex, on #17).
+   */
+  it('is still published by its browser after a rename reached the empty room first', async () => {
+    const room = new BoardRoom()
+    const renamer = await open(room, 'Untitled board', [], false)
+    const renamed = renamer.dispatcher.dispatch({ kind: 'SetBoardTitle', title: 'Renamed' })
+    if (!renamed.ok) throw renamed.error
+    await new Promise((resolve) => setTimeout(resolve, 5))
+    renamer.connection.destroy()
+
+    const holder = await open(room, 'Pricing research', ['a note', 'another'])
+    const newcomer = await open(room, 'Untitled board')
+
+    expect(newcomer.store.getDocument().objects.size).toBe(2)
+    // The rename is the newer word on the name, and it stands.
+    expect(titleOf(newcomer)).toBe('Renamed')
+    expect(titleOf(holder)).toBe('Renamed')
+    holder.connection.destroy()
+    newcomer.connection.destroy()
+  })
+})
+
+describe('what counts as a board already being in the room', () => {
+  it('is the marker, or any object — never a title alone', () => {
+    const titled = new Y.Doc()
+    metaOf(titled).set('title', 'Renamed')
+    expect(holdsBoard(titled)).toBe(false)
+
+    // A room seeded before the marker existed: objects, no marker.
+    const legacy = new Y.Doc()
+    objectsOf(legacy).set('obj_1', { id: 'obj_1' } as never)
+    expect(holdsBoard(legacy)).toBe(true)
+
+    const seeded = new Y.Doc()
+    roomOf(seeded).set('seeded', true)
+    expect(holdsBoard(seeded)).toBe(true)
   })
 })

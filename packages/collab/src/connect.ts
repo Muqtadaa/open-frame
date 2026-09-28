@@ -8,7 +8,7 @@ import {
   readChanges,
   type LoggedChange,
 } from './change-log.js'
-import { metaOf, seedDoc } from './document-map.js'
+import { holdsBoard, seedDoc } from './document-map.js'
 import { createAwareness, type RoomRole } from './protocol.js'
 import { RoomProvider, type ConnectionStatus, type RoomSocket } from './provider.js'
 import { CollabSession } from './session.js'
@@ -196,11 +196,14 @@ export async function connectBoard(options: ConnectBoardOptions): Promise<BoardC
        * "Untitled board" — on that device for good, and for an editor, on
        * everyone's — while the board list still showed the real name.
        *
-       * The title is the test for "a board is here", because every board
-       * ever seeded carries one. A room with a board in it is the truth for a
-       * newcomer; only an empty room takes this browser's board.
+       * A room with a board in it is the truth for a newcomer; only a room
+       * with none takes this browser's board. A TITLE does not make a board:
+       * a rename from the board list can reach the room before the browser
+       * holding the board ever opens it (`holdsBoard`). A title that is there
+       * has already been merged into this browser's document by the time the
+       * room answers, so seeding writes that newer name back, not a stale one.
        */
-      if (seeding && !metaOf(doc).has('title')) seedDoc(doc, options.store.getDocument())
+      if (seeding && !holdsBoard(doc)) seedDoc(doc, options.store.getDocument())
       for (const listener of [...syncedListeners]) listener()
       syncedListeners.clear()
     },

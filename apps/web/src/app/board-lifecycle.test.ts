@@ -218,6 +218,43 @@ describe('renaming a board from the list', () => {
     expect(roomRename).toHaveBeenCalledWith(SHARED, KEY, 'Pricing')
   })
 
+  /*
+   * The row is the one that says no — the database lets only the owner rename
+   * — so it goes first. Renamed in the room first, a refused row left the
+   * board renamed for everyone while the list and the row said otherwise
+   * (Codex, on #17).
+   */
+  it('touches the room only once the row has taken the name', async () => {
+    const repository = await boardOnDisk()
+    remoteRename.mockResolvedValue(false)
+
+    await expect(
+      renameBoard(
+        repository,
+        { boardId: SHARED, shared: true, accessKey: KEY, title: 'Old' },
+        'Pricing',
+      ),
+    ).resolves.toBe(false)
+    expect(roomRename).not.toHaveBeenCalled()
+  })
+
+  it('puts the row back when the room cannot take the name', async () => {
+    const repository = await boardOnDisk()
+    roomRename.mockResolvedValue(false)
+
+    await expect(
+      renameBoard(
+        repository,
+        { boardId: SHARED, shared: true, accessKey: KEY, title: 'Old' },
+        'Pricing',
+      ),
+    ).resolves.toBe(false)
+    expect(remoteRename.mock.calls).toEqual([
+      [SHARED, 'Pricing'],
+      [SHARED, 'Old'],
+    ])
+  })
+
   it('renames nothing when the room cannot be reached, and says so', async () => {
     const repository = await boardOnDisk()
     roomRename.mockResolvedValue(false)
@@ -225,7 +262,6 @@ describe('renaming a board from the list', () => {
     await expect(
       renameBoard(repository, { boardId: SHARED, shared: true, accessKey: KEY }, 'Pricing'),
     ).resolves.toBe(false)
-    expect(remoteRename).not.toHaveBeenCalled()
     const loaded = await repository.getBoard(SHARED)
     expect(loaded.status === 'ok' && loaded.document.meta.title).not.toBe('Pricing')
   })

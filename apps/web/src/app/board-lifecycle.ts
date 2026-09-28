@@ -161,8 +161,8 @@ export async function forgetDeletedBoard(
  * in its room, and a rename that wrote only the list and this browser's copy
  * left every other device opening the board under its old name while the list
  * showed the new one (reported by the owner). So the room is renamed first,
- * the way a peer renames it; if the room cannot be reached, nothing is
- * renamed and the caller says so.
+ * the way a peer renames it, once the row has taken the name; if the room
+ * cannot be reached, the row is put back and the caller says so.
  */
 export async function renameBoard(
   repository: BoardRepository,
@@ -170,6 +170,8 @@ export async function renameBoard(
     readonly boardId: BoardId
     readonly shared: boolean
     readonly accessKey?: string | null
+    /** The name it has now, to put back if the room cannot take the new one. */
+    readonly title?: string
   },
   title: string,
 ): Promise<boolean> {
@@ -177,11 +179,21 @@ export async function renameBoard(
   if (trimmed.length === 0 || trimmed.length > 200) return false
 
   if (board.shared) {
+    /*
+     * The ROW first, because it is the one that can say no: the database lets
+     * only the owner rename, while the room takes any editor's write. Renamed
+     * in the room first, a refused row left the board renamed for everyone
+     * and the list saying otherwise (Codex, on #17). And if the room then
+     * cannot be reached, the row is put back, so a failure changes nothing.
+     */
+    if (!(await renameRemoteBoard(board.boardId, trimmed))) return false
     // Loaded only when needed, like the rest of collaboration: the list must
     // not pay for Yjs to render.
     const { renameInRoom } = await import('./collaboration.js')
-    if (!(await renameInRoom(board.boardId, board.accessKey ?? null, trimmed))) return false
-    if (!(await renameRemoteBoard(board.boardId, trimmed))) return false
+    if (!(await renameInRoom(board.boardId, board.accessKey ?? null, trimmed))) {
+      if (board.title !== undefined) await renameRemoteBoard(board.boardId, board.title)
+      return false
+    }
   }
 
   const loaded = await repository.getBoard(board.boardId)

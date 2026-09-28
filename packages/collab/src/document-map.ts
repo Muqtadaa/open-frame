@@ -47,6 +47,34 @@ export const OBJECTS = 'objects'
  */
 export const META = 'meta'
 
+/**
+ * Facts about the ROOM rather than the board, in a third root map. Today one:
+ * `seeded`, set when a browser first publishes its board here.
+ *
+ * Its own root map because an unknown key in `meta` would be copied into every
+ * client's document, while an unknown root map is carried and ignored.
+ *
+ * Why it exists: "has a title" was the test for "a board is here", and a
+ * rename from the board list can reach an empty room before the browser that
+ * holds the board ever opens it. The room then had a title and no board, the
+ * holder declined to publish into a room that looked taken, and its notes
+ * reached nobody (Codex, on #17).
+ */
+export const ROOM = 'room'
+
+export function roomOf(doc: Y.Doc): Y.Map<unknown> {
+  return doc.getMap<unknown>(ROOM)
+}
+
+/**
+ * Whether a board has ever been published into this doc's room. The marker, or
+ * any object at all — a room seeded before the marker existed has objects and
+ * no marker. A title alone never counts: a rename can put one in an empty room.
+ */
+export function holdsBoard(doc: Y.Doc): boolean {
+  return roomOf(doc).get('seeded') === true || objectsOf(doc).size > 0
+}
+
 export function objectsOf(doc: Y.Doc): Y.Map<AnyOpenFrameObject> {
   return doc.getMap<AnyOpenFrameObject>(OBJECTS)
 }
@@ -180,5 +208,6 @@ export function seedDoc(doc: Y.Doc, board: BoardDocument, origin?: unknown): voi
     // browser would otherwise arrive called whatever an empty document is
     // called, which looks like the rename having been lost.
     metaOf(doc).set('title', board.meta.title)
+    roomOf(doc).set('seeded', true)
   }, origin)
 }

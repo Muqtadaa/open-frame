@@ -16,10 +16,13 @@ export {
   objectsFromDoc,
   objectsOf,
   metaOf,
+  holdsBoard,
+  roomOf,
   seedDoc,
   LOCAL_ORIGIN,
   META,
   OBJECTS,
+  ROOM,
 } from './document-map.js'
 export { metaPatchesFromEvent, parentageCandidates, patchesFromEvent } from './remote-patches.js'
 export {
