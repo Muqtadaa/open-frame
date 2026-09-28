@@ -1,7 +1,13 @@
 import type { CommandDispatcher, CommandError, DocumentStore } from '@openframe/core'
 import * as Y from 'yjs'
 
-import { changesOf, markReverted, readChanges, type LoggedChange } from './change-log.js'
+import {
+  changesOf,
+  clearReverted,
+  markReverted,
+  readChanges,
+  type LoggedChange,
+} from './change-log.js'
 import { seedDoc } from './document-map.js'
 import { createAwareness, type RoomRole } from './protocol.js'
 import { RoomProvider, type ConnectionStatus, type RoomSocket } from './provider.js'
@@ -60,6 +66,8 @@ export interface BoardConnection {
   onChanges(listener: (changes: readonly LoggedChange[]) => void): () => void
   /** Says, for every peer, that `id` has been taken back and by whom. False if there is no such entry. */
   markReverted(id: string, by: string | null): boolean
+  /** Says, for every peer, that the revert of `id` was itself undone. False if there is no such entry. */
+  clearReverted(id: string): boolean
   destroy(): void
 }
 
@@ -256,6 +264,9 @@ export async function connectBoard(options: ConnectBoardOptions): Promise<BoardC
     },
     markReverted(id, by) {
       return markReverted(doc, id, by, Date.now())
+    },
+    clearReverted(id) {
+      return clearReverted(doc, id)
     },
     destroy() {
       changesOf(doc).unobserve(onChangeLog)

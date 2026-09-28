@@ -232,4 +232,28 @@ describe('reverting a change somebody else made', () => {
     expect(h.store.getObject(id('n1'))).toBeDefined()
     expect(h.store.getObject(id('n2'))).toBeUndefined()
   })
+
+  /*
+   * Undoing a revert puts the agent's change back — and whoever keeps the
+   * record that it was taken back has to hear about it, or the change reads
+   * as "taken back" while it is on the board (Codex, on #16). An undo and a
+   * redo say which step they replayed, and which way.
+   */
+  it('lets whoever reverted hear when the revert is undone and redone', () => {
+    const h = harness()
+    const change = agent(h, 'Move a note', [
+      { kind: 'MoveObjects', moves: [{ id: id('a'), dx: 50, dy: 0 }] },
+    ])
+    const reverted = h.dispatcher.revert(change)
+    if (!reverted.ok) throw reverted.error
+
+    expect(h.dispatcher.undo()).toMatchObject({
+      ok: true,
+      replayed: { transactionId: reverted.transactionId, direction: 'undo' },
+    })
+    expect(h.dispatcher.redo()).toMatchObject({
+      ok: true,
+      replayed: { transactionId: reverted.transactionId, direction: 'redo' },
+    })
+  })
 })

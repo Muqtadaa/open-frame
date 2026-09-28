@@ -32,6 +32,16 @@ export type DispatchResult =
         readonly before: readonly ObjectId[]
         readonly after: readonly ObjectId[]
       }
+      /**
+       * Set on an undo or a redo: which recorded step it replayed, and which
+       * way. Whoever keeps a record ABOUT a step — that a revert took an
+       * agent's change back — needs to hear when the step is undone, or the
+       * record says "taken back" while the change is on the board.
+       */
+      readonly replayed?: {
+        readonly transactionId: TransactionId
+        readonly direction: 'undo' | 'redo'
+      }
     }
   | { readonly ok: false; readonly error: CommandError }
 
@@ -138,6 +148,7 @@ export class CommandDispatcher {
     return this.#applyHistory(entry.inverse, entry.label, entry.origin, {
       left: entry.forward,
       locked: entry.locked?.after,
+      replayed: { transactionId: entry.transactionId, direction: 'undo' },
     })
   }
 
@@ -150,6 +161,7 @@ export class CommandDispatcher {
     return this.#applyHistory(entry.forward, entry.label, entry.origin, {
       left: entry.inverse,
       locked: entry.locked?.before,
+      replayed: { transactionId: entry.transactionId, direction: 'redo' },
     })
   }
 
@@ -350,6 +362,7 @@ export class CommandDispatcher {
       patches: applicable,
       inverse,
       affected: affectedIds(applicable),
+      ...(recorded.replayed === undefined ? {} : { replayed: recorded.replayed }),
     } as const
     this.#emit(result)
     return result
@@ -370,6 +383,11 @@ interface RecordedState {
   readonly locked: ReadonlySet<ObjectId> | undefined
   /** Recorded somewhere else, so every object it would put back is validated. */
   readonly untrusted?: boolean
+  /** The step being replayed, for an undo or a redo. */
+  readonly replayed?: {
+    readonly transactionId: TransactionId
+    readonly direction: 'undo' | 'redo'
+  }
 }
 
 function lockedAmong(doc: BoardDocument, ids: readonly ObjectId[]): ReadonlySet<ObjectId> {

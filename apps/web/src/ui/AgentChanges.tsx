@@ -1,5 +1,8 @@
 import type { LoggedChange } from '@openframe/collab'
-import { useEffect, useRef, useState } from 'react'
+import type { TransactionId } from '@openframe/core'
+import { useCallback, useEffect, useRef, useState } from 'react'
+
+import { guestIdentity } from '../app/guest.js'
 
 import { AnchoredSurface } from '../controls/AnchoredSurface.js'
 import { useAnchoredTo } from '../controls/use-anchor.js'
@@ -23,7 +26,7 @@ import { Ago } from './Ago.js'
  * to ignore.
  */
 export function AgentChanges() {
-  const { collaboration } = useOpenFrame()
+  const { runtime, collaboration } = useOpenFrame()
   const commands = useCommands()
   const [changes, setChanges] = useState<readonly LoggedChange[]>([])
   const [role, setRole] = useState(collaboration?.role ?? 'editor')
@@ -36,6 +39,33 @@ export function AgentChanges() {
    * about the past every time it is opened.
    */
   const seen = useRef<Set<string> | null>(null)
+  /*
+   * This browser's own reverts, by the transaction each one was, so an undo
+   * of one can be recognised. Undo puts the agent's change back on the board,
+   * and a log that went on saying "taken back" would hide Revert and have the
+   * agent refuse it as already reverted (Codex, on #16). Lives as long as the
+   * undo history it answers to.
+   */
+  const reverts = useRef(new Map<TransactionId, string>())
+
+  const revert = useCallback(
+    (change: LoggedChange): void => {
+      const done = commands.revertChange(change)
+      if (done !== null) reverts.current.set(done, change.id)
+    },
+    [commands],
+  )
+
+  useEffect(() => {
+    if (collaboration === null || collaboration === undefined) return
+    return runtime.dispatcher.subscribe((result) => {
+      if (result.replayed === undefined) return
+      const change = reverts.current.get(result.replayed.transactionId)
+      if (change === undefined) return
+      if (result.replayed.direction === 'undo') collaboration.clearReverted(change)
+      else collaboration.markReverted(change, guestIdentity().name)
+    })
+  }, [runtime, collaboration])
 
   useEffect(() => {
     if (collaboration === null || collaboration === undefined) return
@@ -46,7 +76,13 @@ export function AgentChanges() {
     if (collaboration === null || collaboration === undefined) return
     return collaboration.onChanges((next) => {
       setChanges(next)
-      if (seen.current === null) {
+      /*
+       * Everything here before the room has sent the board is history, not
+       * news. A browser that has never held this board starts with an empty
+       * log and receives the whole of it in the sync, and that used to toast
+       * the newest old change on arrival (Codex, on #16).
+       */
+      if (seen.current === null || !collaboration.synced) {
         seen.current = new Set(next.map((change) => change.id))
         return
       }
@@ -55,16 +91,19 @@ export function AgentChanges() {
       for (const change of arrived) known.add(change.id)
       const newest = arrived.find((change) => change.reverted === null)
       if (newest === undefined) return
-      useInteractionStore
-        .getState()
-        .showToast(
-          `${whose(newest)}: ${newest.label}`,
-          collaboration.role === 'viewer'
-            ? undefined
-            : { label: 'Revert', run: () => commands.revertChange(newest) },
-        )
+      useInteractionStore.getState().showToast(
+        `${whose(newest)}: ${newest.label}`,
+        collaboration.role === 'viewer'
+          ? undefined
+          : {
+              label: 'Revert',
+              run: () => {
+                revert(newest)
+              },
+            },
+      )
     })
-  }, [collaboration, commands])
+  }, [collaboration, revert])
 
   // A sheet like Mentions: the keyboard goes in, Escape or a press elsewhere
   // closes it, and the keyboard goes back to the button.
@@ -159,7 +198,7 @@ export function AgentChanges() {
                         data-testid="agent-change-revert"
                         aria-label={`Revert “${change.label}”`}
                         onClick={() => {
-                          commands.revertChange(change)
+                          revert(change)
                         }}
                       >
                         Revert

@@ -39,7 +39,15 @@ export interface LoggedChange extends RevertableChange {
   /** The dispatcher's transaction id, which is also the entry's key. */
   readonly id: string
   readonly origin: Origin
-  /** Milliseconds since the epoch, on the clock of whoever made the change. */
+  /**
+   * Where the entry stands in the log: one past the highest this peer had
+   * seen when it wrote it. This, not `at`, orders the log and decides what
+   * the cap lets go — every peer's clock is its own, and one running behind
+   * made a brand-new change the "oldest" the moment it was written (Codex, on
+   * #16). Two peers writing at once can share a number; the id breaks the tie.
+   */
+  readonly seq: number
+  /** Milliseconds since the epoch, on the clock of whoever made the change. For showing, never for ordering. */
   readonly at: number
   /** Who made it, as a name to show — `null` when the peer did not say. */
   readonly by: string | null
@@ -58,15 +66,19 @@ export function changesOf(doc: Y.Doc): Y.Map<unknown> {
  * Called INSIDE the transaction that writes the change's patches, so a peer
  * never receives the one without the other.
  */
-export function recordChange(doc: Y.Doc, change: LoggedChange): void {
+export function recordChange(doc: Y.Doc, change: Omit<LoggedChange, 'seq'>): void {
   const log = changesOf(doc)
-  log.set(change.id, structuredClone(change))
+  const entries = readChanges(doc)
+  const seq = (entries[0]?.seq ?? 0) + 1
+  log.set(change.id, structuredClone({ ...change, seq }))
   if (log.size <= CHANGE_LOG_LIMIT) return
-  const oldest = [...log.entries()]
-    .map(([key, value]) => ({ key, at: readLoggedChange(value)?.at ?? -Infinity }))
-    .sort((left, right) => left.at - right.at)
-    .slice(0, log.size - CHANGE_LOG_LIMIT)
-  for (const { key } of oldest) log.delete(key)
+  // Unreadable entries first — they are nobody's history — then the oldest.
+  const readable = new Set(entries.map((entry) => entry.id))
+  const oldest = [
+    ...[...log.keys()].filter((key) => key !== change.id && !readable.has(key)),
+    ...entries.map((entry) => entry.id).reverse(),
+  ].slice(0, log.size - CHANGE_LOG_LIMIT)
+  for (const key of oldest) log.delete(key)
 }
 
 /** Every readable entry, newest first. One that is not an entry is left out. */
@@ -76,15 +88,30 @@ export function readChanges(doc: Y.Doc): LoggedChange[] {
     const change = readLoggedChange(value)
     if (change !== null) out.push(change)
   }
-  return out.sort((left, right) => right.at - left.at)
+  return out.sort(
+    (left, right) => right.seq - left.seq || (left.id < right.id ? 1 : left.id > right.id ? -1 : 0),
+  )
 }
 
 /** Marks an entry taken back. False when there is no such entry. */
 export function markReverted(doc: Y.Doc, id: string, by: string | null, at: number): boolean {
+  return setReverted(doc, id, { at, by })
+}
+
+/**
+ * Says an entry is NOT taken back after all: whoever reverted it has undone
+ * their revert, so the change is on the board again and can be reverted again
+ * (Codex, on #16). False when there is no such entry.
+ */
+export function clearReverted(doc: Y.Doc, id: string): boolean {
+  return setReverted(doc, id, null)
+}
+
+function setReverted(doc: Y.Doc, id: string, reverted: LoggedChange['reverted']): boolean {
   const log = changesOf(doc)
   const change = readLoggedChange(log.get(id))
   if (change === null) return false
-  log.set(id, structuredClone({ ...change, reverted: { at, by } }))
+  log.set(id, structuredClone({ ...change, reverted }))
   return true
 }
 
@@ -98,9 +125,10 @@ export function markReverted(doc: Y.Doc, id: string, by: string | null, at: numb
  */
 export function readLoggedChange(value: unknown): LoggedChange | null {
   if (!isRecord(value)) return null
-  const { id, label, origin, at, by, forward, inverse, affected, locked, reverted } = value
+  const { id, label, origin, seq, at, by, forward, inverse, affected, locked, reverted } = value
   if (typeof id !== 'string' || typeof label !== 'string') return null
   if (typeof origin !== 'string' || !LOGGED_ORIGINS.has(origin as Origin)) return null
+  if (typeof seq !== 'number' || !Number.isFinite(seq)) return null
   if (typeof at !== 'number' || !Number.isFinite(at)) return null
   if (by !== null && typeof by !== 'string') return null
   if (!isPatchList(forward) || !isPatchList(inverse)) return null

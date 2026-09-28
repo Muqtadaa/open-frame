@@ -8,7 +8,13 @@ import { createTestHarness } from '@openframe/core/testing'
 import { beforeEach, describe, expect, it } from 'vitest'
 import * as Y from 'yjs'
 
-import { CHANGE_LOG_LIMIT, changesOf, markReverted, readChanges } from './change-log.js'
+import {
+  CHANGE_LOG_LIMIT,
+  changesOf,
+  clearReverted,
+  markReverted,
+  readChanges,
+} from './change-log.js'
 import { CollabSession } from './session.js'
 
 /**
@@ -33,14 +39,14 @@ function join(docs: Y.Doc[]): void {
   }
 }
 
-function peer(seed: number, by: string) {
+function peer(seed: number, by: string, now = (): number => 1_700_000_000_000 + seed) {
   const harness = createTestHarness({ ids: createSequentialIdGenerator(seed) })
   const doc = new Y.Doc()
   const session = CollabSession.join({
     doc,
     dispatcher: harness.dispatcher,
     by,
-    now: () => 1_700_000_000_000 + seed,
+    now,
     onError: (error) => {
       throw error
     },
@@ -147,5 +153,43 @@ describe('the change log', () => {
     expect(markReverted(agent.doc, made.transactionId, 'Ada', 1)).toBe(true)
     changesOf(agent.doc).set('txn_other', { anything: true })
     expect(dispatched).toBe(0)
+  })
+
+  /*
+   * Each peer stamps `at` with its own clock, and clocks disagree (Codex, on
+   * #16). Ordered by `at`, a change from a peer whose clock ran behind was the
+   * "oldest" the moment it was written — pruned at once from a full log, its
+   * id handed to the agent and then nowhere to be found.
+   */
+  it('orders and prunes by the log’s own sequence, never by anybody’s clock', () => {
+    const behind = peer(5000, 'Slow clock', () => 1)
+    join([agent.doc, person.doc, behind.doc])
+    for (let index = 0; index < CHANGE_LOG_LIMIT; index += 1) {
+      const made = agent.dispatcher.transact(
+        `Note ${String(index)}`,
+        [notes(`n${String(index)}`)],
+        {
+          origin: 'mcp',
+        },
+      )
+      if (!made.ok) throw made.error
+    }
+    const late = behind.dispatcher.transact('From a slow clock', [notes('late')], {
+      origin: 'mcp',
+    })
+    if (!late.ok) throw late.error
+
+    const log = readChanges(person.doc)
+    expect(log).toHaveLength(CHANGE_LOG_LIMIT)
+    expect(log[0]?.label).toBe('From a slow clock')
+    expect(log.map((entry) => entry.label)).not.toContain('Note 0')
+  })
+
+  it('can say a revert has itself been undone, for every peer', () => {
+    const made = agent.dispatcher.transact('Add a note', [notes('n1')], { origin: 'mcp' })
+    if (!made.ok) throw made.error
+    expect(markReverted(person.doc, made.transactionId, 'Ada', 1)).toBe(true)
+    expect(clearReverted(person.doc, made.transactionId)).toBe(true)
+    expect(readChanges(agent.doc)[0]?.reverted).toBeNull()
   })
 })

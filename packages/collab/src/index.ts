@@ -59,6 +59,7 @@ export {
 export { CollabSession, type CollabSessionDeps } from './session.js'
 export {
   changesOf,
+  clearReverted,
   markReverted,
   readChanges,
   readLoggedChange,

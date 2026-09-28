@@ -10,6 +10,7 @@ import type {
   Placement,
   Point,
   Rect,
+  TransactionId,
 } from '@openframe/core'
 import {
   alignOffsets,
@@ -152,9 +153,10 @@ export interface BoardCommands {
   /**
    * Takes back one change an agent made, from the board's change log (tracks
    * A-2), as this person's own step — so Cmd+Z puts it back. Whatever anybody
-   * changed since is kept. True if anything was taken back.
+   * changed since is kept. The revert's own transaction, so an undo of it can
+   * be recognised, or `null` when nothing could be taken back.
    */
-  revertChange(change: LoggedChange): boolean
+  revertChange(change: LoggedChange): TransactionId | null
 }
 
 /**
@@ -825,7 +827,7 @@ export function useCommands(): BoardCommands {
         const result = dispatcher.revert(change)
         if (!result.ok) {
           sayWhyNot(result)
-          return false
+          return null
         }
         // Said to every peer, so the change reads as taken back everywhere and
         // nobody reverts it twice.
@@ -843,7 +845,7 @@ export function useCommands(): BoardCommands {
             ? `Reverted “${change.label}”.`
             : `Reverted “${change.label}”, except ${String(kept)} ${kept === 1 ? 'object' : 'objects'} changed since.`,
         )
-        return true
+        return result.transactionId
       },
     }
   }, [dispatcher, runtime, collaboration])

@@ -189,6 +189,26 @@ test('undo after Revert puts the agent’s change back', async ({ browser }) => 
     await page.getByTestId('canvas').focus()
     await page.keyboard.press('ControlOrMeta+z')
     await expect.poll(() => idsIn(page), { timeout: 20_000 }).toHaveLength(3)
+
+    /*
+     * And it is on offer again. The log kept saying "taken back" while the
+     * change was on the board (Codex, on #16): Revert was hidden, and the
+     * agent refused it as already reverted.
+     */
+    const button = page.getByTestId('agent-changes-button')
+    await expect(button).toHaveText('1 agent change')
+    await button.click()
+    await expect(page.getByTestId('agent-change-revert')).toBeVisible()
+    await expect
+      .poll(async () => (await changesSeenBy(agent))[0]?.reverted ?? null, { timeout: 20_000 })
+      .toBeNull()
+
+    // Redo takes it back again, and says so again.
+    await page.keyboard.press('Escape')
+    await page.getByTestId('canvas').focus()
+    await page.keyboard.press('ControlOrMeta+Shift+z')
+    await expect.poll(() => idsIn(page), { timeout: 20_000 }).toEqual([])
+    await expect(button).toHaveText('Agent changes')
   } finally {
     await agent.context.close()
   }
@@ -206,6 +226,30 @@ test('the agent reverts its own change, and the browser sees it go', async ({ br
     await expect.poll(() => idsIn(page), { timeout: 20_000 }).toEqual([])
     await page.getByTestId('agent-changes-button').click()
     await expect(page.getByTestId(`agent-change-${String(id)}`)).toContainText('Taken back by Ada')
+  } finally {
+    await agent.context.close()
+  }
+})
+
+/*
+ * A browser that has never held this board starts from an empty log, and the
+ * whole of it arrives in the room's first sync. Read as news, that toasted the
+ * newest OLD change to everybody opening the board (Codex, on #16).
+ */
+test('somebody opening the board later is not told about old changes as news', async ({
+  browser,
+}) => {
+  const room = newRoomId()
+  const first = await join(browser, room)
+  const agent = agentOn(room)
+  try {
+    await threeNotes(agent, first)
+    await expect(first.getByTestId('toast')).toBeVisible()
+
+    const later = await join(browser, room)
+    await expect.poll(() => idsIn(later), { timeout: 20_000 }).toHaveLength(3)
+    await expect(later.getByTestId('agent-changes-button')).toHaveText('1 agent change')
+    await expect(later.getByTestId('toast')).toHaveCount(0)
   } finally {
     await agent.context.close()
   }
