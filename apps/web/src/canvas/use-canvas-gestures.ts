@@ -63,6 +63,17 @@ export function useCanvasGestures(containerRef: RefObject<HTMLElement | null>) {
   const commands = useCommands()
   const gesture = useRef<Gesture | null>(null)
 
+  /**
+   * Puts back whatever one-finger gesture was running, writing nothing — the
+   * one way every interruption ends a gesture (rule 28): Escape, a lost
+   * window, a second finger, a cancelled pointer, lost capture.
+   */
+  const abandon = useCallback((): void => {
+    if (gesture.current === null) return
+    gesture.current = null
+    useInteractionStore.getState().endDrag()
+  }, [])
+
   /*
    * ESCAPE CANCELS A GESTURE IN FLIGHT: whatever was being dragged goes back
    * where it was, nothing is written, and the selection it was about stays.
@@ -75,8 +86,7 @@ export function useCanvasGestures(containerRef: RefObject<HTMLElement | null>) {
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent): void => {
       if (event.key !== 'Escape' || gesture.current === null) return
-      gesture.current = null
-      useInteractionStore.getState().endDrag()
+      abandon()
       event.preventDefault()
       event.stopPropagation()
     }
@@ -85,18 +95,14 @@ export function useCanvasGestures(containerRef: RefObject<HTMLElement | null>) {
      * app — will never send the pointer-up. The gesture is put back, as
      * Escape would, rather than left running for a release that never comes.
      */
-    const onBlur = (): void => {
-      if (gesture.current === null) return
-      gesture.current = null
-      useInteractionStore.getState().endDrag()
-    }
+    const onBlur = abandon
     window.addEventListener('keydown', onKeyDown, true)
     window.addEventListener('blur', onBlur)
     return () => {
       window.removeEventListener('keydown', onKeyDown, true)
       window.removeEventListener('blur', onBlur)
     }
-  }, [])
+  }, [abandon])
 
   /*
    * FINGERS ON THE BOARD, by pointer id, in canvas pixels.
@@ -151,12 +157,6 @@ export function useCanvasGestures(containerRef: RefObject<HTMLElement | null>) {
     },
     [containerRef],
   )
-  /** Puts back whatever one-finger gesture was running, writing nothing. */
-  const abandon = useCallback((): void => {
-    if (gesture.current === null) return
-    gesture.current = null
-    useInteractionStore.getState().endDrag()
-  }, [])
   /**
    * Whether the last press landed on a handle.
    *
