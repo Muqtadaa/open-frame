@@ -55,6 +55,7 @@ import { snapDelta, snapRect } from '../scene/snapping.js'
 import {
   CORNER_HANDLES,
   angleFrom,
+  boundsOfAll,
   framesBounds,
   resizeBounds,
   scaleFrames,
@@ -957,8 +958,12 @@ export function useCanvasGestures(containerRef: RefObject<HTMLElement | null>) {
           startViewport: settled.viewport,
           subjects,
           // Captured so the whole selection snaps as ONE unit rather than each
-          // object independently, which would shuffle them apart.
-          startBounds: framesBounds(subjects),
+          // object independently, which would shuffle them apart. Measured by
+          // each object's own bounds: a selected connector's frame sits at
+          // world zero, and the selection snapped as if it began there.
+          startBounds: boundsOfAll(subjects, (object) =>
+            runtime.registry.drawnFromEnds(object) ? null : runtime.registry.boundsOf(object, doc),
+          ),
           alignTargets:
             mode === 'translate'
               ? alignmentTargets(

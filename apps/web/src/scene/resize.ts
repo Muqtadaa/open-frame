@@ -210,6 +210,36 @@ export function resizeBounds(
   }
 }
 
+/**
+ * The box a set of objects occupies, by what each REPORTS as its bounds —
+ * `registry.boundsOf` for everything drawn by its own frame, `null` for what
+ * is not (a connector, drawn from its ends). Null when nothing reports any.
+ *
+ * Reading `.frame` put a connector's vestigial 0×0 at world zero, so a
+ * selection or clipboard holding one was measured from there (tracks A-6).
+ * One loop, never `Math.min(...spread)`: a spread of a large clipboard
+ * overflows the stack at about 120,000 objects.
+ */
+export function boundsOfAll<T>(
+  objects: Iterable<T>,
+  boundsOf: (object: T) => Rect | null,
+): Rect | null {
+  let minX = Infinity
+  let minY = Infinity
+  let maxX = -Infinity
+  let maxY = -Infinity
+  for (const object of objects) {
+    const box = boundsOf(object)
+    if (box === null) continue
+    minX = Math.min(minX, box.x)
+    minY = Math.min(minY, box.y)
+    maxX = Math.max(maxX, box.x + box.width)
+    maxY = Math.max(maxY, box.y + box.height)
+  }
+  if (minX === Infinity) return null
+  return { x: minX, y: minY, width: maxX - minX, height: maxY - minY }
+}
+
 /** The axis-aligned box enclosing a set of frames. */
 export function framesBounds(objects: readonly AnyOpenFrameObject[]): Rect | null {
   if (objects.length === 0) return null

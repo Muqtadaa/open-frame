@@ -1073,9 +1073,76 @@ export class ObjectTypeRegistry {
     return [...doomed]
   }
 
+  /**
+   * Whether this object's shape is its ends — it declares `endpoints`, as rule
+   * 16 describes — so its frame is not where it is. A connector's frame is a
+   * vestigial 0×0 at the origin: anything measuring objects leaves it out, and
+   * its view positions itself from its ends.
+   */
+  drawnFromEnds(object: AnyOpenFrameObject): boolean {
+    return this.#definitions.get(object.type)?.endpoints !== undefined
+  }
+
   /** Objects whose rendering depends on this one — the reverse of `dependencies`. */
   dependenciesOf(object: AnyOpenFrameObject): readonly ObjectId[] {
     return this.#definitions.get(object.type)?.dependencies?.(object) ?? []
+  }
+
+  /**
+   * Every object whose change can change how `object` is drawn: what its type
+   * declares, and — for a declared object whose bounds ARE its children's —
+   * those descendants too (tracks A-6).
+   *
+   * A connector declares the objects at its ends, which is not enough when an
+   * end is a group: moving a member changes the group's bounds without
+   * changing the group object, so the line went on pointing at where the group
+   * used to be. A frame's bounds are its own frame, so its contents are not
+   * added. Built on the per-document child index, never a scan per object
+   * (rule 10).
+   */
+  renderDependenciesOf(object: AnyOpenFrameObject, doc: BoardDocument): readonly ObjectId[] {
+    /*
+     * A closure, not one level: a group's bounds are its members' bounds, and
+     * a member can itself be drawn from other objects — a connector inside a
+     * group reaches the notes at its ends, and moving one moves the group's
+     * edge without changing anything IN the group (Codex, on #18). So every
+     * object reached adds what it is drawn from in turn, bounded by
+     * MAX_BOUNDS_DEPTH exactly as the bounds themselves are.
+     */
+    const out = new Set<ObjectId>()
+    const index = this.#childIndexFor(doc)
+    const visit = (dependency: ObjectId, depth: number): void => {
+      if (dependency === object.id || out.has(dependency) || depth >= MAX_BOUNDS_DEPTH) return
+      out.add(dependency)
+      const target = doc.objects.get(dependency)
+      if (target === undefined) return
+      for (const next of this.dependenciesOf(target)) visit(next, depth + 1)
+      if (this.#boundsFromChildren(target.type)) {
+        for (const child of index.get(dependency) ?? []) visit(child.id, depth + 1)
+      }
+    }
+    for (const dependency of this.dependenciesOf(object)) visit(dependency, 0)
+    return [...out]
+  }
+
+  /**
+   * Whether anything `object` is drawn from has bounds made of its children,
+   * so a member joining or leaving one changes how `object` is drawn. Asked
+   * of TYPES, not of how many members there are: an empty group has none,
+   * and the line joined to it must still hear the first one arrive (Codex,
+   * on #18).
+   */
+  dependsOnMembers(object: AnyOpenFrameObject, doc: BoardDocument): boolean {
+    return this.renderDependenciesOf(object, doc).some((dependency) => {
+      const target = doc.objects.get(dependency)
+      return target !== undefined && this.#boundsFromChildren(target.type)
+    })
+  }
+
+  /** A container whose extent is derived from what it holds, rather than drawn by its own frame. */
+  #boundsFromChildren(type: string): boolean {
+    const definition = this.#definitions.get(type)
+    return definition?.capabilities.canHaveChildren === true && definition.getBounds !== undefined
   }
 
   /** Bounds for hit testing and culling, defaulting to the object's frame. */

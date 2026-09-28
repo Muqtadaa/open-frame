@@ -1,4 +1,4 @@
-import type { AssetRef, BoardDocument, ObjectId } from '@openframe/core'
+import type { AssetRef, BoardDocument, CommandDispatcher, ObjectId } from '@openframe/core'
 
 import { isLocalOnly } from '../adapters/room/room-asset-store.js'
 
@@ -84,4 +84,21 @@ export async function healAssets(document: BoardDocument, deps: HealDeps): Promi
   }
 
   return lifted
+}
+
+/**
+ * How a healed image's new locator is written: as the board's own repair,
+ * which reaches the room like any change and stays OFF the person's undo
+ * history. On it, the first Cmd+Z after opening a board put the local-only
+ * copy back and unpublished the image for everyone else (tracks A-6).
+ */
+export function publishRewrite(
+  dispatcher: CommandDispatcher,
+): (objectId: ObjectId, asset: AssetRef) => void {
+  return (objectId, asset) => {
+    dispatcher.dispatch(
+      { kind: 'UpdateObjectData', id: objectId, patch: { asset } },
+      { label: 'Publish image', skipUndo: true },
+    )
+  }
 }
