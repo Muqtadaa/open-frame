@@ -90,3 +90,34 @@ describe('a transaction of many commands', () => {
     expect(before.objects.has(asObjectId('obj_new0'))).toBe(false)
   })
 })
+
+describe('the top of a container', () => {
+  it('is the last of its children in sibling order, for every container', async () => {
+    const { childrenOf, lastChildOrder } = await import('../domain/document.js')
+    const h = createTestHarness()
+    const made = h.dispatcher.transact('Make', [
+      {
+        kind: 'CreateObjects',
+        objects: [
+          { id: asObjectId('obj_frame'), type: 'frame', x: 0, y: 0, width: 400, height: 400 },
+          { type: 'sticky', x: 10, y: 10 },
+          { type: 'sticky', x: 20, y: 10 },
+        ],
+      },
+      {
+        kind: 'CreateObjects',
+        objects: [
+          { type: 'sticky', x: 30, y: 30, parentId: asObjectId('obj_frame') },
+          { type: 'sticky', x: 40, y: 40, parentId: asObjectId('obj_frame') },
+        ],
+      },
+      { kind: 'ReorderObjects', ids: [asObjectId('obj_frame')], placement: 'back' },
+    ])
+    if (!made.ok) throw made.error
+    const doc = h.store.getDocument()
+    for (const parent of [null, asObjectId('obj_frame'), asObjectId('obj_empty')]) {
+      expect(lastChildOrder(doc, parent)).toBe(childrenOf(doc, parent).at(-1)?.order ?? null)
+    }
+    expect(lastChildOrder(doc, asObjectId('obj_frame'))).not.toBeNull()
+  })
+})
