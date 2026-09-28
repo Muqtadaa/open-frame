@@ -1,5 +1,11 @@
-import type { AnyOpenFrameObject, BoardDocument, ObjectId } from '@openframe/core'
-import { useCallback, useRef, useSyncExternalStore } from 'react'
+import type {
+  AnyOpenFrameObject,
+  BoardDocument,
+  DocumentStore,
+  ObjectId,
+  ObjectTypeRegistry,
+} from '@openframe/core'
+import { useCallback, useMemo, useSyncExternalStore } from 'react'
 
 import { useOpenFrame } from '../runtime/context.js'
 
@@ -75,65 +81,95 @@ export function useUndoState(): { canUndo: boolean; canRedo: boolean; undoLabel:
  */
 export function useDependencySubscriptions(id: ObjectId): number {
   const { runtime } = useOpenFrame()
-  const version = useRef(0)
-
-  const subscribe = useCallback(
-    (onChange: () => void) => {
-      let wired: (() => void)[] = []
-      const unwire = (): void => {
-        for (const unsubscribe of wired) unsubscribe()
-        wired = []
-      }
-      const changed = (): void => {
-        wire()
-        version.current += 1
-        onChange()
-      }
-      let wiredIds = ''
-      const wire = (): void => {
-        unwire()
-        const object = runtime.store.getObject(id)
-        if (object === undefined) return
-        const document = runtime.store.getDocument()
-        const depends = runtime.registry.renderDependenciesOf(object, document)
-        wiredIds = [...depends].sort().join(' ')
-        wired = depends.map((dependency) => runtime.store.subscribeToObject(dependency, changed))
-        /*
-         * A member joining a group is a change to the MEMBER — a new object, or
-         * one whose `parentId` was set — not to the group or to this line, and
-         * nothing this line listens to says so. Reparenting is not even a
-         * structural change. So a line with a group end hears every change to
-         * the board and redraws only when what it depends on is different;
-         * the members' own changes still arrive through their subscriptions.
-         * Asked of the ends' types rather than of their members, because an
-         * EMPTY group has none (Codex, on #18); and heard only by such a line,
-         * or every line would recompute on every edit.
-         */
-        if (runtime.registry.dependsOnMembers(object, document)) {
-          wired.push(
-            runtime.store.subscribeToDocument(() => {
-              const current = runtime.store.getObject(id)
-              if (current === undefined) return
-              const next = runtime.registry.renderDependenciesOf(
-                current,
-                runtime.store.getDocument(),
-              )
-              if ([...next].sort().join(' ') !== wiredIds) changed()
-            }),
-          )
-        }
-      }
-      wire()
-      const self = runtime.store.subscribeToObject(id, changed)
-      return () => {
-        unwire()
-        self()
-      }
-    },
-    [runtime.registry, runtime.store, id],
+  const source = useMemo(
+    () => dependencySource(runtime.store, runtime.registry, id),
+    [runtime.store, runtime.registry, id],
   )
+  return useSyncExternalStore(source.subscribe, source.getSnapshot, source.getSnapshot)
+}
 
-  const getSnapshot = useCallback(() => version.current, [])
+/** What `useDependencySubscriptions` hands `useSyncExternalStore`, apart from React. */
+export interface DependencySource {
+  readonly subscribe: (onChange: () => void) => () => void
+  readonly getSnapshot: () => number
+}
 
-  return useSyncExternalStore(subscribe, getSnapshot, getSnapshot)
+export function dependencySource(
+  store: DocumentStore,
+  registry: ObjectTypeRegistry,
+  id: ObjectId,
+): DependencySource {
+  let version = 0
+  /*
+   * React reads the snapshot while rendering and subscribes only afterwards,
+   * then reads it again to see whether it missed anything. A counter that
+   * moved only when a subscription fired could not tell, so a line whose end
+   * moved in that gap stayed where the end had been (Codex, on #18). The
+   * store's version when the snapshot was last read unsubscribed says: if it
+   * has moved by the time this subscribes, something may have changed. Any
+   * change counts — at worst a redraw on mount that was not needed.
+   */
+  let subscribed = false
+  let readAt = store.getVersion()
+
+  const subscribe = (onChange: () => void): (() => void) => {
+    let wired: (() => void)[] = []
+    const unwire = (): void => {
+      for (const unsubscribe of wired) unsubscribe()
+      wired = []
+    }
+    const changed = (): void => {
+      wire()
+      version += 1
+      onChange()
+    }
+    let wiredIds = ''
+    const wire = (): void => {
+      unwire()
+      const object = store.getObject(id)
+      if (object === undefined) return
+      const document = store.getDocument()
+      const depends = registry.renderDependenciesOf(object, document)
+      wiredIds = [...depends].sort().join(' ')
+      wired = depends.map((dependency) => store.subscribeToObject(dependency, changed))
+      /*
+       * A member joining a group is a change to the MEMBER — a new object, or
+       * one whose `parentId` was set — not to the group or to this line, and
+       * nothing this line listens to says so. Reparenting is not even a
+       * structural change. So a line with a group end hears every change to
+       * the board and redraws only when what it depends on is different;
+       * the members' own changes still arrive through their subscriptions.
+       * Asked of the ends' types rather than of their members, because an
+       * EMPTY group has none (Codex, on #18); and heard only by such a line,
+       * or every line would recompute on every edit.
+       */
+      if (registry.dependsOnMembers(object, document)) {
+        wired.push(
+          store.subscribeToDocument(() => {
+            const current = store.getObject(id)
+            if (current === undefined) return
+            const next = registry.renderDependenciesOf(current, store.getDocument())
+            if ([...next].sort().join(' ') !== wiredIds) changed()
+          }),
+        )
+      }
+    }
+    wire()
+    const self = store.subscribeToObject(id, changed)
+    subscribed = true
+    if (store.getVersion() !== readAt) version += 1
+    return () => {
+      subscribed = false
+      readAt = store.getVersion()
+      unwire()
+      self()
+    }
+  }
+
+  const getSnapshot = (): number => {
+    if (!subscribed) readAt = store.getVersion()
+    return version
+  }
+
+  return { subscribe, getSnapshot }
 }
