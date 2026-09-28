@@ -1630,6 +1630,21 @@ body {
 }
 
 /*
+ * News rather than a refusal: an agent changed the board, and the toast offers
+ * to take it back (tracks A-2). Red is kept for failures (the notice tiers),
+ * so this is the panel stock with the board's own ink.
+ */
+.of-toast--news {
+  color: var(--of-ink);
+  background: var(--of-panel);
+  border-color: var(--of-panel-border);
+}
+
+.of-toast__action {
+  flex: none;
+}
+
+/*
  * A face you can press, for following somebody around the board.
  *
  * The chip already carried a colour and an initial; this only makes the ones
@@ -2431,6 +2446,44 @@ body {
 /* What somebody wanted you to see, on the front door. */
 .of-mentions {
   position: relative;
+}
+
+/*
+ * What agents have done to the board (tracks A-2). The same button and list
+ * as Mentions — a count that asks for attention, quiet once nothing is left
+ * to review — with a row that can be acted on rather than followed.
+ */
+.of-agent-changes {
+  position: relative;
+}
+
+.of-agent-changes__item {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 1px var(--of-space-8);
+  align-items: center;
+  padding: var(--of-space-8);
+  border-radius: var(--of-radius);
+}
+
+.of-agent-changes__item > .of-mentions__who,
+.of-agent-changes__item > .of-mentions__where {
+  grid-column: 1;
+}
+
+.of-agent-changes__revert,
+.of-agent-changes__done {
+  grid-column: 2;
+  grid-row: 1 / span 2;
+}
+
+.of-agent-changes__done {
+  font-size: var(--of-type-record);
+  color: var(--of-ink-muted);
+}
+
+.of-agent-changes__item[data-reverted='true'] .of-mentions__who {
+  color: var(--of-ink-muted);
 }
 
 /*

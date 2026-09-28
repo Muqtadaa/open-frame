@@ -35,6 +35,12 @@ export type Tool =
  * first thing anybody knows about a table they are about to make — and a 3x3
  * that always has to be corrected is a default nobody wanted twice.
  */
+/** Something a toast can do, pressed from inside it. */
+export interface ToastAction {
+  readonly label: string
+  readonly run: () => void
+}
+
 export interface TableSize {
   readonly columns: number
   readonly rows: number
@@ -297,6 +303,12 @@ interface InteractionState {
    */
   readonly toast: string | null
   /**
+   * What the toast offers to do about itself, if anything — "Revert" on an
+   * agent's change (tracks A-2). A toast with an action is news rather than a
+   * refusal, so it is drawn on the panel stock, not in the failure red.
+   */
+  readonly toastAction: ToastAction | null
+  /**
    * What the board last said to a screen reader about something done from the
    * keyboard — "Width 180, height 120", "Locked". `serial` makes the same
    * words said twice a new announcement rather than no change.
@@ -449,7 +461,7 @@ interface InteractionState {
   cycleShape(): void
   setWheelMode(mode: WheelMode): void
   setSnapToGrid(enabled: boolean): void
-  showToast(message: string | null): void
+  showToast(message: string | null, action?: ToastAction): void
   announce(text: string): void
   setGuides(guides: readonly AlignmentGuide[]): void
   toggleSnapToGrid(): void
@@ -520,6 +532,7 @@ export const useInteractionStore = create<InteractionState>((set, get) => ({
   wheelMode: readWheelMode(),
   snapToGrid: readSnap(),
   toast: null,
+  toastAction: null,
   announcement: null,
   guides: NO_GUIDES,
   selection: new Set<ObjectId>(),
@@ -567,7 +580,7 @@ export const useInteractionStore = create<InteractionState>((set, get) => ({
     set({ wheelMode })
   },
 
-  showToast: (toast) => set({ toast }),
+  showToast: (toast, action) => set({ toast, toastAction: action ?? null }),
   announce: (text) =>
     set((state) => ({ announcement: { text, serial: (state.announcement?.serial ?? 0) + 1 } })),
 
