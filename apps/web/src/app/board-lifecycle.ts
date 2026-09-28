@@ -153,23 +153,48 @@ export async function forgetDeletedBoard(
 }
 
 /**
- * Renames a board in both places it is named.
+ * Renames a board everywhere it is named.
  *
- * The title in the list is a COPY — the real one lives in the document, where
- * only a browser holding the board can see it. So a rename has to say so in
- * both, and the local document is written directly rather than through the
- * dispatcher because this board is not open: there is no runtime, no undo
- * stack and no room to tell.
+ * The title in the list is a COPY — the real one lives in the document. For a
+ * local board that document is this browser's, written directly because the
+ * board is not open. For a SHARED board the document that counts is the one
+ * in its room, and a rename that wrote only the list and this browser's copy
+ * left every other device opening the board under its old name while the list
+ * showed the new one (reported by the owner). So the room is renamed first,
+ * the way a peer renames it, once the row has taken the name; if the room
+ * cannot be reached, the row is put back and the caller says so.
  */
 export async function renameBoard(
   repository: BoardRepository,
-  board: { readonly boardId: BoardId; readonly shared: boolean },
+  board: {
+    readonly boardId: BoardId
+    readonly shared: boolean
+    readonly accessKey?: string | null
+    /** The name it has now, to put back if the room cannot take the new one. */
+    readonly title?: string
+  },
   title: string,
 ): Promise<boolean> {
   const trimmed = title.trim()
   if (trimmed.length === 0 || trimmed.length > 200) return false
 
-  if (board.shared && !(await renameRemoteBoard(board.boardId, trimmed))) return false
+  if (board.shared) {
+    /*
+     * The ROW first, because it is the one that can say no: the database lets
+     * only the owner rename, while the room takes any editor's write. Renamed
+     * in the room first, a refused row left the board renamed for everyone
+     * and the list saying otherwise (Codex, on #17). And if the room then
+     * cannot be reached, the row is put back, so a failure changes nothing.
+     */
+    if (!(await renameRemoteBoard(board.boardId, trimmed))) return false
+    // Loaded only when needed, like the rest of collaboration: the list must
+    // not pay for Yjs to render.
+    const { renameInRoom } = await import('./collaboration.js')
+    if (!(await renameInRoom(board.boardId, board.accessKey ?? null, trimmed))) {
+      if (board.title !== undefined) await renameRemoteBoard(board.boardId, board.title)
+      return false
+    }
+  }
 
   const loaded = await repository.getBoard(board.boardId)
   /*

@@ -198,6 +198,7 @@ export async function createRuntime(options: CreateRuntimeOptions = {}): Promise
     notices,
     readOnly,
     quarantine,
+    stored: loaded.status === 'ok',
     flush: autosave.flush,
     saveStatus: autosave.status,
     dispose,

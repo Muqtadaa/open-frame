@@ -88,6 +88,14 @@ export interface OpenFrameRuntime {
   readonly readOnly: boolean
   /** Why the board could not be read, or `null` for one that was. */
   readonly quarantine: Quarantine | null
+  /**
+   * Whether this board came out of this device's storage, rather than being
+   * started blank because the device had never held it. Only a board this
+   * device really has may be published into an empty room: a blank one
+   * would claim a shared board's room as "Untitled board" before its owner
+   * ever opened it there.
+   */
+  readonly stored: boolean
   /** Present only in development and benchmark builds. */
   readonly devTools?: OpenFrameDevTools
   /**
