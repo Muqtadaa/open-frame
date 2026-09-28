@@ -221,4 +221,67 @@ describe('undo after somebody else changed the board', () => {
     expect(h.store.getObject(id('f'))).toBeUndefined()
     expect(h.store.getObject(id('c'))).toBeUndefined()
   })
+
+  /*
+   * A step's changes to ONE object go back together or not at all (Codex, on
+   * #13). A conversion writes the type, its data version and the data it now
+   * holds; filtering them one by one put back `sticky` over evidence data the
+   * moment somebody had edited that data since.
+   */
+  it('does not half-undo a conversion somebody has edited since', () => {
+    const h = harness()
+    const converted = h.dispatcher.dispatch({
+      kind: 'ConvertObjects',
+      ids: [id('a')],
+      toType: 'evidence',
+    })
+    expect(converted.ok).toBe(true)
+    const data = h.store.getObject(id('a'))?.data as Record<string, unknown>
+    remote(h, [{ op: 'set', id: id('a'), path: ['data'], value: { ...data, source: 'P07' } }])
+
+    expect(h.dispatcher.undo()).toMatchObject({ ok: false, error: { code: 'stale-history' } })
+    const after = h.store.getObject(id('a'))
+    expect(after?.type).toBe('evidence')
+    expect((after?.data as Record<string, unknown>).source).toBe('P07')
+  })
+
+  /*
+   * Compared as the replay reaches each change, not against the board it
+   * started from (Codex, on #13): a transaction that moved a note and then
+   * deleted it comes back where it was BEFORE the move.
+   */
+  it('undoes a move-then-delete to where the note started', () => {
+    const h = harness()
+    const result = h.dispatcher.transact('Move and delete', [
+      { kind: 'MoveObjects', moves: [{ id: id('a'), dx: 50, dy: 0 }] },
+      { kind: 'DeleteObjects', ids: [id('a')] },
+    ])
+    expect(result.ok).toBe(true)
+    expect(h.dispatcher.undo()?.ok).toBe(true)
+    expect(x(h, 'a')).toBe(0)
+  })
+
+  it('undoes two moves of the same note in one step back to the start', () => {
+    const h = harness()
+    h.dispatcher.transact('Two moves', [
+      { kind: 'MoveObjects', moves: [{ id: id('a'), dx: 50, dy: 0 }] },
+      { kind: 'MoveObjects', moves: [{ id: id('a'), dx: 30, dy: 0 }] },
+    ])
+    expect(h.dispatcher.undo()?.ok).toBe(true)
+    expect(x(h, 'a')).toBe(0)
+    expect(h.dispatcher.redo()?.ok).toBe(true)
+    expect(x(h, 'a')).toBe(80)
+  })
+
+  it('redoes a create-then-move to where the note was moved', () => {
+    const h = harness()
+    h.dispatcher.transact('Create and move', [
+      { kind: 'CreateObjects', objects: [{ id: id('n'), type: 'sticky', x: 0, y: 300 }] },
+      { kind: 'MoveObjects', moves: [{ id: id('n'), dx: 70, dy: 0 }] },
+    ])
+    expect(h.dispatcher.undo()?.ok).toBe(true)
+    expect(h.store.getObject(id('n'))).toBeUndefined()
+    expect(h.dispatcher.redo()?.ok).toBe(true)
+    expect(x(h, 'n')).toBe(70)
+  })
 })

@@ -295,8 +295,8 @@ export class CommandDispatcher {
 
 /**
  * What the board looked like where a replay starts, as the step recorded it:
- * the patches that LEFT it there (the forward ones, for an undo), and which of
- * its objects were locked at that point.
+ * the patches that LEFT it there (the forward ones, for an undo), each the
+ * partner of one replayed patch, and which of its objects were locked then.
  */
 interface RecordedState {
   readonly left: readonly Patch[]
@@ -315,14 +315,17 @@ function lockedAmong(doc: BoardDocument, ids: readonly ObjectId[]): ReadonlySet<
  * Walked against a working copy, so a later patch sees what an earlier one in
  * the same step did. Left out:
  * - a change to an object that no longer exists, or a removal of one;
- * - a change to a property somebody has changed SINCE: its value is no longer
- *   the one this step left there, and replaying would put back an old value
- *   over their newer one (Codex, on #12);
  * - any change to an object locked by somebody else — except the one that
  *   changes its lock, so undoing your own Lock still unlocks. A lock the step
  *   was recorded with is not somebody else's: deleting an unlocked frame
  *   takes its locked child along, and redoing that must take it again. Rule
- *   3's lock check is the command layer's, and history is not a way round it.
+ *   3's lock check is the command layer's, and history is not a way round it;
+ * - EVERY change to an object that somebody has changed since (Codex, on #12
+ *   and #13). A property is superseded when the value the replay finds there
+ *   is not the one this step left; putting back the step's value would undo
+ *   their edit, not ours. And the whole object goes, not only that property:
+ *   a conversion writes the type, its data version and the data together,
+ *   and replaying two of the three left a sticky holding evidence data.
  * Meta patches (the board's title) always apply.
  */
 function stillApplicable(
@@ -330,52 +333,76 @@ function stillApplicable(
   patches: readonly Patch[],
   recorded: RecordedState,
 ): Patch[] {
-  // What the step left at each property it set: the LAST write wins.
-  const left = new Map<string, unknown>()
-  for (const patch of recorded.left) {
-    if (patch.op === 'set') left.set(propertyKey(patch.id, patch.path), patch.value)
-  }
+  const superseded = new Set<ObjectId>()
+  const first = replay(doc, patches, recorded, new Set(), superseded)
+  if (superseded.size === 0) return first
+  // A second walk without the superseded objects. Changes to one object never
+  // bear on another's checks, so this walk supersedes nothing new.
+  return replay(doc, patches, recorded, superseded, new Set())
+}
+
+function replay(
+  doc: BoardDocument,
+  patches: readonly Patch[],
+  recorded: RecordedState,
+  skip: ReadonlySet<ObjectId>,
+  superseded: Set<ObjectId>,
+): Patch[] {
   const lockedByOthers = (object: AnyOpenFrameObject): boolean =>
     object.locked && recorded.locked?.has(object.id) !== true
 
   const objects = new Map(doc.objects)
   const kept: Patch[] = []
-  for (const patch of patches) {
+  patches.forEach((patch, index) => {
     if (patch.op === 'meta') {
       kept.push(patch)
-      continue
+      return
     }
+    if (skip.has(patch.id)) return
     const existing = objects.get(patch.id)
     if (patch.op === 'add') {
-      if (existing !== undefined && lockedByOthers(existing)) continue
+      if (existing !== undefined && lockedByOthers(existing)) return
       objects.set(patch.id, patch.object)
       kept.push(patch)
-      continue
+      return
     }
-    if (existing === undefined) continue
+    if (existing === undefined) return
     if (patch.op === 'remove') {
-      if (lockedByOthers(existing)) continue
+      if (lockedByOthers(existing)) return
       objects.delete(patch.id)
       kept.push(patch)
-      continue
+      return
     }
     const changesLock = patch.path.length === 1 && patch.path[0] === 'locked'
-    if (lockedByOthers(existing) && !changesLock) continue
-    const key = propertyKey(patch.id, patch.path)
+    if (lockedByOthers(existing) && !changesLock) return
+    /*
+     * What this write expects to find: the value its partner wrote. The
+     * inverse is the forward list inverted patch by patch and reversed, so
+     * patch i of one is the partner of patch n-1-i of the other — which also
+     * gets a step that set the same property twice right, where "the last
+     * write to that property" did not.
+     */
+    const partner =
+      recorded.left.length === patches.length
+        ? recorded.left[patches.length - 1 - index]
+        : undefined
     if (
-      left.has(key) &&
-      !sameValue(getPath(doc.objects.get(patch.id), patch.path), left.get(key))
+      partner?.op === 'set' &&
+      partner.id === patch.id &&
+      samePath(partner.path, patch.path) &&
+      !sameValue(getPath(existing, patch.path), partner.value)
     ) {
-      continue
+      superseded.add(patch.id)
+      return
     }
     objects.set(patch.id, setPath(existing, patch.path, patch.value))
     kept.push(patch)
-  }
+  })
   return kept
 }
 
-function propertyKey(id: ObjectId, path: readonly (string | number)[]): string {
-  return `${id}\u0000${path.join('\u0000')}`
+function samePath(a: readonly (string | number)[], b: readonly (string | number)[]): boolean {
+  return a.length === b.length && a.every((key, index) => String(key) === String(b[index]))
 }
 
 function getPath(target: unknown, path: readonly (string | number)[]): unknown {
