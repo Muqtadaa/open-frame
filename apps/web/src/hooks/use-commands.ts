@@ -40,6 +40,7 @@ const ALIGN_LABELS: Readonly<Record<AlignEdge, string>> = {
 import { useOpenFrame } from '../runtime/context.js'
 import { useInteractionStore } from '../interaction/interaction-store.js'
 import { objectsInMarquee } from '../scene/hit-testing.js'
+import { boundsOfAll } from '../scene/resize.js'
 import { snapPoint } from '../scene/snapping.js'
 import { placeDerived } from '../scene/derived-placement.js'
 import { panToReveal } from '../scene/zoom.js'
@@ -173,14 +174,6 @@ export interface BoardCommands {
 const DUPLICATE_OFFSET = 24
 /** Clearance between a new insight and the evidence it was drawn from. */
 const SYNTHESIS_GAP = 80
-
-/** Top-left of a group of objects, used to anchor a paste. */
-function framesOrigin(objects: readonly { frame: { x: number; y: number } }[]): Point {
-  return {
-    x: Math.min(...objects.map((o) => o.frame.x)),
-    y: Math.min(...objects.map((o) => o.frame.y)),
-  }
-}
 
 export function useCommands(): BoardCommands {
   const { runtime, collaboration } = useOpenFrame()
@@ -609,7 +602,16 @@ export function useCommands(): BoardCommands {
         const clipboard = store.clipboard
         if (clipboard.length === 0) return
 
-        const origin = framesOrigin(clipboard)
+        /*
+         * The top-left of what is pasted, by each object's own bounds: a
+         * connector in the clipboard has a frame at world zero, and measuring
+         * from there put a paste at the pointer far off (tracks A-6).
+         */
+        const doc = runtime.store.getDocument()
+        const box = boundsOfAll(clipboard, (object) =>
+          runtime.registry.drawnFromEnds(object) ? null : runtime.registry.boundsOf(object, doc),
+        )
+        const origin = box ?? { x: 0, y: 0 }
         // Paste at the pointer when there is one, otherwise offset from the
         // source so the copy is visibly a copy rather than hidden underneath.
         const offsetX = at === undefined ? DUPLICATE_OFFSET : at.x - origin.x

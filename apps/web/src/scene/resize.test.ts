@@ -1,7 +1,14 @@
 import { asObjectId, asOrderKey, type AnyOpenFrameObject } from '@openframe/core'
 import { describe, expect, it } from 'vitest'
 
-import { angleFrom, framesBounds, resizeBounds, scaleFrames, snapAngle } from './resize.js'
+import {
+  angleFrom,
+  boundsOfAll,
+  framesBounds,
+  resizeBounds,
+  scaleFrames,
+  snapAngle,
+} from './resize.js'
 
 const bounds = { x: 100, y: 100, width: 200, height: 100 }
 
@@ -79,6 +86,51 @@ describe('resizeBounds', () => {
 
   it('leaves the rect alone for a zero drag', () => {
     expect(resizeBounds(bounds, 'se', { x: 0, y: 0 })).toEqual(bounds)
+  })
+})
+
+/*
+ * The box a set of objects occupies, by what each REPORTS as its bounds
+ * (tracks A-6). Reading `.frame` put a connector — whose frame is a vestigial
+ * 0×0 at the origin — at world zero, so a selection or a clipboard holding one
+ * was measured from there: a paste at the pointer landed far off, and a
+ * selection snapped as if it began at (0, 0). And `Math.min(...spread)` over a
+ * huge clipboard overflowed the stack.
+ */
+describe('boundsOfAll', () => {
+  const frameOf = (object: AnyOpenFrameObject) => ({
+    x: object.frame.x,
+    y: object.frame.y,
+    width: object.frame.width,
+    height: object.frame.height,
+  })
+
+  it('leaves out what reports no bounds of its own', () => {
+    const line = obj('line', 0, 0, 0, 0)
+    expect(
+      boundsOfAll([obj('a', 400, 300, 100, 100), line], (o) => (o === line ? null : frameOf(o))),
+    ).toEqual({ x: 400, y: 300, width: 100, height: 100 })
+  })
+
+  it('measures what each object reports, not its frame', () => {
+    const turned = obj('a', 100, 100, 100, 100)
+    expect(boundsOfAll([turned], () => ({ x: 79, y: 79, width: 142, height: 142 }))).toEqual({
+      x: 79,
+      y: 79,
+      width: 142,
+      height: 142,
+    })
+  })
+
+  it('is null when nothing reports bounds', () => {
+    expect(boundsOfAll([obj('line', 0, 0, 0, 0)], () => null)).toBeNull()
+  })
+
+  it('takes a clipboard of 150,000 without overflowing the stack', () => {
+    const many = Array.from({ length: 150_000 }, (_, index) =>
+      obj(`n${String(index)}`, index, 7, 10, 10),
+    )
+    expect(boundsOfAll(many, frameOf)?.y).toBe(7)
   })
 })
 

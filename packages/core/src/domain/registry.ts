@@ -1073,6 +1073,16 @@ export class ObjectTypeRegistry {
     return [...doomed]
   }
 
+  /**
+   * Whether this object's shape is its ends — it declares `endpoints`, as rule
+   * 16 describes — so its frame is not where it is. A connector's frame is a
+   * vestigial 0×0 at the origin: anything measuring objects leaves it out, and
+   * its view positions itself from its ends.
+   */
+  drawnFromEnds(object: AnyOpenFrameObject): boolean {
+    return this.#definitions.get(object.type)?.endpoints !== undefined
+  }
+
   /** Objects whose rendering depends on this one — the reverse of `dependencies`. */
   dependenciesOf(object: AnyOpenFrameObject): readonly ObjectId[] {
     return this.#definitions.get(object.type)?.dependencies?.(object) ?? []
