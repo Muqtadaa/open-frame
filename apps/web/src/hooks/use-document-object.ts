@@ -1,5 +1,5 @@
 import type { AnyOpenFrameObject, BoardDocument, ObjectId } from '@openframe/core'
-import { useCallback, useSyncExternalStore } from 'react'
+import { useCallback, useRef, useSyncExternalStore } from 'react'
 
 import { useOpenFrame } from '../runtime/context.js'
 
@@ -57,50 +57,66 @@ export function useUndoState(): { canUndo: boolean; canRedo: boolean; undoLabel:
 /**
  * Subscribes to the objects a given object's rendering depends on.
  *
- * A connector must redraw when either end moves, but per-object subscriptions —
- * which are what keep a large board fast — only wake it for changes to itself.
- * The registry declares the dependencies; this turns them into subscriptions.
+ * A connector must redraw when either end changes, but per-object
+ * subscriptions — which are what keep a large board fast — only wake it for
+ * changes to itself. The registry says what it depends on
+ * (`renderDependenciesOf`: the declared ends, and a group end's members, whose
+ * bounds are the group's); this turns them into subscriptions.
  *
- * Returns a counter that changes whenever a dependency does, so callers can use
- * it as a render signal.
+ * Returns a counter that moves on every notification, as a render signal. It
+ * used to return `Σ(x + y + width)` over the ends, which a note made taller,
+ * turned, or moved as far one way as the other left unchanged — and React,
+ * comparing equal snapshots, skipped the redraw (tracks A-6).
+ *
+ * The subscriptions are REWIRED whenever the object or anything it depends on
+ * changes: reattaching an end points the line at a different object, and a
+ * member joining or leaving a group changes what the group's bounds are made
+ * of. A subscription built once, on mount, went on listening to the old ones.
  */
 export function useDependencySubscriptions(id: ObjectId): number {
   const { runtime } = useOpenFrame()
+  const version = useRef(0)
 
   const subscribe = useCallback(
     (onChange: () => void) => {
-      const object = runtime.store.getObject(id)
-      if (object === undefined) return () => undefined
-
-      const unsubscribes = runtime.registry
-        .dependenciesOf(object)
-        .map((dependency) => runtime.store.subscribeToObject(dependency, onChange))
-
-      /*
-       * The dependency LIST can itself change — reattaching an endpoint points
-       * the connector at a different object — so also watch the object, which
-       * re-runs this subscription.
-       */
-      unsubscribes.push(runtime.store.subscribeToObject(id, onChange))
+      let wired: (() => void)[] = []
+      const unwire = (): void => {
+        for (const unsubscribe of wired) unsubscribe()
+        wired = []
+      }
+      const changed = (): void => {
+        wire()
+        version.current += 1
+        onChange()
+      }
+      const wire = (): void => {
+        unwire()
+        const object = runtime.store.getObject(id)
+        if (object === undefined) return
+        const document = runtime.store.getDocument()
+        const depends = runtime.registry.renderDependenciesOf(object, document)
+        wired = depends.map((dependency) => runtime.store.subscribeToObject(dependency, changed))
+        /*
+         * A member added to a group is a change to the MEMBER, not to the group
+         * or to this line, so only the board's structure says so. Heard only by
+         * a line that has a group end: every line listening would redraw every
+         * line on the board whenever anything was added.
+         */
+        if (depends.length > runtime.registry.dependenciesOf(object).length) {
+          wired.push(runtime.store.subscribeToStructure(changed))
+        }
+      }
+      wire()
+      const self = runtime.store.subscribeToObject(id, changed)
       return () => {
-        for (const unsubscribe of unsubscribes) unsubscribe()
+        unwire()
+        self()
       }
     },
     [runtime.registry, runtime.store, id],
   )
 
-  const getSnapshot = useCallback(() => {
-    const object = runtime.store.getObject(id)
-    if (object === undefined) return 0
-    // Version sum over dependencies: changes whenever any of them does, and is
-    // a primitive so it is a valid snapshot.
-    let signal = 0
-    for (const dependency of runtime.registry.dependenciesOf(object)) {
-      const target = runtime.store.getObject(dependency)
-      if (target !== undefined) signal += target.frame.x + target.frame.y + target.frame.width
-    }
-    return signal
-  }, [runtime.registry, runtime.store, id])
+  const getSnapshot = useCallback(() => version.current, [])
 
   return useSyncExternalStore(subscribe, getSnapshot, getSnapshot)
 }

@@ -1078,6 +1078,45 @@ export class ObjectTypeRegistry {
     return this.#definitions.get(object.type)?.dependencies?.(object) ?? []
   }
 
+  /**
+   * Every object whose change can change how `object` is drawn: what its type
+   * declares, and — for a declared object whose bounds ARE its children's —
+   * those descendants too (tracks A-6).
+   *
+   * A connector declares the objects at its ends, which is not enough when an
+   * end is a group: moving a member changes the group's bounds without
+   * changing the group object, so the line went on pointing at where the group
+   * used to be. A frame's bounds are its own frame, so its contents are not
+   * added. Built on the per-document child index, never a scan per object
+   * (rule 10).
+   */
+  renderDependenciesOf(object: AnyOpenFrameObject, doc: BoardDocument): readonly ObjectId[] {
+    const declared = this.dependenciesOf(object)
+    const out = new Set<ObjectId>(declared)
+    const index = this.#childIndexFor(doc)
+    const addDescendants = (parent: ObjectId, depth: number): void => {
+      if (depth >= MAX_BOUNDS_DEPTH) return
+      for (const child of index.get(parent) ?? []) {
+        if (out.has(child.id)) continue
+        out.add(child.id)
+        addDescendants(child.id, depth + 1)
+      }
+    }
+    for (const dependency of declared) {
+      const target = doc.objects.get(dependency)
+      if (target !== undefined && this.#boundsFromChildren(target.type)) {
+        addDescendants(dependency, 0)
+      }
+    }
+    return [...out]
+  }
+
+  /** A container whose extent is derived from what it holds, rather than drawn by its own frame. */
+  #boundsFromChildren(type: string): boolean {
+    const definition = this.#definitions.get(type)
+    return definition?.capabilities.canHaveChildren === true && definition.getBounds !== undefined
+  }
+
   /** Bounds for hit testing and culling, defaulting to the object's frame. */
   /**
    * The axis-aligned bounds used for culling, hit-test prefiltering and marquee
