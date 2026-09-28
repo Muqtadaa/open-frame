@@ -338,3 +338,17 @@ cover:
       unchanged.
     - Giving `decision` a tool in its view alone put it on the rail with a
       working key and placement.
+- **The gesture hook split into one module per mode** (structural, chosen by
+  the owner):
+  - `use-canvas-gestures.ts` went from 1,659 lines to about 700. Each mode now
+    lives in `canvas/gestures/` as a `GestureHandler`, with a `move` for the
+    preview and a `commit` for its one command.
+  - The modes are pan, marquee, draw, translate, resize, rotate, connect,
+    endpoint, divider and crop.
+  - A new guard, `gestures.test.ts`, checks that every mode has a handler and
+    that the hook branches on no mode by name. It failed on 11 such branches
+    before the split.
+  - Rule 17's drag delta now has unit tests, with an off-grid neighbour.
+  - Escape and a blurred window now call the same `abandon` as every other
+    interruption, instead of a copy of it.
+  - No behaviour change: the e2e specs for every mode pass.
