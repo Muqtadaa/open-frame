@@ -266,4 +266,3 @@ cover:
   - **Not covered:** there is no golden for the new surfaces, because they
     exist only with a live room holding log entries, and goldens are
     local-only.
-
