@@ -109,7 +109,10 @@ export class CommandDispatcher {
     if (refused !== null) return refused
     const entry = this.#undoStack.takeUndo()
     if (entry === undefined) return null
-    return this.#applyHistory(entry.inverse, entry.label, entry.origin)
+    return this.#applyHistory(entry.inverse, entry.label, entry.origin, {
+      left: entry.forward,
+      locked: entry.locked?.after,
+    })
   }
 
   redo(): DispatchResult | null {
@@ -118,7 +121,10 @@ export class CommandDispatcher {
     if (refused !== null) return refused
     const entry = this.#undoStack.takeRedo()
     if (entry === undefined) return null
-    return this.#applyHistory(entry.forward, entry.label, entry.origin)
+    return this.#applyHistory(entry.forward, entry.label, entry.origin, {
+      left: entry.inverse,
+      locked: entry.locked?.before,
+    })
   }
 
   /*
@@ -213,7 +219,16 @@ export class CommandDispatcher {
     this.#deps.writer.applyPatches(patches)
 
     if (options.skipUndo !== true) {
-      this.#undoStack.push({ transactionId, label, origin, forward: patches, inverse })
+      const affected = affectedIds(patches)
+      const after = this.#deps.store.getDocument()
+      this.#undoStack.push({
+        transactionId,
+        label,
+        origin,
+        forward: patches,
+        inverse,
+        locked: { before: lockedAmong(before, affected), after: lockedAmong(after, affected) },
+      })
     }
 
     const result = {
@@ -240,15 +255,20 @@ export class CommandDispatcher {
    * the ones that no longer apply are left out: what somebody else did since
    * wins. A step with nothing left is consumed and reported, not thrown.
    */
-  #applyHistory(patches: readonly Patch[], label: string, origin: Origin): DispatchResult {
+  #applyHistory(
+    patches: readonly Patch[],
+    label: string,
+    origin: Origin,
+    recorded: RecordedState,
+  ): DispatchResult {
     const before = this.#deps.store.getDocument()
-    const applicable = stillApplicable(before, patches)
+    const applicable = stillApplicable(before, patches, recorded)
     if (applicable.length === 0) {
       return {
         ok: false,
         error: new CommandError(
           'stale-history',
-          `“${label}” no longer applies: what it changed was deleted or locked since`,
+          `“${label}” no longer applies: somebody has changed, deleted or locked it since`,
         ),
       }
     }
@@ -274,17 +294,50 @@ export class CommandDispatcher {
 }
 
 /**
+ * What the board looked like where a replay starts, as the step recorded it:
+ * the patches that LEFT it there (the forward ones, for an undo), and which of
+ * its objects were locked at that point.
+ */
+interface RecordedState {
+  readonly left: readonly Patch[]
+  readonly locked: ReadonlySet<ObjectId> | undefined
+}
+
+function lockedAmong(doc: BoardDocument, ids: readonly ObjectId[]): ReadonlySet<ObjectId> {
+  const locked = new Set<ObjectId>()
+  for (const id of ids) if (doc.objects.get(id)?.locked === true) locked.add(id)
+  return locked
+}
+
+/**
  * The patches of a history step that still apply to `doc`, in order.
  *
  * Walked against a working copy, so a later patch sees what an earlier one in
  * the same step did. Left out:
  * - a change to an object that no longer exists, or a removal of one;
- * - any change to a LOCKED object — except the one that changes its lock, so
- *   undoing your own Lock still unlocks. Rule 3's lock check is the command
- *   layer's, and history is not a way round it.
+ * - a change to a property somebody has changed SINCE: its value is no longer
+ *   the one this step left there, and replaying would put back an old value
+ *   over their newer one (Codex, on #12);
+ * - any change to an object locked by somebody else — except the one that
+ *   changes its lock, so undoing your own Lock still unlocks. A lock the step
+ *   was recorded with is not somebody else's: deleting an unlocked frame
+ *   takes its locked child along, and redoing that must take it again. Rule
+ *   3's lock check is the command layer's, and history is not a way round it.
  * Meta patches (the board's title) always apply.
  */
-function stillApplicable(doc: BoardDocument, patches: readonly Patch[]): Patch[] {
+function stillApplicable(
+  doc: BoardDocument,
+  patches: readonly Patch[],
+  recorded: RecordedState,
+): Patch[] {
+  // What the step left at each property it set: the LAST write wins.
+  const left = new Map<string, unknown>()
+  for (const patch of recorded.left) {
+    if (patch.op === 'set') left.set(propertyKey(patch.id, patch.path), patch.value)
+  }
+  const lockedByOthers = (object: AnyOpenFrameObject): boolean =>
+    object.locked && recorded.locked?.has(object.id) !== true
+
   const objects = new Map(doc.objects)
   const kept: Patch[] = []
   for (const patch of patches) {
@@ -294,24 +347,59 @@ function stillApplicable(doc: BoardDocument, patches: readonly Patch[]): Patch[]
     }
     const existing = objects.get(patch.id)
     if (patch.op === 'add') {
-      if (existing?.locked === true) continue
+      if (existing !== undefined && lockedByOthers(existing)) continue
       objects.set(patch.id, patch.object)
       kept.push(patch)
       continue
     }
     if (existing === undefined) continue
     if (patch.op === 'remove') {
-      if (existing.locked) continue
+      if (lockedByOthers(existing)) continue
       objects.delete(patch.id)
       kept.push(patch)
       continue
     }
     const changesLock = patch.path.length === 1 && patch.path[0] === 'locked'
-    if (existing.locked && !changesLock) continue
+    if (lockedByOthers(existing) && !changesLock) continue
+    const key = propertyKey(patch.id, patch.path)
+    if (
+      left.has(key) &&
+      !sameValue(getPath(doc.objects.get(patch.id), patch.path), left.get(key))
+    ) {
+      continue
+    }
     objects.set(patch.id, setPath(existing, patch.path, patch.value))
     kept.push(patch)
   }
   return kept
+}
+
+function propertyKey(id: ObjectId, path: readonly (string | number)[]): string {
+  return `${id}\u0000${path.join('\u0000')}`
+}
+
+function getPath(target: unknown, path: readonly (string | number)[]): unknown {
+  let at = target
+  for (const key of path) {
+    if (at === null || typeof at !== 'object') return undefined
+    at = (at as Record<string, unknown>)[String(key)]
+  }
+  return at
+}
+
+/** Structural equality, blind to key order: a value that round-tripped the CRDT keeps its meaning, not its order. */
+function sameValue(a: unknown, b: unknown): boolean {
+  if (Object.is(a, b)) return true
+  if (a === null || b === null || typeof a !== 'object' || typeof b !== 'object') return false
+  if (Array.isArray(a) !== Array.isArray(b)) return false
+  if (Array.isArray(a) && Array.isArray(b)) {
+    return a.length === b.length && a.every((value, index) => sameValue(value, b[index]))
+  }
+  const left = a as Record<string, unknown>
+  const right = b as Record<string, unknown>
+  const keys = Object.keys(left).filter((key) => left[key] !== undefined)
+  const other = Object.keys(right).filter((key) => right[key] !== undefined)
+  return keys.length === other.length && keys.every((key) => sameValue(left[key], right[key]))
 }
 
 /** Applies patches to a bare object map, for in-transaction sequencing. */

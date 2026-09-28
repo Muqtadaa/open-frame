@@ -1,4 +1,4 @@
-import type { TransactionId } from '../domain/ids.js'
+import type { ObjectId, TransactionId } from '../domain/ids.js'
 import type { Origin } from '../domain/object.js'
 import type { Patch } from '../domain/patch.js'
 
@@ -12,6 +12,16 @@ export interface UndoEntry {
   readonly origin: Origin
   readonly forward: readonly Patch[]
   readonly inverse: readonly Patch[]
+  /**
+   * Which of the step's objects were locked on either side of it. A lock the
+   * step was recorded WITH is its own business — deleting an unlocked frame
+   * takes its locked child along — and must not stop the replay; a lock that
+   * arrived afterwards, from somebody else, must.
+   */
+  readonly locked?: {
+    readonly before: ReadonlySet<ObjectId>
+    readonly after: ReadonlySet<ObjectId>
+  }
 }
 
 export const DEFAULT_UNDO_LIMIT = 200

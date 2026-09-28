@@ -247,7 +247,7 @@ test("a person's undo after an agent deleted the note does not break", async ({ 
     await page.getByTestId('canvas').focus()
     await page.keyboard.press('ControlOrMeta+z')
 
-    await expect(page.getByTestId('toast')).toContainText('deleted or locked since')
+    await expect(page.getByTestId('toast')).toContainText('no longer applies')
     expect(errors).toEqual([])
     expect(await objectsIn(page)).toEqual([])
   } finally {
