@@ -17,13 +17,18 @@ export interface ToolDefinition {
   readonly title: string
   readonly description: string
   /**
-   * A Zod SHAPE rather than a schema, because that is what the MCP SDK takes
-   * for a tool's declared arguments — and it is validated here as well, which
-   * is rule 8 rather than belt and braces: this layer is what a network
-   * transport will call, and a payload that arrived over one is arbitrary
-   * whatever the last layer promised.
+   * A STRICT object schema, built with `z.strictObject`. The MCP SDK parses a
+   * call against it before the tool runs, and a raw shape would be wrapped
+   * in a plain `z.object` that strips a key it does not know. A misspelt
+   * `colour` then vanished, the call succeeded, and the agent believed the
+   * note was blue (tracks A-4). Strict, it is refused and named, and the
+   * JSON schema the agent reads says `additionalProperties: false`.
+   *
+   * It is validated here as well, which is rule 8 rather than belt and
+   * braces: this layer is what a network transport will call, and a payload
+   * that arrived over one is arbitrary whatever the last layer promised.
    */
-  readonly input: z.ZodRawShape
+  readonly input: z.ZodObject
   /** Whether calling it can change the board. Read tools say so, and are cheaper to trust. */
   readonly writes?: boolean
   /** Whether it can remove something. A client may ask a person first. */
@@ -42,9 +47,10 @@ export const boardArgument = {
   board: z.string().describe('The board id, as `list_boards` gives it (brd_…).'),
 }
 
-export interface OnBoard {
+export interface OnBoard<Input> {
   readonly peer: BoardPeer
-  readonly input: Record<string, unknown>
+  /** What the schema let through, typed by the schema, so nothing downstream casts. */
+  readonly input: Input
 }
 
 /**
@@ -58,20 +64,19 @@ export interface OnBoard {
  * in the dispatcher. All three would stop the write; only this one tells the
  * agent, and an agent told nothing tries again.
  */
-export async function onBoard(
+export async function onBoard<Schema extends z.ZodType<{ board: string }>>(
   input: unknown,
   context: ToolContext,
-  shape: z.ZodRawShape,
+  schema: Schema,
   needs: 'view' | 'edit' = 'view',
-): Promise<OnBoard | ToolResponse> {
-  const parsed = z.object(shape).safeParse(input)
+): Promise<OnBoard<z.infer<Schema>> | ToolResponse> {
+  const parsed = schema.safeParse(input)
   if (!parsed.success) return problem(`That is not a valid request: ${parsed.error.message}`)
   if (context.account === null) return problem(NOT_SIGNED_IN)
 
-  const asked = parsed.data as { board: string }
   // `asBoardId` at a deserialization boundary, which is what a tool call is:
   // the string arrived from outside and nothing has vouched for it yet.
-  const peer = await context.board(asBoardId(asked.board))
+  const peer = await context.board(asBoardId(parsed.data.board))
   if (peer === null) return problem(NO_SUCH_BOARD)
   /*
    * The ROOM's answer, not the client's belief: `role` is what the room said

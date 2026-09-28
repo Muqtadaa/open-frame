@@ -92,6 +92,26 @@ describe('the server over stdio', () => {
     ])
   })
 
+  /*
+   * The SDK parses a call against the declared schema BEFORE the tool runs,
+   * so a strict schema in the tool alone is not enough: a raw shape handed to
+   * the SDK became a plain object that stripped the key first, and the tool
+   * never saw it (tracks A-4). Signed out, a stripped call answers "not
+   * signed in"; a refused one names the key.
+   */
+  it('refuses an argument no tool declares, at the wire, and says so in the schema', async () => {
+    const { tools } = await client.listTools()
+    for (const tool of tools) {
+      expect(tool.inputSchema.additionalProperties, tool.name).toBe(false)
+    }
+    const answer = (await client.callTool({
+      name: 'list_boards',
+      arguments: { colour: 'blue' },
+    })) as { content: { type: string; text: string }[]; isError?: boolean }
+    expect(answer.isError).toBe(true)
+    expect(answer.content[0]?.text).toMatch(/colour/)
+  })
+
   it('answers a call, and says what to do when nobody has signed in', async () => {
     const answer = (await client.callTool({ name: 'list_boards', arguments: {} })) as {
       content: { type: string; text: string }[]

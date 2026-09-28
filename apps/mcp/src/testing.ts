@@ -112,3 +112,30 @@ export function stubAccount(
     close: () => undefined,
   }
 }
+
+/**
+ * One valid call for every tool, by name, so a test can break each tool one
+ * way at a time. Tools are strict about their arguments (tracks A-4), so a
+ * single payload carrying every tool's keys is refused by all of them — it
+ * used to be the way these tests were written, and it only worked because
+ * unknown keys were stripped.
+ */
+export const VALID_CALL: Readonly<Record<string, (id: string) => Record<string, unknown>>> = {
+  list_boards: () => ({}),
+  get_board: () => ({ board: TEST_BOARD }),
+  get_objects: () => ({ board: TEST_BOARD }),
+  search_board: () => ({ board: TEST_BOARD, query: 'pricing' }),
+  create_objects: () => ({ board: TEST_BOARD, objects: [{ type: 'sticky', x: 0, y: 0 }] }),
+  update_object: (id) => ({ board: TEST_BOARD, id, style: { color: 'blue' } }),
+  move_objects: (id) => ({ board: TEST_BOARD, moves: [{ id, x: 10, y: 10 }] }),
+  delete_objects: (id) => ({ board: TEST_BOARD, ids: [id] }),
+  create_connector: () => ({ board: TEST_BOARD, from: { x: 0, y: 0 }, to: { x: 100, y: 0 } }),
+  create_frame: () => ({ board: TEST_BOARD, name: 'Frame', x: 0, y: 0, width: 400, height: 300 }),
+  add_comment: () => ({ board: TEST_BOARD, body: 'hello' }),
+}
+
+export function validCall(tool: string, id = 'obj_anything'): Record<string, unknown> {
+  const make = VALID_CALL[tool]
+  if (make === undefined) throw new Error(`No valid call written for ${tool}`)
+  return make(id)
+}

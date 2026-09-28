@@ -3,7 +3,7 @@ import { describe, expect, it } from 'vitest'
 
 import type { BoardPeer } from '../board.js'
 import type { BoardAccess } from '../supabase/account.js'
-import { peerOn, settles, stubAccount, TEST_BOARD } from '../testing.js'
+import { peerOn, settles, stubAccount, TEST_BOARD, validCall } from '../testing.js'
 import { toolContext } from './context.js'
 import { getBoard, getObjects, listBoards, READ_TOOLS, searchBoard } from './read.js'
 import { FRAMING } from './respond.js'
@@ -253,7 +253,7 @@ describe('what a tool will not do', () => {
     })
 
     for (const tool of READ_TOOLS) {
-      const answer = await tool.run({ board: TEST_BOARD, query: 'anything' }, context)
+      const answer = await tool.run(validCall(tool.name), context)
       expect(answer.isError, `${tool.name} tried to answer signed out`).toBe(true)
       expect(answer.text).toMatch(/not signed in/i)
     }

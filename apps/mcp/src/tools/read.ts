@@ -62,14 +62,18 @@ function inDocumentOrder(document: BoardDocument): AnyOpenFrameObject[] {
   return [...document.objects.values()].sort((a, b) => a.order.localeCompare(b.order))
 }
 
+const noArguments = z.strictObject({})
+
 export const listBoards: ToolDefinition = {
   name: 'list_boards',
   title: 'List boards',
   description:
     'The OpenFrame boards this account can open, with what it may do with each. ' +
     'Start here: every other tool takes a board id from this list.',
-  input: {},
-  run: async (_input, context) => {
+  input: noArguments,
+  run: async (input, context) => {
+    const parsed = noArguments.safeParse(input)
+    if (!parsed.success) return problem(`That is not a valid request: ${parsed.error.message}`)
     if (context.account === null) return problem(NOT_SIGNED_IN)
     const boards = await context.account.boards()
     return data({
@@ -80,6 +84,8 @@ export const listBoards: ToolDefinition = {
   },
 }
 
+const boardOnly = z.strictObject(boardArgument)
+
 export const getBoard: ToolDefinition = {
   name: 'get_board',
   title: 'Describe a board',
@@ -87,9 +93,9 @@ export const getBoard: ToolDefinition = {
     'The shape of a board: what it is called, how much is on it, what kinds of objects, ' +
     'and the frames and groups that hold the rest. Always small — use `get_objects` for the ' +
     'objects themselves and `search_board` to find some.',
-  input: boardArgument,
+  input: boardOnly,
   run: async (input, context) => {
-    const opened = await onBoard(input, context, boardArgument)
+    const opened = await onBoard(input, context, boardOnly)
     if (isResponse(opened)) return opened
     const document = opened.peer.store.getDocument()
 
@@ -131,7 +137,7 @@ export const getBoard: ToolDefinition = {
 const DEFAULT_PAGE = 100
 const MAX_PAGE = 500
 
-const objectsArguments = {
+const objectsArguments = z.strictObject({
   ...boardArgument,
   ids: z
     .array(z.string())
@@ -141,7 +147,7 @@ const objectsArguments = {
   type: z.string().optional().describe('Only objects of this type, e.g. `sticky`, `evidence`.'),
   limit: z.number().int().min(1).max(MAX_PAGE).optional().describe(`At most this many (default ${String(DEFAULT_PAGE)}).`),
   cursor: z.string().optional().describe('Continue after this object id, from a previous `next`.'),
-}
+})
 
 export const getObjects: ToolDefinition = {
   name: 'get_objects',
@@ -154,12 +160,7 @@ export const getObjects: ToolDefinition = {
   run: async (input, context) => {
     const opened = await onBoard(input, context, objectsArguments)
     if (isResponse(opened)) return opened
-    const asked = opened.input as {
-      ids?: string[]
-      type?: string
-      limit?: number
-      cursor?: string
-    }
+    const asked = opened.input
     const document = opened.peer.store.getDocument()
 
     if (asked.ids !== undefined) {
@@ -196,11 +197,11 @@ export const getObjects: ToolDefinition = {
   },
 }
 
-const searchArguments = {
+const searchArguments = z.strictObject({
   ...boardArgument,
   query: z.string().min(1).max(200).describe('Words to look for. Case is ignored.'),
   limit: z.number().int().min(1).max(MAX_PAGE).optional(),
-}
+})
 
 export const searchBoard: ToolDefinition = {
   name: 'search_board',
@@ -213,7 +214,7 @@ export const searchBoard: ToolDefinition = {
   run: async (input, context) => {
     const opened = await onBoard(input, context, searchArguments)
     if (isResponse(opened)) return opened
-    const asked = opened.input as { query: string; limit?: number }
+    const asked = opened.input
     const document = opened.peer.store.getDocument()
     const needle = asked.query.toLowerCase()
 
