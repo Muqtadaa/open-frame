@@ -86,3 +86,37 @@ describe('editing something somebody else has open', () => {
     expect(useInteractionStore.getState().editingId).toBeNull()
   })
 })
+
+/*
+ * Hover writes on every pointer move, and every write re-runs every
+ * subscriber's selector — about twenty per visible object (audit
+ * 2026-09-27). A move that changes nothing must not write at all.
+ */
+describe('hover writes only what changed', () => {
+  it('does not notify when the hovered object is the same', () => {
+    let writes = 0
+    const stop = useInteractionStore.subscribe(() => {
+      writes += 1
+    })
+    const store = useInteractionStore.getState()
+    store.setHovered(asObjectId('a'))
+    store.setHovered(asObjectId('a'))
+    store.setHovered(asObjectId('a'))
+    stop()
+    expect(writes).toBe(1)
+  })
+
+  it('does not notify when the pointer has not moved', () => {
+    let writes = 0
+    const stop = useInteractionStore.subscribe(() => {
+      writes += 1
+    })
+    const store = useInteractionStore.getState()
+    store.setPointer({ x: 3, y: 4 })
+    store.setPointer({ x: 3, y: 4 })
+    store.setPointer(null)
+    store.setPointer(null)
+    stop()
+    expect(writes).toBe(2)
+  })
+})

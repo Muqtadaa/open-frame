@@ -43,6 +43,58 @@ test('the front door does not scroll sideways', async ({ page }) => {
   expect(await overflow(page)).toBeLessThanOrEqual(0)
 })
 
+test('a board is named in full and dated on one line', async ({ page }) => {
+  // At 390 the name was cut at about sixteen characters and "an hour ago"
+  // stood in a column one word wide, three lines tall (audit 2026-09-27).
+  await signedIn(page, [
+    ...BOARDS,
+    { id: 'brd_cccccccccccccccc', title: 'Q4 roadmap', role: 'viewer' as const },
+  ])
+  await page.goto(HOME_URL)
+  await page.waitForSelector('[data-testid="home-boards"] li')
+
+  const rows = await page.evaluate(() =>
+    [...document.querySelectorAll('.of-home__board')].map((row) => {
+      const title = row.querySelector<HTMLElement>('.of-home__board-title')
+      const when = row.querySelector<HTMLElement>('.of-home__board-when')
+      // One rect per line the words occupy.
+      const range = document.createRange()
+      if (when !== null) range.selectNodeContents(when)
+      const lines = new Set([...range.getClientRects()].map((rect) => Math.round(rect.top)))
+      return {
+        text: title?.textContent ?? '',
+        clipped:
+          title === null ||
+          title.scrollWidth > title.clientWidth + 1 ||
+          title.scrollHeight > title.clientHeight + 1,
+        whenLines: lines.size,
+        // And the actions, on the same row, never lie over the time.
+        overlaps: (() => {
+          const time = when?.getBoundingClientRect()
+          const actions = row.parentElement
+            ?.querySelector('.of-home__row-actions')
+            ?.getBoundingClientRect()
+          if (time === undefined || actions === undefined) return false
+          return (
+            time.right > actions.left &&
+            time.left < actions.right &&
+            time.bottom > actions.top &&
+            time.top < actions.bottom
+          )
+        })(),
+      }
+    }),
+  )
+  expect(rows.length).toBe(3)
+  // Not vacuous: the longest name is longer than what used to fit.
+  expect(rows.some((row) => row.text.length > 30)).toBe(true)
+  for (const row of rows) {
+    expect(row.clipped, row.text).toBe(false)
+    expect(row.whenLines, row.text).toBe(1)
+    expect(row.overlaps, row.text).toBe(false)
+  }
+})
+
 test('a confirmation reads as a sentence, inside the screen', async ({ page }) => {
   await signedIn(page, BOARDS)
   await page.goto(HOME_URL)
@@ -80,6 +132,28 @@ test("the board's bar fits, with the account as a face and the source in its she
   ).toBeVisible()
 })
 
+/*
+ * Signed out, the label IS the button (audit 2026-09-27). The rule that
+ * shrinks the account to its face hid it here too, leaving a 16px invisible
+ * button — and the source link, whose other home is that button's sheet.
+ */
+test('signed out, the bar still says Sign in, and the source is behind it', async ({ page }) => {
+  await page.goto(BOARD_URL)
+  await page.waitForSelector('[data-testid="status-bar"]')
+  const signIn = page.getByTestId('sign-in')
+  await expect(signIn).toHaveText('Sign in')
+  await expect(signIn.locator('.of-status__share-label')).toBeVisible()
+  const box = await signIn.boundingBox()
+  if (box === null) throw new Error('no sign in')
+  expect(box.width).toBeGreaterThanOrEqual(30)
+  expect(box.x + box.width).toBeLessThanOrEqual(390)
+
+  await signIn.click()
+  await expect(
+    page.getByTestId('account-dialog').getByRole('link', { name: 'Source' }),
+  ).toBeVisible()
+})
+
 test('the page can be zoomed', async ({ page }) => {
   await page.goto(HOME_URL)
   const viewport = await page.locator('meta[name="viewport"]').getAttribute('content')
@@ -111,4 +185,71 @@ test.describe('a narrow window with a mouse', () => {
     await page.waitForSelector('[data-testid="home-boards"] li')
     expect(await overflow(page)).toBeLessThanOrEqual(0)
   })
+})
+
+/*
+ * The comments panel on a phone (audit 2026-09-27): a 300px card pinned
+ * under the bar sat across the rail and over Find when both were open, and
+ * measured its height from `100vh`, which on a phone includes the browser's
+ * own bar. It is a sheet along the bottom here, like the record panel.
+ */
+test('the comments panel is a sheet along the bottom, clear of Find', async ({ page }) => {
+  await signedIn(page, [{ id: 'brd_abcdefgh12345678', title: 'Shared', role: 'owner' }])
+  await page.routeWebSocket(/\/room\//, () => undefined)
+  await page.goto(`/?room=brd_abcdefgh12345678&k=${'e'.repeat(32)}`)
+  await page.waitForSelector('[data-testid="status-bar"]')
+  await page.getByTestId('tool-comment').click()
+  const panel = page.getByTestId('comment-panel')
+  await expect(panel).toBeVisible()
+
+  const box = await panel.boundingBox()
+  if (box === null) throw new Error('no panel')
+  expect(box.x).toBeGreaterThanOrEqual(0)
+  expect(box.x + box.width).toBeLessThanOrEqual(390)
+  expect(Math.round(box.y + box.height)).toBeGreaterThanOrEqual(843)
+  expect(box.height).toBeLessThanOrEqual(844 * 0.6 + 1)
+
+  await page.keyboard.press('Control+f')
+  const find = await page.getByTestId('search-panel').boundingBox()
+  if (find === null) throw new Error('no search')
+  expect(find.y + find.height).toBeLessThanOrEqual(box.y)
+})
+
+/*
+ * Targets for a finger (audit 2026-09-27). Nothing grew for a coarse pointer:
+ * most of the chrome was 30px — the secondary-control floor for a mouse — and
+ * the workspace tabs were 26px tall, under even that. On a touch screen the
+ * secondary floor is the product's operating size, 40.
+ */
+test('a finger gets 40px targets on the board', async ({ page }) => {
+  await page.goto(BOARD_URL)
+  await page.waitForSelector('[data-testid="status-bar"]')
+  await page.getByTestId('tool-sticky').tap()
+  await page.locator('[data-testid="canvas"]').tap({ position: { x: 200, y: 220 } })
+  await page.keyboard.press('Escape')
+  await expect(page.getByTestId('inspector')).toBeVisible()
+  for (const id of [
+    'zoom-in',
+    'zoom-out',
+    'zoom-fit',
+    'undo',
+    'theme-toggle',
+    'inspector-delete',
+  ]) {
+    const box = await page.getByTestId(id).boundingBox()
+    expect(box?.width, id).toBeGreaterThanOrEqual(40)
+    expect(box?.height, id).toBeGreaterThanOrEqual(40)
+  }
+  // And the bar still fits the phone.
+  const bar = await page.getByTestId('status-bar').boundingBox()
+  expect((bar?.x ?? 0) + (bar?.width ?? 0)).toBeLessThanOrEqual(390)
+})
+
+test('the workspace tabs are a target, not a label', async ({ page }) => {
+  await signedIn(page, BOARDS)
+  await page.goto(HOME_URL)
+  const tab = page.getByTestId('workspace-all')
+  await expect(tab).toBeVisible()
+  const box = await tab.boundingBox()
+  expect(box?.height).toBeGreaterThanOrEqual(40)
 })

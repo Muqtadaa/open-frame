@@ -45,6 +45,14 @@ export const SURFACE_VARS: Record<ColorToken, string> = {
 }
 
 /**
+ * The paper a frame nobody has coloured is laid on: white in the Notebook, the
+ * panel stock After Hours. It belongs to the WORLD, not the palette — which is
+ * why it is not `SURFACE_VARS.white`: a white somebody chose stays white, at
+ * night included, and only the default follows the lamp being off.
+ */
+export const FRAME_PAPER = 'var(--of-frame-paper)'
+
+/**
  * A colour, as CSS.
  *
  * A TOKEN goes through the map above, so it follows the theme. A LITERAL is
@@ -126,7 +134,6 @@ export function surfaceColor(value: ColorValue | undefined): string | undefined 
   return value === undefined ? undefined : surfaceOf(value, 'gray')
 }
 
-
 /**
  * Ink that can be read on a given fill, when nobody has chosen one.
  *
@@ -168,9 +175,9 @@ function relativeLuminance(hex: string): number {
 export function fontFamily(token: FontToken | undefined): string {
   switch (token) {
     case 'serif':
-      return 'ui-serif, Georgia, serif'
+      return 'var(--of-serif)'
     case 'mono':
-      return 'ui-monospace, SFMono-Regular, Menlo, monospace'
+      return 'var(--of-mono)'
     default:
       return 'inherit'
   }
@@ -197,7 +204,9 @@ export function textAlign(token: AlignToken | undefined): 'left' | 'center' | 'r
  * property is what lets a view's own stylesheet decide, and a table cell and a
  * sticky do not start from the same place.
  */
-export function verticalAlign(token: VAlignToken | undefined): 'flex-start' | 'center' | 'flex-end' {
+export function verticalAlign(
+  token: VAlignToken | undefined,
+): 'flex-start' | 'center' | 'flex-end' {
   return token === 'middle' ? 'center' : token === 'bottom' ? 'flex-end' : 'flex-start'
 }
 

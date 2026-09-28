@@ -157,7 +157,7 @@ function readComment(row: unknown): BoardComment | null {
 
 /** Every comment on a board, threads and replies together, oldest first. */
 export async function listComments(boardId: BoardId): Promise<readonly BoardComment[]> {
-  const client = supabaseClient()
+  const client = await supabaseClient()
   if (client === null) return []
 
   const response = (await client.rpc('board_comments_for', { p_board_id: boardId })) as {
@@ -176,7 +176,7 @@ export async function listComments(boardId: BoardId): Promise<readonly BoardComm
 
 /** Who is on this board, for putting a name to a comment and for mentioning. */
 export async function boardPeople(boardId: BoardId): Promise<readonly BoardPerson[]> {
-  const client = supabaseClient()
+  const client = await supabaseClient()
   if (client === null) return []
 
   const response = (await client.rpc('board_people', { p_board_id: boardId })) as {
@@ -188,7 +188,11 @@ export async function boardPeople(boardId: BoardId): Promise<readonly BoardPerso
   const people: BoardPerson[] = []
   for (const row of response.data) {
     if (typeof row !== 'object' || row === null) continue
-    const { user_id: userId, display_name: displayName, hue } = row as {
+    const {
+      user_id: userId,
+      display_name: displayName,
+      hue,
+    } = row as {
       user_id?: unknown
       display_name?: unknown
       hue?: unknown
@@ -229,7 +233,7 @@ export interface NewComment {
  * an error because nothing looks wrong.
  */
 export async function postComment(comment: NewComment): Promise<string | null> {
-  const client = supabaseClient()
+  const client = await supabaseClient()
   if (client === null) return null
 
   const response = (await client.rpc('post_comment', {
@@ -249,7 +253,7 @@ export async function postComment(comment: NewComment): Promise<string | null> {
 
 /** Marks a thread finished, or opens it again. Anybody on the board may. */
 export async function resolveComment(id: string, resolved: boolean): Promise<boolean> {
-  const client = supabaseClient()
+  const client = await supabaseClient()
   if (client === null) return false
 
   const response = (await client.rpc('resolve_comment', {
@@ -262,7 +266,7 @@ export async function resolveComment(id: string, resolved: boolean): Promise<boo
 
 /** What you have been told about and not yet read. */
 export async function myMentions(): Promise<readonly Mention[]> {
-  const client = supabaseClient()
+  const client = await supabaseClient()
   if (client === null) return []
 
   const response = (await client.rpc('my_mentions')) as { data: unknown; error: unknown }
@@ -304,7 +308,7 @@ export async function myMentions(): Promise<readonly Mention[]> {
 
 /** Marks mentions read, so they stop being a notification. */
 export async function markMentionsRead(commentIds: readonly string[]): Promise<boolean> {
-  const client = supabaseClient()
+  const client = await supabaseClient()
   if (client === null || commentIds.length === 0) return false
 
   const response = (await client
@@ -337,26 +341,34 @@ export async function markMentionsRead(commentIds: readonly string[]): Promise<b
  * socket subscription per board opened.
  */
 export function watchMyMentions(userId: string, onChange: () => void): () => void {
-  const client = supabaseClient()
-  if (client === null) return () => undefined
+  // The client arrives asynchronously now; an unsubscribe that comes first
+  // must still mean no channel is ever left open.
+  let stopped = false
+  let stop: (() => void) | null = null
+  void supabaseClient().then((client) => {
+    if (client === null || stopped) return
+    const channel = client
+      .channel(`mentions:${userId}`)
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'comment_mentions',
+          filter: `user_id=eq.${userId}`,
+        },
+        () => {
+          onChange()
+        },
+      )
+      .subscribe()
 
-  const channel = client
-    .channel(`mentions:${userId}`)
-    .on(
-      'postgres_changes',
-      {
-        event: '*',
-        schema: 'public',
-        table: 'comment_mentions',
-        filter: `user_id=eq.${userId}`,
-      },
-      () => {
-        onChange()
-      },
-    )
-    .subscribe()
-
+    stop = () => {
+      void client.removeChannel(channel)
+    }
+  })
   return () => {
-    void client.removeChannel(channel)
+    stopped = true
+    stop?.()
   }
 }

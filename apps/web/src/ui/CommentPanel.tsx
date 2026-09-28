@@ -485,8 +485,10 @@ export function CommentPanel({ author }: { readonly author: string | null }) {
            * A textbox that names the option under the arrows — not
            * role="combobox", which a <textarea> may not take (axe:
            * aria-allowed-role). The menu is still announced as it moves.
+           * It points at the menu only while the menu exists: pointing at an
+           * element that is not there is invalid ARIA (audit 2026-09-27).
            */
-          aria-controls="of-mention-menu"
+          aria-controls={picking ? 'of-mention-menu' : undefined}
           aria-autocomplete="list"
           aria-activedescendant={
             picking ? `of-mention-menu-${String(highlight)}` : undefined
@@ -574,6 +576,17 @@ export function CommentPanel({ author }: { readonly author: string | null }) {
             }
           }}
         />
+
+        {/*
+          * Says a list has opened, since a textarea cannot say it for itself
+          * the way a combobox would. Always present, and empty when no list
+          * is open, because a live region only speaks when its text CHANGES.
+          */}
+        <p className="of-visually-hidden" role="status" data-testid="mention-status">
+          {picking
+            ? `${String(candidates.length)} ${candidates.length === 1 ? 'person matches' : 'people match'}. Up and down to choose, Enter to mention.`
+            : ''}
+        </p>
 
         {picking && (
           <MentionPicker

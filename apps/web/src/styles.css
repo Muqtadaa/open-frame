@@ -20,6 +20,9 @@
  */
 :root {
   color-scheme: light;
+  caret-color: var(--of-accent);
+  scrollbar-color: var(--of-control-border) transparent;
+  scrollbar-width: thin;
 
   /* Ground. The desk the page sits on, and the page itself. */
   --of-bg: #eef2f6;
@@ -114,12 +117,18 @@
    * objects; content INSIDE an object scales in `em` from its object's size
    * and is not on this ramp at all. 12px is the floor (rule 22).
    */
-  --of-type-record: 12px; /* mono records: labels, readouts, shortcuts, counts */
-  --of-type-ui-small: 13px; /* secondary lines: a hint, a row's second line */
-  --of-type-control: 14px; /* what you operate: buttons, fields, a shape's label */
-  --of-type-ui: 15px; /* menus, notices, toasts, a sticky's body */
-  --of-type-title: 17px; /* the title of a gate or a sheet */
-  --of-type-headline: 19px; /* the wordmark on the front door */
+  --of-type-record: 0.75rem; /* mono records: labels, readouts, shortcuts, counts */
+  --of-type-ui-small: 0.8125rem; /* secondary lines: a hint, a row's second line */
+  --of-type-control: 0.875rem; /* what you operate: buttons, fields, a shape's label */
+  --of-type-ui: 0.9375rem; /* menus, notices, toasts, a sticky's body */
+  --of-type-title: 1.0625rem; /* the title of a gate or a sheet */
+  --of-type-headline: 1.1875rem; /* the wordmark on the front door */
+  /*
+   * In px, unlike the rest: a text object's size is CONTENT, in world units,
+   * and a board must lay out the same for everybody looking at it. The ramp
+   * above is the interface's, in rem, so it follows a reader's text size;
+   * each is written as its px at the default 16px root.
+   */
   --of-type-display: 22px; /* a text object: the largest type, and the user's */
 
   /*
@@ -157,6 +166,11 @@
    * quiet, no longer cramped.
    */
   --of-step: 10px;
+  /*
+   * The AA 2.5.8 floor itself, for a control that has to sit beside a larger
+   * one — the rail's disclosures. Anything that can be 30 is.
+   */
+  --of-hit-min: 24px;
   /* A secondary control inside apparatus — the AA 2.5.8 floor is 24. */
   --of-hit-sm: 30px;
   /*
@@ -199,6 +213,16 @@
    * a costume for "technical".
    */
   --of-mono: ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace;
+  /* The board's serif, and the face picker's specimen of it: one stack, so the
+     sample shows the face a note will actually get. */
+  --of-serif: ui-serif, Georgia, 'Times New Roman', serif;
+
+  /* Four weights, each a decision: body, a quiet emphasis, headings and
+     labels, and the one bold the brand's name takes. */
+  --of-weight-regular: 400;
+  --of-weight-medium: 500;
+  --of-weight-semibold: 600;
+  --of-weight-bold: 700;
 
   /*
    * The content palette: eleven, each an ink and its paper.
@@ -225,6 +249,12 @@
    */
   --of-line-black: #16202b;
   --of-line-white: #3f5163;
+  /*
+   * The paper a frame nobody has coloured is laid on: a sheet of the page's
+   * own stock, which in this world is white. Not the `white` token — After
+   * Hours gives it a different sheet, and a white somebody chose stays white.
+   */
+  --of-frame-paper: var(--of-s-white);
   /*
    * The inner lines of a table: quieter than an outer edge, but still an
    * edge you have to see to aim at a cell. Held at 3:1 on the panel.
@@ -291,6 +321,19 @@
   --of-brand-horizon: #4a2b7a;
   --of-brand-magenta: #ff2fbf;
   --of-brand-cyan: #35e2ff;
+}
+
+/*
+ * FOR A FINGER, the secondary floor is the operating size. 30px is a fair
+ * target for a mouse and a poor one for a thumb, and nothing grew for a
+ * coarse pointer: the zoom cluster, history, swatches and segmented
+ * controls were all 30 on a phone (audit 2026-09-27). 40 rather than the
+ * 44 of some platform guides, because this product's sizes step in tens.
+ */
+@media (pointer: coarse) {
+  :root {
+    --of-hit-sm: var(--of-hit);
+  }
 }
 
 /*
@@ -382,6 +425,13 @@
   /* Black is the page here, so a black line is drawn in the gray ink. */
   --of-line-black: #bcc8de;
   --of-line-white: #ffffff;
+  /*
+   * Night paper. Even dimmed, white paper under a frame was a bright slab the
+   * size of a region of the board, under everything laid on it. An uncoloured
+   * frame is cut from the panel stock instead — the dark sheet the board's own
+   * panels are — and its control-border edge says where it ends.
+   */
+  --of-frame-paper: var(--of-panel);
   --of-edge-inner: #7a64b8;
 
   --of-c-yellow: #ffd95e;
@@ -421,12 +471,6 @@
 ::selection {
   background: var(--of-accent-soft);
   color: var(--of-ink);
-}
-
-:root {
-  caret-color: var(--of-accent);
-  scrollbar-color: var(--of-control-border) transparent;
-  scrollbar-width: thin;
 }
 
 :focus-visible {
@@ -588,11 +632,13 @@
   color: var(--of-accent);
   background: var(--of-accent-soft);
   /*
-   * Its own boundary: the wash alone is 1.13:1 against the bar, so only the
-   * icon's colour said the toggle was on (design-tokens.test holds the ring
-   * to 3:1 in both worlds).
+   * Its own mark: the wash alone is 1.13:1 against the bar, so only the icon's
+   * colour said the toggle was on (design-tokens.test holds it to 3:1 in both
+   * worlds). A bar along the foot rather than a ring, because a ring is what
+   * FOCUS draws — a pressed toggle read as a focused one, and a focused
+   * pressed one wore two rings (audit 2026-09-27).
    */
-  box-shadow: inset 0 0 0 1px var(--of-accent);
+  box-shadow: inset 0 -2px 0 var(--of-accent);
 }
 
 .of-icon-button--destructive:hover:not(:disabled) {
@@ -602,7 +648,6 @@
 
 /* Numerals in any record read as columns, never as ransom text. */
 .of-status,
-.of-zoom__value,
 .of-inspector {
   font-variant-numeric: tabular-nums;
 }
@@ -619,13 +664,7 @@ body,
 }
 
 body {
-  font-family:
-    ui-sans-serif,
-    system-ui,
-    -apple-system,
-    'Segoe UI',
-    Roboto,
-    sans-serif;
+  font-family: var(--of-font);
   color: var(--of-ink);
   background: var(--of-bg);
   overscroll-behavior: none;
@@ -640,6 +679,14 @@ body {
 }
 
 /* Overlays float over the canvas and are click-through except where they paint. */
+/*
+ * The board's landmark draws no box: the canvas and the overlays inside it are
+ * placed against the app exactly as they were before it existed.
+ */
+.of-board-main {
+  display: contents;
+}
+
 .of-overlay {
   position: absolute;
   z-index: var(--of-z-chrome);
@@ -711,14 +758,19 @@ body {
   flex-direction: column;
   max-height: 100%;
   gap: var(--of-space-2);
-  /* The right-hand padding is where a tool's options strip lives. */
-  padding: var(--of-space-6) var(--of-space-12) var(--of-space-6) var(--of-space-6);
+  /*
+   * The right-hand padding is where a tool's options strip lives, as wide as
+   * a target may be: it was 12px, which failed WCAG 2.5.8 on every board.
+   */
+  padding: var(--of-space-6) var(--of-hit-min) var(--of-space-6) var(--of-space-6);
   /* The page's own stock, with a margin rule down its inner edge — the way a
      ruled pad prints its margin — rather than a white card hovering over it. */
   background: var(--of-page);
   border: 1px solid var(--of-panel-border);
   border-radius: var(--of-radius-apparatus);
   box-shadow: var(--of-shadow);
+  /* A tool's size, stepped down below as the window shortens. */
+  --of-tool: var(--of-hit-lg);
 }
 
 /*
@@ -727,18 +779,14 @@ body {
  * than shrinking continuously to sizes off the quadrille. Each threshold is
  * the height at which the larger rail stops fitting its band.
  */
-.of-app {
-  --of-tool: var(--of-hit-lg);
-}
-
 @media (max-height: 719px) {
-  .of-app {
+  .of-rail {
     --of-tool: var(--of-hit);
   }
 }
 
 @media (max-height: 603px) {
-  .of-app {
+  .of-rail {
     --of-tool: var(--of-hit-sm);
   }
 }
@@ -747,11 +795,83 @@ body {
  * The last resort, for a window too short for even the smallest tools: the
  * rail scrolls. Only here, because a scrolling box clips everything that hangs
  * outside it, and every tool's tip does.
+ *
+ * A scrolling rail keeps its end space INSIDE the scroll, as margins on the
+ * first and last groups, rather than as padding. The fade below is sticky,
+ * and a sticky box cannot leave its containing block, which stops at the
+ * padding — so with padding the fade stuck six pixels short of the edge and
+ * the next tool showed through underneath it.
  */
 @media (max-height: 493px) {
   .of-rail {
     overflow-y: auto;
+    padding-block: 0;
   }
+
+  .of-rail > .of-rail__group:first-of-type {
+    margin-top: var(--of-space-6);
+  }
+
+  .of-rail > .of-rail__group:last-of-type {
+    margin-bottom: var(--of-space-6);
+  }
+}
+
+/*
+ * Under a finger the smallest tools are 40px, not 30 (see `--of-hit-sm`), so
+ * the rail runs out of room at the height where a mouse's would step down —
+ * and without this it overran its own box between 493 and 603, the last tools
+ * drawn off the end of it and out of reach (audit 2026-09-27).
+ */
+@media (pointer: coarse) and (max-height: 603px) {
+  .of-rail {
+    overflow-y: auto;
+    padding-block: 0;
+  }
+
+  .of-rail > .of-rail__group:first-of-type {
+    margin-top: var(--of-space-6);
+  }
+
+  .of-rail > .of-rail__group:last-of-type {
+    margin-bottom: var(--of-space-6);
+  }
+}
+
+/*
+ * A rail that scrolls says so. A phone draws no scrollbar, so the tools past
+ * the edge looked like tools that did not exist. The end with more beyond it
+ * fades into the rail's stock, drawn by `use-scroll-edges` marking which end
+ * that is. Sticky, so the fade stays at the edge while the tools move under
+ * it, and laid over the tools rather than taking room from them.
+ */
+.of-rail[data-more-before]::before,
+.of-rail[data-more-after]::after {
+  --of-rail-fade: calc(2 * var(--of-space-12));
+
+  position: sticky;
+  z-index: var(--of-z-lifted);
+  flex: none;
+  height: var(--of-rail-fade);
+  /* Across the side padding too, where the options strip's chevrons live;
+     that padding is inside the scroll area, so this overflows nothing. */
+  margin-inline: calc(-1 * var(--of-space-6)) calc(-1 * var(--of-hit-min));
+  content: '';
+  pointer-events: none;
+}
+
+/* The negative margins take back the fade's height AND the rail's gap, so a
+   fade arriving does not nudge a single tool. */
+.of-rail[data-more-before]::before {
+  top: 0;
+  margin-bottom: calc(-1 * (var(--of-rail-fade) + var(--of-space-2)));
+  background: linear-gradient(to top, transparent, var(--of-page));
+}
+
+.of-rail[data-more-after]::after {
+  bottom: 0;
+  margin-top: calc(-1 * (var(--of-rail-fade) + var(--of-space-2)));
+  background: linear-gradient(to bottom, transparent, var(--of-page));
 }
 
 .of-rail__group {
@@ -876,7 +996,7 @@ body {
   font-family: var(--of-font);
   font-size: var(--of-type-record);
   font-style: normal;
-  font-weight: 400;
+  font-weight: var(--of-weight-regular);
   line-height: 1.35;
   color: var(--of-page);
   text-align: left;
@@ -992,10 +1112,10 @@ body {
 .of-rail__more {
   position: absolute;
   top: 0;
-  right: calc(-1 * var(--of-space-12));
+  right: calc(-1 * var(--of-hit-min));
   display: grid;
   place-items: center;
-  width: var(--of-space-12);
+  width: var(--of-hit-min);
   height: 100%;
   padding: 0;
   color: var(--of-ink-muted);
@@ -1106,7 +1226,7 @@ body {
  */
 .of-swatch--ink {
   font-size: var(--of-type-ui-small);
-  font-weight: 600;
+  font-weight: var(--of-weight-semibold);
   line-height: 1;
 }
 
@@ -1379,7 +1499,6 @@ body {
   background: var(--of-panel-border);
 }
 
-
 /*
  * The wheel-mode VALUE, not a heading. Mono and small so it reads as a setting
  * beside its icon; at body size next to a mouse it looked like a panel title.
@@ -1575,6 +1694,25 @@ body {
   overflow: hidden;
   font-size: var(--of-type-record);
   /*
+   * A cell aligns its own text up and down.
+   *
+   * The table used to set `justify-content` on itself, which is a GRID — there
+   * the property distributes tracks along the inline axis, so it moved nothing
+   * and the cells stayed `display: block` with `align-items: normal`. Vertical
+   * alignment in a table did nothing from the day it shipped.
+   *
+   * The value still arrives as ONE declaration on the table, as a custom
+   * property: those inherit, and `justify-content` does not. Setting it per cell
+   * would rebuild a style object four hundred times on a twenty-by-twenty grid.
+   *
+   * Not the textarea: `display: flex` on a form control is meaningless, and
+   * size containment would stop it scrolling with what is typed.
+   */
+  display: flex;
+  flex-direction: column;
+  justify-content: var(--of-valign, flex-start);
+  container-type: size;
+  /*
    * INHERITED, not set. `color: var(--of-ink)` here won every text colour the
    * table was given, because the ink is applied to the table as a whole and a
    * property set on the child beats one inherited into it. `body` is the ink,
@@ -1596,30 +1734,8 @@ body {
   pointer-events: none;
 }
 
-/*
- * A cell aligns its own text up and down.
- *
- * The table used to set `justify-content` on itself, which is a GRID — there
- * the property distributes tracks along the inline axis, so it moved nothing
- * and the cells stayed `display: block` with `align-items: normal`. Vertical
- * alignment in a table did nothing from the day it shipped.
- *
- * The value still arrives as ONE declaration on the table, as a custom
- * property: those inherit, and `justify-content` does not. Setting it per cell
- * would rebuild a style object four hundred times on a twenty-by-twenty grid.
- *
- * Not the textarea: `display: flex` on a form control is meaningless, and
- * size containment would stop it scrolling with what is typed.
- */
-.of-table__cell {
-  display: flex;
-  flex-direction: column;
-  justify-content: var(--of-valign, flex-start);
-  container-type: size;
-}
-
 .of-table__cell--head {
-  font-weight: 600;
+  font-weight: var(--of-weight-semibold);
   background: var(--of-hover);
 }
 
@@ -1913,7 +2029,7 @@ body {
 }
 
 .of-table-strip__item--within {
-  font-weight: 600;
+  font-weight: var(--of-weight-semibold);
   color: var(--of-accent);
   background: var(--of-accent-soft);
   border-color: var(--of-accent);
@@ -2081,7 +2197,7 @@ body {
 
 .of-code__code,
 .of-code__input {
-  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-family: var(--of-mono);
   font-size: var(--of-type-record);
   line-height: 1.5;
   color: var(--of-ink);
@@ -2198,8 +2314,9 @@ body {
 .of-spaces__tab {
   display: inline-flex;
   gap: var(--of-space-6);
-  align-items: baseline;
-  min-height: 26px;
+  align-items: center;
+  /* A target, not a label: it was 26px, under the secondary floor. */
+  min-height: var(--of-hit-sm);
   padding: var(--of-space-4) var(--of-step);
   font: inherit;
   font-size: var(--of-type-record);
@@ -2327,7 +2444,7 @@ body {
   padding: 0 var(--of-step);
   font-family: var(--of-font);
   font-size: var(--of-type-record);
-  font-weight: 600;
+  font-weight: var(--of-weight-semibold);
   color: var(--of-accent);
   cursor: pointer;
   background: var(--of-accent-soft);
@@ -2345,7 +2462,7 @@ body {
  * the way back with it.
  */
 .of-mentions__bell.is-read {
-  font-weight: 400;
+  font-weight: var(--of-weight-regular);
   color: var(--of-ink-muted);
   background: transparent;
   border-color: var(--of-control-border);
@@ -2403,7 +2520,7 @@ body {
 
 .of-mentions__who {
   font-size: var(--of-type-record);
-  font-weight: 600;
+  font-weight: var(--of-weight-semibold);
   color: var(--of-ink);
 }
 
@@ -2434,7 +2551,7 @@ body {
  */
 .of-mention {
   padding: 0 var(--of-space-4);
-  font-weight: 600;
+  font-weight: var(--of-weight-semibold);
   color: var(--of-accent);
   background: var(--of-accent-soft);
   border-radius: var(--of-radius-apparatus);
@@ -2491,7 +2608,7 @@ body {
   width: 20px;
   height: 20px;
   font-size: var(--of-type-record);
-  font-weight: 600;
+  font-weight: var(--of-weight-semibold);
   /* Page stock, as every face: ink read at 1.5–3:1 on these hues. */
   color: var(--of-panel);
   border-radius: var(--of-radius-round);
@@ -2526,13 +2643,15 @@ body {
   position: absolute;
   top: 0;
   left: 0;
+  --of-pin: 26px;
+
   display: grid;
   place-items: center;
-  width: 26px;
-  height: 26px;
+  width: var(--of-pin);
+  height: var(--of-pin);
   padding: 0;
   font-size: var(--of-type-record);
-  font-weight: 600;
+  font-weight: var(--of-weight-semibold);
   color: var(--of-panel);
   pointer-events: auto;
   cursor: pointer;
@@ -2548,7 +2667,7 @@ body {
    * spot the remark is about. The box's top left was, which put the point
    * 26px below where anybody clicked.
    */
-  margin-top: -26px;
+  margin-top: calc(-1 * var(--of-pin));
 }
 
 /*
@@ -2584,13 +2703,37 @@ body {
   flex-direction: column;
   gap: var(--of-step);
   width: 300px;
-  max-height: calc(100vh - 120px);
+  /*
+   * The dynamic viewport, like everything else here: `100vh` on a phone
+   * includes the browser's own bar, so the panel's foot sat under it.
+   */
+  max-height: calc(100dvh - var(--of-nav-band) - var(--of-gutter));
   padding: var(--of-space-16);
   overflow-y: auto;
   background: var(--of-panel);
   border: 1px solid var(--of-panel-border);
   border-radius: var(--of-radius-surface);
   box-shadow: var(--of-shadow);
+}
+
+/*
+ * On a phone it is a sheet along the bottom, as the record panel is below
+ * the same width: a 300px card pinned under the bar sat across the rail,
+ * and over Find when both were open (audit 2026-09-27).
+ */
+@media (width < 560px) {
+  .of-comment-panel {
+    top: auto;
+    right: 0;
+    bottom: 0;
+    left: 0;
+    width: auto;
+    max-height: 60dvh;
+    border-right: none;
+    border-bottom: none;
+    border-left: none;
+    border-radius: var(--of-radius-surface) var(--of-radius-surface) 0 0;
+  }
 }
 
 .of-comment-panel__head {
@@ -2607,7 +2750,7 @@ body {
 .of-comment-panel__title {
   margin: 0;
   font-size: var(--of-type-control);
-  font-weight: 600;
+  font-weight: var(--of-weight-semibold);
   color: var(--of-ink);
 }
 
@@ -2681,7 +2824,7 @@ body {
 
 .of-comment-panel__who {
   font-size: var(--of-type-record);
-  font-weight: 600;
+  font-weight: var(--of-weight-semibold);
   color: var(--of-ink);
 }
 
@@ -2728,7 +2871,7 @@ body {
   width: 22px;
   height: 22px;
   font-size: var(--of-type-record);
-  font-weight: 600;
+  font-weight: var(--of-weight-semibold);
   color: var(--of-panel);
   border-radius: var(--of-radius-round);
 }
@@ -2760,7 +2903,7 @@ body {
 
 .of-comment__name {
   font-size: var(--of-type-record);
-  font-weight: 600;
+  font-weight: var(--of-weight-semibold);
   color: var(--of-ink);
 }
 
@@ -2797,7 +2940,7 @@ body {
 .of-gone__title {
   margin: 0 0 var(--of-space-8);
   font-size: var(--of-type-title);
-  font-weight: 600;
+  font-weight: var(--of-weight-semibold);
   color: var(--of-ink);
 }
 
@@ -2865,6 +3008,8 @@ body {
 }
 
 .of-status {
+  /* The dialog's positioning context. */
+  position: relative;
   display: flex;
   gap: var(--of-step);
   align-items: center;
@@ -2899,12 +3044,12 @@ body {
 }
 
 .of-status__save--failed {
-  font-weight: 600;
+  font-weight: var(--of-weight-semibold);
   color: var(--of-danger);
 }
 
 .of-status b {
-  font-weight: 600;
+  font-weight: var(--of-weight-semibold);
   color: var(--of-ink);
 }
 
@@ -2925,7 +3070,7 @@ body {
   /* Navigation, so the interface's voice at a control's weight, not a readout. */
   font-family: var(--of-font);
   font-size: var(--of-type-control);
-  font-weight: 500;
+  font-weight: var(--of-weight-medium);
   color: var(--of-ink);
   text-decoration: none;
   border-radius: var(--of-radius);
@@ -2966,7 +3111,6 @@ body {
   display: flex;
   gap: var(--of-space-2);
 }
-
 
 /* ---------- account ---------- */
 
@@ -3089,13 +3233,6 @@ body {
   color: var(--of-ink);
 }
 
-
-
-/* The status line is the dialog's positioning context. */
-.of-status {
-  position: relative;
-}
-
 /*
  * Capping the line's WIDTH is not the same as keeping its contents inside it.
  *
@@ -3147,21 +3284,6 @@ body {
   font: inherit;
 }
 
-.of-dev {
-  /*
-   * Gives all but nothing to the name: development instrumentation
-   * goes before the board's name loses a character. Shrinking at the same
-   * rate, the two split the loss and the name was cut beside a panel no user
-   * ever sees.
-   */
-  flex: 0 10000 auto;
-}
-
-/* Development instrumentation clips rather than pushes. */
-.of-dev {
-  overflow: hidden;
-}
-
 /*
  * A NARROW window: what the bar gives up, in order, when it truly runs out of
  * room. The selection count first (the record panel says it too), then the
@@ -3177,9 +3299,22 @@ body {
   .of-status__exit-label {
     display: none;
   }
+
+  /*
+   * A shared board's chip keeps its dot — green, amber, grey say the same
+   * thing the word did — and its name and tip carry the rest.
+   */
+  .of-status__room .of-status__share-label {
+    display: none;
+  }
 }
 
-@media (width < 480px) {
+/*
+ * The second step, at 560 rather than 480: between the two a shared board's
+ * bar — the room chip, whoever is here — ran out of room with the full gaps
+ * and the save word still standing (audit 2026-09-27).
+ */
+@media (width < 560px) {
   .of-status {
     gap: var(--of-space-4);
     padding: var(--of-space-6);
@@ -3197,13 +3332,22 @@ body {
   .of-status__rule {
     display: none;
   }
+}
 
-  /*
-   * The account shrinks to its face, and the source offer moves into the
-   * account sheet: both ran off the right edge of a phone, and the source
-   * link has to stay reachable from inside the running app (AGPL §13).
-   */
-  .of-status__account .of-status__share-label,
+/*
+ * The account shrinks to its face, and the source offer moves into the
+ * account sheet: both ran off the right edge — a phone at first, and then
+ * any window under about 820px once the bar carried a shared board's chip
+ * and the people in it (audit 2026-09-27). The source link has to stay
+ * reachable from inside the running app (AGPL §13), and the sheet is where
+ * it goes.
+ *
+ * Only a signed-in account has a face to shrink to. Signed out, the label
+ * is the whole button, so it stays — and with it the sheet that carries the
+ * source link.
+ */
+@media (width < 820px) {
+  .of-status__account:not([data-testid='sign-in']) .of-status__share-label,
   .of-status__source {
     display: none;
   }
@@ -3283,7 +3427,7 @@ body {
   padding: var(--of-space-2) var(--of-space-6);
   font-family: var(--of-font);
   font-size: var(--of-type-record);
-  font-weight: 500;
+  font-weight: var(--of-weight-medium);
   line-height: 1.3;
   color: var(--of-page);
   white-space: nowrap;
@@ -3429,7 +3573,7 @@ body {
   height: 24px;
   font-family: var(--of-font);
   font-size: var(--of-type-record);
-  font-weight: 600;
+  font-weight: var(--of-weight-semibold);
   color: var(--of-page);
   border: 1.5px solid var(--of-page);
   border-radius: var(--of-radius-round);
@@ -3530,6 +3674,21 @@ body {
   position: absolute;
   inset: 0;
   transform-origin: 0 0;
+
+  /*
+   * THE SAME RAMP, IN WORLD UNITS. The interface's type is in rem so it
+   * follows a reader's text size; what is ON the board — a note's body, a
+   * shape's label, a cell — is content, and a board must lay out the same
+   * for everybody looking at it (rule 24: inside the world a length is a
+   * world unit). `design-tokens.test.ts` holds each to its rem step at the
+   * default 16px root.
+   */
+  --of-type-record: 12px;
+  --of-type-ui-small: 13px;
+  --of-type-control: 14px;
+  --of-type-ui: 15px;
+  --of-type-title: 17px;
+  --of-type-headline: 19px;
 }
 
 /*
@@ -3640,7 +3799,6 @@ body {
   /* Selected and draggable, so the cursor says what the next press does. */
   cursor: move;
 }
-
 
 .of-selection {
   position: absolute;
@@ -3899,7 +4057,7 @@ body {
  * own ink is the one colour guaranteed to read on whatever stock it is given.
  */
 .of-slip__type {
-  font-weight: 600;
+  font-weight: var(--of-weight-semibold);
 }
 
 /*
@@ -4050,7 +4208,7 @@ body {
 .of-unknown__badge,
 .of-fallback__type,
 .of-render-error__label {
-  font-weight: 600;
+  font-weight: var(--of-weight-semibold);
 }
 
 .of-unknown__hint,
@@ -4062,8 +4220,16 @@ body {
 
 .of-dev {
   display: flex;
+  /*
+   * Gives all but nothing to the name in the bar: development
+   * instrumentation goes before the board's name loses a character.
+   * Shrinking at the same rate, the two split the loss and the name was cut
+   * beside a panel no user ever sees. And it clips rather than pushes.
+   */
+  flex: 0 10000 auto;
   gap: var(--of-space-4);
   align-items: center;
+  overflow: hidden;
   font-size: var(--of-type-record);
 }
 
@@ -4351,7 +4517,6 @@ body {
   cursor: crosshair;
 }
 
-
 /* Images ------------------------------------------------------------------ */
 
 .of-image {
@@ -4389,20 +4554,7 @@ body {
   background: var(--of-danger-wash);
 }
 
-.of-image__alt-editor {
-  width: 100%;
-  height: 100%;
-  padding: var(--of-space-8);
-  font: inherit;
-  font-size: var(--of-type-ui);
-  resize: none;
-  background: var(--of-panel);
-  border: 1px solid var(--of-accent);
-  border-radius: var(--of-radius-apparatus);
-}
-
 /* Toast ------------------------------------------------------------------- */
-
 
 /* A drawn × on a 24px target: it was a glyph with no size, in an 8×15 box. */
 .of-toast__dismiss {
@@ -4489,10 +4641,46 @@ body {
  * tax on board space for something only relevant when something is selected.
  */
 .of-inspector {
+  /* For Delete, drawn in the top corner — see .of-inspector__delete. */
+  position: relative;
   display: flex;
   flex-direction: column;
   gap: var(--of-space-2);
   padding: var(--of-step);
+}
+
+/*
+ * Taller than the room it has: it scrolls inside rather than running off the
+ * window. Only then — scrolling clips, and the panel's tips hang outside it.
+ */
+/*
+ * Its rows keep their height under a cap: in a flex column they would shrink
+ * instead, and overlap one another rather than overflow and scroll.
+ */
+.of-inspector > * {
+  flex-shrink: 0;
+}
+
+.of-inspector--scrolls {
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+
+/*
+ * Docked along the bottom of a narrow window: the full width, square to the
+ * edges it meets, and still the panel's own stock.
+ */
+.of-inspector-dock {
+  top: auto;
+  right: 0;
+  bottom: 0;
+}
+
+.of-inspector--docked {
+  border-bottom: none;
+  border-right: none;
+  border-left: none;
+  border-radius: var(--of-radius-surface) var(--of-radius-surface) 0 0;
 }
 
 /*
@@ -4515,10 +4703,6 @@ body {
  * first thing Tab reached from the board — one Enter from removing the
  * selection — while the place it is drawn is right where people look for it.
  */
-.of-inspector {
-  position: relative;
-}
-
 .of-inspector__delete {
   position: absolute;
   top: var(--of-step);
@@ -4552,7 +4736,7 @@ body {
 .of-inspector__title {
   margin: 0;
   font-size: var(--of-type-ui);
-  font-weight: 600;
+  font-weight: var(--of-weight-semibold);
   line-height: 1.25;
   color: var(--of-ink);
 }
@@ -4576,7 +4760,7 @@ body {
   margin: var(--of-space-6) 0 var(--of-space-2);
   font-family: var(--of-mono);
   font-size: var(--of-type-record);
-  font-weight: 400;
+  font-weight: var(--of-weight-regular);
   color: var(--of-ink-muted);
   text-transform: lowercase;
   letter-spacing: 0.02em;
@@ -4633,7 +4817,6 @@ body {
 .of-inspector__disclosure[aria-expanded='true'] svg {
   transform: rotate(90deg);
 }
-
 
 /*
  * A record row: label column, value column.
@@ -4879,7 +5062,7 @@ textarea.of-input {
 }
 
 .of-face--serif {
-  font-family: ui-serif, Georgia, 'Times New Roman', serif;
+  font-family: var(--of-serif);
 }
 
 .of-face--mono {
@@ -4984,15 +5167,6 @@ textarea.of-input {
   background: var(--of-ink);
   border: none;
   border-radius: var(--of-radius-hair);
-}
-
-/*
- * Swatches as index-slip stock rather than paint dots. Seven saturated circles
- * read as a paint app; a slip is a rectangle, and the page already speaks that
- * language.
- */
-.of-swatch {
-  border-radius: var(--of-radius-slip);
 }
 
 /*
@@ -5331,7 +5505,7 @@ textarea.of-input {
 
 /* The glyphs SHOW the formatting, so the button is legible without its label. */
 .of-format-bar__button--bold {
-  font-weight: 700;
+  font-weight: var(--of-weight-bold);
 }
 
 .of-format-bar__button--italic {
@@ -5373,17 +5547,6 @@ textarea.of-input {
   font-variant-numeric: tabular-nums;
   color: var(--of-ink-muted);
   text-align: center;
-}
-
-/*
- * The editable surface. A contenteditable, not a textarea — a textarea cannot
- * show a bold word. `pre-wrap` makes a newline character a line break, which is
- * what lets the model store newlines as text rather than as markup.
- */
-.of-rich-editor {
-  overflow-wrap: anywhere;
-  white-space: pre-wrap;
-  outline: 2px solid var(--of-accent);
 }
 
 /*
@@ -5508,10 +5671,17 @@ textarea.of-input {
  * asserts. Ground you cannot ignore is a cage the content has to fight.
  */
 .of-home {
+  /* The most actions a ledger row carries — three targets and two 2px gaps,
+     so 94px under a mouse and wider under a finger, whose targets grow.
+     See .of-home__row-actions. */
+  --of-home-actions: calc(3 * var(--of-hit-sm) + 2 * var(--of-space-2));
+
   box-sizing: border-box;
   display: flex;
   flex-direction: column;
-  gap: 28px;
+  /* On the rule, like every other offset in the chrome: three steps between
+     the header and the ledger, five above it, the gutter at the sides. */
+  gap: calc(3 * var(--of-step));
   width: 100%;
   min-height: 100dvh;
   /*
@@ -5520,7 +5690,7 @@ textarea.of-input {
    * whole page scroll — with nothing visible out there to scroll to.
    */
   overflow-x: clip;
-  padding: 48px 24px;
+  padding: calc(5 * var(--of-step)) var(--of-gutter);
   font-family: var(--of-font);
   color: var(--of-ink);
   background-color: var(--of-page);
@@ -5615,7 +5785,7 @@ textarea.of-input {
 .of-home__title {
   margin: 0;
   font-size: var(--of-type-headline);
-  font-weight: 600;
+  font-weight: var(--of-weight-semibold);
   line-height: 1.35;
 }
 
@@ -5700,7 +5870,7 @@ textarea.of-input {
   margin: 0 0 var(--of-space-12);
   font-family: var(--of-mono);
   font-size: var(--of-type-record);
-  font-weight: 400;
+  font-weight: var(--of-weight-regular);
   line-height: 1;
   letter-spacing: 0.02em;
   color: var(--of-ink-muted);
@@ -5792,7 +5962,7 @@ textarea.of-input {
    * share sheet, and the 32px it no longer needs went back to the name.
    */
   justify-content: flex-end;
-  width: 94px;
+  width: var(--of-home-actions);
   gap: var(--of-space-2);
   opacity: 0;
 }
@@ -5808,7 +5978,6 @@ textarea.of-input {
     opacity: 1;
   }
 }
-
 
 .of-home__rename {
   flex: 1;
@@ -6060,7 +6229,7 @@ textarea.of-input {
 /* Below the rail's own breakpoint, the page stops being a margin exercise. */
 @media (width <= 560px) {
   .of-home {
-    padding: 24px var(--of-space-16);
+    padding: var(--of-gutter) var(--of-space-16);
   }
 
   .of-home__column {
@@ -6090,26 +6259,74 @@ textarea.of-input {
    * repeating down the page. So the name takes its own line and the two
    * readouts share the one below it.
    */
+  /*
+   * And the stack has to leave the name room to BE read. Stacked, it still
+   * lost everything past about sixteen characters to a single line beside an
+   * action block, and "an hour ago" stood in a column one word wide, three
+   * lines tall (audit 2026-09-27).
+   *
+   * So on a phone the name has the whole row and may take two lines; the
+   * readouts flow, the time dropping under the tag WHOLE rather than breaking;
+   * and the actions sit at the end of the last readout line, under the name
+   * rather than beside it. The spacer after the readouts keeps that line's end
+   * clear for them — sized for the most a row carries, since a flowing line
+   * cannot know how many its own row has.
+   */
+  .of-home__row-main {
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr) auto;
+    align-items: center;
+  }
+
+  .of-home__row-main > .of-home__board,
+  .of-home__row-main > .of-home__rename {
+    grid-row: 1;
+    grid-column: 2 / 4;
+  }
+
+  .of-home__row-main > .of-home__row-actions {
+    grid-row: 1;
+    grid-column: 3;
+    align-self: end;
+    width: auto;
+    /* Level with the spacer, which sits inside the link's padding. */
+    margin-bottom: var(--of-step);
+  }
+
+  .of-home__row-main > .of-home__row-note {
+    grid-column: 2 / 4;
+  }
+
   .of-home__board {
-    grid-template-columns: auto 1fr;
-    grid-template-areas:
-      'title title'
-      'tag when';
-    row-gap: var(--of-space-2);
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: var(--of-space-2) var(--of-step);
     padding: var(--of-step) var(--of-space-8);
   }
 
-  .of-home__board-title {
-    grid-area: title;
+  /* As tall as the actions too: a spacer that wraps onto a line of its own
+     has to MAKE that line, or the actions hang over the readouts above it. */
+  .of-home__board::after {
+    flex: 0 0 var(--of-home-actions);
+    height: var(--of-hit-sm);
+    content: '';
   }
 
-  .of-home__board-tag {
-    grid-area: tag;
+  .of-home__board-title {
+    display: -webkit-box;
+    flex-basis: 100%;
+    overflow-wrap: anywhere;
+    white-space: normal;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 2;
+    line-clamp: 2;
   }
 
   .of-home__board-when {
-    grid-area: when;
     min-width: 0;
+    white-space: nowrap;
+    text-align: left;
   }
 }
 
@@ -6253,7 +6470,7 @@ textarea.of-input {
    */
   font-family: var(--of-font);
   font-size: var(--of-type-ui);
-  font-weight: 600;
+  font-weight: var(--of-weight-semibold);
   text-overflow: ellipsis;
   white-space: nowrap;
   color: var(--of-ink);
@@ -6510,7 +6727,6 @@ textarea.of-input {
   align-items: center;
   padding: var(--of-space-4);
 }
-
 
 .of-arrange__glyph {
   width: 17px;

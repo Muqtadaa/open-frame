@@ -91,11 +91,32 @@ export function groupByParent(doc: BoardDocument): Map<ObjectId | null, AnyOpenF
   return byParent
 }
 
+/*
+ * One paint order per DOCUMENT. A document is immutable — every change makes
+ * a new one — so its order never goes stale, and a WeakMap lets it go with
+ * the document. It was worked out afresh on every call: hover hit testing
+ * asks on every pointer move, and at 10,000 objects that was 4.4ms a move
+ * with the pointer merely moving (audit 2026-09-27).
+ */
+const paintOrders = new WeakMap<BoardDocument, readonly AnyOpenFrameObject[]>()
+
 /**
  * Every object in the document in paint order: parents before children,
  * siblings in fractional-index order. This is the order the renderer draws in.
+ *
+ * Read-only because it is shared: the same array goes to every caller for the
+ * same document, so one that sorted or reversed it in place would reorder the
+ * board for everybody else.
  */
-export function objectsInPaintOrder(doc: BoardDocument): AnyOpenFrameObject[] {
+export function objectsInPaintOrder(doc: BoardDocument): readonly AnyOpenFrameObject[] {
+  const known = paintOrders.get(doc)
+  if (known !== undefined) return known
+  const painted = paintOrderOf(doc)
+  paintOrders.set(doc, painted)
+  return painted
+}
+
+function paintOrderOf(doc: BoardDocument): readonly AnyOpenFrameObject[] {
   const byParent = groupByParent(doc)
   const result: AnyOpenFrameObject[] = []
   // A cycle would otherwise recurse forever and hang the renderer. Load-time

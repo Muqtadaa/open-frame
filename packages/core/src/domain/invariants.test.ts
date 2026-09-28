@@ -109,6 +109,21 @@ describe('paint order', () => {
     ])
   })
 
+  /*
+   * Asked on every pointer move by hover hit testing, and on every frame by
+   * culling — and it regrouped and re-sorted the whole document each time:
+   * about 1ms a move at 1,000 objects and 4.4ms at 10,000, with the pointer
+   * merely moving (audit 2026-09-27). A document is immutable, so its paint
+   * order is worked out once per document.
+   */
+  it('is worked out once per document, and afresh for a new one', () => {
+    const doc = docWith(obj('a', null), obj('b', 'a'))
+    expect(objectsInPaintOrder(doc)).toBe(objectsInPaintOrder(doc))
+    const next = docWith(obj('a', null), obj('b', 'a'), obj('c', null))
+    expect(objectsInPaintOrder(next)).not.toBe(objectsInPaintOrder(doc))
+    expect(objectsInPaintOrder(next)).toHaveLength(3)
+  })
+
   it('includes every object exactly once', () => {
     const doc = docWith(obj('a', null), obj('b', 'a'), obj('c', 'b'), obj('d', null))
     expect(objectsInPaintOrder(doc)).toHaveLength(4)

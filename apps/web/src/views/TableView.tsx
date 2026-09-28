@@ -415,6 +415,17 @@ function TableGrid({
                   key={index}
                   className={`of-table__cell${head ? ' of-table__cell--head' : ''}`}
                   role={head ? 'columnheader' : 'cell'}
+                  /*
+                   * A header nobody has typed yet still names its column, in
+                   * the words the editor's header strip uses: a fresh table
+                   * read as a grid of columns called nothing (audit
+                   * 2026-09-27).
+                   */
+                  aria-label={
+                    head && plainTextOf(cell.text).trim() === ''
+                      ? `Column ${letter(col)}`
+                      : undefined
+                  }
                   // Where it is and how far it reaches, read back by fitting a
                   // track: with merges, a cell's position among its siblings no
                   // longer says which column it is in.

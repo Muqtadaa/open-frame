@@ -426,6 +426,33 @@ test('shows a picked mention as a name, never as the token it is stored as', asy
  * because a comment is prose, and Escape closes the panel. The menu borrows
  * them while it is open and has to give them back when it is not.
  */
+/*
+ * The mention list is announced as it opens, and the box never points at one
+ * that is not there (audit 2026-09-27): `aria-controls` named an element that
+ * did not exist while no list was open, which is invalid ARIA, and nothing
+ * said a list had appeared.
+ */
+test('the composer points at the mention list only while it is open, and says so', async ({
+  page,
+}) => {
+  await signedIn(page, [{ id: BOARD, title: 'Shared', role: 'owner' }])
+  await openBoard(page)
+  await page.getByTestId('tool-comment').click()
+  await page.locator('[data-testid="canvas"]').click({ position: { x: 260, y: 200 } })
+
+  const input = page.getByTestId('comment-input')
+  await expect(input).not.toHaveAttribute('aria-controls', /.*/)
+  await input.pressSequentially('@Ro')
+  await expect(page.getByTestId('mention-menu')).toBeVisible()
+  const controls = await input.getAttribute('aria-controls')
+  expect(controls).not.toBeNull()
+  await expect(page.locator(`#${controls ?? ''}`)).toHaveCount(1)
+  await expect(page.getByTestId('mention-status')).toHaveText(/1 person matches/)
+
+  await input.press('Escape')
+  await expect(input).not.toHaveAttribute('aria-controls', /.*/)
+})
+
 test('the menu takes Enter and Escape only while it is open', async ({ page }) => {
   await signedIn(page, [{ id: BOARD, title: 'Shared', role: 'owner' }])
   await openBoard(page)
@@ -461,22 +488,17 @@ test('the menu takes Enter and Escape only while it is open', async ({ page }) =
  * to go home. This is the same bell, on a canvas.
  */
 test('carries the bell onto the board, not just the front door', async ({ page }) => {
-  await signedIn(
-    page,
-    [{ id: BOARD, title: 'Shared', role: 'owner' }],
-    'Muqtadaa Miandara',
-    {
-      mentions: [
-        {
-          commentId: 'cmt_elsewhere',
-          boardId: BOARD,
-          boardTitle: 'Another board',
-          authorName: 'Rowan',
-          body: `@[Muqtadaa Miandara](${'0'.repeat(8)}-0000-4000-8000-000000000001) come and look`,
-        },
-      ],
-    },
-  )
+  await signedIn(page, [{ id: BOARD, title: 'Shared', role: 'owner' }], 'Muqtadaa Miandara', {
+    mentions: [
+      {
+        commentId: 'cmt_elsewhere',
+        boardId: BOARD,
+        boardTitle: 'Another board',
+        authorName: 'Rowan',
+        body: `@[Muqtadaa Miandara](${'0'.repeat(8)}-0000-4000-8000-000000000001) come and look`,
+      },
+    ],
+  })
   await openBoard(page)
 
   const bell = page.getByTestId('mentions-button')
@@ -1005,7 +1027,9 @@ test.describe('by keyboard', () => {
     await expect(page.getByRole('heading', { name: 'Comments' })).toBeFocused()
     await page.keyboard.press('Escape')
     await expect(page.getByTestId('comment-panel')).toHaveCount(0)
-    await expect(page.getByTestId('tool-comment')).toBeFocused()
+    // Back where M was pressed: the board, which keeps the keyboard after an
+    // edit now (audit 2026-09-27) rather than dropping it on the page.
+    await expect(page.getByTestId('canvas')).toBeFocused()
   })
 
   test('a pin that opened a thread gets the keyboard back', async ({ page }) => {
@@ -1028,8 +1052,20 @@ test.describe('by keyboard', () => {
   test('the mentions list is a sheet: in, along, and out again', async ({ page }) => {
     await signedIn(page, [{ id: BOARD, title: 'Shared', role: 'owner' }], 'Muqtadaa Miandara', {
       mentions: [
-        { commentId: 'cmt_m1', boardId: BOARD, boardTitle: 'Shared', authorName: 'Rowan', body: 'first' },
-        { commentId: 'cmt_m2', boardId: BOARD, boardTitle: 'Shared', authorName: 'Wren', body: 'second' },
+        {
+          commentId: 'cmt_m1',
+          boardId: BOARD,
+          boardTitle: 'Shared',
+          authorName: 'Rowan',
+          body: 'first',
+        },
+        {
+          commentId: 'cmt_m2',
+          boardId: BOARD,
+          boardTitle: 'Shared',
+          authorName: 'Wren',
+          body: 'second',
+        },
       ],
     })
     await page.goto(HOME_URL)
@@ -1056,9 +1092,7 @@ test.describe('by keyboard', () => {
  * discussion is still live is the first thing they need, and nothing said.
  */
 test.describe('when, how many, and where', () => {
-  test('says when each remark was made, and how many replies a thread has', async ({
-    page,
-  }) => {
+  test('says when each remark was made, and how many replies a thread has', async ({ page }) => {
     await signedIn(page, [{ id: BOARD, title: 'Shared', role: 'owner' }])
     await openBoard(page)
     await page.getByTestId('tool-comment').click()
@@ -1157,7 +1191,13 @@ test.describe('the marks themselves', () => {
   test('the mentions bell is a quiet chip a hand can hit', async ({ page }) => {
     await signedIn(page, [{ id: BOARD, title: 'Shared', role: 'owner' }], 'Muqtadaa Miandara', {
       mentions: [
-        { commentId: 'cmt_m1', boardId: BOARD, boardTitle: 'Shared', authorName: 'Rowan', body: 'hi' },
+        {
+          commentId: 'cmt_m1',
+          boardId: BOARD,
+          boardTitle: 'Shared',
+          authorName: 'Rowan',
+          body: 'hi',
+        },
       ],
     })
     await openBoard(page)

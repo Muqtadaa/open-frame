@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, type CSSProperties } from 'react'
+import { memo, useEffect, useMemo, useRef, type CSSProperties } from 'react'
 
 import { useInteractionStore } from '../interaction/interaction-store.js'
 import { cursorFor } from '../interaction/tool-cursor.js'
@@ -101,6 +101,27 @@ export function Canvas() {
    * should the pointer — a cursor showing a rectangle while the rail shows a
    * diamond is the interface disagreeing with itself.
    */
+  /*
+   * WHEN AN EDIT ENDS, the keyboard comes back to the board. The editor
+   * unmounts with focus inside it, which leaves focus on BODY — and Tab then
+   * started again at "All boards", thirty stops away, after every keyboard
+   * edit. Only when nothing else has taken focus: a click into the record
+   * panel that ended the edit keeps its field.
+   */
+  useEffect(
+    () =>
+      useInteractionStore.subscribe((state, previous) => {
+        if (previous.editingId === null || state.editingId !== null) return
+        requestAnimationFrame(() => {
+          const active = window.document.activeElement
+          if (active === null || active === window.document.body) {
+            containerRef.current?.focus({ preventScroll: true })
+          }
+        })
+      }),
+    [containerRef],
+  )
+
   const ink = useCursorInk()
   const toolCursor = useMemo(() => cursorFor(tool, shapeKind, ink), [tool, shapeKind, ink])
 
@@ -138,7 +159,8 @@ export function Canvas() {
       onPointerDown={gestures.onPointerDown}
       onPointerMove={gestures.onPointerMove}
       onPointerUp={gestures.onPointerUp}
-      onPointerCancel={gestures.onPointerUp}
+      onPointerCancel={gestures.onPointerCancel}
+      onLostPointerCapture={gestures.onLostPointerCapture}
       onPointerLeave={gestures.onPointerLeave}
       onDoubleClick={gestures.onDoubleClick}
       onContextMenu={gestures.onContextMenu}
@@ -164,36 +186,7 @@ export function Canvas() {
        * 5% and at 1600% alike. Inside the world transform that is not
        * expressible — see `.of-apparatus` in styles.css for what fails.
        */}
-      <div className="of-apparatus" data-apparatus-layer>
-        <HoverOverlay />
-        <SelectionOverlay />
-        <ConnectPoints />
-        <DrawPreview />
-        <MarqueeOverlay />
-        <AlignmentOverlay />
-        <EndpointOverlay />
-        <DividerOverlay />
-        <CropOverlay />
-        <ConnectorPreview />
-        {/*
-          Rendered here but PORTALED out, like every other piece of apparatus:
-          it lives inside the tree so it sees the selection and the document,
-          and lands on the chrome layer so it can be clamped to the window.
-        */}
-        <ArrangeBar />
-        {/*
-          A pin is above the grips: it is the only way to open the thread under
-          it, and one on the edge of a selected object was covered by that
-          object's handles. The words are elsewhere, in the panel — text that
-          scaled with the board could not be read at 25%.
-        */}
-        <CommentLayer />
-        {/*
-          Last, so other people's cursors sit above the board and every overlay
-          on it — a cursor behind a note is a cursor nobody can follow.
-        */}
-        <PresenceLayer />
-      </div>
+      <Apparatus />
 
       {/*
        * Where a type's own apparatus lands: OUTSIDE the world transform, so
@@ -204,3 +197,46 @@ export function Canvas() {
     </div>
   )
 }
+
+/*
+ * The apparatus, in a component of its own with no props, and memoised.
+ *
+ * Every overlay here reads what it needs from the store itself, the viewport
+ * included. As children of the canvas they also re-rendered whenever the
+ * canvas did — on every pan move, twice per move for each of thirteen
+ * overlays, most of them drawing nothing (audit 2026-09-27).
+ */
+const Apparatus = memo(function Apparatus() {
+  return (
+    <div className="of-apparatus" data-apparatus-layer>
+      <HoverOverlay />
+      <SelectionOverlay />
+      <ConnectPoints />
+      <DrawPreview />
+      <MarqueeOverlay />
+      <AlignmentOverlay />
+      <EndpointOverlay />
+      <DividerOverlay />
+      <CropOverlay />
+      <ConnectorPreview />
+      {/*
+      Rendered here but PORTALED out, like every other piece of apparatus:
+      it lives inside the tree so it sees the selection and the document,
+      and lands on the chrome layer so it can be clamped to the window.
+    */}
+      <ArrangeBar />
+      {/*
+      A pin is above the grips: it is the only way to open the thread under
+      it, and one on the edge of a selected object was covered by that
+      object's handles. The words are elsewhere, in the panel — text that
+      scaled with the board could not be read at 25%.
+    */}
+      <CommentLayer />
+      {/*
+      Last, so other people's cursors sit above the board and every overlay
+      on it — a cursor behind a note is a cursor nobody can follow.
+    */}
+      <PresenceLayer />
+    </div>
+  )
+})

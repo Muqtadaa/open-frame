@@ -1,6 +1,6 @@
-import type { Session } from '@supabase/supabase-js'
+import type { Session, SupabaseClient } from '@supabase/supabase-js'
 
-import { supabaseClient } from './client.js'
+import { onClientBuilt, sessionPossible, supabaseClient } from './client.js'
 
 /**
  * Who you are, if you are anybody.
@@ -40,7 +40,7 @@ export interface AuthResult {
 const PROFILE_COLUMNS = 'display_name, hue'
 
 async function identityFrom(session: Session): Promise<Identity> {
-  const client = supabaseClient()
+  const client = await supabaseClient()
   const fallbackName = session.user.email?.split('@')[0] ?? 'Someone'
 
   let displayName = fallbackName
@@ -76,7 +76,9 @@ async function identityFrom(session: Session): Promise<Identity> {
 
 /** The identity right now, or `null` for a guest. */
 export async function currentIdentity(): Promise<Identity | null> {
-  const client = supabaseClient()
+  // Signed out for certain: no need to load the library to say so.
+  if (!sessionPossible()) return null
+  const client = await supabaseClient()
   if (client === null) return null
   const { data } = await client.auth.getSession()
   return data.session === null ? null : identityFrom(data.session)
@@ -87,18 +89,39 @@ export async function currentIdentity(): Promise<Identity | null> {
  * refresh, because the token is part of the identity.
  */
 export function onIdentityChange(listener: (identity: Identity | null) => void): () => void {
-  const client = supabaseClient()
-  if (client === null) return () => undefined
-
-  const { data } = client.auth.onAuthStateChange((_event, session) => {
-    if (session === null) {
-      listener(null)
-      return
+  // The client arrives asynchronously now; an unsubscribe that comes first
+  // must still mean nothing is ever heard.
+  let stopped = false
+  let stop: (() => void) | null = null
+  const listen = (client: SupabaseClient): void => {
+    if (stopped) return
+    const { data } = client.auth.onAuthStateChange((_event, session) => {
+      if (session === null) {
+        listener(null)
+        return
+      }
+      void identityFrom(session).then(listener)
+    })
+    stop = () => {
+      data.subscription.unsubscribe()
     }
-    void identityFrom(session).then(listener)
-  })
+  }
+  /*
+   * With no session to hear about, wait for the client to be built — by a
+   * sign-in, say — rather than building it just to listen to nothing.
+   */
+  let unwait: () => void = () => undefined
+  if (sessionPossible()) {
+    void supabaseClient().then((client) => {
+      if (client !== null) listen(client)
+    })
+  } else {
+    unwait = onClientBuilt(listen)
+  }
   return () => {
-    data.subscription.unsubscribe()
+    stopped = true
+    unwait()
+    stop?.()
   }
 }
 
@@ -133,7 +156,7 @@ export function readableError(message: string): string {
 }
 
 export async function signIn(email: string, password: string): Promise<AuthResult> {
-  const client = supabaseClient()
+  const client = await supabaseClient()
   if (client === null) return { ok: false, message: 'This build has no accounts.' }
 
   const { error } = await client.auth.signInWithPassword({ email, password })
@@ -145,7 +168,7 @@ export async function signUp(
   password: string,
   displayName: string,
 ): Promise<AuthResult> {
-  const client = supabaseClient()
+  const client = await supabaseClient()
   if (client === null) return { ok: false, message: 'This build has no accounts.' }
 
   const { error } = await client.auth.signUp({
@@ -159,5 +182,5 @@ export async function signUp(
 }
 
 export async function signOut(): Promise<void> {
-  await supabaseClient()?.auth.signOut()
+  await (await supabaseClient())?.auth.signOut()
 }

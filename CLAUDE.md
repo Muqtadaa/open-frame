@@ -494,6 +494,25 @@ through `updateParagraph`/`setList`, never as a character edit: deleting the
 last character of an empty line after a list leaves text ending in the list's
 newline, which reads as no line at all.
 
+### 28. A gesture that is interrupted is put back, not committed
+
+Touch is in scope, and a finger is interrupted in ways a mouse never is: the
+browser takes the pointer for a scroll (`pointercancel`), capture is lost
+(`lostpointercapture`), the window loses focus, or a second finger lands. Each
+of those reverts the gesture exactly as Escape does — rule 4's one command is
+only ever dispatched by a gesture that FINISHED. `pointercancel` used to commit,
+so a phone's own scroll could leave a half-dragged selection written to the
+document and the undo stack.
+
+A second finger never joins a one-finger gesture; it abandons it and becomes a
+pinch, which zooms and pans about the midpoint and writes nothing.
+
+**A coarse pointer changes sizes, so re-check every threshold computed from
+one.** `--of-hit-sm` is 40px under a finger, and the rail's scroll breakpoint —
+worked out for 30px tools — let it overrun its own box between 493 and 603px
+tall, the last tools drawn out of reach. `rail-overflow.spec.ts` walks the
+heights with touch on for that reason.
+
 ---
 
 ## Conventions

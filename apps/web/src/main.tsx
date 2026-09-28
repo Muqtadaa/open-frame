@@ -5,10 +5,10 @@ import { IndexedDbBoardRepository } from './adapters/indexeddb/indexeddb-board-r
 import { App } from './app/App.js'
 import { AppErrorBoundary } from './app/AppErrorBoundary.js'
 import { createBoardCapabilities } from './app/board-capabilities.js'
+import type { BoardConnection } from '@openframe/collab'
 import { COLLAB_ENABLED } from './app/collab-config.js'
 import { healAssets } from './app/heal-assets.js'
 import { forgetDeletedBoard } from './app/board-lifecycle.js'
-import { startCollaboration } from './app/collaboration.js'
 import { createRuntime } from './app/composition-root.js'
 import { markLocalOpened } from './app/board-prefs.js'
 import { joinBoard, touchBoardOpened } from './app/remote-boards.js'
@@ -62,7 +62,7 @@ if (route.kind === 'home') {
    * panel of its own, rather than leaving a cheerful lie on screen.
    */
   let runtime: Awaited<ReturnType<typeof createRuntime>>
-  let collaboration: Awaited<ReturnType<typeof startCollaboration>> | null
+  let collaboration: BoardConnection | null
   try {
     runtime = await createRuntime({ boardId: route.boardId, capabilities })
 
@@ -73,9 +73,16 @@ if (route.kind === 'home') {
      * this deployment does not collaborate, rather than one that fails to,
      * forever.
      */
+    /*
+     * Imported only for a shared board: the collaboration code and Yjs are
+     * about 80KB a local board never runs, and they were in the entry chunk
+     * of every page (audit 2026-09-27).
+     */
     collaboration =
       route.shared && COLLAB_ENABLED
-        ? await startCollaboration(
+        ? await (
+            await import('./app/collaboration.js')
+          ).startCollaboration(
             runtime,
             route.boardId,
             (error) => {

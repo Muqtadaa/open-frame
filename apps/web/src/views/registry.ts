@@ -157,6 +157,18 @@ export interface ObjectViewDefinition {
    */
   readonly usesAssets?: boolean
   /**
+   * Declares that this view draws differently at another zoom, so its objects
+   * are handed the live zoom and redraw as it changes.
+   *
+   * Every object used to subscribe to the zoom, so one wheel step re-rendered
+   * every visible object on the board — 10ms of script per step at 200
+   * objects, three times that on a slower machine. Most views never read it;
+   * a frame's hairline edge and a connector's label do.
+   * `zoom-dependence.test` renders every view at two zooms and holds any
+   * whose drawing changes to declaring this.
+   */
+  readonly usesZoom?: boolean
+  /**
    * The colour a fresh object of this type shows before anybody chooses one.
    *
    * Declared, because the record panel has to MARK it: a new sticky was
@@ -187,6 +199,7 @@ export function defineObjectView<TData>(definition: {
   Renderer: ComponentType<ObjectViewProps<TData>>
   InlineEditor?: ComponentType<ObjectEditorProps<TData>>
   usesAssets?: boolean
+  usesZoom?: boolean
   defaultColor?: ColorToken
   defaultAlign?: AlignToken
   defaultVerticalAlign?: VAlignToken
@@ -201,6 +214,7 @@ export function defineObjectView<TData>(definition: {
     type: definition.type,
     Renderer: definition.Renderer as ComponentType<ObjectViewProps>,
     ...(definition.usesAssets === true ? { usesAssets: true } : {}),
+    ...(definition.usesZoom === true ? { usesZoom: true } : {}),
     ...(definition.defaultColor === undefined ? {} : { defaultColor: definition.defaultColor }),
     ...(definition.defaultAlign === undefined ? {} : { defaultAlign: definition.defaultAlign }),
     ...(definition.defaultVerticalAlign === undefined

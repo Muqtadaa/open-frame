@@ -38,7 +38,9 @@ const CANVAS = read('src/canvas/Canvas.tsx')
  */
 function renderedBetween(from: string, to: string): string[] {
   const start = CANVAS.indexOf(from)
-  const end = CANVAS.indexOf(to)
+  // The end marker is looked for AFTER the start: the apparatus layer is its
+  // own component, at the foot of the file, and ends with it.
+  const end = CANVAS.indexOf(to, start)
   if (start < 0 || end < 0 || end <= start) return []
   const found = [...CANVAS.slice(start, end).matchAll(/<([A-Z][A-Za-z]*)\b/g)].map(
     (match) => match[1] ?? '',
@@ -46,8 +48,8 @@ function renderedBetween(from: string, to: string): string[] {
   return [...new Set(found)]
 }
 
-const IN_WORLD = renderedBetween('`of-world', 'className="of-apparatus"')
-const ON_APPARATUS = renderedBetween('className="of-apparatus"', 'className="of-chrome-layer"')
+const IN_WORLD = renderedBetween('`of-world', '<Apparatus />')
+const ON_APPARATUS = renderedBetween('className="of-apparatus"', '\n})')
 
 /** Where a canvas component's source lives, or null if it is somewhere else. */
 function sourceOf(name: string): string | null {

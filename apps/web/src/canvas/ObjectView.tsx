@@ -7,6 +7,7 @@ import { useCommands } from '../hooks/use-commands.js'
 import { useOpenFrame } from '../runtime/context.js'
 import { useInteractionStore } from '../interaction/interaction-store.js'
 import { useRemoteDrag } from '../interaction/remote-drags.js'
+import { translateOffset } from '../interaction/drag-offset.js'
 import { ObjectErrorBoundary } from './ObjectErrorBoundary.js'
 import { EditorChrome, EditorOverlay } from './EditorChrome.js'
 import { FallbackView } from '../views/FallbackView.js'
@@ -63,7 +64,16 @@ function ObjectViewInner({ id, views }: Props) {
   const overlay = useOverlay(id)
   const object = useDocumentObject(id)
   const selected = useInteractionStore((state) => state.selection.has(id))
-  const zoom = useInteractionStore((state) => state.viewport.zoom)
+  /*
+   * The zoom only for a view that draws by it, or an object being edited —
+   * editors place their chrome by it. Everything else gets a constant, so a
+   * wheel step no longer re-renders every object on the board.
+   */
+  const editingThis = useInteractionStore((state) => state.editingId === id)
+  const zoomed = object !== undefined && views.get(object.type)?.usesZoom === true
+  const zoom = useInteractionStore((state) =>
+    zoomed || editingThis ? state.viewport.zoom : 1,
+  )
   // Subscribes to the objects this one's rendering depends on — a connector's
   // endpoints — so it redraws when they move. Without this, per-object
   // subscriptions would leave dependent objects stale.
@@ -88,12 +98,9 @@ function ObjectViewInner({ id, views }: Props) {
   const isDragging = useInteractionStore(
     (state) => state.drag.kind === 'translate' && state.drag.ids.has(id),
   )
-  const dragDx = useInteractionStore((state) =>
-    state.drag.kind === 'translate' ? state.drag.dx : 0,
-  )
-  const dragDy = useInteractionStore((state) =>
-    state.drag.kind === 'translate' ? state.drag.dy : 0,
-  )
+  // Gated on membership: every visible object runs these on every move.
+  const dragDx = useInteractionStore((state) => translateOffset(state.drag, id, 'dx'))
+  const dragDy = useInteractionStore((state) => translateOffset(state.drag, id, 'dy'))
   // `Map.get` returns a stable reference while the map is unchanged, so this is
   // a safe selector despite looking like it constructs something.
   /*

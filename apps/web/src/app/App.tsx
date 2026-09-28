@@ -33,10 +33,12 @@ export function App() {
   if (runtime.quarantine !== null) {
     return (
       <div className="of-app">
-        <Canvas />
         <div className="of-overlay of-overlay--nav" data-keep-clear="top">
           <StatusBar />
         </div>
+        <main className="of-board-main" aria-label="Board">
+          <Canvas />
+        </main>
         <BoardUnreadable />
       </div>
     )
@@ -44,30 +46,42 @@ export function App() {
   return (
     <CommentsProvider>
       <div className="of-app">
-        <Canvas />
-
         {/*
           The board's navigation, along the top — the way out, the name, the
           history. `data-keep-clear` marks furniture anchored to the WINDOW,
           which anything anchored to a selection has to stay clear of because
           it cannot move out of the way itself; the value names the edge it
           holds. See controls/screen-furniture.ts.
+
+          FIRST in the page, before the board: it holds the h1, and the record
+          panel's heading can dock on the canvas's chrome layer, which read it
+          out before the page's own title (audit 2026-09-27).
         */}
         <div className="of-overlay of-overlay--nav" data-keep-clear="top">
           <StatusBar />
         </div>
 
-        <div className="of-overlay of-overlay--left">
-          <Toolbar />
-        </div>
+        {/*
+          The board, and what you work on it with, as the page's main content —
+          it was in no landmark at all, so jumping between them skipped the one
+          thing the page is for. `display: contents`, so the overlays inside it
+          are still placed against the app and nothing moves.
+        */}
+        <main className="of-board-main" aria-label="Board">
+          <Canvas />
+
+          <div className="of-overlay of-overlay--left">
+            <Toolbar />
+          </div>
+
+          <div className="of-overlay of-overlay--bottom-right" data-keep-clear="bottom">
+            <ZoomControl />
+          </div>
+        </main>
 
         <div className="of-overlay of-overlay--top">
           <NoticeBanner notices={runtime.notices} />
           <Toast />
-        </div>
-
-        <div className="of-overlay of-overlay--bottom-right" data-keep-clear="bottom">
-          <ZoomControl />
         </div>
 
         <Inspector />

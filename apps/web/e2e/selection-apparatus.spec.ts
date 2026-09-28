@@ -235,7 +235,10 @@ test.describe('the board from the keyboard', () => {
     await page.keyboard.press('Escape')
 
     // From the top of the page, the board is a stop in the order.
-    await page.locator('body').focus()
+    // Nothing focused: the body cannot take focus, so blur whatever has it.
+    await page.evaluate(() => {
+      if (document.activeElement instanceof HTMLElement) document.activeElement.blur()
+    })
     let reached = false
     for (let press = 0; press < 60 && !reached; press += 1) {
       await page.keyboard.press('Tab')

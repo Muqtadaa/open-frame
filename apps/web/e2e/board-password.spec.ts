@@ -198,6 +198,17 @@ test.describe('as a dialog', () => {
     expect(inert).toBe(true)
   })
 
+  test('is a dialog that holds a form, not a form playing a dialog', async ({ page }) => {
+    // A form carries an implicit role of its own, and one given `alertdialog`
+    // instead loses it — so Enter-to-submit worked, but nothing said a form
+    // was there (audit 2026-09-27).
+    const gate = page.getByRole('alertdialog', { name: 'This board has a password' })
+    await expect(gate).toBeVisible()
+    expect(await gate.evaluate((element) => element.tagName)).toBe('DIV')
+    await expect(gate.locator('form')).toHaveCount(1)
+    await expect(gate.locator('form').getByTestId('board-password')).toHaveCount(1)
+  })
+
   test('puts the keyboard back in the field after a wrong password, and says why', async ({
     page,
   }) => {

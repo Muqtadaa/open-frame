@@ -1,4 +1,4 @@
-import { useEffect } from 'react'
+import { useLayoutEffect } from 'react'
 
 import type { ObjectId } from '@openframe/core'
 
@@ -66,7 +66,14 @@ export function useKeyboardShortcuts(setSpaceHeld: (held: boolean) => void): voi
   const commands = useCommands()
   const { runtime } = useOpenFrame()
 
-  useEffect(() => {
+  /*
+   * A LAYOUT effect, attached during React's commit and so before the board is
+   * ever painted. As a passive effect it ran after the paint: the rail was on
+   * screen for a moment with nothing listening, and a key pressed at it — by a
+   * person opening a board and pressing S, or by a spec — went nowhere. The
+   * same gap reopened on every re-render that changed the dependencies below.
+   */
+  useLayoutEffect(() => {
     /*
      * Whether the control with focus got it from the POINTER. A focus move
      * takes its source from the last input: a click leaves focus pointer-led,
