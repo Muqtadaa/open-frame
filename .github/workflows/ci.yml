@@ -69,7 +69,7 @@ jobs:
 
       - run: pnpm install --frozen-lockfile
 
-      - run: pnpm --filter @openframe/web exec playwright install --with-deps chromium
+      - uses: ./.github/actions/playwright
 
       # Boots a real workerd with a real SQLite-backed Durable Object and drives
       # two browsers at it. Separate from the `e2e` job because it needs a
@@ -77,6 +77,16 @@ jobs:
       # with no account anywhere.
       - name: Two windows, one board
         run: pnpm test:rooms
+
+      # Traces are recorded on the first retry, so a failure that passed on its
+      # retry — the one worth a look — leaves one here as well.
+      - uses: actions/upload-artifact@v4
+        if: ${{ !cancelled() }}
+        with:
+          name: rooms-test-results
+          path: apps/web/test-results/
+          retention-days: 7
+          if-no-files-found: ignore
 
   e2e:
     name: End-to-end
@@ -94,7 +104,7 @@ jobs:
       - run: pnpm install --frozen-lockfile
 
       - name: Install Playwright browsers
-        run: pnpm --filter @openframe/web exec playwright install --with-deps chromium
+        uses: ./.github/actions/playwright
 
       - name: Run end-to-end tests
         run: pnpm test:e2e
@@ -105,3 +115,11 @@ jobs:
           name: playwright-report
           path: apps/web/playwright-report/
           retention-days: 7
+
+      - uses: actions/upload-artifact@v4
+        if: ${{ !cancelled() }}
+        with:
+          name: e2e-test-results
+          path: apps/web/test-results/
+          retention-days: 7
+          if-no-files-found: ignore
