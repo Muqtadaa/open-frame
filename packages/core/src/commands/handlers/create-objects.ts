@@ -5,6 +5,7 @@ import { orderBetween } from '../../domain/order.js'
 import type { OrderKey } from '../../domain/ids.js'
 import type { Patch } from '../../domain/patch.js'
 import { CommandError } from '../errors.js'
+import { requirePaintable } from './shared.js'
 import type { CommandContext, Command } from '../types.js'
 
 type CreateObjects = Extract<Command, { kind: 'CreateObjects' }>
@@ -28,6 +29,7 @@ export function createObjects(
   const claimed = new Set<string>()
 
   for (const spec of command.objects) {
+    if (spec.style !== undefined) requirePaintable(spec.style)
     const definition = ctx.registry.get(spec.type)
     if (definition === undefined) {
       throw new CommandError('unknown-type', `Object type "${spec.type}" is not registered`)

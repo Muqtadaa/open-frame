@@ -3,7 +3,7 @@ import type { Patch } from '../../domain/patch.js'
 import type { StyleProp } from '../../domain/object.js'
 import { CommandError } from '../errors.js'
 import type { CommandContext, Command } from '../types.js'
-import { requireObject, requireUnlocked } from './shared.js'
+import { requireObject, requirePaintable, requireUnlocked } from './shared.js'
 
 type UpdateStyle = Extract<Command, { kind: 'UpdateStyle' }>
 
@@ -25,6 +25,7 @@ export function updateStyle(
     throw new CommandError('invalid-input', 'UpdateStyle requires at least one id')
   }
 
+  requirePaintable(command.style)
   const requested = Object.entries(command.style).filter(([, value]) => value !== undefined)
   if (requested.length === 0) {
     throw new CommandError('invalid-input', 'UpdateStyle requires at least one style property')
