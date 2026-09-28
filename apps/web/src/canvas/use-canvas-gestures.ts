@@ -702,7 +702,10 @@ export function useCanvasGestures(containerRef: RefObject<HTMLElement | null>) {
             intent.from === null
               ? ({ kind: 'point', x: intent.at.x, y: intent.at.y } as const)
               : ({ kind: 'object', objectId: intent.from, anchor: { kind: 'auto' } } as const)
-          store.beginConnect(from, intent.at)
+          store.beginConnect(from, intent.at, {
+            type: intent.objectType,
+            ...(intent.data === undefined ? {} : { data: intent.data }),
+          })
           return 'connect'
         }
       }
@@ -1382,7 +1385,7 @@ export function useCanvasGestures(containerRef: RefObject<HTMLElement | null>) {
       }
 
       if (active.mode === 'connect' && store.drag.kind === 'connect') {
-        const { from, to, over } = store.drag
+        const { from, to, over, make } = store.drag
         /*
          * A NEW line answers "where does this attach" exactly as a re-dragged
          * end does, through the same function in the type. Two answers to one
@@ -1411,7 +1414,7 @@ export function useCanvasGestures(containerRef: RefObject<HTMLElement | null>) {
           target.kind === 'point' &&
           Math.hypot(target.x - from.x, target.y - from.y) < 8
         if (!trivial) {
-          const id = commands.createConnector(from, target)
+          const id = commands.createConnector(from, target, make)
           if (id !== null) {
             store.setSelection([id])
             store.setTool('select')

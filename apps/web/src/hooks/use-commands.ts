@@ -48,7 +48,15 @@ import { panToReveal } from '../scene/zoom.js'
 export interface BoardCommands {
   /** Creates any registered type. No per-type method — that is the registry's job. */
   /** Creates a connector between two resolved endpoints. */
-  createConnector(from: ConnectorEndpoint, to: ConnectorEndpoint): ObjectId | null
+  /**
+   * Makes a line between two ends — a connector, or whatever type the armed
+   * tool says it is, with the data its options give it.
+   */
+  createConnector(
+    from: ConnectorEndpoint,
+    to: ConnectorEndpoint,
+    make?: { readonly type: string; readonly data?: Readonly<Record<string, unknown>> },
+  ): ObjectId | null
   createObject(type: string, at: Point, data?: Readonly<Record<string, unknown>>): ObjectId | null
   /**
    * Creates an object at an explicit rectangle, for a draw-to-size gesture.
@@ -363,17 +371,17 @@ export function useCommands(): BoardCommands {
         return placeObject(type, rect, data)
       },
 
-      createConnector(from, to) {
+      createConnector(from, to, make = { type: 'connector' }) {
         const result = dispatcher.dispatch({
           kind: 'CreateObjects',
           objects: [
             {
-              type: 'connector',
+              type: make.type,
               // A connector's position comes from its endpoints; the frame is
               // vestigial and deliberately zero.
               x: 0,
               y: 0,
-              data: { from, to },
+              data: { ...make.data, from, to },
             },
           ],
         })

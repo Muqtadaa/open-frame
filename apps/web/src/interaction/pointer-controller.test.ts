@@ -62,13 +62,43 @@ describe('pointer down', () => {
 
   it('starts a connector from the object under the pointer', () => {
     expect(onPointerDown(ctx({ tool: 'connector', hitId: A }))).toEqual([
-      { kind: 'begin-connect', from: A, at: { x: 10, y: 10 } },
+      { kind: 'begin-connect', objectType: 'connector', from: A, at: { x: 10, y: 10 } },
     ])
   })
 
   it('starts a connector from empty canvas as a free end', () => {
     expect(onPointerDown(ctx({ tool: 'connector' }))).toEqual([
-      { kind: 'begin-connect', from: null, at: { x: 10, y: 10 } },
+      { kind: 'begin-connect', objectType: 'connector', from: null, at: { x: 10, y: 10 } },
+    ])
+  })
+
+  /*
+   * A type that is DRAWN between two things declares `place: 'connect'` and
+   * makes itself, not a connector. The intent dropped the type, and the end
+   * of the gesture made a connector whatever tool was armed (Codex, on #20).
+   */
+  it('carries the declared type and its data through a connect placement', () => {
+    const wire = {
+      type: 'wire',
+      tool: {
+        label: 'Wire',
+        keys: [],
+        order: 99,
+        place: 'connect' as const,
+        data: () => ({ routing: 'orthogonal' }),
+        cursor: () => ({ body: '' }),
+      },
+    }
+    expect(
+      onPointerDown(ctx({ tool: 'wire', hitId: A, make: makeFor('wire', [wire], {}) })),
+    ).toEqual([
+      {
+        kind: 'begin-connect',
+        objectType: 'wire',
+        data: { routing: 'orthogonal' },
+        from: A,
+        at: { x: 10, y: 10 },
+      },
     ])
   })
 

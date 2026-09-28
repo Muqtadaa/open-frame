@@ -22,6 +22,12 @@ import { create } from 'zustand'
  */
 export type { Tool }
 
+/** What a connect gesture makes when it lands. */
+export interface ConnectMake {
+  readonly type: string
+  readonly data?: Readonly<Record<string, unknown>>
+}
+
 /** Something a toast can do, pressed from inside it. */
 export interface ToastAction {
   readonly label: string
@@ -211,6 +217,12 @@ export type DragState =
   /** Drawing a connector: one end fixed, the other following the pointer. */
   | {
       readonly kind: 'connect'
+      /**
+       * What letting go makes. The armed tool's type rather than always a
+       * connector: a type drawn between two things declares `place: 'connect'`
+       * and must be the thing that gets made (Codex, on #20).
+       */
+      readonly make: ConnectMake
       readonly from: ConnectorEndpoint
       readonly to: Point
       /** The object currently under the pointer, highlighted as a drop target. */
@@ -494,7 +506,7 @@ interface InteractionState {
   beginPan(): void
   beginResize(handle: HandleId): void
   beginRotate(): void
-  beginConnect(from: ConnectorEndpoint, at: Point): void
+  beginConnect(from: ConnectorEndpoint, at: Point, make?: ConnectMake): void
   updateConnect(
     to: Point,
     over: ObjectId | null,
@@ -511,6 +523,12 @@ interface InteractionState {
 }
 
 const NO_OPTIONS: Readonly<Record<string, unknown>> = {}
+
+/**
+ * The plain line: what a connect gesture makes when nothing armed says
+ * otherwise — dragging out from a selected object's side, or re-aiming an end.
+ */
+const CONNECTOR: ConnectMake = { type: 'connector' }
 
 export const useInteractionStore = create<InteractionState>((set, get) => ({
   tool: 'select',
@@ -692,8 +710,8 @@ export const useInteractionStore = create<InteractionState>((set, get) => ({
   beginPan: () => set({ drag: { kind: 'pan' } }),
   beginResize: (handle) => set({ drag: { kind: 'resize', handle, frames: new Map() } }),
   beginRotate: () => set({ drag: { kind: 'rotate', frames: new Map() } }),
-  beginConnect: (from, at) =>
-    set({ drag: { kind: 'connect', from, to: at, over: null, reshaping: null } }),
+  beginConnect: (from, at, make = CONNECTOR) =>
+    set({ drag: { kind: 'connect', make, from, to: at, over: null, reshaping: null } }),
   updateConnect: (to, over, reshaping = null) =>
     set((state) =>
       state.drag.kind === 'connect' ? { drag: { ...state.drag, to, over, reshaping } } : {},

@@ -45,7 +45,14 @@ export type PointerIntent =
     }
   | { readonly kind: 'begin-edit'; readonly id: ObjectId }
   /** Starts drawing a connector from whatever is under the pointer. */
-  | { readonly kind: 'begin-connect'; readonly from: ObjectId | null; readonly at: Point }
+  | {
+      readonly kind: 'begin-connect'
+      /** What the finished line is: the armed tool's type, and its data. */
+      readonly objectType: string
+      readonly data?: Readonly<Record<string, unknown>>
+      readonly from: ObjectId | null
+      readonly at: Point
+    }
 
 export interface PointerDownContext {
   readonly tool: Tool
@@ -114,7 +121,15 @@ export function onPointerDown(ctx: PointerDownContext): readonly PointerIntent[]
       case 'draw':
         return [{ kind: 'begin-draw', objectType: make.type, at: ctx.worldPoint, ...data }]
       case 'connect':
-        return [{ kind: 'begin-connect', from: ctx.hitId, at: ctx.worldPoint }]
+        return [
+          {
+            kind: 'begin-connect',
+            objectType: make.type,
+            ...data,
+            from: ctx.hitId,
+            at: ctx.worldPoint,
+          },
+        ]
     }
   }
 
