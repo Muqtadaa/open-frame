@@ -107,3 +107,47 @@ describe('whether a line hears members join its ends', () => {
     expect(h.registry.dependsOnMembers(line, h.store.getDocument())).toBe(false)
   })
 })
+
+/*
+ * A group's bounds are its members' bounds, and a member can itself be drawn
+ * from other objects: a connector inside a group reaches the notes at its
+ * ends. Moving one of those changes the group's bounds without changing
+ * anything in the group, so a line joined to the group has to hear it too
+ * (Codex, on #18).
+ */
+describe('a group holding a line', () => {
+  it('includes what the line inside it is drawn from', () => {
+    const h = createTestHarness()
+    const end = (objectId: ObjectId) => ({ kind: 'object', objectId, anchor: { kind: 'auto' } })
+    const data = (from: ObjectId, to: ObjectId) => ({
+      from: end(from),
+      to: end(to),
+      routing: 'straight',
+      points: [],
+      startArrow: 'none',
+      endArrow: 'arrow',
+      text: [{ text: '' }],
+      label: null,
+    })
+    const made = h.dispatcher.transact('Make', [
+      {
+        kind: 'CreateObjects',
+        objects: [
+          { id: id('x'), type: 'sticky', x: 0, y: 0 },
+          { id: id('y'), type: 'sticky', x: 300, y: 0 },
+          { id: id('z'), type: 'sticky', x: 900, y: 0 },
+          { id: id('inner'), type: 'connector', x: 0, y: 0, data: data(id('x'), id('y')) },
+          { id: id('g'), type: 'group', x: 0, y: 0 },
+          { id: id('outer'), type: 'connector', x: 0, y: 0, data: data(id('g'), id('z')) },
+        ],
+      },
+      { kind: 'ReparentObjects', ids: [id('inner')], parentId: id('g') },
+    ])
+    if (!made.ok) throw made.error
+    const outer = h.store.getObject(id('outer'))
+    if (outer === undefined) throw new Error('no line')
+    expect([...h.registry.renderDependenciesOf(outer, h.store.getDocument())].sort()).toEqual(
+      [id('g'), id('inner'), id('x'), id('y'), id('z')].sort(),
+    )
+  })
+})

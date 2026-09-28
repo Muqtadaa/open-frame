@@ -1101,35 +1101,39 @@ export class ObjectTypeRegistry {
    * (rule 10).
    */
   renderDependenciesOf(object: AnyOpenFrameObject, doc: BoardDocument): readonly ObjectId[] {
-    const declared = this.dependenciesOf(object)
-    const out = new Set<ObjectId>(declared)
+    /*
+     * A closure, not one level: a group's bounds are its members' bounds, and
+     * a member can itself be drawn from other objects — a connector inside a
+     * group reaches the notes at its ends, and moving one moves the group's
+     * edge without changing anything IN the group (Codex, on #18). So every
+     * object reached adds what it is drawn from in turn, bounded by
+     * MAX_BOUNDS_DEPTH exactly as the bounds themselves are.
+     */
+    const out = new Set<ObjectId>()
     const index = this.#childIndexFor(doc)
-    const addDescendants = (parent: ObjectId, depth: number): void => {
-      if (depth >= MAX_BOUNDS_DEPTH) return
-      for (const child of index.get(parent) ?? []) {
-        if (out.has(child.id)) continue
-        out.add(child.id)
-        addDescendants(child.id, depth + 1)
-      }
-    }
-    for (const dependency of declared) {
+    const visit = (dependency: ObjectId, depth: number): void => {
+      if (dependency === object.id || out.has(dependency) || depth >= MAX_BOUNDS_DEPTH) return
+      out.add(dependency)
       const target = doc.objects.get(dependency)
-      if (target !== undefined && this.#boundsFromChildren(target.type)) {
-        addDescendants(dependency, 0)
+      if (target === undefined) return
+      for (const next of this.dependenciesOf(target)) visit(next, depth + 1)
+      if (this.#boundsFromChildren(target.type)) {
+        for (const child of index.get(dependency) ?? []) visit(child.id, depth + 1)
       }
     }
+    for (const dependency of this.dependenciesOf(object)) visit(dependency, 0)
     return [...out]
   }
 
   /**
-   * Whether an object declared by `object` has bounds made of its children,
+   * Whether anything `object` is drawn from has bounds made of its children,
    * so a member joining or leaving one changes how `object` is drawn. Asked
-   * of the ends' TYPES, not of how many members they hold: an empty group has
-   * none, and the line joined to it must still hear the first one arrive
-   * (Codex, on #18).
+   * of TYPES, not of how many members there are: an empty group has none,
+   * and the line joined to it must still hear the first one arrive (Codex,
+   * on #18).
    */
   dependsOnMembers(object: AnyOpenFrameObject, doc: BoardDocument): boolean {
-    return this.dependenciesOf(object).some((dependency) => {
+    return this.renderDependenciesOf(object, doc).some((dependency) => {
       const target = doc.objects.get(dependency)
       return target !== undefined && this.#boundsFromChildren(target.type)
     })
