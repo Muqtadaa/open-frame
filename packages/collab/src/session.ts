@@ -7,6 +7,7 @@ import type {
 } from '@openframe/core'
 import type * as Y from 'yjs'
 
+import { LOGGED_ORIGINS, recordChange } from './change-log.js'
 import { applyPatchesToDoc, LOCAL_ORIGIN, metaOf, objectsOf } from './document-map.js'
 import { metaPatchesFromEvent, parentageCandidates, patchesFromEvent } from './remote-patches.js'
 
@@ -22,6 +23,13 @@ export interface CollabSessionDeps {
    * whether that is a toast, a log line or a reconnect.
    */
   readonly onError: (error: CommandError) => void
+  /**
+   * Who this peer's changes are by, as a name to show beside them in the
+   * change log. `null` (the default) when nobody said.
+   */
+  readonly by?: string | null
+  /** The clock a logged change is stamped with. `Date.now` unless a test says otherwise. */
+  readonly now?: () => number
 }
 
 type Ok = Extract<DispatchResult, { ok: true }>
@@ -43,6 +51,15 @@ export class CollabSession {
   readonly #doc: Y.Doc
   readonly #dispatcher: CommandDispatcher
   readonly #onError: (error: CommandError) => void
+  readonly #by: string | null
+  readonly #now: () => number
+  /**
+   * The last time this session stamped on a logged change. Stamps only move
+   * forward, so two changes made in the same millisecond still come out of
+   * the log in the order they were made — which decides what is newest, and
+   * so what the cap lets go.
+   */
+  #lastAt = -Infinity
   readonly #detach: (() => void)[] = []
 
   /**
@@ -61,6 +78,8 @@ export class CollabSession {
     this.#doc = deps.doc
     this.#dispatcher = deps.dispatcher
     this.#onError = deps.onError
+    this.#by = deps.by ?? null
+    this.#now = deps.now ?? Date.now
   }
 
   static join(deps: CollabSessionDeps): CollabSession {
@@ -107,10 +126,36 @@ export class CollabSession {
     for (const detach of this.#detach.splice(0)) detach()
   }
 
-  /** Local change → `Y.Doc`. */
+  /**
+   * Local change → `Y.Doc`, and into the change log when it was not a
+   * person's (tracks A-2).
+   *
+   * One transaction for both, so no peer ever holds the change without the
+   * entry that can take it back, or the entry without the change.
+   */
   #publish(result: Ok): void {
     if (this.#merging) return
-    applyPatchesToDoc(this.#doc, result.patches, LOCAL_ORIGIN)
+    if (!LOGGED_ORIGINS.has(result.origin)) {
+      applyPatchesToDoc(this.#doc, result.patches, LOCAL_ORIGIN)
+      return
+    }
+    const at = Math.max(this.#now(), this.#lastAt + 1)
+    this.#lastAt = at
+    this.#doc.transact(() => {
+      applyPatchesToDoc(this.#doc, result.patches, LOCAL_ORIGIN)
+      recordChange(this.#doc, {
+        id: result.transactionId,
+        label: result.label,
+        origin: result.origin,
+        at,
+        by: this.#by,
+        forward: result.patches,
+        inverse: result.inverse,
+        affected: result.affected,
+        locked: result.locked ?? { before: [], after: [] },
+        reverted: null,
+      })
+    }, LOCAL_ORIGIN)
   }
 
   /** `Y.Doc` meta → local change. Parentage cannot be disturbed, so no repair. */

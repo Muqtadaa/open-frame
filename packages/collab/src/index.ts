@@ -58,6 +58,17 @@ export {
 } from './connect.js'
 export { CollabSession, type CollabSessionDeps } from './session.js'
 export {
+  changesOf,
+  markReverted,
+  readChanges,
+  readLoggedChange,
+  recordChange,
+  CHANGES,
+  CHANGE_LOG_LIMIT,
+  LOGGED_ORIGINS,
+  type LoggedChange,
+} from './change-log.js'
+export {
   roomSocketUrl,
   KEY_PARAM,
   OWNER_PARAM,

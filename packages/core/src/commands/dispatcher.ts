@@ -23,6 +23,15 @@ export type DispatchResult =
       readonly patches: readonly Patch[]
       readonly inverse: readonly Patch[]
       readonly affected: readonly ObjectId[]
+      /**
+       * Which affected objects were locked before and after, for a change
+       * recorded to be reverted somewhere else. Set on an originated change;
+       * a replay of history leaves it out.
+       */
+      readonly locked?: {
+        readonly before: readonly ObjectId[]
+        readonly after: readonly ObjectId[]
+      }
     }
   | { readonly ok: false; readonly error: CommandError }
 
@@ -279,17 +288,11 @@ export class CommandDispatcher {
     const inverse = invertPatches(before, patches)
     this.#deps.writer.applyPatches(patches)
 
+    const affected = affectedIds(patches)
+    const after = this.#deps.store.getDocument()
+    const locked = { before: lockedAmong(before, affected), after: lockedAmong(after, affected) }
     if (options.skipUndo !== true) {
-      const affected = affectedIds(patches)
-      const after = this.#deps.store.getDocument()
-      this.#undoStack.push({
-        transactionId,
-        label,
-        origin,
-        forward: patches,
-        inverse,
-        locked: { before: lockedAmong(before, affected), after: lockedAmong(after, affected) },
-      })
+      this.#undoStack.push({ transactionId, label, origin, forward: patches, inverse, locked })
     }
 
     const result = {
@@ -299,7 +302,8 @@ export class CommandDispatcher {
       origin,
       patches,
       inverse,
-      affected: affectedIds(patches),
+      affected,
+      locked: { before: [...locked.before], after: [...locked.after] },
     } as const
     this.#emit(result)
     return result
