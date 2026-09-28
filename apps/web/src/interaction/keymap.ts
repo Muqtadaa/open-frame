@@ -1,4 +1,4 @@
-import type { Tool } from './interaction-store.js'
+import type { ChromeTool, DeclaredTool, Tool } from '../scene/tools.js'
 import { IS_MAC } from '../scene/platform.js'
 import { GRID_SIZE } from '../scene/snapping.js'
 
@@ -24,7 +24,8 @@ export interface KeyContext {
 
 export type KeyAction =
   | { readonly kind: 'tool'; readonly tool: Tool }
-  | { readonly kind: 'cycle-shape' }
+  /** Arms the tool that makes `type`, or walks its options if it is armed. */
+  | { readonly kind: 'cycle-tool'; readonly type: string }
   | { readonly kind: 'undo' }
   | { readonly kind: 'redo' }
   | { readonly kind: 'delete' }
@@ -55,19 +56,14 @@ const NUDGE_COARSE = 10
 /** Degrees per press of `.` or `,`: the angles a pointer rotation snaps to with Shift. */
 const ROTATE_STEP = 15
 
-const TOOL_KEYS: Readonly<Record<string, Tool>> = {
+/*
+ * Only the chrome's own modes. A type's tool declares its keys on its view,
+ * and arrives here as `tools`: this used to list sticky, text, frame and the
+ * rest, so a new type with a tool had one more file to be edited into.
+ */
+const CHROME_KEYS: Readonly<Record<string, ChromeTool>> = {
   v: 'select',
   h: 'pan',
-  s: 'sticky',
-  // Miro binds sticky notes to N; accept both rather than make people relearn.
-  n: 'sticky',
-  t: 'text',
-  f: 'frame',
-  c: 'connector',
-  // A table is a grid; a code block is code. Neither initial collides with
-  // one already bound, which is the only reason these two are what they are.
-  g: 'table',
-  k: 'code',
   // C was already the connector, so commenting takes M — which is also what
   // Figma binds it to.
   m: 'comment',
@@ -87,7 +83,10 @@ const NUDGE_KEYS: Readonly<Record<string, { dx: number; dy: number }>> = {
  * for the zoom bindings: without it, Cmd/Ctrl +/- zooms the *browser* as well as
  * the canvas, and the two compound into an unusable mess.
  */
-export function resolveKeyAction(ctx: KeyContext): KeyAction | null {
+export function resolveKeyAction(
+  ctx: KeyContext,
+  tools: readonly DeclaredTool[] = [],
+): KeyAction | null {
   const mod = ctx.metaKey || ctx.ctrlKey
   const key = ctx.key
 
@@ -203,10 +202,14 @@ export function resolveKeyAction(ctx: KeyContext): KeyAction | null {
 
   if (ctx.shiftKey) return null
 
-  if (key === 'u' || key === 'U') return { kind: 'cycle-shape' }
-
-  const tool = TOOL_KEYS[key.toLowerCase()]
-  return tool === undefined ? null : { kind: 'tool', tool }
+  const lower = key.toLowerCase()
+  const chrome = CHROME_KEYS[lower]
+  if (chrome !== undefined) return { kind: 'tool', tool: chrome }
+  for (const { type, tool } of tools) {
+    if (tool.cycleKey === lower) return { kind: 'cycle-tool', type }
+    if (tool.keys.includes(lower)) return { kind: 'tool', tool: type }
+  }
+  return null
 }
 
 /** Human-readable accelerator for tooltips, using the platform's modifier glyph. */

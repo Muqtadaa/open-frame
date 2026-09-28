@@ -7,23 +7,35 @@ import {
   onPointerDown,
   type PointerDownContext,
 } from './pointer-controller.js'
+import { makeFor } from '../scene/tools.js'
+import { createDefaultViewRegistry } from '../views/index.js'
+
+/** The tools the board actually offers, as the canvas resolves them. */
+const TOOLS = createDefaultViewRegistry().tools()
 
 const A = asObjectId('obj_a')
 const B = asObjectId('obj_b')
 
-function ctx(overrides: Partial<PointerDownContext> = {}): PointerDownContext {
+/**
+ * A press, with the armed tool resolved the way the canvas resolves it — from
+ * the tool each type declares, and what has been `chosen` for it.
+ */
+function ctx(
+  overrides: Partial<PointerDownContext> & { chosen?: Readonly<Record<string, unknown>> } = {},
+): PointerDownContext {
+  const { chosen = {}, ...rest } = overrides
+  const tool = rest.tool ?? 'select'
   return {
-    tool: 'select',
+    tool,
     worldPoint: { x: 10, y: 10 },
     hitId: null,
     selection: new Set<ObjectId>(),
     locked: new Set<ObjectId>(),
-    tableSize: { columns: 3, rows: 3 },
     shiftKey: false,
     button: 0,
     spaceHeld: false,
-    shapeKind: 'rectangle',
-    ...overrides,
+    make: makeFor(tool, TOOLS, chosen),
+    ...rest,
   }
 }
 
@@ -73,7 +85,7 @@ describe('pointer down', () => {
    * is the only place that knows how far the pointer went.
    */
   it('carries the current variant when drawing a shape', () => {
-    expect(onPointerDown(ctx({ tool: 'shape', shapeKind: 'ellipse' }))).toEqual([
+    expect(onPointerDown(ctx({ tool: 'shape', chosen: { shape: 'ellipse' } }))).toEqual([
       { kind: 'begin-draw', objectType: 'shape', at: { x: 10, y: 10 }, data: { shape: 'ellipse' } },
     ])
   })
@@ -173,7 +185,9 @@ describe('drag threshold', () => {
  */
 describe('placing a table', () => {
   it('creates the grid the tool is set to', () => {
-    const [intent] = onPointerDown(ctx({ tool: 'table', tableSize: { columns: 5, rows: 2 } }))
+    const [intent] = onPointerDown(
+      ctx({ tool: 'table', chosen: { table: { columns: 5, rows: 2 } } }),
+    )
 
     expect(intent).toEqual({
       kind: 'create',

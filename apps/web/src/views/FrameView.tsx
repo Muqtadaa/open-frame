@@ -1,6 +1,12 @@
 import { type FrameData } from '@openframe/core'
 
-import { defineObjectView, type ObjectEditorProps, type ObjectViewProps } from './registry.js'
+import { FrameIcon } from '../controls/icons.js'
+import {
+  defineObjectView,
+  type ObjectTool,
+  type ObjectEditorProps,
+  type ObjectViewProps,
+} from './registry.js'
 import { RichTextEditor } from './RichTextEditor.js'
 import { RichTextView } from './RichTextView.js'
 import { FRAME_PAPER, inkColor, surfaceOf } from '../scene/style-tokens.js'
@@ -131,8 +137,21 @@ function FrameEditor({ object, zoom, Chrome, onCommit }: ObjectEditorProps<Frame
   )
 }
 
+/** Drawn, the way a box is in every graphics tool: press, drag out the size, release. */
+const frameTool: ObjectTool = {
+  label: 'Frame',
+  keys: ['f'],
+  order: 40,
+  place: 'draw',
+  Icon: () => <FrameIcon />,
+  cursor: () => ({
+    body: 'M6.3 3h2.1v18H6.3zM15.6 3h2.1v18h-2.1zM3 6.3h18v2.1H3zM3 15.6h18v2.1H3z',
+  }),
+}
+
 export const frameView = defineObjectView<FrameData>({
   type: 'frame',
+  tool: frameTool,
   // Its hairline edge is laid out at the zoom and painted back down.
   usesZoom: true,
   /*

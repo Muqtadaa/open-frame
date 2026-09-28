@@ -1,9 +1,23 @@
-import type { ObjectBase, ShapeData } from '@openframe/core'
+import { SHAPE_KINDS, type ObjectBase, type ShapeData, type ShapeKind } from '@openframe/core'
 
-import { defineObjectView, type ObjectEditorProps, type ObjectViewProps } from './registry.js'
+import { ShapeIcon } from '../controls/icons.js'
+import { ShapePicker } from '../controls/ShapePicker.js'
+import type { Mark } from '../scene/tools.js'
+import {
+  defineObjectView,
+  type ObjectEditorProps,
+  type ObjectTool,
+  type ObjectViewProps,
+} from './registry.js'
 import { RichTextEditor } from './RichTextEditor.js'
 import { RichTextView } from './RichTextView.js'
-import { ELLIPSE_MARGIN, labelInset, roundedShapePath } from '../scene/shape-geometry.js'
+import {
+  ELLIPSE,
+  ELLIPSE_MARGIN,
+  labelInset,
+  roundedShapePath,
+  shapePath,
+} from '../scene/shape-geometry.js'
 import { plainTextOf } from '@openframe/core'
 
 import {
@@ -183,8 +197,52 @@ function ShapeEditor({ object, Chrome, onCommit }: ObjectEditorProps<ShapeData>)
   )
 }
 
-export const shapeView = defineObjectView<ShapeData>({
+/**
+ * The shape tool's cursor, which follows the variant the rail is showing.
+ *
+ * Drawn from `shapePath`, the same geometry the object itself is drawn from,
+ * so a new shape kind arrives with a cursor rather than needing one. That
+ * geometry is on a 0–100 grid, hence the scale back onto the 24 the other
+ * marks use.
+ */
+function shapeMark(kind: ShapeKind): Mark {
+  const path = shapePath(kind)
+  const inner =
+    path === null
+      ? `<ellipse cx="${String(ELLIPSE.cx)}" cy="${String(ELLIPSE.cy)}" rx="${String(ELLIPSE.rx)}" ry="${String(ELLIPSE.ry)}"/>`
+      : `<path d="${path}"/>`
+  // Onto the same ink box as every other mark: the geometry is a 0-100 grid
+  // and the marks are drawn in 3..21 of a 24 one.
+  return { body: `<g transform="translate(3 3) scale(0.18)">${inner}</g>` }
+}
+
+/**
+ * Drawn, like a frame. The variant is chosen before drawing: U arms the tool
+ * and then walks the kinds — one key reaching four shapes without four
+ * bindings — and pressing the armed button opens the list.
+ */
+const shapeTool: ObjectTool<ShapeKind> = {
+  label: 'Shape',
+  keys: [],
+  order: 30,
+  place: 'draw',
+  initial: 'rectangle',
+  data: (kind) => ({ shape: kind }),
+  cycleKey: 'u',
+  cycle: (kind) => SHAPE_KINDS[(SHAPE_KINDS.indexOf(kind) + 1) % SHAPE_KINDS.length] ?? 'rectangle',
+  cursor: shapeMark,
+  Icon: ({ options }) => <ShapeIcon kind={options} />,
+  options: {
+    label: 'Choose shape',
+    popup: 'menu',
+    testIds: { disclosure: 'shape-menu', surface: 'shape-flyout' },
+    Picker: ShapePicker,
+  },
+}
+
+export const shapeView = defineObjectView<ShapeData, ShapeKind>({
   type: 'shape',
+  tool: shapeTool,
   defaultColor: 'gray',
   defaultAlign: LABEL_ALIGN,
   defaultVerticalAlign: LABEL_VALIGN,

@@ -4,7 +4,13 @@ import { CODE_LANGUAGES, MAX_CODE, type CodeData } from '@openframe/core'
 
 import { inkColor } from '../scene/style-tokens.js'
 import { canFormat, formatCode } from './code-format.js'
-import { defineObjectView, type ObjectEditorProps, type ObjectViewProps } from './registry.js'
+import { CodeIcon } from '../controls/icons.js'
+import {
+  defineObjectView,
+  type ObjectTool,
+  type ObjectEditorProps,
+  type ObjectViewProps,
+} from './registry.js'
 import { highlight } from './code-highlight.js'
 
 /**
@@ -273,8 +279,25 @@ function CodeEditor({ object, Chrome, onCommit }: ObjectEditorProps<CodeData>) {
   )
 }
 
+/**
+ * A code block is code; K, because no nearer letter was free — C was already
+ * the connector.
+ */
+const codeTool: ObjectTool = {
+  label: 'Code',
+  keys: ['k'],
+  order: 70,
+  place: 'click',
+  Icon: () => <CodeIcon />,
+  cursor: () => ({
+    body: 'M5.5 4.5h13a2.5 2.5 0 0 1 2.5 2.5v10a2.5 2.5 0 0 1-2.5 2.5h-13A2.5 2.5 0 0 1 3 17V7a2.5 2.5 0 0 1 2.5-2.5z',
+    detail: 'm9.6 9.3-2.9 2.7 2.9 2.7M14.4 9.3l2.9 2.7-2.9 2.7',
+  }),
+}
+
 export const codeView = defineObjectView<CodeData>({
   type: 'code',
+  tool: codeTool,
   Renderer: CodeRenderer,
   InlineEditor: CodeEditor,
 })

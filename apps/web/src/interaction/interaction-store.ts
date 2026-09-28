@@ -1,6 +1,5 @@
 import {
   DEFAULT_VIEWPORT,
-  SHAPE_KINDS,
   type AnyOpenFrameObject,
   type ConnectorEndpoint,
   type ImageCrop,
@@ -8,42 +7,25 @@ import {
   type ObjectId,
   type ObjectStyle,
   type Point,
-  type ShapeKind,
   type Viewport,
 } from '@openframe/core'
 
 import type { AlignmentGuide } from '../scene/alignment.js'
 import type { HandleId } from '../scene/resize.js'
+import type { Tool } from '../scene/tools.js'
 import { create } from 'zustand'
 
-export type Tool =
-  | 'select'
-  | 'pan'
-  | 'sticky'
-  | 'text'
-  | 'shape'
-  | 'frame'
-  | 'connector'
-  | 'table'
-  | 'code'
-  | 'comment'
-
-/**
- * The grid a new table will be dropped with.
- *
- * Chosen before placing rather than adjusted after, because the size is the
- * first thing anybody knows about a table they are about to make — and a 3x3
- * that always has to be corrected is a default nobody wanted twice.
+/*
+ * What a tool is lives in `scene/tools.ts`: a chrome mode, or the name of a
+ * type whose view declares one. Re-exported because most of the app reads
+ * the tool from here.
  */
+export type { Tool }
+
 /** Something a toast can do, pressed from inside it. */
 export interface ToastAction {
   readonly label: string
   readonly run: () => void
-}
-
-export interface TableSize {
-  readonly columns: number
-  readonly rows: number
 }
 
 /** Where a comment is being written, before it exists. */
@@ -288,8 +270,13 @@ export interface ContextMenuAt {
 
 interface InteractionState {
   readonly tool: Tool
-  /** Which shape the shape tool will draw. Cycled with `U`. */
-  readonly shapeKind: ShapeKind
+  /**
+   * What each tool has had chosen for it — which shape, how big a table — by
+   * the type it makes. The tool declares what the options mean and where they
+   * start; this only remembers them, so a new tool with options needs no
+   * field here.
+   */
+  readonly toolOptions: Readonly<Record<string, unknown>>
   readonly wheelMode: WheelMode
   /**
    * Whether transforms snap to the grid. On by default; held Cmd/Ctrl overrides
@@ -389,8 +376,6 @@ interface InteractionState {
    * the way a conversation belongs to a room, which is why it lives in its own
    * table and not in the object registry.
    */
-  /** The size the table tool will place. */
-  readonly tableSize: TableSize
   readonly composing: ComposingComment | null
   readonly openThreadId: string | null
   /**
@@ -457,8 +442,8 @@ interface InteractionState {
   readonly searchOpen: boolean
 
   setTool(tool: Tool): void
-  /** Selects the shape tool, advancing the variant when it is already active. */
-  cycleShape(): void
+  /** Remembers what was chosen for the tool that makes `type`. */
+  setToolOptions(type: string, options: unknown): void
   setWheelMode(mode: WheelMode): void
   setSnapToGrid(enabled: boolean): void
   showToast(message: string | null, action?: ToastAction): void
@@ -485,7 +470,6 @@ interface InteractionState {
     data: Readonly<Record<string, unknown>>,
     grow: { readonly width: number; readonly height: number },
   ): void
-  setTableSize(size: TableSize): void
   setCommentsOpen(open: boolean): void
   startComment(at: ComposingComment | null): void
   openThread(id: string | null): void
@@ -526,9 +510,11 @@ interface InteractionState {
   pruneSelection(exists: (id: ObjectId) => boolean): void
 }
 
+const NO_OPTIONS: Readonly<Record<string, unknown>> = {}
+
 export const useInteractionStore = create<InteractionState>((set, get) => ({
   tool: 'select',
-  shapeKind: 'rectangle',
+  toolOptions: NO_OPTIONS,
   wheelMode: readWheelMode(),
   snapToGrid: readSnap(),
   toast: null,
@@ -544,7 +530,6 @@ export const useInteractionStore = create<InteractionState>((set, get) => ({
   lockedByOthers: NO_LOCKS,
   viewport: DEFAULT_VIEWPORT,
   following: null,
-  tableSize: { columns: 3, rows: 3 },
   commentsOpen: false,
   composing: null,
   openThreadId: null,
@@ -566,14 +551,8 @@ export const useInteractionStore = create<InteractionState>((set, get) => ({
       commentsOpen: tool === 'comment' ? true : state.commentsOpen,
     })),
 
-  cycleShape: () =>
-    set((state) => {
-      // First press picks the tool; further presses walk the variants, which is
-      // how a single key can reach four shapes without four bindings.
-      if (state.tool !== 'shape') return { tool: 'shape', editingId: null }
-      const next = SHAPE_KINDS[(SHAPE_KINDS.indexOf(state.shapeKind) + 1) % SHAPE_KINDS.length]
-      return { shapeKind: next ?? 'rectangle', editingId: null }
-    }),
+  setToolOptions: (type, options) =>
+    set((state) => ({ toolOptions: { ...state.toolOptions, [type]: options } })),
 
   setWheelMode: (wheelMode) => {
     writeWheelMode(wheelMode)
@@ -677,7 +656,6 @@ export const useInteractionStore = create<InteractionState>((set, get) => ({
       // drag state nothing is going to commit.
       state.drag.kind === 'divider' ? { drag: { ...state.drag, data, grow } } : {},
     ),
-  setTableSize: (tableSize) => set({ tableSize, tool: 'table' }),
   setCommentsOpen: (commentsOpen) => set({ commentsOpen }),
   startComment: (at) => set({ composing: at, openThreadId: null }),
   openThread: (id) => set({ openThreadId: id, composing: null }),

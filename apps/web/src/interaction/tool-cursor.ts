@@ -1,6 +1,11 @@
-import { ELLIPSE, shapePath } from '../scene/shape-geometry.js'
-import type { ShapeKind } from '@openframe/core'
-import type { Tool } from './interaction-store.js'
+import {
+  isChromeTool,
+  optionsOf,
+  type ChromeTool,
+  type DeclaredTool,
+  type Mark,
+  type Tool,
+} from '../scene/tools.js'
 
 /**
  * The cursor says WHICH tool is armed, not merely that one is.
@@ -24,72 +29,40 @@ import type { Tool } from './interaction-store.js'
  * of it in the halo colour — which is how a table gets its grid lines and a
  * sticky note gets its folded corner without a third pass or a third colour.
  */
-interface Mark {
-  /** Shapes to fill. The glyph itself. */
-  readonly body: string
-  /** Drawn over the body in the halo colour: the lines inside the glyph. */
-  readonly detail?: string
-}
 
 /**
- * A `Record<Tool, …>` on purpose. Adding a tool is then a compile error
- * rather than a tool that silently inherits somebody else's pointer — the
- * same friction the object-type registry uses, and cheaper than a test.
+ * The chrome's own modes. A type's tool brings its mark with it
+ * (`ToolBehaviour.cursor`, declared on its view), so a new type with a tool
+ * needs nothing here.
  *
+ * A `Record<ChromeTool, …>` on purpose: a new chrome mode is then a compile
+ * error rather than a mode that silently inherits somebody else's pointer.
  * `null` means the platform's own cursor is the honest one: `select` acts on
  * what is already there rather than aiming at empty board, and `pan` has a
  * hand that every user of every map already knows.
- *
- * `shape` is the one that cannot be a constant, because the rail's icon
- * follows the chosen variant and so should the pointer — see `shapeMark`.
  */
-const MARK: Readonly<Record<Tool, Mark | null>> = {
+const CHROME_MARK: Readonly<Record<ChromeTool, Mark | null>> = {
   select: null,
   pan: null,
-  sticky: {
-    body: 'M4.5 4h15v9.6L13.6 20H4.5z',
-    detail: 'M19.5 13.6h-5.9v6.4',
-  },
-  text: { body: 'M4.6 4h14.8v3.3h-5.8V20h-3.2V7.3H4.6z' },
-  // Replaced per call. A rectangle is the default variant and the honest
-  // stand-in for a tool that has not been asked which shape it is drawing.
-  shape: { body: '' },
-  frame: {
-    body: 'M6.3 3h2.1v18H6.3zM15.6 3h2.1v18h-2.1zM3 6.3h18v2.1H3zM3 15.6h18v2.1H3z',
-  },
-  connector: {
-    body: 'M5.5 15.4a3.1 3.1 0 1 1 0 6.2 3.1 3.1 0 0 1 0-6.2zM18.5 2.4a3.1 3.1 0 1 1 0 6.2 3.1 3.1 0 0 1 0-6.2zM6.8 15.6 15.6 6.8l1.6 1.6-8.8 8.8z',
-  },
-  table: {
-    body: 'M5.5 4.5h13a2.5 2.5 0 0 1 2.5 2.5v10a2.5 2.5 0 0 1-2.5 2.5h-13A2.5 2.5 0 0 1 3 17V7a2.5 2.5 0 0 1 2.5-2.5z',
-    detail: 'M3 9.6h18M3 14.4h18M9.6 9.6v9.9M15.4 9.6v9.9',
-  },
-  code: {
-    body: 'M5.5 4.5h13a2.5 2.5 0 0 1 2.5 2.5v10a2.5 2.5 0 0 1-2.5 2.5h-13A2.5 2.5 0 0 1 3 17V7a2.5 2.5 0 0 1 2.5-2.5z',
-    detail: 'm9.6 9.3-2.9 2.7 2.9 2.7M14.4 9.3l2.9 2.7-2.9 2.7',
-  },
   comment: {
     body: 'M20 12a7 7 0 0 1-7 7H9l-4 3v-4.2A7 7 0 0 1 4 12a7 7 0 0 1 7-7h2a7 7 0 0 1 7 7Z',
   },
 }
 
 /**
- * The shape tool's mark, which follows the variant the rail is showing.
- *
- * Drawn from `shapePath`, the same geometry the object itself is drawn from,
- * so a new shape kind arrives with a cursor rather than needing one. That
- * geometry is on a 0–100 grid, hence the scale back onto the 24 the other
- * marks use.
+ * The mark for whatever is armed: the chrome's own, or the one the type's tool
+ * declares for the options chosen — a shape tool's follows the variant the
+ * rail is showing. `null` for the platform's own pointer, and for a tool
+ * nothing declares.
  */
-function shapeMark(kind: ShapeKind): Mark {
-  const path = shapePath(kind)
-  const inner =
-    path === null
-      ? `<ellipse cx="${String(ELLIPSE.cx)}" cy="${String(ELLIPSE.cy)}" rx="${String(ELLIPSE.rx)}" ry="${String(ELLIPSE.ry)}"/>`
-      : `<path d="${path}"/>`
-  // Onto the same ink box as every other mark: the geometry is a 0-100 grid
-  // and the marks are drawn in 3..21 of a 24 one.
-  return { body: `<g transform="translate(3 3) scale(0.18)">${inner}</g>` }
+export function markFor(
+  tool: Tool,
+  tools: readonly DeclaredTool[],
+  chosen: Readonly<Record<string, unknown>>,
+): Mark | null {
+  if (isChromeTool(tool)) return CHROME_MARK[tool]
+  const declared = tools.find((entry) => entry.type === tool)
+  return declared === undefined ? null : declared.tool.cursor(optionsOf(declared, chosen))
 }
 
 /**
@@ -251,12 +224,7 @@ function shapes(body: string): string {
  * no fallback is then dropped entirely — leaving the arrow, which says
  * nothing about a tool being armed at all.
  */
-export function cursorFor(
-  tool: Tool,
-  shapeKind: ShapeKind = 'rectangle',
-  colours: CursorInk = DEFAULT_INK,
-): string | null {
-  const mark = tool === 'shape' ? shapeMark(shapeKind) : MARK[tool]
+export function cursorFor(mark: Mark | null, colours: CursorInk = DEFAULT_INK): string | null {
   if (mark === null) return null
   return `url("data:image/svg+xml,${encodeURIComponent(markup(mark, colours))}") ${String(HOT)} ${String(HOT)}, crosshair`
 }

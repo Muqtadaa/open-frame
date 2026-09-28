@@ -30,6 +30,7 @@ import {
 import { useOpenFrame } from '../runtime/context.js'
 import { pinFraction } from '../scene/comment-pin.js'
 import { pinchViewport, type PinchStart } from '../scene/pinch.js'
+import { makeFor } from '../scene/tools.js'
 import { useCommands } from '../hooks/use-commands.js'
 import { useInteractionStore } from '../interaction/interaction-store.js'
 import {
@@ -494,7 +495,7 @@ function objectChromeUnderPointer(target: EventTarget | null): ObjectId | null {
  * Nothing here writes to the document except on pointer-up.
  */
 export function useCanvasGestures(containerRef: RefObject<HTMLElement | null>) {
-  const { runtime } = useOpenFrame()
+  const { runtime, views } = useOpenFrame()
   const commands = useCommands()
   const gesture = useRef<Gesture | null>(null)
 
@@ -920,8 +921,7 @@ export function useCanvasGestures(containerRef: RefObject<HTMLElement | null>) {
         shiftKey: event.shiftKey,
         button: event.button,
         spaceHeld: spaceHeld.current,
-        shapeKind: store.shapeKind,
-        tableSize: store.tableSize,
+        make: makeFor(store.tool, views.tools(), store.toolOptions),
         /*
          * Only what a press could actually move: the object under the pointer
          * and whatever is already selected. Walking the whole document to
@@ -988,7 +988,7 @@ export function useCanvasGestures(containerRef: RefObject<HTMLElement | null>) {
         }
       }
     },
-    [abandon, applyIntent, beginPinch, canvasPoint, runtime, toWorld],
+    [abandon, applyIntent, beginPinch, canvasPoint, runtime, toWorld, views],
   )
 
   const onPointerMove = useCallback(

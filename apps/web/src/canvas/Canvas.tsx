@@ -1,7 +1,8 @@
 import { memo, useEffect, useMemo, useRef, type CSSProperties } from 'react'
 
 import { useInteractionStore } from '../interaction/interaction-store.js'
-import { cursorFor } from '../interaction/tool-cursor.js'
+import { useOpenFrame } from '../runtime/context.js'
+import { cursorFor, markFor } from '../interaction/tool-cursor.js'
 import { useCursorInk } from '../hooks/use-cursor-ink.js'
 import { useKeyboardShortcuts } from '../interaction/use-keyboard-shortcuts.js'
 import { gridStyle } from '../scene/grid.js'
@@ -74,7 +75,8 @@ export function Canvas() {
   const setCanvasSize = useInteractionStore((state) => state.setCanvasSize)
   const viewport = useInteractionStore((state) => state.viewport)
   const tool = useInteractionStore((state) => state.tool)
-  const shapeKind = useInteractionStore((state) => state.shapeKind)
+  const toolOptions = useInteractionStore((state) => state.toolOptions)
+  const { views } = useOpenFrame()
   const gestures = useCanvasGestures(containerRef)
   // Promotes the world layer only while it is actually moving — see use-moving.
   const moving = useMoving()
@@ -123,7 +125,10 @@ export function Canvas() {
   )
 
   const ink = useCursorInk()
-  const toolCursor = useMemo(() => cursorFor(tool, shapeKind, ink), [tool, shapeKind, ink])
+  const toolCursor = useMemo(
+    () => cursorFor(markFor(tool, views.tools(), toolOptions), ink),
+    [tool, toolOptions, ink, views],
+  )
 
   return (
     <div

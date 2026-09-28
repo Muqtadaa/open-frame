@@ -1,6 +1,6 @@
-import type { ObjectId, Point, ShapeKind } from '@openframe/core'
+import type { ObjectId, Point } from '@openframe/core'
 
-import type { Tool } from './interaction-store.js'
+import type { Placement, Tool } from '../scene/tools.js'
 
 /**
  * What a pointer gesture MEANS, decided without touching React, the DOM or the
@@ -57,10 +57,17 @@ export interface PointerDownContext {
   /** 0 = primary, 1 = middle. */
   readonly button: number
   readonly spaceHeld: boolean
-  /** Which variant the shape tool is currently set to. */
-  readonly shapeKind: ShapeKind
-  /** The grid the table tool will place. */
-  readonly tableSize: { readonly columns: number; readonly rows: number }
+  /**
+   * What the armed tool makes, when it makes something: the type, how a press
+   * places it, and the data its options give it. Resolved by the caller from
+   * the type's declared tool, so this stays a pure function of what it is
+   * handed and names no type.
+   */
+  readonly make: {
+    readonly type: string
+    readonly place: Placement
+    readonly data?: Readonly<Record<string, unknown>>
+  } | null
   /**
    * Which objects are locked, so a press on one does not become a drag.
    *
@@ -83,35 +90,6 @@ export function onPointerDown(ctx: PointerDownContext): readonly PointerIntent[]
   }
 
   /*
-   * Creation tools are data-driven rather than a branch per tool, so adding an
-   * object type does not add a case here. The registry already knows how to
-   * build any registered type; this only has to name it.
-   */
-  if (ctx.tool === 'sticky') return [{ kind: 'create', objectType: 'sticky', at: ctx.worldPoint }]
-  if (ctx.tool === 'text') return [{ kind: 'create', objectType: 'text', at: ctx.worldPoint }]
-  if (ctx.tool === 'table') {
-    /*
-     * Equal WEIGHTS, one per column and row. The registry builds the cells to
-     * match, so the count lives in exactly one place — the length of these
-     * two arrays — and nothing downstream has to be told the shape twice.
-     */
-    return [
-      {
-        kind: 'create',
-        objectType: 'table',
-        at: ctx.worldPoint,
-        data: {
-          columns: Array.from({ length: ctx.tableSize.columns }, () => 1),
-          rows: Array.from({ length: ctx.tableSize.rows }, () => 1),
-        },
-      },
-    ]
-  }
-  if (ctx.tool === 'code') return [{ kind: 'create', objectType: 'code', at: ctx.worldPoint }]
-  if (ctx.tool === 'connector') {
-    return [{ kind: 'begin-connect', from: ctx.hitId, at: ctx.worldPoint }]
-  }
-  /*
    * A comment is dropped where you click, and carries WHAT you clicked on if
    * anything was there. The point is what pins it; the object is an
    * association, so deleting that object later leaves the comment exactly
@@ -120,26 +98,24 @@ export function onPointerDown(ctx: PointerDownContext): readonly PointerIntent[]
   if (ctx.tool === 'comment') {
     return [{ kind: 'drop-comment', at: ctx.worldPoint, on: ctx.hitId }]
   }
+
   /*
-   * Frames and shapes are DRAWN, the way they are in every graphics tool: press,
-   * drag out the size, release. A click that does not travel still places one at
-   * the type's default size, so nothing is taken away.
-   *
-   * Stickies and text are not drawn. A sticky's size is a property of the type —
-   * they are all the same size on purpose, because a wall of notes at different
-   * sizes stops reading as a wall of notes — and a text object sizes itself to
-   * what is typed into it.
+   * Creation is data-driven, not a branch per tool: the type declares how a
+   * press places one, and the registry already knows how to build it. This
+   * used to read "data-driven" over an `if` for every tool, so a new type with
+   * a tool had to be added here as well.
    */
-  if (ctx.tool === 'frame') return [{ kind: 'begin-draw', objectType: 'frame', at: ctx.worldPoint }]
-  if (ctx.tool === 'shape') {
-    return [
-      {
-        kind: 'begin-draw',
-        objectType: 'shape',
-        at: ctx.worldPoint,
-        data: { shape: ctx.shapeKind },
-      },
-    ]
+  const { make } = ctx
+  if (make !== null) {
+    const data = make.data === undefined ? {} : { data: make.data }
+    switch (make.place) {
+      case 'click':
+        return [{ kind: 'create', objectType: make.type, at: ctx.worldPoint, ...data }]
+      case 'draw':
+        return [{ kind: 'begin-draw', objectType: make.type, at: ctx.worldPoint, ...data }]
+      case 'connect':
+        return [{ kind: 'begin-connect', from: ctx.hitId, at: ctx.worldPoint }]
+    }
   }
 
   if (ctx.hitId === null) {

@@ -14,6 +14,7 @@ import { useCommands } from '../hooks/use-commands.js'
 import { useInteractionStore } from './interaction-store.js'
 import { resolveKeyAction } from './keymap.js'
 import { readingOrder } from '../scene/reading-order.js'
+import { optionsOf } from '../scene/tools.js'
 
 /** The smallest a keyboard resize makes a side, in world units. */
 const MIN_SIDE = 10
@@ -64,7 +65,7 @@ function isOperable(target: EventTarget | null): boolean {
  */
 export function useKeyboardShortcuts(setSpaceHeld: (held: boolean) => void): void {
   const commands = useCommands()
-  const { runtime } = useOpenFrame()
+  const { runtime, views } = useOpenFrame()
 
   /*
    * A LAYOUT effect, attached during React's commit and so before the board is
@@ -150,7 +151,7 @@ export function useKeyboardShortcuts(setSpaceHeld: (held: boolean) => void): voi
         return
       }
 
-      const action = resolveKeyAction(event)
+      const action = resolveKeyAction(event, views.tools())
       if (action === null) return
       event.preventDefault()
 
@@ -181,9 +182,25 @@ export function useKeyboardShortcuts(setSpaceHeld: (held: boolean) => void): voi
           }
           return
         }
-        case 'cycle-shape':
-          store.cycleShape()
+        case 'cycle-tool': {
+          /*
+           * The first press arms the tool; every press after walks what it
+           * will make next — how one key reaches four shapes without four
+           * bindings.
+           */
+          const declared = views.tools().find((entry) => entry.type === action.type)
+          if (declared === undefined) return
+          if (store.tool !== action.type) {
+            store.setTool(action.type)
+            return
+          }
+          const { cycle } = declared.tool
+          if (cycle !== undefined) {
+            store.setToolOptions(action.type, cycle(optionsOf(declared, store.toolOptions)))
+          }
+          store.setEditing(null)
           return
+        }
         case 'undo':
           commands.undo()
           return
@@ -410,5 +427,5 @@ export function useKeyboardShortcuts(setSpaceHeld: (held: boolean) => void): voi
       window.removeEventListener('keydown', onKeyDown)
       window.removeEventListener('keyup', onKeyUp)
     }
-  }, [commands, runtime.registry, runtime.store, setSpaceHeld])
+  }, [commands, runtime.registry, runtime.store, setSpaceHeld, views])
 }

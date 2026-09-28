@@ -1,6 +1,12 @@
 import { isEmptyText, type ColorValue, type StickyData } from '@openframe/core'
 
-import { defineObjectView, type ObjectEditorProps, type ObjectViewProps } from './registry.js'
+import { StickyIcon } from '../controls/icons.js'
+import {
+  defineObjectView,
+  type ObjectTool,
+  type ObjectEditorProps,
+  type ObjectViewProps,
+} from './registry.js'
 import { RichTextEditor } from './RichTextEditor.js'
 import { RichTextView } from './RichTextView.js'
 import {
@@ -62,8 +68,23 @@ function StickyEditor({ object, Chrome, onCommit }: ObjectEditorProps<StickyData
   )
 }
 
+/**
+ * Placed where you press, at the size every note is — a wall of notes at
+ * different sizes stops reading as a wall of notes. Miro binds sticky notes to
+ * N, so both keys arm it rather than make people relearn.
+ */
+const stickyTool: ObjectTool = {
+  label: 'Sticky',
+  keys: ['s', 'n'],
+  order: 10,
+  place: 'click',
+  Icon: () => <StickyIcon />,
+  cursor: () => ({ body: 'M4.5 4h15v9.6L13.6 20H4.5z', detail: 'M19.5 13.6h-5.9v6.4' }),
+}
+
 export const stickyView = defineObjectView<StickyData>({
   type: 'sticky',
+  tool: stickyTool,
   defaultColor: 'yellow',
   Renderer: StickyRenderer,
   InlineEditor: StickyEditor,
