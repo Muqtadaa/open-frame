@@ -85,3 +85,25 @@ describe('what a connector depends on to be drawn', () => {
     )
   })
 })
+
+describe('whether a line hears members join its ends', () => {
+  it('does for a group end, even an empty one', () => {
+    const h = createTestHarness()
+    const made = h.dispatcher.dispatch({
+      kind: 'CreateObjects',
+      objects: [
+        { id: id('g'), type: 'group', x: 0, y: 0 },
+        { id: id('b'), type: 'sticky', x: 300, y: 0 },
+      ],
+    })
+    if (!made.ok) throw made.error
+    const line = connector(h, id('g'), id('b'))
+    expect(h.registry.dependsOnMembers(line, h.store.getDocument())).toBe(true)
+  })
+
+  it('does not for frame ends, whose bounds are their own', () => {
+    const h = board()
+    const line = connector(h, id('f'), id('in-frame'))
+    expect(h.registry.dependsOnMembers(line, h.store.getDocument())).toBe(false)
+  })
+})

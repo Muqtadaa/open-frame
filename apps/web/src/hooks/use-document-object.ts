@@ -89,21 +89,38 @@ export function useDependencySubscriptions(id: ObjectId): number {
         version.current += 1
         onChange()
       }
+      let wiredIds = ''
       const wire = (): void => {
         unwire()
         const object = runtime.store.getObject(id)
         if (object === undefined) return
         const document = runtime.store.getDocument()
         const depends = runtime.registry.renderDependenciesOf(object, document)
+        wiredIds = [...depends].sort().join(' ')
         wired = depends.map((dependency) => runtime.store.subscribeToObject(dependency, changed))
         /*
-         * A member added to a group is a change to the MEMBER, not to the group
-         * or to this line, so only the board's structure says so. Heard only by
-         * a line that has a group end: every line listening would redraw every
-         * line on the board whenever anything was added.
+         * A member joining a group is a change to the MEMBER — a new object, or
+         * one whose `parentId` was set — not to the group or to this line, and
+         * nothing this line listens to says so. Reparenting is not even a
+         * structural change. So a line with a group end hears every change to
+         * the board and redraws only when what it depends on is different;
+         * the members' own changes still arrive through their subscriptions.
+         * Asked of the ends' types rather than of their members, because an
+         * EMPTY group has none (Codex, on #18); and heard only by such a line,
+         * or every line would recompute on every edit.
          */
-        if (depends.length > runtime.registry.dependenciesOf(object).length) {
-          wired.push(runtime.store.subscribeToStructure(changed))
+        if (runtime.registry.dependsOnMembers(object, document)) {
+          wired.push(
+            runtime.store.subscribeToDocument(() => {
+              const current = runtime.store.getObject(id)
+              if (current === undefined) return
+              const next = runtime.registry.renderDependenciesOf(
+                current,
+                runtime.store.getDocument(),
+              )
+              if ([...next].sort().join(' ') !== wiredIds) changed()
+            }),
+          )
         }
       }
       wire()

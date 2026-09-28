@@ -125,3 +125,28 @@ test('a line joined to a group follows a member that moves', async ({ page }) =>
   await run(page, [{ kind: 'MoveObjects', moves: [{ id: 'obj_b', dx: 0, dy: 400 }] }])
   await expect.poll(() => path(page)).not.toBe(before)
 })
+
+/*
+ * An EMPTY group has no members to listen to, so a line that listened only
+ * when there were some never heard the first one arrive — and stayed at the
+ * empty group's bounds (Codex, on #18).
+ */
+test('a line joined to an empty group follows the first member put in it', async ({ page }) => {
+  await freshBoard(page)
+  await run(page, [
+    {
+      kind: 'CreateObjects',
+      objects: [
+        { id: 'obj_a', type: 'sticky', x: 100, y: 500, width: 160, height: 160 },
+        { id: 'obj_c', type: 'sticky', x: 700, y: 200, width: 160, height: 160 },
+        { id: 'obj_g', type: 'group', x: 0, y: 0 },
+      ],
+    },
+    connector('obj_g', 'obj_c'),
+  ])
+  const before = await path(page)
+  expect(before).not.toBeNull()
+
+  await run(page, [{ kind: 'ReparentObjects', ids: ['obj_a'], parentId: 'obj_g' }])
+  await expect.poll(() => path(page)).not.toBe(before)
+})

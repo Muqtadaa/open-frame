@@ -1121,6 +1121,20 @@ export class ObjectTypeRegistry {
     return [...out]
   }
 
+  /**
+   * Whether an object declared by `object` has bounds made of its children,
+   * so a member joining or leaving one changes how `object` is drawn. Asked
+   * of the ends' TYPES, not of how many members they hold: an empty group has
+   * none, and the line joined to it must still hear the first one arrive
+   * (Codex, on #18).
+   */
+  dependsOnMembers(object: AnyOpenFrameObject, doc: BoardDocument): boolean {
+    return this.dependenciesOf(object).some((dependency) => {
+      const target = doc.objects.get(dependency)
+      return target !== undefined && this.#boundsFromChildren(target.type)
+    })
+  }
+
   /** A container whose extent is derived from what it holds, rather than drawn by its own frame. */
   #boundsFromChildren(type: string): boolean {
     const definition = this.#definitions.get(type)
