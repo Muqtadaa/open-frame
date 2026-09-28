@@ -204,4 +204,32 @@ describe('reverting a change somebody else made', () => {
     expect(h.dispatcher.revert(change).ok).toBe(true)
     expect(h.store.getObject(id('a'))).toBeDefined()
   })
+
+  /*
+   * The inverse of a create is a removal, and a removal was checked only for
+   * whether the object still existed. Somebody who had since written in the
+   * agent's note lost what they wrote when the agent's change was taken back.
+   */
+  it('does not delete something the change made that somebody has changed since', () => {
+    const h = harness()
+    const change = agent(h, 'Add two notes', [
+      {
+        kind: 'CreateObjects',
+        objects: [
+          { id: id('n1'), type: 'sticky', x: 0, y: 300 },
+          { id: id('n2'), type: 'sticky', x: 100, y: 300 },
+        ],
+      },
+    ])
+    h.dispatcher.dispatch({
+      kind: 'UpdateObjectData',
+      id: id('n1'),
+      patch: { text: richFromPlain('mine now') },
+    })
+
+    const result = h.dispatcher.revert(change)
+    expect(result.ok && result.affected).toEqual([id('n2')])
+    expect(h.store.getObject(id('n1'))).toBeDefined()
+    expect(h.store.getObject(id('n2'))).toBeUndefined()
+  })
 })

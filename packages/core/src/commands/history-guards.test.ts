@@ -284,4 +284,25 @@ describe('undo after somebody else changed the board', () => {
     expect(h.dispatcher.redo()?.ok).toBe(true)
     expect(x(h, 'n')).toBe(70)
   })
+
+  it('does not undo a creation into deleting what somebody has written in it since', () => {
+    const h = harness()
+    h.dispatcher.dispatch({
+      kind: 'CreateObjects',
+      objects: [{ id: id('n'), type: 'sticky', x: 0, y: 300 }],
+    })
+    const written = h.store.getObject(id('n'))
+    if (written === undefined) throw new Error('no note')
+    remote(h, [
+      {
+        op: 'set',
+        id: id('n'),
+        path: ['data'],
+        value: { ...(written.data as Record<string, unknown>), text: richFromPlain('theirs') },
+      },
+    ])
+
+    expect(h.dispatcher.undo()).toMatchObject({ ok: false, error: { code: 'stale-history' } })
+    expect(h.store.getObject(id('n'))).toBeDefined()
+  })
 })

@@ -390,7 +390,7 @@ function lockedAmong(doc: BoardDocument, ids: readonly ObjectId[]): ReadonlySet<
  *   takes its locked child along, and redoing that must take it again. Rule
  *   3's lock check is the command layer's, and history is not a way round it;
  * - EVERY change to an object that somebody has changed since (Codex, on #12
- *   and #13). A property is superseded when the value the replay finds there
+ *   and #13), including removing an object the step created (A-2). A property is superseded when the value the replay finds there
  *   is not the one this step left; putting back the step's value would undo
  *   their edit, not ours. And the whole object goes, not only that property:
  *   a conversion writes the type, its data version and the data together,
@@ -436,14 +436,6 @@ function replay(
       return
     }
     if (existing === undefined) return
-    if (patch.op === 'remove') {
-      if (lockedByOthers(existing)) return
-      objects.delete(patch.id)
-      kept.push(patch)
-      return
-    }
-    const changesLock = patch.path.length === 1 && patch.path[0] === 'locked'
-    if (lockedByOthers(existing) && !changesLock) return
     /*
      * What this write expects to find: the value its partner wrote. The
      * inverse is the forward list inverted patch by patch and reversed, so
@@ -455,6 +447,28 @@ function replay(
       recorded.left.length === patches.length
         ? recorded.left[patches.length - 1 - index]
         : undefined
+    if (patch.op === 'remove') {
+      if (lockedByOthers(existing)) return
+      /*
+       * Taking back a creation removes the object — and a removal used to be
+       * checked only for whether the object was there. Somebody who had
+       * written in it since lost what they wrote (tracks A-2): the object must
+       * still be exactly what the step made, like any other value it left.
+       */
+      if (
+        partner?.op === 'add' &&
+        partner.id === patch.id &&
+        !sameValue(existing, partner.object)
+      ) {
+        superseded.add(patch.id)
+        return
+      }
+      objects.delete(patch.id)
+      kept.push(patch)
+      return
+    }
+    const changesLock = patch.path.length === 1 && patch.path[0] === 'locked'
+    if (lockedByOthers(existing) && !changesLock) return
     if (
       partner?.op === 'set' &&
       partner.id === patch.id &&
