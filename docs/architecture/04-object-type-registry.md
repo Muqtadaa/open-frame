@@ -18,7 +18,7 @@ So the registry is split:
 |                        | Lives in        | Contains                                                         | Knows about React |
 | ---------------------- | --------------- | ---------------------------------------------------------------- | :---------------: |
 | `ObjectTypeDefinition` | `packages/core` | schema, version, migrations, factory, capabilities, `describe()` |        ❌         |
-| `ObjectViewDefinition` | `apps/web`      | `Renderer`, `InlineEditor`, icon                                 |        ✅         |
+| `ObjectViewDefinition` | `apps/web`      | `Renderer`, `InlineEditor`, defaults, `tool`                     |        ✅         |
 
 They are joined by the type string at startup, and **either can be missing
 without the other breaking**:
@@ -132,16 +132,59 @@ export const evidenceType = defineObjectType<'evidence', EvidenceData>({
 
 **Zero changes** to: the command layer, the dispatcher, undo, persistence,
 serialization, migration infrastructure, the viewport, hit testing, culling,
-selection, the toolbar framework, search, AI serialization or MCP tools.
+selection, the tool rail, the keymap, the cursor, the pointer controller,
+search, AI serialization or MCP tools.
+
+### Making it from the rail
+
+A type that people make from the rail says so on its view, in the same file:
+
+```ts
+const evidenceTool: ObjectTool = {
+  label: 'Evidence',
+  keys: ['e'],
+  order: 80,
+  place: 'click', // or 'draw' (drag to size) or 'connect'
+  Icon: () => <EvidenceIcon />,
+  cursor: () => ({ body: 'M4 4h16v16H4z' }),
+}
+
+export const evidenceView = defineObjectView<EvidenceData>({
+  type: 'evidence',
+  tool: evidenceTool,
+  // ...
+})
+```
+
+The rail, the keymap, the cursor and the pointer all read it through
+`views.tools()`. A tool with choices to make first declares `initial`,
+`data(options)` for what the object is created with, an optional `cycleKey`
+plus `cycle`, and an `options.Picker` that the rail opens from the armed
+button. The shape tool declares all of these.
+
+The claim was tested, not assumed. `decision` was given a tool in
+`DecisionView.tsx` and nothing else was changed. It appeared on the rail, its
+key armed it, and a press placed one.
+
+Until tracks A-6 this was not true. Adding a tool meant editing seven more
+files: the `Tool` union, the keymap, the pointer controller, the cursor table,
+and the rail's groups, icons and flyouts. None of them compared `object.type`,
+so the rule 5 scan could not see them. It now scans tool comparisons as well
+(`apps/web/src/registry-rule.test.ts`).
 
 ---
 
 ## The anti-`switch` rule
 
 `switch (object.type)` is permitted in exactly one place: the registry lookup
-itself. Anywhere else it is a design failure, and
-[`architecture.test.ts`](../../packages/core/src/architecture.test.ts) fails the
-build if it appears.
+itself. Anywhere else it is a design failure, and two tests fail the build if
+it appears:
+
+- [`architecture.test.ts`](../../packages/core/src/architecture.test.ts) checks
+  core;
+- [`registry-rule.test.ts`](../../apps/web/src/registry-rule.test.ts) checks the
+  web app outside `views/`. It also catches comparing `.type`, or a tool,
+  against a registered type name.
 
 If behaviour varies by object type, it belongs in the registry — that is what
 makes a new type pick it up for free.

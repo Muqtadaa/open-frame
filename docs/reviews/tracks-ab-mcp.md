@@ -316,3 +316,25 @@ cover:
       pass, instead of sorting all children to read the last one.
   - **What is left** is one scan per command. Only the agent's own process
     pays it.
+
+- **Tool metadata moved into the registry** (structural, chosen by the owner):
+  - **What was wrong.** A type made from the rail declared its tool in seven
+    places: the `Tool` union, the keymap, the pointer controller's `if`s, the
+    cursor table, and the rail's groups, icons and flyouts. All seven compared
+    `tool === 'shape'`, which the rule 5 scan could not see.
+  - **What changed.**
+    - A type now declares its tool on its view, as `ObjectViewDefinition.tool`.
+      It holds the label, keys, order, placement, icon, cursor, and any options
+      with their picker.
+    - Every caller reads that declaration through `views.tools()`.
+    - `shapeKind` and `tableSize` became one `toolOptions` map.
+    - The shape and table pickers moved to `controls/`.
+    - Image stays a chrome button, because it is a file chooser with upload
+      validation rather than a placement.
+  - **How it was checked.**
+    - The widened rule 5 scan failed on the nine tool comparisons before the
+      change.
+    - The rail goldens did not move, and the rail and tool e2e specs pass
+      unchanged.
+    - Giving `decision` a tool in its view alone put it on the rail with a
+      working key and placement.
