@@ -1,6 +1,7 @@
 import type { BoardDocument } from '../../domain/document.js'
 import type { ObjectId } from '../../domain/ids.js'
 import type { AnyOpenFrameObject } from '../../domain/object.js'
+import { unpaintableColours } from '../../domain/style-boundary.js'
 import { CommandError } from '../errors.js'
 
 /** Fetches an object or rejects the whole command. */
@@ -52,4 +53,19 @@ export function collectWithDescendants(
     for (const child of childrenByParent.get(id) ?? []) stack.push(child)
   }
   return collected
+}
+
+/**
+ * A style whose colours a view can paint, or the whole command is rejected.
+ * A colour is handed to CSS as written, so `url(https://…)` would be fetched
+ * by every viewer's browser (tracks A-3).
+ */
+export function requirePaintable(style: object): void {
+  const bad = unpaintableColours(style)
+  if (bad.length > 0) {
+    throw new CommandError(
+      'invalid-input',
+      `style.${bad.join(', style.')} must be a palette colour, #rrggbb or none`,
+    )
+  }
 }

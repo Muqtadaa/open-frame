@@ -4,7 +4,7 @@ import { describe, expect, it } from 'vitest'
 
 import type { BoardPeer } from '../board.js'
 import type { BoardAccess, NewComment } from '../supabase/account.js'
-import { peerOn, settles, stubAccount, TEST_BOARD } from '../testing.js'
+import { peerOn, settles, stubAccount, TEST_BOARD, validCall } from '../testing.js'
 import { toolContext } from './context.js'
 import { getObjects } from './read.js'
 import { FRAMING } from './respond.js'
@@ -265,24 +265,7 @@ describe('a view-only board', () => {
 
     for (const tool of WRITE_TOOLS) {
       if (tool.name === 'add_comment') continue
-      const answer = await tool.run(
-        {
-          board: TEST_BOARD,
-          objects: [note('not allowed')],
-          ids: ['obj_anything'],
-          moves: [{ id: 'obj_anything', x: 0, y: 0 }],
-          id: 'obj_anything',
-          data: { text: [{ text: 'no' }] },
-          from: { x: 0, y: 0 },
-          to: { x: 10, y: 10 },
-          name: 'nope',
-          x: 0,
-          y: 0,
-          width: 10,
-          height: 10,
-        },
-        context,
-      )
+      const answer = await tool.run(validCall(tool.name), context)
       expect(answer.isError, `${tool.name} did not refuse a viewer`).toBe(true)
       expect(answer.text).toMatch(/view-only/i)
     }

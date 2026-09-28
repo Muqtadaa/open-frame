@@ -212,3 +212,21 @@ cover:
     partner in the opposite list. The check previously ran against the board
     the replay started from, which put a move-then-delete back at the moved
     spot and a create-then-move back at the start.
+- **A-3, A-4 and B-1, the boundary:**
+  - A colour is checked where a COMMAND arrives, not only at load and at the
+    room: `CreateObjects` and `UpdateStyle` refuse a value in `color`,
+    `textColor`, `strokeColor` or `labelFill` that is not a palette token,
+    `#rrggbb` or `none` (`requirePaintable`). A command refuses rather than
+    drops, since whoever sent it is there to be told.
+    `style-boundary.test.ts`: 10 of 11 failed before.
+  - Every tool's arguments are a `z.strictObject`, including nested objects
+    and both sides of the connector's endpoint union. The SDK parses against
+    this schema before the tool runs; a raw shape had been wrapped in a
+    non-strict object that stripped unknown keys first. The JSON schema an
+    agent reads now says `additionalProperties: false`. `onBoard` is generic
+    over the schema, so the ten `as` casts on parsed input are gone.
+  - `contract.test.ts` covers, per tool: an unknown key is refused by name
+    and changes nothing (12 failed before). It also covers hostile colours
+    through `create_objects` and `update_object`, lock refusals for update,
+    move and delete, and the 200/500 size limits. The stdio test checks the
+    same refusal at the wire. Loosening any one schema again fails its test.

@@ -39,11 +39,11 @@ import type { ToolContext } from './context.js'
 const ids = createIdGenerator()
 
 /** Every write tool needs `edit`, so the need is written once rather than seven times. */
-const onBoardEditing = (
+const onBoardEditing = <Schema extends z.ZodType<{ board: string }>>(
   input: unknown,
   context: ToolContext,
-  shape: z.ZodRawShape,
-): ReturnType<typeof onBoard> => onBoard(input, context, shape, 'edit')
+  schema: Schema,
+): ReturnType<typeof onBoard<Schema>> => onBoard(input, context, schema, 'edit')
 
 /**
  * One transaction, one undo entry, and an answer the agent can check.
@@ -72,13 +72,37 @@ function commit(
   })
 }
 
+/**
+ * The style keys `type` does not take, as a refusal naming them, or null.
+ *
+ * `style` is a record rather than a strict schema because what it may hold is
+ * the TYPE's answer (`capabilities.styleProps`, rule 21), and a schema here
+ * would be a second, stale one. `UpdateStyle` skips a key a type does not
+ * take, which is right for a mixed selection coloured at once and wrong for
+ * an agent naming one object: `style: { colour }` changed nothing and was
+ * reported as done (Codex, on #14). An unknown type is left to the command,
+ * which refuses it with its own reason.
+ */
+function strayStyle(peer: BoardPeer, type: string, style: object): ToolResponse | null {
+  const definition = peer.registry.get(type)
+  if (definition === undefined) return null
+  const takes: readonly string[] = definition.capabilities.styleProps
+  const stray = Object.keys(style).filter((key) => !takes.includes(key))
+  if (stray.length === 0) return null
+  return problem(
+    `A ${type} has no style ${stray.map((key) => `\`${key}\``).join(', ')}. ` +
+      `It takes: ${takes.length === 0 ? 'none' : takes.join(', ')}.`,
+  )
+}
+
 const point = { x: z.number().finite(), y: z.number().finite() }
 
-const createArguments = {
+const createArguments = z.strictObject({
   ...boardArgument,
   objects: z
     .array(
-      z.object({
+      // Strict inside as well: a misspelt `widht` is the same lie one level down.
+      z.strictObject({
         type: z.string().describe('A type this build knows: sticky, text, shape, evidence, …'),
         ...point,
         width: z.number().positive().optional(),
@@ -96,7 +120,7 @@ const createArguments = {
     )
     .min(1)
     .max(200),
-}
+})
 
 export const createObjects: ToolDefinition = {
   name: 'create_objects',
@@ -110,17 +134,11 @@ export const createObjects: ToolDefinition = {
   run: async (input, context) => {
     const opened = await onBoardEditing(input, context, createArguments)
     if (isResponse(opened)) return opened
-    const asked = opened.input as {
-      objects: {
-        type: string
-        x: number
-        y: number
-        width?: number
-        height?: number
-        parentId?: string
-        data?: Record<string, unknown>
-        style?: Record<string, unknown>
-      }[]
+    const asked = opened.input
+    for (const object of asked.objects) {
+      if (object.style === undefined) continue
+      const refused = strayStyle(opened.peer, object.type, object.style)
+      if (refused !== null) return refused
     }
 
     return commit(opened.peer, `Create ${String(asked.objects.length)} object(s)`, [
@@ -141,7 +159,7 @@ export const createObjects: ToolDefinition = {
   },
 }
 
-const updateArguments = {
+const updateArguments = z.strictObject({
   ...boardArgument,
   id: z.string().describe('The object to change, as `get_objects` gives it.'),
   data: z
@@ -149,7 +167,7 @@ const updateArguments = {
     .optional()
     .describe('Fields to change on the object itself. Merged, so leave out what stays.'),
   style: z.record(z.string(), z.unknown()).optional().describe('Colour, size and the rest.'),
-}
+})
 
 export const updateObject: ToolDefinition = {
   name: 'update_object',
@@ -162,16 +180,17 @@ export const updateObject: ToolDefinition = {
   run: async (input, context) => {
     const opened = await onBoardEditing(input, context, updateArguments)
     if (isResponse(opened)) return opened
-    const asked = opened.input as {
-      id: string
-      data?: Record<string, unknown>
-      style?: Record<string, unknown>
-    }
+    const asked = opened.input
     if (asked.data === undefined && asked.style === undefined) {
       return problem('Nothing to change: pass `data`, `style`, or both.')
     }
 
     const id = asObjectId(asked.id)
+    const target = opened.peer.store.getDocument().objects.get(id)
+    if (target !== undefined && asked.style !== undefined) {
+      const refused = strayStyle(opened.peer, target.type, asked.style)
+      if (refused !== null) return refused
+    }
     const commands: Command[] = []
     if (asked.data !== undefined) commands.push({ kind: 'UpdateObjectData', id, patch: asked.data })
     if (asked.style !== undefined) {
@@ -181,14 +200,14 @@ export const updateObject: ToolDefinition = {
   },
 }
 
-const moveArguments = {
+const moveArguments = z.strictObject({
   ...boardArgument,
   moves: z
-    .array(z.object({ id: z.string(), ...point }))
+    .array(z.strictObject({ id: z.string(), ...point }))
     .min(1)
     .max(500)
     .describe('Where each object goes, in board coordinates — the same numbers `get_objects` gives.'),
-}
+})
 
 export const moveObjects: ToolDefinition = {
   name: 'move_objects',
@@ -201,7 +220,7 @@ export const moveObjects: ToolDefinition = {
   run: async (input, context) => {
     const opened = await onBoardEditing(input, context, moveArguments)
     if (isResponse(opened)) return opened
-    const asked = opened.input as { moves: { id: string; x: number; y: number }[] }
+    const asked = opened.input
     const document = opened.peer.store.getDocument()
 
     /*
@@ -237,10 +256,10 @@ export const moveObjects: ToolDefinition = {
   },
 }
 
-const deleteArguments = {
+const deleteArguments = z.strictObject({
   ...boardArgument,
   ids: z.array(z.string()).min(1).max(500),
-}
+})
 
 export const deleteObjects: ToolDefinition = {
   name: 'delete_objects',
@@ -254,19 +273,24 @@ export const deleteObjects: ToolDefinition = {
   run: async (input, context) => {
     const opened = await onBoardEditing(input, context, deleteArguments)
     if (isResponse(opened)) return opened
-    const asked = opened.input as { ids: string[] }
+    const asked = opened.input
     return commit(opened.peer, `Delete ${String(asked.ids.length)} object(s)`, [
       { kind: 'DeleteObjects', ids: asked.ids.map((id) => asObjectId(id)) },
     ])
   },
 }
 
+/*
+ * Strict on both sides, or the union cannot tell them apart: a plain object
+ * would let `{ x, y, objectId }` through as a point with a stray key, and
+ * `{ x, y, side }` through as a point that silently ignored the side.
+ */
 const endpoint = z.union([
-  z.object({ objectId: z.string().describe('Attach to this object.') }),
-  z.object(point).describe('A free point in board coordinates.'),
+  z.strictObject({ objectId: z.string().describe('Attach to this object.') }),
+  z.strictObject(point).describe('A free point in board coordinates.'),
 ])
 
-const connectorArguments = {
+const connectorArguments = z.strictObject({
   ...boardArgument,
   from: endpoint,
   to: endpoint,
@@ -276,7 +300,7 @@ const connectorArguments = {
   startArrow: z
     .enum(['none', 'arrow', 'triangle', 'dot', 'diamond', 'semicircle', 'bar'])
     .optional(),
-}
+})
 
 export const createConnector: ToolDefinition = {
   name: 'create_connector',
@@ -290,17 +314,10 @@ export const createConnector: ToolDefinition = {
   run: async (input, context) => {
     const opened = await onBoardEditing(input, context, connectorArguments)
     if (isResponse(opened)) return opened
-    const asked = opened.input as {
-      from: { objectId?: string; x?: number; y?: number }
-      to: { objectId?: string; x?: number; y?: number }
-      routing?: string
-      text?: string
-      startArrow?: string
-      endArrow?: string
-    }
+    const asked = opened.input
 
-    const end = (spec: { objectId?: string; x?: number; y?: number }): Record<string, unknown> =>
-      spec.objectId === undefined
+    const end = (spec: z.infer<typeof endpoint>): Record<string, unknown> =>
+      !('objectId' in spec)
         ? { kind: 'point', x: spec.x, y: spec.y }
         : // `auto` because where a line meets a shape is the type's decision,
           // not the caller's: it picks the side that suits the route and keeps
@@ -336,7 +353,7 @@ export const createConnector: ToolDefinition = {
   },
 }
 
-const frameArguments = {
+const frameArguments = z.strictObject({
   ...boardArgument,
   name: z.string().max(120).describe('What the frame is called.'),
   ...point,
@@ -347,7 +364,7 @@ const frameArguments = {
     .max(500)
     .optional()
     .describe('Objects to put inside it. They keep their positions.'),
-}
+})
 
 export const createFrame: ToolDefinition = {
   name: 'create_frame',
@@ -360,14 +377,7 @@ export const createFrame: ToolDefinition = {
   run: async (input, context) => {
     const opened = await onBoardEditing(input, context, frameArguments)
     if (isResponse(opened)) return opened
-    const asked = opened.input as {
-      name: string
-      x: number
-      y: number
-      width: number
-      height: number
-      contains?: string[]
-    }
+    const asked = opened.input
 
     /*
      * The id is minted HERE because the second command has to name the first
@@ -405,13 +415,13 @@ export const createFrame: ToolDefinition = {
   },
 }
 
-const commentArguments = {
+const commentArguments = z.strictObject({
   ...boardArgument,
   body: z.string().min(1).max(4000),
   objectId: z.string().optional().describe('Pin it to this object.'),
   x: z.number().finite().optional().describe('Or drop the pin here, in board coordinates.'),
   y: z.number().finite().optional(),
-}
+})
 
 export const addComment: ToolDefinition = {
   name: 'add_comment',
@@ -422,17 +432,11 @@ export const addComment: ToolDefinition = {
     'rather than part of it: they are not in undo and do not move the objects.',
   input: commentArguments,
   run: async (input, context) => {
-    const parsed = z.object(commentArguments).safeParse(input)
+    const parsed = commentArguments.safeParse(input)
     if (!parsed.success) return problem(`That is not a valid request: ${parsed.error.message}`)
     if (context.account === null) return problem(NOT_SIGNED_IN)
 
-    const asked = parsed.data as {
-      board: string
-      body: string
-      objectId?: string
-      x?: number
-      y?: number
-    }
+    const asked = parsed.data
     /*
      * No `role` check, and deliberately not: commenting is what a viewer MAY
      * do — `readOnlyCapabilities` has granted `comment` since phase 1 — and

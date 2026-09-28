@@ -48,3 +48,18 @@ export function sanitizeStyle(json: Record<string, unknown>): ObjectStyle {
   // map the view owns, so an unrecognised one misses and the default applies.
   return style
 }
+
+/**
+ * The colour keys in `style` whose value is not a colour a view can paint: not
+ * a palette token, not `#rrggbb`, and not `none`. For the COMMAND boundary,
+ * which rejects rather than drops (tracks A-3): whoever sent a command is
+ * there to be told, where a file on disk is not.
+ */
+export function unpaintableColours(style: object): string[] {
+  return Object.entries(style)
+    .filter(
+      ([key, value]) =>
+        key in COLOUR_KEYS && value !== undefined && value !== 'none' && !isColorValue(value),
+    )
+    .map(([key]) => key)
+}
