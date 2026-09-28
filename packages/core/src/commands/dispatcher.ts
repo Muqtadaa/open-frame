@@ -8,6 +8,7 @@ import type { Clock } from '../ports/clock.js'
 import type { IdGenerator } from '../ports/id-generator.js'
 import type { DocumentStore, DocumentWriter } from '../store/document-store.js'
 import { CommandError } from './errors.js'
+import { acceptablePatches } from './handlers/apply-remote-patches.js'
 import { handleCommand } from './handlers/index.js'
 import { describeCommand } from './labels.js'
 import { UndoStack } from './undo.js'
@@ -163,6 +164,13 @@ export class CommandDispatcher {
     const result = this.#applyHistory(change.inverse, label, origin, {
       left: change.forward,
       locked: change.locked === undefined ? undefined : new Set(change.locked.after),
+      /*
+       * Somebody else's word for what the board looked like: the change log
+       * it comes from is writable by any editor of the board, so what it
+       * would put back is checked like a merge. Undo replays this board's own
+       * history and needs no such check.
+       */
+      untrusted: true,
     })
     if (!result.ok) return result
     const after = this.#deps.store.getDocument()
@@ -315,7 +323,9 @@ export class CommandDispatcher {
     recorded: RecordedState,
   ): DispatchResult {
     const before = this.#deps.store.getDocument()
-    const applicable = stillApplicable(before, patches, recorded)
+    const kept = stillApplicable(before, patches, recorded)
+    const applicable =
+      recorded.untrusted === true ? acceptablePatches(before, kept, this.#deps.registry) : kept
     if (applicable.length === 0) {
       return {
         ok: false,
@@ -354,6 +364,8 @@ export class CommandDispatcher {
 interface RecordedState {
   readonly left: readonly Patch[]
   readonly locked: ReadonlySet<ObjectId> | undefined
+  /** Recorded somewhere else, so every object it would put back is validated. */
+  readonly untrusted?: boolean
 }
 
 function lockedAmong(doc: BoardDocument, ids: readonly ObjectId[]): ReadonlySet<ObjectId> {

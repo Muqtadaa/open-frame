@@ -173,4 +173,35 @@ describe('reverting a change somebody else made', () => {
       origin: 'mcp',
     })
   })
+
+  /*
+   * A recorded change arrives from the shared log, which any editor of the
+   * board can write to, so what it would put back is checked like anything
+   * else arriving from another client. Undo replays this board's OWN history
+   * and does not need it; a revert takes somebody else's word for what the
+   * board looked like.
+   */
+  it('puts back nothing that is not a valid object', () => {
+    const h = harness()
+    const change = agent(h, 'Delete a note', [{ kind: 'DeleteObjects', ids: [id('a')] }])
+    const [restore] = change.inverse
+    if (restore?.op !== 'add') throw new Error('expected the inverse of a delete to add')
+    const hostile: RevertableChange = {
+      ...change,
+      inverse: [
+        {
+          ...restore,
+          object: { ...restore.object, frame: { ...restore.object.frame, width: 'wide' } },
+        } as unknown as typeof restore,
+      ],
+    }
+
+    expect(h.dispatcher.revert(hostile)).toMatchObject({
+      ok: false,
+      error: { code: 'stale-history' },
+    })
+    expect(h.store.getObject(id('a'))).toBeUndefined()
+    expect(h.dispatcher.revert(change).ok).toBe(true)
+    expect(h.store.getObject(id('a'))).toBeDefined()
+  })
 })
