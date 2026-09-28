@@ -24,7 +24,10 @@ export function setBoardTitle(doc: BoardDocument, command: SetBoardTitle): Patch
     throw new CommandError('invalid-input', 'A board needs a name')
   }
   if (title.length > MAX_TITLE) {
-    throw new CommandError('invalid-input', `A board name is at most ${String(MAX_TITLE)} characters`)
+    throw new CommandError(
+      'invalid-input',
+      `A board name is at most ${String(MAX_TITLE)} characters`,
+    )
   }
 
   // No change is no patch: renaming a board to what it is already called must

@@ -23,9 +23,7 @@ import type { BoardComment } from './use-comments.js'
  * Returns whether it found the comment, so a caller can tell "gone" from
  * "done" rather than assuming.
  */
-export function useFocusComment(
-  comments: readonly BoardComment[],
-): (commentId: string) => boolean {
+export function useFocusComment(comments: readonly BoardComment[]): (commentId: string) => boolean {
   const { runtime } = useOpenFrame()
   const openThread = useInteractionStore((state) => state.openThread)
   const setCommentsOpen = useInteractionStore((state) => state.setCommentsOpen)
@@ -49,8 +47,7 @@ export function useFocusComment(
       setCommentsOpen(true)
 
       const document = runtime.store.getDocument()
-      const object =
-        thread.objectId === null ? undefined : document.objects.get(thread.objectId)
+      const object = thread.objectId === null ? undefined : document.objects.get(thread.objectId)
       /*
        * `boundsOf`, never `object.frame` — a connector has no meaningful frame
        * and asking for one puts the pin at the origin.

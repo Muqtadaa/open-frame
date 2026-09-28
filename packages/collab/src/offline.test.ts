@@ -128,9 +128,7 @@ const settle = async (): Promise<void> => {
 }
 
 function moveTo(doc: Y.Doc, id: string, x: number): void {
-  applyPatchesToDoc(doc, [
-    { op: 'set', id: id as ObjectId, path: ['frame', 'x'], value: x },
-  ])
+  applyPatchesToDoc(doc, [{ op: 'set', id: id as ObjectId, path: ['frame', 'x'], value: x }])
 }
 
 function retitle(doc: Y.Doc, id: string, text: string): void {

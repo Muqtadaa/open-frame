@@ -53,9 +53,7 @@ describe('json', () => {
 describe('brace languages', () => {
   it('indents a nested block', () => {
     const before = 'function f() {\nif (x) {\nreturn 1\n}\n}'
-    expect(tidyCode(before, 'typescript')).toBe(
-      'function f() {\n  if (x) {\n    return 1\n  }\n}',
-    )
+    expect(tidyCode(before, 'typescript')).toBe('function f() {\n  if (x) {\n    return 1\n  }\n}')
   })
 
   it('pulls a closing line out to the level it closes', () => {
@@ -80,16 +78,12 @@ describe('brace languages', () => {
    */
   it('ignores a brace inside a string', () => {
     const before = 'function f() {\nconst a = "}"\nconst b = 2\n}'
-    expect(tidyCode(before, 'javascript')).toBe(
-      'function f() {\n  const a = "}"\n  const b = 2\n}',
-    )
+    expect(tidyCode(before, 'javascript')).toBe('function f() {\n  const a = "}"\n  const b = 2\n}')
   })
 
   it('ignores a brace inside a line comment', () => {
     const before = 'function f() {\n// }\nconst b = 2\n}'
-    expect(tidyCode(before, 'javascript')).toBe(
-      'function f() {\n  // }\n  const b = 2\n}',
-    )
+    expect(tidyCode(before, 'javascript')).toBe('function f() {\n  // }\n  const b = 2\n}')
   })
 
   it('never indents below zero when a file opens with a closer', () => {
@@ -99,9 +93,7 @@ describe('brace languages', () => {
 
 describe('markup', () => {
   it('indents nested elements', () => {
-    expect(tidyCode('<div>\n<p>hi</p>\n</div>', 'html')).toBe(
-      '<div>\n  <p>hi</p>\n</div>',
-    )
+    expect(tidyCode('<div>\n<p>hi</p>\n</div>', 'html')).toBe('<div>\n  <p>hi</p>\n</div>')
   })
 
   it('keeps a matched pair on one line flat', () => {

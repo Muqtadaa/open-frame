@@ -56,7 +56,9 @@ export function parseQuery(query: string): readonly QueryTerm[] {
 }
 
 /** Every array-valued field, flattened and lowercased. Tags, and anything like them. */
-function listValues(fields: Readonly<Record<string, string | number | readonly string[]>>): string[] {
+function listValues(
+  fields: Readonly<Record<string, string | number | readonly string[]>>,
+): string[] {
   const values: string[] = []
   for (const value of Object.values(fields)) {
     if (Array.isArray(value)) for (const entry of value) values.push(String(entry).toLowerCase())

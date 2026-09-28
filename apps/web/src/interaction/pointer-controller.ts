@@ -133,7 +133,12 @@ export function onPointerDown(ctx: PointerDownContext): readonly PointerIntent[]
   if (ctx.tool === 'frame') return [{ kind: 'begin-draw', objectType: 'frame', at: ctx.worldPoint }]
   if (ctx.tool === 'shape') {
     return [
-      { kind: 'begin-draw', objectType: 'shape', at: ctx.worldPoint, data: { shape: ctx.shapeKind } },
+      {
+        kind: 'begin-draw',
+        objectType: 'shape',
+        at: ctx.worldPoint,
+        data: { shape: ctx.shapeKind },
+      },
     ]
   }
 

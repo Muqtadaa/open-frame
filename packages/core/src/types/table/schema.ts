@@ -251,7 +251,10 @@ export const TableDataSchema: ZodType<TableData> = z
     rows: z.array(WeightSchema).min(1).max(MAX_ROWS),
     cells: z.array(TableCellSchema),
     headerRow: z.boolean(),
-    lines: z.object({ h: z.array(LineAtSchema), v: z.array(LineAtSchema) }).strict().optional(),
+    lines: z
+      .object({ h: z.array(LineAtSchema), v: z.array(LineAtSchema) })
+      .strict()
+      .optional(),
     merges: z.array(MergeSchema).optional(),
   })
   /*
@@ -283,7 +286,9 @@ export const TableDataSchema: ZodType<TableData> = z
 function linesFit(data: {
   columns: readonly unknown[]
   rows: readonly unknown[]
-  lines?: { h: readonly { row: number; col: number }[]; v: readonly { row: number; col: number }[] } | undefined
+  lines?:
+    | { h: readonly { row: number; col: number }[]; v: readonly { row: number; col: number }[] }
+    | undefined
 }): boolean {
   if (data.lines === undefined) return true
   const width = data.columns.length
@@ -436,11 +441,7 @@ export function setTrackSize(
  * rather than a rect is what lets the caller stay ignorant of the grid's shape
  * — and what makes "style these cells" one operation over a list.
  */
-export function cellRange(
-  data: TableData,
-  anchor: number,
-  focus: number,
-): readonly number[] {
+export function cellRange(data: TableData, anchor: number, focus: number): readonly number[] {
   const width = data.columns.length
   const count = width * data.rows.length
   if (width === 0 || anchor < 0 || focus < 0 || anchor >= count || focus >= count) return []

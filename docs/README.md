@@ -24,17 +24,17 @@ product grows.
 
 ## Start here
 
-| If you want to…                      | Read                                                            |
-| ------------------------------------ | --------------------------------------------------------------- |
-| Understand the system in ten minutes | [Architecture overview](architecture/01-overview.md)            |
+| If you want to…                          | Read                                                                |
+| ---------------------------------------- | ------------------------------------------------------------------- |
+| Understand the system in ten minutes     | [Architecture overview](architecture/01-overview.md)                |
 | Know who this is for and what is settled | [`PRODUCT.md`](../PRODUCT.md) — product truth, not visual direction |
-| Know what the interface is trying to be | [`DESIGN.md`](../DESIGN.md) and `apps/web/.impeccable/surfaces/` |
-| Know where a piece of state belongs  | [State ownership](architecture/02-state-ownership.md)           |
-| Add a new kind of canvas object      | [Object type registry](architecture/04-object-type-registry.md) |
-| Change what happens on the board     | [Commands and undo](architecture/05-commands-and-undo.md)       |
-| Know what we are building next       | [Roadmap](phases/README.md)                                     |
-| Know why something was decided       | [Decision records](adr/README.md)                               |
-| Work on this repo with Claude Code   | [`CLAUDE.md`](../CLAUDE.md)                                     |
+| Know what the interface is trying to be  | [`DESIGN.md`](../DESIGN.md) and `apps/web/.impeccable/surfaces/`    |
+| Know where a piece of state belongs      | [State ownership](architecture/02-state-ownership.md)               |
+| Add a new kind of canvas object          | [Object type registry](architecture/04-object-type-registry.md)     |
+| Change what happens on the board         | [Commands and undo](architecture/05-commands-and-undo.md)           |
+| Know what we are building next           | [Roadmap](phases/README.md)                                         |
+| Know why something was decided           | [Decision records](adr/README.md)                                   |
+| Work on this repo with Claude Code       | [`CLAUDE.md`](../CLAUDE.md)                                         |
 
 ---
 

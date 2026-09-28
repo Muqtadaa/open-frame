@@ -8,11 +8,7 @@ import type {
 import type * as Y from 'yjs'
 
 import { applyPatchesToDoc, LOCAL_ORIGIN, metaOf, objectsOf } from './document-map.js'
-import {
-  metaPatchesFromEvent,
-  parentageCandidates,
-  patchesFromEvent,
-} from './remote-patches.js'
+import { metaPatchesFromEvent, parentageCandidates, patchesFromEvent } from './remote-patches.js'
 
 export interface CollabSessionDeps {
   readonly doc: Y.Doc

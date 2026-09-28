@@ -46,7 +46,7 @@ async function freshBoard(page: Page): Promise<void> {
    * paint, so a keystroke sent on the canvas alone can land in the gap and be
    * dropped. That showed up as a rare, unexplained tool-selection failure.
    */
-  await expect(page.getByTestId("tool-select")).toBeVisible()
+  await expect(page.getByTestId('tool-select')).toBeVisible()
 }
 
 async function place(page: Page, kind: string, label: string): Promise<void> {
@@ -131,12 +131,15 @@ test.describe('shapes', () => {
   test('a label does not move when it is opened to edit', async ({ page }) => {
     await place(page, 'rectangle', 'Pay')
     const middleOf = async (selector: string): Promise<number> =>
-      page.locator(selector).first().evaluate((element) => {
-        const range = document.createRange()
-        range.selectNodeContents(element)
-        const box = range.getBoundingClientRect()
-        return box.y + box.height / 2
-      })
+      page
+        .locator(selector)
+        .first()
+        .evaluate((element) => {
+          const range = document.createRange()
+          range.selectNodeContents(element)
+          const box = range.getBoundingClientRect()
+          return box.y + box.height / 2
+        })
     const drawn = await middleOf('.of-shape__label-text')
     await page.locator('[data-object-type="shape"]').dblclick()
     await expect(page.locator(EDITOR)).toBeFocused()

@@ -12,7 +12,14 @@
  */
 export { openBoard, type BoardPeer, type OpenBoardOptions } from './board.js'
 export { nodeRoomSocket } from './node-room-socket.js'
-export { resume, signIn, signOut, type BoardAccess, type NewComment, type SignedIn } from './supabase/account.js'
+export {
+  resume,
+  signIn,
+  signOut,
+  type BoardAccess,
+  type NewComment,
+  type SignedIn,
+} from './supabase/account.js'
 export { toolContext, type ToolContext } from './tools/context.js'
 export { type ToolDefinition } from './tools/definition.js'
 export { READ_TOOLS } from './tools/read.js'

@@ -120,10 +120,13 @@ test('the record panel keeps off the object it is describing', async ({ page }) 
    * middle of the boundary, where the double-click lands. Asserting no
    * overlap at all would be asserting more than the layer promises.
    */
-  const covering = await page.evaluate(([x, y]: number[]) => {
-    const found = document.elementFromPoint(x ?? 0, y ?? 0)
-    return found?.closest('[data-testid="inspector"]') !== null && found !== null
-  }, [grip.x + grip.width / 2, grip.y + grip.height / 2])
+  const covering = await page.evaluate(
+    ([x, y]: number[]) => {
+      const found = document.elementFromPoint(x ?? 0, y ?? 0)
+      return found?.closest('[data-testid="inspector"]') !== null && found !== null
+    },
+    [grip.x + grip.width / 2, grip.y + grip.height / 2],
+  )
 
   expect(covering, 'the panel is over the boundary you would double-click').toBe(false)
 })

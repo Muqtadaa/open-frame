@@ -117,9 +117,7 @@ export function useComments(boardId: BoardId, enabled: boolean): LoadedComments 
 
 /** Threads only — the ones with a pin — newest last, resolved ones excluded. */
 export function openThreads(comments: readonly BoardComment[]): readonly BoardComment[] {
-  return comments.filter(
-    (comment) => comment.parentId === null && comment.resolvedAt === null,
-  )
+  return comments.filter((comment) => comment.parentId === null && comment.resolvedAt === null)
 }
 
 /** Every thread with a pin, including resolved ones. */

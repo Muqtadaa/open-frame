@@ -77,8 +77,7 @@ describe('the highlighter is loaded on demand', () => {
  * imports that would each be fetched to enumerate them.
  */
 describe('every language offered can be highlighted', () => {
-  const read = (path: string): string =>
-    readFileSync(resolve(process.cwd(), path), 'utf8')
+  const read = (path: string): string => readFileSync(resolve(process.cwd(), path), 'utf8')
 
   const loaders = new Set(
     [...read('src/views/code-highlight.ts').matchAll(/^ {2}([a-z0-9]+): \(\) =>/gm)].map(

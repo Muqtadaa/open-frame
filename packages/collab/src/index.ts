@@ -21,11 +21,7 @@ export {
   META,
   OBJECTS,
 } from './document-map.js'
-export {
-  metaPatchesFromEvent,
-  parentageCandidates,
-  patchesFromEvent,
-} from './remote-patches.js'
+export { metaPatchesFromEvent, parentageCandidates, patchesFromEvent } from './remote-patches.js'
 export {
   createAwareness,
   decodeRole,
@@ -44,12 +40,7 @@ export {
   type Handled,
   type RoomRole,
 } from './protocol.js'
-export {
-  BoardRoom,
-  documentFromSnapshot,
-  type BoardRoomOptions,
-  type RoomPeer,
-} from './room.js'
+export { BoardRoom, documentFromSnapshot, type BoardRoomOptions, type RoomPeer } from './room.js'
 export {
   CLOSE_BOARD_DELETED,
   CLOSE_PASSWORD_REQUIRED,

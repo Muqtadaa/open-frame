@@ -41,7 +41,10 @@ function hasFiniteFrame(object: AnyOpenFrameObject): boolean {
 }
 
 /** Walks up a parent chain, reporting the loop it entered or `null` if it ends. */
-function cycleFrom(parentOf: (id: ObjectId) => ObjectId | null, startId: ObjectId): ObjectId[] | null {
+function cycleFrom(
+  parentOf: (id: ObjectId) => ObjectId | null,
+  startId: ObjectId,
+): ObjectId[] | null {
   const path: ObjectId[] = []
   const seen = new Set<ObjectId>()
   let current: ObjectId | null = startId

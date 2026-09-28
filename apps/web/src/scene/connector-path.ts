@@ -134,7 +134,12 @@ export function routeAngles(
   const beforeEnd = distinctFrom(points, points.length - 1, -1)
   const first = points[0]
   const last = points[points.length - 1]
-  if (afterStart === undefined || beforeEnd === undefined || first === undefined || last === undefined) {
+  if (
+    afterStart === undefined ||
+    beforeEnd === undefined ||
+    first === undefined ||
+    last === undefined
+  ) {
     return { departure: straight, arrival: straight }
   }
 

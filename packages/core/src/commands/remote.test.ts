@@ -53,7 +53,10 @@ describe('ApplyRemotePatches', () => {
     const h = harnessWith('one')
     const depth = h.dispatcher.undoStack.depth
     const result = h.dispatcher.dispatch(
-      { kind: 'ApplyRemotePatches', patches: [{ op: 'set', id: id('one'), path: ['frame', 'x'], value: 42 }] },
+      {
+        kind: 'ApplyRemotePatches',
+        patches: [{ op: 'set', id: id('one'), path: ['frame', 'x'], value: 42 }],
+      },
       { origin: 'remote', skipUndo: true },
     )
 
@@ -126,8 +129,14 @@ describe('RepairParentage', () => {
     const fromOne = cycle()
     const fromOther = cycle()
 
-    fromOne.dispatcher.dispatch({ kind: 'RepairParentage', ids: [id('aaa')] }, { origin: 'remote', skipUndo: true })
-    fromOther.dispatcher.dispatch({ kind: 'RepairParentage', ids: [id('zzz')] }, { origin: 'remote', skipUndo: true })
+    fromOne.dispatcher.dispatch(
+      { kind: 'RepairParentage', ids: [id('aaa')] },
+      { origin: 'remote', skipUndo: true },
+    )
+    fromOther.dispatcher.dispatch(
+      { kind: 'RepairParentage', ids: [id('zzz')] },
+      { origin: 'remote', skipUndo: true },
+    )
 
     for (const h of [fromOne, fromOther]) {
       expect(findParentCycle(h.store.getDocument().objects, id('aaa'))).toBeNull()
@@ -150,7 +159,11 @@ describe('RepairParentage', () => {
       { op: 'set', id: id('zzz'), path: ['locked'], value: true },
     ])
 
-    const refused = h.dispatcher.dispatch({ kind: 'ReparentObjects', ids: [id('aaa')], parentId: null })
+    const refused = h.dispatcher.dispatch({
+      kind: 'ReparentObjects',
+      ids: [id('aaa')],
+      parentId: null,
+    })
     expect(refused.ok).toBe(false)
 
     const repaired = h.dispatcher.dispatch(
@@ -243,7 +256,10 @@ describe('parentageRepairs', () => {
  */
 describe('ApplyRemotePatches, against a peer that sends nonsense', () => {
   const remote = (h: ReturnType<typeof createTestHarness>, patches: Patch[]) =>
-    h.dispatcher.dispatch({ kind: 'ApplyRemotePatches', patches }, { origin: 'remote', skipUndo: true })
+    h.dispatcher.dispatch(
+      { kind: 'ApplyRemotePatches', patches },
+      { origin: 'remote', skipUndo: true },
+    )
 
   /** A whole object of the wrong shape. The widest door there is. */
   it('drops an arriving object whose frame is not a frame', () => {

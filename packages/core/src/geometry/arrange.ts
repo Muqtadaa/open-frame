@@ -143,7 +143,9 @@ export function distributeOffsets<Id>(
   let cursor = from
   for (const item of order) {
     const delta = cursor - startOf(item.bounds, axis)
-    offsets.push(axis === 'x' ? { id: item.id, dx: delta, dy: 0 } : { id: item.id, dx: 0, dy: delta })
+    offsets.push(
+      axis === 'x' ? { id: item.id, dx: delta, dy: 0 } : { id: item.id, dx: 0, dy: delta },
+    )
     cursor += sizeOf(item.bounds, axis) + gap
   }
   return offsets

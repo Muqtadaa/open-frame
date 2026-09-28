@@ -1,10 +1,4 @@
-import {
-  asObjectId,
-  clampZoom,
-  type ObjectId,
-  type Point,
-  type Viewport,
-} from '@openframe/core'
+import { asObjectId, clampZoom, type ObjectId, type Point, type Viewport } from '@openframe/core'
 
 /**
  * What one person's presence says, and how much of it to believe.

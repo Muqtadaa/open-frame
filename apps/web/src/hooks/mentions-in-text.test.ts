@@ -238,11 +238,7 @@ describe('the menu that opens when you type @', () => {
    */
   it('puts the name that starts with what you typed first', () => {
     const board = [person('u-x', 'Rosamund'), person('u-samira', 'Samira'), person('u-sam', 'Sam')]
-    expect(peopleMatching('sam', board).map((p) => p.userId)).toEqual([
-      'u-sam',
-      'u-samira',
-      'u-x',
-    ])
+    expect(peopleMatching('sam', board).map((p) => p.userId)).toEqual(['u-sam', 'u-samira', 'u-x'])
   })
 
   it('offers nobody when nobody matches', () => {

@@ -45,7 +45,7 @@ async function freshBoard(page: Page): Promise<void> {
    * paint, so a keystroke sent on the canvas alone can land in the gap and be
    * dropped. That showed up as a rare, unexplained tool-selection failure.
    */
-  await expect(page.getByTestId("tool-select")).toBeVisible()
+  await expect(page.getByTestId('tool-select')).toBeVisible()
 }
 
 async function upload(page: Page, name: string, mimeType: string, body: Buffer): Promise<void> {
@@ -218,15 +218,13 @@ test.describe('cropping', () => {
     await expect(page.getByTestId('crop-overlay')).toBeVisible()
     const picture = await image.boundingBox()
     if (picture === null) throw new Error('no picture')
-    const grips = await page
-      .locator('[data-testid^="crop-"].of-crop__target')
-      .evaluateAll((all) =>
-        all.map((grip) => {
-          const box = grip.getBoundingClientRect()
-          const id = grip.getAttribute('data-testid') ?? ''
-          return { id, x: box.x, y: box.y, w: box.width, h: box.height }
-        }),
-      )
+    const grips = await page.locator('[data-testid^="crop-"].of-crop__target').evaluateAll((all) =>
+      all.map((grip) => {
+        const box = grip.getBoundingClientRect()
+        const id = grip.getAttribute('data-testid') ?? ''
+        return { id, x: box.x, y: box.y, w: box.width, h: box.height }
+      }),
+    )
     expect(grips).toHaveLength(8)
     for (const grip of grips) {
       expect(Math.min(grip.w, grip.h), `${grip.id} target`).toBeGreaterThanOrEqual(24)
@@ -387,9 +385,9 @@ test.describe('cropping', () => {
     await page.mouse.move(handle.x + 60, handle.y + 45, { steps: 8 })
     await page.mouse.up()
 
-    await expect.poll(async () => (await image.boundingBox())?.width ?? 0).toBeGreaterThan(
-      cropped.width + 30,
-    )
+    await expect
+      .poll(async () => (await image.boundingBox())?.width ?? 0)
+      .toBeGreaterThan(cropped.width + 30)
   })
 
   test('offers crop grips OR resize grips, never both at once', async ({ page }) => {
@@ -425,7 +423,9 @@ test.describe('cropping', () => {
     await page.mouse.down()
     await page.mouse.move(grip.x + grip.width / 2 - 60, grip.y + grip.height / 2, { steps: 6 })
     await page.mouse.up()
-    await expect.poll(async () => (await image.boundingBox())?.width ?? 0).toBeLessThan(before.width)
+    await expect
+      .poll(async () => (await image.boundingBox())?.width ?? 0)
+      .toBeLessThan(before.width)
 
     await page.getByTestId('crop-reset').click()
 
@@ -434,10 +434,9 @@ test.describe('cropping', () => {
      * would squeeze the whole picture into the cropped box, which looks like
      * the image was rescaled rather than uncropped.
      */
-    await expect.poll(async () => (await image.boundingBox())?.width ?? 0).toBeCloseTo(
-      before.width,
-      0,
-    )
+    await expect
+      .poll(async () => (await image.boundingBox())?.width ?? 0)
+      .toBeCloseTo(before.width, 0)
     // And the button is gone, because there is nothing left to reset.
     await expect(page.getByTestId('crop-reset')).toHaveCount(0)
   })
@@ -454,13 +453,17 @@ test.describe('cropping', () => {
     await page.mouse.down()
     await page.mouse.move(grip.x + grip.width / 2 - 40, grip.y + grip.height / 2, { steps: 6 })
     await page.mouse.up()
-    await expect.poll(async () => (await image.boundingBox())?.width ?? 0).toBeLessThan(before.width)
+    await expect
+      .poll(async () => (await image.boundingBox())?.width ?? 0)
+      .toBeLessThan(before.width)
 
     /*
      * ONE step. The window and the box are two commands — data and geometry —
      * but one action, and undoing a drag has to put both back.
      */
     await page.keyboard.press('ControlOrMeta+z')
-    await expect.poll(async () => (await image.boundingBox())?.width ?? 0).toBeCloseTo(before.width, 0)
+    await expect
+      .poll(async () => (await image.boundingBox())?.width ?? 0)
+      .toBeCloseTo(before.width, 0)
   })
 })

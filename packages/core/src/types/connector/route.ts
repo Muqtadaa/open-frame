@@ -59,10 +59,7 @@ function along(point: Point, normal: Point | null, distance: number): Point {
  * one can be mixed without special-casing either.
  */
 function stubs(start: Point, end: Point, normals: RouteNormals | null): [Point, Point] {
-  return [
-    along(start, normals?.start ?? null, STUB),
-    along(end, normals?.end ?? null, STUB),
-  ]
+  return [along(start, normals?.start ?? null, STUB), along(end, normals?.end ?? null, STUB)]
 }
 
 /**
@@ -542,8 +539,14 @@ function roundObstacles(
     const box = grown(rect, CLEARANCE)
     // The run OUT of the start, which this node holds the far coordinate of.
     const leaving = horizontal
-      ? [{ x: s.x, y: at.y }, { x: at.x, y: at.y }]
-      : [{ x: at.x, y: s.y }, { x: at.x, y: at.y }]
+      ? [
+          { x: s.x, y: at.y },
+          { x: at.x, y: at.y },
+        ]
+      : [
+          { x: at.x, y: s.y },
+          { x: at.x, y: at.y },
+        ]
     const [leaveFrom, leaveTo] = leaving
     if (leaveFrom !== undefined && leaveTo !== undefined && crosses(leaveFrom, leaveTo, box)) {
       at = horizontal
@@ -552,8 +555,14 @@ function roundObstacles(
     }
     // And the crossing run, between the two.
     const crossing = horizontal
-      ? [{ x: at.x, y: at.y }, { x: at.x, y: e.y }]
-      : [{ x: at.x, y: at.y }, { x: e.x, y: at.y }]
+      ? [
+          { x: at.x, y: at.y },
+          { x: at.x, y: e.y },
+        ]
+      : [
+          { x: at.x, y: at.y },
+          { x: e.x, y: at.y },
+        ]
     const [crossFrom, crossTo] = crossing
     if (crossFrom !== undefined && crossTo !== undefined && crosses(crossFrom, crossTo, box)) {
       at = horizontal
@@ -652,7 +661,11 @@ function clearingCubic(
     width: Math.max(...plain.map((point) => point.x)) - Math.min(...plain.map((point) => point.x)),
     height: Math.max(...plain.map((point) => point.y)) - Math.min(...plain.map((point) => point.y)),
   }
-  if (!boxes.some((box) => crosses({ x: hull.x, y: hull.y }, { x: hull.x + hull.width, y: hull.y + hull.height }, box))) {
+  if (
+    !boxes.some((box) =>
+      crosses({ x: hull.x, y: hull.y }, { x: hull.x + hull.width, y: hull.y + hull.height }, box),
+    )
+  ) {
     return plain
   }
 
@@ -878,7 +891,6 @@ export function routeMidpoint(route: Route): Point {
   return points[points.length - 1] ?? first
 }
 
-
 /** How long a flattened path is, and how far along each vertex sits. */
 function walkOf(path: readonly Point[]): { total: number; upto: number[] } {
   const upto: number[] = [0]
@@ -948,7 +960,9 @@ export function labelAnchor(route: Route, label: LabelPlacement | null | undefin
       const length = walkOf(segment.path).total
       const offCentre = Math.abs(index - (segments.length - 1) / 2)
       const better =
-        best === null || length > best.length || (length === best.length && offCentre < best.offCentre)
+        best === null ||
+        length > best.length ||
+        (length === best.length && offCentre < best.offCentre)
       if (better) best = { at: segment.middle, length, offCentre }
     }
     return best === null ? routeMidpoint(route) : best.at
@@ -984,7 +998,10 @@ export function labelFrom(route: Route, point: Point): LabelPlacement {
     const dy = to.y - from.y
     const span = Math.hypot(dx, dy)
     if (span === 0) continue
-    const t = Math.min(Math.max(((point.x - from.x) * dx + (point.y - from.y) * dy) / (span * span), 0), 1)
+    const t = Math.min(
+      Math.max(((point.x - from.x) * dx + (point.y - from.y) * dy) / (span * span), 0),
+      1,
+    )
     const on = { x: from.x + dx * t, y: from.y + dy * t }
     const away = Math.hypot(point.x - on.x, point.y - on.y)
     if (best !== null && away >= best.away) continue

@@ -51,10 +51,7 @@ const PRETTIER: Readonly<Record<string, Recipe>> = {
   markdown: { parser: 'markdown', plugins: [() => import('prettier/plugins/markdown')] },
   typescript: {
     parser: 'typescript',
-    plugins: [
-      () => import('prettier/plugins/typescript'),
-      () => import('prettier/plugins/estree'),
-    ],
+    plugins: [() => import('prettier/plugins/typescript'), () => import('prettier/plugins/estree')],
   },
   yaml: { parser: 'yaml', plugins: [() => import('prettier/plugins/yaml')] },
 }

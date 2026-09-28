@@ -68,8 +68,13 @@ test.describe('the board name', () => {
   test('does not drive the canvas while being typed', async ({ page }) => {
     const before = await page.evaluate(
       () =>
-        (window as unknown as { __openframe: { runtime: { store: { getDocument(): { objects: ReadonlyMap<string, unknown> } } } } }).__openframe.runtime.store.getDocument()
-          .objects.size,
+        (
+          window as unknown as {
+            __openframe: {
+              runtime: { store: { getDocument(): { objects: ReadonlyMap<string, unknown> } } }
+            }
+          }
+        ).__openframe.runtime.store.getDocument().objects.size,
     )
 
     await page.locator(TITLE).click()
@@ -78,8 +83,13 @@ test.describe('the board name', () => {
 
     const after = await page.evaluate(
       () =>
-        (window as unknown as { __openframe: { runtime: { store: { getDocument(): { objects: ReadonlyMap<string, unknown> } } } } }).__openframe.runtime.store.getDocument()
-          .objects.size,
+        (
+          window as unknown as {
+            __openframe: {
+              runtime: { store: { getDocument(): { objects: ReadonlyMap<string, unknown> } } }
+            }
+          }
+        ).__openframe.runtime.store.getDocument().objects.size,
     )
     expect(after).toBe(before)
   })
@@ -172,8 +182,10 @@ test('the context menu stays on screen near the bottom edge', async ({ page }) =
     const node = document.querySelector('[data-testid="context-menu"]')
     if (node === null) return 'no menu'
     const rect = node.getBoundingClientRect()
-    if (rect.bottom > window.innerHeight) return `bottom ${String(rect.bottom)} past ${String(window.innerHeight)}`
-    if (rect.right > window.innerWidth) return `right ${String(rect.right)} past ${String(window.innerWidth)}`
+    if (rect.bottom > window.innerHeight)
+      return `bottom ${String(rect.bottom)} past ${String(window.innerHeight)}`
+    if (rect.right > window.innerWidth)
+      return `right ${String(rect.right)} past ${String(window.innerWidth)}`
     if (rect.top < 0) return `top ${String(rect.top)}`
     return 'fits'
   })

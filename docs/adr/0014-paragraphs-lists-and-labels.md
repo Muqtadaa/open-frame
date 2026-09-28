@@ -61,12 +61,14 @@ Together these are unambiguous in both directions. A list item followed by an
 empty plain line is `item⏎(bullet)⏎`, which is different from a text that ends
 on the item, `item⏎(bullet)`. They also keep **every existing document
 valid and meaning what it meant**:
+
 - Text with no attributes is plain paragraphs, which is exactly how it rendered.
 - A trailing newline in `pre-wrap` never drew an empty line anyway.
 
 **No `dataVersion` bump for body text.** The change is additive: no stored note
 needs rewriting. An older build that meets a `list` attribute fails to
 validate THAT object:
+
 - loading from storage, it quarantines the object and opens the board
   read-only (rule 7);
 - from a peer, it refuses the object, and that peer does not see it until it
@@ -85,6 +87,7 @@ becomes one unmarked span.
 `style.italic`, `style.underline` and `style.textSize` were the per-object form
 that rule 27 allowed for labels. With the label now rich text, keeping them
 would be two controls for one question.
+
 - The connector's v3 migration writes them onto the label's spans. `textSize`
   small / medium / large maps to span sizes `sm` / (none) / `lg`.
 - The connector stops declaring those style props.
@@ -108,6 +111,7 @@ now stores that rather than what it was given.
 
 **Paragraphs as a list of span lists: `{ spans, list?, indent? }[]`.** The
 cleanest model to program against. Rejected, for three reasons:
+
 - It changes the type of every body text on every board, so all 12 types
   need a migration.
 - An older build handed one renders nothing, because it iterates paragraphs

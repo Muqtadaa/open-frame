@@ -1273,6 +1273,7 @@ guides and a route's legs carry the same halo. design-tokens.test measures
 every slip and ink in both worlds.
 
 **The grips.** Each family has its own silhouette:
+
 - Resize: 9px panel squares with an accent edge and a 2px radius.
 - Rotate: a 15px glyph chip.
 - Connect: 8px circles.
@@ -1289,6 +1290,7 @@ is compact: four corners, drawn just outside it, and nothing else. The rest
 return when there is room.
 
 **What a selection says:**
+
 - A move carries the box with it. Your own box is never left behind.
 - A line on its own is selected by its ends, not by a box.
 - A group reads "Group of N" above its box.
@@ -1300,6 +1302,7 @@ return when there is room.
 
 **From the keyboard.** The board is a stop in the page's order, and its
 focus ring is drawn inside its edge.
+
 - Tab and Shift+Tab walk its objects in reading order and let go past the
   last one.
 - Arrows move the selection, and Alt+arrows resize it by the grid step.
@@ -1437,6 +1440,7 @@ wanted.
 **Gates.** A board nobody can use gets a panel in front of it, never a banner
 above it. The panel is on the panel stock at the surface radius over
 `--of-scrim`, 360px wide:
+
 - a 600-weight title that names the dialog
 - one muted paragraph that describes it
 - a row of actions: the one thing to do (primary), then All boards

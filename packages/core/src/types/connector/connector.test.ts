@@ -54,7 +54,6 @@ describe('endpoint resolution', () => {
     b = create(h, 'sticky', 500, 0)
   })
 
-
   it('resolves a free point to itself', () => {
     const { start } = resolveEndpoints(
       h.store.getDocument(),
@@ -125,7 +124,7 @@ describe('endpoint resolution', () => {
     expect(start.y).toBeCloseTo(extent.y + extent.height / 2, 6)
   })
 
-  it('aims at a container\'s anchors where they are drawn, not at its origin', () => {
+  it("aims at a container's anchors where they are drawn, not at its origin", () => {
     const group = create(h, 'group', 0, 0)
     h.dispatcher.dispatch({ kind: 'ReparentObjects', ids: [a, b], parentId: group })
     const held = h.store.getObject(group)
@@ -151,7 +150,7 @@ describe('endpoint resolution', () => {
    * honest answer, which is only safe because nothing both rotates and keeps
    * its extent somewhere else.
    */
-  it('keeps a turned object\'s anchor on its turned edge', () => {
+  it("keeps a turned object's anchor on its turned edge", () => {
     // A SHAPE, because a sticky note is deliberately not rotatable — the
     // command refuses it, and a test that ignored the refusal would be
     // asserting about an object that never turned.
@@ -649,7 +648,13 @@ describe('draggable endpoints', () => {
   })
 
   it('detaches an end dropped on empty space', () => {
-    const patch = h.registry.retargetEndpoint(object(), h.store.getDocument(), 'from', { kind: 'point', x: -40, y: -60, tolerance: REACH, final: true })
+    const patch = h.registry.retargetEndpoint(object(), h.store.getDocument(), 'from', {
+      kind: 'point',
+      x: -40,
+      y: -60,
+      tolerance: REACH,
+      final: true,
+    })
     if (patch === null) throw new Error('expected a patch')
 
     h.dispatcher.dispatch({ kind: 'UpdateObjectData', id: connector, patch })
@@ -657,7 +662,13 @@ describe('draggable endpoints', () => {
   })
 
   it('leaves the other end untouched', () => {
-    const patch = h.registry.retargetEndpoint(object(), h.store.getDocument(), 'from', { kind: 'point', x: 5, y: 5, tolerance: REACH, final: true })
+    const patch = h.registry.retargetEndpoint(object(), h.store.getDocument(), 'from', {
+      kind: 'point',
+      x: 5,
+      y: 5,
+      tolerance: REACH,
+      final: true,
+    })
     if (patch === null) throw new Error('expected a patch')
 
     h.dispatcher.dispatch({ kind: 'UpdateObjectData', id: connector, patch })
@@ -682,9 +693,15 @@ describe('draggable endpoints', () => {
   })
 
   it('ignores an endpoint id it does not have', () => {
-    expect(h.registry.retargetEndpoint(object(), h.store.getDocument(), 'middle', { kind: 'point', x: 0, y: 0, tolerance: REACH, final: true })).toEqual(
-      {},
-    )
+    expect(
+      h.registry.retargetEndpoint(object(), h.store.getDocument(), 'middle', {
+        kind: 'point',
+        x: 0,
+        y: 0,
+        tolerance: REACH,
+        final: true,
+      }),
+    ).toEqual({})
   })
 
   it('re-attaching is undoable like any other edit', () => {
@@ -853,7 +870,10 @@ describe('a bend', () => {
  * line that visits two of them backwards crosses itself in front of you.
  */
 describe('a route held at several points', () => {
-  const stops = (routing: 'straight' | 'curved', points: readonly { along: number; across: number }[]) => {
+  const stops = (
+    routing: 'straight' | 'curved',
+    points: readonly { along: number; across: number }[],
+  ) => {
     const h = createTestHarness()
     const id = create(h, 'connector', 0, 0, {
       from: { kind: 'point', x: 0, y: 0 },
@@ -874,8 +894,13 @@ describe('a route held at several points', () => {
    * defaults to the RELEASE here because most of these ask what a completed
    * drag produces. The tests that care about the difference say so.
    */
-  const drop = (x: number, y: number, final = true) =>
-    ({ kind: 'point' as const, x, y, tolerance: 8, final })
+  const drop = (x: number, y: number, final = true) => ({
+    kind: 'point' as const,
+    x,
+    y,
+    tolerance: 8,
+    final,
+  })
 
   it.each(['straight', 'curved'] as const)(
     'offers one midpoint per stretch of a %s route, and a handle at each stop',
@@ -1034,8 +1059,13 @@ describe('dissolving a stop into its neighbour', () => {
     (patch as { points: { along: number; across: number }[] }).points
 
   /** Where a stop is dropped, in world units, and how close counts. */
-  const at = (x: number, y: number, final = false) =>
-    ({ kind: 'point' as const, x, y, tolerance: 14, final })
+  const at = (x: number, y: number, final = false) => ({
+    kind: 'point' as const,
+    x,
+    y,
+    tolerance: 14,
+    final,
+  })
 
   it('merges a stop dropped on the end next to it, without shortening the list', () => {
     const { h, object } = held([{ along: 0.5, across: 80 }])
@@ -1157,12 +1187,7 @@ describe('dissolving a stop into its neighbour', () => {
 
   it('lets the END win the tie, so the last place pinned is the thing it joins', () => {
     const { h, object } = held([{ along: 0.5, across: 80 }])
-    const patch = h.registry.retargetEndpoint(
-      object,
-      h.store.getDocument(),
-      'vertex:0',
-      at(396, 0),
-    )
+    const patch = h.registry.retargetEndpoint(object, h.store.getDocument(), 'vertex:0', at(396, 0))
     const preview = moved(object, patch as object)
     const route = h.registry.boundsOf(preview, h.store.getDocument())
     // The stop is on top of the far end, and the route still reaches it.
@@ -1176,9 +1201,7 @@ describe('dissolving a stop into its neighbour', () => {
      * which one survives decides what the handles mean, and keeping the stop
      * would turn "add a point here" into "drag the one you just merged".
      */
-    const ids = h.registry
-      .endpointsOf(preview, h.store.getDocument())
-      .map((point) => point.id)
+    const ids = h.registry.endpointsOf(preview, h.store.getDocument()).map((point) => point.id)
     expect(ids).toEqual(['from', 'to', 'vertex:0', 'midpoint:1'])
   })
 
@@ -1293,7 +1316,6 @@ describe('pushing an orthogonal route about by its legs', () => {
     expect(h.registry.hitTestObject(pushed, h.store.getDocument(), { x: 120, y: 100 })).toBe(true)
     expect(h.registry.hitTestObject(pushed, h.store.getDocument(), { x: 60, y: 0 })).toBe(true)
     expect(h.registry.hitTestObject(pushed, h.store.getDocument(), { x: 300, y: 200 })).toBe(true)
-
   })
 
   it('gains no turn from a run being slid, on any geometry', () => {
@@ -1370,13 +1392,19 @@ describe('pushing an orthogonal route about by its legs', () => {
       h.registry.hitTestObject(on, h.store.getDocument(), at)
 
     // The crossing first, which puts the route's first stop in the list.
-    const first = merged(object, slide(h, object, legNear(h, object, { x: 200, y: 100 }), { x: 120, y: 100 }))
+    const first = merged(
+      object,
+      slide(h, object, legNear(h, object, { x: 200, y: 100 }), { x: 120, y: 100 }),
+    )
     expect(stopsOf(first)).toHaveLength(1)
     expect(inks(first, { x: 120, y: 100 })).toBe(true)
 
     // Then the run leaving the start, which that stop now holds: it moves,
     // and a new corner appears between it and the end it leaves.
-    const second = merged(first, slide(h, first, legNear(h, first, { x: 60, y: 0 }), { x: 60, y: 70 }))
+    const second = merged(
+      first,
+      slide(h, first, legNear(h, first, { x: 60, y: 0 }), { x: 60, y: 70 }),
+    )
     expect(inks(second, { x: 60, y: 70 })).toBe(true)
     expect(inks(second, { x: 0, y: 35 })).toBe(true)
 
@@ -1385,7 +1413,10 @@ describe('pushing an orthogonal route about by its legs', () => {
      * nowhere to write to until a stop goes in beside it. That is the second
      * one, and the route is a staircase.
      */
-    const third = merged(second, slide(h, second, legNear(h, second, { x: 0, y: 35 }), { x: 40, y: 35 }))
+    const third = merged(
+      second,
+      slide(h, second, legNear(h, second, { x: 0, y: 35 }), { x: 40, y: 35 }),
+    )
     expect(stopsOf(third)).toHaveLength(2)
     expect(inks(third, { x: 40, y: 35 })).toBe(true)
     expect(inks(third, { x: 60, y: 70 })).toBe(true)
@@ -1421,9 +1452,7 @@ describe('pushing an orthogonal route about by its legs', () => {
     })
     const object = h.store.getObject(id)
     if (object === undefined) throw new Error('missing connector')
-    expect(
-      slide(h, object, 'leg:x:new:0:1', { x: 100, y: 100 }),
-    ).toEqual({})
+    expect(slide(h, object, 'leg:x:new:0:1', { x: 100, y: 100 })).toEqual({})
   })
 })
 
@@ -1457,8 +1486,11 @@ describe('routing around the objects at each end', () => {
   /** Every point the drawn route passes through, sampled. */
   const drawn = (h: TestHarness, object: AnyOpenFrameObject): readonly Point[] => {
     const doc = h.store.getDocument()
-    const ends = resolveEndpoints(doc, (object.data as ConnectorData).from, (object.data as ConnectorData).to, (other) =>
-      h.registry.boundsOf(other, doc),
+    const ends = resolveEndpoints(
+      doc,
+      (object.data as ConnectorData).from,
+      (object.data as ConnectorData).to,
+      (other) => h.registry.boundsOf(other, doc),
     )
     return flattenRoute(
       connectorRoute(
@@ -1598,7 +1630,9 @@ describe('placing a connector label', () => {
     h.registry.endpointsOf(object, h.store.getDocument()).find((point) => point.id === 'label')
 
   it('offers a handle only once there is something to move', () => {
-    expect(handle(...Object.values(titled('')) as [TestHarness, AnyOpenFrameObject])).toBeUndefined()
+    expect(
+      handle(...(Object.values(titled('')) as [TestHarness, AnyOpenFrameObject])),
+    ).toBeUndefined()
     const named = titled('depends on')
     expect(handle(named.h, named.object)).toBeDefined()
   })
@@ -1699,10 +1733,7 @@ describe('placing a connector label', () => {
       ...object,
       data: { ...(object.data as object), points: [{ along: 0.3, across: 40 }] },
     }
-    expect(h.registry.actionsOf(bent).map((action) => action.id)).toEqual([
-      'reset',
-      'centre-label',
-    ])
+    expect(h.registry.actionsOf(bent).map((action) => action.id)).toEqual(['reset', 'centre-label'])
     expect(h.registry.applyAction(bent, 'reset')).toEqual({ points: [] })
   })
 

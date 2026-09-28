@@ -7,7 +7,14 @@ import { peerOn, stubAccount, TEST_BOARD, VALID_CALL, validCall } from '../testi
 import { toolContext } from './context.js'
 import type { ToolDefinition } from './definition.js'
 import { READ_TOOLS } from './read.js'
-import { createConnector, createObjects, deleteObjects, moveObjects, updateObject, WRITE_TOOLS } from './write.js'
+import {
+  createConnector,
+  createObjects,
+  deleteObjects,
+  moveObjects,
+  updateObject,
+  WRITE_TOOLS,
+} from './write.js'
 
 /**
  * Every tool's contract at its edge (tracks A-4 and B-1).

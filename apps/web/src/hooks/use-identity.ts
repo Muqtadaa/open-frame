@@ -1,6 +1,11 @@
 import { useEffect, useState } from 'react'
 
-import { ACCOUNTS_ENABLED, currentIdentity, onIdentityChange, type Identity } from '../app/identity.js'
+import {
+  ACCOUNTS_ENABLED,
+  currentIdentity,
+  onIdentityChange,
+  type Identity,
+} from '../app/identity.js'
 
 /**
  * Who is signed in, or `null` for a guest.

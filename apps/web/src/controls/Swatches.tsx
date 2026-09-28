@@ -1,4 +1,10 @@
-import { COLOR_TOKENS, isHexColor, type ColorToken, type ColorValue, type HexColor } from '@openframe/core'
+import {
+  COLOR_TOKENS,
+  isHexColor,
+  type ColorToken,
+  type ColorValue,
+  type HexColor,
+} from '@openframe/core'
 import { useState } from 'react'
 
 import { resolveCssColor } from '../scene/color.js'
@@ -72,13 +78,7 @@ export type SwatchKind = 'surface' | 'ink' | 'line'
 function RuleMark() {
   return (
     <svg viewBox="0 0 24 24" width="17" height="17" aria-hidden="true" focusable="false">
-      <path
-        d="M4 12h16"
-        fill="none"
-        stroke="currentColor"
-        strokeWidth="3"
-        strokeLinecap="round"
-      />
+      <path d="M4 12h16" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" />
     </svg>
   )
 }
@@ -195,11 +195,11 @@ export function Swatches({
           }}
         >
           {/*
-            * The specimen shows what the colour will BE: a letter for text, a
-            * rule for a line. Both are ink on the token's own slip — the pair
-            * the palette tests — but a line offered as a row of letters is a
-            * control announcing the wrong property, which is what shipped.
-            */}
+           * The specimen shows what the colour will BE: a letter for text, a
+           * rule for a line. Both are ink on the token's own slip — the pair
+           * the palette tests — but a line offered as a row of letters is a
+           * control announcing the wrong property, which is what shipped.
+           */}
           {kind === 'ink' ? 'A' : null}
           {kind === 'line' ? <RuleMark /> : null}
         </button>
@@ -221,24 +221,24 @@ export function Swatches({
         }}
       >
         {/*
-          * A DRAWN mark, not a `+` glyph. Icons in this world are authored SVG
-          * on the 24x24 grid at 1.6 — a typed plus in a dashed box read as a
-          * placeholder that had failed to load, which is what it looked like.
-          */}
+         * A DRAWN mark, not a `+` glyph. Icons in this world are authored SVG
+         * on the 24x24 grid at 1.6 — a typed plus in a dashed box read as a
+         * placeholder that had failed to load, which is what it looked like.
+         */}
         {custom === null ? <SpectrumMark /> : null}
       </button>
 
       {/*
-        * The picker placed itself with `left: calc(100% + 14px)` and nothing
-        * clamped it. That was a SECOND placement rather than a live bug —
-        * measured at three window widths and with the panel pushed both ways,
-        * it kept about 96px of clearance every time, because the record panel
-        * it hangs off is itself kept clear of the right edge.
-        *
-        * It is here anyway, because "correct as long as the panel it sits
-        * inside stays where it is" is not a property anybody checks when they
-        * move the panel.
-        */}
+       * The picker placed itself with `left: calc(100% + 14px)` and nothing
+       * clamped it. That was a SECOND placement rather than a live bug —
+       * measured at three window widths and with the panel pushed both ways,
+       * it kept about 96px of clearance every time, because the record panel
+       * it hangs off is itself kept clear of the right edge.
+       *
+       * It is here anyway, because "correct as long as the panel it sits
+       * inside stays where it is" is not a property anybody checks when they
+       * move the panel.
+       */}
       {picking && (
         <AnchoredSurface
           anchor={anchor}

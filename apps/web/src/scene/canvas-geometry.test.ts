@@ -151,11 +151,7 @@ describe('objects with no place on the board', () => {
     }
   }
 
-  const doc = docWith(
-    sticky('a', 0, 0, 'a0'),
-    sticky('b', 200, 0, 'a1'),
-    relation('rel', 'a', 'b'),
-  )
+  const doc = docWith(sticky('a', 0, 0, 'a0'), sticky('b', 200, 0, 'a1'), relation('rel', 'a', 'b'))
 
   it('is never culled into a viewport', () => {
     const visible = cullToViewport(doc, registry, { x: -500, y: -500, width: 2000, height: 2000 })

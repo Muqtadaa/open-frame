@@ -220,7 +220,7 @@ describe('every placing tool carries its own cursor', () => {
 
   it.each(aiming)('%s', (id) => {
     const cursor = cursorFor(id as Tool)
-    expect(cursor, 'no mark, so this tool shows somebody else\'s pointer').not.toBeNull()
+    expect(cursor, "no mark, so this tool shows somebody else's pointer").not.toBeNull()
     expect(cursor).toContain('data:image/svg+xml')
     /*
      * A KEYWORD after the image. A data URI cursor is refused outright on
@@ -231,7 +231,7 @@ describe('every placing tool carries its own cursor', () => {
     expect(cursor).toMatch(/,\s*crosshair$/)
   })
 
-  it('leaves the two that should keep the platform\'s own', () => {
+  it("leaves the two that should keep the platform's own", () => {
     expect(cursorFor('select')).toBeNull()
     expect(cursorFor('pan')).toBeNull()
   })
@@ -290,7 +290,10 @@ describe('every placing tool carries its own cursor', () => {
 
     it('leaves room for the rim around the crosshair', () => {
       // The rim is stroked outside the path, half either side.
-      expect(hot - arm - rim / 2, 'the crosshair is cut off at the top left').toBeGreaterThanOrEqual(0)
+      expect(
+        hot - arm - rim / 2,
+        'the crosshair is cut off at the top left',
+      ).toBeGreaterThanOrEqual(0)
     })
 
     it('points where the crosshair crosses', () => {
@@ -306,7 +309,9 @@ describe('every placing tool carries its own cursor', () => {
     })
 
     it('keeps the glyph inside the box', () => {
-      expect(place + ink * scale + rim / 2, 'the glyph runs out of the cursor').toBeLessThanOrEqual(size)
+      expect(place + ink * scale + rim / 2, 'the glyph runs out of the cursor').toBeLessThanOrEqual(
+        size,
+      )
     })
 
     it('keeps the glyph off the crosshair', () => {

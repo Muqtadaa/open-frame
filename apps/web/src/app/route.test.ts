@@ -17,7 +17,9 @@ describe('reading a route', () => {
     expect(readRoute('?room=brd_abcdefgh12345678')).toEqual({
       kind: 'board',
       boardId: asBoardId('brd_abcdefgh12345678'),
-      shared: true, key: null, commentId: null,
+      shared: true,
+      key: null,
+      commentId: null,
     })
   })
 
@@ -25,7 +27,9 @@ describe('reading a route', () => {
     expect(readRoute('?board=board_local')).toEqual({
       kind: 'board',
       boardId: asBoardId('board_local'),
-      shared: false, key: null, commentId: null,
+      shared: false,
+      key: null,
+      commentId: null,
     })
   })
 
@@ -50,7 +54,9 @@ describe('reading a route', () => {
     expect(route).toEqual({
       kind: 'board',
       boardId: asBoardId('brd_abcdefgh12345678'),
-      shared: true, key: null, commentId: null,
+      shared: true,
+      key: null,
+      commentId: null,
     })
   })
 })
@@ -61,7 +67,9 @@ describe('writing a route', () => {
     expect(readRoute(boardHref(id, false).slice(1))).toEqual({
       kind: 'board',
       boardId: id,
-      shared: false, key: null, commentId: null,
+      shared: false,
+      key: null,
+      commentId: null,
     })
   })
 
@@ -71,7 +79,9 @@ describe('writing a route', () => {
     expect(readRoute(href.slice(1))).toEqual({
       kind: 'board',
       boardId: asBoardId('brd_abcdefgh12345678'),
-      shared: true, key: null, commentId: null,
+      shared: true,
+      key: null,
+      commentId: null,
     })
   })
 
@@ -136,9 +146,7 @@ describe('the comment a link points at', () => {
 
   it('is carried on a shared link', () => {
     expect(readRoute(`?room=brd_abcdefgh12345678&c=${ID}`).kind).toBe('board')
-    expect(
-      readRoute(`?room=brd_abcdefgh12345678&c=${ID}`),
-    ).toMatchObject({ commentId: ID })
+    expect(readRoute(`?room=brd_abcdefgh12345678&c=${ID}`)).toMatchObject({ commentId: ID })
   })
 
   it('is carried on a local board too, which can also be commented on', () => {

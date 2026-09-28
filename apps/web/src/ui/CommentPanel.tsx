@@ -144,8 +144,7 @@ export function CommentPanel({ author }: { readonly author: string | null }) {
     () => (query === null ? [] : peopleMatching(query.query, others)),
     [query, others],
   )
-  const picking =
-    query !== null && candidates.length > 0 && dismissed !== query.start && !settled
+  const picking = query !== null && candidates.length > 0 && dismissed !== query.start && !settled
 
   const say = (next: string, at: number): void => {
     // A dismissed menu stays dismissed for THAT mention only: once the caret
@@ -187,7 +186,11 @@ export function CommentPanel({ author }: { readonly author: string | null }) {
   const stranger = useMemo(() => unknownMentionIn(body, people), [body, people])
 
   const copyInvite = (): void => {
-    const link = shareLink(runtime.boardId, window.location.origin, accessKey(window.location.search))
+    const link = shareLink(
+      runtime.boardId,
+      window.location.origin,
+      accessKey(window.location.search),
+    )
     /*
      * The clipboard can REFUSE — a denied permission, an insecure origin, a
      * browser that only allows it from a trusted gesture it has decided this
@@ -315,8 +318,7 @@ export function CommentPanel({ author }: { readonly author: string | null }) {
   }
 
   const attachedTo = thread?.objectId ?? composing?.objectId ?? null
-  const attachmentGone =
-    attachedTo !== null && !runtime.store.getDocument().objects.has(attachedTo)
+  const attachmentGone = attachedTo !== null && !runtime.store.getDocument().objects.has(attachedTo)
 
   return (
     <aside
@@ -340,10 +342,10 @@ export function CommentPanel({ author }: { readonly author: string | null }) {
           {browsing ? 'Comments' : thread === null ? 'New comment' : 'Comment'}
         </h2>
         {/*
-          * Back to the list from a thread. Close was the only way out, and it
-          * closed everything — reading a second thread meant reopening the
-          * tool and finding your place again.
-          */}
+         * Back to the list from a thread. Close was the only way out, and it
+         * closed everything — reading a second thread meant reopening the
+         * tool and finding your place again.
+         */}
         {thread !== null && (
           <button
             type="button"
@@ -368,11 +370,11 @@ export function CommentPanel({ author }: { readonly author: string | null }) {
       </header>
 
       {/*
-        * An element that has since been deleted is SAID, not hidden. The
-        * comment stays where it was put — its coordinates never depended on
-        * the object — and the remark still means something even when the thing
-        * it was about does not exist any more.
-        */}
+       * An element that has since been deleted is SAID, not hidden. The
+       * comment stays where it was put — its coordinates never depended on
+       * the object — and the remark still means something even when the thing
+       * it was about does not exist any more.
+       */}
       {attachmentGone && (
         <p className="of-comment-panel__gone" data-testid="comment-orphaned">
           What this was attached to has been deleted.
@@ -380,10 +382,10 @@ export function CommentPanel({ author }: { readonly author: string | null }) {
       )}
 
       {/*
-        * BROWSING: what is already on the board, so picking the comment tool
-        * shows you the conversation rather than an empty panel waiting for a
-        * click. Clicking one opens it, which is the same thing its pin does.
-        */}
+       * BROWSING: what is already on the board, so picking the comment tool
+       * shows you the conversation rather than an empty panel waiting for a
+       * click. Clicking one opens it, which is the same thing its pin does.
+       */}
       {browsing && (
         <div className="of-comment-panel__list" data-testid="comment-list">
           {threads.length === 0 ? (
@@ -433,10 +435,10 @@ export function CommentPanel({ author }: { readonly author: string | null }) {
           )}
 
           {/*
-            * Offered only when there IS one. A control that reveals nothing
-            * is a control people press once and learn to distrust, and the
-            * count is what makes pressing it worth it.
-            */}
+           * Offered only when there IS one. A control that reveals nothing
+           * is a control people press once and learn to distrust, and the
+           * count is what makes pressing it worth it.
+           */}
           {resolvedCount > 0 && (
             <button
               type="button"
@@ -447,9 +449,7 @@ export function CommentPanel({ author }: { readonly author: string | null }) {
                 setShowResolved((was) => !was)
               }}
             >
-              {showResolved
-                ? 'Hide resolved'
-                : `Show ${String(resolvedCount)} resolved`}
+              {showResolved ? 'Hide resolved' : `Show ${String(resolvedCount)} resolved`}
             </button>
           )}
         </div>
@@ -465,236 +465,232 @@ export function CommentPanel({ author }: { readonly author: string | null }) {
       )}
 
       {/*
-        * No composer while browsing: a comment is dropped somewhere, so there
-        * is nothing to write INTO until a spot or a thread is chosen. A box
-        * that posted to nowhere would be the worst of the three states.
-        */}
+       * No composer while browsing: a comment is dropped somewhere, so there
+       * is nothing to write INTO until a spot or a thread is chosen. A box
+       * that posted to nowhere would be the worst of the three states.
+       */}
       {!browsing && (
-      <form onSubmit={submit}>
-        <textarea
-          ref={input}
-          className="of-input"
-          rows={3}
-          value={body}
-          maxLength={4000}
-          disabled={busy}
-          placeholder={thread === null ? 'Say something' : 'Reply'}
-          aria-label={thread === null ? 'Your comment' : 'Your reply'}
-          data-testid="comment-input"
-          /*
-           * A textbox that names the option under the arrows — not
-           * role="combobox", which a <textarea> may not take (axe:
-           * aria-allowed-role). The menu is still announced as it moves.
-           * It points at the menu only while the menu exists: pointing at an
-           * element that is not there is invalid ARIA (audit 2026-09-27).
-           */
-          aria-controls={picking ? 'of-mention-menu' : undefined}
-          aria-autocomplete="list"
-          aria-activedescendant={
-            picking ? `of-mention-menu-${String(highlight)}` : undefined
-          }
-          onChange={(event) => {
-            say(event.target.value, event.target.selectionStart)
-          }}
-          // Every way a caret moves without the text changing.
-          onSelect={(event) => {
-            setCaret(event.currentTarget.selectionStart)
-          }}
-          onKeyDown={(event) => {
+        <form onSubmit={submit}>
+          <textarea
+            ref={input}
+            className="of-input"
+            rows={3}
+            value={body}
+            maxLength={4000}
+            disabled={busy}
+            placeholder={thread === null ? 'Say something' : 'Reply'}
+            aria-label={thread === null ? 'Your comment' : 'Your reply'}
+            data-testid="comment-input"
             /*
-             * A name just chosen already ends in a space, so the space most
-             * people type next is swallowed rather than doubled ("@Rowan  in").
+             * A textbox that names the option under the arrows — not
+             * role="combobox", which a <textarea> may not take (axe:
+             * aria-allowed-role). The menu is still announced as it moves.
+             * It points at the menu only while the menu exists: pointing at an
+             * element that is not there is invalid ARIA (audit 2026-09-27).
              */
-            if (settled && event.key === ' ' && body[caret - 1] === ' ') {
-              event.preventDefault()
-              setSettled(false)
-              return
-            }
-            /*
-             * The menu takes the keys it needs and passes on the rest, so the
-             * composer behaves exactly as it did whenever nothing is open.
-             * Checked FIRST because every one of these keys already means
-             * something here — Enter is a newline, Escape closes the panel.
-             */
-            if (picking) {
-              if (event.key === 'ArrowDown' || event.key === 'ArrowUp') {
+            aria-controls={picking ? 'of-mention-menu' : undefined}
+            aria-autocomplete="list"
+            aria-activedescendant={picking ? `of-mention-menu-${String(highlight)}` : undefined}
+            onChange={(event) => {
+              say(event.target.value, event.target.selectionStart)
+            }}
+            // Every way a caret moves without the text changing.
+            onSelect={(event) => {
+              setCaret(event.currentTarget.selectionStart)
+            }}
+            onKeyDown={(event) => {
+              /*
+               * A name just chosen already ends in a space, so the space most
+               * people type next is swallowed rather than doubled ("@Rowan  in").
+               */
+              if (settled && event.key === ' ' && body[caret - 1] === ' ') {
                 event.preventDefault()
-                const step = event.key === 'ArrowDown' ? 1 : -1
-                // Wraps, because a menu of three that stops at the bottom
-                // makes you travel back up through all of them.
-                setHighlight(
-                  (current) =>
-                    (current + step + candidates.length) % candidates.length,
-                )
-                return
-              }
-              if (event.key === 'Escape') {
-                event.preventDefault()
-                setDismissed(query.start)
+                setSettled(false)
                 return
               }
               /*
-               * Tab and plain Enter choose. Enter with a modifier does NOT:
-               * Cmd+Enter posts, and somebody who has finished typing a name
-               * and wants to send it should not have to dismiss a menu first.
+               * The menu takes the keys it needs and passes on the rest, so the
+               * composer behaves exactly as it did whenever nothing is open.
+               * Checked FIRST because every one of these keys already means
+               * something here — Enter is a newline, Escape closes the panel.
                */
-              if (
-                event.key === 'Tab' ||
-                (event.key === 'Enter' && !event.metaKey && !event.ctrlKey)
-              ) {
-                const person = candidates[highlight]
-                if (person !== undefined) {
+              if (picking) {
+                if (event.key === 'ArrowDown' || event.key === 'ArrowUp') {
                   event.preventDefault()
-                  choose(person)
+                  const step = event.key === 'ArrowDown' ? 1 : -1
+                  // Wraps, because a menu of three that stops at the bottom
+                  // makes you travel back up through all of them.
+                  setHighlight(
+                    (current) => (current + step + candidates.length) % candidates.length,
+                  )
                   return
                 }
-              }
-            }
-            /*
-             * Cmd or Ctrl + Enter posts; Escape closes without posting.
-             *
-             * Plain Enter is a new LINE here, unlike a table cell — a comment
-             * is prose and often several sentences, and a composer that
-             * submitted on Enter would cut people off mid-thought. That is
-             * why the commit takes a modifier and the table's does not.
-             */
-            if (event.key === 'Escape') {
-              event.preventDefault()
-              /*
-               * Escape closes the panel, panel and all, and KEEPS the words:
-               * the draft is held outside the panel and comes back when this
-               * spot or thread is opened again. It used to throw them away —
-               * the one failure this product does not accept, from the key
-               * that means "done" everywhere else on the board.
-               */
-              close()
-              return
-            }
-            if (event.key === 'Enter' && (event.metaKey || event.ctrlKey)) {
-              event.preventDefault()
-              submit(event)
-            }
-          }}
-        />
-
-        {/*
-          * Says a list has opened, since a textarea cannot say it for itself
-          * the way a combobox would. Always present, and empty when no list
-          * is open, because a live region only speaks when its text CHANGES.
-          */}
-        <p className="of-visually-hidden" role="status" data-testid="mention-status">
-          {picking
-            ? `${String(candidates.length)} ${candidates.length === 1 ? 'person matches' : 'people match'}. Up and down to choose, Enter to mention.`
-            : ''}
-        </p>
-
-        {picking && (
-          <MentionPicker
-            id="of-mention-menu"
-            people={candidates}
-            highlight={highlight}
-            onPick={choose}
-          />
-        )}
-
-        {/*
-          * A few names and a count, not the whole list.
-          *
-          * This was every name joined with commas, which was fine when the
-          * only people offered were the board's own members. A workspace can
-          * hold a great many, and a hint that turns into a paragraph is one
-          * nobody reads — including the part that says what to type.
-          */}
-        {!picking && stranger === null && others.length > 0 && (
-          <p className="of-comment-panel__hint" data-testid="comment-people-hint">
-            Type @ and a name to notify someone:{' '}
-            {others
-              .slice(0, 4)
-              .map((person) => person.displayName)
-              .join(', ')}
-            {others.length > 4 && ` and ${String(others.length - 4)} more`}
-          </p>
-        )}
-
-        {/*
-          * A name typed at somebody who is not here.
-          *
-          * The way onto a board is its link — that is how sharing already
-          * works, and it is why there is no directory to search: a lookup
-          * across every account would let anybody with a board enumerate the
-          * whole user list, which no amount of row-level security undoes once
-          * the function exists.
-          *
-          * So this offers the link rather than the person. It replaces the
-          * hint rather than joining it: two lines about mentions, one of them
-          * saying the thing you just typed will not work, is a paragraph
-          * nobody reads.
-          */}
-        {!picking && stranger !== null && (
-          <p className="of-comment-panel__hint" data-testid="comment-stranger">
-            Nobody here is called {stranger}. Share the board with them and they can be
-            mentioned.{' '}
-            <button
-              type="button"
-              className="of-button of-button--ghost of-comment-panel__invite"
-              data-testid="comment-invite"
-              onClick={() => {
-                copyInvite()
-              }}
-            >
-              {invited ? 'Link copied' : 'Copy invite link'}
-            </button>
-          </p>
-        )}
-
-        {kept?.body === body && (
-          <p className="of-comment-panel__hint" data-testid="comment-draft-kept">
-            Draft kept from before.
-          </p>
-        )}
-
-        {problem !== null && (
-          <p className="of-comment-panel__problem" role="alert" data-testid="comment-problem">
-            {problem}
-          </p>
-        )}
-
-        <div className="of-comment-panel__actions">
-          <button
-            type="submit"
-            className="of-button of-button--primary"
-            disabled={busy || body.trim() === ''}
-            data-testid="comment-post"
-          >
-            {thread === null ? 'Comment' : 'Reply'}
-          </button>
-
-          {thread !== null && (
-            <button
-              type="button"
-              className="of-button of-button--ghost"
-              data-testid="comment-resolve"
-              onClick={() => {
-                setBusy(true)
-                void resolve(thread.id, thread.resolvedAt === null).then((ok) => {
-                  setBusy(false)
-                  if (!ok) {
-                    setProblem(
-                      thread.resolvedAt === null
-                        ? 'That could not be resolved. Try again in a moment.'
-                        : 'That could not be reopened. Try again in a moment.',
-                    )
+                if (event.key === 'Escape') {
+                  event.preventDefault()
+                  setDismissed(query.start)
+                  return
+                }
+                /*
+                 * Tab and plain Enter choose. Enter with a modifier does NOT:
+                 * Cmd+Enter posts, and somebody who has finished typing a name
+                 * and wants to send it should not have to dismiss a menu first.
+                 */
+                if (
+                  event.key === 'Tab' ||
+                  (event.key === 'Enter' && !event.metaKey && !event.ctrlKey)
+                ) {
+                  const person = candidates[highlight]
+                  if (person !== undefined) {
+                    event.preventDefault()
+                    choose(person)
                     return
                   }
-                  openThread(null)
-                })
-              }}
-            >
-              {thread.resolvedAt === null ? 'Resolve' : 'Reopen'}
-            </button>
+                }
+              }
+              /*
+               * Cmd or Ctrl + Enter posts; Escape closes without posting.
+               *
+               * Plain Enter is a new LINE here, unlike a table cell — a comment
+               * is prose and often several sentences, and a composer that
+               * submitted on Enter would cut people off mid-thought. That is
+               * why the commit takes a modifier and the table's does not.
+               */
+              if (event.key === 'Escape') {
+                event.preventDefault()
+                /*
+                 * Escape closes the panel, panel and all, and KEEPS the words:
+                 * the draft is held outside the panel and comes back when this
+                 * spot or thread is opened again. It used to throw them away —
+                 * the one failure this product does not accept, from the key
+                 * that means "done" everywhere else on the board.
+                 */
+                close()
+                return
+              }
+              if (event.key === 'Enter' && (event.metaKey || event.ctrlKey)) {
+                event.preventDefault()
+                submit(event)
+              }
+            }}
+          />
+
+          {/*
+           * Says a list has opened, since a textarea cannot say it for itself
+           * the way a combobox would. Always present, and empty when no list
+           * is open, because a live region only speaks when its text CHANGES.
+           */}
+          <p className="of-visually-hidden" role="status" data-testid="mention-status">
+            {picking
+              ? `${String(candidates.length)} ${candidates.length === 1 ? 'person matches' : 'people match'}. Up and down to choose, Enter to mention.`
+              : ''}
+          </p>
+
+          {picking && (
+            <MentionPicker
+              id="of-mention-menu"
+              people={candidates}
+              highlight={highlight}
+              onPick={choose}
+            />
           )}
-        </div>
-      </form>
+
+          {/*
+           * A few names and a count, not the whole list.
+           *
+           * This was every name joined with commas, which was fine when the
+           * only people offered were the board's own members. A workspace can
+           * hold a great many, and a hint that turns into a paragraph is one
+           * nobody reads — including the part that says what to type.
+           */}
+          {!picking && stranger === null && others.length > 0 && (
+            <p className="of-comment-panel__hint" data-testid="comment-people-hint">
+              Type @ and a name to notify someone:{' '}
+              {others
+                .slice(0, 4)
+                .map((person) => person.displayName)
+                .join(', ')}
+              {others.length > 4 && ` and ${String(others.length - 4)} more`}
+            </p>
+          )}
+
+          {/*
+           * A name typed at somebody who is not here.
+           *
+           * The way onto a board is its link — that is how sharing already
+           * works, and it is why there is no directory to search: a lookup
+           * across every account would let anybody with a board enumerate the
+           * whole user list, which no amount of row-level security undoes once
+           * the function exists.
+           *
+           * So this offers the link rather than the person. It replaces the
+           * hint rather than joining it: two lines about mentions, one of them
+           * saying the thing you just typed will not work, is a paragraph
+           * nobody reads.
+           */}
+          {!picking && stranger !== null && (
+            <p className="of-comment-panel__hint" data-testid="comment-stranger">
+              Nobody here is called {stranger}. Share the board with them and they can be mentioned.{' '}
+              <button
+                type="button"
+                className="of-button of-button--ghost of-comment-panel__invite"
+                data-testid="comment-invite"
+                onClick={() => {
+                  copyInvite()
+                }}
+              >
+                {invited ? 'Link copied' : 'Copy invite link'}
+              </button>
+            </p>
+          )}
+
+          {kept?.body === body && (
+            <p className="of-comment-panel__hint" data-testid="comment-draft-kept">
+              Draft kept from before.
+            </p>
+          )}
+
+          {problem !== null && (
+            <p className="of-comment-panel__problem" role="alert" data-testid="comment-problem">
+              {problem}
+            </p>
+          )}
+
+          <div className="of-comment-panel__actions">
+            <button
+              type="submit"
+              className="of-button of-button--primary"
+              disabled={busy || body.trim() === ''}
+              data-testid="comment-post"
+            >
+              {thread === null ? 'Comment' : 'Reply'}
+            </button>
+
+            {thread !== null && (
+              <button
+                type="button"
+                className="of-button of-button--ghost"
+                data-testid="comment-resolve"
+                onClick={() => {
+                  setBusy(true)
+                  void resolve(thread.id, thread.resolvedAt === null).then((ok) => {
+                    setBusy(false)
+                    if (!ok) {
+                      setProblem(
+                        thread.resolvedAt === null
+                          ? 'That could not be resolved. Try again in a moment.'
+                          : 'That could not be reopened. Try again in a moment.',
+                      )
+                      return
+                    }
+                    openThread(null)
+                  })
+                }}
+              >
+                {thread.resolvedAt === null ? 'Resolve' : 'Reopen'}
+              </button>
+            )}
+          </div>
+        </form>
       )}
     </aside>
   )

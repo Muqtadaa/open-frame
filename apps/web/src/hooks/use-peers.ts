@@ -42,6 +42,5 @@ export function useLockedByOthers(peers: readonly Peer[]): ReadonlySet<ObjectIdL
   return useMemo(() => new Set(editorsByObject(peers).keys()), [peers])
 }
 
-type ObjectIdLike = ReturnType<typeof editorsByObject> extends ReadonlyMap<infer K, unknown>
-  ? K
-  : never
+type ObjectIdLike =
+  ReturnType<typeof editorsByObject> extends ReadonlyMap<infer K, unknown> ? K : never

@@ -126,12 +126,12 @@ Real, and usable:
 
 **Absent — must not be fabricated:** there are no users yet, no testimonials, no
 case studies, no customer names, no adoption or revenue figures, no press, and
-no research conducted *with* OpenFrame. Any such claim would be invented.
+no research conducted _with_ OpenFrame. Any such claim would be invented.
 
 ## Product Principles
 
 1. **Meaning is carried by the object, not by the layout.** Where something sits
-   is a thought; what it *is* must survive being moved, copied or exported.
+   is a thought; what it _is_ must survive being moved, copied or exported.
 2. **Structure is earned, never demanded.** A user may drop a plain note and
    promote it later. Nothing asks them to classify before they understand.
 3. **The canvas is the product.** Chrome is borrowed space and gives it back.
@@ -139,7 +139,7 @@ no research conducted *with* OpenFrame. Any such claim would be invented.
 4. **Local-first.** A board works offline. Once you have it, no network is
    needed to open it, read it or change it, and nothing you do is lost while
    the connection is gone.
-   *Revised 2026-09-19.* This used to read "with no account and no network".
+   _Revised 2026-09-19._ This used to read "with no account and no network".
    The no-network half is unchanged and is what IndexedDB and the CRDT actually
    provide. The no-account half is retired: **creating and sharing a board both
    take an account**, because a board with no owner cannot be listed, renamed,

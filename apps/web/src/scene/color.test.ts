@@ -56,10 +56,7 @@ describe('contrast', () => {
 
   /** Order must not matter: the ratio is between two colours, not from one. */
   it('is symmetric', () => {
-    expect(contrastRatio('#7a5c00', '#ffe9a3')).toBeCloseTo(
-      contrastRatio('#ffe9a3', '#7a5c00'),
-      10,
-    )
+    expect(contrastRatio('#7a5c00', '#ffe9a3')).toBeCloseTo(contrastRatio('#ffe9a3', '#7a5c00'), 10)
   })
 
   /**

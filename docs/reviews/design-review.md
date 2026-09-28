@@ -456,6 +456,7 @@ After more hands-on testing, the owner asked for three things:
 ### C3 #3 · Navigation bar and zoom cluster (critique 24/40)
 
 A dual-agent critique scored the bar and cluster 24/40. It found:
+
 - **P1:** a hidden board name and no tab title.
 - **P1:** keyboard and screen-reader defects.
 - **P1:** a zoom readout whose tip described a different action from what a
@@ -502,6 +503,7 @@ cluster, clarified.
 ### C3 #4 · Context menu, search, arrange bar, format bar (critique 22/40)
 
 A dual-agent critique scored the four surfaces 22/40. It found:
+
 - **P0:** Escape silently discarded typed text, and could not be undone.
 - **P1:** the context menu was not a keyboard menu.
 - **P1:** the context menu had no hierarchy: 16 flat rows, and an
@@ -543,6 +545,7 @@ menu restructure; and all three format-bar additions.
 ### C3 #5 · Comments, mentions and presence (critique 21/40)
 
 A dual-agent critique, run in a live two-person room, scored the surface 21/40:
+
 - **P0:** Escape, or a click on another spot or pin, threw a comment or reply
   draft away.
 - **P1:** a comment could not be started by keyboard; focus fell to the body
@@ -576,7 +579,6 @@ time with the exact date in the tip; faces at 24px without overlap.
 - **Left for later:** edit/delete a remark; next/previous thread; the
   "Shared" chip copies rather than opening the chooser; a ghost face seen once
   after a reload; the canvas presence layer is hidden from assistive tech.
-
 
 ### C3 #6 · Blocked and degraded states (critique 20/40)
 
@@ -648,6 +650,7 @@ was sound: every overlay was the same size at 25% and at 1600%. Its problems:
   readout, chrome text swept into a selection.
 
 The owner chose everything, minors included:
+
 - keys on the board, with announcements;
 - keep the look and fix contrast with a halo;
 - corners only below about 48px.
@@ -761,6 +764,7 @@ contract, but the edges had drifted and sharing no longer matched its own.
   sheets, and sheets animating from the wrong edge.
 
 The owner chose everything, minors included:
+
 - confirm, then land on the shared board;
 - the owner's chip opens both links with the password beside them;
 - at phone width, the account shrinks to its face and Source moves into its
@@ -786,7 +790,6 @@ The owner chose everything, minors included:
 - **Left for later:** whether a board has a password (it needs the rooms
   worker to say); a world toggle on the front door; a focused row action's
   tip covering the row above.
-
 
 ### C3 #10 · The boot splash (critique 16/32)
 
@@ -837,7 +840,6 @@ then a quiet sheet; and a route-aware label with no capsule, plus a watchdog.
   `notices.spec.ts:90` and `rail-keyboard.spec.ts:147` each failed once in 80
   loaded repeats. Main shows the same race: 1 failure in 160, on the same two
   files. Specs should wait for the board to be ready, not merely drawn.
-
 
 ### Cross-cutting audit · `apps/web/src` (14/20 → 19/20)
 
@@ -934,14 +936,14 @@ on narrow screens, and the bundle split in this pass.
 **Re-score** — the same rubric, re-scored by me against the fixes rather than
 by a fresh independent audit:
 
-| # | Dimension | Before | After | What holds it back |
-|---|---|---|---|---|
-| 1 | Accessibility | 3 | 4 | Untested with a real screen reader |
-| 2 | Performance | 2 | 3 | The pan ground still repaints (step 13 reverted) |
-| 3 | Responsive design | 2 | 4 | Untested on real devices and WebKit |
-| 4 | Theming | 4 | 4 | — |
-| 5 | Implementation integrity | 3 | 4 | — |
-| | **Total** | **14/20** | **19/20** | |
+| #   | Dimension                | Before    | After     | What holds it back                               |
+| --- | ------------------------ | --------- | --------- | ------------------------------------------------ |
+| 1   | Accessibility            | 3         | 4         | Untested with a real screen reader               |
+| 2   | Performance              | 2         | 3         | The pan ground still repaints (step 13 reverted) |
+| 3   | Responsive design        | 2         | 4         | Untested on real devices and WebKit              |
+| 4   | Theming                  | 4         | 4         | —                                                |
+| 5   | Implementation integrity | 3         | 4         | —                                                |
+|     | **Total**                | **14/20** | **19/20** |                                                  |
 
 **Night paper** (the owner's answer to the frame-fill question). A frame nobody
 has coloured is laid on the world's paper, `--of-frame-paper`: `--of-s-white`
@@ -950,6 +952,7 @@ Hours in place of the lit `#d6d9e2`. A chosen white still paints white. The
 frame no longer declares `defaultColor`, so the record panel marks no swatch
 for an uncoloured frame; marking `white` would have marked a colour that,
 pressed at night, changes the frame. Guarded by `design-tokens.test`:
+
 - the paper is white by day and the panel at night;
 - it is never brighter than the ink or white paper;
 - the control-border edge reaches 3:1 on it.

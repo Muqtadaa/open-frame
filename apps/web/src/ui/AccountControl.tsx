@@ -33,10 +33,10 @@ export function AccountControl() {
     return (
       <>
         {/*
-          * Pressing your own name OPENS your account. It used to sign you out
-          * on the spot — one click on the most natural thing on the bar to
-          * press, with nothing to confirm it.
-          */}
+         * Pressing your own name OPENS your account. It used to sign you out
+         * on the spot — one click on the most natural thing on the bar to
+         * press, with nothing to confirm it.
+         */}
         <button
           ref={ref}
           type="button"
@@ -93,16 +93,14 @@ export function AccountControl() {
       </button>
 
       {/*
-        * Under the button (the bar runs along the top), and clamped. It used
-        * to be `bottom: calc(100% +
-        * 10px); left: 0` against whichever ancestor happened to be positioned
-        * — which was the BAR, not the button, so a 320px dialog was aligned to
-        * the left edge of the screen rather than to the control that opened
-        * it, and nothing stopped it running off the right on a narrow window.
-        */}
-      {open && (
-        <SignInSheet anchor={anchor} surface={surface} trigger={ref} onClose={close} />
-      )}
+       * Under the button (the bar runs along the top), and clamped. It used
+       * to be `bottom: calc(100% +
+       * 10px); left: 0` against whichever ancestor happened to be positioned
+       * — which was the BAR, not the button, so a 320px dialog was aligned to
+       * the left edge of the screen rather than to the control that opened
+       * it, and nothing stopped it running off the right on a narrow window.
+       */}
+      {open && <SignInSheet anchor={anchor} surface={surface} trigger={ref} onClose={close} />}
     </>
   )
 }
@@ -127,8 +125,19 @@ function SignInSheet({
   useDismiss(sheet, trigger, onClose)
   useFocusOnOpen(sheet)
   return (
-    <AnchoredSurface anchor={anchor} surface={surface} prefer={['below', 'above']} testId="account-surface">
-      <div ref={sheet} className="of-sheet" role="dialog" aria-label="Account" data-testid="account-dialog">
+    <AnchoredSurface
+      anchor={anchor}
+      surface={surface}
+      prefer={['below', 'above']}
+      testId="account-surface"
+    >
+      <div
+        ref={sheet}
+        className="of-sheet"
+        role="dialog"
+        aria-label="Account"
+        data-testid="account-dialog"
+      >
         <AccountForm onDone={onClose} />
         <SheetSource />
       </div>
@@ -166,7 +175,12 @@ export function AccountSheet({
   useFocusOnOpen(sheet)
 
   return (
-    <AnchoredSurface anchor={anchor} surface={surface} prefer={['below', 'above']} testId="account-surface">
+    <AnchoredSurface
+      anchor={anchor}
+      surface={surface}
+      prefer={['below', 'above']}
+      testId="account-surface"
+    >
       <div
         ref={sheet}
         className="of-sheet of-account-sheet"

@@ -50,7 +50,12 @@ function polygon(points: readonly Point[]): string {
  * caller passes `angle` at the far end and `angle + PI` at the near one — the
  * same convention the open arrow already used.
  */
-export function capPath(kind: Arrowhead, at: Point, rotation: number, size = ARROW_SIZE): Cap | null {
+export function capPath(
+  kind: Arrowhead,
+  at: Point,
+  rotation: number,
+  size = ARROW_SIZE,
+): Cap | null {
   const half = size / 2
 
   switch (kind) {
@@ -69,14 +74,22 @@ export function capPath(kind: Arrowhead, at: Point, rotation: number, size = ARR
 
     case 'triangle': {
       const base = back(at, rotation, size)
-      return { d: polygon([at, side(base, rotation, half), side(base, rotation, -half)]), filled: true }
+      return {
+        d: polygon([at, side(base, rotation, half), side(base, rotation, -half)]),
+        filled: true,
+      }
     }
 
     case 'diamond': {
       const waist = back(at, rotation, half)
       const tail = back(at, rotation, size)
       return {
-        d: polygon([at, side(waist, rotation, half * 0.8), tail, side(waist, rotation, -half * 0.8)]),
+        d: polygon([
+          at,
+          side(waist, rotation, half * 0.8),
+          tail,
+          side(waist, rotation, -half * 0.8),
+        ]),
         filled: true,
       }
     }

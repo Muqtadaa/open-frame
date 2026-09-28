@@ -41,11 +41,13 @@ const GOOD_ROW = {
 }
 
 /** Everything the account module asks a client for, and nothing else. */
-function fakeClient(answers: {
-  signIn?: { data: unknown; error: unknown }
-  refresh?: { data: unknown; error: unknown }
-  rows?: unknown
-} = {}) {
+function fakeClient(
+  answers: {
+    signIn?: { data: unknown; error: unknown }
+    refresh?: { data: unknown; error: unknown }
+    rows?: unknown
+  } = {},
+) {
   let changed: ((event: string, session: unknown) => void) | null = null
   const signInWithPassword = vi.fn(() =>
     Promise.resolve(answers.signIn ?? { data: { session: sessionOf(REFRESH_TOKEN) }, error: null }),
@@ -150,7 +152,12 @@ describe('resuming a session', () => {
   it('writes back the token the service rotated to', async () => {
     const env = somewhere()
     writeSession(
-      { project: SUPABASE_URL, userId: 'user-1', email: 'someone@example.com', refreshToken: REFRESH_TOKEN },
+      {
+        project: SUPABASE_URL,
+        userId: 'user-1',
+        email: 'someone@example.com',
+        refreshToken: REFRESH_TOKEN,
+      },
       env,
     )
     const fake = fakeClient()
@@ -184,7 +191,12 @@ describe('resuming a session', () => {
   it('never offers a token to a project that did not issue it', async () => {
     const env = somewhere()
     writeSession(
-      { project: 'https://somewhere-else.supabase.co', userId: 'user-1', email: null, refreshToken: REFRESH_TOKEN },
+      {
+        project: 'https://somewhere-else.supabase.co',
+        userId: 'user-1',
+        email: null,
+        refreshToken: REFRESH_TOKEN,
+      },
       env,
     )
     const fake = fakeClient()
@@ -231,7 +243,11 @@ describe('the boards behind an account', () => {
   it('drops a row this version cannot read rather than answering with a broken board', async () => {
     const env = somewhere()
     const fake = fakeClient({
-      rows: [{ title: 'No id at all', role: 'owner' }, { ...GOOD_ROW, role: 'archivist' }, GOOD_ROW],
+      rows: [
+        { title: 'No id at all', role: 'owner' },
+        { ...GOOD_ROW, role: 'archivist' },
+        GOOD_ROW,
+      ],
     })
     const signedIn = await signIn('someone@example.com', 'a password', { client: fake.client, env })
 

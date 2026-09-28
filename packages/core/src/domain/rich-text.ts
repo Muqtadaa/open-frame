@@ -96,7 +96,7 @@ export const TextSpanSchema: ZodType<TextSpan> = z
       context.addIssue({ code: 'custom', message: 'only a lone newline can end a list item' })
     }
     if (span.indent !== undefined && span.list === undefined) {
-      context.addIssue({ code: 'custom', message: 'indent is a list item\'s, and needs `list`' })
+      context.addIssue({ code: 'custom', message: "indent is a list item's, and needs `list`" })
     }
   })
 
@@ -427,12 +427,7 @@ export function indentBy(rich: RichText, from: number, to: number, by: 1 | -1): 
  * marks and a newline that ends a list item — one character, never split —
  * stays exactly the item it was.
  */
-export function spliceText(
-  rich: RichText,
-  from: number,
-  to: number,
-  inserted: RichText,
-): RichText {
+export function spliceText(rich: RichText, from: number, to: number, inserted: RichText): RichText {
   const split = splitAt(splitAt(rich, from), Math.max(from, to))
   const before: TextSpan[] = []
   const after: TextSpan[] = []

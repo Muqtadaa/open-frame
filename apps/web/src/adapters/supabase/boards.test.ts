@@ -103,7 +103,12 @@ describe('listing the boards behind an account', () => {
    * the top of somebody's list. Anything but a true is not pinned.
    */
   it('treats anything but a true as unpinned', async () => {
-    answering({ data: [{ ...goodRow, pinned: 'yes' }, { ...goodRow, id: 'brd_bbbbbbbb22222222' }] })
+    answering({
+      data: [
+        { ...goodRow, pinned: 'yes' },
+        { ...goodRow, id: 'brd_bbbbbbbb22222222' },
+      ],
+    })
 
     const boards = await listMyBoards()
 

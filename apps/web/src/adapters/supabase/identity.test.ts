@@ -12,12 +12,12 @@ import { readableError } from './identity.js'
  * exactly what a train tunnel or a blocked corporate proxy looks like.
  */
 describe('turning a provider error into something a person can act on', () => {
-  it.each([
-    ['TypeError: Failed to fetch'],
-    ['NetworkError when attempting to fetch resource.'],
-  ])('says the service is unreachable for %s', (raw) => {
-    expect(readableError(raw)).toContain('Could not reach')
-  })
+  it.each([['TypeError: Failed to fetch'], ['NetworkError when attempting to fetch resource.']])(
+    'says the service is unreachable for %s',
+    (raw) => {
+      expect(readableError(raw)).toContain('Could not reach')
+    },
+  )
 
   /**
    * One message for both halves of a wrong sign-in. Saying "no account with

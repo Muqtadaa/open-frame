@@ -42,7 +42,7 @@ module.exports = {
       name: 'yjs-lives-only-in-collab',
       severity: 'error',
       comment:
-        'Yjs exists in exactly one package. ADR 0007 made patches OpenFrame\'s own format precisely ' +
+        "Yjs exists in exactly one package. ADR 0007 made patches OpenFrame's own format precisely " +
         'so that a CRDT could be translated at one seam rather than threaded through the domain, and ' +
         'ADR 0013 is reversible only for as long as that holds. A `yjs` import anywhere else is the ' +
         'phase\'s last "done when" quietly failing.',
@@ -66,7 +66,7 @@ module.exports = {
         'Object runtime do: a UI component that imports a database client is a UI component that ' +
         'cannot be tested without one, and a provider that reaches the canvas is a provider nobody ' +
         'can replace. Everything else receives a session, never a client. Two folders, because ' +
-        'there are two clients now — the browser\'s and the MCP server\'s — and each is the only ' +
+        "there are two clients now — the browser's and the MCP server's — and each is the only " +
         'door in its own app.',
       from: { pathNot: '^(apps/web/src/adapters/supabase|apps/mcp/src/supabase)' },
       to: { path: '^@supabase($|/)|node_modules/@supabase/' },
@@ -268,7 +268,9 @@ module.exports = {
      * `supabase-lives-only-in-adapters` rule was written, deliberately broken
      * to watch it fail, and did not fire. Anchored to OUR build output.
      */
-    exclude: { path: '(\\.test\\.tsx?$|^apps/web/e2e(-rooms)?/|^(apps|packages)/[^/]+/dist/|^(apps|packages)/[^/]+/coverage/)' },
+    exclude: {
+      path: '(\\.test\\.tsx?$|^apps/web/e2e(-rooms)?/|^(apps|packages)/[^/]+/dist/|^(apps|packages)/[^/]+/coverage/)',
+    },
     enhancedResolveOptions: {
       exportsFields: ['exports'],
       conditionNames: ['import', 'require', 'types'],

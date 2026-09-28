@@ -100,9 +100,7 @@ test.describe('the keyboard', () => {
     await expect(drawn(page).nth(0)).toHaveText('draft two')
   })
 
-  test('keeps the cell being typed in on Escape, and a second Escape leaves', async ({
-    page,
-  }) => {
+  test('keeps the cell being typed in on Escape, and a second Escape leaves', async ({ page }) => {
     await newTable(page)
     await fill(page, ['kept'])
     await page.keyboard.type('also kept')

@@ -1,5 +1,11 @@
 import { describe, expect, it, vi } from 'vitest'
-import { asAssetId, type AssetBlob, type AssetId, type AssetRef, type AssetStore } from '@openframe/core'
+import {
+  asAssetId,
+  type AssetBlob,
+  type AssetId,
+  type AssetRef,
+  type AssetStore,
+} from '@openframe/core'
 
 import { isLocalOnly, RoomAssetStore } from './room-asset-store.js'
 

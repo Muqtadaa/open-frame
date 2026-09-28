@@ -5,7 +5,7 @@
 ## Context
 
 Feedback from the deployed build asked for bold, italic, underline, strikethrough
-and size — applied to *selected text*, not to the whole object. That is the
+and size — applied to _selected text_, not to the whole object. That is the
 question [`PRODUCT.md`](../../PRODUCT.md) has carried as explicitly undecided
 since Phase 1:
 
@@ -43,8 +43,8 @@ characters and the marks on it.
 type RichText = readonly TextSpan[]
 interface TextSpan {
   readonly text: string
-  readonly marks?: readonly Mark[]   // 'bold' | 'italic' | 'underline' | 'strike'
-  readonly size?: SizeToken          // 'small' | 'normal' | 'large' | 'huge'
+  readonly marks?: readonly Mark[] // 'bold' | 'italic' | 'underline' | 'strike'
+  readonly size?: SizeToken // 'small' | 'normal' | 'large' | 'huge'
 }
 ```
 

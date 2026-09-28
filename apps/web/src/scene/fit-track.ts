@@ -87,9 +87,7 @@ export function fitColumnWidth(cells: readonly HTMLElement[]): number | null {
       const style = window.getComputedStyle(cell)
       for (const property of FACE) ruler.style[property] = style[property]
 
-      ruler.replaceChildren(
-        ...[...cell.childNodes].map((node) => node.cloneNode(true)),
-      )
+      ruler.replaceChildren(...[...cell.childNodes].map((node) => node.cloneNode(true)))
       /*
        * The cell's OWN padding and rules, not a number copied from the
        * stylesheet. A constant here is a second source of truth that goes
@@ -147,11 +145,7 @@ export function fitRowHeight(cells: readonly HTMLElement[]): number | null {
  * out — its width is shared, so it says nothing about any one of them, which
  * is what a spreadsheet does with a merged cell when it fits a column.
  */
-export function cellsInTrack(
-  grid: Element,
-  axis: 'row' | 'column',
-  index: number,
-): HTMLElement[] {
+export function cellsInTrack(grid: Element, axis: 'row' | 'column', index: number): HTMLElement[] {
   // Every cell, not the grid's children: the cells sit inside their rows.
   return [...grid.querySelectorAll('[data-row]')].filter((cell): cell is HTMLElement => {
     if (!(cell instanceof HTMLElement)) return false

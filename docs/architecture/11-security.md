@@ -39,16 +39,16 @@ builds is the one the server validates and authorizes.
 
 ## Areas to handle before the relevant feature ships
 
-| Area                                       | When it matters            | What the architecture already does                                                      |
-| ------------------------------------------ | -------------------------- | --------------------------------------------------------------------------------------- |
-| **XSS via object text**                    | Now, nominally             | All text renders as React children — never `dangerouslySetInnerHTML`. Keep it that way. |
-| **SVG sanitization**                       | SVG import (not shipped)   | ✅ SVG is refused outright — see below                                                  |
-| **Asset upload validation**                | Images — **done**          | ✅ Size, declared type and sniffed content, in `runtime/asset-validation.ts`            |
-| **SSRF via URL preview**                   | Link/bookmark objects      | Not built; fetching must be server-side with an allowlist                               |
-| **Server-side authorization**              | First multi-user feature   | `Capabilities` port + commands as data                                                  |
-| **Public board links**                     | Sharing                    | `view`/`comment` capabilities already distinguished                                     |
-| **API rate limits**                        | Public API                 | Commands are discrete and countable                                                     |
-| **AI prompt injection from board content** | AI features (Phase 5)      | ⬇ see below                                                                             |
+| Area                                       | When it matters          | What the architecture already does                                                      |
+| ------------------------------------------ | ------------------------ | --------------------------------------------------------------------------------------- |
+| **XSS via object text**                    | Now, nominally           | All text renders as React children — never `dangerouslySetInnerHTML`. Keep it that way. |
+| **SVG sanitization**                       | SVG import (not shipped) | ✅ SVG is refused outright — see below                                                  |
+| **Asset upload validation**                | Images — **done**        | ✅ Size, declared type and sniffed content, in `runtime/asset-validation.ts`            |
+| **SSRF via URL preview**                   | Link/bookmark objects    | Not built; fetching must be server-side with an allowlist                               |
+| **Server-side authorization**              | First multi-user feature | `Capabilities` port + commands as data                                                  |
+| **Public board links**                     | Sharing                  | `view`/`comment` capabilities already distinguished                                     |
+| **API rate limits**                        | Public API               | Commands are discrete and countable                                                     |
+| **AI prompt injection from board content** | AI features (Phase 5)    | ⬇ see below                                                                             |
 
 ---
 

@@ -133,10 +133,7 @@ function fits(side: Side, request: AnchorRequest): boolean {
     case 'left':
       return anchor.x - gap - surface.width >= Math.max(margin, left)
     case 'below':
-      return (
-        anchor.y + anchor.height + gap + surface.height <=
-        within.height - margin - band.bottom
-      )
+      return anchor.y + anchor.height + gap + surface.height <= within.height - margin - band.bottom
     case 'above':
       return anchor.y - gap - surface.height >= margin + band.top
     case 'over':
@@ -167,9 +164,7 @@ function positionOn(side: Side, request: AnchorRequest): { x: number; y: number 
 }
 
 function overlaps(a: Rect, b: Rect): boolean {
-  return (
-    a.x < b.x + b.width && b.x < a.x + a.width && a.y < b.y + b.height && b.y < a.y + a.height
-  )
+  return a.x < b.x + b.width && b.x < a.x + a.width && a.y < b.y + b.height && b.y < a.y + a.height
 }
 
 /** How much of two rectangles is the same pixels. */

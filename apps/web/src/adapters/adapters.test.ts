@@ -267,7 +267,10 @@ describe('leaving a board', () => {
     const repository = new MemoryBoardRepository()
     const runtime = await createRuntime({ boardId: BOARD, repository, autosaveDelayMs: 500 })
 
-    runtime.dispatcher.dispatch({ kind: 'CreateObjects', objects: [{ type: 'sticky', x: 0, y: 0 }] })
+    runtime.dispatcher.dispatch({
+      kind: 'CreateObjects',
+      objects: [{ type: 'sticky', x: 0, y: 0 }],
+    })
 
     expect(await repository.getBoard(BOARD)).toMatchObject({ status: 'not-found' })
 
@@ -318,7 +321,10 @@ describe('the save state', () => {
 
     const seen: string[] = []
     const stop = runtime.saveStatus.subscribe(() => seen.push(runtime.saveStatus.get()))
-    runtime.dispatcher.dispatch({ kind: 'CreateObjects', objects: [{ type: 'sticky', x: 0, y: 0 }] })
+    runtime.dispatcher.dispatch({
+      kind: 'CreateObjects',
+      objects: [{ type: 'sticky', x: 0, y: 0 }],
+    })
     expect(runtime.saveStatus.get()).toBe('pending')
 
     await runtime.flush()
@@ -334,7 +340,10 @@ describe('the save state', () => {
       repository: new FailingRepository(),
       autosaveDelayMs: 500,
     })
-    runtime.dispatcher.dispatch({ kind: 'CreateObjects', objects: [{ type: 'sticky', x: 0, y: 0 }] })
+    runtime.dispatcher.dispatch({
+      kind: 'CreateObjects',
+      objects: [{ type: 'sticky', x: 0, y: 0 }],
+    })
     await runtime.flush()
     expect(runtime.saveStatus.get()).toBe('failed')
     runtime.dispose()
@@ -362,9 +371,15 @@ describe('the save state', () => {
     })
     const tick = (): Promise<void> => new Promise((resolve) => setTimeout(resolve, 5))
 
-    runtime.dispatcher.dispatch({ kind: 'CreateObjects', objects: [{ type: 'sticky', x: 0, y: 0 }] })
+    runtime.dispatcher.dispatch({
+      kind: 'CreateObjects',
+      objects: [{ type: 'sticky', x: 0, y: 0 }],
+    })
     await tick()
-    runtime.dispatcher.dispatch({ kind: 'CreateObjects', objects: [{ type: 'sticky', x: 9, y: 9 }] })
+    runtime.dispatcher.dispatch({
+      kind: 'CreateObjects',
+      objects: [{ type: 'sticky', x: 9, y: 9 }],
+    })
     await tick()
     expect(pending).toHaveLength(2)
 
@@ -379,7 +394,12 @@ describe('the save state', () => {
 
   it('reads read-only on a board that is never written back', async () => {
     const repository = new MemoryBoardRepository()
-    repository.seedRaw(BOARD, { format: 'openframe.board', schemaVersion: 1, savedAt: 0, board: { junk: true } })
+    repository.seedRaw(BOARD, {
+      format: 'openframe.board',
+      schemaVersion: 1,
+      savedAt: 0,
+      board: { junk: true },
+    })
     const runtime = await createRuntime({ boardId: BOARD, repository, autosaveDelayMs: 500 })
     expect(runtime.saveStatus.get()).toBe('read-only')
     runtime.dispose()

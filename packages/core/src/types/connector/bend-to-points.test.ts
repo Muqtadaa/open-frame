@@ -47,7 +47,6 @@ describe('a board from before waypoints', () => {
      */
     expect(dataOf(id).points).toEqual([])
   })
-
 })
 
 /**

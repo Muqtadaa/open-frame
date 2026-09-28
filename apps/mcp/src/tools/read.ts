@@ -145,7 +145,13 @@ const objectsArguments = z.strictObject({
     .optional()
     .describe('Specific objects, by id. Everything else is ignored when this is given.'),
   type: z.string().optional().describe('Only objects of this type, e.g. `sticky`, `evidence`.'),
-  limit: z.number().int().min(1).max(MAX_PAGE).optional().describe(`At most this many (default ${String(DEFAULT_PAGE)}).`),
+  limit: z
+    .number()
+    .int()
+    .min(1)
+    .max(MAX_PAGE)
+    .optional()
+    .describe(`At most this many (default ${String(DEFAULT_PAGE)}).`),
   cursor: z.string().optional().describe('Continue after this object id, from a previous `next`.'),
 })
 
@@ -153,7 +159,7 @@ export const getObjects: ToolDefinition = {
   name: 'get_objects',
   title: 'Read objects on a board',
   description:
-    'The objects on a board, in the board\'s own order, a page at a time. Each carries its ' +
+    "The objects on a board, in the board's own order, a page at a time. Each carries its " +
     'type, a one-line summary and the named fields that type declares. Returns `next` when ' +
     'there is more; pass it back as `cursor`.',
   input: objectsArguments,
@@ -181,9 +187,7 @@ export const getObjects: ToolDefinition = {
       (object) => asked.type === undefined || object.type === asked.type,
     )
     const from =
-      asked.cursor === undefined
-        ? 0
-        : ordered.findIndex((object) => object.id === asked.cursor) + 1
+      asked.cursor === undefined ? 0 : ordered.findIndex((object) => object.id === asked.cursor) + 1
     const limit = asked.limit ?? DEFAULT_PAGE
     const page = ordered.slice(from, from + limit)
     const more = from + limit < ordered.length

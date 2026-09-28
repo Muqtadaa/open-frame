@@ -82,13 +82,7 @@ describe('the route itself', () => {
      * ever buy one bend.
      */
     const route = connectorRoute(start, end, 'orthogonal', [{ along: 0.25, across: 0 }])
-    expect(route.points).toEqual([
-      start,
-      { x: 0, y: 25 },
-      { x: 50, y: 25 },
-      { x: 50, y: 100 },
-      end,
-    ])
+    expect(route.points).toEqual([start, { x: 0, y: 25 }, { x: 50, y: 25 }, { x: 50, y: 100 }, end])
   })
 
   /*
@@ -254,7 +248,9 @@ describe('the bend handle still sits on the line it bends', () => {
       const crossing = orthogonalLegs(start, end, [], normals)[1]
       const handle =
         routing === 'orthogonal'
-          ? (crossing === undefined ? { x: 0, y: 0 } : middleOf(crossing))
+          ? crossing === undefined
+            ? { x: 0, y: 0 }
+            : middleOf(crossing)
           : (routeSegments(route)[0]?.middle ?? { x: 0, y: 0 })
       const drawn = flattenRoute(route, 48)
       // On the line it bends, which is the whole contract: a handle anywhere

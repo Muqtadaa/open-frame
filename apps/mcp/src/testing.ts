@@ -97,10 +97,7 @@ export async function settles(): Promise<void> {
  * the tools need from it is a list of boards and somewhere for a comment to
  * go, so that is all this is.
  */
-export function stubAccount(
-  boards: readonly BoardAccess[],
-  said: NewComment[] = [],
-): SignedIn {
+export function stubAccount(boards: readonly BoardAccess[], said: NewComment[] = []): SignedIn {
   return {
     account: { userId: 'user-1', email: 'someone@example.com', displayName: 'Someone' },
     boards: () => Promise.resolve(boards),

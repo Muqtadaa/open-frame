@@ -19,14 +19,7 @@ import { BOARD_URL } from './routes.js'
  */
 const CANVAS = '[data-testid="canvas"]'
 
-type Part =
-  | 'corner'
-  | 'rotate'
-  | 'glyph'
-  | 'connect'
-  | 'edge'
-  | 'belowRotate'
-  | 'belowConnect'
+type Part = 'corner' | 'rotate' | 'glyph' | 'connect' | 'edge' | 'belowRotate' | 'belowConnect'
 
 /** Every piece of the cluster, as the browser actually lays it out. */
 async function grips(page: Page): Promise<Record<Part, number | null>> {

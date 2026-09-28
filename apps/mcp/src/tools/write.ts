@@ -1,4 +1,10 @@
-import { asBoardId, asObjectId, createIdGenerator, type Command, type ObjectId } from '@openframe/core'
+import {
+  asBoardId,
+  asObjectId,
+  createIdGenerator,
+  type Command,
+  type ObjectId,
+} from '@openframe/core'
 import { z } from 'zod'
 
 import type { BoardPeer } from '../board.js'
@@ -206,7 +212,9 @@ const moveArguments = z.strictObject({
     .array(z.strictObject({ id: z.string(), ...point }))
     .min(1)
     .max(500)
-    .describe('Where each object goes, in board coordinates — the same numbers `get_objects` gives.'),
+    .describe(
+      'Where each object goes, in board coordinates — the same numbers `get_objects` gives.',
+    ),
 })
 
 export const moveObjects: ToolDefinition = {
@@ -243,7 +251,8 @@ export const moveObjects: ToolDefinition = {
         dy: move.y - object.frame.y,
       })
     }
-    if (moves.length === 0) return problem(`Nothing to move: no such object as ${missing.join(', ')}`)
+    if (moves.length === 0)
+      return problem(`Nothing to move: no such object as ${missing.join(', ')}`)
 
     return commit(
       opened.peer,

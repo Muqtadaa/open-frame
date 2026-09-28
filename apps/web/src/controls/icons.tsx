@@ -196,8 +196,21 @@ export function FillIcon({ className, variant }: IconProps & { variant: string }
   return (
     <svg {...base} className={className}>
       <rect x="4" y="5" width="16" height="14" rx="2" />
-      {variant === 'tint' && <rect x="4" y="5" width="16" height="14" rx="2" fill="currentColor" opacity="0.25" stroke="none" />}
-      {variant === 'solid' && <rect x="4" y="5" width="16" height="14" rx="2" fill="currentColor" stroke="none" />}
+      {variant === 'tint' && (
+        <rect
+          x="4"
+          y="5"
+          width="16"
+          height="14"
+          rx="2"
+          fill="currentColor"
+          opacity="0.25"
+          stroke="none"
+        />
+      )}
+      {variant === 'solid' && (
+        <rect x="4" y="5" width="16" height="14" rx="2" fill="currentColor" stroke="none" />
+      )}
       {variant === 'none' && <path d="M5.5 18.5 18.5 5.5" />}
     </svg>
   )
@@ -442,7 +455,14 @@ export function SnapIcon({ className }: IconProps) {
     <svg {...base} className={className}>
       {[5, 12, 19].flatMap((x) =>
         [5, 12, 19].map((y) => (
-          <circle key={`${String(x)}.${String(y)}`} cx={x} cy={y} r={1.1} fill="currentColor" stroke="none" />
+          <circle
+            key={`${String(x)}.${String(y)}`}
+            cx={x}
+            cy={y}
+            r={1.1}
+            fill="currentColor"
+            stroke="none"
+          />
         )),
       )}
       <rect x="5" y="5" width="7" height="7" rx="1" />
@@ -481,7 +501,12 @@ export function RotateIcon({ className }: IconProps) {
  */
 function alignIcon(
   rule: { readonly x1: number; readonly y1: number; readonly x2: number; readonly y2: number },
-  bars: readonly { readonly x: number; readonly y: number; readonly w: number; readonly h: number }[],
+  bars: readonly {
+    readonly x: number
+    readonly y: number
+    readonly w: number
+    readonly h: number
+  }[],
 ) {
   return function Icon({ className }: IconProps) {
     return (

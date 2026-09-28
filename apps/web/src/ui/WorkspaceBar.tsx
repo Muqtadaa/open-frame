@@ -59,33 +59,33 @@ export function WorkspaceBar({
     <div className="of-spaces" data-testid="workspace-bar">
       <div className="of-spaces__row">
         <div className="of-spaces__tabs" role="group" aria-label="Workspaces">
-        <button
-          type="button"
-          className={`of-spaces__tab${selected === null ? ' of-spaces__tab--on' : ''}`}
-          aria-pressed={selected === null}
-          data-testid="workspace-all"
-          onClick={() => {
-            onSelect(null)
-          }}
-        >
-          everything
-        </button>
-
-        {workspaces.map((workspace) => (
           <button
-            key={workspace.id}
             type="button"
-            className={`of-spaces__tab${selected === workspace.id ? ' of-spaces__tab--on' : ''}`}
-            aria-pressed={selected === workspace.id}
-            data-testid={`workspace-${workspace.id}`}
+            className={`of-spaces__tab${selected === null ? ' of-spaces__tab--on' : ''}`}
+            aria-pressed={selected === null}
+            data-testid="workspace-all"
             onClick={() => {
-              onSelect(workspace.id)
+              onSelect(null)
             }}
           >
-            {workspace.name}
-            <span className="of-spaces__count">{workspace.boards}</span>
+            everything
           </button>
-        ))}
+
+          {workspaces.map((workspace) => (
+            <button
+              key={workspace.id}
+              type="button"
+              className={`of-spaces__tab${selected === workspace.id ? ' of-spaces__tab--on' : ''}`}
+              aria-pressed={selected === workspace.id}
+              data-testid={`workspace-${workspace.id}`}
+              onClick={() => {
+                onSelect(workspace.id)
+              }}
+            >
+              {workspace.name}
+              <span className="of-spaces__count">{workspace.boards}</span>
+            </button>
+          ))}
         </div>
 
         <button
@@ -138,7 +138,12 @@ export function WorkspaceBar({
               }}
             />
           </label>
-          <button type="submit" className="of-button" disabled={busy} data-testid="workspace-create">
+          <button
+            type="submit"
+            className="of-button"
+            disabled={busy}
+            data-testid="workspace-create"
+          >
             Create
           </button>
           <button
@@ -157,10 +162,10 @@ export function WorkspaceBar({
       )}
 
       {/*
-        * Sharing is offered for the workspace being SHOWN, because a link that
-        * did not say which workspace it let somebody into would be the easiest
-        * possible thing to send by mistake.
-        */}
+       * Sharing is offered for the workspace being SHOWN, because a link that
+       * did not say which workspace it let somebody into would be the easiest
+       * possible thing to send by mistake.
+       */}
       {current !== null && current.role === 'admin' && !current.personal && (
         <div className="of-spaces__share">
           <button

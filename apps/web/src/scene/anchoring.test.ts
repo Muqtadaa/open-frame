@@ -266,8 +266,6 @@ describe('keeping clear of the screen-edge furniture', () => {
       anchor: { x: 600, y: 670, width: 30, height: 30 },
       prefer: ['above'] as const,
     }
-    expect(placeAnchored({ ...fromBottom, keepClearBottom: 64 })).toEqual(
-      placeAnchored(fromBottom),
-    )
+    expect(placeAnchored({ ...fromBottom, keepClearBottom: 64 })).toEqual(placeAnchored(fromBottom))
   })
 })

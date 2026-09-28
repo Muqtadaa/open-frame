@@ -38,13 +38,13 @@ Decided at kickoff, on one constraint: **stay free at small scale.** OpenFrame
 has no users and no revenue, so a fixed monthly cost before the first
 collaborator is a cost with no counterparty.
 
-| Piece        | Choice                                   | Free allowance                                                        | First bill                      |
-| ------------ | ---------------------------------------- | --------------------------------------------------------------------- | ------------------------------- |
-| Room server  | Cloudflare Durable Objects ([ADR 0013](../adr/0013-collaboration-transport-durable-objects.md)) | 100k requests/day, 13k GB-s/day, 10 GB SQLite. Incoming WS messages bill **20:1**; outgoing are free | Workers Paid, $5/mo             |
-| Database     | Supabase Postgres                        | 500 MB database, 10 GB bandwidth/month                                | Pro, $25/mo                     |
-| Auth         | Clerk                                    | 50,000 monthly retained users                                         | $25/mo Pro                      |
-| Assets       | Cloudflare R2                            | 10 GB, 1M writes, 10M reads, **zero egress**                          | $0.015/GB past 10 GB            |
-| Web app      | Vercel                                   | Hobby                                                                 | Pro, $20/mo — see the flag below |
+| Piece       | Choice                                                                                          | Free allowance                                                                                       | First bill                       |
+| ----------- | ----------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------- | -------------------------------- |
+| Room server | Cloudflare Durable Objects ([ADR 0013](../adr/0013-collaboration-transport-durable-objects.md)) | 100k requests/day, 13k GB-s/day, 10 GB SQLite. Incoming WS messages bill **20:1**; outgoing are free | Workers Paid, $5/mo              |
+| Database    | Supabase Postgres                                                                               | 500 MB database, 10 GB bandwidth/month                                                               | Pro, $25/mo                      |
+| Auth        | Clerk                                                                                           | 50,000 monthly retained users                                                                        | $25/mo Pro                       |
+| Assets      | Cloudflare R2                                                                                   | 10 GB, 1M writes, 10M reads, **zero egress**                                                         | $0.015/GB past 10 GB             |
+| Web app     | Vercel                                                                                          | Hobby                                                                                                | Pro, $20/mo — see the flag below |
 
 **Supabase is the database, with the pause accepted as a known cost.** A free
 project is paused after 7 days of low activity, which reads badly against
@@ -249,6 +249,7 @@ the one whose keys the room has to verify.
   The zoom of a peer on a build with a wider range is CLAMPED rather than
   refused: they are still somewhere definite, and refusing would strand their
   follower.
+
 - ~~**Live drag deltas.**~~ Done. The in-flight offset travels as presence, so
   another person's note slides under their cursor instead of teleporting on
   release — with no write, no undo entry and no storage row. Rule 4 is
@@ -317,6 +318,7 @@ this browser", whatever is sitting in IndexedDB under its id.
   history that made the flag necessary. Proved end to end in `test:rooms` —
   a real browser edits a board with the socket refused, reloads, reconnects,
   and a second browser reads the move out of the room.
+
 - ~~**Remote objects are not schema-validated**~~ — fixed 2026-09-19. Anyone
   holding a board's edit link could write arbitrary JSON into the shared map
   and it went straight into the document. `ApplyRemotePatches` now reads an
@@ -328,6 +330,7 @@ this browser", whatever is sitting in IndexedDB under its id.
   Dropped, never repaired and never thrown. A half-understood object is worse
   than an absent one, and one bad object from one peer must not take down the
   sync loop for everybody — a batch keeps its good patches.
+
 - ~~**A read-only participant goes deaf**~~ — fixed 2026-09-19. Originating a
   change asks `edit`; applying a merged one asks `view`, because those are
   different acts by different actors.
@@ -357,7 +360,7 @@ and it survives untouched.
 This rewrites principle 4. "A board works in one browser with no account and no
 network" becomes **"a board works offline"**: IndexedDB and the CRDT already
 provide that, and a signed-in person with no network keeps working exactly as
-they do today. What is retired is *no account*, not *no network*.
+they do today. What is retired is _no account_, not _no network_.
 
 PRODUCT.md was edited in the commit that made it true, not before — a document
 describing a product that does not exist is worse than one describing an old
@@ -522,6 +525,7 @@ this browser", whatever is sitting in IndexedDB under its id.
   Refused with close code 4003 rather than by refusing the upgrade, because a
   failed handshake reaches the browser as a generic 1006 and "your wifi
   blinked" is the wrong thing to tell somebody who needs to type a password.
+
 - ~~What a member sees when an owner deletes a board they are looking at.~~
   Fixed. The provider treated 4004 as a dropped connection, so it reconnected
   into a room that answers 410, backed off and tried again for as long as the
@@ -541,6 +545,7 @@ this browser", whatever is sitting in IndexedDB under its id.
   row could never have appeared. What the forgetting actually prevents is a
   dead board's document and CRDT sitting in IndexedDB forever, and that is
   what the test reads now.
+
 - ~~**An owner cannot recover the view-only link after the moment of sharing.**~~
   Fixed. `my_boards()` returns a second `view_key`, populated for the owner and
   null for everybody else, and the row offers a copy control when it is there.
@@ -552,6 +557,7 @@ this browser", whatever is sitting in IndexedDB under its id.
   button wider than a member's and pulled its tag out of the column; the
   actions block now has a fixed width. The alignment test asserted exactly
   that, two distinct x positions, before the fix.
+
 - Boards shared before links had roles cannot have their rooms deleted, by
   design. The row goes; the room outlives it.
 

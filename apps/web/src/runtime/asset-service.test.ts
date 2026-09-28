@@ -1,4 +1,9 @@
-import { createSequentialIdGenerator, type AssetId, type AssetRef, type AssetStore } from '@openframe/core'
+import {
+  createSequentialIdGenerator,
+  type AssetId,
+  type AssetRef,
+  type AssetStore,
+} from '@openframe/core'
 import { describe, expect, it, vi } from 'vitest'
 
 import { AssetService, type ImageMeasurer, type UploadableFile } from './asset-service.js'
@@ -61,9 +66,7 @@ describe('AssetService.upload', () => {
   it('rejects a disguised SVG without storing anything', async () => {
     const { store, service } = createService()
     const svg = new TextEncoder().encode('<svg><script/></svg>')
-    const result = await service.upload(
-      file({ arrayBuffer: () => Promise.resolve(svg.buffer) }),
-    )
+    const result = await service.upload(file({ arrayBuffer: () => Promise.resolve(svg.buffer) }))
 
     expect(result.ok).toBe(false)
     expect(store.puts).toEqual([])

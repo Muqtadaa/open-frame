@@ -140,9 +140,7 @@ describe('the meta patch', () => {
       applyPatches(doc, [{ op: 'meta', path: [] as unknown as [string], value: 'x' }]),
     ).toThrow()
     expect(() =>
-      applyPatches(doc, [
-        { op: 'meta', path: ['a', 'b'] as unknown as [string], value: 'x' },
-      ]),
+      applyPatches(doc, [{ op: 'meta', path: ['a', 'b'] as unknown as [string], value: 'x' }]),
     ).toThrow()
   })
 })
