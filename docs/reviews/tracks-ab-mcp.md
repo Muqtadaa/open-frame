@@ -182,3 +182,18 @@ cover:
 3. **B-3.** CI, small.
 4. **A-2.** Needs the owner's call on the revert shape.
 5. **A-6**, then the P2 measurements.
+
+## Decisions (owner, 2026-09-28)
+
+- **Everything, in the order above**, one PR each, pausing after each merge.
+- **A-2: both sides.** An agent can revert its own change through an MCP tool,
+  and a person can revert an agent's change from the board. Both go through
+  A-1's guarded history path.
+
+## Progress
+
+- **A-1:** undo and redo check capability first, then leave out patches whose
+  target has gone or is locked (except its own lock). A step with nothing left
+  is consumed, reported as `stale-history`, and shown as a toast.
+  `history-guards.test.ts` (6 of 8 failed before the fix) and a rooms test where
+  an MCP peer deletes and a person presses Cmd+Z (it failed before).

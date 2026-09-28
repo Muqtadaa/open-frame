@@ -1,6 +1,7 @@
 import type {
   ColorToken,
   Command,
+  DispatchResult,
   ObjectStyle,
   ConnectorEndpoint,
   EndpointTarget,
@@ -104,11 +105,7 @@ export interface BoardCommands {
    * drag that produced both still a single step to undo. Rule 4 is about one
    * ACTION per gesture, not one command.
    */
-  resizeDivider(
-    id: ObjectId,
-    patch: Readonly<Record<string, unknown>>,
-    frame: ObjectFrame,
-  ): void
+  resizeDivider(id: ObjectId, patch: Readonly<Record<string, unknown>>, frame: ObjectFrame): void
   updateData(id: ObjectId, patch: Readonly<Record<string, unknown>>): void
   /**
    * An edit that also changed the object's size — a table whose track was
@@ -182,6 +179,22 @@ export function useCommands(): BoardCommands {
   return useMemo<BoardCommands>(() => {
     const report = (result: { ok: boolean; error?: unknown }): void => {
       if (!result.ok) console.warn('[openframe] command rejected', result.error)
+    }
+
+    /*
+     * An undo or redo that could not happen says so, where the person is
+     * looking. Somebody else — another person, or an agent — may have deleted
+     * or locked what the step would restore; the dispatcher leaves those out
+     * rather than throwing, and a press that silently did nothing would read
+     * as a broken shortcut.
+     */
+    const sayWhyNot = (result: DispatchResult | null): void => {
+      if (result === null || result.ok) return
+      useInteractionStore
+        .getState()
+        .showToast(
+          result.error.code === 'unauthorized' ? 'This board is read-only.' : result.error.message,
+        )
     }
 
     /*
@@ -787,14 +800,14 @@ export function useCommands(): BoardCommands {
       },
 
       undo() {
-        dispatcher.undo()
+        sayWhyNot(dispatcher.undo())
         useInteractionStore
           .getState()
           .pruneSelection((id) => runtime.store.getObject(id) !== undefined)
       },
 
       redo() {
-        dispatcher.redo()
+        sayWhyNot(dispatcher.redo())
         useInteractionStore
           .getState()
           .pruneSelection((id) => runtime.store.getObject(id) !== undefined)

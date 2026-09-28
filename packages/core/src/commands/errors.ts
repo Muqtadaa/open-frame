@@ -7,6 +7,12 @@ export type CommandErrorCode =
   | 'invalid-data'
   | 'not-resizable'
   | 'would-create-cycle'
+  /**
+   * An undo or redo whose every change has been overtaken — the objects it
+   * would restore were deleted or locked by somebody else in the meantime.
+   * The step is consumed; nothing is written.
+   */
+  | 'stale-history'
 
 /**
  * A rejected command. The document is guaranteed untouched: handlers validate

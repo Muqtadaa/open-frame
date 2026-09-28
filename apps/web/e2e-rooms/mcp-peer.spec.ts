@@ -63,7 +63,9 @@ async function join(browser: Browser, room: string): Promise<Page> {
 const objectsIn = (page: Page): Promise<{ type: string; via: string }[]> =>
   page.evaluate(() =>
     [
-      ...(window as unknown as DebugWindow).__openframe.runtime.store.getDocument().objects.values(),
+      ...(window as unknown as DebugWindow).__openframe.runtime.store
+        .getDocument()
+        .objects.values(),
     ].map((object) => ({ type: object.type, via: object.meta.createdVia })),
   )
 
@@ -198,5 +200,57 @@ test('an agent builds something, and the browser sees one change', async ({ brow
     await expect.poll(() => objectsIn(page), { timeout: 20_000 }).toEqual([])
   } finally {
     await context.close()
+  }
+})
+
+/**
+ * A person's undo, after an agent deleted what it would restore (tracks A-1).
+ *
+ * History was replayed blind: the agent's delete arrived, the person pressed
+ * Cmd+Z on their own earlier move of that note, and the undo threw out of the
+ * keyboard handler. It now leaves out what no longer applies, and says so.
+ */
+test("a person's undo after an agent deleted the note does not break", async ({ browser }) => {
+  const room = newRoomId()
+  const page = await join(browser, room)
+  const errors: string[] = []
+  page.on('pageerror', (error) => errors.push(error.message))
+
+  const id = await page.evaluate(() => {
+    const runtime = (window as unknown as DebugWindow).__openframe.runtime
+    const made = runtime.dispatcher.dispatch({
+      kind: 'CreateObjects',
+      objects: [{ type: 'sticky', x: 100, y: 100, data: { text: [{ text: 'mine' }] } }],
+    })
+    if (!made.ok) throw new Error(made.error?.message ?? 'refused')
+    const [note] = [...runtime.store.getDocument().objects.keys()]
+    if (note === undefined) throw new Error('no note')
+    // The step the person will press Cmd+Z on.
+    const moved = runtime.dispatcher.dispatch({
+      kind: 'MoveObjects',
+      moves: [{ id: note, dx: 40, dy: 0 }],
+    })
+    if (!moved.ok) throw new Error(moved.error?.message ?? 'refused')
+    return note
+  })
+
+  const peer = await openBoard({ boardId: asBoardId(room), server: ROOM_SERVER })
+  try {
+    await expect.poll(() => peer.store.getDocument().objects.has(id as never)).toBe(true)
+    const gone = peer.dispatcher.dispatch(
+      { kind: 'DeleteObjects', ids: [id as never] },
+      { origin: 'mcp' },
+    )
+    expect(gone.ok).toBe(true)
+    await expect.poll(() => objectsIn(page), { timeout: 20_000 }).toEqual([])
+
+    await page.getByTestId('canvas').focus()
+    await page.keyboard.press('ControlOrMeta+z')
+
+    await expect(page.getByTestId('toast')).toContainText('deleted or locked since')
+    expect(errors).toEqual([])
+    expect(await objectsIn(page)).toEqual([])
+  } finally {
+    peer.close()
   }
 })
