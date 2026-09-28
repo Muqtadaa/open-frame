@@ -1,5 +1,15 @@
 import { connectBoard, type BoardConnection } from '@openframe/collab'
-import type { BoardId, CommandError } from '@openframe/core'
+import {
+  allowAllCapabilities,
+  CommandDispatcher,
+  createDefaultRegistry,
+  createDocumentStore,
+  createEmptyDocument,
+  createIdGenerator,
+  systemClock,
+  type BoardId,
+  type CommandError,
+} from '@openframe/core'
 
 import { browserRoomSocket } from '../adapters/browser-room-socket.js'
 import { indexedDbCrdtStore } from '../adapters/indexeddb/crdt-store.js'
@@ -46,9 +56,77 @@ export async function startCollaboration(
       browserRoomSocket(roomSocketUrl(boardId, key, heldToken(boardId), heldOwnerKey(boardId))),
     onError,
     persistence: indexedDbCrdtStore(boardId),
+    // Only a board this device really holds is offered to an empty room;
+    // one it has just started blank never is.
+    seed: runtime.stored,
   })
 
   const guest = guestIdentity()
   connection.setPresence({ name: guest.name, hue: guest.hue })
   return connection
+}
+
+/** How long a rename from the board list waits for the room before giving up. */
+const RENAME_TIMEOUT_MS = 10_000
+
+/**
+ * Renames a shared board IN ITS ROOM, from somewhere the board is not open —
+ * the board list.
+ *
+ * The name a board shows is the one in its room. The list keeps a copy, and a
+ * rename from the list used to write only that copy and this browser's saved
+ * board: every other device, and this one on a fresh start, went on opening
+ * the board under its old name while the list showed the new one (reported by
+ * the owner). So the rename joins the room the way any peer does, waits for
+ * the board, and makes the same change a rename inside the board makes —
+ * through a dispatcher, never by writing the CRDT (rule 3).
+ *
+ * `seed: false`: this joins to change one field of a board that exists, and
+ * must never publish the empty document it starts from.
+ */
+export async function renameInRoom(
+  boardId: BoardId,
+  key: string | null,
+  title: string,
+): Promise<boolean> {
+  const { store, writer } = createDocumentStore(
+    createEmptyDocument(boardId, 'Untitled board', systemClock.now()),
+  )
+  const dispatcher = new CommandDispatcher({
+    store,
+    writer,
+    registry: createDefaultRegistry(),
+    clock: systemClock,
+    ids: createIdGenerator(),
+    // The room decides; a viewer's write is refused there and reported below.
+    capabilities: allowAllCapabilities,
+  })
+  const connection = await connectBoard({
+    store,
+    dispatcher,
+    seed: false,
+    connect: () =>
+      browserRoomSocket(roomSocketUrl(boardId, key, heldToken(boardId), heldOwnerKey(boardId))),
+    onError: () => undefined,
+    persistence: indexedDbCrdtStore(boardId),
+  })
+  try {
+    const synced = await new Promise<boolean>((resolve) => {
+      const timer = setTimeout(() => {
+        resolve(false)
+      }, RENAME_TIMEOUT_MS)
+      connection.onSynced(() => {
+        clearTimeout(timer)
+        resolve(true)
+      })
+    })
+    if (!synced || connection.role !== 'editor') return false
+    return dispatcher.dispatch({ kind: 'SetBoardTitle', title }).ok
+  } finally {
+    // A beat for the update to leave: a socket closed in the same turn as the
+    // write can drop it.
+    setTimeout(() => {
+      connection.destroy()
+    }, 250)
+  }
 }

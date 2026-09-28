@@ -4,6 +4,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { MemoryBoardRepository } from '../adapters/memory/memory-board-repository.js'
 import { deleteBoardEverywhere, leaveBoard, renameBoard } from './board-lifecycle.js'
 import { createRuntime } from './composition-root.js'
+import { renameInRoom } from './collaboration.js'
 import { deleteRemoteBoard, leaveRemoteBoard, renameRemoteBoard } from './remote-boards.js'
 
 /**
@@ -26,9 +27,14 @@ vi.mock('./remote-boards.js', () => ({
   renameRemoteBoard: vi.fn(() => Promise.resolve(true)),
 }))
 
+vi.mock('./collaboration.js', () => ({
+  renameInRoom: vi.fn(() => Promise.resolve(true)),
+}))
+
 const remoteDelete = vi.mocked(deleteRemoteBoard)
 const remoteLeave = vi.mocked(leaveRemoteBoard)
 const remoteRename = vi.mocked(renameRemoteBoard)
+const roomRename = vi.mocked(renameInRoom)
 
 const SHARED = asBoardId('brd_abcdefgh12345678')
 const LOCAL = asBoardId('board_alone')
@@ -194,6 +200,34 @@ describe('renaming a board from the list', () => {
   beforeEach(() => {
     remoteRename.mockReset()
     remoteRename.mockResolvedValue(true)
+    roomRename.mockReset()
+    roomRename.mockResolvedValue(true)
+  })
+
+  /*
+   * The name a shared board shows is the one in its ROOM. Renamed only in the
+   * list and this browser's copy, the board went on opening under its old
+   * name everywhere else while the list showed the new one (reported by the
+   * owner).
+   */
+  it('renames a shared board in its room, with the key the row holds', async () => {
+    const repository = await boardOnDisk()
+    await expect(
+      renameBoard(repository, { boardId: SHARED, shared: true, accessKey: KEY }, 'Pricing'),
+    ).resolves.toBe(true)
+    expect(roomRename).toHaveBeenCalledWith(SHARED, KEY, 'Pricing')
+  })
+
+  it('renames nothing when the room cannot be reached, and says so', async () => {
+    const repository = await boardOnDisk()
+    roomRename.mockResolvedValue(false)
+
+    await expect(
+      renameBoard(repository, { boardId: SHARED, shared: true, accessKey: KEY }, 'Pricing'),
+    ).resolves.toBe(false)
+    expect(remoteRename).not.toHaveBeenCalled()
+    const loaded = await repository.getBoard(SHARED)
+    expect(loaded.status === 'ok' && loaded.document.meta.title).not.toBe('Pricing')
   })
 
   it('writes the name into the document as well as the row', async () => {

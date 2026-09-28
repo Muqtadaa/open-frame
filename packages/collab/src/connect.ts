@@ -8,7 +8,7 @@ import {
   readChanges,
   type LoggedChange,
 } from './change-log.js'
-import { seedDoc } from './document-map.js'
+import { metaOf, seedDoc } from './document-map.js'
 import { createAwareness, type RoomRole } from './protocol.js'
 import { RoomProvider, type ConnectionStatus, type RoomSocket } from './provider.js'
 import { CollabSession } from './session.js'
@@ -145,7 +145,7 @@ export async function connectBoard(options: ConnectBoardOptions): Promise<BoardC
    * resurrect everything anyone else had deleted, because such a doc carries
    * no deletion history — a persisted one does, which is what makes this safe.
    */
-  if (stored === null && (options.seed ?? true)) seedDoc(doc, options.store.getDocument())
+  const seeding = stored === null && (options.seed ?? true)
 
   if (options.persistence !== undefined) {
     const persistence = options.persistence
@@ -187,6 +187,20 @@ export async function connectBoard(options: ConnectBoardOptions): Promise<BoardC
       for (const listener of [...roleListeners]) listener(role)
     },
     onSynced: () => {
+      /*
+       * Seeded only once the room has answered, and only into a room with no
+       * board in it. Seeded BEFORE connecting, a browser opening a shared
+       * board for the first time published the empty document it had just
+       * made up, concurrently with the room's own: Yjs broke the tie on the
+       * title by client id, and about half of all first opens showed
+       * "Untitled board" — on that device for good, and for an editor, on
+       * everyone's — while the board list still showed the real name.
+       *
+       * The title is the test for "a board is here", because every board
+       * ever seeded carries one. A room with a board in it is the truth for a
+       * newcomer; only an empty room takes this browser's board.
+       */
+      if (seeding && !metaOf(doc).has('title')) seedDoc(doc, options.store.getDocument())
       for (const listener of [...syncedListeners]) listener()
       syncedListeners.clear()
     },
