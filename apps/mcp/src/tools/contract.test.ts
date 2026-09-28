@@ -95,6 +95,54 @@ describe('every tool refuses a key it does not know', () => {
   })
 })
 
+/*
+ * The same lie one level down (Codex, on #14). `style` is a record because
+ * what it may hold depends on the TYPE, and `UpdateStyle` skips a key the type
+ * does not take so that a mixed selection can be coloured at once. So
+ * `style: { colour }` changed nothing and reported success, and `strokeColor`
+ * on a sticky, which has no line, did the same.
+ */
+describe('a style key the type does not take', () => {
+  for (const style of [{ colour: 'blue' }, { strokeColor: 'blue' }]) {
+    const key = Object.keys(style)[0] ?? ''
+
+    it(`update_object refuses ${key} on a sticky, by name`, async () => {
+      const { peer, context } = await board()
+      const note = await oneNote(peer, context)
+      const before = JSON.stringify(objectsOn(peer))
+      const answer = await updateObject.run({ board: TEST_BOARD, id: note.id, style }, context)
+      expect(answer.isError, answer.text).toBe(true)
+      expect(answer.text).toContain(key)
+      expect(JSON.stringify(objectsOn(peer))).toBe(before)
+      await context.close()
+    })
+
+    it(`create_objects refuses ${key} on a sticky, by name`, async () => {
+      const { peer, context } = await board()
+      const answer = await createObjects.run(
+        { board: TEST_BOARD, objects: [{ type: 'sticky', x: 0, y: 0, style }] },
+        context,
+      )
+      expect(answer.isError, answer.text).toBe(true)
+      expect(answer.text).toContain(key)
+      expect(objectsOn(peer)).toHaveLength(0)
+      await context.close()
+    })
+  }
+
+  it('still takes one it does', async () => {
+    const { peer, context } = await board()
+    const note = await oneNote(peer, context)
+    const answer = await updateObject.run(
+      { board: TEST_BOARD, id: note.id, style: { color: 'blue', textColor: 'red' } },
+      context,
+    )
+    expect(answer.isError, answer.text).toBe(false)
+    expect(objectsOn(peer)[0]?.style).toMatchObject({ color: 'blue', textColor: 'red' })
+    await context.close()
+  })
+})
+
 describe('a colour must be one', () => {
   const HOSTILE = ['url(https://example.com/pixel)', 'red; background: black']
 

@@ -72,6 +72,29 @@ function commit(
   })
 }
 
+/**
+ * The style keys `type` does not take, as a refusal naming them, or null.
+ *
+ * `style` is a record rather than a strict schema because what it may hold is
+ * the TYPE's answer (`capabilities.styleProps`, rule 21), and a schema here
+ * would be a second, stale one. `UpdateStyle` skips a key a type does not
+ * take, which is right for a mixed selection coloured at once and wrong for
+ * an agent naming one object: `style: { colour }` changed nothing and was
+ * reported as done (Codex, on #14). An unknown type is left to the command,
+ * which refuses it with its own reason.
+ */
+function strayStyle(peer: BoardPeer, type: string, style: object): ToolResponse | null {
+  const definition = peer.registry.get(type)
+  if (definition === undefined) return null
+  const takes: readonly string[] = definition.capabilities.styleProps
+  const stray = Object.keys(style).filter((key) => !takes.includes(key))
+  if (stray.length === 0) return null
+  return problem(
+    `A ${type} has no style ${stray.map((key) => `\`${key}\``).join(', ')}. ` +
+      `It takes: ${takes.length === 0 ? 'none' : takes.join(', ')}.`,
+  )
+}
+
 const point = { x: z.number().finite(), y: z.number().finite() }
 
 const createArguments = z.strictObject({
@@ -112,6 +135,11 @@ export const createObjects: ToolDefinition = {
     const opened = await onBoardEditing(input, context, createArguments)
     if (isResponse(opened)) return opened
     const asked = opened.input
+    for (const object of asked.objects) {
+      if (object.style === undefined) continue
+      const refused = strayStyle(opened.peer, object.type, object.style)
+      if (refused !== null) return refused
+    }
 
     return commit(opened.peer, `Create ${String(asked.objects.length)} object(s)`, [
       {
@@ -158,6 +186,11 @@ export const updateObject: ToolDefinition = {
     }
 
     const id = asObjectId(asked.id)
+    const target = opened.peer.store.getDocument().objects.get(id)
+    if (target !== undefined && asked.style !== undefined) {
+      const refused = strayStyle(opened.peer, target.type, asked.style)
+      if (refused !== null) return refused
+    }
     const commands: Command[] = []
     if (asked.data !== undefined) commands.push({ kind: 'UpdateObjectData', id, patch: asked.data })
     if (asked.style !== undefined) {
