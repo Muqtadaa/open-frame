@@ -291,3 +291,28 @@ cover:
     - It failed on `ObjectView`'s `object.type === 'connector'`. That line now
       calls `registry.drawnFromEnds(object)`, which checks whether the type
       declares `endpoints`.
+- **P2, measuring an agent peer.** `pnpm bench:mcp` (`tools/bench/mcp-cost.ts`)
+  times the real MCP read tools and a real dispatcher on the mixed fixtures.
+  It also counts full-board map copies. `bench:mcp:smoke` runs in `verify`.
+  Numbers are from a 4-core container on Node 22, on board-mixed-10000
+  (12,250 objects), in ms:
+
+  | Case                                   | Before | After | Map copies |
+  | -------------------------------------- | -----: | ----: | ---------: |
+  | `get_objects`, one page                |    1.6 |     — |          0 |
+  | `get_objects`, all 123 pages           |    214 |     — |          0 |
+  | `search_board`                         |    3.4 |     — |          0 |
+  | agent: 200 commands in one transaction |    406 |    24 |    202 → 3 |
+  | agent: one command of 200 (control)    |    5.3 |   4.9 |          3 |
+  | that batch arriving at another peer    |    6.3 |   5.5 |          4 |
+  - **The reads are not a problem.** A page costs about 1.6ms, even though
+    every call sorts the whole board, so they are left as they are.
+  - **The remote batch is fine.** It is what each browser pays, and it stays
+    under a frame.
+  - **The agent's transaction was the real cost.** Two fixes:
+    - The dispatcher now copies the object map once per transaction instead
+      of once per command.
+    - `CreateObjects` finds the top of a container with `lastChildOrder`, one
+      pass, instead of sorting all children to read the last one.
+  - **What is left** is one scan per command. Only the agent's own process
+    pays it.

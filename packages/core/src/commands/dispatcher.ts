@@ -274,14 +274,35 @@ export class CommandDispatcher {
       // the store until every command has succeeded.
       patches = []
       let working = before
+      /*
+       * The objects map this transaction may change in place, once it has
+       * one. Copying the board per COMMAND made an agent's 200-command
+       * transaction copy a 12,000-object map 200 times — 406ms against 5ms for
+       * the same objects in one command (tracks P2, `pnpm bench:mcp`). The
+       * copy is private to this run, so it is made on the first write and
+       * changed in place after that; the store's own map is never touched.
+       *
+       * Every step still gets a NEW document object, because the registry
+       * caches its indexes on document identity: a document whose map changed
+       * underneath it would be answered from the index of what it used to be.
+       */
+      let owned: Map<ObjectId, AnyOpenFrameObject> | null = null
       for (const command of commands) {
         const produced = handleCommand(working, command, context)
+        if (produced.length === 0) continue
         patches.push(...produced)
-        // Through `applyPatches` for meta, which the objects map cannot carry:
-        // a later command in the same transaction must see the new title.
-        working = produced.some((patch) => patch.op === 'meta')
-          ? applyPatches(working, produced)
-          : { ...working, objects: applyToMap(working.objects, produced) }
+        if (produced.some((patch) => patch.op === 'meta')) {
+          // Through `applyPatches` for meta, which the objects map cannot
+          // carry: a later command in the same transaction must see the new
+          // title. What it hands back may share the store's map, so it is
+          // not ours to change.
+          working = applyPatches(working, produced)
+          owned = null
+        } else {
+          owned ??= new Map(working.objects)
+          applyToMap(owned, produced)
+          working = { ...working, objects: owned }
+        }
       }
     } catch (error) {
       if (error instanceof CommandError) return { ok: false, error }
@@ -530,12 +551,11 @@ function sameValue(a: unknown, b: unknown): boolean {
   return keys.length === other.length && keys.every((key) => sameValue(left[key], right[key]))
 }
 
-/** Applies patches to a bare object map, for in-transaction sequencing. */
-function applyToMap(
-  objects: ReadonlyMap<ObjectId, AnyOpenFrameObject>,
-  patches: readonly Patch[],
-): Map<ObjectId, AnyOpenFrameObject> {
-  const next = new Map(objects)
+/**
+ * Applies patches IN PLACE to an object map the caller owns, for in-transaction
+ * sequencing. Never handed the store's map.
+ */
+function applyToMap(next: Map<ObjectId, AnyOpenFrameObject>, patches: readonly Patch[]): void {
   for (const patch of patches) {
     // A meta patch changes the document, not its objects: nothing to sequence
     // here, and later commands in the same transaction see it through `meta`.
@@ -549,7 +569,6 @@ function applyToMap(
       }
     }
   }
-  return next
 }
 
 function setPath<T>(target: T, path: readonly (string | number)[], value: unknown): T {

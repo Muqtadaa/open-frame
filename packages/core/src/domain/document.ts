@@ -1,4 +1,4 @@
-import type { AssetId, BoardId, ObjectId } from './ids.js'
+import type { AssetId, BoardId, ObjectId, OrderKey } from './ids.js'
 import type { AnyOpenFrameObject } from './object.js'
 
 /**
@@ -70,6 +70,25 @@ export function childrenOf(doc: BoardDocument, parentId: ObjectId | null): AnyOp
   }
   children.sort(byOrder)
   return children
+}
+
+/**
+ * The order key of the topmost child of one container, or `null` if it has
+ * none — what `childrenOf(doc, parentId).at(-1)?.order` answers, without
+ * building and SORTING the list to read one end of it.
+ *
+ * Still one pass, so still not something to call per object. It is what
+ * `CreateObjects` asks once per command, and an agent's transaction of 200
+ * single-object commands on a 12,000-object board spent most of its time in
+ * the sort (tracks P2, `pnpm bench:mcp`).
+ */
+export function lastChildOrder(doc: BoardDocument, parentId: ObjectId | null): OrderKey | null {
+  let last: OrderKey | null = null
+  for (const object of doc.objects.values()) {
+    if (object.parentId !== parentId) continue
+    if (last === null || object.order > last) last = object.order
+  }
+  return last
 }
 
 /**

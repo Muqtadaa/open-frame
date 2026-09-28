@@ -1,4 +1,4 @@
-import { childrenOf } from '../../domain/document.js'
+import { lastChildOrder } from '../../domain/document.js'
 import type { BoardDocument } from '../../domain/document.js'
 import { instantiateObject } from '../../domain/factory.js'
 import { orderBetween } from '../../domain/order.js'
@@ -48,10 +48,7 @@ export function createObjects(
     const parentId = spec.parentId ?? null
     const parentKey = parentId ?? '__root__'
     let previous = lastOrderByParent.get(parentKey)
-    if (previous === undefined) {
-      const siblings = childrenOf(doc, parentId)
-      previous = siblings[siblings.length - 1]?.order ?? null
-    }
+    if (previous === undefined) previous = lastChildOrder(doc, parentId)
     const order = orderBetween(previous, null)
     lastOrderByParent.set(parentKey, order)
 
