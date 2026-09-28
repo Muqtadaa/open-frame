@@ -242,4 +242,44 @@ export const searchBoard: ToolDefinition = {
   },
 }
 
-export const READ_TOOLS: readonly ToolDefinition[] = [listBoards, getBoard, getObjects, searchBoard]
+const changesArguments = z.strictObject({
+  ...boardArgument,
+  limit: z.number().int().min(1).max(50).optional().describe('At most this many, newest first.'),
+})
+
+export const listChanges: ToolDefinition = {
+  name: 'list_changes',
+  title: 'What agents have changed',
+  description:
+    'The recent changes agents have made to a board, newest first: what each did, who made ' +
+    'it, when, which objects it touched, and whether it has been taken back. Any of them can ' +
+    'be taken back with `revert_change`.',
+  input: changesArguments,
+  run: async (input, context) => {
+    const opened = await onBoard(input, context, changesArguments)
+    if (isResponse(opened)) return opened
+    const changes = opened.peer.changes().slice(0, opened.input.limit ?? 50)
+    return data({
+      board: boardHead(opened.peer),
+      changes: changes.map((change) => ({
+        id: change.id,
+        did: change.label,
+        by: change.by,
+        at: new Date(change.at).toISOString(),
+        objects: change.affected,
+        reverted:
+          change.reverted === null
+            ? null
+            : { by: change.reverted.by, at: new Date(change.reverted.at).toISOString() },
+      })),
+    })
+  },
+}
+
+export const READ_TOOLS: readonly ToolDefinition[] = [
+  listBoards,
+  getBoard,
+  getObjects,
+  searchBoard,
+  listChanges,
+]

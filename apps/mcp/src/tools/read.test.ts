@@ -346,6 +346,7 @@ describe('the tools themselves', () => {
       'get_board',
       'get_objects',
       'search_board',
+      'list_changes',
     ])
   })
 })

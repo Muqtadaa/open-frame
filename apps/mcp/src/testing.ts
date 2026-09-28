@@ -63,13 +63,14 @@ let joined = 0
 /** A peer on that room, connected the way the socket adapter would connect it. */
 export async function peerOn(
   room: BoardRoom,
-  options: { role?: RoomRole; boardId?: BoardId } = {},
+  options: { role?: RoomRole; boardId?: BoardId; by?: string } = {},
 ): Promise<BoardPeer> {
   const id = `peer-${String(++joined)}`
   const role = options.role ?? 'editor'
   return openBoard({
     boardId: options.boardId ?? TEST_BOARD,
     server: 'ws://room.test',
+    ...(options.by === undefined ? {} : { by: options.by }),
     connect: () => {
       const wire = new Wire()
       /*
@@ -129,6 +130,8 @@ export const VALID_CALL: Readonly<Record<string, (id: string) => Record<string, 
   create_connector: () => ({ board: TEST_BOARD, from: { x: 0, y: 0 }, to: { x: 100, y: 0 } }),
   create_frame: () => ({ board: TEST_BOARD, name: 'Frame', x: 0, y: 0, width: 400, height: 300 }),
   add_comment: () => ({ board: TEST_BOARD, body: 'hello' }),
+  list_changes: () => ({ board: TEST_BOARD }),
+  revert_change: () => ({ board: TEST_BOARD }),
 }
 
 export function validCall(tool: string, id = 'obj_anything'): Record<string, unknown> {

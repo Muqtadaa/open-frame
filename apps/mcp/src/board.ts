@@ -2,6 +2,7 @@ import {
   connectBoard,
   roomSocketUrl,
   type BoardConnection,
+  type LoggedChange,
   type RoomCredentials,
   type RoomRole,
   type RoomSocket,
@@ -53,6 +54,11 @@ export interface OpenBoardOptions {
    * every other caller wants the Node socket this defaults to.
    */
   readonly connect?: (url: string) => RoomSocket
+  /**
+   * Whose agent this is, as the name every peer shows beside its changes in
+   * the board's change log. The signed-in account's display name.
+   */
+  readonly by?: string
 }
 
 export interface BoardPeer {
@@ -77,6 +83,15 @@ export interface BoardPeer {
    * be a second answer to "what is this object" the moment a type changed.
    */
   readonly registry: ObjectTypeRegistry
+  /** Whose agent this is, as the change log names it. */
+  readonly by: string | null
+  /**
+   * The board's change log, newest first: this agent's changes and any other
+   * non-person's, each enough to take the change back (tracks A-2).
+   */
+  changes(): readonly LoggedChange[]
+  /** Says, for every peer, that this agent has taken `id` back. */
+  markReverted(id: string): boolean
   close(): void
 }
 
@@ -126,6 +141,7 @@ export async function openBoard(options: OpenBoardOptions): Promise<BoardPeer> {
     store,
     dispatcher,
     seed: false,
+    by: options.by ?? null,
     connect: () => open(roomSocketUrl(options.server, boardId, options.credentials ?? {})),
     onError: options.onError ?? (() => undefined),
   })
@@ -148,6 +164,9 @@ export async function openBoard(options: OpenBoardOptions): Promise<BoardPeer> {
     get role() {
       return role
     },
+    by: options.by ?? null,
+    changes: () => connection.changes(),
+    markReverted: (id) => connection.markReverted(id, options.by ?? null),
     /**
      * Stops listening and closes the socket.
      *
