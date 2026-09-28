@@ -294,11 +294,14 @@ board that may have moved since.
 creates three notes, a browser on the same board sees all three arrive marked
 `createdVia: 'mcp'`, and ONE undo on the peer takes all three away again.
 
-**Still open, and worth a decision before stage 5:** the entry lives on the
-agent's own undo stack. A person watching in a browser cannot press undo to
-reverse it — remote changes are applied with `skipUndo`, which is what keeps
-undo meaning "reverse MY last change" — so today "revertible in one press"
-means asking the agent to revert it, and no tool offers that yet.
+**Decided and built (tracks A-2):** the entry USED to live only on the
+agent's own undo stack, where no tool reached it, and a person's undo never
+held it, because remote changes are applied with `skipUndo`. Every agent change
+is now in the board's change log, a `changes` map in the CRDT. From there the
+agent can take it back with `revert_change`, and a person can take it back
+with Revert, either from the toast as it lands or from "Agent changes" in the
+top bar. Both go through the same guarded replay as undo. See
+`docs/reviews/tracks-ab-mcp.md`.
 
 ### 5 · Remote transport
 

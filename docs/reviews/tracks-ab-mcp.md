@@ -246,3 +246,24 @@ cover:
     filter. That filter decides when production rooms are redeployed, and an
     MCP-only change does not change the room. The MCP peer is covered on
     every PR by `mcp-peer.spec` in the `rooms` job.
+- **A-2, revert from both sides:**
+  - **Core:** `CommandDispatcher.revert(change)` takes back one recorded change
+    through undo's replay and guards, and records it on the reverter's own
+    history. What it would put back is checked like a merge, with
+    `acceptablePatches` shared with `ApplyRemotePatches`. The guards also now
+    refuse to remove a created object that somebody has changed since. That
+    covers undo too.
+  - **Collab:** a `changes` root map logs every `mcp`/`ai`/`api` change in the
+    same Yjs transaction as its patches: label, who, when, forward, inverse,
+    locks, affected objects, and whether it has been reverted. It is capped at
+    50 entries and read structurally.
+  - **MCP:** `commit()` returns the change id and no longer claims that undo
+    covers it. `list_changes` and `revert_change` are new tools.
+  - **Web:** a toast with Revert when an agent change lands, an "Agent
+    changes" sheet in the top bar, and `revertChange` on `BoardCommands`.
+  - `e2e-rooms/agent-revert.spec.ts` covers a real MCP peer and a browser. All
+    5 tests failed with the web changes set aside.
+  - **Not covered:** there is no golden for the new surfaces, because they
+    exist only with a live room holding log entries, and goldens are
+    local-only.
+

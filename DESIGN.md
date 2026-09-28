@@ -885,8 +885,8 @@ tabs, or in the history a week later, is found by its name.
 
 **Order.** "All boards" and the name lead; then history (undo/redo); then the
 record — the save state and, only when something is selected, "N selected";
-then, after a rule, the app's own apparatus: sharing, mentions, your account,
-the theme; and the AGPL source link last and quietest, underlined as text with
+then, after a rule, the app's own apparatus: sharing, agent changes,
+mentions, your account, the theme; and the AGPL source link last and quietest, underlined as text with
 a 3px offset.
 
 **Type.** The name is set in the interface's own voice, 15px sans at 600 in
@@ -899,6 +899,16 @@ where it is a number.
 where in its tip ("Saved on this device"). It stands where a count of objects
 used to, because it is the one thing a local-first board most needs to say.
 Only a failure is inked, in the danger colour at 600, and only a failure is
+announced.
+
+**Agent changes** appear only on a shared board an agent has touched. The
+control is the Mentions chip: "2 agent changes" in the accent's wash while
+anything is left to review, the plain "Agent changes" once everything has
+been taken back. Its sheet is the Mentions list. Each row gives what the
+change did, whose agent made it, when, and how many objects it touched, with
+Revert at the right, or "Taken back by <name>" in muted ink. A viewer sees
+the rows without Revert. Reverting is the person's own step, so undo puts
+the change back, and what stayed because somebody changed it since is
 announced.
 
 **Your account** is quiet apparatus like the theme toggle, never an outlined
@@ -1432,6 +1442,12 @@ Two tiers, and red only for the second.
   close is a drawn × on a 24px target. It clears after five seconds, but never
   while a pointer is over it or the keyboard is in it. Dismissing either one
   hands focus back to where it came from.
+
+- **News:** something happened that a person may want to take back — an
+  agent changed the board. The toast carries the action ("Revert") as a real
+  button before its close, and it is on the panel stock with the board's
+  ink, like the notice, because a change somebody else made is not a
+  failure. Red is only ever the second tier.
 
 There is still no amber family. The notice left the red because one
 unreadable note is not a board in trouble, not because a warmer colour was
