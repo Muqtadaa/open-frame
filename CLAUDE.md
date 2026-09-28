@@ -134,6 +134,13 @@ and therefore reads 16.7ms whether a pass takes 1ms or 15ms; it only moves once
 the budget is already blown. `pnpm bench:cull` times the pass directly, and is
 what made the above visible.
 
+The same trap applies once per COMMAND. A transaction used to copy the whole
+object map for every command in it, and `CreateObjects` sorted a container's
+children to read its top. So an agent's 200-command transaction on a
+12,000-object board took 406ms, against 5ms for the same objects in one
+command. `pnpm bench:mcp` measures this, and it counts map copies as well as
+time.
+
 **A benchmark fixture of one object type measures one object type.** The board
 fixtures were sticky notes only — the cheapest possible bounds, four numbers off
 a frame — so a flat frame time on them said nothing about connectors, which
