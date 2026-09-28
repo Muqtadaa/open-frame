@@ -1,3 +1,4 @@
+import type { BoardDocument } from '../domain/document.js'
 import type { ObjectId, TransactionId, UserId } from '../domain/ids.js'
 import type { AnyOpenFrameObject, Origin } from '../domain/object.js'
 import { affectedIds, applyPatches, invertPatches, type Patch } from '../domain/patch.js'
@@ -103,15 +104,35 @@ export class CommandDispatcher {
   }
 
   undo(): DispatchResult | null {
+    if (!this.#undoStack.canUndo) return null
+    const refused = this.#refuseHistory()
+    if (refused !== null) return refused
     const entry = this.#undoStack.takeUndo()
     if (entry === undefined) return null
     return this.#applyHistory(entry.inverse, entry.label, entry.origin)
   }
 
   redo(): DispatchResult | null {
+    if (!this.#undoStack.canRedo) return null
+    const refused = this.#refuseHistory()
+    if (refused !== null) return refused
     const entry = this.#undoStack.takeRedo()
     if (entry === undefined) return null
     return this.#applyHistory(entry.forward, entry.label, entry.origin)
+  }
+
+  /*
+   * Undo ORIGINATES a change, so it asks what any other change asks: may this
+   * person edit? A role narrowed to viewer since the step was recorded must
+   * not be able to reach back past the narrowing. Checked BEFORE the step is
+   * taken, so it is still there if editing is allowed again.
+   */
+  #refuseHistory(): Extract<DispatchResult, { ok: false }> | null {
+    if (this.#deps.capabilities.can('edit', this.#deps.store.getDocument().id)) return null
+    return {
+      ok: false,
+      error: new CommandError('unauthorized', 'You do not have permission to edit this board'),
+    }
   }
 
   #run(commands: readonly Command[], label: string, options: DispatchOptions): DispatchResult {
@@ -208,19 +229,40 @@ export class CommandDispatcher {
     return result
   }
 
+  /*
+   * History is replayed against the board AS IT IS NOW, which is not the
+   * board it was recorded on once anybody else can change it — another
+   * person, or an agent. Replayed blind, a step that touched an object since
+   * deleted threw out of the keyboard handler, and one that touched an object
+   * since locked walked straight past the lock (tracks A-1).
+   *
+   * So each patch is checked against the board as the replay reaches it, and
+   * the ones that no longer apply are left out: what somebody else did since
+   * wins. A step with nothing left is consumed and reported, not thrown.
+   */
   #applyHistory(patches: readonly Patch[], label: string, origin: Origin): DispatchResult {
     const before = this.#deps.store.getDocument()
-    const inverse = invertPatches(before, patches)
-    this.#deps.writer.applyPatches(patches)
+    const applicable = stillApplicable(before, patches)
+    if (applicable.length === 0) {
+      return {
+        ok: false,
+        error: new CommandError(
+          'stale-history',
+          `“${label}” no longer applies: what it changed was deleted or locked since`,
+        ),
+      }
+    }
+    const inverse = invertPatches(before, applicable)
+    this.#deps.writer.applyPatches(applicable)
 
     const result = {
       ok: true,
       transactionId: this.#deps.ids.transactionId(),
       label,
       origin,
-      patches,
+      patches: applicable,
       inverse,
-      affected: affectedIds(patches),
+      affected: affectedIds(applicable),
     } as const
     this.#emit(result)
     return result
@@ -229,6 +271,47 @@ export class CommandDispatcher {
   #emit(result: Extract<DispatchResult, { ok: true }>): void {
     for (const listener of [...this.#listeners]) listener(result)
   }
+}
+
+/**
+ * The patches of a history step that still apply to `doc`, in order.
+ *
+ * Walked against a working copy, so a later patch sees what an earlier one in
+ * the same step did. Left out:
+ * - a change to an object that no longer exists, or a removal of one;
+ * - any change to a LOCKED object — except the one that changes its lock, so
+ *   undoing your own Lock still unlocks. Rule 3's lock check is the command
+ *   layer's, and history is not a way round it.
+ * Meta patches (the board's title) always apply.
+ */
+function stillApplicable(doc: BoardDocument, patches: readonly Patch[]): Patch[] {
+  const objects = new Map(doc.objects)
+  const kept: Patch[] = []
+  for (const patch of patches) {
+    if (patch.op === 'meta') {
+      kept.push(patch)
+      continue
+    }
+    const existing = objects.get(patch.id)
+    if (patch.op === 'add') {
+      if (existing?.locked === true) continue
+      objects.set(patch.id, patch.object)
+      kept.push(patch)
+      continue
+    }
+    if (existing === undefined) continue
+    if (patch.op === 'remove') {
+      if (existing.locked) continue
+      objects.delete(patch.id)
+      kept.push(patch)
+      continue
+    }
+    const changesLock = patch.path.length === 1 && patch.path[0] === 'locked'
+    if (existing.locked && !changesLock) continue
+    objects.set(patch.id, setPath(existing, patch.path, patch.value))
+    kept.push(patch)
+  }
+  return kept
 }
 
 /** Applies patches to a bare object map, for in-transaction sequencing. */
