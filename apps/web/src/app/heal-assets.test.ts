@@ -53,7 +53,10 @@ describe('finding images nobody else can see', () => {
       documentWith([
         { id: 'obj_1', data: { asset: local } },
         { id: 'obj_2', data: { asset: shared } },
-        { id: 'obj_3', data: { asset: { ...local, id: asAssetId('ast_3'), locator: 'idb:ast_3' } } },
+        {
+          id: 'obj_3',
+          data: { asset: { ...local, id: asAssetId('ast_3'), locator: 'idb:ast_3' } },
+        },
       ]),
     )
     expect(found.map((one) => one.objectId)).toEqual([asObjectId('obj_1'), asObjectId('obj_3')])
@@ -117,9 +120,9 @@ describe('lifting them into the room', () => {
   it('does nothing at all on a board with no stranded images', async () => {
     const only = documentWith([{ id: 'obj_2', data: { asset: shared } }])
     const resolve = vi.fn()
-    await expect(
-      healAssets(only, { resolve, reupload: vi.fn(), rewrite: vi.fn() }),
-    ).resolves.toBe(0)
+    await expect(healAssets(only, { resolve, reupload: vi.fn(), rewrite: vi.fn() })).resolves.toBe(
+      0,
+    )
     expect(resolve).not.toHaveBeenCalled()
   })
 })

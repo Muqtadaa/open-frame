@@ -11,11 +11,7 @@ import { signIn, signUp } from '../app/identity.js'
  *
  * Only the chrome differs, so only the chrome is the caller's business.
  */
-export function AccountForm({
-  onDone,
-}: {
-  readonly onDone: () => void
-}) {
+export function AccountForm({ onDone }: { readonly onDone: () => void }) {
   const [mode, setMode] = useState<'in' | 'up'>('in')
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
@@ -63,7 +59,6 @@ export function AccountForm({
 
   return (
     <form onSubmit={submit} noValidate>
-
       {mode === 'up' && (
         <label className="of-account__field">
           <span>Name</span>
@@ -132,8 +127,18 @@ export function AccountForm({
         >
           {mode === 'in' ? 'Create an account' : 'I already have one'}
         </button>
-        <button type="submit" className="of-button of-button--primary of-button--large" disabled={busy}>
-          {busy ? (mode === 'in' ? 'Signing in…' : 'Creating…') : mode === 'in' ? 'Sign in' : 'Create account'}
+        <button
+          type="submit"
+          className="of-button of-button--primary of-button--large"
+          disabled={busy}
+        >
+          {busy
+            ? mode === 'in'
+              ? 'Signing in…'
+              : 'Creating…'
+            : mode === 'in'
+              ? 'Sign in'
+              : 'Create account'}
         </button>
       </div>
     </form>

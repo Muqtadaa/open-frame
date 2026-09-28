@@ -32,7 +32,10 @@ const TOKEN = /@\[([^\][\n]+)\]\(([0-9A-Za-z_-]{1,64})\)/g
 
 /** Anything that would end the name early, or open a second token inside one. */
 function nameForToken(displayName: string): string {
-  const safe = displayName.replace(/[[\]\n]/g, ' ').replace(/\s+/g, ' ').trim()
+  const safe = displayName
+    .replace(/[[\]\n]/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim()
   return safe === '' ? 'Someone' : safe
 }
 
@@ -131,10 +134,7 @@ export function mentionsIn(text: string, people: readonly BoardPerson[]): string
   let remaining = withoutTokens(text)
   const byLongest = [...people].sort((a, b) => b.displayName.length - a.displayName.length)
   for (const person of byLongest) {
-    const pattern = new RegExp(
-      `@${escapeForPattern(person.displayName)}(?![\\p{L}\\p{N}'-])`,
-      'iu',
-    )
+    const pattern = new RegExp(`@${escapeForPattern(person.displayName)}(?![\\p{L}\\p{N}'-])`, 'iu')
     if (!pattern.test(remaining)) continue
     if (!found.includes(person.userId)) found.push(person.userId)
     remaining = remaining.replace(pattern, ' ')
@@ -215,9 +215,7 @@ export function peopleMatching(
 ): readonly BoardPerson[] {
   const wanted = query.trim().toLowerCase()
   if (wanted === '') return people
-  const matches = people.filter((person) =>
-    person.displayName.toLowerCase().includes(wanted),
-  )
+  const matches = people.filter((person) => person.displayName.toLowerCase().includes(wanted))
   // Somebody whose name STARTS with what was typed is who was meant; a middle
   // match is a courtesy for a surname or a second word.
   return [...matches].sort((a, b) => {

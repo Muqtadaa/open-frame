@@ -23,11 +23,7 @@ const entries = ENV.split('\n')
   })
 
 /** Everything this build is allowed to configure publicly. */
-const ALLOWED = new Set([
-  'VITE_COLLAB_URL',
-  'VITE_SUPABASE_URL',
-  'VITE_SUPABASE_PUBLISHABLE_KEY',
-])
+const ALLOWED = new Set(['VITE_COLLAB_URL', 'VITE_SUPABASE_URL', 'VITE_SUPABASE_PUBLISHABLE_KEY'])
 
 /**
  * Shapes that are never publishable.

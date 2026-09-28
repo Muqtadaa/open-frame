@@ -100,12 +100,15 @@ test('shape text stays inside the shape', async ({ page }) => {
   await board(page)
   await write(page, 'shape', { x: 560, y: 300 }, LONG)
 
-  const escaped = await page.locator('.of-shape__label-text').first().evaluate((el) => {
-    const label = el.closest('.of-shape__label')!
-    const text = el.getBoundingClientRect()
-    const box = label.getBoundingClientRect()
-    return { over: text.bottom - box.bottom, hidden: el.scrollHeight > el.clientHeight }
-  })
+  const escaped = await page
+    .locator('.of-shape__label-text')
+    .first()
+    .evaluate((el) => {
+      const label = el.closest('.of-shape__label')!
+      const text = el.getBoundingClientRect()
+      const box = label.getBoundingClientRect()
+      return { over: text.bottom - box.bottom, hidden: el.scrollHeight > el.clientHeight }
+    })
 
   /*
    * It used to run straight out of the shape and over whatever was beside it,
@@ -126,15 +129,18 @@ test('hidden text is marked rather than silently cut', async ({ page }) => {
   await board(page)
   await write(page, 'sticky', { x: 500, y: 300 }, LONG)
 
-  const clamp = await page.locator('.of-sticky__text').first().evaluate((el) => {
-    const style = getComputedStyle(el)
-    const box = el.parentElement!
-    return {
-      lines: style.webkitLineClamp,
-      truncated: el.scrollHeight > el.clientHeight || el.clientHeight < box.clientHeight,
-      fits: el.getBoundingClientRect().height <= box.clientHeight + 1,
-    }
-  })
+  const clamp = await page
+    .locator('.of-sticky__text')
+    .first()
+    .evaluate((el) => {
+      const style = getComputedStyle(el)
+      const box = el.parentElement!
+      return {
+        lines: style.webkitLineClamp,
+        truncated: el.scrollHeight > el.clientHeight || el.clientHeight < box.clientHeight,
+        fits: el.getBoundingClientRect().height <= box.clientHeight + 1,
+      }
+    })
 
   /*
    * A real line count, derived in CSS from the box's own height and the text's

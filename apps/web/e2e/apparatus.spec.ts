@@ -19,14 +19,7 @@ import { BOARD_URL } from './routes.js'
  */
 const CANVAS = '[data-testid="canvas"]'
 
-type Part =
-  | 'corner'
-  | 'rotate'
-  | 'glyph'
-  | 'connect'
-  | 'edge'
-  | 'belowRotate'
-  | 'belowConnect'
+type Part = 'corner' | 'rotate' | 'glyph' | 'connect' | 'edge' | 'belowRotate' | 'belowConnect'
 
 /** Every piece of the cluster, as the browser actually lays it out. */
 async function grips(page: Page): Promise<Record<Part, number | null>> {
@@ -69,12 +62,25 @@ async function drawShape(page: Page): Promise<void> {
   await page.keyboard.press('Escape')
 }
 
-async function zoomBy(page: Page, presses: number, key: string): Promise<void> {
-  for (let press = 0; press < presses; press += 1) {
+/**
+ * Steps the zoom with `key` until the readout says `target`, one settled step
+ * at a time.
+ *
+ * Each press waits for the readout to MOVE rather than for a fixed 40ms. Under
+ * a full parallel run the fixed wait let presses overlap, and sixteen presses
+ * down from 1600% once ended at 100%, half of them gone. A count of presses
+ * also only ever meant "enough to reach the end", which the target now says
+ * directly.
+ */
+async function zoomTo(page: Page, key: string, target: string): Promise<void> {
+  const readout = page.getByTestId('zoom-percent')
+  for (let press = 0; press < 20; press += 1) {
+    const before = await readout.textContent()
+    if (before === target) return
     await page.keyboard.press(key)
-    // The readout is the only thing that says the viewport has settled.
-    await page.waitForTimeout(40)
+    await expect(readout).not.toHaveText(before ?? '')
   }
+  await expect(readout).toHaveText(target)
 }
 
 test.describe('apparatus is measured in screen pixels', () => {
@@ -97,12 +103,10 @@ test.describe('apparatus is measured in screen pixels', () => {
     }
     expect(atHundred.corner).toBeGreaterThan(4)
 
-    await zoomBy(page, 8, 'Control+=')
-    await expect(page.getByTestId('zoom-percent')).toHaveText('1600%')
+    await zoomTo(page, 'Control+=', '1600%')
     expect(await grips(page), 'the grips grew with the board').toEqual(atHundred)
 
-    await zoomBy(page, 16, 'Control+-')
-    await expect(page.getByTestId('zoom-percent')).toHaveText('5%')
+    await zoomTo(page, 'Control+-', '5%')
     /*
      * At 5% the shape is thirty pixels across, which makes it a COMPACT
      * selection: its corners stay and the rest wait for room (C3 #7). What is
@@ -146,7 +150,7 @@ test.describe('apparatus is measured in screen pixels', () => {
 
     const atHundred = await band()
     expect(atHundred).toBeGreaterThan(0)
-    await zoomBy(page, 8, 'Control+=')
+    await zoomTo(page, 'Control+=', '1600%')
     expect(await band(), 'the selection band thickened with the zoom').toBeCloseTo(atHundred, 1)
   })
 
@@ -189,8 +193,7 @@ test.describe('apparatus is measured in screen pixels', () => {
 
     const atHundred = await thickest()
     expect(atHundred).toBeGreaterThan(0)
-    await zoomBy(page, 8, 'Control+=')
-    await expect(page.getByTestId('zoom-percent')).toHaveText('1600%')
+    await zoomTo(page, 'Control+=', '1600%')
     expect(await thickest(), 'the frame edge thickened with the zoom').toBeLessThan(1.5)
   })
 })

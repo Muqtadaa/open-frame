@@ -20,12 +20,7 @@ import {
   roleFromAttachment,
   type AccessKeys,
 } from './access.js'
-import {
-  isPassword,
-  newVerifier,
-  tokenAdmits,
-  type PasswordVerifier,
-} from './password.js'
+import { isPassword, newVerifier, tokenAdmits, type PasswordVerifier } from './password.js'
 import { assetDecision, assetKey } from './assets.js'
 import type { Env } from './env.js'
 
@@ -178,7 +173,10 @@ export class BoardRoomObject extends DurableObject<Env> {
      * socket. Were it accepted as `k` it would sit in the page URL, and a URL
      * copied from the address bar would carry the board's password with it.
      */
-    const owner = isOwnerKey(await this.ctx.storage.get<AccessKeys>(KEYS), url.searchParams.get('o'))
+    const owner = isOwnerKey(
+      await this.ctx.storage.get<AccessKeys>(KEYS),
+      url.searchParams.get('o'),
+    )
     if (!owner && !tokenAdmits(verifier, url.searchParams.get('t'))) {
       const refused = new WebSocketPair()
       // `accept()` rather than `acceptWebSocket()` on purpose: this socket is
@@ -503,7 +501,9 @@ export class BoardRoomObject extends DurableObject<Env> {
   async #compact(): Promise<void> {
     const merged = this.#room.snapshot()
     await this.ctx.storage.put(SNAPSHOT, bufferOf(merged))
-    await this.ctx.storage.delete([...(await this.ctx.storage.list({ prefix: UPDATE_PREFIX })).keys()])
+    await this.ctx.storage.delete([
+      ...(await this.ctx.storage.list({ prefix: UPDATE_PREFIX })).keys(),
+    ])
     this.#sequence = 0
   }
 }

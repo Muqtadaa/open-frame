@@ -26,10 +26,10 @@ domain does not change either way.
 | Type        | Notes                                                                                  |
 | ----------- | -------------------------------------------------------------------------------------- |
 | `text`      | Free text without a note background                                                    |
-| `shape`     | ✅ Eight kinds — one type with a `shape` discriminant in `data`, not eight entries      |
+| `shape`     | ✅ Eight kinds — one type with a `shape` discriminant in `data`, not eight entries     |
 | `connector` | Endpoints already modelled; needs routing and rendering                                |
-| `frame`     | ✅ A named container. First type with `canHaveChildren: true`                           |
-| `group`     | ✅ Structure only, empty payload. Extent and position are its members'                  |
+| `frame`     | ✅ A named container. First type with `canHaveChildren: true`                          |
+| `group`     | ✅ Structure only, empty payload. Extent and position are its members'                 |
 | `image`     | ✅ First consumer of `AssetStore`. Drop, paste or pick; alt text is the editable field |
 
 ### Commands

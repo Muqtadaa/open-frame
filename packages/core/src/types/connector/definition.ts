@@ -4,7 +4,12 @@ import { distanceToSegment, type Point } from '../../geometry/point.js'
 import { plainTextOf } from '../../domain/rich-text.js'
 import { bendToPoints } from './bend-to-points.js'
 import { labelToText } from './label-to-text.js'
-import { attachmentAnchor, endpointDependencies, resolveEndpoints, type ResolvedEnds } from './geometry.js'
+import {
+  attachmentAnchor,
+  endpointDependencies,
+  resolveEndpoints,
+  type ResolvedEnds,
+} from './geometry.js'
 import type { RouteNormals } from './route.js'
 import {
   bendAt,
@@ -217,14 +222,7 @@ export const connectorType = defineObjectType<typeof CONNECTOR_TYPE, ConnectorDa
      * that has none. Boards that set `color` on a connector still draw it:
      * the view falls back to it, it simply is not offered any more.
      */
-    styleProps: [
-      'textColor',
-      'strokeColor',
-      'stroke',
-      'dash',
-      'opacity',
-      'labelFill',
-    ],
+    styleProps: ['textColor', 'strokeColor', 'stroke', 'dash', 'opacity', 'labelFill'],
   },
 
   /*
@@ -457,10 +455,17 @@ export const connectorType = defineObjectType<typeof CONNECTOR_TYPE, ConnectorDa
             {
               id: 'label',
               at: labelAnchor(
-                connectorRoute(start, end, object.data.routing, object.data.points, {
-                  start: startNormal,
-                  end: endNormal,
-                }, around(ends)),
+                connectorRoute(
+                  start,
+                  end,
+                  object.data.routing,
+                  object.data.points,
+                  {
+                    start: startNormal,
+                    end: endNormal,
+                  },
+                  around(ends),
+                ),
                 object.data.label,
               ),
               role: 'control' as const,

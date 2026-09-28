@@ -4,7 +4,10 @@
   "savedAt": 1700000000000,
   "board": {
     "id": "board_frozen_connectors",
-    "meta": { "title": "Before a line could be held in more than one place", "createdAt": 1700000000000 },
+    "meta": {
+      "title": "Before a line could be held in more than one place",
+      "createdAt": 1700000000000
+    },
     "objects": [
       {
         "id": "obj_bent",

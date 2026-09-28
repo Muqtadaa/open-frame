@@ -63,12 +63,7 @@ function anchorRect(
 export type BoundsOf = (object: AnyOpenFrameObject) => Rect
 
 /** A normalised (u, v) position on an object's extent, in world coordinates. */
-function pointOnFrame(
-  object: AnyOpenFrameObject,
-  u: number,
-  v: number,
-  boundsOf: BoundsOf,
-): Point {
+function pointOnFrame(object: AnyOpenFrameObject, u: number, v: number, boundsOf: BoundsOf): Point {
   const { rect, rotation } = anchorRect(object, boundsOf)
   const local = { x: rect.x + rect.width * u, y: rect.y + rect.height * v }
   // Rotation is applied last so an anchor stays on the same visual edge when

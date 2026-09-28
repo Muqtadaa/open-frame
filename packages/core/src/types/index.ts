@@ -19,19 +19,9 @@ import { tableType } from './table/definition.js'
 import { textType } from './text/definition.js'
 import { unknownType } from './unknown/definition.js'
 
-export {
-  canTidy,
-  tidyCode,
-  tidyKindOf,
-  type TidyKind,
-} from './code/format.js'
+export { canTidy, tidyCode, tidyKindOf, type TidyKind } from './code/format.js'
 export { CODE_TYPE, codeType } from './code/definition.js'
-export {
-  CODE_LANGUAGES,
-  CodeDataSchema,
-  MAX_CODE,
-  type CodeData,
-} from './code/schema.js'
+export { CODE_LANGUAGES, CodeDataSchema, MAX_CODE, type CodeData } from './code/schema.js'
 
 export { TABLE_TYPE, tableType } from './table/definition.js'
 export {

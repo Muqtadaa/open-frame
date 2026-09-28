@@ -143,9 +143,7 @@ export function forgetToken(boardId: BoardId): void {
   }
 }
 
-export type UnlockOutcome =
-  | { readonly ok: true }
-  | { readonly ok: false; readonly reason: string }
+export type UnlockOutcome = { readonly ok: true } | { readonly ok: false; readonly reason: string }
 
 /**
  * Trades the password for the token, and remembers it.
@@ -166,7 +164,10 @@ export async function unlockBoard(
       body: JSON.stringify({ key, password }),
     })
   } catch {
-    return { ok: false, reason: 'OpenFrame could not be reached. Check the connection and try again.' }
+    return {
+      ok: false,
+      reason: 'OpenFrame could not be reached. Check the connection and try again.',
+    }
   }
 
   if (!response.ok) {
@@ -187,8 +188,7 @@ export async function unlockBoard(
 }
 
 export type PasswordOutcome =
-  | { readonly ok: true }
-  | { readonly ok: false; readonly reason: string }
+  { readonly ok: true } | { readonly ok: false; readonly reason: string }
 
 /**
  * Sets, changes or clears a board's password. `null` clears it.
@@ -219,7 +219,10 @@ export async function setBoardPassword(
       body: JSON.stringify({ key, password }),
     })
   } catch {
-    return { ok: false, reason: 'OpenFrame could not be reached. Check the connection and try again.' }
+    return {
+      ok: false,
+      reason: 'OpenFrame could not be reached. Check the connection and try again.',
+    }
   }
 
   forgetToken(boardId)
@@ -243,9 +246,7 @@ export async function setBoardPassword(
  * presence is also the answer to "is this mine" — asked once, when the room
  * chip mounts, rather than on every press.
  */
-export async function ownedKeys(
-  boardId: BoardId,
-): Promise<{
+export async function ownedKeys(boardId: BoardId): Promise<{
   readonly edit: string | null
   readonly view: string
   readonly owner: string | null

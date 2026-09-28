@@ -43,9 +43,7 @@ export async function startCollaboration(
      * from before would reconnect without it forever.
      */
     connect: () =>
-      browserRoomSocket(
-        roomSocketUrl(boardId, key, heldToken(boardId), heldOwnerKey(boardId)),
-      ),
+      browserRoomSocket(roomSocketUrl(boardId, key, heldToken(boardId), heldOwnerKey(boardId))),
     onError,
     persistence: indexedDbCrdtStore(boardId),
   })

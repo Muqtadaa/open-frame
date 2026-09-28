@@ -136,9 +136,8 @@ function readBoard(row: unknown): RemoteBoard | null {
     // does too — a board you have never opened should not sink out of sight.
     openedAt: Number.isFinite(seen) ? seen : updatedAt,
     workspaceId,
-    workspaceName: typeof workspaceName === 'string' && workspaceName !== ''
-      ? workspaceName
-      : 'Workspace',
+    workspaceName:
+      typeof workspaceName === 'string' && workspaceName !== '' ? workspaceName : 'Workspace',
   }
 }
 

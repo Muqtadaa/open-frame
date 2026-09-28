@@ -170,9 +170,7 @@ test.describe('an edge resizes, not just the square on it', () => {
     const edge = await page.getByTestId('edge-n').boundingBox()
     const corner = await page.getByTestId('handle-nw').boundingBox()
     if (edge === null || corner === null) return
-    expect(edge.x, 'the strip runs into the corner').toBeGreaterThanOrEqual(
-      corner.x + corner.width,
-    )
+    expect(edge.x, 'the strip runs into the corner').toBeGreaterThanOrEqual(corner.x + corner.width)
   })
 })
 

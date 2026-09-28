@@ -31,12 +31,12 @@ wholesale — the reason 4.7MB of benchmark fixtures nearly shipped — so brand
 assets are imported and hashed like any other module, and `index.html`
 references them by source path so the bundler rewrites them.
 
-| File                     | From   | Used by                          |
-| ------------------------ | ------ | -------------------------------- |
-| `splash-hero.webp`       | hero   | boot splash, 1x                  |
-| `splash-hero-2x.webp`    | hero   | boot splash, 2x — same `srcset`  |
-| `logo-mark-32.png`       | lockup | `link rel=icon`                  |
-| `logo-mark-180.png`      | lockup | `link rel=apple-touch-icon`      |
+| File                  | From   | Used by                         |
+| --------------------- | ------ | ------------------------------- |
+| `splash-hero.webp`    | hero   | boot splash, 1x                 |
+| `splash-hero-2x.webp` | hero   | boot splash, 2x — same `srcset` |
+| `logo-mark-32.png`    | lockup | `link rel=icon`                 |
+| `logo-mark-180.png`   | lockup | `link rel=apple-touch-icon`     |
 
 The lockup's own transparent band is not shipped: nothing displays it. The hero
 already carries the wordmark, and the favicon needs the mark alone. Re-derive it

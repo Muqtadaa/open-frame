@@ -25,7 +25,11 @@ describe('routing a request to a board', () => {
   /** A proxy may normalise the header's case, and rejecting that would be a bug
    * reachable only through somebody's corporate network. */
   it('accepts the upgrade header in any case', () => {
-    expect(at('/room/brd_abc123', 'WebSocket')).toEqual({ kind: 'room', boardId: 'brd_abc123', key: null })
+    expect(at('/room/brd_abc123', 'WebSocket')).toEqual({
+      kind: 'room',
+      boardId: 'brd_abc123',
+      key: null,
+    })
   })
 
   it('has nothing at the root', () => {
@@ -84,9 +88,9 @@ describe('the access key on a link', () => {
    */
   it('is dropped, not refused, when it is the wrong shape', () => {
     for (const bad of ['short', '../etc/passwd', 'a'.repeat(200), '']) {
-      expect(routeRequest(new URL(`https://r.dev/room/brd_one?k=${encodeURIComponent(bad)}`), ws)).toEqual(
-        { kind: 'room', boardId: 'brd_one', key: null },
-      )
+      expect(
+        routeRequest(new URL(`https://r.dev/room/brd_one?k=${encodeURIComponent(bad)}`), ws),
+      ).toEqual({ kind: 'room', boardId: 'brd_one', key: null })
     }
   })
 })
@@ -142,10 +146,12 @@ describe('destroying a room', () => {
   })
 
   it('refuses any other method rather than guessing', () => {
-    expect(routeRequest(new URL('https://r.test/room/brd_abc/destroy'), null, 'GET')).toMatchObject({
-      kind: 'refuse',
-      status: 405,
-    })
+    expect(routeRequest(new URL('https://r.test/room/brd_abc/destroy'), null, 'GET')).toMatchObject(
+      {
+        kind: 'refuse',
+        status: 405,
+      },
+    )
   })
 
   /**

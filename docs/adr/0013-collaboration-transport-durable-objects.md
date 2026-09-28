@@ -23,15 +23,15 @@ is a cost with no counterparty.
 
 Re-verified on npm, 2026-09-18:
 
-| Package                       | Version  | Last published |
-| ----------------------------- | -------- | -------------- |
-| `@hocuspocus/server`          | 4.7.0    | 9 days ago     |
-| `y-websocket`                 | 3.1.0    | 6 weeks ago    |
-| `yjs` / `lib0`                | 13.6.32 / 0.2.117 | current |
-| `y-protocols`                 | 1.0.7    | 9 months ago   |
-| `y-durableobjects`            | 1.0.5    | **13 months**  |
-| `@mininjin/y-durable-objects` | 0.2.3    | **18 months**  |
-| `partykit` / `@y-sweet/sdk`   | —        | **a year**     |
+| Package                       | Version           | Last published |
+| ----------------------------- | ----------------- | -------------- |
+| `@hocuspocus/server`          | 4.7.0             | 9 days ago     |
+| `y-websocket`                 | 3.1.0             | 6 weeks ago    |
+| `yjs` / `lib0`                | 13.6.32 / 0.2.117 | current        |
+| `y-protocols`                 | 1.0.7             | 9 months ago   |
+| `y-durableobjects`            | 1.0.5             | **13 months**  |
+| `@mininjin/y-durable-objects` | 0.2.3             | **18 months**  |
+| `partykit` / `@y-sweet/sdk`   | —                 | **a year**     |
 
 ## Decision
 
@@ -57,13 +57,13 @@ instead of depending on an unmaintained few hundred.
 Re-verified 2026-09-18, immediately before Stage 2, because this table is the
 whole basis of the decision:
 
-| Durable Objects   | Workers Free       |
-| ----------------- | ------------------ |
-| Requests          | 100,000 / day      |
-| Duration          | 13,000 GB-s / day  |
-| SQLite storage    | 10 GB per object, not billed on Free |
-| Rows read         | 5 million / day    |
-| Rows written      | 100,000 / day      |
+| Durable Objects | Workers Free                         |
+| --------------- | ------------------------------------ |
+| Requests        | 100,000 / day                        |
+| Duration        | 13,000 GB-s / day                    |
+| SQLite storage  | 10 GB per object, not billed on Free |
+| Rows read       | 5 million / day                      |
+| Rows written    | 100,000 / day                        |
 
 Three details decide whether that number is generous or tight, and all three
 fall the right way for a collaboration room:

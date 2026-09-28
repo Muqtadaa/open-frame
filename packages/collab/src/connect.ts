@@ -166,10 +166,7 @@ export async function connectBoard(options: ConnectBoardOptions): Promise<BoardC
 
   const peers = (): PeerPresence[] => {
     const out: PeerPresence[] = []
-    for (const [clientId, state] of awareness.getStates() as Map<
-      number,
-      Record<string, unknown>
-    >) {
+    for (const [clientId, state] of awareness.getStates() as Map<number, Record<string, unknown>>) {
       // Everyone EXCEPT this client: drawing your own cursor is a bug that
       // looks like lag.
       if (clientId === doc.clientID) continue

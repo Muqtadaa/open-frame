@@ -62,9 +62,10 @@ describe('zoom steps', () => {
   it('stops only on round percentages', () => {
     const readable = new Set([5, 10, 25, 50, 100, 200, 400, 800, 1600])
     for (const step of ZOOM_STEPS) {
-      expect(readable.has(Math.round(step * 100)), `${String(step * 100)}% is not a round stop`).toBe(
-        true,
-      )
+      expect(
+        readable.has(Math.round(step * 100)),
+        `${String(step * 100)}% is not a round stop`,
+      ).toBe(true)
     }
   })
 

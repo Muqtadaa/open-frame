@@ -42,7 +42,8 @@ export function furnitureBands(): Bands {
     // An element with nothing in it measures zero AT its edge of the window,
     // which would reserve the gutter for furniture that is not showing.
     if (box.width === 0 || box.height === 0) continue
-    if (element.dataset.keepClear === 'bottom') bottom = Math.max(bottom, window.innerHeight - box.top)
+    if (element.dataset.keepClear === 'bottom')
+      bottom = Math.max(bottom, window.innerHeight - box.top)
     if (element.dataset.keepClear === 'top') top = Math.max(top, box.bottom)
   }
   return { top, bottom }

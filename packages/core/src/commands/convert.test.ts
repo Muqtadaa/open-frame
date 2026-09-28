@@ -89,7 +89,7 @@ describe('promoting an object to another type', () => {
     expect(h.registry.get('evidence')?.validate(object.data).ok).toBe(true)
   })
 
-  it('stamps the new type\'s current data version', () => {
+  it("stamps the new type's current data version", () => {
     const id = create(h, 'sticky', { text: 'x' })
     h.dispatcher.dispatch({ kind: 'ConvertObjects', ids: [id], toType: 'evidence' })
     expect(h.store.getObject(id)?.dataVersion).toBe(h.registry.get('evidence')?.currentVersion)
@@ -172,9 +172,9 @@ describe('promoting an object to another type', () => {
     })
 
     it('refuses an empty selection, and a no-op conversion', () => {
-      expect(h.dispatcher.dispatch({ kind: 'ConvertObjects', ids: [], toType: 'evidence' }).ok).toBe(
-        false,
-      )
+      expect(
+        h.dispatcher.dispatch({ kind: 'ConvertObjects', ids: [], toType: 'evidence' }).ok,
+      ).toBe(false)
       const id = create(h, 'evidence')
       expect(
         h.dispatcher.dispatch({ kind: 'ConvertObjects', ids: [id], toType: 'evidence' }).ok,
@@ -196,7 +196,6 @@ describe('promoting an object to another type', () => {
     })
   })
 })
-
 
 /**
  * Name intersection is a GUESS, and this is the case where it is wrong.

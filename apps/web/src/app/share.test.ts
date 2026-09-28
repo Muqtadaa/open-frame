@@ -104,7 +104,10 @@ describe('sharing a board', () => {
     const { repository, runtime } = await boardWithContent()
 
     await shareCurrentBoard(runtime)
-    runtime.dispatcher.dispatch({ kind: 'CreateObjects', objects: [{ type: 'sticky', x: 9, y: 9 }] })
+    runtime.dispatcher.dispatch({
+      kind: 'CreateObjects',
+      objects: [{ type: 'sticky', x: 9, y: 9 }],
+    })
     await new Promise((resolve) => setTimeout(resolve, 20))
 
     expect(await repository.getBoard(LOCAL)).toMatchObject({ status: 'not-found' })
@@ -165,11 +168,7 @@ describe('sharing a board', () => {
 
     const shared = await shareCurrentBoard(runtime)
 
-    expect(shared.editLink).toBe(
-      `https://example.test/?room=${shared.boardId}&k=${'e'.repeat(32)}`,
-    )
-    expect(shared.viewLink).toBe(
-      `https://example.test/?room=${shared.boardId}&k=${'v'.repeat(32)}`,
-    )
+    expect(shared.editLink).toBe(`https://example.test/?room=${shared.boardId}&k=${'e'.repeat(32)}`)
+    expect(shared.viewLink).toBe(`https://example.test/?room=${shared.boardId}&k=${'v'.repeat(32)}`)
   })
 })

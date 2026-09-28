@@ -3,12 +3,7 @@ import { defineObjectType } from '../../domain/registry.js'
 import { resizeTokens } from '../shared/resize-tokens.js'
 import { textToSpans } from '../shared/text-to-spans.js'
 import type { StyleProp } from '../../domain/object.js'
-import {
-  CORNERED_KINDS,
-  SHAPE_VERSION,
-  ShapeDataSchema,
-  type ShapeData,
-} from './schema.js'
+import { CORNERED_KINDS, SHAPE_VERSION, ShapeDataSchema, type ShapeData } from './schema.js'
 
 export const SHAPE_TYPE = 'shape'
 

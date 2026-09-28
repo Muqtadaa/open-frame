@@ -82,7 +82,16 @@ export const tableType = defineObjectType<typeof TABLE_TYPE, TableData>({
      * lines that make it a table. Declared properties that the view ignores
      * are what rule 21 forbids, so only what is honoured is listed.
      */
-    styleProps: ['color', 'textColor', 'strokeColor', 'font', 'align', 'verticalAlign', 'opacity', 'stroke'],
+    styleProps: [
+      'color',
+      'textColor',
+      'strokeColor',
+      'font',
+      'align',
+      'verticalAlign',
+      'opacity',
+      'stroke',
+    ],
   },
 
   /**
@@ -128,12 +137,7 @@ export const tableType = defineObjectType<typeof TABLE_TYPE, TableData>({
     if (!across && !dividerId.startsWith('r')) return null
 
     const extent = across ? object.frame.width : object.frame.height
-    const moved = resizeTrackAt(
-      across ? object.data.columns : object.data.rows,
-      index,
-      to,
-      extent,
-    )
+    const moved = resizeTrackAt(across ? object.data.columns : object.data.rows, index, to, extent)
     if (moved === null) return null
 
     const grew = moved.total - extent

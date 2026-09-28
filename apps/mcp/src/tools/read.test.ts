@@ -119,7 +119,10 @@ describe('reading a board', () => {
    */
   it('hands over a big board a page at a time', async () => {
     const { room, author } = await boardWith(
-      Array.from({ length: 7 }, (_at, index) => ({ type: 'sticky', text: `note ${String(index)}` })),
+      Array.from({ length: 7 }, (_at, index) => ({
+        type: 'sticky',
+        text: `note ${String(index)}`,
+      })),
     )
     const context = accountHolding([ACCESS], () => peerOn(room))
 
@@ -185,7 +188,9 @@ describe('reading a board', () => {
     )
 
     expect(payload.total).toBe(2)
-    expect((payload.objects as { type: string }[]).every((object) => object.type === 'sticky')).toBe(true)
+    expect(
+      (payload.objects as { type: string }[]).every((object) => object.type === 'sticky'),
+    ).toBe(true)
     author.close()
     await context.close()
   })
@@ -216,7 +221,9 @@ describe('reading a board', () => {
     await settles()
     const context = accountHolding([ACCESS], () => peerOn(room))
 
-    const byText = payloadOf((await searchBoard.run({ board: TEST_BOARD, query: 'checkout' }, context)).text)
+    const byText = payloadOf(
+      (await searchBoard.run({ board: TEST_BOARD, query: 'checkout' }, context)).text,
+    )
     expect(byText.total).toBe(1)
 
     /*

@@ -148,13 +148,18 @@ export function ColorPicker({ current, against, onPick, onPreview, onClose }: Co
   }
 
   return (
-    <div className="of-picker of-surface" data-testid="color-picker" role="group" aria-label="Custom colour">
+    <div
+      className="of-picker of-surface"
+      data-testid="color-picker"
+      role="group"
+      aria-label="Custom colour"
+    >
       {/*
-        * Saturation across, value up. Two gradients over the pure hue: white
-        * to transparent left-to-right, then black to transparent bottom-to-top
-        * — the standard construction, and the reason the area needs no canvas
-        * and no per-pixel work at all.
-        */}
+       * Saturation across, value up. Two gradients over the pure hue: white
+       * to transparent left-to-right, then black to transparent bottom-to-top
+       * — the standard construction, and the reason the area needs no canvas
+       * and no per-pixel work at all.
+       */}
       <div
         ref={area}
         className="of-picker__area"
@@ -262,12 +267,12 @@ export function ColorPicker({ current, against, onPick, onPreview, onClose }: Co
       </div>
 
       {/*
-        * The contrast, stated rather than enforced.
-        *
-        * Not a block: somebody colouring a decorative label, or matching a
-        * brand, is making a choice this panel is not entitled to overrule. It
-        * is entitled to say what the choice costs.
-        */}
+       * The contrast, stated rather than enforced.
+       *
+       * Not a block: somebody colouring a decorative label, or matching a
+       * brand, is making a choice this panel is not entitled to overrule. It
+       * is entitled to say what the choice costs.
+       */}
       {ratio !== null && (
         <p
           className={`of-picker__contrast${ratio < AA_TEXT ? ' of-picker__contrast--low' : ''}`}

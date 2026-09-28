@@ -3,7 +3,13 @@ import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { describe, expect, it } from 'vitest'
 
-import { clearSession, configHome, readSession, sessionPath, writeSession } from './session-store.js'
+import {
+  clearSession,
+  configHome,
+  readSession,
+  sessionPath,
+  writeSession,
+} from './session-store.js'
 
 /**
  * Where a credential is kept, and what it is kept as.

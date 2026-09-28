@@ -27,9 +27,8 @@ function titleOf(held: BoardPeer): string {
 }
 
 function stickyCount(held: BoardPeer): number {
-  return [...held.store.getDocument().objects.values()].filter(
-    (object) => object.type === 'sticky',
-  ).length
+  return [...held.store.getDocument().objects.values()].filter((object) => object.type === 'sticky')
+    .length
 }
 
 describe('a headless peer', () => {

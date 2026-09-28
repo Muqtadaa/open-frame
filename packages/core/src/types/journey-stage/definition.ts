@@ -36,7 +36,13 @@ export const journeystageType = defineObjectType<typeof JOURNEY_STAGE_TYPE, Jour
   },
 
   fields: [
-    { key: 'sentiment', meaning: 'record', label: 'Sentiment', kind: 'select', options: JOURNEY_STAGE_SENTIMENT },
+    {
+      key: 'sentiment',
+      meaning: 'record',
+      label: 'Sentiment',
+      kind: 'select',
+      options: JOURNEY_STAGE_SENTIMENT,
+    },
   ],
 
   describe: (object) => {

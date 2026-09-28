@@ -240,11 +240,7 @@ describe('replacing a range of text', () => {
 describe('rewriting one paragraph', () => {
   it('keeps an empty last line after a list as that line', () => {
     // "- " typed on the empty line after an item: the dash becomes the bullet.
-    const typed: RichText = [
-      { text: 'c' },
-      { text: '\n', list: 'bullet' },
-      { text: '-' },
-    ]
+    const typed: RichText = [{ text: 'c' }, { text: '\n', list: 'bullet' }, { text: '-' }]
     const index = paragraphsOf(typed).length - 1
     const result = updateParagraph(typed, index, (paragraph) => ({
       spans: spliceText(paragraph.spans, 0, 1, [{ text: '' }]),

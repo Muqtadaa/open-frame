@@ -176,12 +176,12 @@ export function BoardRow({
           <a className="of-home__board" href={href} data-testid="board-link">
             <span className="of-home__board-title">{board.title}</span>
             {/*
-              * What this board IS, in the column the ledger keeps for it.
-              *
-              * A local board is tagged too, which is what let the claim offer
-              * below shrink to one line: the rows say which ones they are, so
-              * the offer does not have to list them a second time.
-              */}
+             * What this board IS, in the column the ledger keeps for it.
+             *
+             * A local board is tagged too, which is what let the claim offer
+             * below shrink to one line: the rows say which ones they are, so
+             * the offer does not have to list them a second time.
+             */}
             <span className="of-home__board-tag" data-kind={board.shared ? 'shared' : 'local'}>
               {!board.shared
                 ? 'this browser'
@@ -200,15 +200,15 @@ export function BoardRow({
         {mode === 'rest' && (
           <span className="of-home__row-actions">
             {/*
-              * The VIEW-ONLY link, for a board you own.
-              *
-              * Both links used to be visible exactly once — in the panel that
-              * appears the moment a board is shared — and the weaker one was
-              * unrecoverable after that, so the only link you could ever send
-              * again was the one that lets people change the board. The edit
-              * link is not offered here because it is the link you are already
-              * holding: opening the board gives it to you.
-              */}
+             * The VIEW-ONLY link, for a board you own.
+             *
+             * Both links used to be visible exactly once — in the panel that
+             * appears the moment a board is shared — and the weaker one was
+             * unrecoverable after that, so the only link you could ever send
+             * again was the one that lets people change the board. The edit
+             * link is not offered here because it is the link you are already
+             * holding: opening the board gives it to you.
+             */}
             {board.viewKey !== null && (
               <button
                 type="button"
@@ -236,7 +236,6 @@ export function BoardRow({
               </button>
             )}
 
-
             <button
               type="button"
               className="of-icon-button"
@@ -253,12 +252,12 @@ export function BoardRow({
             </button>
 
             {/*
-              * One control or the other, never both and never a shared one.
-              * Deleting removes the board from everybody; leaving removes you
-              * from a board that carries on without you. A single "remove"
-              * would eventually destroy somebody's work on behalf of a person
-              * tidying their own list.
-              */}
+             * One control or the other, never both and never a shared one.
+             * Deleting removes the board from everybody; leaving removes you
+             * from a board that carries on without you. A single "remove"
+             * would eventually destroy somebody's work on behalf of a person
+             * tidying their own list.
+             */}
             {canLeave(board) ? (
               <button
                 type="button"
@@ -282,7 +281,7 @@ export function BoardRow({
                   data-tip={`Delete ${board.title}. This cannot be undone.`}
                   aria-description={`Delete ${board.title}. This cannot be undone.`}
                   ref={removeButton}
-                onClick={() => setMode('confirming')}
+                  onClick={() => setMode('confirming')}
                 >
                   <TrashIcon />
                 </button>

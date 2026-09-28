@@ -71,9 +71,7 @@ function ObjectViewInner({ id, views }: Props) {
    */
   const editingThis = useInteractionStore((state) => state.editingId === id)
   const zoomed = object !== undefined && views.get(object.type)?.usesZoom === true
-  const zoom = useInteractionStore((state) =>
-    zoomed || editingThis ? state.viewport.zoom : 1,
-  )
+  const zoom = useInteractionStore((state) => (zoomed || editingThis ? state.viewport.zoom : 1))
   // Subscribes to the objects this one's rendering depends on — a connector's
   // endpoints — so it redraws when they move. Without this, per-object
   // subscriptions would leave dependent objects stale.
@@ -183,9 +181,7 @@ function ObjectViewInner({ id, views }: Props) {
   const { runtime } = useOpenFrame()
   // Resolved before the early return so hook order never varies. Only views
   // that declare `usesAssets` actually subscribe.
-  const assetUrl = useAssetUrl(
-    object !== undefined && views.get(object.type)?.usesAssets === true,
-  )
+  const assetUrl = useAssetUrl(object !== undefined && views.get(object.type)?.usesAssets === true)
   /*
    * WHERE ANOTHER OBJECT'S EDGES ARE, for the one view that draws against
    * them. Handed down rather than reached for: views are a leaf module with no
@@ -231,8 +227,7 @@ function ObjectViewInner({ id, views }: Props) {
    * inside it the moment it is clicked. Asked of the registry rather than
    * compared against 'frame', so any later container type is right for free.
    */
-  const holdsChildren =
-    runtime.registry.get(object.type)?.capabilities.canHaveChildren === true
+  const holdsChildren = runtime.registry.get(object.type)?.capabilities.canHaveChildren === true
   /*
    * Your own drag wins over somebody else's.
    *
@@ -355,7 +350,9 @@ function previewed(
    * on whatever they produce.
    */
   const shaped = previewedShape(object, frame, pending)
-  return pending.style === null ? shaped : { ...shaped, style: { ...shaped.style, ...pending.style } }
+  return pending.style === null
+    ? shaped
+    : { ...shaped, style: { ...shaped.style, ...pending.style } }
 }
 
 function previewedShape(

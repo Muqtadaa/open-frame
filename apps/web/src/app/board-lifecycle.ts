@@ -21,9 +21,7 @@ import { deleteRemoteBoard, leaveRemoteBoard, renameRemoteBoard } from './remote
  * can still see and try again is recoverable, a room nobody can reach is not.
  */
 
-export type DeleteOutcome =
-  | { readonly ok: true }
-  | { readonly ok: false; readonly reason: string }
+export type DeleteOutcome = { readonly ok: true } | { readonly ok: false; readonly reason: string }
 
 /**
  * Destroys the room, or says why it could not.
@@ -83,7 +81,10 @@ export async function deleteBoardEverywhere(
      * rather than ignored: the board is unrecoverable and its row is still
      * listed, and the person needs to know the row is the only thing left.
      */
-    return { ok: false, reason: 'The board was deleted, but it could not be removed from your list.' }
+    return {
+      ok: false,
+      reason: 'The board was deleted, but it could not be removed from your list.',
+    }
   }
 
   // Last, and never allowed to fail the operation: a local copy that outlives

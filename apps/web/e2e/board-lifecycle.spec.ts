@@ -54,7 +54,7 @@ test.beforeEach(async ({ page }) => {
    * paint, so a keystroke sent on the canvas alone can land in the gap and be
    * dropped. That showed up as a rare, unexplained tool-selection failure.
    */
-  await expect(page.getByTestId("tool-select")).toBeVisible()
+  await expect(page.getByTestId('tool-select')).toBeVisible()
 })
 
 test('creates a sticky note and shows its text', async ({ page }) => {

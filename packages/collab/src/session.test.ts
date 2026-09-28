@@ -80,7 +80,9 @@ function peer(seed: number): ReturnType<typeof createTestHarness> & {
 
 const id = (name: string): ObjectId => asObjectId(`obj_${name}`)
 
-function objects(store: { getDocument: () => { objects: ReadonlyMap<ObjectId, AnyOpenFrameObject> } }): Record<string, AnyOpenFrameObject> {
+function objects(store: {
+  getDocument: () => { objects: ReadonlyMap<ObjectId, AnyOpenFrameObject> }
+}): Record<string, AnyOpenFrameObject> {
   return Object.fromEntries([...store.getDocument().objects])
 }
 
@@ -91,7 +93,12 @@ function objects(store: { getDocument: () => { objects: ReadonlyMap<ObjectId, An
  * bound to — a client that quietly diverges from the CRDT looks perfectly
  * healthy until it reloads and its work is gone.
  */
-function expectConverged(...peers: { doc: Y.Doc; store: { getDocument: () => { objects: ReadonlyMap<ObjectId, AnyOpenFrameObject> } } }[]): void {
+function expectConverged(
+  ...peers: {
+    doc: Y.Doc
+    store: { getDocument: () => { objects: ReadonlyMap<ObjectId, AnyOpenFrameObject> } }
+  }[]
+): void {
   const [first] = peers
   if (first === undefined) throw new Error('nothing to compare')
   for (const client of peers) {
@@ -114,7 +121,9 @@ beforeEach(() => {
 function sticky(name: string, text: string, parentId: ObjectId | null = null): ObjectId {
   const result = a.dispatcher.dispatch({
     kind: 'CreateObjects',
-    objects: [{ id: id(name), type: 'sticky', x: 0, y: 0, parentId, data: { text: richFromPlain(text) } }],
+    objects: [
+      { id: id(name), type: 'sticky', x: 0, y: 0, parentId, data: { text: richFromPlain(text) } },
+    ],
   })
   if (!result.ok) throw result.error
   return id(name)
@@ -123,7 +132,9 @@ function sticky(name: string, text: string, parentId: ObjectId | null = null): O
 function frame(name: string, label: string): ObjectId {
   const result = a.dispatcher.dispatch({
     kind: 'CreateObjects',
-    objects: [{ id: id(name), type: 'frame', x: 0, y: 0, width: 400, height: 400, data: { name: label } }],
+    objects: [
+      { id: id(name), type: 'frame', x: 0, y: 0, width: 400, height: 400, data: { name: label } },
+    ],
   })
   if (!result.ok) throw result.error
   return id(name)
@@ -199,7 +210,11 @@ describe('two clients on one board', () => {
     b.store.subscribeToStructure(() => structural++)
     b.store.subscribeToObject(note, () => touched++)
 
-    const restyled = a.dispatcher.dispatch({ kind: 'UpdateStyle', ids: [note], style: { color: 'blue' } })
+    const restyled = a.dispatcher.dispatch({
+      kind: 'UpdateStyle',
+      ids: [note],
+      style: { color: 'blue' },
+    })
     expect(restyled.ok).toBe(true)
 
     expect(touched).toBe(1)
@@ -322,7 +337,11 @@ describe('the corruption a merge can create', () => {
     wire.disconnect()
 
     a.dispatcher.dispatch({ kind: 'DeleteObjects', ids: [note] })
-    b.dispatcher.dispatch({ kind: 'UpdateObjectData', id: note, patch: { text: richFromPlain('edited') } })
+    b.dispatcher.dispatch({
+      kind: 'UpdateObjectData',
+      id: note,
+      patch: { text: richFromPlain('edited') },
+    })
 
     expect(() => {
       wire.reconnect()

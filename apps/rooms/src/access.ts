@@ -35,7 +35,9 @@ export interface AccessKeys {
  * 128 bits, URL-safe. The link IS the credential, so this is the only thing
  * standing between a board and anyone who tries a URL.
  */
-export function mintKey(random: (bytes: Uint8Array) => void = crypto.getRandomValues.bind(crypto)): string {
+export function mintKey(
+  random: (bytes: Uint8Array) => void = crypto.getRandomValues.bind(crypto),
+): string {
   const bytes = new Uint8Array(16)
   random(bytes)
   return [...bytes].map((byte) => byte.toString(16).padStart(2, '0')).join('')
@@ -89,8 +91,7 @@ export function isOwnerKey(keys: AccessKeys | undefined, key: string | null): bo
 }
 
 export type ClaimDecision =
-  | { readonly ok: true }
-  | { readonly ok: false; readonly status: number; readonly error: string }
+  { readonly ok: true } | { readonly ok: false; readonly status: number; readonly error: string }
 
 /**
  * Whether this board may have its two links minted now.
@@ -104,10 +105,7 @@ export type ClaimDecision =
  *   whose board it is. A board being shared for the first time claims BEFORE
  *   anything is written to it, so the empty case is the honest one.
  */
-export function claimDecision(
-  keys: AccessKeys | undefined,
-  hasContent: boolean,
-): ClaimDecision {
+export function claimDecision(keys: AccessKeys | undefined, hasContent: boolean): ClaimDecision {
   if (keys !== undefined) {
     return { ok: false, status: 409, error: 'This board already has links' }
   }
@@ -122,8 +120,7 @@ export function claimDecision(
 }
 
 export type DestroyDecision =
-  | { readonly ok: true }
-  | { readonly ok: false; readonly status: number; readonly error: string }
+  { readonly ok: true } | { readonly ok: false; readonly status: number; readonly error: string }
 
 /**
  * Whether this board's room may be destroyed now.
@@ -180,8 +177,7 @@ export function roleFromAttachment(attached: { readonly role?: unknown } | null)
 }
 
 export type PasswordDecision =
-  | { readonly ok: true }
-  | { readonly ok: false; readonly status: number; readonly error: string }
+  { readonly ok: true } | { readonly ok: false; readonly status: number; readonly error: string }
 
 /**
  * Whether this board's password may be set, changed or cleared now.

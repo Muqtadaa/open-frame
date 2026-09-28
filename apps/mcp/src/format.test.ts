@@ -38,7 +38,10 @@ describe('what the tool prints', () => {
       signedInAs(ACCOUNT),
       boardList(BOARDS),
       boardList([]),
-      boardSummary(createEmptyDocument(asBoardId('brd_abcdefgh12345678'), 'Pricing research', 0), 'editor'),
+      boardSummary(
+        createEmptyDocument(asBoardId('brd_abcdefgh12345678'), 'Pricing research', 0),
+        'editor',
+      ),
     ].join('\n')
 
     expect(everything).not.toContain(KEY)

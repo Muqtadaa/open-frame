@@ -54,7 +54,10 @@ function CodeRenderer({ object }: ObjectViewProps<CodeData>) {
   return (
     <div
       className="of-code"
-      style={{ borderColor: inkColor(object.style.strokeColor), opacity: object.style.opacity ?? 1 }}
+      style={{
+        borderColor: inkColor(object.style.strokeColor),
+        opacity: object.style.opacity ?? 1,
+      }}
       role="group"
       aria-label={`Code block, ${language}`}
     >
@@ -165,52 +168,56 @@ function CodeEditor({ object, Chrome, onCommit }: ObjectEditorProps<CodeData>) {
       }}
     >
       {/*
-        * The language menu is APPARATUS, so it goes where all of it goes: a
-        * screen-space layer that places and clamps it. Inside the editor it
-        * was in world space, which made it grow with the zoom and put it
-        * off-window on a code block bigger than the viewport.
-        */}
+       * The language menu is APPARATUS, so it goes where all of it goes: a
+       * screen-space layer that places and clamps it. Inside the editor it
+       * was in world space, which made it grow with the zoom and put it
+       * off-window on a code block bigger than the viewport.
+       */}
       <Chrome anchor={{ x: 0, y: 0, width: 1, height: 0 }} prefer={['above', 'below']}>
-      <div className="of-code__bar">
-      <select
-        className="of-code__picker of-surface"
-        value={CODE_LANGUAGES.includes(language as (typeof CODE_LANGUAGES)[number]) ? language : 'plain'}
-        aria-label="Language"
-        data-testid="code-language"
-        onChange={(event) => {
-          setLanguage(event.target.value)
-        }}
-        onKeyDown={(event) => {
-          event.stopPropagation()
-        }}
-      >
-        {CODE_LANGUAGES.map((name) => (
-          <option key={name} value={name}>
-            {name}
-          </option>
-        ))}
-      </select>
-      {/*
-        * DISABLED rather than hidden where the language has no formatter.
-        * A control that comes and goes as the menu beside it changes reads as
-        * a glitch; one that is plainly unavailable answers the question it
-        * raises. Twenty-one of the twenty-nine languages get the indenter,
-        * eight get Prettier, and the rest — Python, YAML as a diff, Markdown —
-        * are the ones whose leading space IS their meaning.
-        */}
-      <button
-        type="button"
-        className="of-button of-button--ghost of-surface of-code__format"
-        disabled={!canFormat(language)}
-        aria-label="Pretty print"
-        data-tip="Pretty print (Shift+Alt+F)"
-        aria-description="Pretty print (Shift+Alt+F)"
-        data-testid="code-format"
-        onClick={prettyPrint}
-      >
-        format
-      </button>
-      </div>
+        <div className="of-code__bar">
+          <select
+            className="of-code__picker of-surface"
+            value={
+              CODE_LANGUAGES.includes(language as (typeof CODE_LANGUAGES)[number])
+                ? language
+                : 'plain'
+            }
+            aria-label="Language"
+            data-testid="code-language"
+            onChange={(event) => {
+              setLanguage(event.target.value)
+            }}
+            onKeyDown={(event) => {
+              event.stopPropagation()
+            }}
+          >
+            {CODE_LANGUAGES.map((name) => (
+              <option key={name} value={name}>
+                {name}
+              </option>
+            ))}
+          </select>
+          {/*
+           * DISABLED rather than hidden where the language has no formatter.
+           * A control that comes and goes as the menu beside it changes reads as
+           * a glitch; one that is plainly unavailable answers the question it
+           * raises. Twenty-one of the twenty-nine languages get the indenter,
+           * eight get Prettier, and the rest — Python, YAML as a diff, Markdown —
+           * are the ones whose leading space IS their meaning.
+           */}
+          <button
+            type="button"
+            className="of-button of-button--ghost of-surface of-code__format"
+            disabled={!canFormat(language)}
+            aria-label="Pretty print"
+            data-tip="Pretty print (Shift+Alt+F)"
+            aria-description="Pretty print (Shift+Alt+F)"
+            data-testid="code-format"
+            onClick={prettyPrint}
+          >
+            format
+          </button>
+        </div>
       </Chrome>
 
       <textarea

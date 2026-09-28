@@ -36,11 +36,11 @@ function TextRenderer({ object }: ObjectViewProps<TextData>) {
       aria-label={empty ? 'Empty text' : 'Text'}
     >
       {/*
-        * The text is its own element rather than a bare child. The clamp that
-        * marks hidden text has to live on a descendant of the sized box, since
-        * `100cqh` is measured against the nearest container ANCESTOR — an
-        * element cannot query itself.
-        */}
+       * The text is its own element rather than a bare child. The clamp that
+       * marks hidden text has to live on a descendant of the sized box, since
+       * `100cqh` is measured against the nearest container ANCESTOR — an
+       * element cannot query itself.
+       */}
       <div className="of-text__body" data-fit-text>
         {empty ? 'Text' : <RichTextView value={object.data.text} />}
       </div>

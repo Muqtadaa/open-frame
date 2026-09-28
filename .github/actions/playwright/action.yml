@@ -1,0 +1,31 @@
+name: Playwright Chromium
+description: >-
+  Installs Chromium for Playwright, from a cache keyed on the Playwright
+  version actually installed, so a browser is downloaded once per upgrade
+  rather than once per job.
+
+runs:
+  using: composite
+  steps:
+    # The version the lockfile resolved, not the range in package.json: a cache
+    # keyed on `^1.63.0` would serve an old browser to a newer Playwright that
+    # refuses to drive it.
+    - id: version
+      shell: bash
+      run: echo "version=$(pnpm --filter @openframe/web exec playwright --version | awk '{print $2}')" >> "$GITHUB_OUTPUT"
+
+    - id: cache
+      uses: actions/cache@v4
+      with:
+        path: ~/.cache/ms-playwright
+        key: playwright-${{ runner.os }}-${{ steps.version.outputs.version }}
+
+    - if: steps.cache.outputs.cache-hit != 'true'
+      shell: bash
+      run: pnpm --filter @openframe/web exec playwright install --with-deps chromium
+
+    # The browser is cached; the system libraries it links against are not,
+    # because they live outside the cached directory.
+    - if: steps.cache.outputs.cache-hit == 'true'
+      shell: bash
+      run: pnpm --filter @openframe/web exec playwright install-deps chromium

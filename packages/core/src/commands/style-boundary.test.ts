@@ -15,7 +15,13 @@ import { createTestHarness } from '../testing.js'
  */
 
 const id = (name: string): ObjectId => asObjectId(`obj_${name}`)
-const HOSTILE = ['url(https://example.com/pixel)', 'red; background: black', 'expression(1)', '#12345', 42]
+const HOSTILE = [
+  'url(https://example.com/pixel)',
+  'red; background: black',
+  'expression(1)',
+  '#12345',
+  42,
+]
 
 function withNote() {
   const h = createTestHarness()
@@ -34,7 +40,13 @@ describe('colours at the command boundary', () => {
       const result = h.dispatcher.dispatch({
         kind: 'CreateObjects',
         objects: [
-          { id: id('b'), type: 'sticky', x: 0, y: 0, style: { color: value } as unknown as ObjectStyle },
+          {
+            id: id('b'),
+            type: 'sticky',
+            x: 0,
+            y: 0,
+            style: { color: value } as unknown as ObjectStyle,
+          },
         ],
       })
       expect(result).toMatchObject({ ok: false, error: { code: 'invalid-input' } })
@@ -56,7 +68,9 @@ describe('colours at the command boundary', () => {
   it('takes a token, a literal and none', () => {
     const h = withNote()
     for (const color of ['blue', '#3a7bd5'] as const) {
-      expect(h.dispatcher.dispatch({ kind: 'UpdateStyle', ids: [id('a')], style: { color } }).ok).toBe(true)
+      expect(
+        h.dispatcher.dispatch({ kind: 'UpdateStyle', ids: [id('a')], style: { color } }).ok,
+      ).toBe(true)
       expect(h.store.getObject(id('a'))?.style.color).toBe(color)
     }
     expect(

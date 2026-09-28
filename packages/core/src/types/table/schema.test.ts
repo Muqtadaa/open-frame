@@ -184,7 +184,12 @@ describe('changing a table’s shape', () => {
 
   it('always produces a table its own schema accepts', () => {
     let data = filled(3, 2)
-    for (const step of [['column', 1], ['row', 1], ['column', -1], ['row', -1]] as const) {
+    for (const step of [
+      ['column', 1],
+      ['row', 1],
+      ['column', -1],
+      ['row', -1],
+    ] as const) {
       data = resizeGrid(data, step[0], step[1])
       expect(TableDataSchema.safeParse(data).success, `${step[0]} ${String(step[1])}`).toBe(true)
     }
@@ -240,7 +245,7 @@ describe('cellRange', () => {
   })
 })
 
-describe('a cell\'s own alignment', () => {
+describe("a cell's own alignment", () => {
   const three = grid(3, 3) as TableData
 
   it('is set and cleared per cell, beside its colours', () => {

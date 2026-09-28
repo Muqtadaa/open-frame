@@ -41,7 +41,10 @@ function roomAnswers(status: number): ReturnType<typeof vi.fn> {
 }
 
 function roomUnreachable(): void {
-  vi.stubGlobal('fetch', vi.fn(() => Promise.reject(new Error('offline'))))
+  vi.stubGlobal(
+    'fetch',
+    vi.fn(() => Promise.reject(new Error('offline'))),
+  )
 }
 
 async function boardOnDisk(id = SHARED) {
@@ -196,9 +199,9 @@ describe('renaming a board from the list', () => {
   it('writes the name into the document as well as the row', async () => {
     const repository = await boardOnDisk()
 
-    await expect(renameBoard(repository, { boardId: SHARED, shared: true }, 'Pricing')).resolves.toBe(
-      true,
-    )
+    await expect(
+      renameBoard(repository, { boardId: SHARED, shared: true }, 'Pricing'),
+    ).resolves.toBe(true)
 
     expect(remoteRename).toHaveBeenCalledWith(SHARED, 'Pricing')
     const loaded = await repository.getBoard(SHARED)

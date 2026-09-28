@@ -89,7 +89,7 @@ describe('pointer down', () => {
    * notes at different sizes stops reading as a wall of notes — and a text
    * object sizes itself to what is typed into it.
    */
-  it('still places the types whose size is not the user\'s to choose', () => {
+  it("still places the types whose size is not the user's to choose", () => {
     expect(onPointerDown(ctx({ tool: 'sticky' }))).toEqual([
       { kind: 'create', objectType: 'sticky', at: { x: 10, y: 10 } },
     ])
@@ -173,9 +173,7 @@ describe('drag threshold', () => {
  */
 describe('placing a table', () => {
   it('creates the grid the tool is set to', () => {
-    const [intent] = onPointerDown(
-      ctx({ tool: 'table', tableSize: { columns: 5, rows: 2 } }),
-    )
+    const [intent] = onPointerDown(ctx({ tool: 'table', tableSize: { columns: 5, rows: 2 } }))
 
     expect(intent).toEqual({
       kind: 'create',
@@ -201,9 +199,7 @@ describe('pressing a locked object', () => {
   })
 
   it('does not start one when it is already selected either', () => {
-    const intents = onPointerDown(
-      ctx({ hitId: A, selection: new Set([A]), locked: new Set([A]) }),
-    )
+    const intents = onPointerDown(ctx({ hitId: A, selection: new Set([A]), locked: new Set([A]) }))
     expect(intents).toEqual([])
   })
 

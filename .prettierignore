@@ -5,3 +5,12 @@ pnpm-lock.yaml
 test-results/
 playwright-report/
 tools/bench/fixtures/
+
+# Not ours to reflow. The vendored impeccable skill and its agents are upstream's
+# text, and a reformatted copy turns every re-vendor into a diff. The
+# `.impeccable` surface contracts and critique snapshots are written by that
+# skill's own script, which would undo the formatting on its next run.
+.claude/
+apps/web/.impeccable/
+# Local capture and measurement specs, excluded from git (see .git/info/exclude).
+**/zz-*

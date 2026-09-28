@@ -115,9 +115,9 @@ describe('where a route meets its ends', () => {
     it(`leaves along the first segment of an orthogonal route — ${name}`, () => {
       const { departure } = routeAngles(start, end, 'orthogonal')
 
-      expect(sameDirection(departure, firstDirection(connectorPath(start, end, 'orthogonal')))).toBe(
-        true,
-      )
+      expect(
+        sameDirection(departure, firstDirection(connectorPath(start, end, 'orthogonal'))),
+      ).toBe(true)
     })
   }
 

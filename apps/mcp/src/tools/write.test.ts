@@ -99,10 +99,7 @@ describe('changing a board', () => {
     await createObjects.run({ board: TEST_BOARD, objects: [note('here', 100)] }, context)
     const [made] = objectsOn(peer)
 
-    await moveObjects.run(
-      { board: TEST_BOARD, moves: [{ id: made?.id, x: 640, y: 480 }] },
-      context,
-    )
+    await moveObjects.run({ board: TEST_BOARD, moves: [{ id: made?.id, x: 640, y: 480 }] }, context)
 
     const moved = peer.store.getDocument().objects.get(made?.id ?? made!.id)
     expect(moved?.frame.x).toBe(640)
@@ -318,10 +315,7 @@ describe('a comment', () => {
     await createObjects.run({ board: TEST_BOARD, objects: [note('about this')] }, context)
     const [made] = objectsOn(peer)
 
-    await addComment.run(
-      { board: TEST_BOARD, body: 'about this one', objectId: made?.id },
-      context,
-    )
+    await addComment.run({ board: TEST_BOARD, body: 'about this one', objectId: made?.id }, context)
 
     expect(said[0]?.objectId).toBe(made?.id)
     expect(said[0]?.on).toEqual({ fx: 0.5, fy: 0.5 })

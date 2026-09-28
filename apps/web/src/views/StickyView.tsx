@@ -3,7 +3,14 @@ import { isEmptyText, type ColorValue, type StickyData } from '@openframe/core'
 import { defineObjectView, type ObjectEditorProps, type ObjectViewProps } from './registry.js'
 import { RichTextEditor } from './RichTextEditor.js'
 import { RichTextView } from './RichTextView.js'
-import { fontFamily, textAlign, verticalAlign, inkColor, readableInkOn, surfaceOf } from '../scene/style-tokens.js'
+import {
+  fontFamily,
+  textAlign,
+  verticalAlign,
+  inkColor,
+  readableInkOn,
+  surfaceOf,
+} from '../scene/style-tokens.js'
 
 function background(color: ColorValue | undefined): string {
   return surfaceOf(color, 'yellow')

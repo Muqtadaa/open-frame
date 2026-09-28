@@ -919,7 +919,9 @@ export class ObjectTypeRegistry {
    * selected object without caring what it is.
    */
   endpointsOf(object: AnyOpenFrameObject, doc: BoardDocument): readonly DraggableEndpoint[] {
-    return this.#definitions.get(object.type)?.endpoints?.(object, doc, this.#geometryContext(doc)) ?? []
+    return (
+      this.#definitions.get(object.type)?.endpoints?.(object, doc, this.#geometryContext(doc)) ?? []
+    )
   }
 
   /**

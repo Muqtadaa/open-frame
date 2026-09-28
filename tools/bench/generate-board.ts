@@ -40,7 +40,10 @@ import {
  * nothing exercises is a build path that is already broken.
  */
 const ARGUMENT = Number(process.argv[2])
-const SIZES = Number.isFinite(ARGUMENT) && ARGUMENT > 0 ? ([ARGUMENT] as const) : ([100, 1_000, 5_000, 10_000] as const)
+const SIZES =
+  Number.isFinite(ARGUMENT) && ARGUMENT > 0
+    ? ([ARGUMENT] as const)
+    : ([100, 1_000, 5_000, 10_000] as const)
 const COLORS: ColorToken[] = ['yellow', 'green', 'blue', 'red', 'violet', 'orange']
 /** Spread across the kinds so the mixed board exercises several label insets. */
 const SHAPES = ['rectangle', 'ellipse', 'triangle', 'diamond', 'hexagon'] as const
@@ -179,7 +182,10 @@ function generateMixed(count: number): string {
           ? {
               type: 'shape',
               ...at(index),
-              data: { shape: SHAPES[index % SHAPES.length] ?? 'rectangle', text: richFromPlain('') },
+              data: {
+                shape: SHAPES[index % SHAPES.length] ?? 'rectangle',
+                text: richFromPlain(''),
+              },
               style: { color: COLORS[Math.floor(random() * COLORS.length)] ?? 'yellow' },
             }
           : {

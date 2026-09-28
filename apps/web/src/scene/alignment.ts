@@ -39,8 +39,7 @@ export function alignmentTargets(
   return visible
     .filter(
       (object) =>
-        !selection.has(object.id) &&
-        !ancestorsOf(doc, object.id).some((id) => selection.has(id)),
+        !selection.has(object.id) && !ancestorsOf(doc, object.id).some((id) => selection.has(id)),
     )
     .map((object) => registry.boundsOf(object, doc))
 }

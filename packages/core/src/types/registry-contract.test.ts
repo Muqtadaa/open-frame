@@ -60,9 +60,7 @@ describe('object type registry contract', () => {
     // Same trap, same guard: every optional member is copied one at a time in
     // `defineObjectType`, and forgetting one type checks perfectly.
     expect(registry.get('sticky')?.promotions).toEqual(['evidence', 'insight', 'journey-stage'])
-    expect(registry.get('evidence')?.derivations).toEqual([
-      { type: 'insight', predicate: 'cites' },
-    ])
+    expect(registry.get('evidence')?.derivations).toEqual([{ type: 'insight', predicate: 'cites' }])
   })
 
   /**

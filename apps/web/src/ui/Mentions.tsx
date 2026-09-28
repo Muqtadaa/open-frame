@@ -87,13 +87,13 @@ export function Mentions() {
   return (
     <div className="of-mentions">
       {/*
-        * The COUNT is the unread; the list is everything recent.
-        *
-        * Read and gone were the same state until now, so following a
-        * notification was the last time you could find it. They are kept, and
-        * the bell goes quiet rather than disappearing — an old mention is
-        * still the only link back to the remark it named.
-        */}
+       * The COUNT is the unread; the list is everything recent.
+       *
+       * Read and gone were the same state until now, so following a
+       * notification was the last time you could find it. They are kept, and
+       * the bell goes quiet rather than disappearing — an old mention is
+       * still the only link back to the remark it named.
+       */}
       <button
         ref={bell}
         type="button"
@@ -134,66 +134,69 @@ export function Mentions() {
               links[(at + step + links.length) % links.length]?.focus()
             }}
           >
-          <ul className="of-mentions__list" data-testid="mentions-list">
-            {mentions.map((mention) => (
-              <li key={mention.commentId}>
-                <a
-                  className={
-                    mention.readAt === null
-                      ? 'of-mentions__item'
-                      : 'of-mentions__item is-read'
-                  }
-                  href={commentLink(mention.boardId, '', keyFor(mention.boardId), mention.commentId)}
-                  data-testid={`mention-${mention.commentId}`}
-                  data-unread={mention.readAt === null ? 'true' : 'false'}
-                  data-here={mention.boardId === here ? 'true' : 'false'}
-                  onClick={(event) => {
-                    markRead(mention.commentId)
-                    /*
-                     * Already HERE: go to the remark instead of reloading the
-                     * board you are standing on. A full page load throws away
-                     * the socket, the document and the view for a board the
-                     * browser already has open, and the only thing it
-                     * achieves is arriving at the same place slower.
-                     *
-                     * A modified click is left alone — that is somebody
-                     * asking for a new tab, and the link still works there.
-                     */
-                    if (
-                      mention.boardId !== here ||
-                      event.metaKey ||
-                      event.ctrlKey ||
-                      event.shiftKey ||
-                      event.altKey ||
-                      event.button !== 0
-                    ) {
-                      return
+            <ul className="of-mentions__list" data-testid="mentions-list">
+              {mentions.map((mention) => (
+                <li key={mention.commentId}>
+                  <a
+                    className={
+                      mention.readAt === null ? 'of-mentions__item' : 'of-mentions__item is-read'
                     }
-                    /*
-                     * Only take the click if there is somewhere to take it
-                     * TO. The discussion loads asynchronously, so a click in
-                     * the first moment of a board finds nothing — and a
-                     * prevented click that then does nothing is worse than
-                     * the reload it was saving, because it looks like the
-                     * notification is broken. The link still works, and the
-                     * fresh page honours `?c=` on the way in.
-                     */
-                    if (!focusComment(mention.commentId)) return
-                    event.preventDefault()
-                    setOpen(false)
-                  }}
-                >
-                  <span className="of-mentions__who">{mention.authorName}</span>
-                  <span className="of-mentions__where">
-                    {mention.boardTitle} · <Ago at={mention.createdAt} />
-                  </span>
-                  <span className="of-mentions__what">
-                    {plainMentionText(mention.body).slice(0, 120)}
-                  </span>
-                </a>
-              </li>
-            ))}
-          </ul>
+                    href={commentLink(
+                      mention.boardId,
+                      '',
+                      keyFor(mention.boardId),
+                      mention.commentId,
+                    )}
+                    data-testid={`mention-${mention.commentId}`}
+                    data-unread={mention.readAt === null ? 'true' : 'false'}
+                    data-here={mention.boardId === here ? 'true' : 'false'}
+                    onClick={(event) => {
+                      markRead(mention.commentId)
+                      /*
+                       * Already HERE: go to the remark instead of reloading the
+                       * board you are standing on. A full page load throws away
+                       * the socket, the document and the view for a board the
+                       * browser already has open, and the only thing it
+                       * achieves is arriving at the same place slower.
+                       *
+                       * A modified click is left alone — that is somebody
+                       * asking for a new tab, and the link still works there.
+                       */
+                      if (
+                        mention.boardId !== here ||
+                        event.metaKey ||
+                        event.ctrlKey ||
+                        event.shiftKey ||
+                        event.altKey ||
+                        event.button !== 0
+                      ) {
+                        return
+                      }
+                      /*
+                       * Only take the click if there is somewhere to take it
+                       * TO. The discussion loads asynchronously, so a click in
+                       * the first moment of a board finds nothing — and a
+                       * prevented click that then does nothing is worse than
+                       * the reload it was saving, because it looks like the
+                       * notification is broken. The link still works, and the
+                       * fresh page honours `?c=` on the way in.
+                       */
+                      if (!focusComment(mention.commentId)) return
+                      event.preventDefault()
+                      setOpen(false)
+                    }}
+                  >
+                    <span className="of-mentions__who">{mention.authorName}</span>
+                    <span className="of-mentions__where">
+                      {mention.boardTitle} · <Ago at={mention.createdAt} />
+                    </span>
+                    <span className="of-mentions__what">
+                      {plainMentionText(mention.body).slice(0, 120)}
+                    </span>
+                  </a>
+                </li>
+              ))}
+            </ul>
           </div>
         </AnchoredSurface>
       )}

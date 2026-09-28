@@ -2,11 +2,7 @@ import type { AssetRef, BoardDocument } from '../domain/document.js'
 import { asAssetId, asBoardId, asObjectId, asOrderKey, asUserId } from '../domain/ids.js'
 import type { AssetId, ObjectId } from '../domain/ids.js'
 import { repairDocument, type Repair } from '../domain/invariants.js'
-import {
-  ORIGINS,
-  type AnyOpenFrameObject,
-  type Origin,
-} from '../domain/object.js'
+import { ORIGINS, type AnyOpenFrameObject, type Origin } from '../domain/object.js'
 import type { ObjectTypeRegistry } from '../domain/registry.js'
 import { sanitizeStyle } from '../domain/style-boundary.js'
 import { UNKNOWN_TYPE } from '../types/unknown/definition.js'

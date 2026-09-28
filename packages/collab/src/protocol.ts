@@ -223,11 +223,7 @@ export function readMessage(
     }
 
     case MESSAGE_AWARENESS: {
-      awarenessProtocol.applyAwarenessUpdate(
-        awareness,
-        decoding.readVarUint8Array(decoder),
-        origin,
-      )
+      awarenessProtocol.applyAwarenessUpdate(awareness, decoding.readVarUint8Array(decoder), origin)
       // Presence is relayed as it arrived: the room holds no opinion about who
       // is where, it only makes sure everyone hears about it.
       return { reply: null, broadcast: message, content: false }

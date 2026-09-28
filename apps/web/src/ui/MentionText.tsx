@@ -28,9 +28,7 @@ export function MentionText({
             // A body has no ids of its own, and two mentions of the same
             // person in one comment are genuinely the same value twice.
             key={`${String(index)}-${segment.userId}`}
-            className={
-              segment.userId === whoIsMe ? 'of-mention is-me' : 'of-mention'
-            }
+            className={segment.userId === whoIsMe ? 'of-mention is-me' : 'of-mention'}
             data-testid="mention-chip"
           >
             @{segment.displayName}

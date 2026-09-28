@@ -177,7 +177,8 @@ test('a tool’s tip reads over the record panel', async ({ page }) => {
     if (box === null) continue
     const x = box.x + box.width / 2
     const y = box.y + box.height / 2
-    const inside = x > panel.x && x < panel.x + panel.width && y > panel.y && y < panel.y + panel.height
+    const inside =
+      x > panel.x && x < panel.x + panel.width && y > panel.y && y < panel.y + panel.height
     if (!inside) continue
     const top = await page.evaluate(
       ([px, py]) => document.elementFromPoint(px ?? 0, py ?? 0)?.closest('.of-tool__tip') !== null,

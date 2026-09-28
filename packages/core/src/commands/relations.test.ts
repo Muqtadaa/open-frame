@@ -48,9 +48,9 @@ describe('relations (ADR 0011)', () => {
       const evidence = sticky(h, 'e')
       const insight = sticky(h, 'i')
       relate(h, insight, evidence)
-      expect(h.registry.relationsFrom(h.store.getDocument(), insight).map((l) => l.edge.to)).toEqual([
-        evidence,
-      ])
+      expect(
+        h.registry.relationsFrom(h.store.getDocument(), insight).map((l) => l.edge.to),
+      ).toEqual([evidence])
     })
 
     /*

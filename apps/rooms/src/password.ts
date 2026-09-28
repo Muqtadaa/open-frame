@@ -97,10 +97,7 @@ export async function newVerifier(
 }
 
 /** Whether this is the board's password. */
-export async function isPassword(
-  verifier: PasswordVerifier,
-  password: string,
-): Promise<boolean> {
+export async function isPassword(verifier: PasswordVerifier, password: string): Promise<boolean> {
   const attempt = await derive(password, verifier.salt, verifier.iterations)
   return sameSecret(attempt, verifier.hash)
 }

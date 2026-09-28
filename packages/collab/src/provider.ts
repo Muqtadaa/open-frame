@@ -140,9 +140,11 @@ export class RoomProvider {
     this.#onRole = options.onRole ?? noop
     this.#onSynced = options.onSynced ?? noop
     this.#setTimer = options.setTimer ?? ((run, ms) => setTimeout(run, ms))
-    this.#clearTimer = options.clearTimer ?? ((handle) => {
-      clearTimeout(handle as ReturnType<typeof setTimeout>)
-    })
+    this.#clearTimer =
+      options.clearTimer ??
+      ((handle) => {
+        clearTimeout(handle as ReturnType<typeof setTimeout>)
+      })
 
     this.#doc.on('update', this.#onDocUpdate)
     this.#awareness.on('update', this.#onAwarenessUpdate)

@@ -41,7 +41,7 @@ async function freshBoard(page: Page): Promise<void> {
    * paint, so a keystroke sent on the canvas alone can land in the gap and be
    * dropped. That showed up as a rare, unexplained tool-selection failure.
    */
-  await expect(page.getByTestId("tool-select")).toBeVisible()
+  await expect(page.getByTestId('tool-select')).toBeVisible()
 }
 
 async function sticky(page: Page, x: number, y: number, text: string): Promise<void> {

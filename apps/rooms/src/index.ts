@@ -17,11 +17,7 @@ export { BoardRoomObject } from './room-object.js'
  */
 export default {
   fetch(request: Request, env: Env): Response | Promise<Response> {
-    const route = routeRequest(
-      new URL(request.url),
-      request.headers.get('Upgrade'),
-      request.method,
-    )
+    const route = routeRequest(new URL(request.url), request.headers.get('Upgrade'), request.method)
 
     switch (route.kind) {
       case 'health':
@@ -46,7 +42,8 @@ export default {
              * the URL, so the preflight has to allow them by name — a browser
              * will not send a header the server has not said it accepts.
              */
-            'access-control-allow-headers': 'content-type, x-openframe-key, x-openframe-owner, x-openframe-token',
+            'access-control-allow-headers':
+              'content-type, x-openframe-key, x-openframe-owner, x-openframe-token',
             'access-control-max-age': '86400',
           },
         })

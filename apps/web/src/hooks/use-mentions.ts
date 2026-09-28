@@ -1,12 +1,7 @@
 import { useCallback, useEffect, useState } from 'react'
 
 import { listMyBoards } from '../app/remote-boards.js'
-import {
-  markMentionsRead,
-  myMentions,
-  watchMyMentions,
-  type Mention,
-} from '../app/discussion.js'
+import { markMentionsRead, myMentions, watchMyMentions, type Mention } from '../app/discussion.js'
 import { useIdentity } from './use-identity.js'
 
 export type { Mention }

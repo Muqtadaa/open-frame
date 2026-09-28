@@ -58,7 +58,7 @@ silently destroys them. Following rule 18, this is a capability every type
 declares rather than a check for `type === 'relation'`.
 
 **A memoized relation index on the registry.** Reverse lookup is one pass over
-the document producing *every* relation grouped both ways, cached on document
+the document producing _every_ relation grouped both ways, cached on document
 identity — the same shape as `#childIndexFor`, added when a group's bounds turned
 culling quadratic. The document is immutable and replaced wholesale on each
 change, so identity is an exact invalidation key. Queries are then O(1); the pass
@@ -92,11 +92,11 @@ cost of a side table the command layer cannot reach.
 
 **Reuse `connector`.** Tempting, because a connector already has `from`, `to`,
 attachment and orphan handling, and drawing a line between two objects is how a
-person would *express* a relation. Rejected because the two are different things
+person would _express_ a relation. Rejected because the two are different things
 that happen to look alike.
 
 A connector is a drawn line: it has routing, arrowheads, a stroke, and endpoints
-that attach at an anchor *on* a shape's edge. A relation has no appearance at
+that attach at an anchor _on_ a shape's edge. A relation has no appearance at
 all — an insight may cite forty pieces of evidence without anyone wanting forty
 lines on the board, and two objects may be joined by a line that means nothing.
 Conflating them forces one of two lies: relations you cannot create without

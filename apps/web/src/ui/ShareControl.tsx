@@ -106,59 +106,59 @@ export function ShareControl() {
 
     return (
       <>
-      <button
-        ref={shareButton}
-        type="button"
-        className="of-status__share"
-        disabled={runtime.readOnly}
-        aria-label="Share"
-        data-testid="share-board"
-        data-tip={shareHint}
-        aria-description={shareHint}
-        onClick={() => {
-          setShareError(null)
-          setAsking(true)
-        }}
-      >
-        Share
-      </button>
-      {asking && (
-        <ShareConfirm
-          moving={sharing}
-          error={shareError}
-          onMove={() => {
-            setSharing(true)
+        <button
+          ref={shareButton}
+          type="button"
+          className="of-status__share"
+          disabled={runtime.readOnly}
+          aria-label="Share"
+          data-testid="share-board"
+          data-tip={shareHint}
+          aria-description={shareHint}
+          onClick={() => {
             setShareError(null)
-            void shareCurrentBoard(runtime).then(
-              (shared) => {
-                /*
-                 * Straight onto the board that now exists. The links used to
-                 * be shown over the page that had just been moved away from,
-                 * which went on taking edits and saying "Saved" — and lost
-                 * every one of them (rule 7). The choice of link is offered
-                 * on arrival instead, where anything typed next is kept.
-                 */
-                handOver(shared)
-                window.location.assign(shared.editLink)
-              },
-              (error: unknown) => {
-                setSharing(false)
-                setShareError(
-                  error instanceof ShareFailed
-                    ? error.message
-                    : 'This board could not be moved. It is still here, exactly as it was.',
-                )
-              },
-            )
+            setAsking(true)
           }}
-          onCancel={() => {
-            setAsking(false)
-            setShareError(null)
-            // Once the board behind is no longer inert, or the focus would not take.
-            requestAnimationFrame(() => shareButton.current?.focus())
-          }}
-        />
-      )}
+        >
+          Share
+        </button>
+        {asking && (
+          <ShareConfirm
+            moving={sharing}
+            error={shareError}
+            onMove={() => {
+              setSharing(true)
+              setShareError(null)
+              void shareCurrentBoard(runtime).then(
+                (shared) => {
+                  /*
+                   * Straight onto the board that now exists. The links used to
+                   * be shown over the page that had just been moved away from,
+                   * which went on taking edits and saying "Saved" — and lost
+                   * every one of them (rule 7). The choice of link is offered
+                   * on arrival instead, where anything typed next is kept.
+                   */
+                  handOver(shared)
+                  window.location.assign(shared.editLink)
+                },
+                (error: unknown) => {
+                  setSharing(false)
+                  setShareError(
+                    error instanceof ShareFailed
+                      ? error.message
+                      : 'This board could not be moved. It is still here, exactly as it was.',
+                  )
+                },
+              )
+            }}
+            onCancel={() => {
+              setAsking(false)
+              setShareError(null)
+              // Once the board behind is no longer inert, or the focus would not take.
+              requestAnimationFrame(() => shareButton.current?.focus())
+            }}
+          />
+        )}
       </>
     )
   }
@@ -191,9 +191,7 @@ export function ShareControl() {
    * stops following is never hidden behind "+2".
    */
   const MAX_FACES = 3
-  const followed = here.find(
-    (person) => person.clientId !== null && person.clientId === following,
-  )
+  const followed = here.find((person) => person.clientId !== null && person.clientId === following)
   const shown =
     followed === undefined || here.indexOf(followed) < MAX_FACES
       ? here.slice(0, MAX_FACES)
@@ -287,7 +285,12 @@ export function ShareControl() {
        * not stick. A viewer is not broken — they were given the other link.
        */}
       {role === 'viewer' && (
-        <span className="of-status__watching" data-testid="viewing-only" data-tip="You can watch, and others can see you here. Changing the board needs the edit link." aria-description="You can watch, and others can see you here. Changing the board needs the edit link.">
+        <span
+          className="of-status__watching"
+          data-testid="viewing-only"
+          data-tip="You can watch, and others can see you here. Changing the board needs the edit link."
+          aria-description="You can watch, and others can see you here. Changing the board needs the edit link."
+        >
           View only
         </span>
       )}
@@ -396,7 +399,11 @@ function ShareLinks({
 }: {
   readonly links: SharedBoard
   readonly trigger: RefObject<HTMLElement | null>
-  readonly password: { readonly boardId: SharedBoard['boardId']; readonly editor: string; readonly owner: string | null }
+  readonly password: {
+    readonly boardId: SharedBoard['boardId']
+    readonly editor: string
+    readonly owner: string | null
+  }
   readonly onDone: () => void
 }) {
   const [copied, setCopied] = useState<'edit' | 'view' | null>(null)
@@ -421,7 +428,13 @@ function ShareLinks({
   }
 
   return (
-    <div ref={sheet} className="of-sheet" role="dialog" aria-label="Share this board" data-testid="share-links">
+    <div
+      ref={sheet}
+      className="of-sheet"
+      role="dialog"
+      aria-label="Share this board"
+      data-testid="share-links"
+    >
       <p className="of-share__lead">Shared. Send the link that gives what you mean to give.</p>
 
       <button
@@ -460,7 +473,12 @@ function ShareLinks({
 
       <SharePassword {...password} />
 
-      <button type="button" className="of-button of-share__open" data-testid="share-done" onClick={onDone}>
+      <button
+        type="button"
+        className="of-button of-share__open"
+        data-testid="share-done"
+        onClick={onDone}
+      >
         Done
       </button>
     </div>

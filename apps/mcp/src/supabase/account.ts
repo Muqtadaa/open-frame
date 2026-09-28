@@ -169,11 +169,7 @@ async function displayNameOf(
     : fallback
 }
 
-function handle(
-  client: AuthClient,
-  account: Account,
-  detach: () => void,
-): SignedIn {
+function handle(client: AuthClient, account: Account, detach: () => void): SignedIn {
   const list = async (): Promise<readonly BoardAccess[]> => {
     /*
      * The rows come back through a database function rather than a table read,
@@ -239,10 +235,7 @@ function keepStored(
 ): () => void {
   const { data } = client.auth.onAuthStateChange((_event, session) => {
     if (session === null || session.refresh_token === '') return
-    writeSession(
-      { project: SUPABASE_URL, userId, email, refreshToken: session.refresh_token },
-      env,
-    )
+    writeSession({ project: SUPABASE_URL, userId, email, refreshToken: session.refresh_token }, env)
   })
   return () => {
     data.subscription.unsubscribe()
@@ -272,7 +265,11 @@ export async function signIn(
   )
   const detach = keepStored(client, userId, address, env)
 
-  return handle(client, { userId, email: address, displayName: await displayNameOf(client, userId, address) }, detach)
+  return handle(
+    client,
+    { userId, email: address, displayName: await displayNameOf(client, userId, address) },
+    detach,
+  )
 }
 
 /**
@@ -305,10 +302,17 @@ export async function resume(deps: AccountDeps = {}): Promise<SignedIn | null> {
 
   const userId = session.user.id
   const address = session.user.email ?? stored.email
-  writeSession({ project: SUPABASE_URL, userId, email: address, refreshToken: session.refresh_token }, env)
+  writeSession(
+    { project: SUPABASE_URL, userId, email: address, refreshToken: session.refresh_token },
+    env,
+  )
   const detach = keepStored(client, userId, address, env)
 
-  return handle(client, { userId, email: address, displayName: await displayNameOf(client, userId, address) }, detach)
+  return handle(
+    client,
+    { userId, email: address, displayName: await displayNameOf(client, userId, address) },
+    detach,
+  )
 }
 
 /**

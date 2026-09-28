@@ -87,10 +87,7 @@ export function usePresence(containerRef: RefObject<HTMLDivElement | null>): voi
          * drag moves the pointer, and a pointer that moves is already
          * publishing.
          */
-        drag:
-          state.drag.kind === 'translate'
-            ? { dx: state.drag.dx, dy: state.drag.dy }
-            : null,
+        drag: state.drag.kind === 'translate' ? { dx: state.drag.dx, dy: state.drag.dy } : null,
         // Where this person is looking, for anybody following them — and who
         // they are following, so that nobody follows a follower.
         viewport: state.viewport,

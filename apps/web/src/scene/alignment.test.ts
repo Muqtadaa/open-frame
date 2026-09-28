@@ -91,7 +91,12 @@ describe('alignToNeighbours', () => {
      * three stops, so three guides is correct rather than duplication.
      */
     it('reports every stop that coincides, not just the nearest', () => {
-      const result = alignToNeighbours(rect(0, 0, 180, 180), { x: 200, y: 0 }, [rect(200, 400, 180, 180)], TOL)
+      const result = alignToNeighbours(
+        rect(0, 0, 180, 180),
+        { x: 200, y: 0 },
+        [rect(200, 400, 180, 180)],
+        TOL,
+      )
       const verticals = result.guides.filter((g) => g.axis === 'x').map((g) => g.position)
       expect(verticals.sort((a, b) => a - b)).toEqual([200, 290, 380])
     })

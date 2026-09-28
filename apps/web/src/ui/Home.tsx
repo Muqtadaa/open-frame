@@ -125,32 +125,35 @@ export function Home({ repository }: { readonly repository: BoardRepository }) {
    */
   useEffect(() => {
     let live = true
-    void listAllBoards(repository, identity !== null).then((found) => {
-      /*
-       * The owner keys ride along, cached per board.
-       *
-       * This list is the only place they are handed out, and the board itself
-       * needs one on the socket so its owner is not asked for the password on
-       * their own board. Writing them here means the ordinary route — open a
-       * board from your list — costs no extra round trip; `recoverOwnerKey`
-       * covers arriving by a deep link on a machine that never saw this page.
-       */
-      for (const board of found) {
-        if (board.ownerKey !== null) rememberOwnerKey(board.boardId, board.ownerKey)
-      }
-      if (!live) return
-      setListing({ boards: found, readAt: Date.now() })
-      // A read that works replaces any that failed before it.
-      setListProblem(null)
-    }, (error: unknown) => {
-      // Said, rather than "Looking for your boards…" for as long as the tab
-      // stays open — and said NOW, not after the splash's hold: under the
-      // splash the root is inert, and an alert rendered there is never
-      // announced.
-      if (!live) return
-      abandonSplash()
-      setListProblem(describeStartFailure(error))
-    })
+    void listAllBoards(repository, identity !== null).then(
+      (found) => {
+        /*
+         * The owner keys ride along, cached per board.
+         *
+         * This list is the only place they are handed out, and the board itself
+         * needs one on the socket so its owner is not asked for the password on
+         * their own board. Writing them here means the ordinary route — open a
+         * board from your list — costs no extra round trip; `recoverOwnerKey`
+         * covers arriving by a deep link on a machine that never saw this page.
+         */
+        for (const board of found) {
+          if (board.ownerKey !== null) rememberOwnerKey(board.boardId, board.ownerKey)
+        }
+        if (!live) return
+        setListing({ boards: found, readAt: Date.now() })
+        // A read that works replaces any that failed before it.
+        setListProblem(null)
+      },
+      (error: unknown) => {
+        // Said, rather than "Looking for your boards…" for as long as the tab
+        // stays open — and said NOW, not after the splash's hold: under the
+        // splash the root is inert, and an alert rendered there is never
+        // announced.
+        if (!live) return
+        abandonSplash()
+        setListProblem(describeStartFailure(error))
+      },
+    )
     return () => {
       live = false
     }
@@ -175,9 +178,7 @@ export function Home({ repository }: { readonly repository: BoardRepository }) {
       ? // Into the workspace being shown, so a board lands where you were
         // looking. `undefined` for "everything" means the person's own, which
         // is what the database falls back to.
-        createOwnedBoard(repository, undefined, space ?? undefined).then(
-          (board) => board.editLink,
-        )
+        createOwnedBoard(repository, undefined, space ?? undefined).then((board) => board.editLink)
       : createLocalBoard(repository).then((boardId) => boardHref(boardId, false))
 
     void created.then(
@@ -208,8 +209,7 @@ export function Home({ repository }: { readonly repository: BoardRepository }) {
    * browser. Offered for moving, once, and only to somebody signed in — there
    * is nowhere to move them to otherwise.
    */
-  const strays =
-    identity === null ? [] : (listing?.boards ?? []).filter((board) => !board.shared)
+  const strays = identity === null ? [] : (listing?.boards ?? []).filter((board) => !board.shared)
 
   /*
    * A section with nothing in it is not an empty state, it is a gap.
@@ -247,19 +247,18 @@ export function Home({ repository }: { readonly repository: BoardRepository }) {
             {/* Only worth showing to somebody who has an account to be told. */}
             {identity !== null && <Mentions />}
           </div>
-
         </header>
 
         <div className="of-home__body">
           {/*
-            * OUTSIDE the board list, deliberately.
-            *
-            * An invitation is not about your boards, and somebody following
-            * one while signed out has none — which collapses the whole boards
-            * section and took this notice with it. The test that caught it
-            * passed in isolation and failed under load: the assertion had been
-            * winning a race against the list finishing loading.
-            */}
+           * OUTSIDE the board list, deliberately.
+           *
+           * An invitation is not about your boards, and somebody following
+           * one while signed out has none — which collapses the whole boards
+           * section and took this notice with it. The test that caught it
+           * passed in isolation and failed under load: the assertion had been
+           * winning a race against the list finishing loading.
+           */}
           {invitation !== null && identity === null && (
             <p className="of-home__note" data-testid="workspace-invited-signedout">
               You have been invited to a workspace. Sign in and it will be added to your list.
@@ -273,84 +272,82 @@ export function Home({ repository }: { readonly repository: BoardRepository }) {
           )}
 
           {showBoards && (
-          <section className="of-home__boards" aria-labelledby="of-home-boards">
-            <h2 className="of-home__heading" id="of-home-boards">
-              your boards
-            </h2>
+            <section className="of-home__boards" aria-labelledby="of-home-boards">
+              <h2 className="of-home__heading" id="of-home-boards">
+                your boards
+              </h2>
 
-            <WorkspaceBar
-              workspaces={spaces.workspaces}
-              selected={space}
-              onSelect={(id) => {
-                setSpace(id)
-                // The last workspace's link has nothing to do with this one.
-                setInvite(null)
-              }}
-              onCreate={(name) => {
-                void spaces.create(name).then((id) => {
-                  if (id !== null) setSpace(id)
-                })
-              }}
-              onShare={(id) => {
-                void spaces.share(id).then((keys) => {
-                  if (keys === null) return
-                  setInvite(
-                    `${window.location.origin}/?workspace=${id}&wk=${keys.editorKey}`,
-                  )
-                })
-              }}
-              invite={invite}
-              busy={starting}
-            />
+              <WorkspaceBar
+                workspaces={spaces.workspaces}
+                selected={space}
+                onSelect={(id) => {
+                  setSpace(id)
+                  // The last workspace's link has nothing to do with this one.
+                  setInvite(null)
+                }}
+                onCreate={(name) => {
+                  void spaces.create(name).then((id) => {
+                    if (id !== null) setSpace(id)
+                  })
+                }}
+                onShare={(id) => {
+                  void spaces.share(id).then((keys) => {
+                    if (keys === null) return
+                    setInvite(`${window.location.origin}/?workspace=${id}&wk=${keys.editorKey}`)
+                  })
+                }}
+                invite={invite}
+                busy={starting}
+              />
 
-            {listProblem !== null ? (
-              <p className="of-home__row-problem" role="alert" data-testid="home-list-problem">
-                Your boards could not be listed. {listProblem} Nothing on this device was changed.
-              </p>
-            ) : listing === null ? (
-              <p className="of-home__note">Looking for your boards…</p>
-            ) : shown.length === 0 ? (
-              <p className="of-home__note" data-testid="home-empty">
-                {/* An empty list says what to do next, not only that it is empty. */}
-                {canStart ? 'Nothing here yet. Start a board below.' : 'Nothing here yet.'}
-              </p>
-            ) : (
-              <ul className="of-home__list" data-testid="home-boards">
-                {shown.map((board, index) => (
-                  <BoardRow
-                    key={board.boardId}
-                    board={board}
-                    index={index}
-                    readAt={listing.readAt}
-                    repository={repository}
-                    onChanged={refresh}
-                  />
-                ))}
-              </ul>
-            )}
+              {listProblem !== null ? (
+                <p className="of-home__row-problem" role="alert" data-testid="home-list-problem">
+                  Your boards could not be listed. {listProblem} Nothing on this device was changed.
+                </p>
+              ) : listing === null ? (
+                <p className="of-home__note">Looking for your boards…</p>
+              ) : shown.length === 0 ? (
+                <p className="of-home__note" data-testid="home-empty">
+                  {/* An empty list says what to do next, not only that it is empty. */}
+                  {canStart ? 'Nothing here yet. Start a board below.' : 'Nothing here yet.'}
+                </p>
+              ) : (
+                <ul className="of-home__list" data-testid="home-boards">
+                  {shown.map((board, index) => (
+                    <BoardRow
+                      key={board.boardId}
+                      board={board}
+                      index={index}
+                      readAt={listing.readAt}
+                      repository={repository}
+                      onChanged={refresh}
+                    />
+                  ))}
+                </ul>
+              )}
 
-            {strays.length > 0 && (
-              <ClaimLocalBoards boards={strays} repository={repository} onChanged={refresh} />
-            )}
+              {strays.length > 0 && (
+                <ClaimLocalBoards boards={strays} repository={repository} onChanged={refresh} />
+              )}
 
-            {canStart && (
-              <button
-                type="button"
-                className="of-home__start"
-                data-testid="home-start"
-                disabled={starting}
-                onClick={start}
-              >
-                {starting ? 'Starting…' : 'Start a board'}
-              </button>
-            )}
+              {canStart && (
+                <button
+                  type="button"
+                  className="of-home__start"
+                  data-testid="home-start"
+                  disabled={starting}
+                  onClick={start}
+                >
+                  {starting ? 'Starting…' : 'Start a board'}
+                </button>
+              )}
 
-            {startError !== null && (
-              <p className="of-home__row-problem" role="alert" data-testid="home-start-error">
-                {startError}
-              </p>
-            )}
-          </section>
+              {startError !== null && (
+                <p className="of-home__row-problem" role="alert" data-testid="home-start-error">
+                  {startError}
+                </p>
+              )}
+            </section>
           )}
 
           {ACCOUNTS_ENABLED && identity === null && (
@@ -359,10 +356,10 @@ export function Home({ repository }: { readonly repository: BoardRepository }) {
                 sign in
               </h2>
               {/*
-                * The one thing the door must not imply: that somebody holding a
-                * link needs an account to open it. The contract promised this
-                * line, and it had gone.
-                */}
+               * The one thing the door must not imply: that somebody holding a
+               * link needs an account to open it. The contract promised this
+               * line, and it had gone.
+               */}
               <p className="of-home__note">A link somebody sends you opens without an account.</p>
               <AccountForm
                 onDone={() => {
@@ -376,14 +373,14 @@ export function Home({ repository }: { readonly repository: BoardRepository }) {
       </div>
 
       {/*
-        * The front door's chrome layer.
-        *
-        * The board's lives in `Canvas.tsx`, and the two screens are separate
-        * render roots with no component in common — so a surface opened from
-        * here had nothing to portal into and rendered nothing at all. One per
-        * screen, never two at once, which is what makes the layer's
-        * `querySelector` unambiguous.
-        */}
+       * The front door's chrome layer.
+       *
+       * The board's lives in `Canvas.tsx`, and the two screens are separate
+       * render roots with no component in common — so a surface opened from
+       * here had nothing to portal into and rendered nothing at all. One per
+       * screen, never two at once, which is what makes the layer's
+       * `querySelector` unambiguous.
+       */}
       <div className="of-chrome-layer" data-chrome-layer />
     </main>
   )

@@ -71,7 +71,9 @@ async function addNote(page: Page, text: string, color: string, at = 100): Promi
     ({ text: body, color: hue, x }) => {
       const result = (window as unknown as DebugWindow).__openframe.runtime.dispatcher.dispatch({
         kind: 'CreateObjects',
-        objects: [{ type: 'sticky', x, y: 100, data: { text: [{ text: body }] }, style: { color: hue } }],
+        objects: [
+          { type: 'sticky', x, y: 100, data: { text: [{ text: body }] }, style: { color: hue } },
+        ],
       })
       if (!result.ok) throw new Error(result.error?.message ?? 'the command was refused')
     },
@@ -157,7 +159,9 @@ test('undo takes back your own change, not the last one made', async ({ browser 
   await addNote(bob, 'from bob', 'green')
   await expect.poll(() => colours(alice)).toEqual(['blue', 'green'])
 
-  await alice.evaluate(() => (window as unknown as DebugWindow).__openframe.runtime.dispatcher.undo())
+  await alice.evaluate(() =>
+    (window as unknown as DebugWindow).__openframe.runtime.dispatcher.undo(),
+  )
 
   // Alice's own note is gone. Bob's — the more recent change — is untouched.
   await expect.poll(() => colours(alice)).toEqual(['green'])
@@ -444,7 +448,15 @@ test.describe('two links', () => {
     const refused = await viewer.evaluate(() => {
       const result = (window as unknown as DebugWindow).__openframe.runtime.dispatcher.dispatch({
         kind: 'CreateObjects',
-        objects: [{ type: 'sticky', x: 300, y: 100, data: { text: [{ text: 'nope' }] }, style: { color: 'red' } }],
+        objects: [
+          {
+            type: 'sticky',
+            x: 300,
+            y: 100,
+            data: { text: [{ text: 'nope' }] },
+            style: { color: 'red' },
+          },
+        ],
       })
       return result.ok
     })
@@ -604,9 +616,7 @@ test('an offline edit made after a reload still reaches the room', async ({ brow
  * what proves it was done without breaking rule 4. A version of this that
  * wrote during the drag would pass the first half and fail the second.
  */
-test('a note slides while somebody drags it, without the document moving', async ({
-  browser,
-}) => {
+test('a note slides while somebody drags it, without the document moving', async ({ browser }) => {
   const room = newRoomId()
   const alice = await join(browser, room)
   const bob = await join(browser, room)
@@ -615,16 +625,14 @@ test('a note slides while somebody drags it, without the document moving', async
   await expect.poll(() => colours(bob)).toEqual(['blue'])
 
   const noteFor = (page: Page): Locator => page.locator('[data-object-id]').first()
-  const drawnX = async (page: Page): Promise<number> =>
-    (await noteFor(page).boundingBox())?.x ?? -1
+  const drawnX = async (page: Page): Promise<number> => (await noteFor(page).boundingBox())?.x ?? -1
 
   // Where the DOCUMENT has it, as opposed to where it is drawn. The two part
   // company for exactly as long as somebody is holding it.
   const committedX = (page: Page): Promise<number> =>
     page.evaluate(() => {
-      const objects = (
-        window as unknown as DebugWindow
-      ).__openframe.runtime.store.getDocument().objects
+      const objects = (window as unknown as DebugWindow).__openframe.runtime.store.getDocument()
+        .objects
       for (const object of objects.values()) return object.frame.x
       return -1
     })
