@@ -25,6 +25,12 @@ jobs:
 
       - run: pnpm install --frozen-lockfile
 
+      # First because it is the cheapest, and the steps below are `pnpm verify`
+      # in the same order: a job that checked less than the local command
+      # would pass a push the command refuses.
+      - name: Format
+        run: pnpm format:check
+
       - name: Typecheck
         run: pnpm typecheck
 
@@ -38,6 +44,12 @@ jobs:
 
       - name: Unit and integration tests
         run: pnpm test
+
+      # Generates a small board through the fixture generator, so a change to
+      # the document shape that breaks `pnpm bench:fixtures` fails here rather
+      # than the next time somebody measures.
+      - name: Benchmark fixture smoke
+        run: pnpm bench:smoke
 
       - name: Build
         run: pnpm build

@@ -10,7 +10,7 @@ Durable rules only. Product context lives in [`docs/`](docs/README.md); start at
 ```bash
 pnpm install
 pnpm dev          # http://localhost:5173
-pnpm verify       # typecheck + lint + depcruise + test + build  ← run before every commit
+pnpm verify       # format + typecheck + lint + depcruise + test + bench smoke + build  ← run before every commit
 pnpm test         # unit + integration (~1s)
 pnpm test:e2e     # Playwright; set OPENFRAME_CHROMIUM_PATH if the sandbox ships its own Chromium
 pnpm bench:fixtures   # generate 100/1k/5k/10k boards into apps/web/public/bench/
