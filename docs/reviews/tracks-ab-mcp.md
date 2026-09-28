@@ -266,3 +266,28 @@ cover:
   - **Not covered:** there is no golden for the new surfaces, because they
     exist only with a live room holding log entries, and goldens are
     local-only.
+- **A-6, the carried-over items:**
+  - **Connectors now follow every change to their ends.** Before, a connector
+    re-rendered on a checksum, `x + y + width`. Now each notification bumps a
+    counter, so a note made taller or turned moves the line.
+  - **A line joined to a group follows the group's members.** A group's bounds
+    come from its members, so `registry.renderDependenciesOf` adds the members
+    of any end whose bounds are its children's. A frame end does not add its
+    contents. `e2e/connector-follows.spec.ts` covers both, and both tests
+    failed before the change.
+  - **Paste and a move's snap box use each object's real bounds.** They read
+    `boundsOf`, not `.frame`, and skip types drawn from their ends. A selected
+    connector no longer pulls the box toward (0,0).
+  - **A paste of any size is safe.** `boundsOfAll` is one loop, so it cannot
+    overflow the stack the way `Math.min(...spread)` could.
+  - **Resize and rotate still work from frames, on purpose.** They scale and
+    turn frames, not drawn extents.
+  - **Asset healing is kept off the person's undo history** with `skipUndo`,
+    through `publishRewrite` in `heal-assets.ts`. Before, the first Cmd+Z
+    unpublished an image for everyone.
+  - **Rule 5 is scanned in the web app** (`src/registry-rule.test.ts`).
+    - It flags a `switch` on `.type`, and any comparison of `.type` with a type
+      name. The names are taken from the registry. Views are exempt.
+    - It failed on `ObjectView`'s `object.type === 'connector'`. That line now
+      calls `registry.drawnFromEnds(object)`, which checks whether the type
+      declares `endpoints`.

@@ -82,9 +82,11 @@ performance simultaneously.
 
 ### 5. Object behaviour lives in the registry, never in `switch (object.type)`
 
-`switch (object.type)` outside the registry fails the build. If behaviour varies
-by type, add it to `ObjectTypeDefinition` (pure) or `ObjectViewDefinition`
-(React) — never to a caller.
+`switch (object.type)` outside the registry fails the build, and so does
+comparing `.type` against a registered type name anywhere in the web app outside
+`views/` (`apps/web/src/registry-rule.test.ts`, which takes the names from the
+registry). If behaviour varies by type, add it to `ObjectTypeDefinition` (pure)
+or `ObjectViewDefinition` (React) — never to a caller.
 
 ### 6. Migrations never import current domain types
 

@@ -215,11 +215,12 @@ function ObjectViewInner({ id, views }: Props) {
       ? shown
       : { ...shown, width: shown.width + growWidth, height: shown.height + growHeight }
   /*
-   * A connector's geometry is its resolved endpoints, in absolute world
-   * coordinates — it has no frame to be positioned by. Anchoring its wrapper at
-   * the origin lets the view draw where it actually belongs.
+   * A type drawn from its ends (a connector) has its geometry in resolved
+   * endpoints, in absolute world coordinates — no frame to be positioned by.
+   * Anchoring its wrapper at the origin lets the view draw where it actually
+   * belongs. Asked of the registry, so the next such type is placed right too.
    */
-  const selfPositioned = object.type === 'connector'
+  const selfPositioned = runtime.registry.drawnFromEnds(object)
   /*
    * A selected object is lifted above its unselected siblings so the selection
    * reads clearly — but a CONTAINER lifted above the board is lifted above its
