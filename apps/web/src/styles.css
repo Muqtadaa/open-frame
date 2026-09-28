@@ -1102,6 +1102,15 @@ body {
 }
 
 /*
+ * A tool's options picker is the tool's own (declared on its view); this only
+ * marks where the rail's menu ends, for dismissal, and takes no part in the
+ * layout the surface gives it.
+ */
+.of-rail__picker {
+  display: contents;
+}
+
+/*
  * A tool's options, as a strip down its OUTER edge, in the rail's padding.
  *
  * It was a 16-pixel chevron inside the tool's own corner: too small to aim at,

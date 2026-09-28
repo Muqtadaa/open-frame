@@ -1,70 +1,33 @@
-import { SHAPE_KINDS, screenToWorld, type ShapeKind } from '@openframe/core'
-import { Fragment, useEffect, useRef, useState } from 'react'
+import { screenToWorld } from '@openframe/core'
+import { Fragment, useEffect, useRef, useState, type ReactNode } from 'react'
 
 import { AnchoredSurface } from '../controls/AnchoredSurface.js'
 import { useImageImport } from '../hooks/use-image-import.js'
 import { useScrollEdges } from '../hooks/use-scroll-edges.js'
-import { TableSizePicker } from './TableSizePicker.js'
-import { useInteractionStore, type Tool } from '../interaction/interaction-store.js'
+import { useInteractionStore } from '../interaction/interaction-store.js'
+import { useOpenFrame } from '../runtime/context.js'
+import { optionsOf, type ChromeTool, type Tool } from '../scene/tools.js'
+import type { ObjectTool } from '../views/registry.js'
 import { ALLOWED_IMAGE_TYPES } from '../runtime/asset-validation.js'
-import {
-  CodeIcon,
-  CommentIcon,
-  ConnectorIcon,
-  CursorIcon,
-  DisclosureIcon,
-  FrameIcon,
-  HandIcon,
-  ImageIcon,
-  ShapeIcon,
-  StickyIcon,
-  TableIcon,
-  TextIcon,
-} from '../controls/icons.js'
+import { CommentIcon, CursorIcon, DisclosureIcon, HandIcon, ImageIcon } from '../controls/icons.js'
 
 interface ToolSpec {
   readonly id: Tool
   readonly label: string
   readonly shortcut: string
+  readonly icon: ReactNode
+  /** The type's own tool, when it is one: its options picker hangs off it. */
+  readonly declared?: ObjectTool
+  /** What that tool has chosen now. */
+  readonly options?: unknown
 }
 
-/**
- * The rail in three runs, with a rule between each: getting around the board,
- * making things on it, and annotating what is there. One run of ten with a
- * single rule setting Image apart read as a list rather than a set.
- *
- * `image` stands for the one control that is not a mode (below).
- */
-const GROUPS: readonly {
-  readonly label: string
-  readonly items: readonly (ToolSpec | 'image')[]
-}[] = [
-  {
-    label: 'Navigate',
-    items: [
-      { id: 'select', label: 'Select', shortcut: 'V' },
-      { id: 'pan', label: 'Hand', shortcut: 'H' },
-    ],
-  },
-  {
-    label: 'Make',
-    items: [
-      { id: 'sticky', label: 'Sticky', shortcut: 'S' },
-      { id: 'text', label: 'Text', shortcut: 'T' },
-      { id: 'shape', label: 'Shape', shortcut: 'U' },
-      { id: 'frame', label: 'Frame', shortcut: 'F' },
-      { id: 'connector', label: 'Connect', shortcut: 'C' },
-      { id: 'table', label: 'Table', shortcut: 'G' },
-      { id: 'code', label: 'Code', shortcut: 'K' },
-      'image',
-    ],
-  },
-  // Not a thing you put on the page, but a thing you put ON what is on the
-  // page — and it belongs with the other modes rather than hidden in a menu,
-  // because a comment you cannot find a way to leave is a comment nobody
-  // leaves.
-  { label: 'Annotate', items: [{ id: 'comment', label: 'Comment', shortcut: 'M' }] },
-]
+/** The chrome's own modes, which are not a type and so not the registry's. */
+const CHROME: Readonly<Record<ChromeTool, ToolSpec>> = {
+  select: { id: 'select', label: 'Select', shortcut: 'V', icon: <CursorIcon /> },
+  pan: { id: 'pan', label: 'Hand', shortcut: 'H', icon: <HandIcon /> },
+  comment: { id: 'comment', label: 'Comment', shortcut: 'M', icon: <CommentIcon /> },
+}
 
 /**
  * The margin gutter: what you can put ON the page, and nothing else.
@@ -80,9 +43,11 @@ const GROUPS: readonly {
  * is short enough to read as a set.
  */
 export function Toolbar() {
+  const { views } = useOpenFrame()
   const tool = useInteractionStore((state) => state.tool)
-  const shapeKind = useInteractionStore((state) => state.shapeKind)
+  const toolOptions = useInteractionStore((state) => state.toolOptions)
   const setTool = useInteractionStore((state) => state.setTool)
+  const setToolOptions = useInteractionStore((state) => state.setToolOptions)
   /*
    * ONE menu at a time, as one piece of state rather than two booleans.
    *
@@ -91,7 +56,8 @@ export function Toolbar() {
    * disclosure and then the other, which is exactly the sort of thing nobody
    * tries until a user does.
    */
-  const [openMenu, setOpenMenu] = useState<'shape' | 'table' | null>(null)
+  // The TYPE whose options are open.
+  const [openMenu, setOpenMenu] = useState<string | null>(null)
   // Says which end has more tools, on a window too short for all of them.
   const rail = useRef<HTMLDivElement>(null)
   useScrollEdges(rail)
@@ -105,15 +71,13 @@ export function Toolbar() {
    */
   const [anchor, setAnchor] = useState<DOMRect | null>(null)
   const canvasSize = useInteractionStore((state) => state.canvasSize)
-  const shapesOpen = openMenu === 'shape'
-  const sizeOpen = openMenu === 'table'
   /*
    * Where focus goes back to when a menu closes without a choice: the control
    * that opened it, so a keyboard user is not dropped at the top of the page.
    */
   const opener = useRef<HTMLElement | null>(null)
   const flyout = useRef<HTMLDivElement>(null)
-  const toggle = (menu: 'shape' | 'table', from: HTMLElement): void => {
+  const toggle = (menu: string, from: HTMLElement): void => {
     opener.current = from
     setAnchor(from.getBoundingClientRect())
     setOpenMenu((open) => (open === menu ? null : menu))
@@ -153,171 +117,129 @@ export function Toolbar() {
       window.removeEventListener('pointerdown', onPress, true)
     }
   }, [openMenu])
-  const tableSize = useInteractionStore((state) => state.tableSize)
-  const setTableSize = useInteractionStore((state) => state.setTableSize)
   const importImages = useImageImport()
   const fileInput = useRef<HTMLInputElement>(null)
 
-  const icon = (id: Tool) => {
-    switch (id) {
-      case 'select':
-        return <CursorIcon />
-      case 'pan':
-        return <HandIcon />
-      case 'sticky':
-        return <StickyIcon />
-      case 'text':
-        return <TextIcon />
-      case 'shape':
-        return <ShapeIcon kind={shapeKind} />
-      case 'frame':
-        return <FrameIcon />
-      case 'connector':
-        return <ConnectorIcon />
-      case 'table':
-        return <TableIcon />
-      case 'code':
-        return <CodeIcon />
-      case 'comment':
-        return <CommentIcon />
+  /*
+   * The rail in three runs, with a rule between each: getting around the
+   * board, making things on it, and annotating what is there. One run of ten
+   * with a single rule setting Image apart read as a list rather than a set.
+   *
+   * What can be made is whatever declares a tool on its view, in the order
+   * the tools say; `image` stands for the one control that is not a mode
+   * (below). Annotating is not a thing you put on the page but a thing you put
+   * ON what is there — and it belongs with the other modes rather than hidden
+   * in a menu, because a comment you cannot find a way to leave is a comment
+   * nobody leaves.
+   */
+  const made: ToolSpec[] = views.tools().map((declared) => {
+    const options = optionsOf(declared, toolOptions)
+    const { Icon } = declared.tool
+    return {
+      id: declared.type,
+      label: declared.tool.label,
+      shortcut: (declared.tool.keys[0] ?? declared.tool.cycleKey ?? '').toUpperCase(),
+      icon: <Icon options={options} />,
+      declared: declared.tool,
+      options,
     }
-  }
+  })
+  const groups: readonly {
+    readonly label: string
+    readonly items: readonly (ToolSpec | 'image')[]
+  }[] = [
+    { label: 'Navigate', items: [CHROME.select, CHROME.pan] },
+    { label: 'Make', items: [...made, 'image'] },
+    { label: 'Annotate', items: [CHROME.comment] },
+  ]
 
-  const slot = (spec: ToolSpec) => (
-    <div key={spec.id} className="of-rail__slot">
-      <button
-        type="button"
-        className={`of-tool${tool === spec.id ? ' of-tool--active' : ''}`}
-        aria-pressed={tool === spec.id}
-        aria-label={spec.label}
-        // The tip that shows the key is hidden from assistive tech, so
-        // without this the letter keys were never announced.
-        aria-keyshortcuts={spec.shortcut}
-        data-testid={`tool-${spec.id}`}
-        onClick={(event) => {
-          /*
-           * Pressing an ARMED Shape or Table opens its options. The second
-           * press on Shape used to cycle the kind and on Table open the
-           * picker — one gesture, two meanings — and cycling silently
-           * changed what the next click would make. U still cycles.
-           */
-          if ((spec.id === 'shape' || spec.id === 'table') && tool === spec.id) {
-            toggle(spec.id, event.currentTarget)
-            return
-          }
-          setOpenMenu(null)
-          setTool(spec.id)
-        }}
-      >
-        {icon(spec.id)}
-        <span className="of-tool__tip" aria-hidden="true">
-          {spec.label}
-          <kbd>{spec.shortcut}</kbd>
-        </span>
-      </button>
-
-      {spec.id === 'shape' && (
+  const slot = (spec: ToolSpec) => {
+    const picker = spec.declared?.options
+    const open = picker !== undefined && openMenu === spec.id
+    return (
+      <div key={spec.id} className="of-rail__slot">
         <button
           type="button"
-          className="of-rail__more"
-          aria-label="Choose shape"
-          aria-haspopup="menu"
-          aria-expanded={shapesOpen}
-          data-tip="Choose shape"
-          data-testid="shape-menu"
+          className={`of-tool${tool === spec.id ? ' of-tool--active' : ''}`}
+          aria-pressed={tool === spec.id}
+          aria-label={spec.label}
+          // The tip that shows the key is hidden from assistive tech, so
+          // without this the letter keys were never announced.
+          aria-keyshortcuts={spec.shortcut}
+          data-testid={`tool-${spec.id}`}
           onClick={(event) => {
-            toggle('shape', event.currentTarget)
+            /*
+             * Pressing an ARMED tool that has options opens them. The second
+             * press on Shape used to cycle the kind and on Table open the
+             * picker — one gesture, two meanings — and cycling silently
+             * changed what the next click would make. U still cycles.
+             */
+            if (picker !== undefined && tool === spec.id) {
+              toggle(spec.id, event.currentTarget)
+              return
+            }
+            setOpenMenu(null)
+            setTool(spec.id)
           }}
         >
-          <DisclosureIcon />
+          {spec.icon}
+          <span className="of-tool__tip" aria-hidden="true">
+            {spec.label}
+            <kbd>{spec.shortcut}</kbd>
+          </span>
         </button>
-      )}
 
-      {spec.id === 'table' && (
-        <button
-          type="button"
-          className="of-rail__more"
-          aria-label="Choose table size"
-          aria-haspopup="grid"
-          aria-expanded={sizeOpen}
-          data-tip="Choose table size"
-          data-testid="table-menu"
-          onClick={(event) => {
-            toggle('table', event.currentTarget)
-          }}
-        >
-          <DisclosureIcon />
-        </button>
-      )}
+        {picker !== undefined && (
+          <button
+            type="button"
+            className="of-rail__more"
+            aria-label={picker.label}
+            aria-haspopup={picker.popup}
+            aria-expanded={open}
+            data-tip={picker.label}
+            data-testid={picker.testIds.disclosure}
+            onClick={(event) => {
+              toggle(spec.id, event.currentTarget)
+            }}
+          >
+            <DisclosureIcon />
+          </button>
+        )}
 
-      {/*
-       * On the SAME surface every other floating thing uses, which places
-       * it and clamps it inside the window. It used to pin itself to the
-       * rail slot with `position: absolute; top: 0`, so on a 420-pixel
-       * window it ran 48 pixels off the bottom of the screen, where
-       * nothing could reach it. Nothing about being in the rail rather
-       * than on the board made that a different problem.
-       */}
-      {spec.id === 'table' && sizeOpen && (
-        <AnchoredSurface
-          anchor={anchor}
-          surface={canvasSize}
-          prefer={['right', 'left']}
-          testId="table-size-flyout"
-          layer="menu"
-        >
-          <div ref={flyout} className="of-flyout of-flyout--wide">
-            <TableSizePicker
-              size={tableSize}
-              onChoose={(size) => {
-                // Selecting the tool as well as the size: choosing 4x6 is
-                // saying you are about to place one.
-                setTableSize(size)
-                close(false)
-              }}
-            />
-          </div>
-        </AnchoredSurface>
-      )}
-
-      {spec.id === 'shape' && shapesOpen && (
-        <AnchoredSurface
-          anchor={anchor}
-          surface={canvasSize}
-          prefer={['right', 'left']}
-          testId="shape-flyout"
-          layer="menu"
-        >
-          <ShapeMenu refer={flyout}>
-            {SHAPE_KINDS.map((kind: ShapeKind) => (
-              <button
-                key={kind}
-                type="button"
-                role="menuitemradio"
-                tabIndex={shapeKind === kind ? 0 : -1}
-                aria-checked={shapeKind === kind}
-                className={`of-flyout__item${shapeKind === kind ? ' of-flyout__item--active' : ''}`}
-                data-testid={`shape-${kind}`}
-                onClick={() => {
-                  // Cycle until it lands: keeps a single source of truth for
-                  // the variant instead of a second setter to keep in sync.
-                  let guard = SHAPE_KINDS.length
-                  useInteractionStore.getState().setTool('shape')
-                  while (useInteractionStore.getState().shapeKind !== kind && guard-- > 0) {
-                    useInteractionStore.getState().cycleShape()
-                  }
+        {/*
+         * On the SAME surface every other floating thing uses, which places
+         * it and clamps it inside the window. It used to pin itself to the
+         * rail slot with `position: absolute; top: 0`, so on a 420-pixel
+         * window it ran 48 pixels off the bottom of the screen, where
+         * nothing could reach it. Nothing about being in the rail rather
+         * than on the board made that a different problem.
+         */}
+        {picker !== undefined && open && (
+          <AnchoredSurface
+            anchor={anchor}
+            surface={canvasSize}
+            prefer={['right', 'left']}
+            testId={picker.testIds.surface}
+            layer="menu"
+          >
+            {/* Only there to say what counts as inside, for the dismissal. */}
+            <div ref={flyout} className="of-rail__picker">
+              <picker.Picker
+                options={spec.options}
+                choose={(options) => {
+                  // Arming the tool as well: choosing a 4x6 table or an
+                  // ellipse is saying you are about to place one.
+                  setToolOptions(spec.id, options)
+                  setTool(spec.id)
                   close(false)
                 }}
-              >
-                <ShapeIcon kind={kind} />
-                <span>{kind}</span>
-              </button>
-            ))}
-          </ShapeMenu>
-        </AnchoredSurface>
-      )}
-    </div>
-  )
+              />
+            </div>
+          </AnchoredSurface>
+        )}
+      </div>
+    )
+  }
 
   /*
    * A button rather than a tool mode. Every other tool places something the
@@ -371,7 +293,7 @@ export function Toolbar() {
       aria-label="Board tools"
       aria-orientation="vertical"
     >
-      {GROUPS.map((group, index) => (
+      {groups.map((group, index) => (
         <Fragment key={group.label}>
           {index > 0 && <div className="of-rail__rule" role="separator" />}
           <div className="of-rail__group" role="group" aria-label={group.label}>
@@ -379,54 +301,6 @@ export function Toolbar() {
           </div>
         </Fragment>
       ))}
-    </div>
-  )
-}
-
-/**
- * The shape list as a menu a keyboard can walk: it takes focus on the checked
- * kind when it opens, and the arrows move through it and wrap, with Home and
- * End for the ends. The arrows stop here — on the board they nudge the
- * selection.
- */
-function ShapeMenu({
-  refer,
-  children,
-}: {
-  readonly refer: React.RefObject<HTMLDivElement | null>
-  readonly children: React.ReactNode
-}) {
-  useEffect(() => {
-    refer.current?.querySelector<HTMLElement>('[role="menuitemradio"][tabindex="0"]')?.focus()
-  }, [refer])
-
-  const step = (event: React.KeyboardEvent<HTMLDivElement>): void => {
-    const items = [...event.currentTarget.querySelectorAll<HTMLElement>('[role="menuitemradio"]')]
-    const at = items.indexOf(document.activeElement as HTMLElement)
-    const last = items.length - 1
-    const next =
-      event.key === 'ArrowDown' || event.key === 'ArrowRight'
-        ? at >= last
-          ? 0
-          : at + 1
-        : event.key === 'ArrowUp' || event.key === 'ArrowLeft'
-          ? at <= 0
-            ? last
-            : at - 1
-          : event.key === 'Home'
-            ? 0
-            : event.key === 'End'
-              ? last
-              : null
-    if (next === null) return
-    event.preventDefault()
-    event.stopPropagation()
-    items[next]?.focus()
-  }
-
-  return (
-    <div ref={refer} className="of-flyout" role="menu" aria-label="Shapes" onKeyDown={step}>
-      {children}
     </div>
   )
 }

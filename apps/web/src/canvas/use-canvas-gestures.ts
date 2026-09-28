@@ -30,6 +30,7 @@ import {
 import { useOpenFrame } from '../runtime/context.js'
 import { pinFraction } from '../scene/comment-pin.js'
 import { pinchViewport, type PinchStart } from '../scene/pinch.js'
+import { makeFor } from '../scene/tools.js'
 import { useCommands } from '../hooks/use-commands.js'
 import { useInteractionStore } from '../interaction/interaction-store.js'
 import {
@@ -494,7 +495,7 @@ function objectChromeUnderPointer(target: EventTarget | null): ObjectId | null {
  * Nothing here writes to the document except on pointer-up.
  */
 export function useCanvasGestures(containerRef: RefObject<HTMLElement | null>) {
-  const { runtime } = useOpenFrame()
+  const { runtime, views } = useOpenFrame()
   const commands = useCommands()
   const gesture = useRef<Gesture | null>(null)
 
@@ -701,7 +702,10 @@ export function useCanvasGestures(containerRef: RefObject<HTMLElement | null>) {
             intent.from === null
               ? ({ kind: 'point', x: intent.at.x, y: intent.at.y } as const)
               : ({ kind: 'object', objectId: intent.from, anchor: { kind: 'auto' } } as const)
-          store.beginConnect(from, intent.at)
+          store.beginConnect(from, intent.at, {
+            type: intent.objectType,
+            ...(intent.data === undefined ? {} : { data: intent.data }),
+          })
           return 'connect'
         }
       }
@@ -920,8 +924,7 @@ export function useCanvasGestures(containerRef: RefObject<HTMLElement | null>) {
         shiftKey: event.shiftKey,
         button: event.button,
         spaceHeld: spaceHeld.current,
-        shapeKind: store.shapeKind,
-        tableSize: store.tableSize,
+        make: makeFor(store.tool, views.tools(), store.toolOptions),
         /*
          * Only what a press could actually move: the object under the pointer
          * and whatever is already selected. Walking the whole document to
@@ -988,7 +991,7 @@ export function useCanvasGestures(containerRef: RefObject<HTMLElement | null>) {
         }
       }
     },
-    [abandon, applyIntent, beginPinch, canvasPoint, runtime, toWorld],
+    [abandon, applyIntent, beginPinch, canvasPoint, runtime, toWorld, views],
   )
 
   const onPointerMove = useCallback(
@@ -1382,7 +1385,7 @@ export function useCanvasGestures(containerRef: RefObject<HTMLElement | null>) {
       }
 
       if (active.mode === 'connect' && store.drag.kind === 'connect') {
-        const { from, to, over } = store.drag
+        const { from, to, over, make } = store.drag
         /*
          * A NEW line answers "where does this attach" exactly as a re-dragged
          * end does, through the same function in the type. Two answers to one
@@ -1411,7 +1414,7 @@ export function useCanvasGestures(containerRef: RefObject<HTMLElement | null>) {
           target.kind === 'point' &&
           Math.hypot(target.x - from.x, target.y - from.y) < 8
         if (!trivial) {
-          const id = commands.createConnector(from, target)
+          const id = commands.createConnector(from, target, make)
           if (id !== null) {
             store.setSelection([id])
             store.setTool('select')

@@ -82,10 +82,10 @@ performance simultaneously.
 
 ### 5. Object behaviour lives in the registry, never in `switch (object.type)`
 
-`switch (object.type)` outside the registry fails the build, and so does
-comparing `.type` against a registered type name anywhere in the web app outside
-`views/` (`apps/web/src/registry-rule.test.ts`, which takes the names from the
-registry). If behaviour varies by type, add it to `ObjectTypeDefinition` (pure)
+`switch (object.type)` outside the registry fails the build. So does
+comparing `.type` or a tool against a registered type name anywhere in the web
+app outside `views/`. That check is `apps/web/src/registry-rule.test.ts`, which
+takes the names from the registry. If behaviour varies by type, add it to `ObjectTypeDefinition` (pure)
 or `ObjectViewDefinition` (React) — never to a caller.
 
 ### 6. Migrations never import current domain types
@@ -554,7 +554,10 @@ specific failure. Do not narrate what the code already says.
 1. `packages/core/src/types/<name>/schema.ts` — Zod schema and TS type
 2. `packages/core/src/types/<name>/definition.ts` — `defineObjectType({...})`
 3. Register in `packages/core/src/types/index.ts` — one line
-4. `apps/web/src/views/<Name>View.tsx` — `defineObjectView({...})`
+4. `apps/web/src/views/<Name>View.tsx` — `defineObjectView({...})`. If it is
+   made from the rail, give it a `tool` here as well: label, keys, order,
+   placement, icon and cursor. The rail, keymap, cursor and pointer read it
+   from the registry.
 5. Register in `apps/web/src/views/index.ts` — one line
 
 Nothing else should need to change. If it does, that is the bug — fix the

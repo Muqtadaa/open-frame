@@ -12,6 +12,8 @@ import type {
   Rect,
 } from '@openframe/core'
 
+import type { DeclaredTool, ToolBehaviour } from '../scene/tools.js'
+
 /**
  * The REACT half of the object type system.
  *
@@ -187,6 +189,47 @@ export interface ObjectViewDefinition {
    */
   readonly defaultAlign?: AlignToken
   readonly defaultVerticalAlign?: VAlignToken
+  /**
+   * How this type is made from the rail, when it is: the button, its key, what
+   * the pointer shows, how a press places one, and what can be chosen first.
+   *
+   * On the view rather than scattered, because a tool IS the type's — the
+   * rail, the keymap, the cursor and the pointer each kept a list of their
+   * own, and a new type with a tool meant editing all four and three more.
+   * Absent for a type nobody makes from the rail.
+   */
+  readonly tool?: ObjectTool
+}
+
+/**
+ * A type's tool: what it does (`ToolBehaviour`, which `interaction/` reads) and
+ * how it is drawn on the rail.
+ */
+export interface ObjectTool<TOptions = unknown> extends ToolBehaviour<TOptions> {
+  /** The rail's icon, which may follow the options — a shape tool shows its shape. */
+  readonly Icon: ComponentType<{ readonly options: TOptions }>
+  /**
+   * What can be chosen before placing one, opened by the disclosure beside the
+   * button or by pressing the button again while it is armed.
+   */
+  readonly options?: ToolOptionsPicker<TOptions>
+}
+
+export interface ToolOptionsPicker<TOptions> {
+  /** The disclosure's name: "Choose shape". */
+  readonly label: string
+  /** What the picker is to assistive tech. */
+  readonly popup: 'menu' | 'grid'
+  /** Test ids of the disclosure and the surface, kept as they were. */
+  readonly testIds: { readonly disclosure: string; readonly surface: string }
+  /**
+   * The picker itself. It takes focus when it opens; `choose` arms the tool
+   * with what was picked and closes it.
+   */
+  readonly Picker: ComponentType<{
+    readonly options: TOptions
+    readonly choose: (options: TOptions) => void
+  }>
 }
 
 /**
@@ -194,7 +237,7 @@ export interface ObjectViewDefinition {
  * contains the only casts on this side, for the same reason: authors keep full
  * type safety, consumers get a uniform interface.
  */
-export function defineObjectView<TData>(definition: {
+export function defineObjectView<TData, TOptions = unknown>(definition: {
   type: string
   Renderer: ComponentType<ObjectViewProps<TData>>
   InlineEditor?: ComponentType<ObjectEditorProps<TData>>
@@ -203,6 +246,7 @@ export function defineObjectView<TData>(definition: {
   defaultColor?: ColorToken
   defaultAlign?: AlignToken
   defaultVerticalAlign?: VAlignToken
+  tool?: ObjectTool<TOptions>
 }): ObjectViewDefinition {
   /*
    * Spread one optional at a time. Every member has to be listed or it is
@@ -220,6 +264,7 @@ export function defineObjectView<TData>(definition: {
     ...(definition.defaultVerticalAlign === undefined
       ? {}
       : { defaultVerticalAlign: definition.defaultVerticalAlign }),
+    ...(definition.tool === undefined ? {} : { tool: definition.tool as unknown as ObjectTool }),
     ...(definition.InlineEditor === undefined
       ? {}
       : { InlineEditor: definition.InlineEditor as ComponentType<ObjectEditorProps> }),
@@ -244,6 +289,20 @@ export class ObjectViewRegistry {
   list(): ObjectViewDefinition[] {
     return [...this.#views.values()]
   }
+
+  /**
+   * Every type that declares a tool, in rail order. Asked of the registry by
+   * the rail, the keymap, the cursor and the pointer alike, so none of them
+   * keeps a list of its own.
+   */
+  tools(): readonly (DeclaredTool & { readonly tool: ObjectTool })[] {
+    this.#tools ??= this.list()
+      .flatMap((view) => (view.tool === undefined ? [] : [{ type: view.type, tool: view.tool }]))
+      .sort((a, b) => a.tool.order - b.tool.order)
+    return this.#tools
+  }
+
+  #tools: readonly (DeclaredTool & { readonly tool: ObjectTool })[] | undefined
 }
 
 export type { AnyOpenFrameObject }

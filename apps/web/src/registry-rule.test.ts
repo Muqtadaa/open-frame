@@ -61,4 +61,31 @@ describe('the web app asks the registry what a type does', () => {
     }
     expect(violations).toEqual([])
   })
+
+  /*
+   * A tool is a type's too. The rail, the keys, the cursor and the pointer
+   * each kept a `tool === 'shape'` of their own, so a new type with a tool
+   * meant editing seven files the scan above could not see — it looks for
+   * `.type`, and a tool is compared by its own name. A type declares its
+   * tool on its view, and everything else asks for it.
+   */
+  it("never branches on a type's tool outside a view", () => {
+    const names = TYPES.map(escape).join('|')
+    const operand = '[\\w$.?]*tool[\\w$.?]*'
+    const compared = new RegExp(
+      `\\b${operand}\\s*[!=]==?\\s*['"\`](?:${names})['"\`]|['"\`](?:${names})['"\`]\\s*[!=]==?\\s*${operand}`,
+      'i',
+    )
+    const switched = new RegExp(`switch\\s*\\(\\s*${operand}\\s*\\)`, 'i')
+    const violations: string[] = []
+    for (const file of sources()) {
+      const lines = stripComments(readFileSync(file, 'utf8')).split('\n')
+      lines.forEach((line, index) => {
+        if (compared.test(line) || switched.test(line)) {
+          violations.push(`${file.slice(SRC.length + 1)}:${String(index + 1)}: ${line.trim()}`)
+        }
+      })
+    }
+    expect(violations).toEqual([])
+  })
 })

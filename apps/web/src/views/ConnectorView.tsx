@@ -11,7 +11,13 @@ import {
   strokeWidth,
   surfaceColor,
 } from '../scene/style-tokens.js'
-import { defineObjectView, type ObjectEditorProps, type ObjectViewProps } from './registry.js'
+import { ConnectorIcon } from '../controls/icons.js'
+import {
+  defineObjectView,
+  type ObjectTool,
+  type ObjectEditorProps,
+  type ObjectViewProps,
+} from './registry.js'
 import { RichTextEditor } from './RichTextEditor.js'
 import { RichTextView } from './RichTextView.js'
 
@@ -222,8 +228,21 @@ function ConnectorEditor({
   )
 }
 
+/** Drawn from whatever is under the pointer to wherever it lets go. */
+const connectorTool: ObjectTool = {
+  label: 'Connect',
+  keys: ['c'],
+  order: 50,
+  place: 'connect',
+  Icon: () => <ConnectorIcon />,
+  cursor: () => ({
+    body: 'M5.5 15.4a3.1 3.1 0 1 1 0 6.2 3.1 3.1 0 0 1 0-6.2zM18.5 2.4a3.1 3.1 0 1 1 0 6.2 3.1 3.1 0 0 1 0-6.2zM6.8 15.6 15.6 6.8l1.6 1.6-8.8 8.8z',
+  }),
+}
+
 export const connectorView = defineObjectView<ConnectorData>({
   type: 'connector',
+  tool: connectorTool,
   // Its label keeps a readable size on screen as the board zooms.
   usesZoom: true,
   defaultColor: 'gray',

@@ -1,14 +1,18 @@
-import { readFileSync } from 'node:fs'
-import { resolve } from 'node:path'
-
 import { describe, expect, it } from 'vitest'
 
 import { resolveKeyAction, type KeyContext } from './keymap.js'
 import { SHAPE_KINDS } from '@openframe/core'
 
 import { shapePath } from '../scene/shape-geometry.js'
-import { CURSOR_GEOMETRY, cursorFor, DEFAULT_INK } from './tool-cursor.js'
-import type { Tool } from './interaction-store.js'
+import { createDefaultViewRegistry } from '../views/index.js'
+import { CURSOR_GEOMETRY, cursorFor, DEFAULT_INK, markFor } from './tool-cursor.js'
+
+/** The tools the board actually offers: every one a view declares. */
+const TOOLS = createDefaultViewRegistry().tools()
+const NOTHING_CHOSEN: Readonly<Record<string, unknown>> = {}
+/** The cursor for `tool` with `chosen` options, the way the canvas asks for it. */
+const cursorOf = (tool: string, chosen = NOTHING_CHOSEN, ink = DEFAULT_INK) =>
+  cursorFor(markFor(tool, TOOLS, chosen), ink)
 
 function key(k: string, mods: Partial<KeyContext> = {}): KeyContext {
   return { key: k, metaKey: false, ctrlKey: false, shiftKey: false, altKey: false, ...mods }
@@ -22,77 +26,84 @@ describe('tool shortcuts', () => {
     ['n', 'sticky'],
     ['t', 'text'],
   ])('%s selects the %s tool', (pressed, tool) => {
-    expect(resolveKeyAction(key(pressed))).toEqual({ kind: 'tool', tool })
+    expect(resolveKeyAction(key(pressed), TOOLS)).toEqual({ kind: 'tool', tool })
   })
 
   it('is case-insensitive, so caps lock does not break the tools', () => {
-    expect(resolveKeyAction(key('V'))).toEqual({ kind: 'tool', tool: 'select' })
+    expect(resolveKeyAction(key('V'), TOOLS)).toEqual({ kind: 'tool', tool: 'select' })
   })
 
-  it('cycles shapes with U', () => {
-    expect(resolveKeyAction(key('u'))).toEqual({ kind: 'cycle-shape' })
+  it('cycles shapes with U, because the shape tool says so', () => {
+    expect(resolveKeyAction(key('u'), TOOLS)).toEqual({ kind: 'cycle-tool', type: 'shape' })
+  })
+
+  it('knows only the chrome keys when no type declares a tool', () => {
+    expect(resolveKeyAction(key('v'))).toEqual({ kind: 'tool', tool: 'select' })
+    expect(resolveKeyAction(key('s'))).toBeNull()
   })
 
   it('ignores tool keys held with a modifier, so Cmd+S is not "sticky"', () => {
-    expect(resolveKeyAction(key('s', { metaKey: true }))).toBeNull()
-    expect(resolveKeyAction(key('h', { ctrlKey: true }))).toBeNull()
-    expect(resolveKeyAction(key('t', { altKey: true }))).toBeNull()
+    expect(resolveKeyAction(key('s', { metaKey: true }), TOOLS)).toBeNull()
+    expect(resolveKeyAction(key('h', { ctrlKey: true }), TOOLS)).toBeNull()
+    expect(resolveKeyAction(key('t', { altKey: true }), TOOLS)).toBeNull()
   })
 
   /** Mod+V is paste, not the select tool — the modifier decides. */
   it('distinguishes V from Mod+V', () => {
-    expect(resolveKeyAction(key('v'))).toEqual({ kind: 'tool', tool: 'select' })
-    expect(resolveKeyAction(key('v', { metaKey: true }))).toEqual({ kind: 'paste' })
+    expect(resolveKeyAction(key('v'), TOOLS)).toEqual({ kind: 'tool', tool: 'select' })
+    expect(resolveKeyAction(key('v', { metaKey: true }), TOOLS)).toEqual({ kind: 'paste' })
   })
 })
 
 describe('editing shortcuts', () => {
   it('undoes and redoes', () => {
-    expect(resolveKeyAction(key('z', { metaKey: true }))).toEqual({ kind: 'undo' })
-    expect(resolveKeyAction(key('z', { metaKey: true, shiftKey: true }))).toEqual({ kind: 'redo' })
-    expect(resolveKeyAction(key('y', { ctrlKey: true }))).toEqual({ kind: 'redo' })
+    expect(resolveKeyAction(key('z', { metaKey: true }), TOOLS)).toEqual({ kind: 'undo' })
+    expect(resolveKeyAction(key('z', { metaKey: true, shiftKey: true }), TOOLS)).toEqual({
+      kind: 'redo',
+    })
+    expect(resolveKeyAction(key('y', { ctrlKey: true }), TOOLS)).toEqual({ kind: 'redo' })
   })
 
   it('selects all, duplicates and deletes', () => {
-    expect(resolveKeyAction(key('a', { metaKey: true }))).toEqual({ kind: 'select-all' })
-    expect(resolveKeyAction(key('d', { metaKey: true }))).toEqual({ kind: 'duplicate' })
-    expect(resolveKeyAction(key('Delete'))).toEqual({ kind: 'delete' })
-    expect(resolveKeyAction(key('Backspace'))).toEqual({ kind: 'delete' })
+    expect(resolveKeyAction(key('a', { metaKey: true }), TOOLS)).toEqual({ kind: 'select-all' })
+    expect(resolveKeyAction(key('d', { metaKey: true }), TOOLS)).toEqual({ kind: 'duplicate' })
+    expect(resolveKeyAction(key('Delete'), TOOLS)).toEqual({ kind: 'delete' })
+    expect(resolveKeyAction(key('Backspace'), TOOLS)).toEqual({ kind: 'delete' })
   })
 
   it('cuts, copies and pastes', () => {
-    expect(resolveKeyAction(key('x', { metaKey: true }))).toEqual({ kind: 'cut' })
-    expect(resolveKeyAction(key('c', { metaKey: true }))).toEqual({ kind: 'copy' })
-    expect(resolveKeyAction(key('v', { metaKey: true }))).toEqual({ kind: 'paste' })
+    expect(resolveKeyAction(key('x', { metaKey: true }), TOOLS)).toEqual({ kind: 'cut' })
+    expect(resolveKeyAction(key('c', { metaKey: true }), TOOLS)).toEqual({ kind: 'copy' })
+    expect(resolveKeyAction(key('v', { metaKey: true }), TOOLS)).toEqual({ kind: 'paste' })
   })
 
   it('reorders with bracket keys', () => {
-    expect(resolveKeyAction(key(']'))).toEqual({ kind: 'reorder', placement: 'forward' })
-    expect(resolveKeyAction(key('['))).toEqual({ kind: 'reorder', placement: 'backward' })
-    expect(resolveKeyAction(key(']', { shiftKey: true }))).toEqual({
+    expect(resolveKeyAction(key(']'), TOOLS)).toEqual({ kind: 'reorder', placement: 'forward' })
+    expect(resolveKeyAction(key('['), TOOLS)).toEqual({ kind: 'reorder', placement: 'backward' })
+    expect(resolveKeyAction(key(']', { shiftKey: true }), TOOLS)).toEqual({
       kind: 'reorder',
       placement: 'front',
     })
-    expect(resolveKeyAction(key('[', { shiftKey: true }))).toEqual({
+    expect(resolveKeyAction(key('[', { shiftKey: true }), TOOLS)).toEqual({
       kind: 'reorder',
       placement: 'back',
     })
   })
 
   it('escapes and enters editing', () => {
-    expect(resolveKeyAction(key('Escape'))).toEqual({ kind: 'deselect' })
-    expect(resolveKeyAction(key('Enter'))).toEqual({ kind: 'edit-selection' })
+    expect(resolveKeyAction(key('Escape'), TOOLS)).toEqual({ kind: 'deselect' })
+    expect(resolveKeyAction(key('Enter'), TOOLS)).toEqual({ kind: 'edit-selection' })
   })
 })
 
 describe('nudging', () => {
   it('moves one unit with an arrow', () => {
-    expect(resolveKeyAction(key('ArrowLeft'))).toEqual({ kind: 'nudge', dx: -1, dy: 0 })
-    expect(resolveKeyAction(key('ArrowDown'))).toEqual({ kind: 'nudge', dx: 0, dy: 1 })
+    expect(resolveKeyAction(key('ArrowLeft'), TOOLS)).toEqual({ kind: 'nudge', dx: -1, dy: 0 })
+    expect(resolveKeyAction(key('ArrowDown'), TOOLS)).toEqual({ kind: 'nudge', dx: 0, dy: 1 })
   })
 
   it('moves ten with shift', () => {
-    expect(resolveKeyAction(key('ArrowRight', { shiftKey: true }))).toEqual({
+    expect(resolveKeyAction(key('ArrowRight', { shiftKey: true }), TOOLS)).toEqual({
       kind: 'nudge',
       dx: 10,
       dy: 0,
@@ -116,80 +127,90 @@ describe('zoom shortcuts are claimed, not left to the browser', () => {
     ['1', 'zoom-fit'],
     ['2', 'zoom-selection'],
   ])('claims Mod+%s', (pressed, kind) => {
-    expect(resolveKeyAction(key(pressed, { metaKey: true }))).toEqual({ kind })
-    expect(resolveKeyAction(key(pressed, { ctrlKey: true }))).toEqual({ kind })
+    expect(resolveKeyAction(key(pressed, { metaKey: true }), TOOLS)).toEqual({ kind })
+    expect(resolveKeyAction(key(pressed, { ctrlKey: true }), TOOLS)).toEqual({ kind })
   })
 
   it('leaves the same keys alone without a modifier', () => {
-    expect(resolveKeyAction(key('0'))).toBeNull()
-    expect(resolveKeyAction(key('-'))).toBeNull()
+    expect(resolveKeyAction(key('0'), TOOLS)).toBeNull()
+    expect(resolveKeyAction(key('-'), TOOLS)).toBeNull()
   })
 })
 
 describe('unclaimed keys', () => {
   it('returns null so the browser keeps its own behaviour', () => {
-    expect(resolveKeyAction(key('q'))).toBeNull()
-    expect(resolveKeyAction(key('F5'))).toBeNull()
-    expect(resolveKeyAction(key('p', { metaKey: true }))).toBeNull()
+    expect(resolveKeyAction(key('q'), TOOLS)).toBeNull()
+    expect(resolveKeyAction(key('F5'), TOOLS)).toBeNull()
+    expect(resolveKeyAction(key('p', { metaKey: true }), TOOLS)).toBeNull()
   })
 })
 
 describe('grouping', () => {
   it('groups on Mod+G', () => {
-    expect(resolveKeyAction(key('g', { metaKey: true }))).toEqual({ kind: 'group' })
-    expect(resolveKeyAction(key('g', { ctrlKey: true }))).toEqual({ kind: 'group' })
+    expect(resolveKeyAction(key('g', { metaKey: true }), TOOLS)).toEqual({ kind: 'group' })
+    expect(resolveKeyAction(key('g', { ctrlKey: true }), TOOLS)).toEqual({ kind: 'group' })
   })
 
   it('ungroups on Shift+Mod+G', () => {
-    expect(resolveKeyAction(key('g', { metaKey: true, shiftKey: true }))).toEqual({
+    expect(resolveKeyAction(key('g', { metaKey: true, shiftKey: true }), TOOLS)).toEqual({
       kind: 'ungroup',
     })
   })
 
   /** A shifted press reports the uppercase key, which must not fall through. */
   it('handles the uppercase key', () => {
-    expect(resolveKeyAction(key('G', { metaKey: true, shiftKey: true }))).toEqual({
+    expect(resolveKeyAction(key('G', { metaKey: true, shiftKey: true }), TOOLS)).toEqual({
       kind: 'ungroup',
     })
   })
 
   it('leaves a bare g alone rather than grouping without a modifier', () => {
-    expect(resolveKeyAction(key('g'))).not.toEqual({ kind: 'group' })
+    expect(resolveKeyAction(key('g'), TOOLS)).not.toEqual({ kind: 'group' })
   })
 })
 
 /**
  * The rail and the keymap are two claims about the same thing.
  *
- * Every tool button carries `title={`${label} (${shortcut})`}`, so the rail
- * TELLS people which key selects it — and nothing made that true. The comment
- * tool advertised M from the day it was added and M was never bound, which is
- * the worst version of this: a shortcut that is documented in the interface,
- * in front of the user, and does nothing when pressed.
+ * Every tool button shows its key in its tip and `aria-keyshortcuts`, so the
+ * rail TELLS people which key selects it — and nothing made that true. The
+ * comment tool advertised M from the day it was added and M was never bound,
+ * which is the worst version of this: a shortcut that is documented in the
+ * interface, in front of the user, and does nothing when pressed.
  *
- * Read off the source rather than duplicated here, because a copy of the table
- * is a third claim and would drift from both.
+ * Both now read the same declaration, which is why this reads it too rather
+ * than the rail's source: a copy of the table is a third claim.
  */
 describe('the rail does not promise a shortcut the keymap does not bind', () => {
-  const TOOLBAR = readFileSync(resolve(process.cwd(), 'src/ui/Toolbar.tsx'), 'utf8')
-
-  const advertised = [...TOOLBAR.matchAll(/\{\s*id:\s*'([a-z]+)',[^}]*shortcut:\s*'([^']+)'/g)].map(
-    ([, id, shortcut]) => ({ id: id ?? '', shortcut: shortcut ?? '' }),
-  )
-
-  it('finds the rail to read in the first place', () => {
-    // A regex that quietly matches nothing would pass every case below.
-    expect(advertised.length).toBeGreaterThanOrEqual(10)
+  it('finds the tools to read in the first place', () => {
+    // A registry that quietly offered nothing would pass every case below.
+    expect(TOOLS.length).toBeGreaterThanOrEqual(7)
   })
 
-  it.each(advertised)('$shortcut selects $id, as the button says it does', ({ id, shortcut }) => {
-    const action = resolveKeyAction(key(shortcut.toLowerCase()))
-    /*
-     * Shape is reached by `cycle-shape`, which selects the tool AND steps its
-     * variant — pressed once from another tool it is a selection, which is
-     * why it counts here rather than being excused.
-     */
-    expect(action).toEqual(id === 'shape' ? { kind: 'cycle-shape' } : { kind: 'tool', tool: id })
+  it.each(TOOLS.map(({ type, tool }) => ({ type, shown: tool.keys[0] ?? tool.cycleKey ?? '' })))(
+    '$shown selects $type, as its button says it does',
+    ({ type, shown }) => {
+      expect(shown, 'the tip would show no key').not.toBe('')
+      const action = resolveKeyAction(key(shown), TOOLS)
+      /*
+       * A cycling key selects the tool AND steps its variant — pressed once
+       * from another tool it is a selection, which is why it counts here
+       * rather than being excused.
+       */
+      expect([
+        { kind: 'tool', tool: type },
+        { kind: 'cycle-tool', type },
+      ]).toContainEqual(action)
+    },
+  )
+
+  it('binds no key to two tools', () => {
+    const keys = TOOLS.flatMap(({ tool }) => [
+      ...tool.keys,
+      ...(tool.cycleKey === undefined ? [] : [tool.cycleKey]),
+    ])
+    expect(new Set(keys).size).toBe(keys.length)
+    for (const chrome of ['v', 'h', 'm']) expect(keys).not.toContain(chrome)
   })
 })
 
@@ -199,27 +220,21 @@ describe('the rail does not promise a shortcut the keymap does not bind', () => 
  * This used to check the stylesheet for a `.of-canvas--<tool>` rule, because
  * the cursor was `crosshair` written out once per tool. That answered "you
  * are about to put something down" and never which thing — the same plus sign
- * for a sticky note, a table and a remark. The marks moved to
- * `tool-cursor.ts`, and `Record<Tool, …>` makes a MISSING tool a compile
- * error; what a type cannot catch is a tool added with `null`, which is a
- * deliberate "no mark" and is right for exactly two of them.
+ * for a sticky note, a table and a remark. A type's tool now declares its
+ * mark (a required field, so a missing one is a compile error) and the
+ * chrome's are a `Record<ChromeTool, …>`; what a type cannot catch is a chrome
+ * mode given `null`, which is a deliberate "no mark" and is right for exactly
+ * two of them.
  */
 describe('every placing tool carries its own cursor', () => {
-  const TOOLBAR = readFileSync(resolve(process.cwd(), 'src/ui/Toolbar.tsx'), 'utf8')
-  const ids = [...TOOLBAR.matchAll(/\{\s*id:\s*'([a-z]+)',\s*label:/g)].map(([, id]) => id ?? '')
+  const aiming = [...TOOLS.map(({ type }) => type), 'comment']
 
-  /*
-   * `select` acts on what is already on the board rather than aiming at empty
-   * space, and `pan` has a hand every user of every map already knows.
-   */
-  const aiming = ids.filter((id) => id !== 'select' && id !== 'pan')
-
-  it('finds the rail to read, so the cases below are not vacuous', () => {
+  it('finds the tools to read, so the cases below are not vacuous', () => {
     expect(aiming.length).toBeGreaterThanOrEqual(8)
   })
 
   it.each(aiming)('%s', (id) => {
-    const cursor = cursorFor(id as Tool)
+    const cursor = cursorOf(id)
     expect(cursor, "no mark, so this tool shows somebody else's pointer").not.toBeNull()
     expect(cursor).toContain('data:image/svg+xml')
     /*
@@ -232,13 +247,13 @@ describe('every placing tool carries its own cursor', () => {
   })
 
   it("leaves the two that should keep the platform's own", () => {
-    expect(cursorFor('select')).toBeNull()
-    expect(cursorFor('pan')).toBeNull()
+    expect(cursorOf('select')).toBeNull()
+    expect(cursorOf('pan')).toBeNull()
   })
 
   /** The rim. A single-coloured cursor vanishes into at least one board. */
   it('draws each mark twice, so it reads on any ground', () => {
-    const decoded = decodeURIComponent(cursorFor('comment') ?? '')
+    const decoded = decodeURIComponent(cursorOf('comment') ?? '')
     expect(decoded).toContain(DEFAULT_INK.halo)
     expect(decoded).toContain(DEFAULT_INK.ink)
   })
@@ -252,7 +267,7 @@ describe('every placing tool carries its own cursor', () => {
    */
   it('takes its colours from whichever world is being drawn in', () => {
     const night = decodeURIComponent(
-      cursorFor('comment', 'rectangle', { ink: '#f2f5f8', halo: '#101820' }) ?? '',
+      cursorOf('comment', NOTHING_CHOSEN, { ink: '#f2f5f8', halo: '#101820' }) ?? '',
     )
     expect(night).toContain('#f2f5f8')
     expect(night).toContain('#101820')
@@ -265,7 +280,7 @@ describe('every placing tool carries its own cursor', () => {
    * with itself.
    */
   it('follows the shape variant the rail is showing', () => {
-    const seen = SHAPE_KINDS.map((kind) => cursorFor('shape', kind))
+    const seen = SHAPE_KINDS.map((kind) => cursorOf('shape', { shape: kind }))
     for (const [index, cursor] of seen.entries()) {
       expect(cursor, `${SHAPE_KINDS[index] ?? '?'} has no cursor`).not.toBeNull()
     }
@@ -299,8 +314,8 @@ describe('every placing tool carries its own cursor', () => {
     it('points where the crosshair crosses', () => {
       // A hotspot anywhere else is a cursor that aims at a different pixel
       // from the one it draws a cross on.
-      const svg = decodeURIComponent(cursorFor('comment') ?? '')
-      const spot = /"\)\s(\d+(?:\.\d+)?)\s(\d+(?:\.\d+)?),/.exec(cursorFor('comment') ?? '')
+      const svg = decodeURIComponent(cursorOf('comment') ?? '')
+      const spot = /"\)\s(\d+(?:\.\d+)?)\s(\d+(?:\.\d+)?),/.exec(cursorOf('comment') ?? '')
       expect(spot?.[1]).toBe(String(hot))
       expect(spot?.[2]).toBe(String(hot))
       // Drawn symmetrically about that point, rather than reaching further
@@ -326,7 +341,7 @@ describe('every placing tool carries its own cursor', () => {
      * cursor outlined two ways.
      */
     it('rims both halves at the same weight', () => {
-      const svg = decodeURIComponent(cursorFor('comment') ?? '')
+      const svg = decodeURIComponent(cursorOf('comment') ?? '')
       expect(svg).toContain(`stroke-width="${String(rim)}"`)
       expect(svg).toContain(`stroke-width="${String(rim / scale)}"`)
     })
@@ -334,7 +349,7 @@ describe('every placing tool carries its own cursor', () => {
 
   /** And the geometry is the object's own, so a new kind arrives with one. */
   it('draws the variant from the same geometry the object is drawn from', () => {
-    const diamond = decodeURIComponent(cursorFor('shape', 'diamond') ?? '')
+    const diamond = decodeURIComponent(cursorOf('shape', { shape: 'diamond' }) ?? '')
     expect(diamond).toContain(shapePath('diamond') ?? 'no path')
   })
 })
@@ -351,11 +366,14 @@ describe('transforming the selection without a pointer', () => {
     ['ArrowDown', { dw: 0, dh: 10 }],
     ['ArrowUp', { dw: 0, dh: -10 }],
   ])('Alt+%s resizes by the grid step', (pressed, by) => {
-    expect(resolveKeyAction(key(pressed, { altKey: true }))).toEqual({ kind: 'resize-by', ...by })
+    expect(resolveKeyAction(key(pressed, { altKey: true }), TOOLS)).toEqual({
+      kind: 'resize-by',
+      ...by,
+    })
   })
 
   it('Alt+Shift+arrow resizes by a single unit', () => {
-    expect(resolveKeyAction(key('ArrowRight', { altKey: true, shiftKey: true }))).toEqual({
+    expect(resolveKeyAction(key('ArrowRight', { altKey: true, shiftKey: true }), TOOLS)).toEqual({
       kind: 'resize-by',
       dw: 1,
       dh: 0,
@@ -369,13 +387,16 @@ describe('transforming the selection without a pointer', () => {
     ['<', -1],
   ])('%s rotates by %i degrees', (pressed, degrees) => {
     const shiftKey = pressed === '>' || pressed === '<'
-    expect(resolveKeyAction(key(pressed, { shiftKey }))).toEqual({ kind: 'rotate-by', degrees })
+    expect(resolveKeyAction(key(pressed, { shiftKey }), TOOLS)).toEqual({
+      kind: 'rotate-by',
+      degrees,
+    })
   })
 
   it('Mod+Shift+L locks and unlocks, and plain Mod+L is left to the browser', () => {
-    expect(resolveKeyAction(key('L', { ctrlKey: true, shiftKey: true }))).toEqual({
+    expect(resolveKeyAction(key('L', { ctrlKey: true, shiftKey: true }), TOOLS)).toEqual({
       kind: 'toggle-lock',
     })
-    expect(resolveKeyAction(key('l', { ctrlKey: true }))).toBeNull()
+    expect(resolveKeyAction(key('l', { ctrlKey: true }), TOOLS)).toBeNull()
   })
 })

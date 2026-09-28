@@ -1,6 +1,16 @@
 import { useEffect, useRef, useState } from 'react'
 
-import type { TableSize } from '../interaction/interaction-store.js'
+/**
+ * The grid a new table will be dropped with.
+ *
+ * Chosen before placing rather than adjusted after, because the size is the
+ * first thing anybody knows about a table they are about to make — and a 3x3
+ * that always has to be corrected is a default nobody wanted twice.
+ */
+export interface TableSize {
+  readonly columns: number
+  readonly rows: number
+}
 
 /**
  * Choosing a table's size by pointing at it.

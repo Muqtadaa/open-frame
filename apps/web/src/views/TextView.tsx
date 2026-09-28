@@ -1,7 +1,13 @@
 import { isEmptyText, type ColorValue, type TextData } from '@openframe/core'
 
 import { fontFamily, textAlign, verticalAlign, inkOf } from '../scene/style-tokens.js'
-import { defineObjectView, type ObjectEditorProps, type ObjectViewProps } from './registry.js'
+import { TextIcon } from '../controls/icons.js'
+import {
+  defineObjectView,
+  type ObjectTool,
+  type ObjectEditorProps,
+  type ObjectViewProps,
+} from './registry.js'
 import { RichTextEditor } from './RichTextEditor.js'
 import { RichTextView } from './RichTextView.js'
 
@@ -66,8 +72,19 @@ function TextEditor({ object, Chrome, onCommit }: ObjectEditorProps<TextData>) {
   )
 }
 
+/** Placed where you press; a text object sizes itself to what is typed into it. */
+const textTool: ObjectTool = {
+  label: 'Text',
+  keys: ['t'],
+  order: 20,
+  place: 'click',
+  Icon: () => <TextIcon />,
+  cursor: () => ({ body: 'M4.6 4h14.8v3.3h-5.8V20h-3.2V7.3H4.6z' }),
+}
+
 export const textView = defineObjectView<TextData>({
   type: 'text',
+  tool: textTool,
   Renderer: TextRenderer,
   InlineEditor: TextEditor,
 })

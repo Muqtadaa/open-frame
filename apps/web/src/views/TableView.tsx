@@ -59,7 +59,13 @@ import {
   type TableLine,
 } from '@openframe/core'
 
-import { defineObjectView, type ObjectEditorProps, type ObjectViewProps } from './registry.js'
+import {
+  defineObjectView,
+  type ObjectEditorProps,
+  type ObjectTool,
+  type ObjectViewProps,
+} from './registry.js'
+import { TableSizePicker, type TableSize } from '../controls/TableSizePicker.js'
 import { FormatBar } from './FormatBar.js'
 import {
   RichTextField,
@@ -85,7 +91,14 @@ import {
   verticalAlign,
 } from '../scene/style-tokens.js'
 import { Swatches, groundOf, type SwatchKind } from '../controls/Swatches.js'
-import { AlignIcon, BorderPresetIcon, DashIcon, StrokeIcon, VAlignIcon } from '../controls/icons.js'
+import {
+  AlignIcon,
+  BorderPresetIcon,
+  DashIcon,
+  StrokeIcon,
+  TableIcon,
+  VAlignIcon,
+} from '../controls/icons.js'
 
 /*
  * ---------------------------------------------------------------------------
@@ -1829,8 +1842,45 @@ function CellChoice<T extends AlignToken | VAlignToken>({
   )
 }
 
-export const tableView = defineObjectView<TableData>({
+/**
+ * Placed where you press, at the size chosen first — pressing the armed
+ * button opens the grid. G, because a table is a grid and T was taken.
+ */
+const tableTool: ObjectTool<TableSize> = {
+  label: 'Table',
+  keys: ['g'],
+  order: 60,
+  place: 'click',
+  initial: { columns: 3, rows: 3 },
+  /*
+   * Equal WEIGHTS, one per column and row. The registry builds the cells to
+   * match, so the count lives in exactly one place — the length of these two
+   * arrays — and nothing downstream has to be told the shape twice.
+   */
+  data: (size) => ({
+    columns: Array.from({ length: size.columns }, () => 1),
+    rows: Array.from({ length: size.rows }, () => 1),
+  }),
+  cursor: () => ({
+    body: 'M5.5 4.5h13a2.5 2.5 0 0 1 2.5 2.5v10a2.5 2.5 0 0 1-2.5 2.5h-13A2.5 2.5 0 0 1 3 17V7a2.5 2.5 0 0 1 2.5-2.5z',
+    detail: 'M3 9.6h18M3 14.4h18M9.6 9.6v9.9M15.4 9.6v9.9',
+  }),
+  Icon: () => <TableIcon />,
+  options: {
+    label: 'Choose table size',
+    popup: 'grid',
+    testIds: { disclosure: 'table-menu', surface: 'table-size-flyout' },
+    Picker: ({ options, choose }) => (
+      <div className="of-flyout of-flyout--wide">
+        <TableSizePicker size={options} onChoose={choose} />
+      </div>
+    ),
+  },
+}
+
+export const tableView = defineObjectView<TableData, TableSize>({
   type: 'table',
+  tool: tableTool,
   Renderer: TableRenderer,
   InlineEditor: TableEditor,
 })

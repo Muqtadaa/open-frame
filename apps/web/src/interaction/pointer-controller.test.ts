@@ -7,23 +7,35 @@ import {
   onPointerDown,
   type PointerDownContext,
 } from './pointer-controller.js'
+import { makeFor } from '../scene/tools.js'
+import { createDefaultViewRegistry } from '../views/index.js'
+
+/** The tools the board actually offers, as the canvas resolves them. */
+const TOOLS = createDefaultViewRegistry().tools()
 
 const A = asObjectId('obj_a')
 const B = asObjectId('obj_b')
 
-function ctx(overrides: Partial<PointerDownContext> = {}): PointerDownContext {
+/**
+ * A press, with the armed tool resolved the way the canvas resolves it — from
+ * the tool each type declares, and what has been `chosen` for it.
+ */
+function ctx(
+  overrides: Partial<PointerDownContext> & { chosen?: Readonly<Record<string, unknown>> } = {},
+): PointerDownContext {
+  const { chosen = {}, ...rest } = overrides
+  const tool = rest.tool ?? 'select'
   return {
-    tool: 'select',
+    tool,
     worldPoint: { x: 10, y: 10 },
     hitId: null,
     selection: new Set<ObjectId>(),
     locked: new Set<ObjectId>(),
-    tableSize: { columns: 3, rows: 3 },
     shiftKey: false,
     button: 0,
     spaceHeld: false,
-    shapeKind: 'rectangle',
-    ...overrides,
+    make: makeFor(tool, TOOLS, chosen),
+    ...rest,
   }
 }
 
@@ -50,13 +62,43 @@ describe('pointer down', () => {
 
   it('starts a connector from the object under the pointer', () => {
     expect(onPointerDown(ctx({ tool: 'connector', hitId: A }))).toEqual([
-      { kind: 'begin-connect', from: A, at: { x: 10, y: 10 } },
+      { kind: 'begin-connect', objectType: 'connector', from: A, at: { x: 10, y: 10 } },
     ])
   })
 
   it('starts a connector from empty canvas as a free end', () => {
     expect(onPointerDown(ctx({ tool: 'connector' }))).toEqual([
-      { kind: 'begin-connect', from: null, at: { x: 10, y: 10 } },
+      { kind: 'begin-connect', objectType: 'connector', from: null, at: { x: 10, y: 10 } },
+    ])
+  })
+
+  /*
+   * A type that is DRAWN between two things declares `place: 'connect'` and
+   * makes itself, not a connector. The intent dropped the type, and the end
+   * of the gesture made a connector whatever tool was armed (Codex, on #20).
+   */
+  it('carries the declared type and its data through a connect placement', () => {
+    const wire = {
+      type: 'wire',
+      tool: {
+        label: 'Wire',
+        keys: [],
+        order: 99,
+        place: 'connect' as const,
+        data: () => ({ routing: 'orthogonal' }),
+        cursor: () => ({ body: '' }),
+      },
+    }
+    expect(
+      onPointerDown(ctx({ tool: 'wire', hitId: A, make: makeFor('wire', [wire], {}) })),
+    ).toEqual([
+      {
+        kind: 'begin-connect',
+        objectType: 'wire',
+        data: { routing: 'orthogonal' },
+        from: A,
+        at: { x: 10, y: 10 },
+      },
     ])
   })
 
@@ -73,7 +115,7 @@ describe('pointer down', () => {
    * is the only place that knows how far the pointer went.
    */
   it('carries the current variant when drawing a shape', () => {
-    expect(onPointerDown(ctx({ tool: 'shape', shapeKind: 'ellipse' }))).toEqual([
+    expect(onPointerDown(ctx({ tool: 'shape', chosen: { shape: 'ellipse' } }))).toEqual([
       { kind: 'begin-draw', objectType: 'shape', at: { x: 10, y: 10 }, data: { shape: 'ellipse' } },
     ])
   })
@@ -173,7 +215,9 @@ describe('drag threshold', () => {
  */
 describe('placing a table', () => {
   it('creates the grid the tool is set to', () => {
-    const [intent] = onPointerDown(ctx({ tool: 'table', tableSize: { columns: 5, rows: 2 } }))
+    const [intent] = onPointerDown(
+      ctx({ tool: 'table', chosen: { table: { columns: 5, rows: 2 } } }),
+    )
 
     expect(intent).toEqual({
       kind: 'create',
