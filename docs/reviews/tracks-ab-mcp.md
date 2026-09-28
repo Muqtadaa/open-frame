@@ -197,3 +197,18 @@ cover:
   is consumed, reported as `stale-history`, and shown as a toast.
   `history-guards.test.ts` (6 of 8 failed before the fix) and a rooms test where
   an MCP peer deletes and a person presses Cmd+Z (it failed before).
+- **A-1, after review (Codex, on #12):** a replay also leaves out a `set` whose
+  property somebody has changed since. It compares against the value the step
+  itself left there, so it never puts an old value back over a newer one.
+  Each undo entry also records which of its objects were locked before and
+  after it ran, so a lock the step carried (a locked child swept up by an
+  allowed cascade delete) does not block its own redo.
+- **A-1, second review (Codex, on #13):**
+  - A step's changes to one object now replay together or not at all. A
+    conversion writes the type, its data version and the data together, and
+    undoing two of the three after someone had edited the data left a sticky
+    holding evidence data.
+  - Each replayed write is now checked, as the replay reaches it, against its
+    partner in the opposite list. The check previously ran against the board
+    the replay started from, which put a move-then-delete back at the moved
+    spot and a create-then-move back at the start.

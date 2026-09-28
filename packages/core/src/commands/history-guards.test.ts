@@ -140,4 +140,148 @@ describe('undo after somebody else changed the board', () => {
     expect(h.dispatcher.redo()?.ok).toBe(true)
     expect(x(h, 'a')).toBe(50)
   })
+
+  /*
+   * A newer edit to the same property wins (Codex, on #12). Undo replayed the
+   * stored value regardless: I move a note to 50, somebody moves it to 100,
+   * and my undo put it back at 0 — over their edit, silently.
+   */
+  it('does not overwrite a newer edit to the same property', () => {
+    const h = harness()
+    h.dispatcher.dispatch({ kind: 'MoveObjects', moves: [{ id: id('a'), dx: 50, dy: 0 }] })
+    remote(h, [
+      {
+        op: 'set',
+        id: id('a'),
+        path: ['frame'],
+        value: { ...h.store.getObject(id('a'))?.frame, x: 100 },
+      },
+    ])
+
+    const result = h.dispatcher.undo()
+    expect(result).toMatchObject({ ok: false, error: { code: 'stale-history' } })
+    expect(x(h, 'a')).toBe(100)
+  })
+
+  it('still undoes when somebody changed a DIFFERENT property of the object', () => {
+    const h = harness()
+    h.dispatcher.dispatch({ kind: 'MoveObjects', moves: [{ id: id('a'), dx: 50, dy: 0 }] })
+    remote(h, [{ op: 'set', id: id('a'), path: ['style', 'color'], value: 'blue' }])
+
+    expect(h.dispatcher.undo()?.ok).toBe(true)
+    expect(x(h, 'a')).toBe(0)
+    expect(h.store.getObject(id('a'))?.style.color).toBe('blue')
+  })
+
+  it('does not redo over a newer edit either', () => {
+    const h = harness()
+    h.dispatcher.dispatch({ kind: 'MoveObjects', moves: [{ id: id('a'), dx: 50, dy: 0 }] })
+    h.dispatcher.undo()
+    remote(h, [
+      {
+        op: 'set',
+        id: id('a'),
+        path: ['frame'],
+        value: { ...h.store.getObject(id('a'))?.frame, x: 300 },
+      },
+    ])
+
+    expect(h.dispatcher.redo()).toMatchObject({ ok: false, error: { code: 'stale-history' } })
+    expect(x(h, 'a')).toBe(300)
+  })
+
+  /*
+   * A lock the step was RECORDED with is not somebody else's (Codex, on #12).
+   * Deleting an unlocked frame takes its locked child with it; undo brings
+   * both back; redo must take both again, or the child is left pointing at a
+   * parent that is gone.
+   */
+  it('redoes a cascade that took a locked child with it', () => {
+    const h = harness()
+    const frame = h.dispatcher.dispatch({
+      kind: 'CreateObjects',
+      objects: [{ id: id('f'), type: 'frame', x: 0, y: 0 }],
+    })
+    if (!frame.ok) throw frame.error
+    const child = h.dispatcher.dispatch({
+      kind: 'CreateObjects',
+      objects: [{ id: id('c'), type: 'sticky', x: 10, y: 10, parentId: id('f') }],
+    })
+    if (!child.ok) throw child.error
+    h.dispatcher.dispatch({ kind: 'SetLocked', ids: [id('c')], locked: true })
+
+    const deleted = h.dispatcher.dispatch({ kind: 'DeleteObjects', ids: [id('f')] })
+    expect(deleted.ok).toBe(true)
+    expect(h.store.getObject(id('c'))).toBeUndefined()
+
+    expect(h.dispatcher.undo()?.ok).toBe(true)
+    expect(h.store.getObject(id('c'))?.locked).toBe(true)
+
+    expect(h.dispatcher.redo()?.ok).toBe(true)
+    expect(h.store.getObject(id('f'))).toBeUndefined()
+    expect(h.store.getObject(id('c'))).toBeUndefined()
+  })
+
+  /*
+   * A step's changes to ONE object go back together or not at all (Codex, on
+   * #13). A conversion writes the type, its data version and the data it now
+   * holds; filtering them one by one put back `sticky` over evidence data the
+   * moment somebody had edited that data since.
+   */
+  it('does not half-undo a conversion somebody has edited since', () => {
+    const h = harness()
+    const converted = h.dispatcher.dispatch({
+      kind: 'ConvertObjects',
+      ids: [id('a')],
+      toType: 'evidence',
+    })
+    expect(converted.ok).toBe(true)
+    const data = h.store.getObject(id('a'))?.data as Record<string, unknown>
+    remote(h, [{ op: 'set', id: id('a'), path: ['data'], value: { ...data, source: 'P07' } }])
+
+    expect(h.dispatcher.undo()).toMatchObject({ ok: false, error: { code: 'stale-history' } })
+    const after = h.store.getObject(id('a'))
+    expect(after?.type).toBe('evidence')
+    expect((after?.data as Record<string, unknown>).source).toBe('P07')
+  })
+
+  /*
+   * Compared as the replay reaches each change, not against the board it
+   * started from (Codex, on #13): a transaction that moved a note and then
+   * deleted it comes back where it was BEFORE the move.
+   */
+  it('undoes a move-then-delete to where the note started', () => {
+    const h = harness()
+    const result = h.dispatcher.transact('Move and delete', [
+      { kind: 'MoveObjects', moves: [{ id: id('a'), dx: 50, dy: 0 }] },
+      { kind: 'DeleteObjects', ids: [id('a')] },
+    ])
+    expect(result.ok).toBe(true)
+    expect(h.dispatcher.undo()?.ok).toBe(true)
+    expect(x(h, 'a')).toBe(0)
+  })
+
+  it('undoes two moves of the same note in one step back to the start', () => {
+    const h = harness()
+    h.dispatcher.transact('Two moves', [
+      { kind: 'MoveObjects', moves: [{ id: id('a'), dx: 50, dy: 0 }] },
+      { kind: 'MoveObjects', moves: [{ id: id('a'), dx: 30, dy: 0 }] },
+    ])
+    expect(h.dispatcher.undo()?.ok).toBe(true)
+    expect(x(h, 'a')).toBe(0)
+    expect(h.dispatcher.redo()?.ok).toBe(true)
+    expect(x(h, 'a')).toBe(80)
+  })
+
+  it('redoes a create-then-move to where the note was moved', () => {
+    const h = harness()
+    h.dispatcher.transact('Create and move', [
+      { kind: 'CreateObjects', objects: [{ id: id('n'), type: 'sticky', x: 0, y: 300 }] },
+      { kind: 'MoveObjects', moves: [{ id: id('n'), dx: 70, dy: 0 }] },
+    ])
+    expect(h.dispatcher.undo()?.ok).toBe(true)
+    expect(h.store.getObject(id('n'))).toBeUndefined()
+    expect(h.dispatcher.redo()?.ok).toBe(true)
+    expect(x(h, 'n')).toBe(70)
+  })
 })
