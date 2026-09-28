@@ -33,6 +33,22 @@ export interface DispatchOptions {
   readonly skipUndo?: boolean
 }
 
+/**
+ * A change recorded somewhere else, as it can be taken back here: what it did,
+ * how to undo it, and which of its objects were locked before and after. Plain
+ * arrays rather than sets, because it travels — the change log that carries an
+ * agent's change to every peer is JSON (tracks A-2).
+ */
+export interface RevertableChange {
+  readonly label: string
+  readonly forward: readonly Patch[]
+  readonly inverse: readonly Patch[]
+  readonly locked?: {
+    readonly before: readonly ObjectId[]
+    readonly after: readonly ObjectId[]
+  }
+}
+
 export interface CommandDispatcherDeps {
   readonly store: DocumentStore
   readonly writer: DocumentWriter
@@ -125,6 +141,43 @@ export class CommandDispatcher {
       left: entry.inverse,
       locked: entry.locked?.before,
     })
+  }
+
+  /**
+   * Takes back ONE recorded change that is not on this dispatcher's own
+   * history — an agent's, which reached this board with no undo entry because
+   * it was never this person's to undo (tracks A-2).
+   *
+   * The same replay as undo, with the same guards: whatever anybody has done
+   * since wins, an object somebody else has locked is left alone, and a change
+   * with nothing left to take back is reported as `stale-history`. Unlike undo
+   * it is a NEW change by whoever asked for it, so it goes on their own
+   * history, where undo puts the original back.
+   */
+  revert(change: RevertableChange, options: { readonly origin?: Origin } = {}): DispatchResult {
+    const refused = this.#refuseHistory()
+    if (refused !== null) return refused
+    const before = this.#deps.store.getDocument()
+    const label = `Revert “${change.label}”`
+    const origin = options.origin ?? 'user'
+    const result = this.#applyHistory(change.inverse, label, origin, {
+      left: change.forward,
+      locked: change.locked === undefined ? undefined : new Set(change.locked.after),
+    })
+    if (!result.ok) return result
+    const after = this.#deps.store.getDocument()
+    this.#undoStack.push({
+      transactionId: result.transactionId,
+      label,
+      origin,
+      forward: result.patches,
+      inverse: result.inverse,
+      locked: {
+        before: lockedAmong(before, result.affected),
+        after: lockedAmong(after, result.affected),
+      },
+    })
+    return result
   }
 
   /*
