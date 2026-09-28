@@ -10,6 +10,7 @@ import type {
   Placement,
   Point,
   Rect,
+  TransactionId,
 } from '@openframe/core'
 import {
   alignOffsets,
@@ -23,6 +24,8 @@ import {
 } from '@openframe/core'
 import { useMemo } from 'react'
 
+import type { LoggedChange } from '@openframe/collab'
+import { guestIdentity } from '../app/guest.js'
 import { renameRemoteBoard } from '../app/remote-boards.js'
 
 /** What the undo entry says, which is the only place these names show up. */
@@ -147,6 +150,13 @@ export interface BoardCommands {
   setStyle(ids: readonly ObjectId[], style: ObjectStyle): void
   undo(): void
   redo(): void
+  /**
+   * Takes back one change an agent made, from the board's change log (tracks
+   * A-2), as this person's own step — so Cmd+Z puts it back. Whatever anybody
+   * changed since is kept. The revert's own transaction, so an undo of it can
+   * be recognised, or `null` when nothing could be taken back.
+   */
+  revertChange(change: LoggedChange): TransactionId | null
 }
 
 /**
@@ -173,7 +183,7 @@ function framesOrigin(objects: readonly { frame: { x: number; y: number } }[]): 
 }
 
 export function useCommands(): BoardCommands {
-  const { runtime } = useOpenFrame()
+  const { runtime, collaboration } = useOpenFrame()
   const dispatcher = runtime.dispatcher
 
   return useMemo<BoardCommands>(() => {
@@ -812,6 +822,31 @@ export function useCommands(): BoardCommands {
           .getState()
           .pruneSelection((id) => runtime.store.getObject(id) !== undefined)
       },
+
+      revertChange(change) {
+        const result = dispatcher.revert(change)
+        if (!result.ok) {
+          sayWhyNot(result)
+          return null
+        }
+        // Said to every peer, so the change reads as taken back everywhere and
+        // nobody reverts it twice.
+        collaboration?.markReverted(change.id, guestIdentity().name)
+        const store = useInteractionStore.getState()
+        store.pruneSelection((id) => runtime.store.getObject(id) !== undefined)
+        /*
+         * Said, not left to be noticed: what stayed because somebody had
+         * changed it since is exactly the part a person would otherwise go
+         * looking for.
+         */
+        const kept = change.affected.length - result.affected.length
+        store.announce(
+          kept === 0
+            ? `Reverted “${change.label}”.`
+            : `Reverted “${change.label}”, except ${String(kept)} ${kept === 1 ? 'object' : 'objects'} changed since.`,
+        )
+        return result.transactionId
+      },
     }
-  }, [dispatcher, runtime])
+  }, [dispatcher, runtime, collaboration])
 }

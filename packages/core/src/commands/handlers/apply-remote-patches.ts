@@ -2,6 +2,7 @@ import type { BoardDocument } from '../../domain/document.js'
 import { setIn, type Patch } from '../../domain/patch.js'
 import { CommandError } from '../errors.js'
 import { readRemoteObject } from './remote-object.js'
+import type { ObjectTypeRegistry } from '../../domain/registry.js'
 import type { Command, CommandContext } from '../types.js'
 
 type ApplyRemotePatches = Extract<Command, { kind: 'ApplyRemotePatches' }>
@@ -42,6 +43,23 @@ export function applyRemotePatches(
     )
   }
 
+  return acceptablePatches(doc, command.patches, ctx.registry)
+}
+
+/**
+ * The patches of a batch from somewhere else that this board can accept, in
+ * order: every object they would add or leave behind is one this build can
+ * read, and every object they address exists by the time they reach it.
+ *
+ * Shared by the two ways a change arrives from another client: a merge, and a
+ * revert of a change recorded in the board's change log (tracks A-2), which any
+ * editor of the board can write to.
+ */
+export function acceptablePatches(
+  doc: BoardDocument,
+  incoming: readonly Patch[],
+  registry: ObjectTypeRegistry,
+): Patch[] {
   /*
    * What the board WOULD look like as the batch is walked, so that patches
    * later in it are judged against what the earlier ones did.
@@ -61,7 +79,7 @@ export function applyRemotePatches(
   const known = new Map(doc.objects)
   const patches: Patch[] = []
 
-  for (const patch of command.patches) {
+  for (const patch of incoming) {
     switch (patch.op) {
       case 'add': {
         /*
@@ -70,7 +88,7 @@ export function applyRemotePatches(
          * build has never heard of, or a `frame.width` of `"wide"`, went into
          * the document and out to every view that reads it.
          */
-        const object = readRemoteObject(patch.object, ctx.registry)
+        const object = readRemoteObject(patch.object, registry)
         if (object === null) break
         patches.push({ op: 'add', id: patch.id, object })
         known.set(patch.id, object)
@@ -98,7 +116,7 @@ export function applyRemotePatches(
          * here.
          */
         const candidate = setIn(current, patch.path, patch.value)
-        const checked = readRemoteObject(candidate, ctx.registry)
+        const checked = readRemoteObject(candidate, registry)
         if (checked === null) break
 
         patches.push(patch)

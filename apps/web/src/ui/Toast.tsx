@@ -18,6 +18,7 @@ const TOAST_MS = 5000
  */
 export function Toast() {
   const toast = useInteractionStore((state) => state.toast)
+  const action = useInteractionStore((state) => state.toastAction)
   const showToast = useInteractionStore((state) => state.showToast)
   const [held, setHeld] = useState({ pointer: false, keyboard: false })
   const origin = useRef<Element | null>(null)
@@ -37,7 +38,7 @@ export function Toast() {
 
   return (
     <div
-      className="of-toast"
+      className={action === null ? 'of-toast' : 'of-toast of-toast--news'}
       role="status"
       aria-live="polite"
       data-testid="toast"
@@ -58,6 +59,20 @@ export function Toast() {
       }}
     >
       <span className="of-toast__body">{toast}</span>
+      {action !== null && (
+        <button
+          type="button"
+          className="of-button of-toast__action"
+          data-testid="toast-action"
+          onClick={() => {
+            showToast(null)
+            action.run()
+            handBackFocus(origin.current)
+          }}
+        >
+          {action.label}
+        </button>
+      )}
       <button
         type="button"
         className="of-toast__dismiss"

@@ -1,6 +1,13 @@
 import type { CommandDispatcher, CommandError, DocumentStore } from '@openframe/core'
 import * as Y from 'yjs'
 
+import {
+  changesOf,
+  clearReverted,
+  markReverted,
+  readChanges,
+  type LoggedChange,
+} from './change-log.js'
 import { seedDoc } from './document-map.js'
 import { createAwareness, type RoomRole } from './protocol.js'
 import { RoomProvider, type ConnectionStatus, type RoomSocket } from './provider.js'
@@ -50,6 +57,17 @@ export interface BoardConnection {
   onPeers(listener: (peers: readonly PeerPresence[]) => void): () => void
   onStatus(listener: (status: ConnectionStatus) => void): () => void
   onRole(listener: (role: RoomRole) => void): () => void
+  /**
+   * The board's change log, newest first: what agents and other non-people
+   * changed, each entry enough to take the change back (tracks A-2).
+   */
+  changes(): readonly LoggedChange[]
+  /** Called with the whole log whenever it changes, and once immediately. */
+  onChanges(listener: (changes: readonly LoggedChange[]) => void): () => void
+  /** Says, for every peer, that `id` has been taken back and by whom. False if there is no such entry. */
+  markReverted(id: string, by: string | null): boolean
+  /** Says, for every peer, that the revert of `id` was itself undone. False if there is no such entry. */
+  clearReverted(id: string): boolean
   destroy(): void
 }
 
@@ -87,6 +105,8 @@ export interface ConnectBoardOptions {
    * question would rename the board on its way in.
    */
   readonly seed?: boolean
+  /** Who this peer's changes are by, as a name the change log shows beside them. */
+  readonly by?: string | null
 }
 
 /**
@@ -141,7 +161,15 @@ export async function connectBoard(options: ConnectBoardOptions): Promise<BoardC
     doc,
     dispatcher: options.dispatcher,
     onError: options.onError,
+    by: options.by ?? null,
   })
+
+  const changeListeners = new Set<(changes: readonly LoggedChange[]) => void>()
+  const onChangeLog = (): void => {
+    const current = readChanges(doc)
+    for (const listener of [...changeListeners]) listener(current)
+  }
+  changesOf(doc).observe(onChangeLog)
 
   const statusListeners = new Set<(status: ConnectionStatus) => void>()
   const syncedListeners = new Set<() => void>()
@@ -226,7 +254,23 @@ export async function connectBoard(options: ConnectBoardOptions): Promise<BoardC
       listener(provider.role)
       return () => roleListeners.delete(listener)
     },
+    changes() {
+      return readChanges(doc)
+    },
+    onChanges(listener) {
+      changeListeners.add(listener)
+      listener(readChanges(doc))
+      return () => changeListeners.delete(listener)
+    },
+    markReverted(id, by) {
+      return markReverted(doc, id, by, Date.now())
+    },
+    clearReverted(id) {
+      return clearReverted(doc, id)
+    },
     destroy() {
+      changesOf(doc).unobserve(onChangeLog)
+      changeListeners.clear()
       awareness.off('change', onAwareness)
       peerListeners.clear()
       statusListeners.clear()

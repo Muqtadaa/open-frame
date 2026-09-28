@@ -45,6 +45,9 @@ export function toolContext(account: SignedIn | null, deps: ContextDeps = {}): T
         boardId: board.boardId,
         server: ROOM_SERVER,
         credentials: { key: board.accessKey },
+        // Whose agent this is, beside every change it makes in the board's
+        // change log. Only an account ever opens a board here.
+        ...(account === null ? {} : { by: account.account.displayName }),
       }))
 
   /*

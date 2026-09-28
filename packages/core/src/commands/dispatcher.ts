@@ -8,6 +8,7 @@ import type { Clock } from '../ports/clock.js'
 import type { IdGenerator } from '../ports/id-generator.js'
 import type { DocumentStore, DocumentWriter } from '../store/document-store.js'
 import { CommandError } from './errors.js'
+import { acceptablePatches } from './handlers/apply-remote-patches.js'
 import { handleCommand } from './handlers/index.js'
 import { describeCommand } from './labels.js'
 import { UndoStack } from './undo.js'
@@ -22,6 +23,25 @@ export type DispatchResult =
       readonly patches: readonly Patch[]
       readonly inverse: readonly Patch[]
       readonly affected: readonly ObjectId[]
+      /**
+       * Which affected objects were locked before and after, for a change
+       * recorded to be reverted somewhere else. Set on an originated change;
+       * a replay of history leaves it out.
+       */
+      readonly locked?: {
+        readonly before: readonly ObjectId[]
+        readonly after: readonly ObjectId[]
+      }
+      /**
+       * Set on an undo or a redo: which recorded step it replayed, and which
+       * way. Whoever keeps a record ABOUT a step — that a revert took an
+       * agent's change back — needs to hear when the step is undone, or the
+       * record says "taken back" while the change is on the board.
+       */
+      readonly replayed?: {
+        readonly transactionId: TransactionId
+        readonly direction: 'undo' | 'redo'
+      }
     }
   | { readonly ok: false; readonly error: CommandError }
 
@@ -31,6 +51,22 @@ export interface DispatchOptions {
   readonly actor?: UserId | null
   /** Set for changes that must not enter local history — e.g. remote edits. */
   readonly skipUndo?: boolean
+}
+
+/**
+ * A change recorded somewhere else, as it can be taken back here: what it did,
+ * how to undo it, and which of its objects were locked before and after. Plain
+ * arrays rather than sets, because it travels — the change log that carries an
+ * agent's change to every peer is JSON (tracks A-2).
+ */
+export interface RevertableChange {
+  readonly label: string
+  readonly forward: readonly Patch[]
+  readonly inverse: readonly Patch[]
+  readonly locked?: {
+    readonly before: readonly ObjectId[]
+    readonly after: readonly ObjectId[]
+  }
 }
 
 export interface CommandDispatcherDeps {
@@ -112,6 +148,7 @@ export class CommandDispatcher {
     return this.#applyHistory(entry.inverse, entry.label, entry.origin, {
       left: entry.forward,
       locked: entry.locked?.after,
+      replayed: { transactionId: entry.transactionId, direction: 'undo' },
     })
   }
 
@@ -124,7 +161,52 @@ export class CommandDispatcher {
     return this.#applyHistory(entry.forward, entry.label, entry.origin, {
       left: entry.inverse,
       locked: entry.locked?.before,
+      replayed: { transactionId: entry.transactionId, direction: 'redo' },
     })
+  }
+
+  /**
+   * Takes back ONE recorded change that is not on this dispatcher's own
+   * history — an agent's, which reached this board with no undo entry because
+   * it was never this person's to undo (tracks A-2).
+   *
+   * The same replay as undo, with the same guards: whatever anybody has done
+   * since wins, an object somebody else has locked is left alone, and a change
+   * with nothing left to take back is reported as `stale-history`. Unlike undo
+   * it is a NEW change by whoever asked for it, so it goes on their own
+   * history, where undo puts the original back.
+   */
+  revert(change: RevertableChange, options: { readonly origin?: Origin } = {}): DispatchResult {
+    const refused = this.#refuseHistory()
+    if (refused !== null) return refused
+    const before = this.#deps.store.getDocument()
+    const label = `Revert “${change.label}”`
+    const origin = options.origin ?? 'user'
+    const result = this.#applyHistory(change.inverse, label, origin, {
+      left: change.forward,
+      locked: change.locked === undefined ? undefined : new Set(change.locked.after),
+      /*
+       * Somebody else's word for what the board looked like: the change log
+       * it comes from is writable by any editor of the board, so what it
+       * would put back is checked like a merge. Undo replays this board's own
+       * history and needs no such check.
+       */
+      untrusted: true,
+    })
+    if (!result.ok) return result
+    const after = this.#deps.store.getDocument()
+    this.#undoStack.push({
+      transactionId: result.transactionId,
+      label,
+      origin,
+      forward: result.patches,
+      inverse: result.inverse,
+      locked: {
+        before: lockedAmong(before, result.affected),
+        after: lockedAmong(after, result.affected),
+      },
+    })
+    return result
   }
 
   /*
@@ -218,17 +300,11 @@ export class CommandDispatcher {
     const inverse = invertPatches(before, patches)
     this.#deps.writer.applyPatches(patches)
 
+    const affected = affectedIds(patches)
+    const after = this.#deps.store.getDocument()
+    const locked = { before: lockedAmong(before, affected), after: lockedAmong(after, affected) }
     if (options.skipUndo !== true) {
-      const affected = affectedIds(patches)
-      const after = this.#deps.store.getDocument()
-      this.#undoStack.push({
-        transactionId,
-        label,
-        origin,
-        forward: patches,
-        inverse,
-        locked: { before: lockedAmong(before, affected), after: lockedAmong(after, affected) },
-      })
+      this.#undoStack.push({ transactionId, label, origin, forward: patches, inverse, locked })
     }
 
     const result = {
@@ -238,7 +314,8 @@ export class CommandDispatcher {
       origin,
       patches,
       inverse,
-      affected: affectedIds(patches),
+      affected,
+      locked: { before: [...locked.before], after: [...locked.after] },
     } as const
     this.#emit(result)
     return result
@@ -262,7 +339,9 @@ export class CommandDispatcher {
     recorded: RecordedState,
   ): DispatchResult {
     const before = this.#deps.store.getDocument()
-    const applicable = stillApplicable(before, patches, recorded)
+    const kept = stillApplicable(before, patches, recorded)
+    const applicable =
+      recorded.untrusted === true ? acceptablePatches(before, kept, this.#deps.registry) : kept
     if (applicable.length === 0) {
       return {
         ok: false,
@@ -283,6 +362,7 @@ export class CommandDispatcher {
       patches: applicable,
       inverse,
       affected: affectedIds(applicable),
+      ...(recorded.replayed === undefined ? {} : { replayed: recorded.replayed }),
     } as const
     this.#emit(result)
     return result
@@ -301,6 +381,13 @@ export class CommandDispatcher {
 interface RecordedState {
   readonly left: readonly Patch[]
   readonly locked: ReadonlySet<ObjectId> | undefined
+  /** Recorded somewhere else, so every object it would put back is validated. */
+  readonly untrusted?: boolean
+  /** The step being replayed, for an undo or a redo. */
+  readonly replayed?: {
+    readonly transactionId: TransactionId
+    readonly direction: 'undo' | 'redo'
+  }
 }
 
 function lockedAmong(doc: BoardDocument, ids: readonly ObjectId[]): ReadonlySet<ObjectId> {
@@ -321,7 +408,7 @@ function lockedAmong(doc: BoardDocument, ids: readonly ObjectId[]): ReadonlySet<
  *   takes its locked child along, and redoing that must take it again. Rule
  *   3's lock check is the command layer's, and history is not a way round it;
  * - EVERY change to an object that somebody has changed since (Codex, on #12
- *   and #13). A property is superseded when the value the replay finds there
+ *   and #13), including removing an object the step created (A-2). A property is superseded when the value the replay finds there
  *   is not the one this step left; putting back the step's value would undo
  *   their edit, not ours. And the whole object goes, not only that property:
  *   a conversion writes the type, its data version and the data together,
@@ -367,14 +454,6 @@ function replay(
       return
     }
     if (existing === undefined) return
-    if (patch.op === 'remove') {
-      if (lockedByOthers(existing)) return
-      objects.delete(patch.id)
-      kept.push(patch)
-      return
-    }
-    const changesLock = patch.path.length === 1 && patch.path[0] === 'locked'
-    if (lockedByOthers(existing) && !changesLock) return
     /*
      * What this write expects to find: the value its partner wrote. The
      * inverse is the forward list inverted patch by patch and reversed, so
@@ -386,6 +465,28 @@ function replay(
       recorded.left.length === patches.length
         ? recorded.left[patches.length - 1 - index]
         : undefined
+    if (patch.op === 'remove') {
+      if (lockedByOthers(existing)) return
+      /*
+       * Taking back a creation removes the object — and a removal used to be
+       * checked only for whether the object was there. Somebody who had
+       * written in it since lost what they wrote (tracks A-2): the object must
+       * still be exactly what the step made, like any other value it left.
+       */
+      if (
+        partner?.op === 'add' &&
+        partner.id === patch.id &&
+        !sameValue(existing, partner.object)
+      ) {
+        superseded.add(patch.id)
+        return
+      }
+      objects.delete(patch.id)
+      kept.push(patch)
+      return
+    }
+    const changesLock = patch.path.length === 1 && patch.path[0] === 'locked'
+    if (lockedByOthers(existing) && !changesLock) return
     if (
       partner?.op === 'set' &&
       partner.id === patch.id &&

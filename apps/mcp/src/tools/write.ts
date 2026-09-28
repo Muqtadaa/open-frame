@@ -72,8 +72,16 @@ function commit(
     // What it touched, so the next call can name the objects this one made
     // without reading the whole board back.
     objects: result.affected,
-    // One press to put it back, whatever this changed.
-    undo: 'This was one change; undoing once in OpenFrame reverses all of it.',
+    /*
+     * The id every peer knows this change by, in the board's change log. It
+     * used to say "undoing once in OpenFrame reverses all of it", which was
+     * true nowhere: a person's undo never held an agent's change, and no tool
+     * reached the agent's own (tracks A-2).
+     */
+    change: result.transactionId,
+    undo:
+      'This was one change. `revert_change` with this id takes all of it back, and so can ' +
+      'anyone on the board.',
     ...also,
   })
 }
@@ -471,6 +479,71 @@ export const addComment: ToolDefinition = {
   },
 }
 
+const revertArguments = z.strictObject({
+  ...boardArgument,
+  change: z
+    .string()
+    .optional()
+    .describe('The change to take back, as `list_changes` gives it. The newest one by default.'),
+})
+
+export const revertChange: ToolDefinition = {
+  name: 'revert_change',
+  title: 'Take a change back',
+  writes: true,
+  description:
+    'Take back a change an agent made to a board — yours, or another agent’s — as one step. ' +
+    'Whatever a person has changed since is kept: a note somebody has written in stays. ' +
+    '`list_changes` says which changes there are; with no `change`, the newest is taken back.',
+  input: revertArguments,
+  run: async (input, context) => {
+    const opened = await onBoardEditing(input, context, revertArguments)
+    if (isResponse(opened)) return opened
+    const { peer } = opened
+    const asked = opened.input
+    const log = peer.changes()
+
+    const target =
+      asked.change === undefined
+        ? log.find((change) => change.reverted === null)
+        : log.find((change) => change.id === asked.change)
+    if (target === undefined) {
+      return problem(
+        asked.change === undefined
+          ? 'Nothing to take back: no agent has changed this board, or every change is already undone.'
+          : `No change called ${asked.change} on this board. \`list_changes\` says which there are.`,
+      )
+    }
+    if (target.reverted !== null) {
+      return problem(
+        `“${target.label}” was already taken back${target.reverted.by === null ? '' : ` by ${target.reverted.by}`}.`,
+      )
+    }
+
+    /*
+     * Through the dispatcher's own revert, which is undo's replay with undo's
+     * guards (A-1): what anybody did since wins. Recorded as this agent's own
+     * change, so it is in the log too, and a person can take THIS back.
+     */
+    const result = peer.dispatcher.revert(target, { origin: 'mcp' })
+    if (!result.ok)
+      return problem(`Nothing of that change is left to take back: ${result.error.message}`)
+    peer.markReverted(target.id)
+
+    // Said rather than left to be diffed: what stayed, because somebody had
+    // changed it since.
+    const kept = target.affected.filter((id) => !result.affected.includes(id))
+    return data({
+      board: { id: peer.boardId, title: peer.store.getDocument().meta.title },
+      did: result.label,
+      reverted: target.id,
+      objects: result.affected,
+      ...(kept.length === 0 ? {} : { kept }),
+      change: result.transactionId,
+    })
+  },
+}
+
 export const WRITE_TOOLS: readonly ToolDefinition[] = [
   createObjects,
   updateObject,
@@ -479,4 +552,5 @@ export const WRITE_TOOLS: readonly ToolDefinition[] = [
   createConnector,
   createFrame,
   addComment,
+  revertChange,
 ]
