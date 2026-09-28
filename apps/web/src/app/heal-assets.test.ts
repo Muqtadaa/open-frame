@@ -1,7 +1,9 @@
 import { describe, expect, it, vi } from 'vitest'
 import { asAssetId, asObjectId, type BoardDocument } from '@openframe/core'
 
-import { healAssets, strandedAssets } from './heal-assets.js'
+import { createTestHarness } from '@openframe/core/testing'
+
+import { healAssets, publishRewrite, strandedAssets } from './heal-assets.js'
 
 function documentWith(objects: { id: string; data: unknown }[]): BoardDocument {
   return {
@@ -124,5 +126,28 @@ describe('lifting them into the room', () => {
       0,
     )
     expect(resolve).not.toHaveBeenCalled()
+  })
+})
+
+/*
+ * Lifting an image to the room is repair, not an edit anybody made. It was
+ * dispatched onto the person's own undo history, so the first Cmd+Z after
+ * opening a board put the local-only copy back — unpublishing the image for
+ * everyone else on the board (tracks A-6).
+ */
+describe('publishing a healed image', () => {
+  it('rewrites the image and leaves the person’s undo history alone', () => {
+    const h = createTestHarness()
+    const made = h.dispatcher.dispatch({
+      kind: 'CreateObjects',
+      objects: [{ id: asObjectId('obj_img'), type: 'image', x: 0, y: 0, data: { asset: local } }],
+    })
+    if (!made.ok) throw made.error
+    const depth = h.dispatcher.undoStack.depth
+
+    publishRewrite(h.dispatcher)(asObjectId('obj_img'), shared)
+
+    expect(h.store.getObject(asObjectId('obj_img'))?.data).toMatchObject({ asset: shared })
+    expect(h.dispatcher.undoStack.depth).toBe(depth)
   })
 })

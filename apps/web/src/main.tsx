@@ -7,7 +7,7 @@ import { AppErrorBoundary } from './app/AppErrorBoundary.js'
 import { createBoardCapabilities } from './app/board-capabilities.js'
 import type { BoardConnection } from '@openframe/collab'
 import { COLLAB_ENABLED } from './app/collab-config.js'
-import { healAssets } from './app/heal-assets.js'
+import { healAssets, publishRewrite } from './app/heal-assets.js'
 import { forgetDeletedBoard } from './app/board-lifecycle.js'
 import { createRuntime } from './app/composition-root.js'
 import { markLocalOpened } from './app/board-prefs.js'
@@ -121,12 +121,7 @@ if (route.kind === 'home') {
     void healAssets(runtime.store.getDocument(), {
       resolve: (ref) => runtime.assets.resolveNow(ref),
       reupload: (ref, blob) => runtime.assets.replace(ref.id, blob),
-      rewrite: (objectId, asset) => {
-        runtime.dispatcher.dispatch(
-          { kind: 'UpdateObjectData', id: objectId, patch: { asset } },
-          { label: 'Publish image' },
-        )
-      },
+      rewrite: publishRewrite(runtime.dispatcher),
     })
   }
 
