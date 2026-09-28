@@ -230,3 +230,19 @@ cover:
     through `create_objects` and `update_object`, lock refusals for update,
     move and delete, and the 200/500 size limits. The stdio test checks the
     same refusal at the wire. Loosening any one schema again fails its test.
+- **B-3, CI:**
+  - The repository was formatted in one mechanical commit, listed in
+    `.git-blame-ignore-revs`. Vendored and skill-written files are left out
+    of Prettier. `pnpm verify` now starts with `format:check`.
+  - The CI `verify` job runs the same steps as `pnpm verify`, including the
+    Format step and `bench:smoke`, which it had been missing.
+  - Playwright's Chromium comes from a cache keyed on the resolved
+    Playwright version, through one local action
+    (`.github/actions/playwright`) that every browser job uses.
+  - `e2e` and `rooms` both upload `test-results/`, which is where the traces
+    are.
+  - `deploy-rooms.yml` runs the two-browser rooms suite before its dry run.
+  - **Not done, on purpose:** `apps/mcp` is NOT in `deploy-rooms`' path
+    filter. That filter decides when production rooms are redeployed, and an
+    MCP-only change does not change the room. The MCP peer is covered on
+    every PR by `mcp-peer.spec` in the `rooms` job.

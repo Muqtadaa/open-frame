@@ -45,6 +45,16 @@ jobs:
       - name: Test the room
         run: pnpm --filter @openframe/collab test
 
+      - uses: ./.github/actions/playwright
+
+      # The unit tests above test the protocol; these drive two browsers and an
+      # MCP peer through a real workerd and Durable Object, which is the room
+      # this job is about to replace. The same suite gates every PR, and is run
+      # again here because a deploy is of main as it stands after the merge,
+      # not of any one PR's head.
+      - name: Two windows, one board
+        run: pnpm test:rooms
+
       - name: Typecheck the Worker
         run: pnpm --filter @openframe/rooms typecheck
 
