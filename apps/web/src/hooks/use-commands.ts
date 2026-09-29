@@ -13,6 +13,7 @@ import type {
 } from '@openframe/core'
 import {
   copySpec,
+  groupByParent,
   uncrop,
   unionAll,
   type AlignEdge,
@@ -429,14 +430,23 @@ export function useCommands(): BoardCommands {
       ungroup() {
         const ids = selected()
         if (ids.length === 0) return
+        /*
+         * What is freed is what the groups HELD, read before they go. Not what
+         * the command touched: deleting a group also detaches any line joined
+         * to it, and selecting that line with the members would hand the next
+         * restyle or delete an object nobody chose.
+         */
+        const doc = runtime.store.getDocument()
+        const children = groupByParent(doc)
+        const freed = ids
+          .filter((id) => {
+            const type = doc.objects.get(id)?.type
+            return type !== undefined && runtime.registry.get(type)?.capabilities.selectsAsUnit
+          })
+          .flatMap((id) => (children.get(id) ?? []).map((object) => object.id))
         const result = dispatcher.dispatch({ kind: 'UngroupObjects', ids })
         report(result)
-        if (!result.ok) return
-        // What was freed is what the command touched and is still there; the
-        // groups themselves are gone.
-        useInteractionStore
-          .getState()
-          .setSelection(result.affected.filter((id) => runtime.store.getObject(id) !== undefined))
+        if (result.ok) useInteractionStore.getState().setSelection(freed)
       },
 
       duplicateSelection() {

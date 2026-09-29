@@ -900,6 +900,43 @@ test.describe('aiming at an anchor', () => {
  * and what is finally drawn.
  */
 test.describe('joining a line to a container', () => {
+  /*
+   * Ungrouping frees the members, and they are what is selected afterwards.
+   * Deleting the group also detaches a line joined to it, which the command
+   * reports as changed — but that line was never IN the group, and selecting
+   * it with them would hand the next restyle or delete an object nobody chose.
+   */
+  test('ungrouping selects the members, not a line that was joined to the group', async ({
+    page,
+  }) => {
+    await sticky(page, 320, 260, 'A')
+    await sticky(page, 620, 260, 'B')
+    await page.keyboard.press(`${MOD}+a`)
+    await page.keyboard.press(`${MOD}+g`)
+    await expect(page.locator('[data-object-type="group"]')).toHaveCount(1)
+    const group = await page.getByTestId('selection-overlay').boundingBox()
+    if (group === null) throw new Error('nothing selected')
+    await page.locator(CANVAS).click({ position: { x: 1120, y: 620 } })
+
+    await sticky(page, 460, 640, 'C')
+    await page.keyboard.press('c')
+    await drag(
+      page,
+      { x: 460, y: 640 },
+      { x: group.x + group.width / 2, y: group.y + group.height - 6 },
+    )
+    await page.keyboard.press('v')
+    await expect(page.locator('[data-object-type="connector"]')).toHaveCount(1)
+
+    // A member selects the group it is in.
+    await page.locator(CANVAS).click({ position: { x: 320, y: 260 } })
+    await expect(page.getByTestId('selection-count')).toHaveText('1 selected')
+    await page.keyboard.press(`${MOD}+Shift+g`)
+
+    await expect(page.locator('[data-object-type="group"]')).toHaveCount(0)
+    await expect(page.getByTestId('selection-count')).toHaveText('2 selected')
+  })
+
   test('meets the group where it is drawn, and follows it', async ({ page }) => {
     await sticky(page, 320, 260, 'A')
     await sticky(page, 620, 260, 'B')

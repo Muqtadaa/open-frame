@@ -31,6 +31,27 @@ export function deriveObject(
   if (sources.length === 0) {
     throw new CommandError('invalid-input', 'There is nothing on the board to derive from')
   }
+  if (ctx.registry.get(command.toType) === undefined) {
+    throw new CommandError('unknown-type', `Object type "${command.toType}" is not registered`)
+  }
+  /*
+   * Only the pairings the types DECLARE. A relation is provenance, and the
+   * menu offering just those is a courtesy; this is the rule, so an agent or
+   * the API cannot stand a task on a sticky that nothing says a task stands on.
+   */
+  for (const source of sources) {
+    const declared = ctx.registry.get(source.type)?.derivations ?? []
+    const allowed = declared.some(
+      (derivation) =>
+        derivation.type === command.toType && derivation.predicate === command.predicate,
+    )
+    if (!allowed) {
+      throw new CommandError(
+        'invalid-input',
+        `A ${source.type} cannot be the source of a ${command.toType} that ${command.predicate} it`,
+      )
+    }
+  }
 
   const id = command.id ?? ctx.ids.objectId()
   return createObjects(

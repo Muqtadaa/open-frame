@@ -356,3 +356,73 @@ describe('DeriveObject', () => {
     if (!result.ok) expect(result.error.code).toBe('unknown-type')
   })
 })
+
+/**
+ * A derivation is provenance, so only the pairings the types DECLARE may be
+ * recorded. The menu only ever offered those; a caller that builds the
+ * command itself — an agent, the API — must be held to the same list, or it
+ * can stand a task on a sticky that nothing says a task can stand on.
+ */
+describe('DeriveObject, against what the sources declare', () => {
+  it('refuses a type the source does not derive', () => {
+    const h = createTestHarness()
+    const note = create(h, 'sticky')
+    const result = run(h, {
+      kind: 'DeriveObject',
+      toType: 'task',
+      from: [note],
+      predicate: 'implements',
+      x: 0,
+      y: -200,
+    })
+    expect(result.ok).toBe(false)
+    if (!result.ok) expect(result.error.code).toBe('invalid-input')
+    expect(h.store.getDocument().objects.size).toBe(1)
+  })
+
+  it('refuses a declared type under a predicate it was not declared with', () => {
+    const h = createTestHarness()
+    const note = create(h, 'sticky')
+    const result = run(h, {
+      kind: 'DeriveObject',
+      toType: 'insight',
+      from: [note],
+      predicate: 'refutes',
+      x: 0,
+      y: -200,
+    })
+    expect(result.ok).toBe(false)
+    if (!result.ok) expect(result.error.code).toBe('invalid-input')
+  })
+
+  it('refuses a mixed selection when one source cannot derive it', () => {
+    const h = createTestHarness()
+    const evidence = create(h, 'evidence')
+    const task = create(h, 'task', 300, 0)
+    const result = run(h, {
+      kind: 'DeriveObject',
+      toType: 'insight',
+      from: [evidence, task],
+      predicate: 'cites',
+      x: 0,
+      y: -200,
+    })
+    expect(result.ok).toBe(false)
+    if (!result.ok) expect(result.error.code).toBe('invalid-input')
+  })
+
+  it('allows what every source declares', () => {
+    const h = createTestHarness()
+    const note = create(h, 'sticky')
+    const evidence = create(h, 'evidence', 300, 0)
+    const result = run(h, {
+      kind: 'DeriveObject',
+      toType: 'insight',
+      from: [note, evidence],
+      predicate: 'cites',
+      x: 0,
+      y: -200,
+    })
+    expect(result.ok).toBe(true)
+  })
+})
