@@ -1,6 +1,6 @@
-import { expect, test, type Page } from '@playwright/test'
+import type { Page } from '@playwright/test'
 
-import { BOARD_URL } from './routes.js'
+import { CANVAS, EDITOR, expect, test, boxOf } from './fixtures.js'
 
 /**
  * Tools, shortcuts and viewport navigation.
@@ -10,45 +10,11 @@ import { BOARD_URL } from './routes.js'
  * exactly what unit tests cannot observe.
  */
 
-const CANVAS = '[data-testid="canvas"]'
-/*
- * Whatever is currently editable in place.
- *
- * Body text is a `contenteditable` since rich text (ADR 0012); a frame's title
- * and an image's alt text are labels and stay plain textareas. A spec should
- * not have to know which it is about to type into.
- */
-const EDITOR = 'textarea, [contenteditable="true"]'
-
-async function freshBoard(page: Page): Promise<void> {
-  await page.goto(BOARD_URL)
-  await page.evaluate(
-    async () =>
-      new Promise<void>((resolve) => {
-        const request = indexedDB.deleteDatabase('openframe')
-        request.onsuccess = () => resolve()
-        request.onerror = () => resolve()
-        request.onblocked = () => resolve()
-      }),
-  )
-  await page.reload()
-  await expect(page.locator(CANVAS)).toBeVisible()
-  /*
-   * Also wait for the toolbar. A visible canvas only means React rendered;
-   * `useKeyboardShortcuts` attaches its listener in an effect, which runs after
-   * paint, so a keystroke sent on the canvas alone can land in the gap and be
-   * dropped. That showed up as a rare, unexplained tool-selection failure.
-   */
-  await expect(page.getByTestId('tool-select')).toBeVisible()
-}
+test.use({ board: 'fresh' })
 
 async function zoomPercent(page: Page): Promise<number> {
   return Number((await page.getByTestId('zoom-percent').textContent())?.replace('%', '') ?? '0')
 }
-
-test.beforeEach(async ({ page }) => {
-  await freshBoard(page)
-})
 
 test.describe('keyboard tool selection', () => {
   test('V, S, T and H select their tools', async ({ page }) => {
@@ -133,16 +99,14 @@ test.describe('zoom', () => {
    * preventDefault, so the canvas percentage changes and the page does not.
    */
   test('claims Mod+plus, Mod+minus and Mod+0 instead of the browser', async ({ page }) => {
-    const mod = process.platform === 'darwin' ? 'Meta' : 'Control'
-
-    await page.keyboard.press(`${mod}+=`)
+    await page.keyboard.press(`ControlOrMeta+=`)
     await expect(zoomPercent(page)).resolves.toBe(200)
 
-    await page.keyboard.press(`${mod}+-`)
+    await page.keyboard.press(`ControlOrMeta+-`)
     await expect(zoomPercent(page)).resolves.toBe(100)
 
-    await page.keyboard.press(`${mod}+=`)
-    await page.keyboard.press(`${mod}+0`)
+    await page.keyboard.press(`ControlOrMeta+=`)
+    await page.keyboard.press(`ControlOrMeta+0`)
     await expect(zoomPercent(page)).resolves.toBe(100)
 
     // The page itself must not have scaled.
@@ -191,8 +155,7 @@ test.describe('zoom', () => {
       await page.getByTestId('zoom-input').fill(percent)
       await page.getByTestId('zoom-input').press('Enter')
       await expect(zoomPercent(page)).resolves.toBe(Number(percent))
-      const box = await title.boundingBox()
-      if (box === null) throw new Error(`the frame name is not on screen at ${percent}%`)
+      const box = await boxOf(title)
       return box.height
     }
 
@@ -229,9 +192,10 @@ test.describe('zoom', () => {
       // The bar arrives on an animation that carries its own transform, so a
       // box read on the same tick is the animation's, not the layout's.
       await expect(page.getByTestId('table-cell-style')).toBeVisible()
-      await page.waitForTimeout(250)
-      const box = await page.getByTestId('table-cell-style').boundingBox()
-      if (box === null) throw new Error(`no colour bar at ${percent}%`)
+      await page
+        .getByTestId('table-cell-style')
+        .evaluate((bar) => Promise.all(bar.getAnimations({ subtree: true }).map((a) => a.finished)))
+      const box = await boxOf(page.getByTestId('table-cell-style'))
       await page.keyboard.press('Escape')
       return { w: box.width, h: box.height }
     }
@@ -258,20 +222,18 @@ test.describe('zoom', () => {
 
 test.describe('selection shortcuts', () => {
   test('select all, duplicate, then undo', async ({ page }) => {
-    const mod = process.platform === 'darwin' ? 'Meta' : 'Control'
-
     await page.keyboard.press('s')
     await page.locator(CANVAS).click({ position: { x: 400, y: 300 } })
     await page.locator(CANVAS).click({ position: { x: 900, y: 500 } })
     await page.keyboard.press('v')
 
-    await page.keyboard.press(`${mod}+a`)
+    await page.keyboard.press(`ControlOrMeta+a`)
     await expect(page.locator('.of-object--selected')).toHaveCount(1)
 
-    await page.keyboard.press(`${mod}+d`)
+    await page.keyboard.press(`ControlOrMeta+d`)
     await expect(page.locator('[data-object-type="sticky"]')).toHaveCount(2)
 
-    await page.keyboard.press(`${mod}+z`)
+    await page.keyboard.press(`ControlOrMeta+z`)
     await expect(page.locator('[data-object-type="sticky"]')).toHaveCount(1)
   })
 
@@ -282,15 +244,11 @@ test.describe('selection shortcuts', () => {
     await page.keyboard.press('v')
 
     await page.locator('[data-object-type="sticky"]').click()
-    const before = await page.locator('[data-object-type="sticky"]').boundingBox()
-    expect(before).not.toBeNull()
-    if (before === null) return
+    const before = await boxOf(page.locator('[data-object-type="sticky"]'))
 
     for (let i = 0; i < 5; i++) await page.keyboard.press('Shift+ArrowRight')
 
-    const after = await page.locator('[data-object-type="sticky"]').boundingBox()
-    expect(after).not.toBeNull()
-    if (after === null) return
+    const after = await boxOf(page.locator('[data-object-type="sticky"]'))
     expect(Math.round(after.x - before.x)).toBe(50)
   })
 })

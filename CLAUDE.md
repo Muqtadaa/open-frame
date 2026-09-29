@@ -561,6 +561,14 @@ selection, viewport, gesture, discussion and chrome. A new field goes in the
 slice that owns it. Two slices must never define the same key, because the
 spread that joins them silently keeps the later one (`slices.test.ts`).
 
+**Browser tests** — a spec builds on `e2e/fixtures.ts`: it asks for its board
+with `test.use({ board: 'fresh' | 'open' })` and uses the shared `drag`,
+`place`, `boxOf`, `saved`, `clickLine`, `undo`. A missing element is a
+FAILURE, never a `return` — 47 places once returned early on a null read and passed
+while checking nothing. `eslint-plugin-playwright` holds the rest: no sleeps
+(wait for the state the sleep stood for), no branches in a test body, no
+forced clicks. `e2e-rooms/rooms.ts` is the same for the rooms suite.
+
 **Ports** — `Clock` and `IdGenerator` are injected, so tests are deterministic
 without fake timers or mocks. Use `createTestHarness()` from `core/src/testing.ts`.
 

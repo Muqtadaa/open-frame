@@ -1,6 +1,6 @@
-import { expect, test, type Page } from '@playwright/test'
+import type { Page } from '@playwright/test'
 
-import { BOARD_URL } from './routes.js'
+import { CANVAS, expect, test } from './fixtures.js'
 
 /**
  * Finding things by what they MEAN, walked in a browser.
@@ -11,26 +11,11 @@ import { BOARD_URL } from './routes.js'
  * declarations falsifiable at last (rule 21).
  */
 
-const CANVAS = '[data-testid="canvas"]'
 const EDITOR = '[data-testid="rich-text-editor"]'
 const AT = { x: 340, y: 280 }
 const CLEAR = { x: 1120, y: 620 }
 
-async function freshBoard(page: Page): Promise<void> {
-  await page.goto(BOARD_URL)
-  await page.evaluate(
-    async () =>
-      new Promise<void>((resolve) => {
-        const r = indexedDB.deleteDatabase('openframe')
-        r.onsuccess = () => resolve()
-        r.onerror = () => resolve()
-        r.onblocked = () => resolve()
-      }),
-  )
-  await page.reload()
-  await expect(page.locator(CANVAS)).toBeVisible()
-  await expect(page.getByTestId('tool-select')).toBeVisible()
-}
+test.use({ board: 'fresh' })
 
 async function note(page: Page, at: { x: number; y: number }, text: string): Promise<void> {
   await page.keyboard.press('s')
@@ -46,10 +31,6 @@ async function openSearch(page: Page): Promise<void> {
 }
 
 test.describe('finding things on a board', () => {
-  test.beforeEach(async ({ page }) => {
-    await freshBoard(page)
-  })
-
   test('opens with the shortcut and leaves on Escape', async ({ page }) => {
     await openSearch(page)
     await page.keyboard.press('Escape')

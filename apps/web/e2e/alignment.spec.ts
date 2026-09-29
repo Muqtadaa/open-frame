@@ -1,6 +1,6 @@
-import { expect, test, type Page } from '@playwright/test'
+import type { Page } from '@playwright/test'
 
-import { BOARD_URL } from './routes.js'
+import { boxOf, CANVAS, drag, expect, place, test } from './fixtures.js'
 
 /**
  * Alignment guides: lining a drag up with its neighbours, and showing why.
@@ -10,70 +10,17 @@ import { BOARD_URL } from './routes.js'
  * is precisely the state a unit test cannot observe.
  */
 
-const CANVAS = '[data-testid="canvas"]'
-/*
- * Whatever is currently editable in place.
- *
- * Body text is a `contenteditable` since rich text (ADR 0012); a frame's title
- * and an image's alt text are labels and stay plain textareas. A spec should
- * not have to know which it is about to type into.
- */
-const EDITOR = 'textarea, [contenteditable="true"]'
 const MOD = process.platform === 'darwin' ? 'Meta' : 'Control'
+const AWAY = { x: 1150, y: 160 }
 
-async function freshBoard(page: Page): Promise<void> {
-  await page.goto(BOARD_URL)
-  await page.evaluate(
-    async () =>
-      new Promise<void>((resolve) => {
-        const request = indexedDB.deleteDatabase('openframe')
-        request.onsuccess = () => resolve()
-        request.onerror = () => resolve()
-        request.onblocked = () => resolve()
-      }),
-  )
-  await page.reload()
-  await expect(page.locator(CANVAS)).toBeVisible()
-  /*
-   * Also wait for the toolbar. A visible canvas only means React rendered;
-   * `useKeyboardShortcuts` attaches its listener in an effect, which runs after
-   * paint, so a keystroke sent on the canvas alone can land in the gap and be
-   * dropped. That showed up as a rare, unexplained tool-selection failure.
-   */
-  await expect(page.getByTestId('tool-select')).toBeVisible()
-}
+test.use({ board: 'fresh' })
 
 async function create(page: Page, tool: string, x: number, y: number, text: string): Promise<void> {
-  await page.keyboard.press(tool)
-  await page.locator(CANVAS).click({ position: { x, y } })
-  await expect(page.locator(EDITOR)).toBeFocused()
-  await page.locator(EDITOR).fill(text)
-  await page.locator(CANVAS).click({ position: { x: 1150, y: 160 } })
-  await expect(page.locator(EDITOR)).toHaveCount(0)
-  await page.keyboard.press('v')
+  await place(page, tool, { x, y }, text, AWAY)
 }
 
-/** Drags in steps and runs `midway` while the pointer is still down. */
-async function dragWith(
-  page: Page,
-  from: { x: number; y: number },
-  to: { x: number; y: number },
-  midway?: () => Promise<void>,
-): Promise<void> {
-  await page.mouse.move(from.x, from.y)
-  await page.mouse.down()
-  for (let i = 1; i <= 8; i++) {
-    await page.mouse.move(from.x + ((to.x - from.x) * i) / 8, from.y + ((to.y - from.y) * i) / 8)
-  }
-  if (midway !== undefined) await midway()
-  await page.mouse.up()
-}
-
-const box = async (page: Page, nth: number) => {
-  const result = await page.locator('[data-object-type="sticky"]').nth(nth).boundingBox()
-  if (result === null) throw new Error(`no sticky at index ${String(nth)}`)
-  return result
-}
+const box = async (page: Page, nth: number) =>
+  boxOf(page.locator('[data-object-type="sticky"]').nth(nth))
 
 /**
  * Nudges the anchor OFF the grid, holding the modifier so snapping cannot pull
@@ -93,11 +40,7 @@ async function pushAnchorOffGrid(page: Page): Promise<number> {
    * anchor on the grid — which failed this suite intermittently rather than
    * honestly.
    */
-  await dragWith(
-    page,
-    { x: before.x + 20, y: before.y + 20 },
-    { x: before.x + 27, y: before.y + 20 },
-  )
+  await drag(page, { x: before.x + 20, y: before.y + 20 }, { x: before.x + 27, y: before.y + 20 })
   await page.keyboard.up(MOD)
 
   const after = await box(page, 0)
@@ -112,13 +55,12 @@ async function pushAnchorOffGrid(page: Page): Promise<number> {
    * instead of the note. That made this suite fail whenever the panel changed
    * height, which is nothing to do with alignment guides.
    */
-  await page.locator(CANVAS).click({ position: { x: 1150, y: 160 } })
+  await page.locator(CANVAS).click({ position: AWAY })
   return after.x
 }
 
 test.describe('alignment guides', () => {
   test.beforeEach(async ({ page }) => {
-    await freshBoard(page)
     await create(page, 's', 350, 250, 'Anchor')
     await create(page, 's', 700, 520, 'Mover')
   })
@@ -131,7 +73,7 @@ test.describe('alignment guides', () => {
     // capture tolerance, so a guide should appear.
     const target = anchor.x + 4
 
-    await dragWith(
+    await drag(
       page,
       { x: mover.x + 20, y: mover.y + 20 },
       { x: target + 20, y: mover.y + 20 },
@@ -152,11 +94,7 @@ test.describe('alignment guides', () => {
     const anchorX = await pushAnchorOffGrid(page)
     const mover = await box(page, 1)
 
-    await dragWith(
-      page,
-      { x: mover.x + 20, y: mover.y + 20 },
-      { x: anchorX + 3 + 20, y: mover.y + 20 },
-    )
+    await drag(page, { x: mover.x + 20, y: mover.y + 20 }, { x: anchorX + 3 + 20, y: mover.y + 20 })
 
     const settled = await box(page, 1)
     expect(Math.abs(settled.x - anchorX)).toBeLessThan(1)
@@ -170,11 +108,7 @@ test.describe('alignment guides', () => {
     const mover = await box(page, 1)
     const startY = mover.y
 
-    await dragWith(
-      page,
-      { x: mover.x + 20, y: mover.y + 20 },
-      { x: anchorX + 3 + 20, y: mover.y + 20 },
-    )
+    await drag(page, { x: mover.x + 20, y: mover.y + 20 }, { x: anchorX + 3 + 20, y: mover.y + 20 })
 
     const settled = await box(page, 1)
     expect(Math.abs(settled.x - anchorX)).toBeLessThan(1)
@@ -188,7 +122,7 @@ test.describe('alignment guides', () => {
     const mover = await box(page, 1)
 
     // 40px off is well outside the capture tolerance.
-    await dragWith(
+    await drag(
       page,
       { x: mover.x + 20, y: mover.y + 20 },
       { x: anchorX + 40 + 20, y: mover.y + 20 },
@@ -204,7 +138,7 @@ test.describe('alignment guides', () => {
     const mover = await box(page, 1)
 
     await page.keyboard.down(MOD)
-    await dragWith(
+    await drag(
       page,
       { x: mover.x + 20, y: mover.y + 20 },
       { x: anchorX + 3 + 20, y: mover.y + 20 },

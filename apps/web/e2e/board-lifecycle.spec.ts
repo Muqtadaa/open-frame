@@ -1,5 +1,6 @@
 import { expect, test, type Page } from '@playwright/test'
 
+import { CANVAS, EDITOR, boxOf, saved } from './fixtures.js'
 import { BOARD_URL } from './routes.js'
 
 /**
@@ -13,15 +14,6 @@ import { BOARD_URL } from './routes.js'
  * the unit level.
  */
 
-const CANVAS = '[data-testid="canvas"]'
-/*
- * Whatever is currently editable in place.
- *
- * Body text is a `contenteditable` since rich text (ADR 0012); a frame's title
- * and an image's alt text are labels and stay plain textareas. A spec should
- * not have to know which it is about to type into.
- */
-const EDITOR = 'textarea, [contenteditable="true"]'
 const STICKY = '[data-object-type="sticky"]'
 
 async function createSticky(page: Page, x: number, y: number, text: string): Promise<void> {
@@ -69,7 +61,7 @@ test('creates a sticky note and shows its text', async ({ page }) => {
 test('persists across a reload', async ({ page }) => {
   await createSticky(page, 300, 250, 'Survives a reload')
 
-  await page.waitForTimeout(800) // autosave is debounced
+  await saved(page)
   await page.reload()
 
   await expect(page.locator(STICKY)).toHaveCount(1)
@@ -80,9 +72,7 @@ test('drags a note and undoes the move as a single action', async ({ page }) => 
   await createSticky(page, 300, 250, 'Draggable')
 
   const note = page.locator(STICKY)
-  const before = await note.boundingBox()
-  expect(before).not.toBeNull()
-  if (before === null) return
+  const before = await boxOf(note)
 
   // Many pointer events, one undoable action.
   await page.mouse.move(before.x + 40, before.y + 40)
@@ -92,16 +82,12 @@ test('drags a note and undoes the move as a single action', async ({ page }) => 
   }
   await page.mouse.up()
 
-  const after = await note.boundingBox()
-  expect(after).not.toBeNull()
-  if (after === null) return
+  const after = await boxOf(note)
   expect(Math.round(after.x - before.x)).toBeGreaterThan(100)
 
   await page.getByTestId('undo').click()
 
-  const restored = await note.boundingBox()
-  expect(restored).not.toBeNull()
-  if (restored === null) return
+  const restored = await boxOf(note)
   expect(Math.round(restored.x)).toBe(Math.round(before.x))
 
   // One drag produced exactly one history entry, so undo is now exhausted

@@ -1,7 +1,9 @@
 import { expect, test, type Browser, type Locator, type Page } from '@playwright/test'
+import { boxOf, defined, pairs } from '../e2e/fixtures.js'
 
 import { BOARD_URL, HOME_URL } from '../e2e/routes.js'
 import { signedIn } from '../e2e/signed-in.js'
+import { join, newRoomId } from './rooms.js'
 
 /**
  * Two people, one board, a real Durable Object.
@@ -45,23 +47,6 @@ interface DebugWindow {
  */
 
 /** A fresh room per test: wrangler keeps local Durable Object state on disk. */
-function newRoomId(): string {
-  return `brd_${Math.random().toString(36).slice(2, 12)}${Date.now().toString(36)}`
-}
-
-async function join(browser: Browser, room: string): Promise<Page> {
-  const context = await browser.newContext()
-  const page = await context.newPage()
-  await page.goto(`/?room=${room}`)
-  await page.waitForSelector('[data-testid="status-bar"]')
-  await expect(page.locator('[data-testid="room-status"]')).toHaveAttribute(
-    'data-status',
-    'connected',
-    { timeout: 20_000 },
-  )
-  return page
-}
-
 /**
  * `at` matters: two notes at the same coordinates overlap, and the upper one
  * swallows every click aimed at the lower. That cost a test run.
@@ -129,8 +114,7 @@ test('faces are targets, side by side, and a crowd is counted', async ({ browser
   const room = newRoomId()
   const pages = [await join(browser, room)]
   for (let i = 0; i < 3; i++) pages.push(await join(browser, room))
-  const [me] = pages
-  if (me === undefined) return
+  const me = defined(pages[0], 'the first page')
   await expect(me.locator('[data-testid="room-people"]')).toHaveAttribute('data-count', '4', {
     timeout: 20_000,
   })
@@ -140,11 +124,12 @@ test('faces are targets, side by side, and a crowd is counted', async ({ browser
   const boxes = await faces.evaluateAll((all) =>
     all.map((face) => face.getBoundingClientRect().toJSON() as DOMRect),
   )
-  for (const [i, box] of boxes.entries()) {
+  for (const box of boxes) {
     expect(box.width).toBeGreaterThanOrEqual(24)
     expect(box.height).toBeGreaterThanOrEqual(24)
-    const next = boxes[i + 1]
-    if (next !== undefined) expect(next.x).toBeGreaterThanOrEqual(box.x + box.width)
+  }
+  for (const [box, next] of pairs(boxes)) {
+    expect(next.x).toBeGreaterThanOrEqual(box.x + box.width)
   }
   await expect(me.getByTestId('room-more')).toHaveText('+1')
 })
@@ -641,8 +626,7 @@ test('a note slides while somebody drags it, without the document moving', async
   const startedAt = await drawnX(bob)
 
   // Alice picks the note up and moves it, WITHOUT letting go.
-  const box = await noteFor(alice).boundingBox()
-  if (box === null) throw new Error('alice cannot see the note')
+  const box = await boxOf(noteFor(alice))
   await alice.mouse.move(box.x + box.width / 2, box.y + box.height / 2)
   await alice.mouse.down()
   await alice.mouse.move(box.x + box.width / 2 + 220, box.y + box.height / 2 + 90, { steps: 12 })

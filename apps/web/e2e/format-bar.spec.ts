@@ -1,14 +1,16 @@
 import { expect, test, type Page } from '@playwright/test'
 
+import { CANVAS } from './fixtures.js'
 import { BOARD_URL } from './routes.js'
 
 /**
  * The format bar says what size the text is, stops at the ends of the
  * ladder, lists its shortcuts, and can be reached without a pointer.
  */
-const CANVAS = '[data-testid="canvas"]'
 const EDITOR = '[contenteditable="true"]'
 const MOD = process.platform === 'darwin' ? 'Meta' : 'Control'
+/** How a tip writes the same key. */
+const TIP_MOD = process.platform === 'darwin' ? '⌘' : 'Ctrl+'
 
 async function editingNote(page: Page, text: string): Promise<void> {
   await page.goto(BOARD_URL)
@@ -45,10 +47,9 @@ test('shows the size between the steppers, and switches them off at the ends', a
 
 test('every control names its shortcut, and the new ones work', async ({ page }) => {
   await editingNote(page, 'Crossed out')
-  const ctrl = process.platform === 'darwin' ? '⌘' : 'Ctrl+'
   await expect(page.getByTestId('format-bold')).toHaveAttribute(
     'data-tip',
-    new RegExp(`${ctrl.replace('+', '\\+')}B`),
+    new RegExp(`${TIP_MOD.replace('+', '\\+')}B`),
   )
   await expect(page.getByTestId('format-strike')).toHaveAttribute('aria-keyshortcuts', /Shift\+X$/)
 

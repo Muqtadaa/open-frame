@@ -1,20 +1,10 @@
-import { expect, test, type Page } from '@playwright/test'
+import type { Page } from '@playwright/test'
 
-import { BOARD_URL } from './routes.js'
+import { CANVAS, EDITOR, expect, test, undo, boxOf } from './fixtures.js'
 
 /**
  * The shape palette, and the label geometry that made the triangle look broken.
  */
-
-const CANVAS = '[data-testid="canvas"]'
-/*
- * Whatever is currently editable in place.
- *
- * Body text is a `contenteditable` since rich text (ADR 0012); a frame's title
- * and an image's alt text are labels and stay plain textareas. A spec should
- * not have to know which it is about to type into.
- */
-const EDITOR = 'textarea, [contenteditable="true"]'
 
 const KINDS = [
   'rectangle',
@@ -27,27 +17,7 @@ const KINDS = [
   'octagon',
 ] as const
 
-async function freshBoard(page: Page): Promise<void> {
-  await page.goto(BOARD_URL)
-  await page.evaluate(
-    async () =>
-      new Promise<void>((resolve) => {
-        const request = indexedDB.deleteDatabase('openframe')
-        request.onsuccess = () => resolve()
-        request.onerror = () => resolve()
-        request.onblocked = () => resolve()
-      }),
-  )
-  await page.reload()
-  await expect(page.locator(CANVAS)).toBeVisible()
-  /*
-   * Also wait for the toolbar. A visible canvas only means React rendered;
-   * `useKeyboardShortcuts` attaches its listener in an effect, which runs after
-   * paint, so a keystroke sent on the canvas alone can land in the gap and be
-   * dropped. That showed up as a rare, unexplained tool-selection failure.
-   */
-  await expect(page.getByTestId('tool-select')).toBeVisible()
-}
+test.use({ board: 'fresh' })
 
 async function place(page: Page, kind: string, label: string): Promise<void> {
   await page.keyboard.press('u')
@@ -60,10 +30,6 @@ async function place(page: Page, kind: string, label: string): Promise<void> {
 }
 
 test.describe('shapes', () => {
-  test.beforeEach(async ({ page }) => {
-    await freshBoard(page)
-  })
-
   test('offers every kind in the picker', async ({ page }) => {
     await page.keyboard.press('u')
     await page.getByTestId('shape-menu').click()
@@ -79,11 +45,8 @@ test.describe('shapes', () => {
       const shape = page.locator('[data-object-type="shape"]')
       await expect(shape).toContainText('Review')
 
-      const outline = await shape.locator('.of-shape__svg').boundingBox()
-      const label = await shape.locator('.of-shape__label').boundingBox()
-      expect(outline).not.toBeNull()
-      expect(label).not.toBeNull()
-      if (outline === null || label === null) return
+      const outline = await boxOf(shape.locator('.of-shape__svg'))
+      const label = await boxOf(shape.locator('.of-shape__label'))
 
       /*
        * The bug this guards: with a uniform inset the triangle's label sat in
@@ -110,9 +73,8 @@ test.describe('shapes', () => {
     test(`a ${kind} label sits in the middle until told otherwise`, async ({ page }) => {
       await place(page, kind, 'Pay')
 
-      const box = await page.locator('.of-shape__label').boundingBox()
-      const text = await page.locator('.of-shape__label-text').boundingBox()
-      if (box === null || text === null) throw new Error('missing geometry')
+      const box = await boxOf(page.locator('.of-shape__label'))
+      const text = await boxOf(page.locator('.of-shape__label-text'))
       expect(Math.abs(text.x + text.width / 2 - (box.x + box.width / 2))).toBeLessThan(2)
       expect(Math.abs(text.y + text.height / 2 - (box.y + box.height / 2))).toBeLessThan(2)
 
@@ -149,9 +111,8 @@ test.describe('shapes', () => {
   test('a triangle label sits low, where the shape is actually wide', async ({ page }) => {
     await place(page, 'triangle', 'Review')
 
-    const outline = await page.locator('.of-shape__svg').boundingBox()
-    const label = await page.locator('.of-shape__label').boundingBox()
-    if (outline === null || label === null) throw new Error('missing geometry')
+    const outline = await boxOf(page.locator('.of-shape__svg'))
+    const label = await boxOf(page.locator('.of-shape__label'))
 
     // Its centre must be below the vertical midpoint — the apex half is empty.
     const labelCentre = label.y + label.height / 2
@@ -164,10 +125,6 @@ test.describe('shapes', () => {
  * size, release. Reported missing from the deployed build.
  */
 test.describe('drawing to size', () => {
-  test.beforeEach(async ({ page }) => {
-    await freshBoard(page)
-  })
-
   async function drag(
     page: Page,
     from: { x: number; y: number },
@@ -274,7 +231,7 @@ test.describe('drawing to size', () => {
     await page.keyboard.press('u')
     await drag(page, { x: 200, y: 200 }, { x: 470, y: 360 })
     await expect(page.locator('[data-object-id]')).toHaveCount(1)
-    await page.keyboard.press('Control+z')
+    await undo(page)
     await expect(page.locator('[data-object-id]')).toHaveCount(0)
   })
 })

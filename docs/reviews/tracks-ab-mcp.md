@@ -411,3 +411,17 @@ cover:
     views and controls importing the I/O use cases directly. It failed once
     on purpose.
   - CLAUDE.md rule 2 says where I/O comes from. Item 2 is complete.
+- **E2E fixtures and lint** (item 3, PR 3a):
+  - `e2e/fixtures.ts` replaces twelve `freshBoard` and twelve `board()`
+    copies (one had lost the rail wait), the identical `drag`, note-placing
+    and box helpers, and 36 redeclared selectors. A spec asks for its board
+    with `test.use`. `e2e-rooms/rooms.ts` does the same for `join` and
+    `newRoomId`. The test list is unchanged.
+  - 47 places returned early on a null read, so a test could pass having checked
+    nothing. They fail now, naming the element; shown first by pointing one
+    at an element with no box, which passed before and fails after.
+  - `eslint-plugin-playwright` on both suites. What it found was fixed, not
+    disabled: nine autosave sleeps wait for the save state, thirteen forced
+    clicks on a connector click a point of the stroke, ninety null throws
+    use `boxOf`. Two timed waits stay, with their reasons.
+  - Next: PR 3b moves the `.of-*` class selectors to roles and test ids.

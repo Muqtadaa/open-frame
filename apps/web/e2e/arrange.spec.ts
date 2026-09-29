@@ -1,6 +1,6 @@
-import { expect, test, type Page } from '@playwright/test'
+import type { Page } from '@playwright/test'
 
-import { BOARD_URL } from './routes.js'
+import { CANVAS, expect, openBoard, test, undo } from './fixtures.js'
 
 /**
  * Lining a selection up, and evening out the gaps.
@@ -11,13 +11,6 @@ import { BOARD_URL } from './routes.js'
  * press on it does not deselect what it is about to act on, and that the whole
  * arrangement is one undo.
  */
-const CANVAS = '[data-testid="canvas"]'
-
-async function board(page: Page): Promise<void> {
-  await page.goto(BOARD_URL)
-  await expect(page.locator(CANVAS)).toBeVisible()
-  await expect(page.getByTestId('tool-select')).toBeVisible()
-}
 
 /**
  * Drops a sticky note, ends its editor, and leaves NOTHING selected.
@@ -54,7 +47,7 @@ async function selectAll(page: Page): Promise<void> {
 }
 
 test('offers nothing to arrange until two things are selected', async ({ page }) => {
-  await board(page)
+  await openBoard(page)
   // Both placed BEFORE anything is selected, for the reason in `note` above.
   await note(page, { x: 420, y: 260 })
   await note(page, { x: 700, y: 430 })
@@ -67,7 +60,7 @@ test('offers nothing to arrange until two things are selected', async ({ page })
 })
 
 test('aligns a selection to the top of its own bounding box', async ({ page }) => {
-  await board(page)
+  await openBoard(page)
   await note(page, { x: 420, y: 240 })
   await note(page, { x: 700, y: 430 })
   await selectAll(page)
@@ -88,7 +81,7 @@ test('aligns a selection to the top of its own bounding box', async ({ page }) =
 })
 
 test('aligns centres rather than edges', async ({ page }) => {
-  await board(page)
+  await openBoard(page)
   await note(page, { x: 420, y: 240 })
   await note(page, { x: 760, y: 420 })
   await selectAll(page)
@@ -101,7 +94,7 @@ test('aligns centres rather than edges', async ({ page }) => {
 })
 
 test('evens out the gaps, leaving the outermost two where they were', async ({ page }) => {
-  await board(page)
+  await openBoard(page)
   await note(page, { x: 320, y: 300 })
   await note(page, { x: 460, y: 300 })
   await note(page, { x: 900, y: 300 })
@@ -124,7 +117,7 @@ test('evens out the gaps, leaving the outermost two where they were', async ({ p
 })
 
 test('will not distribute fewer than three', async ({ page }) => {
-  await board(page)
+  await openBoard(page)
   await note(page, { x: 420, y: 260 })
   await note(page, { x: 700, y: 400 })
   await selectAll(page)
@@ -146,7 +139,7 @@ test('will not distribute fewer than three', async ({ page }) => {
 })
 
 test('groups the alignments across and down', async ({ page }) => {
-  await board(page)
+  await openBoard(page)
   await note(page, { x: 420, y: 260 })
   await note(page, { x: 700, y: 400 })
   await selectAll(page)
@@ -168,7 +161,7 @@ test('groups the alignments across and down', async ({ page }) => {
 })
 
 test('is one undo, however many objects moved', async ({ page }) => {
-  await board(page)
+  await openBoard(page)
   await note(page, { x: 380, y: 240 })
   await note(page, { x: 620, y: 400 })
   await note(page, { x: 860, y: 300 })
@@ -184,7 +177,7 @@ test('is one undo, however many objects moved', async ({ page }) => {
    * the whole arrangement back — a per-object command would cost three presses
    * and leave the board half aligned in between.
    */
-  await page.keyboard.press('ControlOrMeta+z')
+  await undo(page)
   await expect.poll(async () => (await boxes(page))[1]?.y ?? 0).toBeCloseTo(before[1]!.y, 0)
 })
 
@@ -195,7 +188,7 @@ test('is one undo, however many objects moved', async ({ page }) => {
  * That fault has appeared four times on other apparatus.
  */
 test('a press on the bar does not take the selection away', async ({ page }) => {
-  await board(page)
+  await openBoard(page)
   await note(page, { x: 420, y: 240 })
   await note(page, { x: 700, y: 430 })
   await selectAll(page)

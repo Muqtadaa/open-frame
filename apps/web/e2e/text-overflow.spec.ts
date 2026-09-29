@@ -1,6 +1,6 @@
-import { expect, test, type Page } from '@playwright/test'
+import type { Page } from '@playwright/test'
 
-import { BOARD_URL } from './routes.js'
+import { CANVAS, expect, openBoard, test, undo, boxOf } from './fixtures.js'
 
 /**
  * What text does when there is more of it than there is room.
@@ -13,13 +13,6 @@ import { BOARD_URL } from './routes.js'
  * It could not, on a sticky note or in a table, for as long as the feature had
  * shipped.
  */
-const CANVAS = '[data-testid="canvas"]'
-
-async function board(page: Page): Promise<void> {
-  await page.goto(BOARD_URL)
-  await expect(page.locator(CANVAS)).toBeVisible()
-  await expect(page.getByTestId('tool-select')).toBeVisible()
-}
 
 /** Places an object, types into the editor it opens, and COMMITS. */
 async function write(page: Page, tool: string, at: { x: number; y: number }, text: string) {
@@ -36,7 +29,7 @@ const LONG =
   'fifteen sixteen seventeen eighteen nineteen twenty twenty-one twenty-two'
 
 test('a sticky note aligns its text down the box', async ({ page }) => {
-  await board(page)
+  await openBoard(page)
   await write(page, 'sticky', { x: 500, y: 300 }, 'short')
 
   const top = async (): Promise<number> =>
@@ -65,7 +58,7 @@ test('a sticky note aligns its text down the box', async ({ page }) => {
 })
 
 test('a table cell aligns its text down', async ({ page }) => {
-  await board(page)
+  await openBoard(page)
   await page.getByTestId('tool-table').click()
   await page.locator(CANVAS).click({ position: { x: 560, y: 300 } })
   await page.keyboard.press('Escape')
@@ -97,7 +90,7 @@ test('a table cell aligns its text down', async ({ page }) => {
 })
 
 test('shape text stays inside the shape', async ({ page }) => {
-  await board(page)
+  await openBoard(page)
   await write(page, 'shape', { x: 560, y: 300 }, LONG)
 
   const escaped = await page
@@ -126,7 +119,7 @@ test('shape text stays inside the shape', async ({ page }) => {
 })
 
 test('hidden text is marked rather than silently cut', async ({ page }) => {
-  await board(page)
+  await openBoard(page)
   await write(page, 'sticky', { x: 500, y: 300 }, LONG)
 
   const clamp = await page
@@ -161,7 +154,7 @@ test('hidden text is marked rather than silently cut', async ({ page }) => {
  * width.
  */
 test('double-clicking the bottom handle fits a sticky to its text', async ({ page }) => {
-  await board(page)
+  await openBoard(page)
   await write(page, 'sticky', { x: 500, y: 300 }, LONG)
 
   const hidden = async (): Promise<boolean> =>
@@ -174,8 +167,7 @@ test('double-clicking the bottom handle fits a sticky to its text', async ({ pag
   expect(await hidden()).toBe(true)
 
   const before = (await page.locator('[data-object-id]').first().boundingBox())?.height ?? 0
-  const grip = await page.getByTestId('handle-s').boundingBox()
-  if (grip === null) throw new Error('no bottom handle')
+  const grip = await boxOf(page.getByTestId('handle-s'))
   await page.mouse.dblclick(grip.x + grip.width / 2, grip.y + grip.height / 2)
 
   const after = (await page.locator('[data-object-id]').first().boundingBox())?.height ?? 0
@@ -184,21 +176,20 @@ test('double-clicking the bottom handle fits a sticky to its text', async ({ pag
   await expect.poll(hidden).toBe(false)
 
   // And it is one ordinary resize, so one undo puts it back.
-  await page.keyboard.press('ControlOrMeta+z')
+  await undo(page)
   await expect
     .poll(async () => (await page.locator('[data-object-id]').first().boundingBox())?.height ?? 0)
     .toBeCloseTo(before, 0)
 })
 
 test('double-clicking the right handle fits a shape to its widest line', async ({ page }) => {
-  await board(page)
+  await openBoard(page)
   await write(page, 'shape', { x: 560, y: 300 }, 'a single line that is wider than this shape is')
 
   await page.locator('[data-object-id]').first().click()
   const before = (await page.locator('[data-object-id]').first().boundingBox())?.width ?? 0
 
-  const grip = await page.getByTestId('handle-e').boundingBox()
-  if (grip === null) throw new Error('no right handle')
+  const grip = await boxOf(page.getByTestId('handle-e'))
   await page.mouse.dblclick(grip.x + grip.width / 2, grip.y + grip.height / 2)
 
   const after = (await page.locator('[data-object-id]').first().boundingBox())?.width ?? 0
@@ -234,7 +225,7 @@ test('double-clicking the right handle fits a shape to its widest line', async (
  * all render through.
  */
 test('a structured slip aligns its text down', async ({ page }) => {
-  await board(page)
+  await openBoard(page)
   await write(page, 'sticky', { x: 500, y: 300 }, 'short')
 
   await page.locator(CANVAS).click({ position: { x: 500, y: 300 } })

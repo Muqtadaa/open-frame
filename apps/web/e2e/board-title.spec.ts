@@ -1,4 +1,5 @@
 import { expect, test, type Page } from '@playwright/test'
+import { boxOf, saved } from './fixtures.js'
 
 import { BOARD_URL, HOME_URL } from './routes.js'
 
@@ -37,7 +38,7 @@ test.describe('the board name', () => {
   test('survives a reload', async ({ page }) => {
     await rename(page, 'Pricing research')
 
-    await page.waitForTimeout(800) // autosave is debounced
+    await saved(page)
     await page.reload()
     await page.waitForSelector('[data-testid="status-bar"]')
 
@@ -106,7 +107,7 @@ test.describe('the board name', () => {
   test('is what the board list shows', async ({ page }) => {
     await rename(page, 'Pricing research')
 
-    await page.waitForTimeout(800) // autosave is debounced
+    await saved(page)
     await page.goto(HOME_URL)
 
     await expect(page.getByTestId('home-boards')).toContainText('Pricing research')
@@ -164,9 +165,7 @@ test('nothing covers the zoom controls', async ({ page }) => {
  */
 test('the context menu stays on screen near the bottom edge', async ({ page }) => {
   const canvas = page.locator('[data-testid="canvas"]')
-  const box = await canvas.boundingBox()
-  expect(box).not.toBeNull()
-  if (box === null) return
+  const box = await boxOf(canvas)
 
   /*
    * Low enough that a menu placed at the pointer runs off the bottom, but

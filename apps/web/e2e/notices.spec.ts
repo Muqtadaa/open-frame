@@ -1,5 +1,6 @@
 import { expect, test, type Page } from '@playwright/test'
 
+import { CANVAS, boxOf } from './fixtures.js'
 import { BOARD_URL } from './routes.js'
 
 /**
@@ -10,7 +11,6 @@ import { BOARD_URL } from './routes.js'
  * version looked like a board in trouble. The toast's close glyph rendered at
  * 0px inside an 8×15 target, and a dismissed notice took the keyboard with it.
  */
-const CANVAS = '[data-testid="canvas"]'
 const FILE_INPUT = 'input[type="file"]'
 
 async function boardWithAnUnknownObject(page: Page): Promise<void> {
@@ -130,12 +130,14 @@ test.describe('the toast', () => {
   })
 
   test('waits while it is being read', async ({ page }) => {
+    await page.clock.install()
     await page.goto(BOARD_URL)
     await expect(page.getByTestId('tool-select')).toBeVisible()
     await rejectAnUpload(page)
     await page.getByTestId('toast').hover()
-    // Longer than it stays up on its own.
-    await page.waitForTimeout(5_500)
+    // Longer than it stays up on its own, on the page's clock rather than by
+    // sitting through five and a half real seconds.
+    await page.clock.runFor(5_500)
     await expect(page.getByTestId('toast')).toBeVisible()
   })
 
@@ -143,11 +145,8 @@ test.describe('the toast', () => {
     await page.setViewportSize({ width: 760, height: 800 })
     await boardWithAnUnknownObject(page)
     await rejectAnUpload(page)
-    const notice = await page.getByTestId('notice-banner').boundingBox()
-    const toast = await page.getByTestId('toast').boundingBox()
-    expect(notice).not.toBeNull()
-    expect(toast).not.toBeNull()
-    if (notice === null || toast === null) return
+    const notice = await boxOf(page.getByTestId('notice-banner'))
+    const toast = await boxOf(page.getByTestId('toast'))
     expect(toast.y).toBeGreaterThanOrEqual(notice.y + notice.height + 4)
   })
 })

@@ -1,72 +1,32 @@
-import { expect, test, type Page } from '@playwright/test'
+import type { Page } from '@playwright/test'
 
-import { BOARD_URL } from './routes.js'
+import {
+  CANVAS,
+  drag,
+  EDITOR,
+  expect,
+  place,
+  test,
+  undo,
+  boxOf,
+  saved,
+  alongTheLine,
+  clickLine,
+  defined,
+  pairs,
+} from './fixtures.js'
 
 /**
  * Connectors: drawing, following their endpoints, and what happens when the
  * objects they attach to are deleted.
  */
 
-const CANVAS = '[data-testid="canvas"]'
-/*
- * Whatever is currently editable in place.
- *
- * Body text is a `contenteditable` since rich text (ADR 0012); a frame's title
- * and an image's alt text are labels and stay plain textareas. A spec should
- * not have to know which it is about to type into.
- */
-const EDITOR = 'textarea, [contenteditable="true"]'
 const MOD = process.platform === 'darwin' ? 'Meta' : 'Control'
 
-async function freshBoard(page: Page): Promise<void> {
-  await page.goto(BOARD_URL)
-  await page.evaluate(
-    async () =>
-      new Promise<void>((resolve) => {
-        const request = indexedDB.deleteDatabase('openframe')
-        request.onsuccess = () => resolve()
-        request.onerror = () => resolve()
-        request.onblocked = () => resolve()
-      }),
-  )
-  await page.reload()
-  await expect(page.locator(CANVAS)).toBeVisible()
-  /*
-   * Also wait for the toolbar. A visible canvas only means React rendered;
-   * `useKeyboardShortcuts` attaches its listener in an effect, which runs after
-   * paint, so a keystroke sent on the canvas alone can land in the gap and be
-   * dropped. That showed up as a rare, unexplained tool-selection failure.
-   */
-  await expect(page.getByTestId('tool-select')).toBeVisible()
-}
+test.use({ board: 'fresh' })
 
 async function sticky(page: Page, x: number, y: number, text: string): Promise<void> {
-  await page.keyboard.press('s')
-  await page.locator(CANVAS).click({ position: { x, y } })
-  await expect(page.locator(EDITOR)).toBeFocused()
-  await page.locator(EDITOR).fill(text)
-  await page.locator(CANVAS).click({ position: { x: 1180, y: 120 } })
-  await expect(page.locator(EDITOR)).toHaveCount(0)
-  await page.keyboard.press('v')
-}
-
-/**
- * A point a given fraction of the way along the DRAWN line, on screen.
- *
- * Asked of the path itself rather than worked out from the two ends: a curve's
- * middle is nowhere near the middle of the straight line between them, and a
- * test that aimed there would miss the handle it is reaching for — and then
- * pass or fail for the wrong reason.
- */
-async function alongTheLine(page: Page, fraction = 0.5): Promise<{ x: number; y: number }> {
-  return page.locator('.of-connector__line').evaluate((element, at: number) => {
-    const path = element as unknown as SVGPathElement
-    const point = path.getPointAtLength(path.getTotalLength() * at)
-    const matrix = path.getScreenCTM()
-    if (matrix === null) throw new Error('the line is not on screen')
-    const screen = new DOMPoint(point.x, point.y).matrixTransform(matrix)
-    return { x: screen.x, y: screen.y }
-  }, fraction)
+  await place(page, 's', { x, y }, text, { x: 1180, y: 120 })
 }
 
 /**
@@ -82,18 +42,8 @@ async function legAt(page: Page, fraction = 0.5): Promise<{ x: number; y: number
   await page.mouse.move(at.x, at.y)
   const grip = page.locator('[data-testid^="endpoint-leg:"]')
   await expect(grip).toHaveCount(1)
-  const box = await grip.boundingBox()
-  if (box === null) throw new Error('no leg to grab')
+  const box = await boxOf(grip)
   return { x: box.x + box.width / 2, y: box.y + box.height / 2 }
-}
-
-async function drag(page: Page, from: { x: number; y: number }, to: { x: number; y: number }) {
-  await page.mouse.move(from.x, from.y)
-  await page.mouse.down()
-  for (let i = 1; i <= 8; i++) {
-    await page.mouse.move(from.x + ((to.x - from.x) * i) / 8, from.y + ((to.y - from.y) * i) / 8)
-  }
-  await page.mouse.up()
 }
 
 /**
@@ -117,10 +67,6 @@ async function connectedPair(page: Page): Promise<void> {
 
 /** Midpoint of the drawn connector, in canvas coordinates. */
 const MIDPOINT = { x: (A_AT.x + B_AT.x) / 2, y: (A_AT.y + B_AT.y) / 2 }
-
-test.beforeEach(async ({ page }) => {
-  await freshBoard(page)
-})
 
 test('draws a connector between two objects', async ({ page }) => {
   await connectedPair(page)
@@ -176,7 +122,7 @@ test('restores the attachment on undo', async ({ page }) => {
   await page.keyboard.press('Delete')
   await expect(page.locator('[data-object-type="sticky"]')).toHaveCount(1)
 
-  await page.keyboard.press(`${MOD}+z`)
+  await undo(page)
   await expect(page.locator('[data-object-type="sticky"]')).toHaveCount(2)
   await expect(page.locator('[data-object-type="connector"]')).toHaveCount(1)
 })
@@ -199,7 +145,7 @@ test('is selectable and labellable', async ({ page }) => {
 
 test('survives a reload', async ({ page }) => {
   await connectedPair(page)
-  await page.waitForTimeout(800)
+  await saved(page)
   await page.reload()
   await expect(page.locator('[data-object-type="connector"]')).toHaveCount(1)
   await expect(page.locator('.of-connector__line')).toBeVisible()
@@ -252,7 +198,7 @@ test.describe('dragging an existing endpoint', () => {
    * straight run between two points is a point on the line.
    */
   async function selectConnector(page: Page): Promise<void> {
-    await page.locator('.of-connector__line').click({ force: true })
+    await clickLine(page)
     await expect(page.getByTestId('endpoint-from')).toBeVisible()
   }
 
@@ -279,8 +225,7 @@ test.describe('dragging an existing endpoint', () => {
     await pairPlusSpare(page)
     await selectConnector(page)
 
-    const handle = await page.getByTestId('endpoint-to').boundingBox()
-    if (handle === null) throw new Error('no endpoint handle')
+    const handle = await boxOf(page.getByTestId('endpoint-to'))
     const before = await page.locator('.of-connector__line').getAttribute('d')
 
     await drag(
@@ -300,8 +245,7 @@ test.describe('dragging an existing endpoint', () => {
     await connectedPair(page)
     await selectConnector(page)
 
-    const handle = await page.getByTestId('endpoint-to').boundingBox()
-    if (handle === null) throw new Error('no endpoint handle')
+    const handle = await boxOf(page.getByTestId('endpoint-to'))
 
     await drag(
       page,
@@ -320,8 +264,7 @@ test.describe('dragging an existing endpoint', () => {
     await selectConnector(page)
     const before = await page.locator('.of-connector__line').getAttribute('d')
 
-    const handle = await page.getByTestId('endpoint-to').boundingBox()
-    if (handle === null) throw new Error('no endpoint handle')
+    const handle = await boxOf(page.getByTestId('endpoint-to'))
     await drag(
       page,
       { x: handle.x + handle.width / 2, y: handle.y + handle.height / 2 },
@@ -329,7 +272,7 @@ test.describe('dragging an existing endpoint', () => {
     )
     expect(await page.locator('.of-connector__line').getAttribute('d')).not.toBe(before)
 
-    await page.keyboard.press(`${MOD}+z`)
+    await undo(page)
     expect(await page.locator('.of-connector__line').getAttribute('d')).toBe(before)
   })
 
@@ -351,10 +294,6 @@ test.describe('connection points', () => {
   const A = { x: 300, y: 250 }
   const B = { x: 300, y: 520 }
   const CLEAR = { x: 1120, y: 140 }
-
-  test.beforeEach(async ({ page }) => {
-    await freshBoard(page)
-  })
 
   async function note(page: Page, at: { x: number; y: number }, text: string): Promise<void> {
     await page.keyboard.press('s')
@@ -404,7 +343,7 @@ test.describe('connection points', () => {
     await expect(page.locator('[data-object-type="connector"]')).toHaveCount(1)
 
     await page.locator(CANVAS).click({ position: CLEAR })
-    await page.keyboard.press('Control+z')
+    await undo(page)
     await expect(page.locator('[data-object-type="connector"]')).toHaveCount(0)
   })
 
@@ -437,7 +376,7 @@ test.describe('connection points', () => {
 test.describe('bending a route', () => {
   async function bendableConnector(page: Page, routing: 'orthogonal' | 'curved'): Promise<void> {
     await connectedPair(page)
-    await page.locator('.of-connector__line').click({ force: true })
+    await clickLine(page)
     await expect(page.getByTestId('endpoint-from')).toBeVisible()
     await page.getByTestId('field-routing').selectOption(routing)
   }
@@ -446,7 +385,7 @@ test.describe('bending a route', () => {
     page,
   }) => {
     await connectedPair(page)
-    await page.locator('.of-connector__line').click({ force: true })
+    await clickLine(page)
     await expect(page.getByTestId('endpoint-from')).toBeVisible()
 
     await page.getByTestId('field-routing').selectOption('orthogonal')
@@ -463,8 +402,7 @@ test.describe('bending a route', () => {
     await expect(page.locator('[data-testid^="endpoint-leg:"]')).toHaveCount(1)
 
     // A bar along the run, not a dot on it: it is grabbed anywhere.
-    const grip = await page.locator('[data-testid^="endpoint-leg:"]').boundingBox()
-    if (grip === null) throw new Error('no leg')
+    const grip = await boxOf(page.locator('[data-testid^="endpoint-leg:"]'))
     expect(Math.max(grip.width, grip.height)).toBeGreaterThan(30)
   })
 
@@ -514,8 +452,7 @@ test.describe('bending a route', () => {
 
     await drag(page, from, { x: from.x, y: from.y - 120 })
 
-    const after = await page.getByTestId('endpoint-vertex:0').boundingBox()
-    if (after === null) throw new Error('no vertex handle')
+    const after = await boxOf(page.getByTestId('endpoint-vertex:0'))
     /*
      * The handle ends up under the POINTER, which is the whole test: a curve
      * whose midpoint only moves part of the way slides out from under your
@@ -524,7 +461,7 @@ test.describe('bending a route', () => {
     expect(after.y + after.height / 2).toBeCloseTo(from.y - 120, -1)
 
     // ONE undo, not one per pointer event: the whole drag is one command.
-    await page.keyboard.press('ControlOrMeta+z')
+    await undo(page)
     await expect(page.getByTestId('endpoint-vertex:0')).toHaveCount(0)
   })
 })
@@ -534,7 +471,7 @@ test.describe('putting a line back', () => {
     page,
   }) => {
     await connectedPair(page)
-    await page.locator('.of-connector__line').click({ force: true })
+    await clickLine(page)
     await expect(page.getByTestId('endpoint-from')).toBeVisible()
     await page.getByTestId('field-routing').selectOption('orthogonal')
 
@@ -566,13 +503,11 @@ test.describe('putting a line back', () => {
     await page.locator(CANVAS).click({ position: { x: 1180, y: 120 } })
     await expect(page.locator('.of-connector__label')).toContainText('depends on')
 
-    await page.locator('.of-connector__line').click({ force: true })
-    const grip = await page.getByTestId('endpoint-label').boundingBox()
-    if (grip === null) throw new Error('no label handle')
+    await clickLine(page)
+    const grip = await boxOf(page.getByTestId('endpoint-label'))
     const from = { x: grip.x + grip.width / 2, y: grip.y + grip.height / 2 }
 
-    const before = await page.locator('.of-connector__label').boundingBox()
-    if (before === null) throw new Error('no label')
+    const before = await boxOf(page.locator('.of-connector__label'))
 
     /*
      * Dragged ALONG the line and pulled well off it at the same time. The
@@ -582,8 +517,7 @@ test.describe('putting a line back', () => {
      */
     await drag(page, from, { x: from.x + 150, y: from.y - 120 })
 
-    const after = await page.locator('.of-connector__label').boundingBox()
-    if (after === null) throw new Error('no label')
+    const after = await boxOf(page.locator('.of-connector__label'))
     expect(Math.abs(after.x - before.x), 'the label did not move along').toBeGreaterThan(40)
 
     const away = await page.locator('.of-connector__line').evaluate(
@@ -605,8 +539,7 @@ test.describe('putting a line back', () => {
     expect(away, 'the label came off the line').toBeLessThan(8)
 
     await page.getByTestId('action-centre-label').click()
-    const back = await page.locator('.of-connector__label').boundingBox()
-    if (back === null) throw new Error('no label')
+    const back = await boxOf(page.locator('.of-connector__label'))
     expect(Math.hypot(back.x - before.x, back.y - before.y)).toBeLessThan(2)
   })
 })
@@ -657,7 +590,7 @@ test.describe('formatting a connector label', () => {
   test('takes a background of its own, and loses it again', async ({ page }) => {
     await labelled(page, 'depends on')
     await page.locator(CANVAS).click({ position: { x: 1180, y: 120 } })
-    await page.locator('.of-connector__line').click({ force: true })
+    await clickLine(page)
 
     const label = page.locator('.of-connector__label')
     await expect(label).toHaveCSS('background-color', 'rgba(0, 0, 0, 0)')
@@ -683,8 +616,7 @@ test.describe('formatting a connector label', () => {
     await page.locator(CANVAS).click({ position: { x: 1180, y: 120 } })
     const label = page.locator('.of-connector__label')
     const height = async (): Promise<number> => {
-      const box = await label.boundingBox()
-      if (box === null) throw new Error('no label')
+      const box = await boxOf(label)
       return box.height
     }
     const atHundred = await height()
@@ -712,7 +644,7 @@ test.describe('formatting a connector label', () => {
   test('takes an ink that reads on its background', async ({ page }) => {
     await labelled(page, 'depends on')
     await page.locator(CANVAS).click({ position: { x: 1180, y: 120 } })
-    await page.locator('.of-connector__line').click({ force: true })
+    await clickLine(page)
     const label = page.locator('.of-connector__label')
     const ink = await label.evaluate((element) => getComputedStyle(element).color)
 
@@ -749,7 +681,7 @@ test.describe('formatting a connector label', () => {
   test('takes a text colour', async ({ page }) => {
     await labelled(page, 'depends on')
     await page.locator(CANVAS).click({ position: { x: 1180, y: 120 } })
-    await page.locator('.of-connector__line').click({ force: true })
+    await clickLine(page)
 
     await page.getByTestId('paint-textColor').click()
     await page.getByTestId('ink-red').click()
@@ -869,17 +801,15 @@ test.describe('aiming at an anchor', () => {
     await page.keyboard.press('c')
     await drag(page, A_AT, { x: at.bottom.x, y: at.bottom.y + 12 })
     await page.keyboard.press('v')
-    await page.locator('.of-connector__line').click({ force: true })
+    await clickLine(page)
     await page.getByTestId('field-routing').selectOption('curved')
 
-    const d = await page.locator('.of-connector__line').getAttribute('d')
-    if (d === null) throw new Error('no line')
+    const d = defined(await page.locator('.of-connector__line').getAttribute('d'), 'the line')
     const numbers = [...d.matchAll(/-?\d+(\.\d+)?/g)].map((m) => Number(m[0]))
     // M x y C c1x c1y, c2x c2y, ex ey
-    const [, , , , c2x, c2y, ex, ey] = numbers
-    if (c2x === undefined || c2y === undefined || ex === undefined || ey === undefined) {
-      throw new Error('a cubic has eight numbers in it')
-    }
+    const [c2x, c2y, ex, ey] = [4, 5, 6, 7].map((at) =>
+      defined(numbers[at], 'a cubic has eight numbers in it'),
+    ) as [number, number, number, number]
     // The last control point sits directly BELOW the end, so the line arrives
     // travelling upward into the bottom edge it is attached to.
     expect(c2x).toBeCloseTo(ex, 0)
@@ -914,8 +844,7 @@ test.describe('joining a line to a container', () => {
     await page.keyboard.press(`${MOD}+a`)
     await page.keyboard.press(`${MOD}+g`)
     await expect(page.locator('[data-object-type="group"]')).toHaveCount(1)
-    const group = await page.getByTestId('selection-overlay').boundingBox()
-    if (group === null) throw new Error('nothing selected')
+    const group = await boxOf(page.getByTestId('selection-overlay'))
     await page.locator(CANVAS).click({ position: { x: 1120, y: 620 } })
 
     await sticky(page, 460, 640, 'C')
@@ -981,13 +910,12 @@ test.describe('joining a line to a container', () => {
     await page.keyboard.press('v')
 
     const endOfLine = async () => {
-      const d = await page.locator('.of-connector__line').getAttribute('d')
-      if (d === null) throw new Error('no line')
+      const d = defined(await page.locator('.of-connector__line').getAttribute('d'), 'the line')
       const numbers = [...d.matchAll(/-?\d+(\.\d+)?/g)].map((m) => Number(m[0]))
-      const x = numbers[numbers.length - 2]
-      const y = numbers[numbers.length - 1]
-      if (x === undefined || y === undefined) throw new Error('no end point')
-      return { x, y }
+      return {
+        x: defined(numbers[numbers.length - 2], 'the end point'),
+        y: defined(numbers[numbers.length - 1], 'the end point'),
+      }
     }
 
     /*
@@ -1032,7 +960,7 @@ test.describe('reshaping a line', () => {
     await page.keyboard.press('c')
     await drag(page, A_AT, B_AT)
     await page.keyboard.press('v')
-    await page.locator('.of-connector__line').click({ force: true })
+    await clickLine(page)
     await page.getByTestId('field-routing').selectOption(routing)
     await expect(page.getByTestId('endpoint-from')).toBeVisible()
   }
@@ -1093,8 +1021,7 @@ test.describe('reshaping a line', () => {
     // From the handle itself, not from the point that revealed it: the two are
     // a few pixels apart, and a press that misses lands on the line and drags
     // the whole connector instead.
-    const grip = await page.getByTestId('endpoint-midpoint:0').boundingBox()
-    if (grip === null) throw new Error('no midpoint handle')
+    const grip = await boxOf(page.getByTestId('endpoint-midpoint:0'))
     const from = { x: grip.x + grip.width / 2, y: grip.y + grip.height / 2 }
     await page.mouse.move(from.x, from.y)
     await page.mouse.down()
@@ -1114,8 +1041,7 @@ test.describe('reshaping a line', () => {
     await expect(page.getByTestId('endpoint-vertex:1')).toHaveCount(0)
 
     // The handle came with it: what you are dragging is where you dragged it.
-    const held = await page.getByTestId('endpoint-vertex:0').boundingBox()
-    if (held === null) throw new Error('no vertex handle')
+    const held = await boxOf(page.getByTestId('endpoint-vertex:0'))
     expect(held.x + held.width / 2).toBeCloseTo(from.x + 90, 0)
 
     const previewed = await route(page)
@@ -1130,8 +1056,7 @@ test.describe('reshaping a line', () => {
 
     const first = await alongTheLine(page)
     await page.mouse.move(first.x, first.y)
-    const firstGrip = await page.getByTestId('endpoint-midpoint:0').boundingBox()
-    if (firstGrip === null) throw new Error('no midpoint handle')
+    const firstGrip = await boxOf(page.getByTestId('endpoint-midpoint:0'))
     await drag(
       page,
       { x: firstGrip.x + firstGrip.width / 2, y: firstGrip.y + firstGrip.height / 2 },
@@ -1147,8 +1072,7 @@ test.describe('reshaping a line', () => {
     const second = await alongTheLine(page, 0.75)
     await page.mouse.move(second.x, second.y)
     await expect(page.getByTestId('endpoint-midpoint:1')).toBeVisible()
-    const secondGrip = await page.getByTestId('endpoint-midpoint:1').boundingBox()
-    if (secondGrip === null) throw new Error('no second midpoint handle')
+    const secondGrip = await boxOf(page.getByTestId('endpoint-midpoint:1'))
     await drag(
       page,
       { x: secondGrip.x + secondGrip.width / 2, y: secondGrip.y + secondGrip.height / 2 },
@@ -1167,16 +1091,14 @@ test.describe('reshaping a line', () => {
 
     const middle = await alongTheLine(page)
     await page.mouse.move(middle.x, middle.y)
-    const grip = await page.getByTestId('endpoint-midpoint:0').boundingBox()
-    if (grip === null) throw new Error('no midpoint handle')
+    const grip = await boxOf(page.getByTestId('endpoint-midpoint:0'))
     const from = { x: grip.x + grip.width / 2, y: grip.y + grip.height / 2 }
     await drag(page, from, { x: from.x, y: from.y - 90 })
     await expect(page.getByTestId('endpoint-vertex:0')).toBeVisible()
     expect(await route(page), 'the stop did not bend the line').not.toBe(plain)
 
-    const stop = await page.getByTestId('endpoint-vertex:0').boundingBox()
-    const end = await page.getByTestId('endpoint-from').boundingBox()
-    if (stop === null || end === null) throw new Error('no handles to drag between')
+    const stop = await boxOf(page.getByTestId('endpoint-vertex:0'))
+    const end = await boxOf(page.getByTestId('endpoint-from'))
 
     await page.mouse.move(stop.x + stop.width / 2, stop.y + stop.height / 2)
     await page.mouse.down()
@@ -1198,7 +1120,7 @@ test.describe('reshaping a line', () => {
     await expect(page.getByTestId('endpoint-vertex:0')).toHaveCount(0)
 
     // And one undo puts it back, because the whole drag was one command.
-    await page.keyboard.press('ControlOrMeta+z')
+    await undo(page)
     await expect(page.getByTestId('endpoint-vertex:0')).toBeVisible()
     expect(await route(page)).not.toBe(plain)
   })
@@ -1225,10 +1147,7 @@ test.describe('reshaping a line', () => {
 
     // And it is still square: every run is along one axis or the other.
     const run = points(await route(page))
-    for (let at = 1; at < run.length; at += 1) {
-      const a = run[at - 1]
-      const b = run[at]
-      if (a === undefined || b === undefined) continue
+    for (const [a, b] of pairs(run)) {
       expect(Math.abs(a.x - b.x) < 0.01 || Math.abs(a.y - b.y) < 0.01, 'a leg ran diagonally').toBe(
         true,
       )
@@ -1248,8 +1167,7 @@ test.describe('reshaping a line', () => {
      * would be aiming past it.
      */
     const run = points(before)
-    const lastTurn = run[run.length - 2]
-    if (lastTurn === undefined) throw new Error('no turn to aim at')
+    const lastTurn = defined(run[run.length - 2], 'a turn to aim at')
     expect(crossingAt(before), 'it starts out standing in the middle').not.toBeCloseTo(
       lastTurn.x,
       0,
@@ -1299,10 +1217,7 @@ test('offers its line one colour, and marks the one it is drawn in', async ({ pa
   await page.getByTestId('paint-strokeColor').click()
   await expect(page.getByTestId('line-gray')).toHaveAttribute('aria-pressed', 'true')
 
-  const panel = await page.getByTestId('inspector').boundingBox()
-  const targets = await page.locator('.of-paint__target').boundingBox()
-  expect(panel).not.toBeNull()
-  expect(targets).not.toBeNull()
-  if (panel === null || targets === null) return
+  const panel = await boxOf(page.getByTestId('inspector'))
+  const targets = await boxOf(page.locator('.of-paint__target'))
   expect(targets.x + targets.width).toBeLessThanOrEqual(panel.x + panel.width)
 })

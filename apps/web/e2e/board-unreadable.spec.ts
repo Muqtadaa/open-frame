@@ -1,5 +1,6 @@
 import { expect, test, type Page } from '@playwright/test'
 
+import { CANVAS, undo } from './fixtures.js'
 import { BOARD_URL } from './routes.js'
 
 /**
@@ -10,7 +11,6 @@ import { BOARD_URL } from './routes.js'
  * week on that board, that is a picture of their work being gone. The work is
  * not gone, and what they need to hear is that first.
  */
-const CANVAS = '[data-testid="canvas"]'
 
 async function boardWithNotes(page: Page): Promise<void> {
   await page.goto(BOARD_URL)
@@ -125,7 +125,7 @@ test('is never written back, whatever happens on the page', async ({ page }) => 
   await page.keyboard.press('s')
   await page.mouse.dblclick(400, 400)
   await page.keyboard.type('anything')
-  await page.keyboard.press('Control+z')
+  await undo(page)
   await page.reload()
   await expect(page.getByTestId('board-unreadable')).toBeVisible()
   expect(await storedRecord(page)).toBe(before)

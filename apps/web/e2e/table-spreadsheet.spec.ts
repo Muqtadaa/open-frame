@@ -1,20 +1,15 @@
-import { expect, test, type Locator, type Page } from '@playwright/test'
+import type { Locator, Page } from '@playwright/test'
 
-import { BOARD_URL } from './routes.js'
+import { CANVAS, expect, test, undo, boxOf } from './fixtures.js'
 
 /**
  * A table edited as a spreadsheet (ADR 0015): a selection the keyboard moves,
  * rows and columns inserted and deleted anywhere, merges, and lines ruled from
  * a borders menu — all into one draft, committed as one command.
  */
-const CANVAS = '[data-testid="canvas"]'
 const AWAY = { x: 1100, y: 640 }
 
-async function board(page: Page): Promise<void> {
-  await page.goto(BOARD_URL)
-  await expect(page.locator(CANVAS)).toBeVisible()
-  await expect(page.getByTestId('tool-select')).toBeVisible()
-}
+test.use({ board: 'open' })
 
 /** A new table, left open in its editor, navigating from A1. */
 async function newTable(page: Page, size?: string): Promise<void> {
@@ -45,10 +40,6 @@ async function leave(page: Page): Promise<void> {
   await page.locator(CANVAS).click({ position: AWAY })
   await expect(page.getByTestId('table-editor')).toHaveCount(0)
 }
-
-test.beforeEach(async ({ page }) => {
-  await board(page)
-})
 
 test.describe('the keyboard', () => {
   test('types over a selected cell, and Tab and Enter move on', async ({ page }) => {
@@ -150,8 +141,7 @@ test.describe('the pointer', () => {
   test('types into the cell that was double-clicked', async ({ page }) => {
     await newTable(page)
     await leave(page)
-    const box = await page.locator('[data-object-id]').first().boundingBox()
-    if (box === null) throw new Error('the table is not on screen')
+    const box = await boxOf(page.locator('[data-object-id]').first())
     // The middle of the bottom-right cell of a 3x3.
     await page.mouse.dblclick(box.x + box.width * 0.85, box.y + box.height * 0.85)
     await expect(page.getByTestId('table-cell-field')).toBeFocused()
@@ -164,9 +154,8 @@ test.describe('the pointer', () => {
 
   test('selects a block by dragging across it', async ({ page }) => {
     await newTable(page)
-    const from = await cell(page, 0).boundingBox()
-    const to = await cell(page, 4).boundingBox()
-    if (from === null || to === null) throw new Error('no cells')
+    const from = await boxOf(cell(page, 0))
+    const to = await boxOf(cell(page, 4))
     await page.mouse.move(from.x + from.width / 2, from.y + from.height / 2)
     await page.mouse.down()
     await page.mouse.move(to.x + to.width / 2, to.y + to.height / 2, { steps: 6 })
@@ -206,9 +195,8 @@ test.describe('the pointer', () => {
       ['A', 0],
       ['D', 3],
     ] as const) {
-      const strip = await page.getByTestId(`table-column-${letter}`).boundingBox()
-      const column = await cell(page, index).boundingBox()
-      if (strip === null || column === null) throw new Error('not drawn')
+      const strip = await boxOf(page.getByTestId(`table-column-${letter}`))
+      const column = await boxOf(cell(page, index))
       expect(Math.abs(strip.x - column.x)).toBeLessThan(2)
       expect(Math.abs(strip.width - column.width)).toBeLessThan(2)
     }
@@ -313,9 +301,8 @@ test.describe('merging', () => {
 
     // Eight cells drawn, the first spanning two columns.
     await expect(drawn(page)).toHaveCount(8)
-    const merged = await drawn(page).nth(0).boundingBox()
-    const below = await drawn(page).nth(2).boundingBox()
-    if (merged === null || below === null) throw new Error('not drawn')
+    const merged = await boxOf(drawn(page).nth(0))
+    const below = await boxOf(drawn(page).nth(2))
     expect(merged.width).toBeGreaterThan(below.width * 1.8)
 
     await page.locator('[data-object-id]').first().dblclick()
@@ -461,7 +448,7 @@ test.describe('sizing tracks', () => {
     expect(await width(drawn(page).nth(0))).toBeGreaterThan(before + 40)
 
     // The text, the fit and the new size are one undo entry.
-    await page.keyboard.press('ControlOrMeta+z')
+    await undo(page)
     await expect
       .poll(() => width(page.locator('[data-object-id]').first()))
       .toBeCloseTo(tableBefore, 0)
@@ -472,8 +459,7 @@ test.describe('sizing tracks', () => {
     await newTable(page)
     const height = async (): Promise<number> => (await cell(page, 3).boundingBox())?.height ?? 0
     const before = await height()
-    const edge = await page.getByTestId('table-row-edge-2').boundingBox()
-    if (edge === null) throw new Error('no edge')
+    const edge = await boxOf(page.getByTestId('table-row-edge-2'))
     const x = edge.x + edge.width / 2
     const y = edge.y + edge.height / 2
     await page.mouse.move(x, y)
@@ -507,8 +493,7 @@ test.describe('sizing tracks', () => {
     await leave(page)
 
     await page.locator('[data-object-id]').first().click()
-    const grip = await page.getByTestId('divider-c0').boundingBox()
-    if (grip === null) throw new Error('the boundary is not on screen')
+    const grip = await boxOf(page.getByTestId('divider-c0'))
     await page.mouse.dblclick(grip.x + grip.width / 2, grip.y + grip.height / 2)
     // Fitted to "x" — narrow — not to the merged heading.
     await expect.poll(() => width(drawn(page).nth(2))).toBeLessThan(80)
@@ -524,7 +509,7 @@ test('builds a table in one undo entry', async ({ page }) => {
   await leave(page)
   await expect(page.locator('[role="table"]')).toHaveAttribute('aria-label', /3 columns by 4 rows/)
 
-  await page.keyboard.press('ControlOrMeta+z')
+  await undo(page)
   await expect(page.locator('[role="table"]')).toHaveAttribute('aria-label', /3 columns by 3 rows/)
   await expect(drawn(page).nth(0)).toHaveText('')
 })

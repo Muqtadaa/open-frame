@@ -1,4 +1,5 @@
 import { expect, test, type Page } from '@playwright/test'
+import { boxOf } from './fixtures.js'
 
 import { BOARD_URL } from './routes.js'
 
@@ -10,6 +11,7 @@ import { BOARD_URL } from './routes.js'
  * "edit the selection", and prevented both before the focused button saw
  * them. The table size and image import had no keyboard route at all.
  */
+// Local rather than the shared fixture: it waits for the splash to go, which `openBoard` does not.
 async function board(page: Page): Promise<void> {
   await page.goto(BOARD_URL)
   await expect(page.getByTestId('tool-select')).toBeVisible()
@@ -151,6 +153,30 @@ test('a tip waits for a pointer, but not for the keyboard', async ({ page }) => 
  * panel floats in — so with a selection near the rail, the panel opened
  * beside it and hovering "Sticky" slid the label out UNDER the panel.
  */
+/**
+ * Hovers each tool and returns the centre of every tip that lands over `panel`
+ * — the ones whose stacking is worth checking. A tip that is not shown at all
+ * fails in `boxOf` rather than being passed over.
+ */
+async function tipsOver(
+  page: Page,
+  panel: { x: number; y: number; width: number; height: number },
+): Promise<[number, number][]> {
+  const centres: [number, number][] = []
+  for (const tool of await page.locator('.of-rail .of-tool').all()) {
+    await tool.hover()
+    const tip = tool.locator('.of-tool__tip')
+    await expect(tip).toHaveCSS('opacity', '1')
+    const box = await boxOf(tip)
+    const x = box.x + box.width / 2
+    const y = box.y + box.height / 2
+    if (x > panel.x && x < panel.x + panel.width && y > panel.y && y < panel.y + panel.height) {
+      centres.push([x, y])
+    }
+  }
+  return centres
+}
+
 test('a tool’s tip reads over the record panel', async ({ page }) => {
   await board(page)
   // Two notes far apart, selected together: the panel has no side to go to
@@ -163,29 +189,17 @@ test('a tool’s tip reads over the record panel', async ({ page }) => {
   }
   await page.keyboard.press('v')
   await page.keyboard.press('ControlOrMeta+a')
-  const panel = await page.getByTestId('inspector').boundingBox()
-  if (panel === null) throw new Error('no panel')
+  const panel = await boxOf(page.getByTestId('inspector'))
 
   // Tips take no pointer, which hides them from a hit test; let this one in.
   await page.addStyleTag({ content: '.of-tool__tip { pointer-events: auto !important; }' })
-  let checked = 0
-  for (const tool of await page.locator('.of-rail .of-tool').all()) {
-    await tool.hover()
-    const tip = tool.locator('.of-tool__tip')
-    await expect(tip).toHaveCSS('opacity', '1')
-    const box = await tip.boundingBox()
-    if (box === null) continue
-    const x = box.x + box.width / 2
-    const y = box.y + box.height / 2
-    const inside =
-      x > panel.x && x < panel.x + panel.width && y > panel.y && y < panel.y + panel.height
-    if (!inside) continue
+  const centres = await tipsOver(page, panel)
+  expect(centres.length, 'no tip crossed the panel, so this proved nothing').toBeGreaterThan(0)
+  for (const [x, y] of centres) {
     const top = await page.evaluate(
       ([px, py]) => document.elementFromPoint(px ?? 0, py ?? 0)?.closest('.of-tool__tip') !== null,
       [x, y],
     )
     expect(top, 'a tip under the panel').toBe(true)
-    checked += 1
   }
-  expect(checked, 'no tip crossed the panel, so this proved nothing').toBeGreaterThan(0)
 })

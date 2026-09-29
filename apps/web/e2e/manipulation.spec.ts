@@ -1,6 +1,6 @@
-import { expect, test, type Page } from '@playwright/test'
+import type { Page } from '@playwright/test'
 
-import { BOARD_URL } from './routes.js'
+import { CANVAS, drag, EDITOR, expect, place, test, undo, boxOf } from './fixtures.js'
 
 /**
  * Direct manipulation: resize, rotate, z-order, clipboard, lock.
@@ -10,61 +10,13 @@ import { BOARD_URL } from './routes.js'
  * test can observe.
  */
 
-const CANVAS = '[data-testid="canvas"]'
-/*
- * Whatever is currently editable in place.
- *
- * Body text is a `contenteditable` since rich text (ADR 0012); a frame's title
- * and an image's alt text are labels and stay plain textareas. A spec should
- * not have to know which it is about to type into.
- */
-const EDITOR = 'textarea, [contenteditable="true"]'
 const MOD = process.platform === 'darwin' ? 'Meta' : 'Control'
 
-async function freshBoard(page: Page): Promise<void> {
-  await page.goto(BOARD_URL)
-  await page.evaluate(
-    async () =>
-      new Promise<void>((resolve) => {
-        const request = indexedDB.deleteDatabase('openframe')
-        request.onsuccess = () => resolve()
-        request.onerror = () => resolve()
-        request.onblocked = () => resolve()
-      }),
-  )
-  await page.reload()
-  await expect(page.locator(CANVAS)).toBeVisible()
-  /*
-   * Also wait for the toolbar. A visible canvas only means React rendered;
-   * `useKeyboardShortcuts` attaches its listener in an effect, which runs after
-   * paint, so a keystroke sent on the canvas alone can land in the gap and be
-   * dropped. That showed up as a rare, unexplained tool-selection failure.
-   */
-  await expect(page.getByTestId('tool-select')).toBeVisible()
-}
+test.use({ board: 'fresh' })
 
 async function create(page: Page, tool: string, x: number, y: number, text = ''): Promise<void> {
-  await page.keyboard.press(tool)
-  await page.locator(CANVAS).click({ position: { x, y } })
-  await expect(page.locator(EDITOR)).toBeFocused()
-  if (text !== '') await page.locator(EDITOR).fill(text)
-  await page.locator(CANVAS).click({ position: { x: 1100, y: 180 } })
-  await expect(page.locator(EDITOR)).toHaveCount(0)
-  await page.keyboard.press('v')
+  await place(page, tool, { x, y }, text)
 }
-
-async function drag(page: Page, from: { x: number; y: number }, to: { x: number; y: number }) {
-  await page.mouse.move(from.x, from.y)
-  await page.mouse.down()
-  for (let i = 1; i <= 8; i++) {
-    await page.mouse.move(from.x + ((to.x - from.x) * i) / 8, from.y + ((to.y - from.y) * i) / 8)
-  }
-  await page.mouse.up()
-}
-
-test.beforeEach(async ({ page }) => {
-  await freshBoard(page)
-})
 
 test.describe('resize', () => {
   test('shows handles for a selected object and hides them otherwise', async ({ page }) => {
@@ -81,11 +33,8 @@ test.describe('resize', () => {
     await create(page, 's', 400, 300, 'Resize me')
     await page.locator('[data-object-type="sticky"]').click()
 
-    const before = await page.locator('[data-object-type="sticky"]').boundingBox()
-    const handle = await page.getByTestId('handle-se').boundingBox()
-    expect(before).not.toBeNull()
-    expect(handle).not.toBeNull()
-    if (before === null || handle === null) return
+    const before = await boxOf(page.locator('[data-object-type="sticky"]'))
+    const handle = await boxOf(page.getByTestId('handle-se'))
 
     await drag(
       page,
@@ -93,9 +42,7 @@ test.describe('resize', () => {
       { x: handle.x + 120, y: handle.y + 120 },
     )
 
-    const after = await page.locator('[data-object-type="sticky"]').boundingBox()
-    expect(after).not.toBeNull()
-    if (after === null) return
+    const after = await boxOf(page.locator('[data-object-type="sticky"]'))
     expect(after.width).toBeGreaterThan(before.width + 80)
   })
 
@@ -104,20 +51,17 @@ test.describe('resize', () => {
     await create(page, 's', 400, 300, 'Resize me')
     await page.locator('[data-object-type="sticky"]').click()
 
-    const before = await page.locator('[data-object-type="sticky"]').boundingBox()
-    const handle = await page.getByTestId('handle-se').boundingBox()
-    if (before === null || handle === null) return
+    const before = await boxOf(page.locator('[data-object-type="sticky"]'))
+    const handle = await boxOf(page.getByTestId('handle-se'))
 
     await drag(
       page,
       { x: handle.x + handle.width / 2, y: handle.y + handle.height / 2 },
       { x: handle.x + 140, y: handle.y + 100 },
     )
-    await page.keyboard.press(`${MOD}+z`)
+    await undo(page)
 
-    const restored = await page.locator('[data-object-type="sticky"]').boundingBox()
-    expect(restored).not.toBeNull()
-    if (restored === null) return
+    const restored = await boxOf(page.locator('[data-object-type="sticky"]'))
     expect(Math.round(restored.width)).toBe(Math.round(before.width))
   })
 
@@ -137,11 +81,8 @@ test.describe('resize', () => {
     await create(page, 'u', 600, 400)
     await page.locator('[data-object-type="shape"]').click()
 
-    const grip = await page.getByTestId('handle-rotate').boundingBox()
-    const box = await page.locator('[data-object-type="shape"]').boundingBox()
-    expect(grip).not.toBeNull()
-    expect(box).not.toBeNull()
-    if (grip === null || box === null) return
+    const grip = await boxOf(page.getByTestId('handle-rotate'))
+    const box = await boxOf(page.locator('[data-object-type="shape"]'))
 
     await drag(
       page,
@@ -266,22 +207,18 @@ test.describe('frames', () => {
     await create(page, 's', 200, 200, 'Inside')
 
     const note = page.locator('[data-object-type="sticky"]')
-    const before = await note.boundingBox()
-    if (before === null) return
+    const before = await boxOf(note)
 
     // Drag the note onto the frame.
     await drag(page, { x: before.x + 40, y: before.y + 40 }, { x: 700, y: 400 })
 
-    const inFrame = await note.boundingBox()
-    if (inFrame === null) return
+    const inFrame = await boxOf(note)
 
     // Now drag the FRAME by its title and confirm the note travels with it.
-    const title = await page.locator('.of-frame__title').boundingBox()
-    if (title === null) return
+    const title = await boxOf(page.locator('.of-frame__title'))
     await drag(page, { x: title.x + 10, y: title.y + 5 }, { x: title.x + 10, y: title.y - 120 })
 
-    const after = await note.boundingBox()
-    if (after === null) return
+    const after = await boxOf(note)
     expect(Math.round(after.y - inFrame.y)).toBeLessThan(-80)
   })
 
@@ -293,14 +230,12 @@ test.describe('frames', () => {
 
     await create(page, 's', 200, 200, 'Note')
     const note = page.locator('[data-object-type="sticky"]')
-    const start = await note.boundingBox()
-    if (start === null) return
+    const start = await boxOf(note)
 
     await drag(page, { x: start.x + 40, y: start.y + 40 }, { x: 700, y: 400 })
-    await page.keyboard.press(`${MOD}+z`)
+    await undo(page)
 
-    const restored = await note.boundingBox()
-    if (restored === null) return
+    const restored = await boxOf(note)
     expect(Math.round(restored.x)).toBe(Math.round(start.x))
   })
 
@@ -312,8 +247,7 @@ test.describe('frames', () => {
 
     await create(page, 's', 200, 200, 'Doomed')
     const note = page.locator('[data-object-type="sticky"]')
-    const start = await note.boundingBox()
-    if (start === null) return
+    const start = await boxOf(note)
     await drag(page, { x: start.x + 40, y: start.y + 40 }, { x: 700, y: 400 })
 
     await page.locator('.of-frame__title').click()
@@ -321,7 +255,7 @@ test.describe('frames', () => {
     await expect(page.locator('[data-object-type="frame"]')).toHaveCount(0)
     await expect(page.locator('[data-object-type="sticky"]')).toHaveCount(0)
 
-    await page.keyboard.press(`${MOD}+z`)
+    await undo(page)
     await expect(page.locator('[data-object-type="frame"]')).toHaveCount(1)
     await expect(page.locator('[data-object-type="sticky"]')).toHaveCount(1)
   })
@@ -333,8 +267,7 @@ test.describe('snap to grid', () => {
     await create(page, 's', 405, 307, 'Snappy')
 
     const note = page.locator('[data-object-type="sticky"]')
-    const before = await note.boundingBox()
-    if (before === null) return
+    const before = await boxOf(note)
 
     // A deliberately awkward distance: 37 and 23 are not grid multiples.
     await drag(
@@ -343,8 +276,7 @@ test.describe('snap to grid', () => {
       { x: before.x + 40 + 37, y: before.y + 40 + 23 },
     )
 
-    const after = await note.boundingBox()
-    if (after === null) return
+    const after = await boxOf(note)
     // The POSITION is what snaps, not the distance travelled — an object that
     // began off-grid must end up on it.
     expect(Math.round(after.x) % 10).toBe(0)
@@ -354,8 +286,7 @@ test.describe('snap to grid', () => {
 
   test('places a newly created object on the grid', async ({ page }) => {
     await create(page, 's', 407, 313, 'Aligned')
-    const box = await page.locator('[data-object-type="sticky"]').boundingBox()
-    if (box === null) return
+    const box = await boxOf(page.locator('[data-object-type="sticky"]'))
     expect(Math.round(box.x) % 10).toBe(0)
     expect(Math.round(box.y) % 10).toBe(0)
   })
@@ -367,20 +298,17 @@ test.describe('snap to grid', () => {
     await create(page, 's', 405, 307, 'Free')
 
     const note = page.locator('[data-object-type="sticky"]')
-    const before = await note.boundingBox()
-    if (before === null) return
+    const before = await boxOf(note)
 
-    const key = process.platform === 'darwin' ? 'Meta' : 'Control'
-    await page.keyboard.down(key)
+    await page.keyboard.down(MOD)
     await drag(
       page,
       { x: before.x + 40, y: before.y + 40 },
       { x: before.x + 40 + 37, y: before.y + 40 + 23 },
     )
-    await page.keyboard.up(key)
+    await page.keyboard.up(MOD)
 
-    const after = await note.boundingBox()
-    if (after === null) return
+    const after = await boxOf(note)
     expect(Math.round(after.x - before.x)).toBe(37)
     expect(Math.round(after.y - before.y)).toBe(23)
 
@@ -394,8 +322,7 @@ test.describe('snap to grid', () => {
 
     await create(page, 's', 405, 307, 'Loose')
     const note = page.locator('[data-object-type="sticky"]')
-    const before = await note.boundingBox()
-    if (before === null) return
+    const before = await boxOf(note)
 
     await drag(
       page,
@@ -403,8 +330,7 @@ test.describe('snap to grid', () => {
       { x: before.x + 40 + 37, y: before.y + 40 + 23 },
     )
 
-    const after = await note.boundingBox()
-    if (after === null) return
+    const after = await boxOf(note)
     expect(Math.round(after.x - before.x)).toBe(37)
 
     await page.reload()
@@ -415,16 +341,14 @@ test.describe('snap to grid', () => {
     await create(page, 's', 405, 307, 'Resize')
     await page.locator('[data-object-type="sticky"]').click()
 
-    const handle = await page.getByTestId('handle-se').boundingBox()
-    if (handle === null) return
+    const handle = await boxOf(page.getByTestId('handle-se'))
     await drag(
       page,
       { x: handle.x + handle.width / 2, y: handle.y + handle.height / 2 },
       { x: handle.x + 73, y: handle.y + 47 },
     )
 
-    const after = await page.locator('[data-object-type="sticky"]').boundingBox()
-    if (after === null) return
+    const after = await boxOf(page.locator('[data-object-type="sticky"]'))
     expect(Math.round(after.width) % 10).toBe(0)
     expect(Math.round(after.height) % 10).toBe(0)
   })
@@ -438,10 +362,6 @@ test.describe('snap to grid', () => {
 test.describe('reported regressions', () => {
   const AT = { x: 340, y: 280 }
   const CLEAR = { x: 1120, y: 140 }
-
-  test.beforeEach(async ({ page }) => {
-    await freshBoard(page)
-  })
 
   /**
    * A shape's label sits in a flex box that centres it, and a flex container

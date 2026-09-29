@@ -1,8 +1,8 @@
-import { expect, test, type Page } from '@playwright/test'
+import type { Page } from '@playwright/test'
 
 import { deflateSync } from 'node:zlib'
 
-import { BOARD_URL } from './routes.js'
+import { CANVAS, expect, test, undo, boxOf, saved } from './fixtures.js'
 
 /**
  * Images: uploading, what gets rejected, and surviving a reload.
@@ -11,7 +11,6 @@ import { BOARD_URL } from './routes.js'
  * whole reason the stored locator is `idb:<id>` rather than an object URL.
  */
 
-const CANVAS = '[data-testid="canvas"]'
 const FILE_INPUT = 'input[type="file"]'
 
 /**
@@ -26,27 +25,7 @@ const PNG_2x3_BASE64 =
   'iVBORw0KGgoAAAANSUhEUgAAAAIAAAADCAIAAAA2iEnWAAAAEElEQVR42mP4zwAE/xlQKAA+' +
   '1gX7ttb52gAAAABJRU5ErkJggg=='
 
-async function freshBoard(page: Page): Promise<void> {
-  await page.goto(BOARD_URL)
-  await page.evaluate(
-    async () =>
-      new Promise<void>((resolve) => {
-        const request = indexedDB.deleteDatabase('openframe')
-        request.onsuccess = () => resolve()
-        request.onerror = () => resolve()
-        request.onblocked = () => resolve()
-      }),
-  )
-  await page.reload()
-  await expect(page.locator(CANVAS)).toBeVisible()
-  /*
-   * Also wait for the toolbar. A visible canvas only means React rendered;
-   * `useKeyboardShortcuts` attaches its listener in an effect, which runs after
-   * paint, so a keystroke sent on the canvas alone can land in the gap and be
-   * dropped. That showed up as a rare, unexplained tool-selection failure.
-   */
-  await expect(page.getByTestId('tool-select')).toBeVisible()
-}
+test.use({ board: 'fresh' })
 
 async function upload(page: Page, name: string, mimeType: string, body: Buffer): Promise<void> {
   await page.locator(FILE_INPUT).setInputFiles({ name, mimeType, buffer: body })
@@ -100,10 +79,6 @@ function pngOf(width: number, height: number): Buffer {
 }
 
 test.describe('images', () => {
-  test.beforeEach(async ({ page }) => {
-    await freshBoard(page)
-  })
-
   test('places an uploaded image and names it after the file', async ({ page }) => {
     await upload(page, 'holiday.png', 'image/png', png())
 
@@ -137,8 +112,7 @@ test.describe('images', () => {
     await upload(page, 'persisted.png', 'image/png', png())
     await expect(page.locator('[data-object-type="image"] img')).toBeVisible()
 
-    // Long enough for the autosave debounce to have flushed the board.
-    await page.waitForTimeout(800)
+    await saved(page)
     await page.reload()
 
     const image = page.locator('[data-object-type="image"] img')
@@ -152,7 +126,7 @@ test.describe('images', () => {
     await expect(page.locator('[data-object-type="image"]')).toHaveCount(1)
 
     await page.locator(CANVAS).click({ position: { x: 1150, y: 600 } })
-    await page.keyboard.press(process.platform === 'darwin' ? 'Meta+z' : 'Control+z')
+    await undo(page)
 
     await expect(page.locator('[data-object-type="image"]')).toHaveCount(0)
   })
@@ -201,7 +175,6 @@ test.describe('images', () => {
  */
 test.describe('cropping', () => {
   test.beforeEach(async ({ page }) => {
-    await freshBoard(page)
     // Big enough that its eight grips are eight distinct places to aim at.
     await upload(page, 'holiday.png', 'image/png', pngOf(200, 150))
     await expect(page.locator('[data-object-type="image"]')).toHaveCount(1)
@@ -216,8 +189,7 @@ test.describe('cropping', () => {
     const image = page.locator('[data-object-type="image"]')
     await image.dblclick()
     await expect(page.getByTestId('crop-overlay')).toBeVisible()
-    const picture = await image.boundingBox()
-    if (picture === null) throw new Error('no picture')
+    const picture = await boxOf(image)
     const grips = await page.locator('[data-testid^="crop-"].of-crop__target').evaluateAll((all) =>
       all.map((grip) => {
         const box = grip.getBoundingClientRect()
@@ -271,21 +243,18 @@ test.describe('cropping', () => {
     const image = page.locator('[data-object-type="image"]')
     await image.dblclick()
 
-    const before = await image.boundingBox()
-    const picture = await page.locator('.of-image').boundingBox()
-    if (before === null || picture === null) throw new Error('no image')
+    const before = await boxOf(image)
+    const picture = await boxOf(page.locator('.of-image'))
 
-    const grip = await page.getByTestId('crop-e').boundingBox()
-    if (grip === null) throw new Error('no handle')
+    const grip = await boxOf(page.getByTestId('crop-e'))
     const trim = Math.round(before.width / 4)
     await page.mouse.move(grip.x + grip.width / 2, grip.y + grip.height / 2)
     await page.mouse.down()
     await page.mouse.move(grip.x + grip.width / 2 - trim, grip.y + grip.height / 2, { steps: 8 })
     await page.mouse.up()
 
-    const after = await image.boundingBox()
-    const shown = await page.locator('.of-image').boundingBox()
-    if (after === null || shown === null) throw new Error('no image')
+    const after = await boxOf(image)
+    const shown = await boxOf(page.locator('.of-image'))
 
     // The box is narrower by what was dragged off.
     expect(after.width).toBeCloseTo(before.width - trim, 0)
@@ -304,21 +273,18 @@ test.describe('cropping', () => {
     const image = page.locator('[data-object-type="image"]')
     await image.dblclick()
 
-    const before = await image.boundingBox()
-    const picture = await page.locator('.of-image').boundingBox()
-    if (before === null || picture === null) throw new Error('no image')
+    const before = await boxOf(image)
+    const picture = await boxOf(page.locator('.of-image'))
 
-    const grip = await page.getByTestId('crop-w').boundingBox()
-    if (grip === null) throw new Error('no handle')
+    const grip = await boxOf(page.getByTestId('crop-w'))
     const trim = Math.round(before.width / 4)
     await page.mouse.move(grip.x + grip.width / 2, grip.y + grip.height / 2)
     await page.mouse.down()
     await page.mouse.move(grip.x + grip.width / 2 + trim, grip.y + grip.height / 2, { steps: 8 })
     await page.mouse.up()
 
-    const after = await image.boundingBox()
-    const shown = await page.locator('.of-image').boundingBox()
-    if (after === null || shown === null) throw new Error('no image')
+    const after = await boxOf(image)
+    const shown = await boxOf(page.locator('.of-image'))
 
     /*
      * An object's position IS its top-left corner, so a left-edge crop that
@@ -360,8 +326,7 @@ test.describe('cropping', () => {
     const image = page.locator('[data-object-type="image"]')
     await image.dblclick()
 
-    const grip = await page.getByTestId('crop-e').boundingBox()
-    if (grip === null) throw new Error('no crop handle')
+    const grip = await boxOf(page.getByTestId('crop-e'))
     await page.mouse.move(grip.x + grip.width / 2, grip.y + grip.height / 2)
     await page.mouse.down()
     await page.mouse.move(grip.x + grip.width / 2 - 40, grip.y + grip.height / 2, { steps: 6 })
@@ -371,15 +336,13 @@ test.describe('cropping', () => {
     await page.locator(CANVAS).click({ position: { x: 1180, y: 160 } })
     await image.click()
 
-    const cropped = await image.boundingBox()
-    if (cropped === null) throw new Error('no image')
+    const cropped = await boxOf(image)
 
     /*
      * The resize handle must be reachable. It was not: the crop grips were
      * still in the DOM, above the object, on the same corner.
      */
-    const handle = await page.getByTestId('handle-se').boundingBox()
-    if (handle === null) throw new Error('no resize handle')
+    const handle = await boxOf(page.getByTestId('handle-se'))
     await page.mouse.move(handle.x + handle.width / 2, handle.y + handle.height / 2)
     await page.mouse.down()
     await page.mouse.move(handle.x + 60, handle.y + 45, { steps: 8 })
@@ -414,11 +377,9 @@ test.describe('cropping', () => {
   test('reset puts the whole picture back', async ({ page }) => {
     const image = page.locator('[data-object-type="image"]')
     await image.dblclick()
-    const before = await image.boundingBox()
-    if (before === null) throw new Error('no image')
+    const before = await boxOf(image)
 
-    const grip = await page.getByTestId('crop-e').boundingBox()
-    if (grip === null) throw new Error('no handle')
+    const grip = await boxOf(page.getByTestId('crop-e'))
     await page.mouse.move(grip.x + grip.width / 2, grip.y + grip.height / 2)
     await page.mouse.down()
     await page.mouse.move(grip.x + grip.width / 2 - 60, grip.y + grip.height / 2, { steps: 6 })
@@ -444,11 +405,9 @@ test.describe('cropping', () => {
   test('is one undoable action', async ({ page }) => {
     const image = page.locator('[data-object-type="image"]')
     await image.dblclick()
-    const before = await image.boundingBox()
-    if (before === null) throw new Error('no image')
+    const before = await boxOf(image)
 
-    const grip = await page.getByTestId('crop-e').boundingBox()
-    if (grip === null) throw new Error('no handle')
+    const grip = await boxOf(page.getByTestId('crop-e'))
     await page.mouse.move(grip.x + grip.width / 2, grip.y + grip.height / 2)
     await page.mouse.down()
     await page.mouse.move(grip.x + grip.width / 2 - 40, grip.y + grip.height / 2, { steps: 6 })
@@ -461,7 +420,7 @@ test.describe('cropping', () => {
      * ONE step. The window and the box are two commands — data and geometry —
      * but one action, and undoing a drag has to put both back.
      */
-    await page.keyboard.press('ControlOrMeta+z')
+    await undo(page)
     await expect
       .poll(async () => (await image.boundingBox())?.width ?? 0)
       .toBeCloseTo(before.width, 0)

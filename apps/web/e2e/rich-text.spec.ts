@@ -1,6 +1,6 @@
-import { expect, test, type Page } from '@playwright/test'
+import type { Page } from '@playwright/test'
 
-import { BOARD_URL } from './routes.js'
+import { CANVAS, expect, test, undo, saved } from './fixtures.js'
 
 /**
  * Formatting selected text (ADR 0012), walked in a browser.
@@ -10,26 +10,11 @@ import { BOARD_URL } from './routes.js'
  * a real button, survives a commit and a reload.
  */
 
-const CANVAS = '[data-testid="canvas"]'
 const EDITOR = '[data-testid="rich-text-editor"]'
 const AT = { x: 340, y: 280 }
 const CLEAR = { x: 1120, y: 140 }
 
-async function freshBoard(page: Page): Promise<void> {
-  await page.goto(BOARD_URL)
-  await page.evaluate(
-    async () =>
-      new Promise<void>((resolve) => {
-        const r = indexedDB.deleteDatabase('openframe')
-        r.onsuccess = () => resolve()
-        r.onerror = () => resolve()
-        r.onblocked = () => resolve()
-      }),
-  )
-  await page.reload()
-  await expect(page.locator(CANVAS)).toBeVisible()
-  await expect(page.getByTestId('tool-select')).toBeVisible()
-}
+test.use({ board: 'fresh' })
 
 async function noteSaying(page: Page, text: string): Promise<void> {
   await page.keyboard.press('s')
@@ -44,7 +29,7 @@ async function selectFirst(page: Page, count: number): Promise<void> {
     // The first TEXT, wherever it sits: each paragraph is a block now
     // (ADR 0014), so the editor's first child is a paragraph, not the words.
     const node = document.createTreeWalker(element, NodeFilter.SHOW_TEXT).nextNode()
-    if (node === null) return
+    if (node === null) throw new Error('the editor holds no text to select')
     const range = document.createRange()
     range.setStart(node, 0)
     range.setEnd(node, n)
@@ -55,10 +40,6 @@ async function selectFirst(page: Page, count: number): Promise<void> {
 }
 
 test.describe('formatting selected text', () => {
-  test.beforeEach(async ({ page }) => {
-    await freshBoard(page)
-  })
-
   test('a format bar appears while editing and not otherwise', async ({ page }) => {
     await noteSaying(page, 'Pricing is unclear')
     await expect(page.getByTestId('format-bar')).toBeVisible()
@@ -222,7 +203,7 @@ test.describe('formatting selected text', () => {
     await page.locator(CANVAS).click({ position: CLEAR })
     await expect(page.locator('.of-sticky strong')).toHaveText('Pricing')
 
-    await page.waitForTimeout(800) // autosave is debounced
+    await saved(page)
     await page.reload()
     await expect(page.locator('.of-sticky strong')).toHaveText('Pricing')
   })
@@ -238,7 +219,7 @@ test.describe('formatting selected text', () => {
     await page.locator(CANVAS).click({ position: CLEAR })
     await expect(page.locator('.of-sticky strong')).toHaveCount(1)
 
-    await page.keyboard.press('Control+z')
+    await undo(page)
     await expect(page.locator('.of-sticky strong')).toHaveCount(0)
     await expect(page.locator('.of-sticky')).toContainText('A plain note')
   })
@@ -253,7 +234,7 @@ test.describe('formatting selected text', () => {
     await page.keyboard.press('Escape')
 
     await expect(page.locator('.of-sticky strong')).toHaveCount(1)
-    await page.keyboard.press('Control+z')
+    await undo(page)
     await expect(page.locator('.of-sticky strong')).toHaveCount(0)
     await expect(page.locator('.of-sticky')).toContainText('A plain note')
   })
@@ -300,7 +281,6 @@ test.describe('formatting selected text', () => {
  */
 test.describe('lists', () => {
   test.beforeEach(async ({ page }) => {
-    await freshBoard(page)
     await page.keyboard.press('s')
     await page.locator(CANVAS).click({ position: AT })
     await expect(page.locator(EDITOR)).toBeFocused()
@@ -391,14 +371,13 @@ test.describe('lists', () => {
 
     const drawn = page.locator('[data-object-type="sticky"] [role="list"] [role="listitem"]')
     await expect(drawn).toHaveText(['alpha', 'beta'])
-    await page.waitForTimeout(800) // autosave
+    await saved(page)
     await page.reload()
     await expect(drawn).toHaveText(['alpha', 'beta'])
   })
 })
 
 test('a frame title takes formatting and a list', async ({ page }) => {
-  await freshBoard(page)
   await page.keyboard.press('f')
   await page.locator(CANVAS).click({ position: AT })
   await expect(page.locator(EDITOR)).toBeFocused()
@@ -416,7 +395,6 @@ test('a frame title takes formatting and a list', async ({ page }) => {
  * points — which is what inserting that markup into the page would do.
  */
 test('pasting markup with images fetches none of them', async ({ page }) => {
-  await freshBoard(page)
   const fetched: string[] = []
   await page.route('**/paste-probe-*', async (route) => {
     fetched.push(route.request().url())
@@ -437,6 +415,9 @@ test('pasting markup with images fetches none of them', async ({ page }) => {
     )
   })
   await expect(page.locator(`${EDITOR} [data-list="bullet"] strong`)).toHaveText('kept')
+  // Nothing to wait FOR: the claim is that no request is ever made, so the
+  // only test of it is to let time pass and see that none arrived.
+  // eslint-disable-next-line playwright/no-wait-for-timeout
   await page.waitForTimeout(500)
   expect(fetched).toEqual([])
 })

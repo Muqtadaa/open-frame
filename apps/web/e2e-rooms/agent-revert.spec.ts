@@ -1,6 +1,7 @@
 import { openBoard, READ_TOOLS, toolContext, WRITE_TOOLS, type BoardPeer } from '@openframe/mcp'
 import { asBoardId } from '@openframe/core'
-import { expect, test, type Browser, type Page } from '@playwright/test'
+import { expect, test, type Page } from '@playwright/test'
+import { join, newRoomId } from './rooms.js'
 
 /**
  * An agent's change, taken back from the board or by the agent (tracks A-2).
@@ -27,23 +28,6 @@ interface DebugWindow {
       }
     }
   }
-}
-
-function newRoomId(): string {
-  return `brd_${Math.random().toString(36).slice(2, 12)}${Date.now().toString(36)}`
-}
-
-async function join(browser: Browser, room: string): Promise<Page> {
-  const context = await browser.newContext()
-  const page = await context.newPage()
-  await page.goto(`/?room=${room}`)
-  await page.waitForSelector('[data-testid="status-bar"]')
-  await expect(page.locator('[data-testid="room-status"]')).toHaveAttribute(
-    'data-status',
-    'connected',
-    { timeout: 20_000 },
-  )
-  return page
 }
 
 const idsIn = (page: Page): Promise<string[]> =>

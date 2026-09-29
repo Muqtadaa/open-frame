@@ -1,5 +1,6 @@
 import { expect, test, type Page } from '@playwright/test'
 
+import { CANVAS } from './fixtures.js'
 import { BOARD_URL } from './routes.js'
 
 /**
@@ -10,7 +11,6 @@ import { BOARD_URL } from './routes.js'
  * broke its lines in different places the moment it was double-clicked, so the
  * word you aimed at was no longer where you aimed.
  */
-const CANVAS = '[data-testid="canvas"]'
 const EDITOR = '[contenteditable="true"]'
 const WORDS =
   'The pricing page confused three of five participants who could not find the annual toggle anywhere'

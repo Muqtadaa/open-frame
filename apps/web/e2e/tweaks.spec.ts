@@ -1,17 +1,10 @@
-import { expect, test, type Page } from '@playwright/test'
+import type { Page } from '@playwright/test'
 
-import { BOARD_URL } from './routes.js'
+import { CANVAS, expect, openBoard, test, boxOf } from './fixtures.js'
 
 /**
  * Three things that were each telling a small lie about what the board does.
  */
-const CANVAS = '[data-testid="canvas"]'
-
-async function board(page: Page): Promise<void> {
-  await page.goto(BOARD_URL)
-  await expect(page.locator(CANVAS)).toBeVisible()
-  await expect(page.getByTestId('tool-select')).toBeVisible()
-}
 
 async function note(page: Page, at: { x: number; y: number }, text: string): Promise<void> {
   await page.getByTestId('tool-sticky').click()
@@ -29,7 +22,7 @@ async function note(page: Page, at: { x: number; y: number }, text: string): Pro
  * promised typing on hover and gave a selection on click.
  */
 test('an object does not promise a caret it will not give you', async ({ page }) => {
-  await board(page)
+  await openBoard(page)
   await note(page, { x: 500, y: 300 }, 'hello')
 
   const object = page.locator('[data-object-id]').first()
@@ -57,11 +50,10 @@ test.describe('a locked object', () => {
   }
 
   test('does not follow the pointer and snap back', async ({ page }) => {
-    await board(page)
+    await openBoard(page)
     await lock(page)
 
-    const before = await page.locator('[data-object-id]').first().boundingBox()
-    if (before === null) throw new Error('no object')
+    const before = await boxOf(page.locator('[data-object-id]').first())
 
     /*
      * The command has always refused this — `requireUnlocked` is in the
@@ -86,7 +78,7 @@ test.describe('a locked object', () => {
   })
 
   test('says why its handles are missing', async ({ page }) => {
-    await board(page)
+    await openBoard(page)
     await lock(page)
     await page.locator('[data-object-id]').first().click()
 
@@ -96,7 +88,7 @@ test.describe('a locked object', () => {
   })
 
   test('can still be selected, because that is how you unlock it', async ({ page }) => {
-    await board(page)
+    await openBoard(page)
     await lock(page)
     await page.locator(CANVAS).click({ position: { x: 1180, y: 150 } })
     await page.locator('[data-object-id]').first().click()
@@ -116,13 +108,13 @@ test.describe('a locked object', () => {
  */
 test.describe('the comment tool', () => {
   test('is reached by the key the button says it is', async ({ page }) => {
-    await board(page)
+    await openBoard(page)
     await page.keyboard.press('m')
     await expect(page.getByTestId('tool-comment')).toHaveAttribute('aria-pressed', 'true')
   })
 
   test('shows its cursor over an object, not only over empty board', async ({ page }) => {
-    await board(page)
+    await openBoard(page)
     await note(page, { x: 500, y: 300 }, 'about this')
 
     const object = page.locator('[data-object-id]').first()
@@ -135,7 +127,7 @@ test.describe('the comment tool', () => {
   })
 
   test('keeps the comment cursor over something already selected', async ({ page }) => {
-    await board(page)
+    await openBoard(page)
     await note(page, { x: 500, y: 300 }, 'about this')
 
     const object = page.locator('[data-object-id]').first()
@@ -157,7 +149,7 @@ test.describe('the comment tool', () => {
    * looking.
    */
   test('says WHICH tool is armed, not merely that one is', async ({ page }) => {
-    await board(page)
+    await openBoard(page)
     const cursor = async (): Promise<string> =>
       await page.locator(CANVAS).evaluate((el) => getComputedStyle(el).cursor)
 
@@ -192,7 +184,7 @@ test.describe('the comment tool', () => {
  * pixels apart, one of them next to nothing that changes it.
  */
 test('shows the zoom once, beside the control that changes it', async ({ page }) => {
-  await board(page)
+  await openBoard(page)
 
   await expect(page.getByTestId('zoom-percent')).toBeVisible()
   await expect(page.getByTestId('zoom-percent')).toHaveText('100%')

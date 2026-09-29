@@ -1,6 +1,6 @@
 import { expect, test, type Page } from '@playwright/test'
 
-import { BOARD_URL } from './routes.js'
+import { CANVAS, openBoard, boxOf } from './fixtures.js'
 
 /**
  * The context menu is a menu a keyboard can drive (the ARIA menu pattern).
@@ -10,13 +10,11 @@ import { BOARD_URL } from './routes.js'
  * it at the window's corner; Escape dropped focus on the page AND cleared the
  * selection the menu was about.
  */
-const CANVAS = '[data-testid="canvas"]'
 const NOTE = { x: 340, y: 260 }
 
+// Local rather than the shared `place`: it types rather than fills, and checks the tool is armed.
 async function boardWithNote(page: Page): Promise<void> {
-  await page.goto(BOARD_URL)
-  await expect(page.locator(CANVAS)).toBeVisible()
-  await expect(page.getByTestId('tool-select')).toBeVisible()
+  await openBoard(page)
   await page.keyboard.press('s')
   await expect(page.getByTestId('tool-sticky')).toHaveAttribute('aria-pressed', 'true')
   await page.locator(CANVAS).click({ position: NOTE })
@@ -100,11 +98,8 @@ test('Shift+F10 opens it on the selection, not in the corner', async ({ page }) 
   await expect(menu(page)).toBeVisible()
   await expect(item(page, 'Derive insight')).toBeFocused()
 
-  const note = await page.locator('[data-object-type="sticky"]').boundingBox()
-  const box = await menu(page).boundingBox()
-  expect(note).not.toBeNull()
-  expect(box).not.toBeNull()
-  if (note === null || box === null) return
+  const note = await boxOf(page.locator('[data-object-type="sticky"]'))
+  const box = await boxOf(menu(page))
   // Hung from the note: it starts at the note's edge, not at the window's.
   const touches =
     Math.abs(box.y - (note.y + note.height)) < 4 ||
@@ -176,10 +171,8 @@ test.describe('what it offers', () => {
   // 699px of flat list did not; it was clamped up over the note it was about.
   test('hangs straight down from the pointer on a laptop-sized window', async ({ page }) => {
     await page.locator(CANVAS).click({ position: NOTE, button: 'right' })
-    const box = await menu(page).boundingBox()
-    const canvas = await page.locator(CANVAS).boundingBox()
-    expect(box).not.toBeNull()
-    if (box === null || canvas === null) return
+    const box = await boxOf(menu(page))
+    const canvas = await boxOf(page.locator(CANVAS))
     expect(Math.abs(box.y - (canvas.y + NOTE.y))).toBeLessThan(2)
     expect(Math.abs(box.x - (canvas.x + NOTE.x))).toBeLessThan(2)
   })
@@ -214,10 +207,8 @@ test.describe('what it offers', () => {
     await page.locator(CANVAS).click({ position: { x: 1100, y: 640 } })
 
     const added = page.locator('[data-object-type="sticky"]', { hasText: 'Here' })
-    const box = await added.boundingBox()
-    const canvas = await page.locator(CANVAS).boundingBox()
-    expect(box).not.toBeNull()
-    if (box === null || canvas === null) return
+    const box = await boxOf(added)
+    const canvas = await boxOf(page.locator(CANVAS))
     // Where the menu was opened, not wherever a new note would otherwise go.
     const x = empty.x + canvas.x
     const y = empty.y + canvas.y

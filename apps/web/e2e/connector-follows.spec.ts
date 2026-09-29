@@ -1,6 +1,6 @@
-import { expect, test, type Page } from '@playwright/test'
+import type { Page } from '@playwright/test'
 
-import { BOARD_URL } from './routes.js'
+import { expect, test } from './fixtures.js'
 
 /**
  * A line follows every change to what it joins (tracks A-6).
@@ -27,20 +27,7 @@ interface DebugWindow {
   }
 }
 
-async function freshBoard(page: Page): Promise<void> {
-  await page.goto(BOARD_URL)
-  await page.evaluate(
-    async () =>
-      new Promise<void>((resolve) => {
-        const request = indexedDB.deleteDatabase('openframe')
-        request.onsuccess = () => resolve()
-        request.onerror = () => resolve()
-        request.onblocked = () => resolve()
-      }),
-  )
-  await page.reload()
-  await expect(page.getByTestId('canvas')).toBeVisible()
-}
+test.use({ board: 'fresh' })
 
 /** Runs commands on the board, as one change. */
 async function run(page: Page, commands: unknown[]): Promise<void> {
@@ -81,7 +68,6 @@ const path = (page: Page) =>
   page.locator('[data-object-id="obj_line"] .of-connector__line').first().getAttribute('d')
 
 test('a line follows a note made taller, which leaves x + y + width alone', async ({ page }) => {
-  await freshBoard(page)
   await run(page, [
     {
       kind: 'CreateObjects',
@@ -105,7 +91,6 @@ test('a line follows a note made taller, which leaves x + y + width alone', asyn
 })
 
 test('a line joined to a group follows a member that moves', async ({ page }) => {
-  await freshBoard(page)
   await run(page, [
     {
       kind: 'CreateObjects',
@@ -132,7 +117,6 @@ test('a line joined to a group follows a member that moves', async ({ page }) =>
  * empty group's bounds (Codex, on #18).
  */
 test('a line joined to an empty group follows the first member put in it', async ({ page }) => {
-  await freshBoard(page)
   await run(page, [
     {
       kind: 'CreateObjects',

@@ -1,6 +1,6 @@
-import { expect, test, type Page } from '@playwright/test'
+import type { Page } from '@playwright/test'
 
-import { BOARD_URL } from './routes.js'
+import { CANVAS, EDITOR, expect, place, test, undo, boxOf, saved } from './fixtures.js'
 
 /**
  * Phase 3's claim, walked end to end by a user.
@@ -11,44 +11,13 @@ import { BOARD_URL } from './routes.js'
  * a person can reach any of it.
  */
 
-const CANVAS = '[data-testid="canvas"]'
-/*
- * Whatever is currently editable in place.
- *
- * Body text is a `contenteditable` since rich text (ADR 0012); a frame's title
- * and an image's alt text are labels and stay plain textareas. A spec should
- * not have to know which it is about to type into.
- */
-const EDITOR = 'textarea, [contenteditable="true"]'
 const EMPTY = { x: 1120, y: 150 }
 const NOTE = { x: 340, y: 260 }
 
-async function freshBoard(page: Page): Promise<void> {
-  await page.goto(BOARD_URL)
-  await page.evaluate(
-    async () =>
-      new Promise<void>((resolve) => {
-        const r = indexedDB.deleteDatabase('openframe')
-        r.onsuccess = () => resolve()
-        r.onerror = () => resolve()
-        r.onblocked = () => resolve()
-      }),
-  )
-  await page.reload()
-  await expect(page.locator(CANVAS)).toBeVisible()
-  // The keyboard effect attaches after paint; without this the first keypress
-  // of a spec is dropped and the failure looks like a broken shortcut.
-  await expect(page.getByTestId('tool-select')).toBeVisible()
-}
+test.use({ board: 'fresh' })
 
 async function placeNote(page: Page, text: string): Promise<void> {
-  await page.keyboard.press('s')
-  await page.locator(CANVAS).click({ position: NOTE })
-  await expect(page.locator(EDITOR)).toBeFocused()
-  await page.locator(EDITOR).fill(text)
-  await page.locator(CANVAS).click({ position: EMPTY })
-  await expect(page.locator(EDITOR)).toHaveCount(0)
-  await page.keyboard.press('v')
+  await place(page, 's', NOTE, text, EMPTY)
 }
 
 async function promote(page: Page, at: { x: number; y: number }): Promise<void> {
@@ -61,10 +30,6 @@ async function promote(page: Page, at: { x: number; y: number }): Promise<void> 
 }
 
 test.describe('structured objects', () => {
-  test.beforeEach(async ({ page }) => {
-    await freshBoard(page)
-  })
-
   test('a note is promoted to evidence and keeps its text and place', async ({ page }) => {
     await placeNote(page, 'Participants skipped the pricing page')
 
@@ -128,9 +93,8 @@ test.describe('structured objects', () => {
     await page.getByTestId('menu-derive-insight').click()
     await page.keyboard.press('Escape')
 
-    const frame = await page.locator('[data-object-type="frame"]').boundingBox()
-    const insight = await page.locator('[data-object-type="insight"]').boundingBox()
-    if (frame === null || insight === null) throw new Error('missing an object')
+    const frame = await boxOf(page.locator('[data-object-type="frame"]'))
+    const insight = await boxOf(page.locator('[data-object-type="insight"]'))
     expect(insight.x).toBeGreaterThanOrEqual(frame.x)
     expect(insight.y).toBeGreaterThanOrEqual(frame.y)
     expect(insight.x + insight.width).toBeLessThanOrEqual(frame.x + frame.width)
@@ -196,7 +160,7 @@ test.describe('structured objects', () => {
     await expect(page.getByTestId('field-source')).toBeVisible()
 
     await page.locator(CANVAS).click({ position: EMPTY })
-    await page.keyboard.press('Control+z')
+    await undo(page)
 
     await page.locator(CANVAS).click({ position: NOTE })
     await expect(page.getByTestId('inspector')).toBeVisible()
@@ -245,7 +209,7 @@ test.describe('structured objects', () => {
     await expect(page.locator(CANVAS)).toContainText('September usability study')
 
     // And it is in the DOCUMENT, not just on screen.
-    await page.waitForTimeout(800) // autosave is debounced
+    await saved(page)
     await page.reload()
     await expect(page.locator(CANVAS)).toContainText('September usability study')
   })
@@ -279,10 +243,6 @@ test.describe('synthesis', () => {
   const FIRST = { x: 300, y: 300 }
   const SECOND = { x: 300, y: 520 }
 
-  test.beforeEach(async ({ page }) => {
-    await freshBoard(page)
-  })
-
   /*
    * Synthesis now lands in the editor, so every assertion about the record
    * panel has to leave it first — the panel is deliberately hidden while an
@@ -298,13 +258,7 @@ test.describe('synthesis', () => {
   }
 
   async function placeAt(page: Page, at: { x: number; y: number }, text: string): Promise<void> {
-    await page.keyboard.press('s')
-    await page.locator(CANVAS).click({ position: at })
-    await expect(page.locator(EDITOR)).toBeFocused()
-    await page.locator(EDITOR).fill(text)
-    await page.locator(CANVAS).click({ position: EMPTY })
-    await expect(page.locator(EDITOR)).toHaveCount(0)
-    await page.keyboard.press('v')
+    await place(page, 's', at, text, EMPTY)
   }
 
   /**
@@ -386,7 +340,7 @@ test.describe('synthesis', () => {
     await synthesiseFrom(page, FIRST)
     await expect(page.getByRole('list', { name: 'stands on' })).toBeVisible()
 
-    await page.keyboard.press('Control+z')
+    await undo(page)
 
     await page.locator(CANVAS).click({ position: FIRST })
     await expect(page.getByTestId('inspector')).toBeVisible()
@@ -437,10 +391,6 @@ test.describe('synthesis', () => {
 test.describe('the synthesis spine', () => {
   const START = { x: 300, y: 560 }
   const CLEAR = { x: 1120, y: 140 }
-
-  test.beforeEach(async ({ page }) => {
-    await freshBoard(page)
-  })
 
   test('runs from a note to a task without leaving the board', async ({ page }) => {
     await page.keyboard.press('s')
@@ -496,7 +446,6 @@ test.describe('the synthesis spine', () => {
  * ink beside real values they read as data somebody had entered.
  */
 test('an empty record field reads as an example, not as a value', async ({ page }) => {
-  await freshBoard(page)
   await placeNote(page, 'Three of five could not find the annual price')
   await promote(page, NOTE)
   await page.locator(CANVAS).click({ position: NOTE })
@@ -516,7 +465,6 @@ test('an empty record field reads as an example, not as a value', async ({ page 
  * note and a piece of evidence are the same object with a different payload.
  */
 test('the panel names what the object is, and puts its record first', async ({ page }) => {
-  await freshBoard(page)
   await placeNote(page, 'Three of five could not find the annual price')
   await page.locator(CANVAS).click({ position: NOTE })
   await expect(page.getByTestId('inspector-title')).toHaveText('Sticky')
@@ -538,7 +486,6 @@ test('the panel names what the object is, and puts its record first', async ({ p
  * navigation bar, now it runs along the top.
  */
 test('folds appearance away on evidence, and opens it on request', async ({ page }) => {
-  await freshBoard(page)
   await placeNote(page, 'Three of five could not find the annual price')
   await promote(page, NOTE)
   await page.locator(CANVAS).click({ position: NOTE })
@@ -547,11 +494,8 @@ test('folds appearance away on evidence, and opens it on request', async ({ page
   await expect(toggle).toHaveAttribute('aria-expanded', 'false')
   await expect(page.getByTestId('swatch-gray')).toHaveCount(0)
 
-  const panel = await page.getByTestId('inspector').boundingBox()
-  const line = await page.getByTestId('status-bar').boundingBox()
-  expect(panel).not.toBeNull()
-  expect(line).not.toBeNull()
-  if (panel === null || line === null) return
+  const panel = await boxOf(page.getByTestId('inspector'))
+  const line = await boxOf(page.getByTestId('status-bar'))
   // Clear of the navigation bar, which runs along the top of the window now.
   expect(panel.y).toBeGreaterThanOrEqual(line.y + line.height)
 
