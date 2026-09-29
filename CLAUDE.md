@@ -569,6 +569,12 @@ while checking nothing. `eslint-plugin-playwright` holds the rest: no sleeps
 (wait for the state the sleep stood for), no branches in a test body, no
 forced clicks. `e2e-rooms/rooms.ts` is the same for the rooms suite.
 
+Reach an element by its role and name, or by a `data-testid` — never by a
+styling class. The class names are the design's to change, and 188 selectors
+once tied behaviour tests to the stylesheet. `e2e-navigation.test.ts` fails on
+any `.of-` class in either suite, except the few whose visual state IS the
+claim, each listed there with its reason.
+
 **Ports** — `Clock` and `IdGenerator` are injected, so tests are deterministic
 without fake timers or mocks. Use `createTestHarness()` from `core/src/testing.ts`.
 

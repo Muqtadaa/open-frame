@@ -425,3 +425,13 @@ cover:
     clicks on a connector click a point of the stroke, ninety null throws
     use `boxOf`. Two timed waits stay, with their reasons.
   - Next: PR 3b moves the `.of-*` class selectors to roles and test ids.
+- **E2E selectors** (item 3, PR 3b):
+  - 188 `.of-*` class selectors in the two suites now reach elements by role
+    and name (the rail toolbar, object groups, menu items, options, articles,
+    headings) or by a `data-testid` added to the element that carried the
+    class — attributes only, so no golden moved. Selection is `data-selected`.
+  - `e2e-navigation.test.ts` fails on any styling class in a spec or helper,
+    every class in a string counted; seen failing on all 188 first. Three
+    stay, allowlisted with reasons: the editing outline's dash, a shaded
+    header strip, and the editor's paragraph element (ADR 0014).
+  - Item 3 is complete. Next: item 4, cross-browser runs.
