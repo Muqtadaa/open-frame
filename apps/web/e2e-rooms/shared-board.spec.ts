@@ -3,7 +3,7 @@ import { boxOf, defined, pairs } from '../e2e/fixtures.js'
 
 import { BOARD_URL, HOME_URL } from '../e2e/routes.js'
 import { signedIn } from '../e2e/signed-in.js'
-import { join, newRoomId } from './rooms.js'
+import { join, keptLocally, newRoomId, pageNow } from './rooms.js'
 
 /**
  * Two people, one board, a real Durable Object.
@@ -336,6 +336,9 @@ test.describe('other people', () => {
     // Bob cannot take it, and it STAYS not taken.
     await bob.locator(NOTE).nth(contested).dblclick()
     await expect(bob.locator(EDITOR)).toHaveCount(0)
+    // Nothing to wait FOR: the claim is that the editor never opens, so the
+    // only test of "stays" is to let a moment pass and look again.
+    // eslint-disable-next-line no-restricted-syntax
     await bob.waitForTimeout(600)
     await expect(bob.locator(EDITOR)).toHaveCount(0)
 
@@ -504,8 +507,9 @@ test('an offline edit made after a reload still reaches the room', async ({ brow
     { timeout: 20_000 },
   )
 
+  const beforeNote = await pageNow(first)
   await addNote(first, 'before the flight', 'blue')
-  await first.waitForTimeout(500)
+  await keptLocally(first, room, beforeNote)
   await first.close()
 
   /*
@@ -533,6 +537,7 @@ test('an offline edit made after a reload still reaches the room', async ({ brow
   await expect(second.locator('[data-object-id]')).toHaveCount(1)
 
   // MOVE the existing note. This is the patch that used to vanish.
+  const beforeMove = await pageNow(second)
   await second.evaluate(() => {
     const debug = (window as unknown as DebugWindow).__openframe
     const [object] = [...debug.runtime.store.getDocument().objects.values()]
@@ -544,7 +549,7 @@ test('an offline edit made after a reload still reaches the room', async ({ brow
     })
     if (!result.ok) throw new Error(result.error?.message ?? 'the move was refused')
   })
-  await second.waitForTimeout(300)
+  await keptLocally(second, room, beforeMove)
 
   await second.close()
 
@@ -566,7 +571,6 @@ test('an offline edit made after a reload still reaches the room', async ({ brow
     'connected',
     { timeout: 20_000 },
   )
-  await third.waitForTimeout(1000)
 
   // Somebody else, with nothing cached, asks the room what the board is.
   const other = await browser.newContext()
@@ -575,14 +579,22 @@ test('an offline edit made after a reload still reaches the room', async ({ brow
   await bob.waitForSelector('[data-testid="status-bar"]')
   await expect(bob.locator('[data-object-id]')).toHaveCount(1)
 
-  const x = await bob.evaluate(() => {
-    const debug = (window as unknown as DebugWindow).__openframe
-    const [object] = [...debug.runtime.store.getDocument().objects.values()]
-    return (object as unknown as { frame: { x: number } }).frame.x
-  })
-
-  // 100 was where it was left. 500 means the offline move got there.
-  expect(x).toBe(500)
+  /*
+   * 100 was where it was left; 500 means the offline move got there. Polled,
+   * because the note exists at 100 before the move arrives: `third` pushes it
+   * once it reconnects, and stays open until the end of the test to do so.
+   */
+  await expect
+    .poll(
+      () =>
+        bob.evaluate(() => {
+          const debug = (window as unknown as DebugWindow).__openframe
+          const [object] = [...debug.runtime.store.getDocument().objects.values()]
+          return (object as unknown as { frame: { x: number } }).frame.x
+        }),
+      { timeout: 20_000 },
+    )
+    .toBe(500)
 
   await context.close()
   await other.close()
