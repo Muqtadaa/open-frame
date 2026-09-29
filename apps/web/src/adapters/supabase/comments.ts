@@ -1,6 +1,7 @@
 import type { BoardId, ObjectId } from '@openframe/core'
 
 import { supabaseClient } from './client.js'
+import type { BoardComment, BoardPerson, Mention, NewComment } from '../../runtime/services.js'
 
 /**
  * Comments on a board, and the mentions that notify people about them.
@@ -16,68 +17,6 @@ import { supabaseClient } from './client.js'
  * edit with no network at all. What an unreachable database costs here is the
  * DISCUSSION, not the board.
  */
-
-export interface BoardComment {
-  readonly id: string
-  /** `null` on a thread; the thread's id on a reply. */
-  readonly parentId: string | null
-  readonly authorId: string
-  readonly authorName: string
-  readonly authorHue: number
-  readonly body: string
-  /** Where the pin sits, in board coordinates. `null` on a reply. */
-  readonly x: number | null
-  readonly y: number | null
-  /**
-   * What it was dropped on, if anything.
-   *
-   * An object that is later deleted leaves the comment exactly where it was
-   * put, and the interface says what it was attached to is gone.
-   */
-  readonly objectId: ObjectId | null
-  /**
-   * WHERE on that element, as a proportion of its box.
-   *
-   * `0.5, 0.5` is the middle; `1, 0` is the top-right corner. A proportion
-   * rather than an offset so the pin survives a RESIZE as well as a move —
-   * the corner somebody was objecting to stays the corner.
-   *
-   * `null` on a comment that is not on an element, and on every comment
-   * written before this existed. Those keep their own `x` and `y`, which is
-   * also the fallback for an anchored comment whose element has been deleted:
-   * a fraction of something that is gone is not a position, and the pin has to
-   * go somewhere.
-   */
-  readonly fx: number | null
-  readonly fy: number | null
-  readonly resolvedAt: number | null
-  readonly createdAt: number
-}
-
-export interface BoardPerson {
-  readonly userId: string
-  readonly displayName: string
-  readonly hue: number
-}
-
-export interface Mention {
-  readonly commentId: string
-  readonly boardId: BoardId
-  readonly boardTitle: string
-  readonly authorName: string
-  readonly body: string
-  readonly createdAt: number
-  /**
-   * When this was read, or `null` while it is still new.
-   *
-   * Read and GONE are two different states. The list used to return only the
-   * unread, so following a notification was the last time you could ever find
-   * it — the thing somebody wanted you to see disappeared at the moment you
-   * looked at it, along with the only link back to the board and remark it
-   * named.
-   */
-  readonly readAt: number | null
-}
 
 /** Milliseconds from a timestamp the database wrote, or `null`. */
 function when(value: unknown): number | null {
@@ -205,23 +144,6 @@ export async function boardPeople(boardId: BoardId): Promise<readonly BoardPerso
     })
   }
   return people
-}
-
-export interface NewComment {
-  readonly boardId: BoardId
-  readonly body: string
-  /** Set on a reply, absent on a thread. */
-  readonly parentId?: string
-  /** Set on a thread, absent on a reply. */
-  readonly at?: { readonly x: number; readonly y: number }
-  readonly objectId?: ObjectId | null
-  /**
-   * Where on that element, as a proportion of its box. Set together with
-   * `objectId` or not at all — a fraction of nothing is not a position, and
-   * the database refuses one.
-   */
-  readonly on?: { readonly fx: number; readonly fy: number }
-  readonly mentions?: readonly string[]
 }
 
 /**
@@ -372,3 +294,5 @@ export function watchMyMentions(userId: string, onChange: () => void): () => voi
     stop?.()
   }
 }
+
+export type { BoardComment, BoardPerson, Mention, NewComment }

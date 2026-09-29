@@ -192,6 +192,11 @@ function socketBase(): string {
   return COLLAB_URL.replace(/^http/, 'ws')
 }
 
+/** The room server's http(s) base, or `null` for a build with none. */
+export function roomHttpBase(): string | null {
+  return COLLAB_URL === null ? null : COLLAB_URL.replace(/^ws/, 'http')
+}
+
 function httpBase(): string {
   if (COLLAB_URL === null) throw new Error('No room server is configured for this build')
   return COLLAB_URL.replace(/^ws/, 'http')

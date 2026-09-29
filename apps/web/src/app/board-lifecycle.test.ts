@@ -1,11 +1,11 @@
-import { asBoardId, richFromPlain } from '@openframe/core'
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
+import { asBoardId, richFromPlain, type BoardId, type BoardRepository } from '@openframe/core'
+import { beforeEach, describe, expect, it, vi } from 'vitest'
 
+import { forgetCrdt } from '../adapters/indexeddb/crdt-store.js'
 import { MemoryBoardRepository } from '../adapters/memory/memory-board-repository.js'
-import { deleteBoardEverywhere, leaveBoard, renameBoard } from './board-lifecycle.js'
+import * as lifecycle from './board-lifecycle.js'
 import { createRuntime } from './composition-root.js'
-import { renameInRoom } from './collaboration.js'
-import { deleteRemoteBoard, leaveRemoteBoard, renameRemoteBoard } from './remote-boards.js'
+import { fakeRemoteBoards, fakeRooms } from './services.fake.js'
 
 /**
  * Removing a board is three removals, and the ORDER is the design.
@@ -21,37 +21,41 @@ import { deleteRemoteBoard, leaveRemoteBoard, renameRemoteBoard } from './remote
  * can still see and retry is recoverable, a room nobody can reach is not.
  */
 
-vi.mock('./remote-boards.js', () => ({
-  deleteRemoteBoard: vi.fn(() => Promise.resolve(true)),
-  leaveRemoteBoard: vi.fn(() => Promise.resolve(true)),
-  renameRemoteBoard: vi.fn(() => Promise.resolve(true)),
-}))
+let rooms = fakeRooms()
+let remote = fakeRemoteBoards()
+const roomRename = vi.fn<lifecycle.LifecycleDeps['renameInRoom']>()
 
-vi.mock('./collaboration.js', () => ({
-  renameInRoom: vi.fn(() => Promise.resolve(true)),
-}))
+beforeEach(() => {
+  rooms = fakeRooms()
+  remote = fakeRemoteBoards()
+  roomRename.mockReset()
+  roomRename.mockResolvedValue(true)
+})
 
-const remoteDelete = vi.mocked(deleteRemoteBoard)
-const remoteLeave = vi.mocked(leaveRemoteBoard)
-const remoteRename = vi.mocked(renameRemoteBoard)
-const roomRename = vi.mocked(renameInRoom)
+const deps = (repository: BoardRepository): lifecycle.LifecycleDeps => ({
+  repository,
+  rooms,
+  remoteBoards: remote,
+  forgetCrdt,
+  renameInRoom: roomRename,
+})
+
+// The use cases as they read at a call site, with this test's fakes behind them.
+const deleteBoardEverywhere = (
+  repository: BoardRepository,
+  board: Parameters<typeof lifecycle.deleteBoardEverywhere>[1],
+) => lifecycle.deleteBoardEverywhere(deps(repository), board)
+const leaveBoard = (repository: BoardRepository, boardId: BoardId) =>
+  lifecycle.leaveBoard(deps(repository), boardId)
+const renameBoard = (
+  repository: BoardRepository,
+  board: Parameters<typeof lifecycle.renameBoard>[1],
+  title: string,
+) => lifecycle.renameBoard(deps(repository), board, title)
 
 const SHARED = asBoardId('brd_abcdefgh12345678')
 const LOCAL = asBoardId('board_alone')
 const KEY = 'e'.repeat(32)
-
-function roomAnswers(status: number): ReturnType<typeof vi.fn> {
-  const fetcher = vi.fn(() => Promise.resolve({ ok: status < 400, status } as Response))
-  vi.stubGlobal('fetch', fetcher)
-  return fetcher
-}
-
-function roomUnreachable(): void {
-  vi.stubGlobal(
-    'fetch',
-    vi.fn(() => Promise.reject(new Error('offline'))),
-  )
-}
 
 async function boardOnDisk(id = SHARED) {
   const repository = new MemoryBoardRepository()
@@ -66,17 +70,7 @@ async function boardOnDisk(id = SHARED) {
 }
 
 describe('deleting a board', () => {
-  beforeEach(() => {
-    remoteDelete.mockReset()
-    remoteDelete.mockResolvedValue(true)
-  })
-
-  afterEach(() => {
-    vi.unstubAllGlobals()
-  })
-
   it('destroys the room, the row and the local copy', async () => {
-    const fetcher = roomAnswers(200)
     const repository = await boardOnDisk()
 
     const outcome = await deleteBoardEverywhere(repository, {
@@ -86,15 +80,11 @@ describe('deleting a board', () => {
     })
 
     expect(outcome).toEqual({ ok: true })
-    expect(remoteDelete).toHaveBeenCalledWith(SHARED)
+    // With the key the row holds. That it travels in the request BODY rather
+    // than the URL is the room client's to keep (room-client.test.ts).
+    expect(rooms.destroy).toHaveBeenCalledWith(SHARED, KEY)
+    expect(remote.remove).toHaveBeenCalledWith(SHARED)
     expect(await repository.getBoard(SHARED)).toMatchObject({ status: 'not-found' })
-
-    // The key travels in the BODY. A credential in a query string is a
-    // credential in an access log, and this is the destructive endpoint.
-    const [url, init] = fetcher.mock.calls[0] as [string, RequestInit]
-    expect(url).toContain(`/room/${SHARED}/destroy`)
-    expect(url).not.toContain(KEY)
-    expect(init.body).toBe(JSON.stringify({ key: KEY }))
   })
 
   /**
@@ -103,7 +93,7 @@ describe('deleting a board', () => {
    * try again rather than be left with a board they can neither see nor reach.
    */
   it('keeps the row and the local copy when the room cannot be reached', async () => {
-    roomUnreachable()
+    rooms.destroy.mockResolvedValue('unreachable')
     const repository = await boardOnDisk()
 
     const outcome = await deleteBoardEverywhere(repository, {
@@ -113,13 +103,13 @@ describe('deleting a board', () => {
     })
 
     expect(outcome.ok).toBe(false)
-    expect(remoteDelete).not.toHaveBeenCalled()
+    expect(remote.remove).not.toHaveBeenCalled()
     expect((await repository.getBoard(SHARED)).status).toBe('ok')
   })
 
   /** A board shared before links had roles: its room has no key to trust. */
   it('says so, and stops, when the room refuses to be destroyed', async () => {
-    roomAnswers(409)
+    rooms.destroy.mockResolvedValue('legacy')
     const repository = await boardOnDisk()
 
     const outcome = await deleteBoardEverywhere(repository, {
@@ -134,18 +124,17 @@ describe('deleting a board', () => {
 
   /** Already destroyed is not a failure: a second attempt must finish the job. */
   it('carries on when the room is already gone', async () => {
-    roomAnswers(410)
+    rooms.destroy.mockResolvedValue('gone')
     const repository = await boardOnDisk()
 
     await expect(
       deleteBoardEverywhere(repository, { boardId: SHARED, shared: true, accessKey: KEY }),
     ).resolves.toEqual({ ok: true })
-    expect(remoteDelete).toHaveBeenCalled()
+    expect(remote.remove).toHaveBeenCalled()
   })
 
   /** A board that was never shared has no room and no row — just a local copy. */
   it('touches no network for a board that is only in this browser', async () => {
-    const fetcher = roomAnswers(200)
     const repository = await boardOnDisk(LOCAL)
 
     const outcome = await deleteBoardEverywhere(repository, {
@@ -155,40 +144,29 @@ describe('deleting a board', () => {
     })
 
     expect(outcome).toEqual({ ok: true })
-    expect(fetcher).not.toHaveBeenCalled()
-    expect(remoteDelete).not.toHaveBeenCalled()
+    expect(rooms.destroy).not.toHaveBeenCalled()
+    expect(remote.remove).not.toHaveBeenCalled()
     expect(await repository.getBoard(LOCAL)).toMatchObject({ status: 'not-found' })
   })
 })
 
 describe('leaving a board', () => {
-  beforeEach(() => {
-    remoteLeave.mockReset()
-    remoteLeave.mockResolvedValue(true)
-    roomAnswers(200)
-  })
-
-  afterEach(() => {
-    vi.unstubAllGlobals()
-  })
-
   /**
    * The distinction the whole pair exists for. Leaving removes YOU; the board
    * carries on for everybody else, and its room is never touched.
    */
   it('never destroys the room', async () => {
-    const fetcher = roomAnswers(200)
     const repository = await boardOnDisk()
 
     await expect(leaveBoard(repository, SHARED)).resolves.toEqual({ ok: true })
 
-    expect(fetcher).not.toHaveBeenCalled()
-    expect(remoteLeave).toHaveBeenCalledWith(SHARED)
+    expect(rooms.destroy).not.toHaveBeenCalled()
+    expect(remote.leave).toHaveBeenCalledWith(SHARED)
     expect(await repository.getBoard(SHARED)).toMatchObject({ status: 'not-found' })
   })
 
   it('reports a refusal rather than pretending', async () => {
-    remoteLeave.mockResolvedValue(false)
+    remote.leave.mockResolvedValue(false)
     const repository = await boardOnDisk()
 
     expect((await leaveBoard(repository, SHARED)).ok).toBe(false)
@@ -198,8 +176,8 @@ describe('leaving a board', () => {
 
 describe('renaming a board from the list', () => {
   beforeEach(() => {
-    remoteRename.mockReset()
-    remoteRename.mockResolvedValue(true)
+    remote.rename.mockReset()
+    remote.rename.mockResolvedValue(true)
     roomRename.mockReset()
     roomRename.mockResolvedValue(true)
   })
@@ -226,7 +204,7 @@ describe('renaming a board from the list', () => {
    */
   it('touches the room only once the row has taken the name', async () => {
     const repository = await boardOnDisk()
-    remoteRename.mockResolvedValue(false)
+    remote.rename.mockResolvedValue(false)
 
     await expect(
       renameBoard(
@@ -249,7 +227,7 @@ describe('renaming a board from the list', () => {
         'Pricing',
       ),
     ).resolves.toBe(false)
-    expect(remoteRename.mock.calls).toEqual([
+    expect(remote.rename.mock.calls).toEqual([
       [SHARED, 'Pricing'],
       [SHARED, 'Old'],
     ])
@@ -273,7 +251,7 @@ describe('renaming a board from the list', () => {
       renameBoard(repository, { boardId: SHARED, shared: true }, 'Pricing'),
     ).resolves.toBe(true)
 
-    expect(remoteRename).toHaveBeenCalledWith(SHARED, 'Pricing')
+    expect(remote.rename).toHaveBeenCalledWith(SHARED, 'Pricing')
     const loaded = await repository.getBoard(SHARED)
     expect(loaded.status).toBe('ok')
     if (loaded.status !== 'ok') return
@@ -291,7 +269,7 @@ describe('renaming a board from the list', () => {
     await expect(
       renameBoard(repository, { boardId: SHARED, shared: true }, 'x'.repeat(201)),
     ).resolves.toBe(false)
-    expect(remoteRename).not.toHaveBeenCalled()
+    expect(remote.rename).not.toHaveBeenCalled()
   })
 
   /**

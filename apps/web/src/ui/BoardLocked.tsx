@@ -1,8 +1,8 @@
 import { useEffect, useId, useRef, useState, type FormEvent } from 'react'
 
-import { recoverOwnerKey, unlockBoard } from '../app/board-password.js'
 import { readRoute } from '../app/route.js'
 import { useOpenFrame } from '../runtime/context.js'
+import { useServices } from '../runtime/services.js'
 import { Gate, GateActions, GateBody } from './Gate.js'
 
 /**
@@ -21,6 +21,7 @@ import { Gate, GateActions, GateBody } from './Gate.js'
  */
 export function BoardLocked() {
   const { runtime, collaboration } = useOpenFrame()
+  const services = useServices()
   const [locked, setLocked] = useState(collaboration?.status === 'locked')
   /*
    * Nothing is shown until the owner question is settled.
@@ -48,7 +49,7 @@ export function BoardLocked() {
   useEffect(() => {
     if (!locked) return
     let live = true
-    void recoverOwnerKey(runtime.boardId).then((key) => {
+    void services.passwords.recoverOwnerKey(runtime.boardId).then((key) => {
       if (!live) return
       // Found one: this is the owner, and the board opens without a password.
       if (key !== null) window.location.reload()
@@ -57,7 +58,7 @@ export function BoardLocked() {
     return () => {
       live = false
     }
-  }, [locked, runtime.boardId])
+  }, [locked, runtime.boardId, services.passwords])
 
   if (!locked || !asking) return null
 
@@ -74,7 +75,7 @@ export function BoardLocked() {
     const route = readRoute(window.location.search)
     const key = route.kind === 'board' ? route.key : null
 
-    void unlockBoard(runtime.boardId, key, password).then((outcome) => {
+    void services.passwords.unlock(runtime.boardId, key, password).then((outcome) => {
       if (outcome.ok) {
         window.location.reload()
         return

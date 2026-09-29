@@ -383,3 +383,20 @@ cover:
   - The contract suite covers the new tools through `VALID_CALL`.
     `shape.test.ts` has 10 tests. A rooms test has an agent group two notes and
     a person revert it; with the tool removed, that test failed.
+- **A services layer for `app/`, part one** (item 2, PR 2a):
+  - Everything the interface can ask of the outside world is now a port in
+    `runtime/services.ts`: rooms, accounts, remote boards, discussion,
+    workspaces, and the board and password use cases. The composition root
+    builds one bundle and provides it around BOTH routes, so the front door,
+    which has no board runtime, gets it too.
+  - The rooms worker's HTTP moved into `adapters/room/room-client.ts`, which
+    is handed its `fetch`. The use cases in `app/` take their dependencies and
+    keep the order and the wording. Their tests hand in fakes instead of
+    `vi.mock` and a replaced global, and `board-password.ts`, previously
+    untested, has 13 tests.
+  - The Supabase config moved into the adapter, which had been importing it
+    from `app/`. The new `adapters-do-not-import-app` rule and the
+    `io-boundary.test.ts` scan (no bare `fetch(` above the adapters) each
+    failed once on purpose.
+  - Part two moves the hooks and the remaining ui imports onto the services,
+    deletes the re-export modules, and adds the rule that makes it stick.

@@ -1,9 +1,19 @@
 import type { BoardId, BoardRepository } from '@openframe/core'
 
-import { forgetCrdt } from '../adapters/indexeddb/crdt-store.js'
+import type { Outcome, RemoteBoardService, RoomService } from '../runtime/services.js'
 import { forgetLocalPrefs } from './board-prefs.js'
-import { COLLAB_ENABLED, destroyUrl } from './collab-config.js'
-import { deleteRemoteBoard, leaveRemoteBoard, renameRemoteBoard } from './remote-boards.js'
+import { COLLAB_ENABLED } from './collab-config.js'
+
+/** What removing and renaming a board need from the outside world. */
+export interface LifecycleDeps {
+  readonly repository: BoardRepository
+  readonly rooms: RoomService
+  readonly remoteBoards: RemoteBoardService
+  /** Drops a board's stored collaborative history from this browser. */
+  readonly forgetCrdt: (boardId: BoardId) => Promise<void>
+  /** Renames the board where it really lives: in its room, as a peer would. */
+  readonly renameInRoom: (boardId: BoardId, key: string | null, title: string) => Promise<boolean>
+}
 
 /**
  * Removing a board, which is three removals in a row and has to be all of them.
@@ -21,7 +31,7 @@ import { deleteRemoteBoard, leaveRemoteBoard, renameRemoteBoard } from './remote
  * can still see and try again is recoverable, a room nobody can reach is not.
  */
 
-export type DeleteOutcome = { readonly ok: true } | { readonly ok: false; readonly reason: string }
+export type DeleteOutcome = Outcome
 
 /**
  * Destroys the room, or says why it could not.
@@ -30,36 +40,32 @@ export type DeleteOutcome = { readonly ok: true } | { readonly ok: false; readon
  * was never shared has no room, and a build with no room server cannot have
  * given it one.
  */
-async function destroyRoom(boardId: BoardId, editorKey: string | null): Promise<string | null> {
+async function destroyRoom(
+  rooms: RoomService,
+  boardId: BoardId,
+  editorKey: string | null,
+): Promise<string | null> {
   if (!COLLAB_ENABLED || editorKey === null) return null
 
-  let response: Response
-  try {
-    response = await fetch(destroyUrl(boardId), {
-      method: 'POST',
-      headers: { 'content-type': 'application/json' },
-      body: JSON.stringify({ key: editorKey }),
-    })
-  } catch {
-    return 'OpenFrame could not reach the server, so nothing was deleted.'
+  switch (await rooms.destroy(boardId, editorKey)) {
+    case 'unreachable':
+      return 'OpenFrame could not reach the server, so nothing was deleted.'
+    // Already gone. Deleting a board twice is not an error, and refusing here
+    // would strand a row whose room a previous attempt had already destroyed.
+    case 'gone':
+    case 'destroyed':
+      return null
+    /*
+     * A board shared before links had roles. The room keeps no key, so there is
+     * nobody it can trust to destroy it — said plainly rather than swallowed,
+     * because the person is about to lose the row and should know the room
+     * outlives it.
+     */
+    case 'legacy':
+      return 'This board was shared before view-only links existed, so it cannot be deleted here.'
+    case 'refused':
+      return 'This board could not be deleted.'
   }
-
-  // Already gone. Deleting a board twice is not an error, and refusing here
-  // would strand a row whose room a previous attempt had already destroyed.
-  if (response.status === 410) return null
-
-  /*
-   * A board shared before links had roles. The room keeps no key, so there is
-   * nobody it can trust to destroy it — said plainly rather than swallowed,
-   * because the person is about to lose the row and should know the room
-   * outlives it.
-   */
-  if (response.status === 409) {
-    return 'This board was shared before view-only links existed, so it cannot be deleted here.'
-  }
-
-  if (!response.ok) return 'This board could not be deleted.'
-  return null
 }
 
 /**
@@ -69,13 +75,17 @@ async function destroyRoom(boardId: BoardId, editorKey: string | null): Promise<
  * control. What matters here is the ORDER, which the database cannot enforce.
  */
 export async function deleteBoardEverywhere(
-  repository: BoardRepository,
+  deps: LifecycleDeps,
   board: { readonly boardId: BoardId; readonly shared: boolean; readonly accessKey: string | null },
 ): Promise<DeleteOutcome> {
-  const roomFailure = await destroyRoom(board.boardId, board.shared ? board.accessKey : null)
+  const roomFailure = await destroyRoom(
+    deps.rooms,
+    board.boardId,
+    board.shared ? board.accessKey : null,
+  )
   if (roomFailure !== null) return { ok: false, reason: roomFailure }
 
-  if (board.shared && !(await deleteRemoteBoard(board.boardId))) {
+  if (board.shared && !(await deps.remoteBoards.remove(board.boardId))) {
     /*
      * The room is already gone at this point, which is why this is reported
      * rather than ignored: the board is unrecoverable and its row is still
@@ -90,33 +100,30 @@ export async function deleteBoardEverywhere(
   // Last, and never allowed to fail the operation: a local copy that outlives
   // the board is a stale duplicate, not lost work.
   try {
-    await repository.deleteBoard(board.boardId)
+    await deps.repository.deleteBoard(board.boardId)
   } catch {
     // Nothing to tell the person. The board is gone from everywhere that
     // anybody else could reach it.
   }
   // The CRDT too, or a deleted board leaves its whole history behind and the
   // next board to reuse the id would inherit it.
-  await forgetCrdt(board.boardId)
+  await deps.forgetCrdt(board.boardId)
   forgetLocalPrefs(board.boardId)
 
   return { ok: true }
 }
 
 /** Removes YOU from somebody else's board. The board itself is untouched. */
-export async function leaveBoard(
-  repository: BoardRepository,
-  boardId: BoardId,
-): Promise<DeleteOutcome> {
-  if (!(await leaveRemoteBoard(boardId))) {
+export async function leaveBoard(deps: LifecycleDeps, boardId: BoardId): Promise<DeleteOutcome> {
+  if (!(await deps.remoteBoards.leave(boardId))) {
     return { ok: false, reason: 'You could not be removed from this board.' }
   }
   try {
-    await repository.deleteBoard(boardId)
+    await deps.repository.deleteBoard(boardId)
   } catch {
     // As above: a local copy left behind is untidy, not damaging.
   }
-  await forgetCrdt(boardId)
+  await deps.forgetCrdt(boardId)
   forgetLocalPrefs(boardId)
   return { ok: true }
 }
@@ -140,15 +147,15 @@ export async function leaveBoard(
  * tidying failed would be worse.
  */
 export async function forgetDeletedBoard(
-  repository: BoardRepository,
+  deps: Pick<LifecycleDeps, 'repository' | 'forgetCrdt'>,
   boardId: BoardId,
 ): Promise<void> {
   try {
-    await repository.deleteBoard(boardId)
+    await deps.repository.deleteBoard(boardId)
   } catch {
     // As elsewhere: a local copy left behind is untidy, not damaging.
   }
-  await forgetCrdt(boardId)
+  await deps.forgetCrdt(boardId)
   forgetLocalPrefs(boardId)
 }
 
@@ -165,7 +172,7 @@ export async function forgetDeletedBoard(
  * cannot be reached, the row is put back and the caller says so.
  */
 export async function renameBoard(
-  repository: BoardRepository,
+  deps: LifecycleDeps,
   board: {
     readonly boardId: BoardId
     readonly shared: boolean
@@ -186,24 +193,21 @@ export async function renameBoard(
      * and the list saying otherwise (Codex, on #17). And if the room then
      * cannot be reached, the row is put back, so a failure changes nothing.
      */
-    if (!(await renameRemoteBoard(board.boardId, trimmed))) return false
-    // Loaded only when needed, like the rest of collaboration: the list must
-    // not pay for Yjs to render.
-    const { renameInRoom } = await import('./collaboration.js')
-    if (!(await renameInRoom(board.boardId, board.accessKey ?? null, trimmed))) {
-      if (board.title !== undefined) await renameRemoteBoard(board.boardId, board.title)
+    if (!(await deps.remoteBoards.rename(board.boardId, trimmed))) return false
+    if (!(await deps.renameInRoom(board.boardId, board.accessKey ?? null, trimmed))) {
+      if (board.title !== undefined) await deps.remoteBoards.rename(board.boardId, board.title)
       return false
     }
   }
 
-  const loaded = await repository.getBoard(board.boardId)
+  const loaded = await deps.repository.getBoard(board.boardId)
   /*
    * A board that could not be fully read is never written back — not even to
    * change its name. Renaming a quarantined board would save a document we
    * failed to parse, which is the one unacceptable failure.
    */
   if (loaded.status === 'ok') {
-    await repository.saveBoard({
+    await deps.repository.saveBoard({
       ...loaded.document,
       meta: { ...loaded.document.meta, title: trimmed },
     })

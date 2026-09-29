@@ -1,6 +1,6 @@
 import type { SupabaseClient } from '@supabase/supabase-js'
 
-import { SUPABASE_KEY, SUPABASE_URL } from '../../app/supabase-config.js'
+import { SUPABASE_KEY, SUPABASE_URL } from './config.js'
 
 /**
  * The one Supabase client, built once or not at all.

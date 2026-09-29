@@ -1,4 +1,5 @@
 import { supabaseClient } from './client.js'
+import type { Workspace, WorkspaceRole } from '../../runtime/services.js'
 
 /**
  * Workspaces: what a board belongs to, and who works in it.
@@ -13,25 +14,6 @@ import { supabaseClient } from './client.js'
  * edits offline, so a database that cannot be reached must degrade to "no
  * workspaces", never to a broken front door.
  */
-
-export type WorkspaceRole = 'admin' | 'editor' | 'viewer'
-
-export interface Workspace {
-  readonly id: string
-  readonly name: string
-  /** The one every account is given. Not a permission — a label for the list. */
-  readonly personal: boolean
-  readonly role: WorkspaceRole
-  /**
-   * The links, for an admin and nobody else.
-   *
-   * Null for an editor or a viewer, because inviting is what `admin` means: a
-   * link everybody can see is a link anybody can widen the workspace with.
-   */
-  readonly editorKey: string | null
-  readonly viewerKey: string | null
-  readonly boards: number
-}
 
 const ROLES = new Set(['admin', 'editor', 'viewer'])
 const KEY = /^[0-9a-f]{32}$/
@@ -144,3 +126,5 @@ export async function joinWorkspace(id: string, key: string): Promise<WorkspaceR
   const role = response.data
   return typeof role === 'string' && ROLES.has(role) ? (role as WorkspaceRole) : null
 }
+
+export type { Workspace, WorkspaceRole }

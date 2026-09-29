@@ -1,12 +1,10 @@
 import { useCallback, useEffect, useState } from 'react'
-import type { BoardRepository } from '@openframe/core'
 
-import { rememberOwnerKey } from '../app/board-password.js'
 import { abandonSplash } from '../app/splash.js'
-import { createLocalBoard, listAllBoards, type ListedBoard } from '../app/boards.js'
+import type { ListedBoard } from '../app/boards.js'
 import { ACCOUNTS_ENABLED, signOut } from '../app/identity.js'
 import { boardHref } from '../app/route.js'
-import { createOwnedBoard, ShareFailed } from '../app/share.js'
+import { ShareFailed, useServices } from '../runtime/services.js'
 import { useIdentity } from '../hooks/use-identity.js'
 import { Mentions } from './Mentions.js'
 import { WorkspaceBar } from './WorkspaceBar.js'
@@ -41,7 +39,8 @@ import logoMark from '../assets/logo-mark-180.png'
  * A build with no identity service keeps the old behaviour, because a build
  * with no accounts cannot require one — it would have no way in at all.
  */
-export function Home({ repository }: { readonly repository: BoardRepository }) {
+export function Home() {
+  const services = useServices()
   const identity = useIdentity()
   /*
    * The list and the moment it was read, together. "3 minutes ago" is relative
@@ -125,7 +124,7 @@ export function Home({ repository }: { readonly repository: BoardRepository }) {
    */
   useEffect(() => {
     let live = true
-    void listAllBoards(repository, identity !== null).then(
+    void services.boards.listAll(identity !== null).then(
       (found) => {
         /*
          * The owner keys ride along, cached per board.
@@ -137,7 +136,9 @@ export function Home({ repository }: { readonly repository: BoardRepository }) {
          * covers arriving by a deep link on a machine that never saw this page.
          */
         for (const board of found) {
-          if (board.ownerKey !== null) rememberOwnerKey(board.boardId, board.ownerKey)
+          if (board.ownerKey !== null) {
+            services.passwords.rememberOwnerKey(board.boardId, board.ownerKey)
+          }
         }
         if (!live) return
         setListing({ boards: found, readAt: Date.now() })
@@ -157,7 +158,7 @@ export function Home({ repository }: { readonly repository: BoardRepository }) {
     return () => {
       live = false
     }
-  }, [repository, identity, revision])
+  }, [services, identity, revision])
 
   const [startError, setStartError] = useState<string | null>(null)
 
@@ -178,8 +179,8 @@ export function Home({ repository }: { readonly repository: BoardRepository }) {
       ? // Into the workspace being shown, so a board lands where you were
         // looking. `undefined` for "everything" means the person's own, which
         // is what the database falls back to.
-        createOwnedBoard(repository, undefined, space ?? undefined).then((board) => board.editLink)
-      : createLocalBoard(repository).then((boardId) => boardHref(boardId, false))
+        services.boards.createOwned(undefined, space ?? undefined).then((board) => board.editLink)
+      : services.boards.createLocal().then((boardId) => boardHref(boardId, false))
 
     void created.then(
       (href) => {
@@ -319,16 +320,13 @@ export function Home({ repository }: { readonly repository: BoardRepository }) {
                       board={board}
                       index={index}
                       readAt={listing.readAt}
-                      repository={repository}
                       onChanged={refresh}
                     />
                   ))}
                 </ul>
               )}
 
-              {strays.length > 0 && (
-                <ClaimLocalBoards boards={strays} repository={repository} onChanged={refresh} />
-              )}
+              {strays.length > 0 && <ClaimLocalBoards boards={strays} onChanged={refresh} />}
 
               {canStart && (
                 <button
