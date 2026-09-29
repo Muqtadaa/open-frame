@@ -254,3 +254,45 @@ test('somebody opening the board later is not told about old changes as news', a
     await agent.context.close()
   }
 })
+
+const typesIn = (page: Page): Promise<string[]> =>
+  page.evaluate(() =>
+    [
+      ...(window as unknown as DebugWindow).__openframe.runtime.store
+        .getDocument()
+        .objects.values(),
+    ].map((object) => object.type),
+  )
+
+/**
+ * The edits that are several changes to the document and one thing to a
+ * person, done by an agent: a group arrives as ONE change, reads in the
+ * person's own words, and one Revert frees the notes again.
+ */
+test('an agent groups two notes, and one Revert frees them', async ({ browser }) => {
+  const room = newRoomId()
+  const page = await join(browser, room)
+  const agent = agentOn(room)
+  try {
+    const made = await agent.call('create_objects', {
+      objects: [0, 300].map((x) => ({ type: 'sticky', x, y: 0 })),
+    })
+    const notes = (JSON.parse(made.text.slice(made.text.indexOf('{'))) as { objects: string[] })
+      .objects
+    await expect.poll(() => idsIn(page), { timeout: 20_000 }).toHaveLength(2)
+    await page.getByTestId('toast').getByRole('button', { name: 'Dismiss' }).click()
+
+    await agent.call('group_objects', { ids: notes })
+    await expect
+      .poll(async () => (await typesIn(page)).sort(), { timeout: 20_000 })
+      .toEqual(['group', 'sticky', 'sticky'])
+
+    const toast = page.getByTestId('toast')
+    await expect(toast).toContainText('Ada’s agent: Group')
+    await toast.getByTestId('toast-action').click()
+
+    await expect.poll(() => typesIn(page), { timeout: 20_000 }).toEqual(['sticky', 'sticky'])
+  } finally {
+    await agent.context.close()
+  }
+})

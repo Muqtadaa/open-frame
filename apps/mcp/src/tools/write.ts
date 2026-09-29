@@ -2,6 +2,7 @@ import {
   asBoardId,
   asObjectId,
   createIdGenerator,
+  describeCommand,
   type Command,
   type ObjectId,
 } from '@openframe/core'
@@ -66,6 +67,21 @@ function commit(
 ): ToolResponse {
   const result = peer.dispatcher.transact(label, commands, { origin: 'mcp' })
   if (!result.ok) return problem(`The board refused that: ${result.error.message}`)
+  /*
+   * Nothing to do — already lined up, or everything asked about locked. The
+   * dispatcher records no change for that, so there is none to name: an
+   * answer offering a change id would send the agent to revert something the
+   * log never held.
+   */
+  if (result.patches.length === 0) {
+    return data({
+      board: { id: peer.boardId, title: peer.store.getDocument().meta.title },
+      did: label,
+      changed: false,
+      note: 'Nothing needed changing, so nothing was recorded.',
+      ...also,
+    })
+  }
   return data({
     board: { id: peer.boardId, title: peer.store.getDocument().meta.title },
     did: label,
@@ -544,6 +560,207 @@ export const revertChange: ToolDefinition = {
   },
 }
 
+/*
+ * The edits that are several changes to the document and one thing to a
+ * person. Each is ONE core command, so an agent gets exactly the rules the
+ * board's own menu gets — a group of things in different frames refused,
+ * provenance only where a type declares it — and the label a person reads in
+ * the change log is the same one the web writes.
+ */
+
+/*
+ * Each object once. `min` counts entries, not objects, so `[id, id]` would
+ * pass for two and make a group of one; refused here with a reason an agent
+ * can act on, and counted distinctly again by the command itself.
+ */
+const objectIds = (min: number) =>
+  z
+    .array(z.string())
+    .max(500)
+    .refine(
+      (list) => new Set(list).size === list.length,
+      'Name each object only once, not more than once.',
+    )
+    .refine((list) => list.length >= min, `Name at least ${String(min)} objects.`)
+
+/** Dispatches one command under the label everyone else uses for it. */
+const commitOne = (peer: BoardPeer, command: Command, also: Record<string, unknown> = {}) =>
+  commit(peer, describeCommand(command), [command], also)
+
+const groupArguments = z.strictObject({ ...boardArgument, ids: objectIds(2) })
+
+export const groupObjects: ToolDefinition = {
+  name: 'group_objects',
+  title: 'Group objects',
+  writes: true,
+  description:
+    'Wrap two or more objects in a group, so they move and select as one. They must all be in ' +
+    'the same place — all loose on the board, or all in the same frame. Returns the `group` id.',
+  input: groupArguments,
+  run: async (input, context) => {
+    const opened = await onBoardEditing(input, context, groupArguments)
+    if (isResponse(opened)) return opened
+    // Minted here so the answer can name the group it made.
+    const group = ids.objectId()
+    return commitOne(
+      opened.peer,
+      { kind: 'GroupObjects', ids: opened.input.ids.map((id) => asObjectId(id)), id: group },
+      { group },
+    )
+  },
+}
+
+const ungroupArguments = z.strictObject({ ...boardArgument, ids: objectIds(1) })
+
+export const ungroupObjects: ToolDefinition = {
+  name: 'ungroup_objects',
+  title: 'Ungroup',
+  writes: true,
+  description:
+    'Dissolve groups, keeping everything they held where it is. Anything in `ids` that is not ' +
+    'a group is left alone.',
+  input: ungroupArguments,
+  run: async (input, context) => {
+    const opened = await onBoardEditing(input, context, ungroupArguments)
+    if (isResponse(opened)) return opened
+    return commitOne(opened.peer, {
+      kind: 'UngroupObjects',
+      ids: opened.input.ids.map((id) => asObjectId(id)),
+    })
+  },
+}
+
+const alignArguments = z.strictObject({
+  ...boardArgument,
+  ids: objectIds(2),
+  edge: z
+    .enum(['left', 'centerX', 'right', 'top', 'middleY', 'bottom'])
+    .describe('Which edge, or centre line, of their combined box to line them up on.'),
+})
+
+export const alignObjects: ToolDefinition = {
+  name: 'align_objects',
+  title: 'Align objects',
+  writes: true,
+  description:
+    'Line objects up on one edge of the box around them all. A locked object stays put but ' +
+    'still counts toward the box; lines between objects are not moved themselves.',
+  input: alignArguments,
+  run: async (input, context) => {
+    const opened = await onBoardEditing(input, context, alignArguments)
+    if (isResponse(opened)) return opened
+    return commitOne(opened.peer, {
+      kind: 'AlignObjects',
+      ids: opened.input.ids.map((id) => asObjectId(id)),
+      edge: opened.input.edge,
+    })
+  },
+}
+
+const distributeArguments = z.strictObject({
+  ...boardArgument,
+  ids: objectIds(3),
+  axis: z.enum(['x', 'y']).describe('`x` spaces them across, `y` down.'),
+})
+
+export const distributeObjects: ToolDefinition = {
+  name: 'distribute_objects',
+  title: 'Space objects evenly',
+  writes: true,
+  description:
+    'Make the gaps between three or more objects equal along one axis. The outermost two stay ' +
+    'where they are.',
+  input: distributeArguments,
+  run: async (input, context) => {
+    const opened = await onBoardEditing(input, context, distributeArguments)
+    if (isResponse(opened)) return opened
+    return commitOne(opened.peer, {
+      kind: 'DistributeObjects',
+      ids: opened.input.ids.map((id) => asObjectId(id)),
+      axis: opened.input.axis,
+    })
+  },
+}
+
+/** What the board's own duplicate uses: far enough to read as a copy. */
+const DUPLICATE_OFFSET = 24
+
+const duplicateArguments = z.strictObject({
+  ...boardArgument,
+  ids: objectIds(1),
+  dx: z
+    .number()
+    .finite()
+    .optional()
+    .describe(`How far right (default ${String(DUPLICATE_OFFSET)}).`),
+  dy: z
+    .number()
+    .finite()
+    .optional()
+    .describe(`How far down (default ${String(DUPLICATE_OFFSET)}).`),
+})
+
+export const duplicateObjects: ToolDefinition = {
+  name: 'duplicate_objects',
+  title: 'Duplicate objects',
+  writes: true,
+  description:
+    'Copy objects — size, style and content — a little way from the originals. `objects` in ' +
+    'the answer are the copies.',
+  input: duplicateArguments,
+  run: async (input, context) => {
+    const opened = await onBoardEditing(input, context, duplicateArguments)
+    if (isResponse(opened)) return opened
+    const asked = opened.input
+    return commitOne(opened.peer, {
+      kind: 'DuplicateObjects',
+      ids: asked.ids.map((id) => asObjectId(id)),
+      dx: asked.dx ?? DUPLICATE_OFFSET,
+      dy: asked.dy ?? DUPLICATE_OFFSET,
+    })
+  },
+}
+
+const deriveArguments = z.strictObject({
+  ...boardArgument,
+  toType: z.string().describe('What to make, e.g. `insight`.'),
+  from: objectIds(1).describe('What it stands on — each is related back to the new object.'),
+  predicate: z.string().describe('How it relates to them, e.g. `cites`.'),
+  ...point,
+})
+
+export const deriveObject: ToolDefinition = {
+  name: 'derive_object',
+  title: 'Derive an object from others',
+  writes: true,
+  description:
+    'Make a new object that stands on existing ones — an insight citing evidence, a hypothesis ' +
+    'derived from an insight — related back to each of them in the same change. Only the ' +
+    'pairings the types declare are allowed; `get_board` lists them under `derivations`. ' +
+    'Returns the `derived` id.',
+  input: deriveArguments,
+  run: async (input, context) => {
+    const opened = await onBoardEditing(input, context, deriveArguments)
+    if (isResponse(opened)) return opened
+    const asked = opened.input
+    // Minted here so the answer can name what was made.
+    const derived = ids.objectId()
+    return commitOne(
+      opened.peer,
+      {
+        kind: 'DeriveObject',
+        toType: asked.toType,
+        from: asked.from.map((id) => asObjectId(id)),
+        predicate: asked.predicate,
+        x: asked.x,
+        y: asked.y,
+        id: derived,
+      },
+      { derived },
+    )
+  },
+}
+
 export const WRITE_TOOLS: readonly ToolDefinition[] = [
   createObjects,
   updateObject,
@@ -553,4 +770,10 @@ export const WRITE_TOOLS: readonly ToolDefinition[] = [
   createFrame,
   addComment,
   revertChange,
+  groupObjects,
+  ungroupObjects,
+  alignObjects,
+  distributeObjects,
+  duplicateObjects,
+  deriveObject,
 ]

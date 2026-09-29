@@ -125,11 +125,25 @@ export const getBoard: ToolDefinition = {
       })
       .filter((container) => container !== null)
 
+    /*
+     * What `derive_object` will accept from the types on THIS board. It
+     * refuses a pairing no type declares, so an agent has to be able to learn
+     * the pairings rather than guess them.
+     */
+    const derivations: Record<string, readonly { type: string; predicate: string }[]> = {}
+    for (const type of Object.keys(byType)) {
+      const declared = opened.peer.registry.get(type)?.derivations ?? []
+      if (declared.length > 0) {
+        derivations[type] = declared.map(({ type: to, predicate }) => ({ type: to, predicate }))
+      }
+    }
+
     return data({
       board: boardHead(opened.peer),
       you: opened.peer.role,
       objects: { total: document.objects.size, byType },
       containers,
+      derivations,
     })
   },
 }

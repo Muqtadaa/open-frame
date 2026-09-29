@@ -426,3 +426,36 @@ describe('DeriveObject, against what the sources declare', () => {
     expect(result.ok).toBe(true)
   })
 })
+
+/**
+ * A command is JSON anybody can build, so a list of ids can name one object
+ * twice. That is one object: it must not make a group of one, or cite the
+ * same source twice.
+ */
+describe('an object named twice', () => {
+  it('does not count twice toward a group', () => {
+    const h = createTestHarness()
+    const a = create(h, 'sticky')
+    const result = run(h, { kind: 'GroupObjects', ids: [a, a] })
+    expect(result.ok).toBe(false)
+    if (!result.ok) expect(result.error.code).toBe('invalid-input')
+  })
+
+  it('is cited once', () => {
+    const h = createTestHarness()
+    const a = create(h, 'evidence')
+    const result = run(h, {
+      kind: 'DeriveObject',
+      toType: 'insight',
+      from: [a, a],
+      predicate: 'cites',
+      x: 0,
+      y: -200,
+    })
+    expect(result.ok).toBe(true)
+    const relations = [...h.store.getDocument().objects.values()].filter(
+      (object) => object.type === 'relation',
+    )
+    expect(relations).toHaveLength(1)
+  })
+})

@@ -374,3 +374,12 @@ cover:
     goes on screen, and what to select or reveal afterwards.
   - Next: MCP tools on these commands, then a services layer for `app/`, e2e
     fixtures, and cross-browser runs.
+- **MCP tools on the composite commands:**
+  - `group_objects`, `ungroup_objects`, `align_objects`,
+    `distribute_objects`, `duplicate_objects` and `derive_object` each dispatch
+    one core command, under the label the web uses.
+  - `get_board` now lists `derivations` for the types on the board, because
+    `derive_object` refuses any pairing a type does not declare.
+  - The contract suite covers the new tools through `VALID_CALL`.
+    `shape.test.ts` has 10 tests. A rooms test has an agent group two notes and
+    a person revert it; with the tool removed, that test failed.
