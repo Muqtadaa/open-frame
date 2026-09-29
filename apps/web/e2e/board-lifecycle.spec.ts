@@ -1,5 +1,6 @@
 import { expect, test, type Page } from '@playwright/test'
 
+import { CANVAS, EDITOR } from './fixtures.js'
 import { BOARD_URL } from './routes.js'
 
 /**
@@ -13,15 +14,6 @@ import { BOARD_URL } from './routes.js'
  * the unit level.
  */
 
-const CANVAS = '[data-testid="canvas"]'
-/*
- * Whatever is currently editable in place.
- *
- * Body text is a `contenteditable` since rich text (ADR 0012); a frame's title
- * and an image's alt text are labels and stay plain textareas. A spec should
- * not have to know which it is about to type into.
- */
-const EDITOR = 'textarea, [contenteditable="true"]'
 const STICKY = '[data-object-type="sticky"]'
 
 async function createSticky(page: Page, x: number, y: number, text: string): Promise<void> {

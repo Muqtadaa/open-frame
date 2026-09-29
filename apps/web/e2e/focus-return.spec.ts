@@ -1,5 +1,6 @@
 import { expect, test } from '@playwright/test'
 
+import { CANVAS } from './fixtures.js'
 import { BOARD_URL } from './routes.js'
 
 /**
@@ -10,7 +11,6 @@ import { BOARD_URL } from './routes.js'
  * thirty stops from the canvas — after every edit, for somebody working by
  * keyboard alone.
  */
-const CANVAS = '[data-testid="canvas"]'
 
 test.beforeEach(async ({ page }) => {
   await page.goto(BOARD_URL)

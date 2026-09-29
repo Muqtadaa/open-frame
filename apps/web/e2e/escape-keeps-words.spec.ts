@@ -1,6 +1,4 @@
-import { expect, test, type Page } from '@playwright/test'
-
-import { BOARD_URL } from './routes.js'
+import { CANVAS, expect, test, undo } from './fixtures.js'
 
 /**
  * Escape ends an edit; it does not throw the edit away.
@@ -11,19 +9,10 @@ import { BOARD_URL } from './routes.js'
  * press to mean "I'm done". Every editor on the board now treats Escape as
  * leaving, and leaving commits; undo is how an edit is taken back.
  */
-const CANVAS = '[data-testid="canvas"]'
 const EDITOR = '[contenteditable="true"]'
 const MOD = process.platform === 'darwin' ? 'Meta' : 'Control'
 
-async function board(page: Page): Promise<void> {
-  await page.goto(BOARD_URL)
-  await expect(page.locator(CANVAS)).toBeVisible()
-  await expect(page.getByTestId('tool-select')).toBeVisible()
-}
-
-test.beforeEach(async ({ page }) => {
-  await board(page)
-})
+test.use({ board: 'open' })
 
 test('keeps what was typed into a new note, as one undoable edit', async ({ page }) => {
   await page.keyboard.press('s')
@@ -38,7 +27,7 @@ test('keeps what was typed into a new note, as one undoable edit', async ({ page
   await expect(note).toContainText('Customers churn in week two')
 
   // Undo takes the words back and leaves the note — the edit is the entry.
-  await page.keyboard.press(`${MOD}+z`)
+  await undo(page)
   await expect(note).toHaveCount(1)
   await expect(note).not.toContainText('Customers')
 })
@@ -120,6 +109,6 @@ test('leaving an edit that changed nothing adds no undo step', async ({ page }) 
   await expect(page.locator(EDITOR)).toHaveCount(0)
 
   // The one undo takes back the typing, not an empty re-save of it.
-  await page.keyboard.press(`${MOD}+z`)
+  await undo(page)
   await expect(note).not.toContainText('Untouched')
 })

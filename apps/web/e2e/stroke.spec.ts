@@ -1,6 +1,6 @@
-import { expect, test, type Page } from '@playwright/test'
+import type { Page } from '@playwright/test'
 
-import { BOARD_URL } from './routes.js'
+import { CANVAS, expect, openBoard, test } from './fixtures.js'
 
 /**
  * A line's pattern, on everything that offers one.
@@ -10,13 +10,6 @@ import { BOARD_URL } from './routes.js'
  * warns about when a VIEW does not honour what its type claims. That is what
  * happened here.
  */
-const CANVAS = '[data-testid="canvas"]'
-
-async function board(page: Page): Promise<void> {
-  await page.goto(BOARD_URL)
-  await expect(page.locator(CANVAS)).toBeVisible()
-  await expect(page.getByTestId('tool-select')).toBeVisible()
-}
 
 async function shape(page: Page, at: { x: number; y: number }): Promise<void> {
   await page.getByTestId('tool-shape').click()
@@ -28,7 +21,7 @@ async function shape(page: Page, at: { x: number; y: number }): Promise<void> {
 
 test.describe('a line pattern reaches the shape it is set on', () => {
   test('dashes a rectangle, which is drawn as a path', async ({ page }) => {
-    await board(page)
+    await openBoard(page)
     await shape(page, { x: 600, y: 320 })
 
     const outline = page.locator('.of-shape__svg path').first()
@@ -46,7 +39,7 @@ test.describe('a line pattern reaches the shape it is set on', () => {
    * declared, and invisible.
    */
   test('dots an ellipse, which needs a round cap to be dots at all', async ({ page }) => {
-    await board(page)
+    await openBoard(page)
     await page.getByTestId('tool-shape').click()
     // Cycle to the ellipse, which is the one shape drawn as an <ellipse>.
     await page.keyboard.press('u')
@@ -75,7 +68,7 @@ test.describe('a line pattern reaches the shape it is set on', () => {
    */
   test('dashes every variant, not just the branch that had it', async ({ page }) => {
     const KINDS = 8
-    await board(page)
+    await openBoard(page)
 
     for (let index = 0; index < KINDS; index += 1) {
       await page.getByTestId('tool-shape').click()
@@ -100,7 +93,7 @@ test.describe('a line pattern reaches the shape it is set on', () => {
   })
 
   test('and solid puts it back', async ({ page }) => {
-    await board(page)
+    await openBoard(page)
     await shape(page, { x: 600, y: 320 })
 
     await page.getByTestId('line-dashed').click()
@@ -125,7 +118,7 @@ test.describe('an edge resizes, not just the square on it', () => {
       .evaluate((el) => (el as HTMLElement).getBoundingClientRect().width)
 
   test('pulls from a point nowhere near the midpoint handle', async ({ page }) => {
-    await board(page)
+    await openBoard(page)
     await shape(page, { x: 600, y: 320 })
 
     const before = await widthOf(page)
@@ -152,7 +145,7 @@ test.describe('an edge resizes, not just the square on it', () => {
   })
 
   test('offers the resize cursor along the whole edge', async ({ page }) => {
-    await board(page)
+    await openBoard(page)
     await shape(page, { x: 600, y: 320 })
     await expect(page.getByTestId('edge-e')).toHaveCSS('cursor', 'ew-resize')
     await expect(page.getByTestId('edge-s')).toHaveCSS('cursor', 'ns-resize')
@@ -164,7 +157,7 @@ test.describe('an edge resizes, not just the square on it', () => {
    * elements happens to be painted last.
    */
   test('leaves the corners to the corner handles', async ({ page }) => {
-    await board(page)
+    await openBoard(page)
     await shape(page, { x: 600, y: 320 })
 
     const edge = await page.getByTestId('edge-n').boundingBox()
@@ -191,7 +184,7 @@ test.describe('the outline that follows the pointer', () => {
   }
 
   test('draws the shape once, not the shape and its box', async ({ page }) => {
-    await board(page)
+    await openBoard(page)
     await startDraw(page)
 
     const preview = page.getByTestId('draw-preview')
@@ -205,7 +198,7 @@ test.describe('the outline that follows the pointer', () => {
 
   /** And a type with no outline of its own still gets the box. */
   test('keeps the box for something it cannot draw', async ({ page }) => {
-    await board(page)
+    await openBoard(page)
     await page.getByTestId('tool-frame').click()
     await page.mouse.move(420, 260)
     await page.mouse.down()

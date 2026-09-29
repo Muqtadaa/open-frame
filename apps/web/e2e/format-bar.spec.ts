@@ -1,12 +1,12 @@
 import { expect, test, type Page } from '@playwright/test'
 
+import { CANVAS } from './fixtures.js'
 import { BOARD_URL } from './routes.js'
 
 /**
  * The format bar says what size the text is, stops at the ends of the
  * ladder, lists its shortcuts, and can be reached without a pointer.
  */
-const CANVAS = '[data-testid="canvas"]'
 const EDITOR = '[contenteditable="true"]'
 const MOD = process.platform === 'darwin' ? 'Meta' : 'Control'
 

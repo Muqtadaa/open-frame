@@ -10,6 +10,7 @@ import { BOARD_URL } from './routes.js'
  * "edit the selection", and prevented both before the focused button saw
  * them. The table size and image import had no keyboard route at all.
  */
+// Local rather than the shared fixture: it waits for the splash to go, which `openBoard` does not.
 async function board(page: Page): Promise<void> {
   await page.goto(BOARD_URL)
   await expect(page.getByTestId('tool-select')).toBeVisible()

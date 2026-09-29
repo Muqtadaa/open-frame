@@ -1,5 +1,6 @@
 import { expect, test, type Page } from '@playwright/test'
 
+import { CANVAS } from './fixtures.js'
 import { BOARD_URL } from './routes.js'
 
 /**
@@ -17,7 +18,6 @@ import { BOARD_URL } from './routes.js'
  * either — it said `1px` for a border that was painting sixteen. Only the
  * rendered rectangle knows, which is why this is here rather than in vitest.
  */
-const CANVAS = '[data-testid="canvas"]'
 
 type Part = 'corner' | 'rotate' | 'glyph' | 'connect' | 'edge' | 'belowRotate' | 'belowConnect'
 

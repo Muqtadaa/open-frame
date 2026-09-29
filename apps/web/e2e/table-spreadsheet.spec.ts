@@ -1,20 +1,15 @@
-import { expect, test, type Locator, type Page } from '@playwright/test'
+import type { Locator, Page } from '@playwright/test'
 
-import { BOARD_URL } from './routes.js'
+import { CANVAS, expect, test, undo } from './fixtures.js'
 
 /**
  * A table edited as a spreadsheet (ADR 0015): a selection the keyboard moves,
  * rows and columns inserted and deleted anywhere, merges, and lines ruled from
  * a borders menu — all into one draft, committed as one command.
  */
-const CANVAS = '[data-testid="canvas"]'
 const AWAY = { x: 1100, y: 640 }
 
-async function board(page: Page): Promise<void> {
-  await page.goto(BOARD_URL)
-  await expect(page.locator(CANVAS)).toBeVisible()
-  await expect(page.getByTestId('tool-select')).toBeVisible()
-}
+test.use({ board: 'open' })
 
 /** A new table, left open in its editor, navigating from A1. */
 async function newTable(page: Page, size?: string): Promise<void> {
@@ -45,10 +40,6 @@ async function leave(page: Page): Promise<void> {
   await page.locator(CANVAS).click({ position: AWAY })
   await expect(page.getByTestId('table-editor')).toHaveCount(0)
 }
-
-test.beforeEach(async ({ page }) => {
-  await board(page)
-})
 
 test.describe('the keyboard', () => {
   test('types over a selected cell, and Tab and Enter move on', async ({ page }) => {
@@ -461,7 +452,7 @@ test.describe('sizing tracks', () => {
     expect(await width(drawn(page).nth(0))).toBeGreaterThan(before + 40)
 
     // The text, the fit and the new size are one undo entry.
-    await page.keyboard.press('ControlOrMeta+z')
+    await undo(page)
     await expect
       .poll(() => width(page.locator('[data-object-id]').first()))
       .toBeCloseTo(tableBefore, 0)
@@ -524,7 +515,7 @@ test('builds a table in one undo entry', async ({ page }) => {
   await leave(page)
   await expect(page.locator('[role="table"]')).toHaveAttribute('aria-label', /3 columns by 4 rows/)
 
-  await page.keyboard.press('ControlOrMeta+z')
+  await undo(page)
   await expect(page.locator('[role="table"]')).toHaveAttribute('aria-label', /3 columns by 3 rows/)
   await expect(drawn(page).nth(0)).toHaveText('')
 })

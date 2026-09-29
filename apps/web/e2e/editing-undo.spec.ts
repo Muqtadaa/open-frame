@@ -1,6 +1,4 @@
-import { expect, test, type Page } from '@playwright/test'
-
-import { BOARD_URL } from './routes.js'
+import { CANVAS, expect, openBoard, test } from './fixtures.js'
 
 /**
  * Undo, while a text editor is open, means the TEXT.
@@ -13,16 +11,9 @@ import { BOARD_URL } from './routes.js'
  *
  * Two controls bound to one shortcut have to agree, which is what these test.
  */
-const CANVAS = '[data-testid="canvas"]'
-
-async function board(page: Page): Promise<void> {
-  await page.goto(BOARD_URL)
-  await expect(page.locator(CANVAS)).toBeVisible()
-  await expect(page.getByTestId('tool-select')).toBeVisible()
-}
 
 test('the keyboard undoes typing rather than the board', async ({ page }) => {
-  await board(page)
+  await openBoard(page)
   await page.getByTestId('tool-code').click()
   await page.locator(CANVAS).click({ position: { x: 340, y: 240 } })
 
@@ -40,7 +31,7 @@ test('the keyboard undoes typing rather than the board', async ({ page }) => {
 })
 
 test('the undo button does the same thing the shortcut does', async ({ page }) => {
-  await board(page)
+  await openBoard(page)
   await page.getByTestId('tool-code').click()
   await page.locator(CANVAS).click({ position: { x: 340, y: 240 } })
 
@@ -61,7 +52,7 @@ test('the undo button does the same thing the shortcut does', async ({ page }) =
 })
 
 test('the undo button still undoes the board when nothing is being edited', async ({ page }) => {
-  await board(page)
+  await openBoard(page)
   await page.keyboard.press('s')
   await page.locator(CANVAS).click({ position: { x: 300, y: 240 } })
   await page.keyboard.press('Escape')

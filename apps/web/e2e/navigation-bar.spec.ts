@@ -1,6 +1,6 @@
-import { expect, test, type Page } from '@playwright/test'
+import type { Page } from '@playwright/test'
 
-import { BOARD_URL } from './routes.js'
+import { CANVAS, expect, openBoard, test } from './fixtures.js'
 import { signedIn } from './signed-in.js'
 
 /**
@@ -11,18 +11,11 @@ import { signedIn } from './signed-in.js'
  * They are the page's navigation, so they sit where navigation is looked for,
  * and the name reads as the name of the page rather than as one more readout.
  */
-const CANVAS = '[data-testid="canvas"]'
-
-async function board(page: Page): Promise<void> {
-  await page.goto(BOARD_URL)
-  await expect(page.locator(CANVAS)).toBeVisible()
-  await expect(page.getByTestId('tool-select')).toBeVisible()
-}
 
 const SHARED = 'brd_abcdefgh12345678'
 
 test('sits along the top of the window, above the rail', async ({ page }) => {
-  await board(page)
+  await openBoard(page)
   const bar = await page.getByTestId('status-bar').boundingBox()
   const rail = await page.getByRole('toolbar', { name: 'Board tools' }).boundingBox()
   if (bar === null || rail === null) throw new Error('bar or rail is not on screen')
@@ -31,7 +24,7 @@ test('sits along the top of the window, above the rail', async ({ page }) => {
 })
 
 test('names the board in the interface’s own voice, not as a readout', async ({ page }) => {
-  await board(page)
+  await openBoard(page)
   const title = page.getByTestId('board-title')
   await expect(title).toHaveCSS('font-weight', '600')
   const face = await title.evaluate((el) => getComputedStyle(el).fontFamily)
@@ -39,7 +32,7 @@ test('names the board in the interface’s own voice, not as a readout', async (
 })
 
 test('opens its tips downward, into the window', async ({ page }) => {
-  await board(page)
+  await openBoard(page)
   await page.getByTestId('undo').focus()
   const tip = await page.getByTestId('undo').evaluate((el) => {
     const after = getComputedStyle(el, '::after')
@@ -49,7 +42,7 @@ test('opens its tips downward, into the window', async ({ page }) => {
 })
 
 test('keeps an object’s panel clear of it, however high the object sits', async ({ page }) => {
-  await board(page)
+  await openBoard(page)
   await page.keyboard.press('s')
   // A note placed high enough that its top edge is under the bar.
   await page.locator(CANVAS).click({ position: { x: 500, y: 110 } })
@@ -80,13 +73,13 @@ test.describe('the board’s name', () => {
   }
 
   test('names the tab', async ({ page }) => {
-    await board(page)
+    await openBoard(page)
     await rename(page, 'Checkout research')
     await expect(page).toHaveTitle('Checkout research — OpenFrame')
   })
 
   test('uses the room the bar has before it shortens', async ({ page }) => {
-    await board(page)
+    await openBoard(page)
     const name = 'Checkout funnel teardown — September interviews'
     await rename(page, name)
     const title = page.getByTestId('board-title')
@@ -97,7 +90,7 @@ test.describe('the board’s name', () => {
   })
 
   test('shows the whole of a name too long for the bar', async ({ page }) => {
-    await board(page)
+    await openBoard(page)
     const name =
       'Q3 pricing research synthesis — onboarding, checkout, retention and churn interviews across four markets'
     await rename(page, name)
@@ -107,7 +100,7 @@ test.describe('the board’s name', () => {
   })
 
   test('is the heading of the page’s navigation', async ({ page }) => {
-    await board(page)
+    await openBoard(page)
     const nav = page.getByRole('navigation', { name: 'Board' })
     await expect(nav).toBeVisible()
     await expect(nav.getByRole('heading', { level: 1 })).toHaveText('Untitled board')
@@ -122,7 +115,7 @@ test.describe('the board’s name', () => {
  */
 test.describe('the keyboard on the bar', () => {
   test('comes back to the name after renaming, and can rename again', async ({ page }) => {
-    await board(page)
+    await openBoard(page)
     await page.getByTestId('board-title').click()
     await page.keyboard.type('Renamed')
     await page.keyboard.press('Enter')
@@ -135,7 +128,7 @@ test.describe('the keyboard on the bar', () => {
   })
 
   test('comes back to the zoom readout after typing a zoom', async ({ page }) => {
-    await board(page)
+    await openBoard(page)
     await page.getByTestId('zoom-percent').click()
     await page.keyboard.type('150')
     await page.keyboard.press('Enter')
@@ -144,7 +137,7 @@ test.describe('the keyboard on the bar', () => {
   })
 
   test('moves to redo when the last undo leaves nothing to undo', async ({ page }) => {
-    await board(page)
+    await openBoard(page)
     await page.keyboard.press('s')
     await page.locator(CANVAS).click({ position: { x: 500, y: 400 } })
     await page.keyboard.press('Escape')
@@ -157,13 +150,13 @@ test.describe('the keyboard on the bar', () => {
   })
 
   test('names each control by what it is, never by its tip', async ({ page }) => {
-    await board(page)
+    await openBoard(page)
     await expect(page.getByRole('button', { name: 'Untitled board', exact: true })).toBeVisible()
     await expect(page.getByRole('button', { name: 'Zoom 100%', exact: true })).toBeVisible()
   })
 
   test('gives every control a target a pointer can find', async ({ page }) => {
-    await board(page)
+    await openBoard(page)
     const theme = await page.getByTestId('theme-toggle').boundingBox()
     const source = await page.getByTestId('source-link').boundingBox()
     expect(theme?.width ?? 0).toBeGreaterThanOrEqual(30)
@@ -178,12 +171,12 @@ test.describe('the keyboard on the bar', () => {
  */
 test.describe('the zoom readout', () => {
   test('says a click is for typing a zoom', async ({ page }) => {
-    await board(page)
+    await openBoard(page)
     await expect(page.getByTestId('zoom-percent')).toHaveAttribute('data-tip', /Type a zoom/)
   })
 
   test('offers the common zooms to a pointer', async ({ page }) => {
-    await board(page)
+    await openBoard(page)
     await page.getByTestId('zoom-in').click()
     await expect(page.getByTestId('zoom-percent')).not.toHaveText('100%')
     await page.getByTestId('zoom-percent').click()
@@ -192,7 +185,7 @@ test.describe('the zoom readout', () => {
   })
 
   test('says why it will not take a zoom, and keeps the field open', async ({ page }) => {
-    await board(page)
+    await openBoard(page)
     await page.getByTestId('zoom-percent').click()
     await page.keyboard.type('5000')
     await page.keyboard.press('Enter')
@@ -215,7 +208,7 @@ test.describe('the zoom readout', () => {
  */
 test.describe('what the bar carries', () => {
   test('says the work is saved, and when it is being saved', async ({ page }) => {
-    await board(page)
+    await openBoard(page)
     const state = page.getByTestId('save-state')
     await expect(state).toHaveText('Saved')
     await expect(state).toHaveAttribute('data-tip', /on this device/)
@@ -227,7 +220,7 @@ test.describe('what the bar carries', () => {
   })
 
   test('counts a selection only when there is one', async ({ page }) => {
-    await board(page)
+    await openBoard(page)
     await expect(page.getByTestId('selection-count')).toHaveCount(0)
     await page.keyboard.press('s')
     await page.locator(CANVAS).click({ position: { x: 500, y: 400 } })
@@ -238,7 +231,7 @@ test.describe('what the bar carries', () => {
   })
 
   test('sets the source link last, after the app’s own controls', async ({ page }) => {
-    await board(page)
+    await openBoard(page)
     const order = await page
       .getByTestId('status-bar')
       .evaluate((bar) =>
@@ -251,7 +244,7 @@ test.describe('what the bar carries', () => {
 
   test('closes the account sheet on Escape without touching the board', async ({ page }) => {
     await signedIn(page, [])
-    await board(page)
+    await openBoard(page)
     await page.keyboard.press('s')
     await page.locator(CANVAS).click({ position: { x: 500, y: 400 } })
     await page.locator(CANVAS).click({ position: { x: 900, y: 600 } })
@@ -267,7 +260,7 @@ test.describe('what the bar carries', () => {
 
   test('signs out back to the board, not into the sign-in form', async ({ page }) => {
     await signedIn(page, [])
-    await board(page)
+    await openBoard(page)
     await page.getByTestId('account').click()
     await page.getByTestId('account-sheet').getByRole('button', { name: 'Sign out' }).click()
     await expect(page.getByTestId('sign-in')).toBeVisible()
@@ -276,7 +269,7 @@ test.describe('what the bar carries', () => {
 
   test('opens the account instead of signing out when the name is pressed', async ({ page }) => {
     await signedIn(page, [])
-    await board(page)
+    await openBoard(page)
     await page.getByTestId('account').click()
     const sheet = page.getByTestId('account-sheet')
     await expect(sheet).toBeVisible()
@@ -295,7 +288,7 @@ test.describe('what the bar carries', () => {
  */
 test.describe('the zoom cluster', () => {
   test('labels the wheel setting as the wheel’s', async ({ page }) => {
-    await board(page)
+    await openBoard(page)
     await expect(page.getByTestId('wheel-mode')).toHaveText('wheel: zoom')
     await expect(
       page.getByRole('button', { name: 'Scroll wheel zooms', exact: true }),
@@ -305,18 +298,18 @@ test.describe('the zoom cluster', () => {
   })
 
   test('names snap once, and lets its pressed state say whether it is on', async ({ page }) => {
-    await board(page)
+    await openBoard(page)
     const snap = page.getByRole('button', { name: 'Snap to grid', exact: true })
     await expect(snap).toHaveAttribute('aria-pressed', 'true')
   })
 
   test('draws snap as points to land on, not as a frame’s lines', async ({ page }) => {
-    await board(page)
+    await openBoard(page)
     await expect(page.getByTestId('snap-toggle').locator('svg circle')).not.toHaveCount(0)
   })
 
   test('reads the slider as a zoom', async ({ page }) => {
-    await board(page)
+    await openBoard(page)
     await expect(page.getByTestId('zoom-slider')).toHaveAttribute('aria-valuetext', '100%')
   })
 })
@@ -330,7 +323,7 @@ test.describe('a narrow window', () => {
   for (const width of [390, 560, 760]) {
     test(`keeps every control inside the bar at ${String(width)}px`, async ({ page }) => {
       await page.setViewportSize({ width, height: 720 })
-      await board(page)
+      await openBoard(page)
       const escaped = await page.getByTestId('status-bar').evaluate((bar) => {
         const edge = bar.getBoundingClientRect().right
         return [...bar.children]
@@ -372,7 +365,7 @@ test.describe('a narrow window', () => {
 
   test('lines the bar up with the rail', async ({ page }) => {
     await page.setViewportSize({ width: 760, height: 720 })
-    await board(page)
+    await openBoard(page)
     const bar = await page.getByTestId('status-bar').boundingBox()
     const rail = await page.getByRole('toolbar', { name: 'Board tools' }).boundingBox()
     expect(Math.abs((bar?.x ?? 0) - (rail?.x ?? 0))).toBeLessThan(1)

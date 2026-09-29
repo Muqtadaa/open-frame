@@ -1,5 +1,6 @@
 import { expect, test, type Page } from '@playwright/test'
 
+import { CANVAS } from './fixtures.js'
 import { BOARD_URL } from './routes.js'
 
 /**
@@ -10,7 +11,6 @@ import { BOARD_URL } from './routes.js'
  * the selection's handles; on a short window, or at 200% zoom, it covered the
  * zoom cluster and its lower rows could not be reached at all.
  */
-const CANVAS = '[data-testid="canvas"]'
 
 async function selectANote(page: Page, at: { x: number; y: number }): Promise<void> {
   await page.goto(BOARD_URL)

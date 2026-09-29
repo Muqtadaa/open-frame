@@ -1,20 +1,15 @@
-import { expect, test, type Page } from '@playwright/test'
+import type { Page } from '@playwright/test'
 
-import { BOARD_URL } from './routes.js'
+import { CANVAS, expect, test, undo } from './fixtures.js'
 
 /**
  * The selection apparatus tells the truth about what is selected, where it is
  * NOW — during a gesture as well as after one (C3 #7).
  */
-const CANVAS = '[data-testid="canvas"]'
 const EDITOR = '[contenteditable="true"]'
 const AWAY = { x: 1180, y: 120 }
 
-async function board(page: Page): Promise<void> {
-  await page.goto(BOARD_URL)
-  await expect(page.locator(CANVAS)).toBeVisible()
-  await expect(page.getByTestId('tool-select')).toBeVisible()
-}
+test.use({ board: 'open' })
 
 async function note(page: Page, at: { x: number; y: number }, text: string): Promise<void> {
   await page.keyboard.press('s')
@@ -32,10 +27,6 @@ async function canvasPoint(page: Page, at: { x: number; y: number }) {
   if (canvas === null) throw new Error('no canvas')
   return { x: canvas.x + at.x, y: canvas.y + at.y }
 }
-
-test.beforeEach(async ({ page }) => {
-  await board(page)
-})
 
 /*
  * The box and its eight handles stayed where the note WAS while the note moved
@@ -336,7 +327,7 @@ test.describe('the board from the keyboard', () => {
     await expect(announcer(page)).toHaveText(/^Width \d+, height \d+$/)
 
     // One undo per press, like a nudge.
-    await page.keyboard.press('ControlOrMeta+z')
+    await undo(page)
     const undone = await object.boundingBox()
     expect(Math.round((undone?.height ?? 0) - before.height)).toBe(10)
   })

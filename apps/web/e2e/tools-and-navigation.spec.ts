@@ -1,6 +1,6 @@
-import { expect, test, type Page } from '@playwright/test'
+import type { Page } from '@playwright/test'
 
-import { BOARD_URL } from './routes.js'
+import { CANVAS, EDITOR, expect, test } from './fixtures.js'
 
 /**
  * Tools, shortcuts and viewport navigation.
@@ -10,45 +10,11 @@ import { BOARD_URL } from './routes.js'
  * exactly what unit tests cannot observe.
  */
 
-const CANVAS = '[data-testid="canvas"]'
-/*
- * Whatever is currently editable in place.
- *
- * Body text is a `contenteditable` since rich text (ADR 0012); a frame's title
- * and an image's alt text are labels and stay plain textareas. A spec should
- * not have to know which it is about to type into.
- */
-const EDITOR = 'textarea, [contenteditable="true"]'
-
-async function freshBoard(page: Page): Promise<void> {
-  await page.goto(BOARD_URL)
-  await page.evaluate(
-    async () =>
-      new Promise<void>((resolve) => {
-        const request = indexedDB.deleteDatabase('openframe')
-        request.onsuccess = () => resolve()
-        request.onerror = () => resolve()
-        request.onblocked = () => resolve()
-      }),
-  )
-  await page.reload()
-  await expect(page.locator(CANVAS)).toBeVisible()
-  /*
-   * Also wait for the toolbar. A visible canvas only means React rendered;
-   * `useKeyboardShortcuts` attaches its listener in an effect, which runs after
-   * paint, so a keystroke sent on the canvas alone can land in the gap and be
-   * dropped. That showed up as a rare, unexplained tool-selection failure.
-   */
-  await expect(page.getByTestId('tool-select')).toBeVisible()
-}
+test.use({ board: 'fresh' })
 
 async function zoomPercent(page: Page): Promise<number> {
   return Number((await page.getByTestId('zoom-percent').textContent())?.replace('%', '') ?? '0')
 }
-
-test.beforeEach(async ({ page }) => {
-  await freshBoard(page)
-})
 
 test.describe('keyboard tool selection', () => {
   test('V, S, T and H select their tools', async ({ page }) => {

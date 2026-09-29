@@ -1,5 +1,6 @@
 import { expect, test, type Locator, type Page } from '@playwright/test'
 
+import { CANVAS, undo } from './fixtures.js'
 import { BOARD_URL } from './routes.js'
 
 /**
@@ -9,7 +10,6 @@ import { BOARD_URL } from './routes.js'
  * be told otherwise — a column of figures right-aligned under left-aligned
  * headings was not something the table could say.
  */
-const CANVAS = '[data-testid="canvas"]'
 const AWAY = { x: 1100, y: 640 }
 
 const drawn = (page: Page): Locator => page.locator('[role="table"] [data-row]')
@@ -93,7 +93,7 @@ test('is one undo with the rest of the edit', async ({ page }) => {
   await page.getByTestId('cell-align-end').click()
   await leave(page)
   expect((await placement(drawn(page).nth(0))).across).toBe('right')
-  await page.keyboard.press('ControlOrMeta+z')
+  await undo(page)
   // The whole edit goes back in one step — its text and its alignment.
   await expect(drawn(page).nth(0)).toHaveText('')
   expect((await placement(drawn(page).nth(0))).across).toBe('left')

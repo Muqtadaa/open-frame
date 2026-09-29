@@ -12,6 +12,7 @@ import { signedIn } from './signed-in.js'
 const BOARD = 'brd_abcdefgh12345678'
 const KEY = 'e'.repeat(32)
 
+// Local rather than the shared fixture: it opens a shared room, not the local board.
 async function openBoard(page: Page): Promise<void> {
   await page.routeWebSocket(/\/room\//, () => undefined)
   await page.goto(`/?room=${BOARD}&k=${KEY}`)

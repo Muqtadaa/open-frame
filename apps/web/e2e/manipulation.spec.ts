@@ -1,6 +1,6 @@
-import { expect, test, type Page } from '@playwright/test'
+import type { Page } from '@playwright/test'
 
-import { BOARD_URL } from './routes.js'
+import { CANVAS, drag, EDITOR, expect, place, test, undo } from './fixtures.js'
 
 /**
  * Direct manipulation: resize, rotate, z-order, clipboard, lock.
@@ -10,61 +10,13 @@ import { BOARD_URL } from './routes.js'
  * test can observe.
  */
 
-const CANVAS = '[data-testid="canvas"]'
-/*
- * Whatever is currently editable in place.
- *
- * Body text is a `contenteditable` since rich text (ADR 0012); a frame's title
- * and an image's alt text are labels and stay plain textareas. A spec should
- * not have to know which it is about to type into.
- */
-const EDITOR = 'textarea, [contenteditable="true"]'
 const MOD = process.platform === 'darwin' ? 'Meta' : 'Control'
 
-async function freshBoard(page: Page): Promise<void> {
-  await page.goto(BOARD_URL)
-  await page.evaluate(
-    async () =>
-      new Promise<void>((resolve) => {
-        const request = indexedDB.deleteDatabase('openframe')
-        request.onsuccess = () => resolve()
-        request.onerror = () => resolve()
-        request.onblocked = () => resolve()
-      }),
-  )
-  await page.reload()
-  await expect(page.locator(CANVAS)).toBeVisible()
-  /*
-   * Also wait for the toolbar. A visible canvas only means React rendered;
-   * `useKeyboardShortcuts` attaches its listener in an effect, which runs after
-   * paint, so a keystroke sent on the canvas alone can land in the gap and be
-   * dropped. That showed up as a rare, unexplained tool-selection failure.
-   */
-  await expect(page.getByTestId('tool-select')).toBeVisible()
-}
+test.use({ board: 'fresh' })
 
 async function create(page: Page, tool: string, x: number, y: number, text = ''): Promise<void> {
-  await page.keyboard.press(tool)
-  await page.locator(CANVAS).click({ position: { x, y } })
-  await expect(page.locator(EDITOR)).toBeFocused()
-  if (text !== '') await page.locator(EDITOR).fill(text)
-  await page.locator(CANVAS).click({ position: { x: 1100, y: 180 } })
-  await expect(page.locator(EDITOR)).toHaveCount(0)
-  await page.keyboard.press('v')
+  await place(page, tool, { x, y }, text)
 }
-
-async function drag(page: Page, from: { x: number; y: number }, to: { x: number; y: number }) {
-  await page.mouse.move(from.x, from.y)
-  await page.mouse.down()
-  for (let i = 1; i <= 8; i++) {
-    await page.mouse.move(from.x + ((to.x - from.x) * i) / 8, from.y + ((to.y - from.y) * i) / 8)
-  }
-  await page.mouse.up()
-}
-
-test.beforeEach(async ({ page }) => {
-  await freshBoard(page)
-})
 
 test.describe('resize', () => {
   test('shows handles for a selected object and hides them otherwise', async ({ page }) => {
@@ -113,7 +65,7 @@ test.describe('resize', () => {
       { x: handle.x + handle.width / 2, y: handle.y + handle.height / 2 },
       { x: handle.x + 140, y: handle.y + 100 },
     )
-    await page.keyboard.press(`${MOD}+z`)
+    await undo(page)
 
     const restored = await page.locator('[data-object-type="sticky"]').boundingBox()
     expect(restored).not.toBeNull()
@@ -297,7 +249,7 @@ test.describe('frames', () => {
     if (start === null) return
 
     await drag(page, { x: start.x + 40, y: start.y + 40 }, { x: 700, y: 400 })
-    await page.keyboard.press(`${MOD}+z`)
+    await undo(page)
 
     const restored = await note.boundingBox()
     if (restored === null) return
@@ -321,7 +273,7 @@ test.describe('frames', () => {
     await expect(page.locator('[data-object-type="frame"]')).toHaveCount(0)
     await expect(page.locator('[data-object-type="sticky"]')).toHaveCount(0)
 
-    await page.keyboard.press(`${MOD}+z`)
+    await undo(page)
     await expect(page.locator('[data-object-type="frame"]')).toHaveCount(1)
     await expect(page.locator('[data-object-type="sticky"]')).toHaveCount(1)
   })
@@ -438,10 +390,6 @@ test.describe('snap to grid', () => {
 test.describe('reported regressions', () => {
   const AT = { x: 340, y: 280 }
   const CLEAR = { x: 1120, y: 140 }
-
-  test.beforeEach(async ({ page }) => {
-    await freshBoard(page)
-  })
 
   /**
    * A shape's label sits in a flex box that centres it, and a flex container

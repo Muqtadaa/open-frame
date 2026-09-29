@@ -1,6 +1,6 @@
-import { expect, test, type Locator, type Page } from '@playwright/test'
+import type { Locator, Page } from '@playwright/test'
 
-import { BOARD_URL } from './routes.js'
+import { CANVAS, expect, openBoard, test } from './fixtures.js'
 
 /**
  * Every floating surface, held to one invariant.
@@ -19,13 +19,6 @@ import { BOARD_URL } from './routes.js'
  * "Opens upward" is a fact about one window size and would pass with the
  * defect present at another.
  */
-const CANVAS = '[data-testid="canvas"]'
-
-async function board(page: Page): Promise<void> {
-  await page.goto(BOARD_URL)
-  await expect(page.locator(CANVAS)).toBeVisible()
-  await expect(page.getByTestId('tool-select')).toBeVisible()
-}
 
 async function onScreen(page: Page, surface: Locator, what: string): Promise<void> {
   await expect(surface).toBeVisible()
@@ -50,7 +43,7 @@ async function onScreen(page: Page, surface: Locator, what: string): Promise<voi
  * implementation, not a live overflow, and this test passes against it.
  */
 test('the colour picker stays on screen, opened from a panel on the right', async ({ page }) => {
-  await board(page)
+  await openBoard(page)
 
   // Far right, so the panel is pushed as close to the window's edge as it goes.
   await page.getByTestId('tool-sticky').click()
@@ -76,7 +69,7 @@ test('the colour picker stays on screen, opened from a panel on the right', asyn
  * conversion and is here to keep it passing after.
  */
 test('the context menu stays on screen in the bottom right corner', async ({ page }) => {
-  await board(page)
+  await openBoard(page)
   await page.getByTestId('tool-sticky').click()
   await page.locator(CANVAS).click({ position: { x: 1150, y: 640 } })
   await page.keyboard.press('Escape')
@@ -102,7 +95,7 @@ test('the context menu stays on screen in the bottom right corner', async ({ pag
  * This is the one test in this file that fails against the code it replaced.
  */
 test('the record panel keeps off the object it is describing', async ({ page }) => {
-  await board(page)
+  await openBoard(page)
   await page.getByTestId('tool-table').click()
   await page.locator(CANVAS).click({ position: { x: 740, y: 460 } })
   await page.getByTestId('zoom-in').click()
@@ -146,7 +139,7 @@ test('the record panel keeps off the object it is describing', async ({ page }) 
  * you are looking at rather than the part you press.
  */
 test('the record panel keeps off the screen-edge furniture', async ({ page }) => {
-  await board(page)
+  await openBoard(page)
   await page.getByTestId('tool-sticky').click()
   await page.locator(CANVAS).click({ position: { x: 1160, y: 600 } })
   await page.keyboard.press('Escape')

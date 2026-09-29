@@ -14,6 +14,7 @@ const KEY = 'e'.repeat(32)
  * deleting the element it was dropped on would delete the discussion about
  * that element.
  */
+// Local rather than the shared fixture: it opens a shared room, not the local board.
 async function openBoard(page: Page): Promise<void> {
   // A room the app believes in, refused quietly, so the board opens offline
   // and the test is about comments rather than about sockets.

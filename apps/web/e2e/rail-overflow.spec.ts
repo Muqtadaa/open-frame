@@ -9,6 +9,7 @@ import { BOARD_URL } from './routes.js'
  * — so Connect, Table, Code, Image and Comment were simply not there for
  * anybody who did not think to drag the rail.
  */
+// Local rather than the shared fixture: it waits for the status bar, not the canvas and rail.
 async function open(page: Page): Promise<void> {
   await page.goto(BOARD_URL)
   await page.waitForSelector('[data-testid="status-bar"]')

@@ -1,5 +1,6 @@
 import { expect, test, type Page } from '@playwright/test'
 
+import { CANVAS } from './fixtures.js'
 import { BOARD_URL } from './routes.js'
 
 /**
@@ -10,7 +11,6 @@ import { BOARD_URL } from './routes.js'
  * version looked like a board in trouble. The toast's close glyph rendered at
  * 0px inside an 8×15 target, and a dismissed notice took the keyboard with it.
  */
-const CANVAS = '[data-testid="canvas"]'
 const FILE_INPUT = 'input[type="file"]'
 
 async function boardWithAnUnknownObject(page: Page): Promise<void> {

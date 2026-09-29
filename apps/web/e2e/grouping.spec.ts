@@ -1,6 +1,6 @@
-import { expect, test, type Page } from '@playwright/test'
+import type { Page } from '@playwright/test'
 
-import { BOARD_URL } from './routes.js'
+import { boxOf, CANVAS, EDITOR, expect, place, test, undo } from './fixtures.js'
 
 /**
  * Grouping: one container, built from ordinary commands.
@@ -11,47 +11,12 @@ import { BOARD_URL } from './routes.js'
  * safety, cascading delete, move-with-container and a single undo entry.
  */
 
-const CANVAS = '[data-testid="canvas"]'
-/*
- * Whatever is currently editable in place.
- *
- * Body text is a `contenteditable` since rich text (ADR 0012); a frame's title
- * and an image's alt text are labels and stay plain textareas. A spec should
- * not have to know which it is about to type into.
- */
-const EDITOR = 'textarea, [contenteditable="true"]'
 const MOD = process.platform === 'darwin' ? 'Meta' : 'Control'
 
-async function freshBoard(page: Page): Promise<void> {
-  await page.goto(BOARD_URL)
-  await page.evaluate(
-    async () =>
-      new Promise<void>((resolve) => {
-        const r = indexedDB.deleteDatabase('openframe')
-        r.onsuccess = () => resolve()
-        r.onerror = () => resolve()
-        r.onblocked = () => resolve()
-      }),
-  )
-  await page.reload()
-  await expect(page.locator(CANVAS)).toBeVisible()
-  /*
-   * Also wait for the toolbar. A visible canvas only means React rendered;
-   * `useKeyboardShortcuts` attaches its listener in an effect, which runs after
-   * paint, so a keystroke sent on the canvas alone can land in the gap and be
-   * dropped. That showed up as a rare, unexplained tool-selection failure.
-   */
-  await expect(page.getByTestId('tool-select')).toBeVisible()
-}
+test.use({ board: 'fresh' })
 
 async function sticky(page: Page, x: number, y: number, text: string): Promise<void> {
-  await page.keyboard.press('s')
-  await page.locator(CANVAS).click({ position: { x, y } })
-  await expect(page.locator(EDITOR)).toBeFocused()
-  await page.locator(EDITOR).fill(text)
-  await page.locator(CANVAS).click({ position: { x: 1120, y: 140 } })
-  await expect(page.locator(EDITOR)).toHaveCount(0)
-  await page.keyboard.press('v')
+  await place(page, 's', { x, y }, text, { x: 1120, y: 140 })
 }
 
 const A = { x: 320, y: 300 }
@@ -68,15 +33,10 @@ async function groupBoth(page: Page): Promise<void> {
   await expect(page.locator('[data-object-type="group"]')).toHaveCount(1)
 }
 
-const selectionBox = async (page: Page) => {
-  const result = await page.getByTestId('selection-overlay').boundingBox()
-  if (result === null) throw new Error('nothing selected')
-  return result
-}
+const selectionBox = async (page: Page) => boxOf(page.getByTestId('selection-overlay'))
 
 test.describe('grouping', () => {
   test.beforeEach(async ({ page }) => {
-    await freshBoard(page)
     await twoNotes(page)
   })
 
@@ -133,7 +93,7 @@ test.describe('grouping', () => {
 
   test('grouping is a single undo entry', async ({ page }) => {
     await groupBoth(page)
-    await page.keyboard.press(`${MOD}+z`)
+    await undo(page)
 
     await expect(page.locator('[data-object-type="group"]')).toHaveCount(0)
     await expect(page.locator('[data-object-type="sticky"]')).toHaveCount(2)
@@ -142,7 +102,7 @@ test.describe('grouping', () => {
   test('ungrouping is a single undo entry', async ({ page }) => {
     await groupBoth(page)
     await page.keyboard.press(`${MOD}+Shift+g`)
-    await page.keyboard.press(`${MOD}+z`)
+    await undo(page)
 
     await expect(page.locator('[data-object-type="group"]')).toHaveCount(1)
     await expect(page.locator('[data-object-type="sticky"]')).toHaveCount(2)
@@ -185,7 +145,6 @@ test.describe('grouping', () => {
  */
 test.describe('reaching into a group', () => {
   test.beforeEach(async ({ page }) => {
-    await freshBoard(page)
     await twoNotes(page)
     await groupBoth(page)
   })

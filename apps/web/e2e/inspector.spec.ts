@@ -1,6 +1,6 @@
-import { expect, test, type Page } from '@playwright/test'
+import type { Page } from '@playwright/test'
 
-import { BOARD_URL } from './routes.js'
+import { CANVAS, EDITOR, expect, place, test, undo } from './fixtures.js'
 
 /**
  * The record panel.
@@ -11,50 +11,13 @@ import { BOARD_URL } from './routes.js'
  * of the five could be set by anyone.
  */
 
-const CANVAS = '[data-testid="canvas"]'
-/*
- * Whatever is currently editable in place.
- *
- * Body text is a `contenteditable` since rich text (ADR 0012); a frame's title
- * and an image's alt text are labels and stay plain textareas. A spec should
- * not have to know which it is about to type into.
- */
-const EDITOR = 'textarea, [contenteditable="true"]'
 const EMPTY = { x: 1120, y: 150 }
 
-async function freshBoard(page: Page): Promise<void> {
-  await page.goto(BOARD_URL)
-  await page.evaluate(
-    async () =>
-      new Promise<void>((resolve) => {
-        const r = indexedDB.deleteDatabase('openframe')
-        r.onsuccess = () => resolve()
-        r.onerror = () => resolve()
-        r.onblocked = () => resolve()
-      }),
-  )
-  await page.reload()
-  await expect(page.locator(CANVAS)).toBeVisible()
-  await expect(page.getByTestId('tool-select')).toBeVisible()
-}
-
-async function place(page: Page, tool: string, x: number, y: number, text: string): Promise<void> {
-  await page.keyboard.press(tool)
-  await page.locator(CANVAS).click({ position: { x, y } })
-  await expect(page.locator(EDITOR)).toBeFocused()
-  await page.locator(EDITOR).fill(text)
-  await page.locator(CANVAS).click({ position: EMPTY })
-  await expect(page.locator(EDITOR)).toHaveCount(0)
-  await page.keyboard.press('v')
-}
+test.use({ board: 'fresh' })
 
 test.describe('inspector', () => {
-  test.beforeEach(async ({ page }) => {
-    await freshBoard(page)
-  })
-
   test('appears with a selection and leaves with it', async ({ page }) => {
-    await place(page, 's', 340, 260, 'Note')
+    await place(page, 's', { x: 340, y: 260 }, 'Note', EMPTY)
     await expect(page.getByTestId('inspector')).toHaveCount(0)
 
     await page.locator(CANVAS).click({ position: { x: 340, y: 260 } })
@@ -70,14 +33,14 @@ test.describe('inspector', () => {
    * than each type's own capabilities.
    */
   test('shows only the properties the selected type declares', async ({ page }) => {
-    await place(page, 's', 340, 260, 'Note')
+    await place(page, 's', { x: 340, y: 260 }, 'Note', EMPTY)
     await page.locator(CANVAS).click({ position: { x: 340, y: 260 } })
     await expect(page.getByTestId('swatch-blue')).toBeVisible()
     await expect(page.getByTestId('fill-solid')).toHaveCount(0)
     await expect(page.getByTestId('stroke-thick')).toHaveCount(0)
 
     await page.locator(CANVAS).click({ position: EMPTY })
-    await place(page, 'u', 340, 560, 'Box')
+    await place(page, 'u', { x: 340, y: 560 }, 'Box', EMPTY)
     await page.locator(CANVAS).click({ position: { x: 340, y: 560 } })
     await expect(page.getByTestId('fill-solid')).toBeVisible()
     await expect(page.getByTestId('stroke-thick')).toBeVisible()
@@ -112,13 +75,13 @@ test.describe('inspector', () => {
     await expect(summary).toHaveCount(0)
 
     await page.locator(CANVAS).click({ position: { x: 1150, y: 130 } })
-    await place(page, 'u', 340, 160, 'Box')
+    await place(page, 'u', { x: 340, y: 160 }, 'Box', EMPTY)
     await page.locator(CANVAS).click({ position: { x: 340, y: 160 } })
     await expect(summary).toHaveText('Box')
   })
 
   test('sets fill on a shape, which nothing could reach before', async ({ page }) => {
-    await place(page, 'u', 340, 300, 'Box')
+    await place(page, 'u', { x: 340, y: 300 }, 'Box', EMPTY)
     await page.locator(CANVAS).click({ position: { x: 340, y: 300 } })
 
     await page.getByTestId('fill-none').click()
@@ -128,13 +91,13 @@ test.describe('inspector', () => {
   // The row is keyed `line` for its ids, but it is LABELLED dash, and a
   // screen reader should hear what a sighted user reads.
   test('announces the dash row by the name it is shown under', async ({ page }) => {
-    await place(page, 'u', 340, 300, 'Box')
+    await place(page, 'u', { x: 340, y: 300 }, 'Box', EMPTY)
     await page.locator(CANVAS).click({ position: { x: 340, y: 300 } })
     await expect(page.getByRole('radiogroup', { name: 'dash' })).toBeVisible()
   })
 
   test('sets opacity', async ({ page }) => {
-    await place(page, 's', 340, 260, 'Note')
+    await place(page, 's', { x: 340, y: 260 }, 'Note', EMPTY)
     await page.locator(CANVAS).click({ position: { x: 340, y: 260 } })
 
     await page.getByTestId('opacity').fill('50')
@@ -142,7 +105,7 @@ test.describe('inspector', () => {
   })
 
   test('a style change is one undoable action', async ({ page }) => {
-    await place(page, 's', 340, 260, 'Note')
+    await place(page, 's', { x: 340, y: 260 }, 'Note', EMPTY)
     await page.locator(CANVAS).click({ position: { x: 340, y: 260 } })
     await page.getByTestId('swatch-green').click()
     await expect(page.locator('.of-sticky')).toHaveCSS('background-color', 'rgb(191, 240, 212)')
@@ -160,7 +123,7 @@ test.describe('inspector', () => {
    * view honouring it is worse, because the panel then lies.
    */
   test('inks a note without touching its paper', async ({ page }) => {
-    await place(page, 's', 340, 260, 'Note')
+    await place(page, 's', { x: 340, y: 260 }, 'Note', EMPTY)
     await page.locator(CANVAS).click({ position: { x: 340, y: 260 } })
 
     const paper = await page
@@ -180,7 +143,7 @@ test.describe('inspector', () => {
    * and one swatch sets paper on one and ink on the other.
    */
   test('a text object offers ink and no paper', async ({ page }) => {
-    await place(page, 't', 340, 260, 'Words')
+    await place(page, 't', { x: 340, y: 260 }, 'Words', EMPTY)
     await page.locator(CANVAS).click({ position: { x: 340, y: 260 } })
 
     /*
@@ -202,8 +165,8 @@ test.describe('inspector', () => {
    * meaning.
    */
   test('inks a sticky and a text together', async ({ page }) => {
-    await place(page, 's', 340, 260, 'Note')
-    await place(page, 't', 640, 260, 'Words')
+    await place(page, 's', { x: 340, y: 260 }, 'Note', EMPTY)
+    await place(page, 't', { x: 640, y: 260 }, 'Words', EMPTY)
     await page.keyboard.press('Control+a')
 
     /*
@@ -227,7 +190,7 @@ test.describe('inspector', () => {
    * the field.
    */
   test('paints a colour typed into the picker', async ({ page }) => {
-    await place(page, 's', 340, 260, 'Note')
+    await place(page, 's', { x: 340, y: 260 }, 'Note', EMPTY)
     await page.locator(CANVAS).click({ position: { x: 340, y: 260 } })
 
     await page.getByTestId('paint-textColor').click()
@@ -248,7 +211,7 @@ test.describe('inspector', () => {
    * Three digits are what people write, and a half-typed colour is not one.
    */
   test('takes a short hex and ignores an unfinished one', async ({ page }) => {
-    await place(page, 's', 340, 260, 'Note')
+    await place(page, 's', { x: 340, y: 260 }, 'Note', EMPTY)
     await page.locator(CANVAS).click({ position: { x: 340, y: 260 } })
     await page.getByTestId('paint-textColor').click()
     await page.getByTestId('ink-custom').click()
@@ -266,7 +229,7 @@ test.describe('inspector', () => {
    * would be the panel overruling somebody matching a brand colour.
    */
   test('warns when a colour will be hard to read, without refusing it', async ({ page }) => {
-    await place(page, 's', 340, 260, 'Note')
+    await place(page, 's', { x: 340, y: 260 }, 'Note', EMPTY)
     await page.locator(CANVAS).click({ position: { x: 340, y: 260 } })
     await page.getByTestId('paint-textColor').click()
     await page.getByTestId('ink-custom').click()
@@ -285,8 +248,8 @@ test.describe('inspector', () => {
    * member honours. A shape has `stroke`; a sticky does not.
    */
   test('a mixed selection offers the intersection', async ({ page }) => {
-    await place(page, 's', 340, 260, 'Note')
-    await place(page, 'u', 640, 260, 'Box')
+    await place(page, 's', { x: 340, y: 260 }, 'Note', EMPTY)
+    await place(page, 'u', { x: 640, y: 260 }, 'Box', EMPTY)
     await page.keyboard.press('Control+a')
 
     await expect(page.getByTestId('inspector')).toBeVisible()
@@ -296,8 +259,8 @@ test.describe('inspector', () => {
 
   /** The panel is chrome; it must never land on the tool rail. */
   test('stays clear of the rail even when the selection spans the board', async ({ page }) => {
-    await place(page, 's', 200, 240, 'Left')
-    await place(page, 's', 1150, 640, 'Right')
+    await place(page, 's', { x: 200, y: 240 }, 'Left', EMPTY)
+    await place(page, 's', { x: 1150, y: 640 }, 'Right', EMPTY)
     await page.keyboard.press('Control+a')
 
     const panel = await page.getByTestId('inspector').boundingBox()
@@ -307,7 +270,7 @@ test.describe('inspector', () => {
   })
 
   test('deletes the selection', async ({ page }) => {
-    await place(page, 's', 340, 260, 'Note')
+    await place(page, 's', { x: 340, y: 260 }, 'Note', EMPTY)
     await page.locator(CANVAS).click({ position: { x: 340, y: 260 } })
 
     await page.getByTestId('inspector-delete').click()
@@ -322,15 +285,11 @@ test.describe('inspector', () => {
  * twenty undo entries. They preview on the selection now and write once.
  */
 test.describe('continuous controls write once', () => {
-  test.beforeEach(async ({ page }) => {
-    await freshBoard(page)
-  })
-
   const surfaceOf = (page: Page) =>
     page.locator('.of-sticky').evaluate((element) => getComputedStyle(element).backgroundColor)
 
   test('a drag across the colour picker is one undo entry', async ({ page }) => {
-    await place(page, 's', 340, 260, 'Note')
+    await place(page, 's', { x: 340, y: 260 }, 'Note', EMPTY)
     await page.locator(CANVAS).click({ position: { x: 340, y: 260 } })
     const before = await surfaceOf(page)
 
@@ -348,12 +307,12 @@ test.describe('continuous controls write once', () => {
     expect(after).not.toBe(before)
 
     await page.locator(CANVAS).click({ position: EMPTY })
-    await page.keyboard.press('ControlOrMeta+z')
+    await undo(page)
     await expect.poll(() => surfaceOf(page)).toBe(before)
   })
 
   test('Escape takes back a colour that was only aimed at', async ({ page }) => {
-    await place(page, 's', 340, 260, 'Note')
+    await place(page, 's', { x: 340, y: 260 }, 'Note', EMPTY)
     await page.locator(CANVAS).click({ position: { x: 340, y: 260 } })
     const before = await surfaceOf(page)
 
@@ -376,7 +335,7 @@ test.describe('continuous controls write once', () => {
   test('Escape on the opacity slider takes the steps back and keeps the panel', async ({
     page,
   }) => {
-    await place(page, 's', 340, 260, 'Note')
+    await place(page, 's', { x: 340, y: 260 }, 'Note', EMPTY)
     await page.locator(CANVAS).click({ position: { x: 340, y: 260 } })
 
     await page.getByTestId('opacity').focus()
@@ -392,7 +351,7 @@ test.describe('continuous controls write once', () => {
   })
 
   test('six steps of the opacity slider are one undo entry', async ({ page }) => {
-    await place(page, 's', 340, 260, 'Note')
+    await place(page, 's', { x: 340, y: 260 }, 'Note', EMPTY)
     await page.locator(CANVAS).click({ position: { x: 340, y: 260 } })
 
     await page.getByTestId('opacity').focus()
@@ -401,7 +360,7 @@ test.describe('continuous controls write once', () => {
 
     await page.locator(CANVAS).click({ position: EMPTY })
     await expect(page.locator('.of-sticky')).toHaveCSS('opacity', '0.7')
-    await page.keyboard.press('ControlOrMeta+z')
+    await undo(page)
     await expect(page.locator('.of-sticky')).toHaveCSS('opacity', '1')
   })
 })
@@ -414,12 +373,8 @@ test.describe('continuous controls write once', () => {
  * first one, so a selection could not be built by hand.
  */
 test.describe('the panel is not in the way', () => {
-  test.beforeEach(async ({ page }) => {
-    await freshBoard(page)
-  })
-
   test('an open context menu paints over it', async ({ page }) => {
-    await place(page, 's', 340, 260, 'Note')
+    await place(page, 's', { x: 340, y: 260 }, 'Note', EMPTY)
     await page.locator(CANVAS).click({ position: { x: 340, y: 260 } })
     await expect(page.getByTestId('inspector')).toBeVisible()
     await page.locator(CANVAS).click({ position: { x: 340, y: 260 }, button: 'right' })
@@ -455,8 +410,8 @@ test.describe('the panel is not in the way', () => {
 
   test('steps aside while Shift builds a selection', async ({ page }) => {
     // The second note is placed where the panel beside the first one will be.
-    await place(page, 's', 640, 300, 'Beside')
-    await place(page, 's', 300, 300, 'First')
+    await place(page, 's', { x: 640, y: 300 }, 'Beside', EMPTY)
+    await place(page, 's', { x: 300, y: 300 }, 'First', EMPTY)
     await page.locator(CANVAS).click({ position: { x: 300, y: 300 } })
     const panel = await page.getByTestId('inspector').boundingBox()
     expect(panel).not.toBeNull()
@@ -474,8 +429,8 @@ test.describe('the panel is not in the way', () => {
   // The commonest flow: recolour this one, then add the next. Focus is left on
   // the swatch, which is not typing, so Shift must still clear the way.
   test('steps aside after a swatch was clicked, too', async ({ page }) => {
-    await place(page, 's', 640, 300, 'Beside')
-    await place(page, 's', 300, 300, 'First')
+    await place(page, 's', { x: 640, y: 300 }, 'Beside', EMPTY)
+    await place(page, 's', { x: 300, y: 300 }, 'First', EMPTY)
     await page.locator(CANVAS).click({ position: { x: 300, y: 300 } })
     await page.getByTestId('swatch-blue').click()
     await expect(page.getByTestId('swatch-blue')).toBeFocused()
@@ -496,8 +451,7 @@ test.describe('the panel is not in the way', () => {
  */
 test.describe('the panel says what is set, and a keyboard can cross it', () => {
   test.beforeEach(async ({ page }) => {
-    await freshBoard(page)
-    await place(page, 's', 340, 260, 'Note')
+    await place(page, 's', { x: 340, y: 260 }, 'Note', EMPTY)
     await page.locator(CANVAS).click({ position: { x: 340, y: 260 } })
   })
 

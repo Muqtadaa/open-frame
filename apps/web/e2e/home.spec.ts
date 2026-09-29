@@ -1,5 +1,6 @@
 import { expect, test } from '@playwright/test'
 
+import { CANVAS } from './fixtures.js'
 import { BOARD_URL, HOME_URL } from './routes.js'
 import { seedLocalBoard } from './seed.js'
 
@@ -11,7 +12,6 @@ import { seedLocalBoard } from './seed.js'
  * anybody has ever been sent. Most of what follows is about that.
  */
 
-const CANVAS = '[data-testid="canvas"]'
 const HOME = '[data-testid="home"]'
 
 test.describe('arriving with nothing', () => {

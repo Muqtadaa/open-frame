@@ -1,5 +1,6 @@
 import { expect, test, type Page } from '@playwright/test'
 
+import { CANVAS } from './fixtures.js'
 import { BOARD_URL } from './routes.js'
 
 /**
@@ -10,7 +11,6 @@ import { BOARD_URL } from './routes.js'
  * is the panel stock at night now; by day it is white, as it always was. A
  * white somebody CHOSE stays white in both.
  */
-const CANVAS = '[data-testid="canvas"]'
 const EDITOR = '[contenteditable="true"]'
 
 async function placeFrame(page: Page): Promise<void> {

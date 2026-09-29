@@ -1,6 +1,6 @@
 import { expect, test, type Page } from '@playwright/test'
 
-import { BOARD_URL } from './routes.js'
+import { CANVAS, openBoard } from './fixtures.js'
 
 /**
  * The context menu is a menu a keyboard can drive (the ARIA menu pattern).
@@ -10,13 +10,11 @@ import { BOARD_URL } from './routes.js'
  * it at the window's corner; Escape dropped focus on the page AND cleared the
  * selection the menu was about.
  */
-const CANVAS = '[data-testid="canvas"]'
 const NOTE = { x: 340, y: 260 }
 
+// Local rather than the shared `place`: it types rather than fills, and checks the tool is armed.
 async function boardWithNote(page: Page): Promise<void> {
-  await page.goto(BOARD_URL)
-  await expect(page.locator(CANVAS)).toBeVisible()
-  await expect(page.getByTestId('tool-select')).toBeVisible()
+  await openBoard(page)
   await page.keyboard.press('s')
   await expect(page.getByTestId('tool-sticky')).toHaveAttribute('aria-pressed', 'true')
   await page.locator(CANVAS).click({ position: NOTE })

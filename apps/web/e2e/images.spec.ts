@@ -1,8 +1,8 @@
-import { expect, test, type Page } from '@playwright/test'
+import type { Page } from '@playwright/test'
 
 import { deflateSync } from 'node:zlib'
 
-import { BOARD_URL } from './routes.js'
+import { CANVAS, expect, test, undo } from './fixtures.js'
 
 /**
  * Images: uploading, what gets rejected, and surviving a reload.
@@ -11,7 +11,6 @@ import { BOARD_URL } from './routes.js'
  * whole reason the stored locator is `idb:<id>` rather than an object URL.
  */
 
-const CANVAS = '[data-testid="canvas"]'
 const FILE_INPUT = 'input[type="file"]'
 
 /**
@@ -26,27 +25,7 @@ const PNG_2x3_BASE64 =
   'iVBORw0KGgoAAAANSUhEUgAAAAIAAAADCAIAAAA2iEnWAAAAEElEQVR42mP4zwAE/xlQKAA+' +
   '1gX7ttb52gAAAABJRU5ErkJggg=='
 
-async function freshBoard(page: Page): Promise<void> {
-  await page.goto(BOARD_URL)
-  await page.evaluate(
-    async () =>
-      new Promise<void>((resolve) => {
-        const request = indexedDB.deleteDatabase('openframe')
-        request.onsuccess = () => resolve()
-        request.onerror = () => resolve()
-        request.onblocked = () => resolve()
-      }),
-  )
-  await page.reload()
-  await expect(page.locator(CANVAS)).toBeVisible()
-  /*
-   * Also wait for the toolbar. A visible canvas only means React rendered;
-   * `useKeyboardShortcuts` attaches its listener in an effect, which runs after
-   * paint, so a keystroke sent on the canvas alone can land in the gap and be
-   * dropped. That showed up as a rare, unexplained tool-selection failure.
-   */
-  await expect(page.getByTestId('tool-select')).toBeVisible()
-}
+test.use({ board: 'fresh' })
 
 async function upload(page: Page, name: string, mimeType: string, body: Buffer): Promise<void> {
   await page.locator(FILE_INPUT).setInputFiles({ name, mimeType, buffer: body })
@@ -100,10 +79,6 @@ function pngOf(width: number, height: number): Buffer {
 }
 
 test.describe('images', () => {
-  test.beforeEach(async ({ page }) => {
-    await freshBoard(page)
-  })
-
   test('places an uploaded image and names it after the file', async ({ page }) => {
     await upload(page, 'holiday.png', 'image/png', png())
 
@@ -152,7 +127,7 @@ test.describe('images', () => {
     await expect(page.locator('[data-object-type="image"]')).toHaveCount(1)
 
     await page.locator(CANVAS).click({ position: { x: 1150, y: 600 } })
-    await page.keyboard.press(process.platform === 'darwin' ? 'Meta+z' : 'Control+z')
+    await undo(page)
 
     await expect(page.locator('[data-object-type="image"]')).toHaveCount(0)
   })
@@ -201,7 +176,6 @@ test.describe('images', () => {
  */
 test.describe('cropping', () => {
   test.beforeEach(async ({ page }) => {
-    await freshBoard(page)
     // Big enough that its eight grips are eight distinct places to aim at.
     await upload(page, 'holiday.png', 'image/png', pngOf(200, 150))
     await expect(page.locator('[data-object-type="image"]')).toHaveCount(1)
@@ -461,7 +435,7 @@ test.describe('cropping', () => {
      * ONE step. The window and the box are two commands — data and geometry —
      * but one action, and undoing a drag has to put both back.
      */
-    await page.keyboard.press('ControlOrMeta+z')
+    await undo(page)
     await expect
       .poll(async () => (await image.boundingBox())?.width ?? 0)
       .toBeCloseTo(before.width, 0)
