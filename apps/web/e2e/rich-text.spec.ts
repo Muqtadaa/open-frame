@@ -1,6 +1,6 @@
 import type { Page } from '@playwright/test'
 
-import { CANVAS, expect, test, undo } from './fixtures.js'
+import { CANVAS, expect, test, undo, saved } from './fixtures.js'
 
 /**
  * Formatting selected text (ADR 0012), walked in a browser.
@@ -203,7 +203,7 @@ test.describe('formatting selected text', () => {
     await page.locator(CANVAS).click({ position: CLEAR })
     await expect(page.locator('.of-sticky strong')).toHaveText('Pricing')
 
-    await page.waitForTimeout(800) // autosave is debounced
+    await saved(page)
     await page.reload()
     await expect(page.locator('.of-sticky strong')).toHaveText('Pricing')
   })
@@ -371,7 +371,7 @@ test.describe('lists', () => {
 
     const drawn = page.locator('[data-object-type="sticky"] [role="list"] [role="listitem"]')
     await expect(drawn).toHaveText(['alpha', 'beta'])
-    await page.waitForTimeout(800) // autosave
+    await saved(page)
     await page.reload()
     await expect(drawn).toHaveText(['alpha', 'beta'])
   })
@@ -415,6 +415,9 @@ test('pasting markup with images fetches none of them', async ({ page }) => {
     )
   })
   await expect(page.locator(`${EDITOR} [data-list="bullet"] strong`)).toHaveText('kept')
+  // Nothing to wait FOR: the claim is that no request is ever made, so the
+  // only test of it is to let time pass and see that none arrived.
+  // eslint-disable-next-line playwright/no-wait-for-timeout
   await page.waitForTimeout(500)
   expect(fetched).toEqual([])
 })

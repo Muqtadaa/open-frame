@@ -1,4 +1,5 @@
 import { expect, test, type Browser, type Locator, type Page } from '@playwright/test'
+import { boxOf, defined, pairs } from '../e2e/fixtures.js'
 
 import { BOARD_URL, HOME_URL } from '../e2e/routes.js'
 import { signedIn } from '../e2e/signed-in.js'
@@ -113,8 +114,7 @@ test('faces are targets, side by side, and a crowd is counted', async ({ browser
   const room = newRoomId()
   const pages = [await join(browser, room)]
   for (let i = 0; i < 3; i++) pages.push(await join(browser, room))
-  const [me] = pages
-  if (me === undefined) return
+  const me = defined(pages[0], 'the first page')
   await expect(me.locator('[data-testid="room-people"]')).toHaveAttribute('data-count', '4', {
     timeout: 20_000,
   })
@@ -124,11 +124,12 @@ test('faces are targets, side by side, and a crowd is counted', async ({ browser
   const boxes = await faces.evaluateAll((all) =>
     all.map((face) => face.getBoundingClientRect().toJSON() as DOMRect),
   )
-  for (const [i, box] of boxes.entries()) {
+  for (const box of boxes) {
     expect(box.width).toBeGreaterThanOrEqual(24)
     expect(box.height).toBeGreaterThanOrEqual(24)
-    const next = boxes[i + 1]
-    if (next !== undefined) expect(next.x).toBeGreaterThanOrEqual(box.x + box.width)
+  }
+  for (const [box, next] of pairs(boxes)) {
+    expect(next.x).toBeGreaterThanOrEqual(box.x + box.width)
   }
   await expect(me.getByTestId('room-more')).toHaveText('+1')
 })
@@ -625,8 +626,7 @@ test('a note slides while somebody drags it, without the document moving', async
   const startedAt = await drawnX(bob)
 
   // Alice picks the note up and moves it, WITHOUT letting go.
-  const box = await noteFor(alice).boundingBox()
-  if (box === null) throw new Error('alice cannot see the note')
+  const box = await boxOf(noteFor(alice))
   await alice.mouse.move(box.x + box.width / 2, box.y + box.height / 2)
   await alice.mouse.down()
   await alice.mouse.move(box.x + box.width / 2 + 220, box.y + box.height / 2 + 90, { steps: 12 })

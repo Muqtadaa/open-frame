@@ -1,6 +1,6 @@
 import type { Page } from '@playwright/test'
 
-import { CANVAS, EDITOR, expect, place, test, undo, boxOf } from './fixtures.js'
+import { CANVAS, EDITOR, expect, place, test, undo, boxOf, saved } from './fixtures.js'
 
 /**
  * Phase 3's claim, walked end to end by a user.
@@ -93,9 +93,8 @@ test.describe('structured objects', () => {
     await page.getByTestId('menu-derive-insight').click()
     await page.keyboard.press('Escape')
 
-    const frame = await page.locator('[data-object-type="frame"]').boundingBox()
-    const insight = await page.locator('[data-object-type="insight"]').boundingBox()
-    if (frame === null || insight === null) throw new Error('missing an object')
+    const frame = await boxOf(page.locator('[data-object-type="frame"]'))
+    const insight = await boxOf(page.locator('[data-object-type="insight"]'))
     expect(insight.x).toBeGreaterThanOrEqual(frame.x)
     expect(insight.y).toBeGreaterThanOrEqual(frame.y)
     expect(insight.x + insight.width).toBeLessThanOrEqual(frame.x + frame.width)
@@ -210,7 +209,7 @@ test.describe('structured objects', () => {
     await expect(page.locator(CANVAS)).toContainText('September usability study')
 
     // And it is in the DOCUMENT, not just on screen.
-    await page.waitForTimeout(800) // autosave is debounced
+    await saved(page)
     await page.reload()
     await expect(page.locator(CANVAS)).toContainText('September usability study')
   })

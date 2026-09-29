@@ -130,12 +130,14 @@ test.describe('the toast', () => {
   })
 
   test('waits while it is being read', async ({ page }) => {
+    await page.clock.install()
     await page.goto(BOARD_URL)
     await expect(page.getByTestId('tool-select')).toBeVisible()
     await rejectAnUpload(page)
     await page.getByTestId('toast').hover()
-    // Longer than it stays up on its own.
-    await page.waitForTimeout(5_500)
+    // Longer than it stays up on its own, on the page's clock rather than by
+    // sitting through five and a half real seconds.
+    await page.clock.runFor(5_500)
     await expect(page.getByTestId('toast')).toBeVisible()
   })
 

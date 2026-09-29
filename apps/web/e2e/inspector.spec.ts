@@ -263,9 +263,8 @@ test.describe('inspector', () => {
     await place(page, 's', { x: 1150, y: 640 }, 'Right', EMPTY)
     await page.keyboard.press('Control+a')
 
-    const panel = await page.getByTestId('inspector').boundingBox()
-    const rail = await page.locator('.of-rail').boundingBox()
-    if (panel === null || rail === null) throw new Error('missing geometry')
+    const panel = await boxOf(page.getByTestId('inspector'))
+    const rail = await boxOf(page.locator('.of-rail'))
     expect(panel.x).toBeGreaterThan(rail.x + rail.width)
   })
 

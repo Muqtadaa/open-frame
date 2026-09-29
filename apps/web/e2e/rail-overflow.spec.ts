@@ -66,12 +66,15 @@ test.describe('under a finger, at every height', () => {
       const box = await page.locator('.of-rail').boundingBox()
       expect(box).not.toBeNull()
       expect((box?.y ?? 0) + (box?.height ?? 0)).toBeLessThanOrEqual(height)
-      const last = await page.getByRole('toolbar', { name: 'Board tools' }).evaluate((rail) => {
-        const clipped = rail.scrollHeight > rail.clientHeight + 1
-        const scrolls = getComputedStyle(rail).overflowY !== 'visible'
-        return { clipped, scrolls }
-      })
-      if (last.clipped) expect(last.scrolls).toBe(true)
+      // A rail that is cut off must scroll; one that fits need not.
+      const reachable = await page
+        .getByRole('toolbar', { name: 'Board tools' })
+        .evaluate(
+          (rail) =>
+            rail.scrollHeight <= rail.clientHeight + 1 ||
+            getComputedStyle(rail).overflowY !== 'visible',
+        )
+      expect(reachable, 'the rail is cut off and cannot scroll').toBe(true)
     })
   }
 })

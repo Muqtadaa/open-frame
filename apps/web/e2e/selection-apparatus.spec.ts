@@ -1,6 +1,6 @@
 import type { Page } from '@playwright/test'
 
-import { CANVAS, expect, test, undo } from './fixtures.js'
+import { CANVAS, expect, test, undo, boxOf, clickLine } from './fixtures.js'
 
 /**
  * The selection apparatus tells the truth about what is selected, where it is
@@ -23,8 +23,7 @@ async function note(page: Page, at: { x: number; y: number }, text: string): Pro
 }
 
 async function canvasPoint(page: Page, at: { x: number; y: number }) {
-  const canvas = await page.locator(CANVAS).boundingBox()
-  if (canvas === null) throw new Error('no canvas')
+  const canvas = await boxOf(page.locator(CANVAS))
   return { x: canvas.x + at.x, y: canvas.y + at.y }
 }
 
@@ -37,17 +36,15 @@ test('the box travels with a moving selection', async ({ page }) => {
   await note(page, { x: 340, y: 260 }, 'Moving')
   const object = page.locator('[data-object-type="sticky"]')
   await object.click()
-  const start = await object.boundingBox()
-  if (start === null) throw new Error('no note')
+  const start = await boxOf(object)
 
   const from = { x: start.x + start.width / 2, y: start.y + start.height / 2 }
   await page.mouse.move(from.x, from.y)
   await page.mouse.down()
   for (let i = 1; i <= 6; i++) await page.mouse.move(from.x + 25 * i, from.y + 15 * i)
 
-  const moved = await object.boundingBox()
-  const box = await page.getByTestId('selection-overlay').boundingBox()
-  if (moved === null || box === null) throw new Error('nothing to measure')
+  const moved = await boxOf(object)
+  const box = await boxOf(page.getByTestId('selection-overlay'))
   // The note really moved, so the comparison below is not vacuous.
   expect(moved.x - start.x).toBeGreaterThan(100)
   expect(Math.abs(box.x - moved.x)).toBeLessThan(2)
@@ -72,11 +69,24 @@ test('a lone connector is selected by its ends, not by a box', async ({ page }) 
   }
   await page.mouse.up()
   await page.keyboard.press('v')
-  await page.locator('.of-connector__line').click({ force: true })
+  await clickLine(page)
 
   await expect(page.getByTestId('endpoint-from')).toBeVisible()
   await expect(page.getByTestId('selection-overlay')).toHaveCount(0)
 })
+
+/** Presses Tab until the element with `testId` has focus, at most `limit` times. */
+async function tabsTo(page: Page, testId: string, limit: number): Promise<boolean> {
+  for (let press = 0; press < limit; press += 1) {
+    await page.keyboard.press('Tab')
+    const there = await page.evaluate(
+      (id) => document.activeElement?.getAttribute('data-testid') === id,
+      testId,
+    )
+    if (there) return true
+  }
+  return false
+}
 
 /**
  * The press target a grip really offers: its `__target` child if it has one,
@@ -138,7 +148,7 @@ test.describe('every grip is a 24px target', () => {
     await page.mouse.move(to.x, to.y, { steps: 8 })
     await page.mouse.up()
     await page.keyboard.press('v')
-    await page.locator('.of-connector__line').click({ force: true })
+    await clickLine(page)
     await expect(page.getByTestId('endpoint-from')).toBeVisible()
     atLeast24(await targets(page, '[data-testid="endpoint-from"], [data-testid="endpoint-to"]'))
 
@@ -185,7 +195,7 @@ test('a small selection keeps its corners, and its middle moves it', async ({ pa
   for (let press = 0; press < 2; press += 1) await page.keyboard.press('Control+-')
   await expect(page.getByTestId('zoom-percent')).toHaveText('25%')
   const shape = page.locator('[data-object-type="shape"]')
-  await shape.click({ force: true })
+  await shape.click()
   await expect(page.getByTestId('selection-overlay')).toBeVisible()
 
   await expect(page.locator('[data-testid^="handle-"]')).toHaveCount(4)
@@ -194,15 +204,13 @@ test('a small selection keeps its corners, and its middle moves it', async ({ pa
   await expect(page.getByTestId('handle-rotate')).toHaveCount(0)
   await expect(page.locator('.of-connect-point')).toHaveCount(0)
 
-  const before = await shape.boundingBox()
-  if (before === null) throw new Error('no shape')
+  const before = await boxOf(shape)
   const middle = { x: before.x + before.width / 2, y: before.y + before.height / 2 }
   await page.mouse.move(middle.x, middle.y)
   await page.mouse.down()
   await page.mouse.move(middle.x + 60, middle.y + 40, { steps: 6 })
   await page.mouse.up()
-  const after = await shape.boundingBox()
-  if (after === null) throw new Error('no shape')
+  const after = await boxOf(shape)
   // Moved, not resized.
   expect(after.x - before.x).toBeGreaterThan(40)
   expect(Math.abs(after.width - before.width)).toBeLessThan(1)
@@ -230,14 +238,7 @@ test.describe('the board from the keyboard', () => {
     await page.evaluate(() => {
       if (document.activeElement instanceof HTMLElement) document.activeElement.blur()
     })
-    let reached = false
-    for (let press = 0; press < 60 && !reached; press += 1) {
-      await page.keyboard.press('Tab')
-      reached = await page.evaluate(
-        () => document.activeElement?.getAttribute('data-testid') === 'canvas',
-      )
-    }
-    expect(reached).toBe(true)
+    expect(await tabsTo(page, 'canvas', 60)).toBe(true)
     await expect(page.locator(CANVAS)).toHaveAttribute(
       'aria-description',
       /Tab moves between objects/,
@@ -316,12 +317,11 @@ test.describe('the board from the keyboard', () => {
     await note(page, { x: 340, y: 260 }, 'Grow')
     const object = page.locator('[data-object-type="sticky"]')
     await object.click()
-    const before = await object.boundingBox()
+    const before = await boxOf(object)
     await page.keyboard.press('Alt+ArrowRight')
     await page.keyboard.press('Alt+ArrowDown')
     await page.keyboard.press('Alt+ArrowDown')
-    const after = await object.boundingBox()
-    if (before === null || after === null) throw new Error('no note')
+    const after = await boxOf(object)
     expect(Math.round(after.width - before.width)).toBe(10)
     expect(Math.round(after.height - before.height)).toBe(20)
     await expect(announcer(page)).toHaveText(/^Width \d+, height \d+$/)
@@ -376,8 +376,7 @@ test.describe('Escape backs out one step at a time', () => {
     await note(page, { x: 340, y: 260 }, 'Stay')
     const object = page.locator('[data-object-type="sticky"]')
     await object.click()
-    const start = await object.boundingBox()
-    if (start === null) throw new Error('no note')
+    const start = await boxOf(object)
     const from = { x: start.x + start.width / 2, y: start.y + start.height / 2 }
     await page.mouse.move(from.x, from.y)
     await page.mouse.down()
@@ -429,7 +428,7 @@ test.describe('a selection says what it is', () => {
     await page.mouse.move(to.x, to.y, { steps: 8 })
     await page.mouse.up()
     await page.keyboard.press('v')
-    await page.locator('.of-connector__line').click({ force: true })
+    await clickLine(page)
     await expect(page.getByTestId('endpoint-from')).toBeVisible()
     await page.keyboard.press('ControlOrMeta+Shift+L')
     await expect(page.getByTestId('selection-lock')).toBeVisible()
@@ -459,8 +458,7 @@ test.describe('a selection says what it is', () => {
     await page.mouse.up()
     await page.keyboard.press('Escape')
 
-    const corner = await page.getByTestId('handle-se').boundingBox()
-    if (corner === null) throw new Error('no handle')
+    const corner = await boxOf(page.getByTestId('handle-se'))
     await page.mouse.move(corner.x + corner.width / 2, corner.y + corner.height / 2)
     await page.mouse.down()
     await page.mouse.move(corner.x + 60, corner.y + 40, { steps: 5 })
@@ -468,8 +466,7 @@ test.describe('a selection says what it is', () => {
     await page.mouse.up()
     await expect(page.getByTestId('selection-readout')).toHaveCount(0)
 
-    const grip = await page.getByTestId('handle-rotate').boundingBox()
-    if (grip === null) throw new Error('no grip')
+    const grip = await boxOf(page.getByTestId('handle-rotate'))
     await page.mouse.move(grip.x + grip.width / 2, grip.y + grip.height / 2)
     await page.mouse.down()
     await page.mouse.move(grip.x + 120, grip.y + 60, { steps: 6 })
@@ -505,8 +502,7 @@ test.describe('the apparatus under the pointer', () => {
     await note(page, { x: 340, y: 260 }, 'Hover')
     await page.keyboard.press('Escape')
     await expect(page.getByTestId('hover-outline')).toHaveCount(0)
-    const box = await page.locator('[data-object-type="sticky"]').boundingBox()
-    if (box === null) throw new Error('no note')
+    const box = await boxOf(page.locator('[data-object-type="sticky"]'))
     await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2)
     await expect(page.getByTestId('hover-outline')).toBeVisible()
     // Not over what is already selected, which has its own.
@@ -535,8 +531,7 @@ test.describe('the apparatus under the pointer', () => {
 
   // Dragging from the zoom cluster used to select the chrome's words.
   test('a drag across the chrome selects no text', async ({ page }) => {
-    const cluster = await page.locator('.of-zoom').boundingBox()
-    if (cluster === null) throw new Error('no cluster')
+    const cluster = await boxOf(page.locator('.of-zoom'))
     await page.mouse.move(cluster.x + 4, cluster.y + cluster.height / 2)
     await page.mouse.down()
     await page.mouse.move(200, 120, { steps: 8 })

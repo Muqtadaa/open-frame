@@ -1,4 +1,5 @@
 import { expect, test, type Page } from '@playwright/test'
+import { boxOf } from './fixtures.js'
 
 import { BOARD_URL, HOME_URL } from './routes.js'
 import { signedIn } from './signed-in.js'
@@ -101,8 +102,7 @@ test('a confirmation reads as a sentence, inside the screen', async ({ page }) =
   const row = page.getByTestId('home-boards').locator('li').first()
   await row.getByTestId('delete-board').click()
   const what = row.locator('.of-home__confirm-what')
-  const box = await what.boundingBox()
-  if (box === null) throw new Error('no confirmation')
+  const box = await boxOf(what)
   expect(box.width).toBeGreaterThan(250)
   expect(await overflow(page)).toBeLessThanOrEqual(0)
 })
@@ -113,14 +113,12 @@ test("the board's bar fits, with the account as a face and the source in its she
   await signedIn(page, [])
   await page.goto(BOARD_URL)
   await page.waitForSelector('[data-testid="status-bar"]')
-  const bar = await page.getByTestId('status-bar').boundingBox()
-  if (bar === null) throw new Error('no bar')
+  const bar = await boxOf(page.getByTestId('status-bar'))
   expect(bar.x).toBeGreaterThanOrEqual(0)
   expect(bar.x + bar.width).toBeLessThanOrEqual(390)
 
   const account = page.getByTestId('account')
-  const chip = await account.boundingBox()
-  if (chip === null) throw new Error('no account')
+  const chip = await boxOf(account)
   expect(chip.x + chip.width).toBeLessThanOrEqual(390)
   await expect(account.locator('.of-status__share-label')).toBeHidden()
 
@@ -143,8 +141,7 @@ test('signed out, the bar still says Sign in, and the source is behind it', asyn
   const signIn = page.getByTestId('sign-in')
   await expect(signIn).toHaveText('Sign in')
   await expect(signIn.locator('.of-status__share-label')).toBeVisible()
-  const box = await signIn.boundingBox()
-  if (box === null) throw new Error('no sign in')
+  const box = await boxOf(signIn)
   expect(box.width).toBeGreaterThanOrEqual(30)
   expect(box.x + box.width).toBeLessThanOrEqual(390)
 
@@ -202,16 +199,14 @@ test('the comments panel is a sheet along the bottom, clear of Find', async ({ p
   const panel = page.getByTestId('comment-panel')
   await expect(panel).toBeVisible()
 
-  const box = await panel.boundingBox()
-  if (box === null) throw new Error('no panel')
+  const box = await boxOf(panel)
   expect(box.x).toBeGreaterThanOrEqual(0)
   expect(box.x + box.width).toBeLessThanOrEqual(390)
   expect(Math.round(box.y + box.height)).toBeGreaterThanOrEqual(843)
   expect(box.height).toBeLessThanOrEqual(844 * 0.6 + 1)
 
   await page.keyboard.press('Control+f')
-  const find = await page.getByTestId('search-panel').boundingBox()
-  if (find === null) throw new Error('no search')
+  const find = await boxOf(page.getByTestId('search-panel'))
   expect(find.y + find.height).toBeLessThanOrEqual(box.y)
 })
 

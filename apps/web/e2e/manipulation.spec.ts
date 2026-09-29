@@ -300,14 +300,13 @@ test.describe('snap to grid', () => {
     const note = page.locator('[data-object-type="sticky"]')
     const before = await boxOf(note)
 
-    const key = process.platform === 'darwin' ? 'Meta' : 'Control'
-    await page.keyboard.down(key)
+    await page.keyboard.down(MOD)
     await drag(
       page,
       { x: before.x + 40, y: before.y + 40 },
       { x: before.x + 40 + 37, y: before.y + 40 + 23 },
     )
-    await page.keyboard.up(key)
+    await page.keyboard.up(MOD)
 
     const after = await boxOf(note)
     expect(Math.round(after.x - before.x)).toBe(37)

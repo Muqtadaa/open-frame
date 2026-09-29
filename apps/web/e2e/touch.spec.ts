@@ -1,4 +1,5 @@
 import { expect, test, type CDPSession, type Page } from '@playwright/test'
+import { boxOf } from './fixtures.js'
 
 import { BOARD_URL } from './routes.js'
 
@@ -47,8 +48,7 @@ async function placeNote(page: Page): Promise<{ x: number; y: number }> {
   await page.keyboard.press('Escape')
   const note = page.locator('[data-object-type="sticky"]')
   await expect(note).toHaveCount(1)
-  const box = await note.boundingBox()
-  if (box === null) throw new Error('no note')
+  const box = await boxOf(note)
   return { x: box.x, y: box.y }
 }
 
@@ -87,8 +87,7 @@ test('two fingers moving together pan the board', async ({ page }) => {
     ])
   }
   await touch(cdp, 'touchEnd', [])
-  const moved = await page.locator('[data-object-type="sticky"]').boundingBox()
-  if (moved === null) throw new Error('no note')
+  const moved = await boxOf(page.locator('[data-object-type="sticky"]'))
   expect(moved.x - at.x).toBeCloseTo(40, 0)
   expect(moved.y - at.y).toBeCloseTo(-40, 0)
   await expect(page.getByTestId('zoom-percent')).toHaveText('100%')
@@ -107,8 +106,7 @@ test('a second finger ends a drag without moving what was dragged', async ({ pag
     { id: 2, x: 300, y: 700 },
   ])
   await touch(cdp, 'touchEnd', [])
-  const after = await page.locator('[data-object-type="sticky"]').boundingBox()
-  if (after === null) throw new Error('no note')
+  await boxOf(page.locator('[data-object-type="sticky"]'))
   // Put back, not moved by 40 — the board's view may have moved, but the note
   // has not moved ON the board: undo has nothing new to offer.
   await expect(page.getByTestId('undo')).toHaveAttribute('aria-label', /Undo create/)
@@ -123,8 +121,7 @@ test('a cancelled touch puts a drag back instead of committing it', async ({ pag
     await touch(cdp, 'touchMove', [{ ...grab, x: grab.x + step * 10 }])
   }
   await touch(cdp, 'touchCancel', [])
-  const after = await page.locator('[data-object-type="sticky"]').boundingBox()
-  if (after === null) throw new Error('no note')
+  const after = await boxOf(page.locator('[data-object-type="sticky"]'))
   expect(after.x).toBeCloseTo(at.x, 0)
   expect(after.y).toBeCloseTo(at.y, 0)
   await expect(page.getByTestId('undo')).toHaveAttribute('aria-label', /Undo create/)
@@ -160,8 +157,7 @@ test('lifting one of a pinch’s fingers does not throw the view', async ({ page
   ])
   await touch(cdp, 'touchEnd', [])
   await expect(page.getByTestId('zoom-percent')).toHaveText('100%')
-  const moved = await page.locator('[data-object-type="sticky"]').boundingBox()
-  if (moved === null) throw new Error('no note')
+  const moved = await boxOf(page.locator('[data-object-type="sticky"]'))
   expect(Math.abs(moved.x - at.x)).toBeLessThanOrEqual(2)
   expect(Math.abs(moved.y - at.y)).toBeLessThanOrEqual(2)
 })

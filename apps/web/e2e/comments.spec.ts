@@ -207,14 +207,12 @@ test('says nothing when nobody has mentioned you', async ({ page }) => {
  * comments. What must hold is that the pin moved with it.
  */
 async function pinCentre(page: Page): Promise<{ x: number; y: number }> {
-  const box = await page.locator('[data-testid^="comment-pin-cmt_"]').first().boundingBox()
-  if (box === null) throw new Error('the pin is not on screen')
+  const box = await boxOf(page.locator('[data-testid^="comment-pin-cmt_"]').first())
   return { x: box.x + box.width / 2, y: box.y + box.height / 2 }
 }
 
 async function noteCentre(page: Page): Promise<{ x: number; y: number }> {
-  const box = await page.locator('[data-object-id]').first().boundingBox()
-  if (box === null) throw new Error('the note is not on screen')
+  const box = await boxOf(page.locator('[data-object-id]').first())
   return { x: box.x + box.width / 2, y: box.y + box.height / 2 }
 }
 

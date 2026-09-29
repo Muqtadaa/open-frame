@@ -1,6 +1,6 @@
 import type { Page } from '@playwright/test'
 
-import { CANVAS, expect, openBoard, test } from './fixtures.js'
+import { CANVAS, expect, openBoard, test, boxOf } from './fixtures.js'
 
 /**
  * Three things that were each telling a small lie about what the board does.
@@ -53,8 +53,7 @@ test.describe('a locked object', () => {
     await openBoard(page)
     await lock(page)
 
-    const before = await page.locator('[data-object-id]').first().boundingBox()
-    if (before === null) throw new Error('no object')
+    const before = await boxOf(page.locator('[data-object-id]').first())
 
     /*
      * The command has always refused this — `requireUnlocked` is in the

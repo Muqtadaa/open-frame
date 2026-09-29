@@ -1,6 +1,6 @@
 import type { Page } from '@playwright/test'
 
-import { boxOf, CANVAS, EDITOR, expect, place, test, undo } from './fixtures.js'
+import { boxOf, CANVAS, EDITOR, expect, place, test, undo, saved } from './fixtures.js'
 
 /**
  * Grouping: one container, built from ordinary commands.
@@ -68,8 +68,7 @@ test.describe('grouping', () => {
     await groupBoth(page)
     await page.locator(CANVAS).click({ position: A })
 
-    const before = await page.locator('[data-object-type="sticky"]').nth(1).boundingBox()
-    if (before === null) throw new Error('missing note')
+    const before = await boxOf(page.locator('[data-object-type="sticky"]').nth(1))
 
     // Drag by a member; the whole group should travel.
     await page.mouse.move(A.x, A.y)
@@ -77,8 +76,7 @@ test.describe('grouping', () => {
     for (let i = 1; i <= 6; i++) await page.mouse.move(A.x, A.y + (120 * i) / 6)
     await page.mouse.up()
 
-    const after = await page.locator('[data-object-type="sticky"]').nth(1).boundingBox()
-    if (after === null) throw new Error('missing note')
+    const after = await boxOf(page.locator('[data-object-type="sticky"]').nth(1))
     expect(after.y - before.y).toBeGreaterThan(100)
   })
 
@@ -127,7 +125,7 @@ test.describe('grouping', () => {
 
   test('survives a reload', async ({ page }) => {
     await groupBoth(page)
-    await page.waitForTimeout(800)
+    await saved(page)
     await page.reload()
 
     await expect(page.locator('[data-object-type="group"]')).toHaveCount(1)

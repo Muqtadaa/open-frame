@@ -1,6 +1,6 @@
 import { expect, test, type Page } from '@playwright/test'
 
-import { CANVAS } from './fixtures.js'
+import { CANVAS, boxOf, overlaps } from './fixtures.js'
 import { BOARD_URL } from './routes.js'
 
 /**
@@ -27,8 +27,7 @@ test.describe('on a phone', () => {
   test('it is a sheet along the bottom, inside the screen, that scrolls', async ({ page }) => {
     await selectANote(page, { x: 200, y: 220 })
     const panel = page.getByTestId('inspector')
-    const box = await panel.boundingBox()
-    if (box === null) throw new Error('no panel')
+    const box = await boxOf(panel)
     expect(box.x).toBeGreaterThanOrEqual(0)
     expect(box.x + box.width).toBeLessThanOrEqual(390)
     // Docked: along the bottom edge, and no taller than half the screen.
@@ -38,16 +37,14 @@ test.describe('on a phone', () => {
     // Every control is reachable: the last one scrolls into view, inside it.
     const remove = page.getByTestId('inspector-delete')
     await remove.scrollIntoViewIfNeeded()
-    const del = await remove.boundingBox()
-    if (del === null) throw new Error('no delete')
+    const del = await boxOf(remove)
     expect(del.x + del.width).toBeLessThanOrEqual(390)
     expect(del.y + del.height).toBeLessThanOrEqual(844)
   })
 
   test('it leaves the selection and its handles uncovered', async ({ page }) => {
     await selectANote(page, { x: 200, y: 220 })
-    const handle = await page.getByTestId('handle-se').boundingBox()
-    if (handle === null) throw new Error('no handle')
+    const handle = await boxOf(page.getByTestId('handle-se'))
     const topmost = await page.evaluate(
       ([x, y]) =>
         document
@@ -66,21 +63,14 @@ test.describe('on a short window', () => {
 
   test('it stays clear of the zoom cluster and scrolls to its last row', async ({ page }) => {
     await selectANote(page, { x: 300, y: 160 })
-    const panel = await page.getByTestId('inspector').boundingBox()
-    const zoom = await page.getByTestId('zoom-control').boundingBox()
-    if (panel === null || zoom === null) throw new Error('missing')
-    const overlaps =
-      panel.x < zoom.x + zoom.width &&
-      zoom.x < panel.x + panel.width &&
-      panel.y < zoom.y + zoom.height &&
-      zoom.y < panel.y + panel.height
-    expect(overlaps).toBe(false)
+    const panel = await boxOf(page.getByTestId('inspector'))
+    const zoom = await boxOf(page.getByTestId('zoom-control'))
+    expect(overlaps(panel, zoom)).toBe(false)
     expect(panel.y + panel.height).toBeLessThanOrEqual(400)
 
     const opacity = page.getByTestId('inspector').getByRole('slider').last()
     await opacity.scrollIntoViewIfNeeded()
-    const slider = await opacity.boundingBox()
-    if (slider === null) throw new Error('no slider')
+    const slider = await boxOf(opacity)
     expect(slider.y + slider.height).toBeLessThanOrEqual(panel.y + panel.height + 1)
   })
 })

@@ -1,6 +1,6 @@
 import type { Page } from '@playwright/test'
 
-import { CANVAS, expect, openBoard, test } from './fixtures.js'
+import { CANVAS, expect, openBoard, test, boxOf } from './fixtures.js'
 import { signedIn } from './signed-in.js'
 
 /**
@@ -16,9 +16,8 @@ const SHARED = 'brd_abcdefgh12345678'
 
 test('sits along the top of the window, above the rail', async ({ page }) => {
   await openBoard(page)
-  const bar = await page.getByTestId('status-bar').boundingBox()
-  const rail = await page.getByRole('toolbar', { name: 'Board tools' }).boundingBox()
-  if (bar === null || rail === null) throw new Error('bar or rail is not on screen')
+  const bar = await boxOf(page.getByTestId('status-bar'))
+  const rail = await boxOf(page.getByRole('toolbar', { name: 'Board tools' }))
   expect(bar.y).toBeLessThan(40)
   expect(rail.y).toBeGreaterThanOrEqual(bar.y + bar.height)
 })
@@ -48,13 +47,11 @@ test('keeps an object’s panel clear of it, however high the object sits', asyn
   await page.locator(CANVAS).click({ position: { x: 500, y: 110 } })
   await page.locator(CANVAS).click({ position: { x: 1100, y: 600 } })
   await page.keyboard.press('v')
-  const bar = await page.getByTestId('status-bar').boundingBox()
-  const note = await page.locator('[data-object-type="sticky"]').boundingBox()
-  if (bar === null || note === null) throw new Error('bar or note is not on screen')
+  const bar = await boxOf(page.getByTestId('status-bar'))
+  const note = await boxOf(page.locator('[data-object-type="sticky"]'))
   expect(note.y).toBeLessThan(bar.y + bar.height)
   await page.mouse.click(note.x + 20, note.y + note.height - 20)
-  const panel = await page.getByTestId('inspector').boundingBox()
-  if (panel === null) throw new Error('the panel is not on screen')
+  const panel = await boxOf(page.getByTestId('inspector'))
   expect(panel.y).toBeGreaterThanOrEqual(bar.y + bar.height)
 })
 

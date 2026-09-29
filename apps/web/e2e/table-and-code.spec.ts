@@ -1,6 +1,6 @@
 import type { Page } from '@playwright/test'
 
-import { CANVAS, expect, openBoard, test, undo } from './fixtures.js'
+import { CANVAS, expect, openBoard, test, undo, boxOf, defined } from './fixtures.js'
 
 /**
  * A table and a code block: two object types that carry structure rather than
@@ -177,8 +177,7 @@ test('widens a column by dragging its boundary, in one undo entry', async ({ pag
   }
   const before = await widthOf()
 
-  const grip = await boundary.boundingBox()
-  if (grip === null) throw new Error('the boundary is not on screen')
+  const grip = await boxOf(boundary)
   await page.mouse.move(grip.x + grip.width / 2, grip.y + grip.height / 2)
   await page.mouse.down()
   await page.mouse.move(grip.x + grip.width / 2 + 60, grip.y + grip.height / 2, { steps: 8 })
@@ -216,8 +215,7 @@ test('stops at the narrowest a column may be, and leaves its neighbours alone', 
   const before = await widths()
   const wasWide = await tableWidth()
 
-  const grip = await page.getByTestId('divider-c0').boundingBox()
-  if (grip === null) throw new Error('the boundary is not on screen')
+  const grip = await boxOf(page.getByTestId('divider-c0'))
 
   // Dragged far past the table's own left edge.
   await page.mouse.move(grip.x + grip.width / 2, grip.y + grip.height / 2)
@@ -225,10 +223,11 @@ test('stops at the narrowest a column may be, and leaves its neighbours alone', 
   await page.mouse.move(grip.x - 400, grip.y + grip.height / 2, { steps: 10 })
   await page.mouse.up()
 
-  const [wasFirst, wasSecond] = before
-  const [isFirst, isSecond] = await widths()
-  if (wasFirst === undefined || wasSecond === undefined) throw new Error('no columns were drawn')
-  if (isFirst === undefined || isSecond === undefined) throw new Error('no columns were drawn')
+  const after = await widths()
+  const wasFirst = defined(before[0], 'a first column')
+  const wasSecond = defined(before[1], 'a second column')
+  const isFirst = defined(after[0], 'a first column')
+  const isSecond = defined(after[1], 'a second column')
 
   /*
    * Two things, and the second is the one that changed.
@@ -335,8 +334,7 @@ test('fits a column to its content on a double click', async ({ page }) => {
     (await page.locator('[role="table"] [role="columnheader"]').first().boundingBox())?.width ?? 0
   const before = await widthOf()
 
-  const grip = await page.getByTestId('divider-c0').boundingBox()
-  if (grip === null) throw new Error('the boundary is not on screen')
+  const grip = await boxOf(page.getByTestId('divider-c0'))
   await page.mouse.dblclick(grip.x + grip.width / 2, grip.y + grip.height / 2)
 
   const after = await widthOf()
@@ -392,8 +390,7 @@ test('fits a column to the same width at any zoom', async ({ page }) => {
 
   const fit = async (): Promise<number> => {
     await page.locator('[data-object-id]').first().click()
-    const grip = await page.getByTestId('divider-c0').boundingBox()
-    if (grip === null) throw new Error('the boundary is not on screen')
+    const grip = await boxOf(page.getByTestId('divider-c0'))
     await page.mouse.dblclick(grip.x + grip.width / 2, grip.y + grip.height / 2)
     return await worldWidth()
   }

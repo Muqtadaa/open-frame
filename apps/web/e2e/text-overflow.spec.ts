@@ -1,6 +1,6 @@
 import type { Page } from '@playwright/test'
 
-import { CANVAS, expect, openBoard, test, undo } from './fixtures.js'
+import { CANVAS, expect, openBoard, test, undo, boxOf } from './fixtures.js'
 
 /**
  * What text does when there is more of it than there is room.
@@ -167,8 +167,7 @@ test('double-clicking the bottom handle fits a sticky to its text', async ({ pag
   expect(await hidden()).toBe(true)
 
   const before = (await page.locator('[data-object-id]').first().boundingBox())?.height ?? 0
-  const grip = await page.getByTestId('handle-s').boundingBox()
-  if (grip === null) throw new Error('no bottom handle')
+  const grip = await boxOf(page.getByTestId('handle-s'))
   await page.mouse.dblclick(grip.x + grip.width / 2, grip.y + grip.height / 2)
 
   const after = (await page.locator('[data-object-id]').first().boundingBox())?.height ?? 0
@@ -190,8 +189,7 @@ test('double-clicking the right handle fits a shape to its widest line', async (
   await page.locator('[data-object-id]').first().click()
   const before = (await page.locator('[data-object-id]').first().boundingBox())?.width ?? 0
 
-  const grip = await page.getByTestId('handle-e').boundingBox()
-  if (grip === null) throw new Error('no right handle')
+  const grip = await boxOf(page.getByTestId('handle-e'))
   await page.mouse.dblclick(grip.x + grip.width / 2, grip.y + grip.height / 2)
 
   const after = (await page.locator('[data-object-id]').first().boundingBox())?.width ?? 0

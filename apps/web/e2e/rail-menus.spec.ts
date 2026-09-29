@@ -1,6 +1,6 @@
 import type { Page } from '@playwright/test'
 
-import { CANVAS, expect, openBoard, test } from './fixtures.js'
+import { CANVAS, expect, openBoard, test, boxOf } from './fixtures.js'
 
 /**
  * The tool rail's two menus, on the one surface everything floating uses.
@@ -13,8 +13,7 @@ import { CANVAS, expect, openBoard, test } from './fixtures.js'
 
 /** How far past the bottom of the window something reaches. */
 async function overhang(page: Page, testId: string): Promise<number> {
-  const box = await page.getByTestId(testId).boundingBox()
-  if (box === null) throw new Error(`${testId} is not on screen`)
+  const box = await boxOf(page.getByTestId(testId))
   const height = page.viewportSize()?.height ?? 0
   return box.y + box.height - height
 }
@@ -173,9 +172,8 @@ test.describe('opening, walking and leaving a rail menu', () => {
       ['shape-menu', 'tool-shape'],
       ['table-menu', 'tool-table'],
     ] as const) {
-      const strip = await page.getByTestId(menu).boundingBox()
-      const owner = await page.getByTestId(tool).boundingBox()
-      if (strip === null || owner === null) throw new Error(`${menu} is not on screen`)
+      const strip = await boxOf(page.getByTestId(menu))
+      const owner = await boxOf(page.getByTestId(tool))
       expect(strip.height).toBeGreaterThanOrEqual(24)
       // Both ways: a 12px-wide strip beside a 50px tool fails WCAG 2.5.8, which
       // axe reported on every board (audit 2026-09-27).
@@ -210,9 +208,8 @@ for (const viewport of [
   }) => {
     await page.setViewportSize(viewport)
     await openBoard(page)
-    const rail = await page.getByRole('toolbar', { name: 'Board tools' }).boundingBox()
-    const line = await page.getByTestId('status-bar').boundingBox()
-    if (rail === null || line === null) throw new Error('rail or record line is not on screen')
+    const rail = await boxOf(page.getByRole('toolbar', { name: 'Board tools' }))
+    const line = await boxOf(page.getByTestId('status-bar'))
 
     // Below the navigation bar, never under it, and inside the window.
     expect(rail.y).toBeGreaterThanOrEqual(line.y + line.height)

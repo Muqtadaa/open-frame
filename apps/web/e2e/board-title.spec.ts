@@ -1,5 +1,5 @@
 import { expect, test, type Page } from '@playwright/test'
-import { boxOf } from './fixtures.js'
+import { boxOf, saved } from './fixtures.js'
 
 import { BOARD_URL, HOME_URL } from './routes.js'
 
@@ -38,7 +38,7 @@ test.describe('the board name', () => {
   test('survives a reload', async ({ page }) => {
     await rename(page, 'Pricing research')
 
-    await page.waitForTimeout(800) // autosave is debounced
+    await saved(page)
     await page.reload()
     await page.waitForSelector('[data-testid="status-bar"]')
 
@@ -107,7 +107,7 @@ test.describe('the board name', () => {
   test('is what the board list shows', async ({ page }) => {
     await rename(page, 'Pricing research')
 
-    await page.waitForTimeout(800) // autosave is debounced
+    await saved(page)
     await page.goto(HOME_URL)
 
     await expect(page.getByTestId('home-boards')).toContainText('Pricing research')

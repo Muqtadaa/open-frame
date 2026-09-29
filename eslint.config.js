@@ -1,4 +1,5 @@
 import js from '@eslint/js'
+import playwright from 'eslint-plugin-playwright'
 import reactHooks from 'eslint-plugin-react-hooks'
 import globals from 'globals'
 import tseslint from 'typescript-eslint'
@@ -18,6 +19,9 @@ export default tseslint.config(
       '**/coverage/**',
       '**/playwright-report/**',
       '**/test-results/**',
+      // Local capture scripts, excluded from git in .git/info/exclude; they
+      // are scratch work, not the suite.
+      '**/zz-*.spec.ts',
       'tools/bench/fixtures/**',
       // Wrangler's temporary bundles. Generated on every `wrangler dev`, in no
       // tsconfig project, and not ours.
@@ -140,7 +144,9 @@ export default tseslint.config(
   {
     // Benchmark probes report measurements to stdout; that is their output.
     files: ['**/*.bench.spec.ts'],
-    rules: { 'no-console': 'off' },
+    rules: {
+      'no-console': 'off',
+    },
   },
 
   {
@@ -151,7 +157,40 @@ export default tseslint.config(
   },
 
   {
-    files: ['**/*.test.ts', '**/*.test.tsx', 'apps/web/e2e/**/*.ts'],
+    /*
+     * The e2e suite's own rules. Each is a way a browser test has gone on
+     * passing while checking nothing, or failed for a reason unrelated to
+     * the change under test: a sleep standing in for the state it waits for,
+     * a branch that skips the assertion, a click forced past whatever was
+     * covering the target, an unawaited expectation.
+     */
+    files: ['apps/web/e2e/**/*.ts', 'apps/web/e2e-rooms/**/*.ts'],
+    plugins: { playwright },
+    rules: {
+      'playwright/no-wait-for-timeout': 'error',
+      'playwright/no-conditional-in-test': 'error',
+      'playwright/no-force-option': 'error',
+      'playwright/missing-playwright-await': 'error',
+      'playwright/no-skipped-test': 'error',
+      'playwright/no-focused-test': 'error',
+      'playwright/no-networkidle': 'error',
+      'playwright/no-page-pause': 'error',
+      'playwright/valid-expect': 'error',
+    },
+  },
+
+  {
+    // The benchmark lets time pass on purpose — settling before a measurement
+    // is the measurement's own protocol — and skips sizes a run did not reach.
+    files: ['**/*.bench.spec.ts'],
+    rules: {
+      'playwright/no-wait-for-timeout': 'off',
+      'playwright/no-conditional-in-test': 'off',
+    },
+  },
+
+  {
+    files: ['**/*.test.ts', '**/*.test.tsx', 'apps/web/e2e/**/*.ts', 'apps/web/e2e-rooms/**/*.ts'],
     rules: {
       '@typescript-eslint/no-unsafe-assignment': 'off',
       '@typescript-eslint/no-unsafe-member-access': 'off',

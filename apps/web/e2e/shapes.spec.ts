@@ -73,9 +73,8 @@ test.describe('shapes', () => {
     test(`a ${kind} label sits in the middle until told otherwise`, async ({ page }) => {
       await place(page, kind, 'Pay')
 
-      const box = await page.locator('.of-shape__label').boundingBox()
-      const text = await page.locator('.of-shape__label-text').boundingBox()
-      if (box === null || text === null) throw new Error('missing geometry')
+      const box = await boxOf(page.locator('.of-shape__label'))
+      const text = await boxOf(page.locator('.of-shape__label-text'))
       expect(Math.abs(text.x + text.width / 2 - (box.x + box.width / 2))).toBeLessThan(2)
       expect(Math.abs(text.y + text.height / 2 - (box.y + box.height / 2))).toBeLessThan(2)
 
@@ -112,9 +111,8 @@ test.describe('shapes', () => {
   test('a triangle label sits low, where the shape is actually wide', async ({ page }) => {
     await place(page, 'triangle', 'Review')
 
-    const outline = await page.locator('.of-shape__svg').boundingBox()
-    const label = await page.locator('.of-shape__label').boundingBox()
-    if (outline === null || label === null) throw new Error('missing geometry')
+    const outline = await boxOf(page.locator('.of-shape__svg'))
+    const label = await boxOf(page.locator('.of-shape__label'))
 
     // Its centre must be below the vertical midpoint — the apex half is empty.
     const labelCentre = label.y + label.height / 2

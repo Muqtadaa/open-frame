@@ -1,6 +1,6 @@
 import { expect, test, type Page } from '@playwright/test'
 
-import { CANVAS, EDITOR, boxOf } from './fixtures.js'
+import { CANVAS, EDITOR, boxOf, saved } from './fixtures.js'
 import { BOARD_URL } from './routes.js'
 
 /**
@@ -61,7 +61,7 @@ test('creates a sticky note and shows its text', async ({ page }) => {
 test('persists across a reload', async ({ page }) => {
   await createSticky(page, 300, 250, 'Survives a reload')
 
-  await page.waitForTimeout(800) // autosave is debounced
+  await saved(page)
   await page.reload()
 
   await expect(page.locator(STICKY)).toHaveCount(1)
