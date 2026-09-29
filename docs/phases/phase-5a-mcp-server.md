@@ -255,6 +255,12 @@ a real MCP client; the tool half is covered against a real `BoardRoom` in
 `create_objects`, `update_object`, `move_objects`, `delete_objects`,
 `create_connector`, `create_frame`, `add_comment`.
 
+Later, one tool per composite command: `group_objects`, `ungroup_objects`,
+`align_objects`, `distribute_objects`, `duplicate_objects` and
+`derive_object`. Each dispatches ONE core command, so an agent is held to the
+rules the board's own menu is, and `get_board` lists the derivations the types
+on the board declare, which are the only pairings `derive_object` accepts.
+
 Each is a thin validator: Zod at the boundary (rule 8, because an MCP payload
 is arbitrary), then commands, then the dispatcher. A tool that touches several
 objects uses `transact`, so it is **one undo entry** — an agent that rearranges

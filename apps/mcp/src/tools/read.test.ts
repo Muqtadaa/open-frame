@@ -94,6 +94,25 @@ describe('reading a board', () => {
     await context.close()
   })
 
+  /**
+   * `derive_object` refuses a pairing no type declares, so an agent has to be
+   * able to learn which ones exist without guessing — from the types on the
+   * board it is looking at, and only those.
+   */
+  it('says what the types on the board can be derived into', async () => {
+    const { room, author } = await boardWith([
+      { type: 'sticky', text: 'one' },
+      { type: 'text', text: 'a heading' },
+    ])
+    const context = accountHolding([ACCESS], () => peerOn(room))
+
+    const payload = payloadOf((await getBoard.run({ board: TEST_BOARD }, context)).text)
+
+    expect(payload.derivations).toEqual({ sticky: [{ type: 'insight', predicate: 'cites' }] })
+    author.close()
+    await context.close()
+  })
+
   it('reads the objects through what each type says about itself', async () => {
     const { room, author } = await boardWith([{ type: 'sticky', text: 'the price is hidden' }])
     const context = accountHolding([ACCESS], () => peerOn(room))

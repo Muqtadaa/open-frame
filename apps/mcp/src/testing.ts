@@ -132,6 +132,19 @@ export const VALID_CALL: Readonly<Record<string, (id: string) => Record<string, 
   add_comment: () => ({ board: TEST_BOARD, body: 'hello' }),
   list_changes: () => ({ board: TEST_BOARD }),
   revert_change: () => ({ board: TEST_BOARD }),
+  group_objects: (id) => ({ board: TEST_BOARD, ids: [id, id] }),
+  ungroup_objects: (id) => ({ board: TEST_BOARD, ids: [id] }),
+  align_objects: (id) => ({ board: TEST_BOARD, ids: [id, id], edge: 'left' }),
+  distribute_objects: (id) => ({ board: TEST_BOARD, ids: [id, id, id], axis: 'x' }),
+  duplicate_objects: (id) => ({ board: TEST_BOARD, ids: [id] }),
+  derive_object: (id) => ({
+    board: TEST_BOARD,
+    toType: 'insight',
+    from: [id],
+    predicate: 'cites',
+    x: 0,
+    y: 0,
+  }),
 }
 
 export function validCall(tool: string, id = 'obj_anything'): Record<string, unknown> {
