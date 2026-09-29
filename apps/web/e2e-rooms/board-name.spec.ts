@@ -1,4 +1,5 @@
-import { expect, test, type Browser, type Page } from '@playwright/test'
+import { expect, test } from '@playwright/test'
+import { join, newRoomId } from './rooms.js'
 
 /**
  * A shared board opens under its own name, on every device (reported by the
@@ -21,24 +22,6 @@ interface DebugWindow {
       }
     }
   }
-}
-
-function newRoomId(): string {
-  return `brd_${Math.random().toString(36).slice(2, 12)}${Date.now().toString(36)}`
-}
-
-async function join(browser: Browser, room: string): Promise<Page> {
-  // A new context is a new device: no board, no CRDT, nothing stored.
-  const context = await browser.newContext()
-  const page = await context.newPage()
-  await page.goto(`/?room=${room}`)
-  await page.waitForSelector('[data-testid="status-bar"]')
-  await expect(page.locator('[data-testid="room-status"]')).toHaveAttribute(
-    'data-status',
-    'connected',
-    { timeout: 20_000 },
-  )
-  return page
 }
 
 test('every device opening a named board sees its name', async ({ browser }) => {

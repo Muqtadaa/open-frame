@@ -2,6 +2,7 @@ import { expect, test, type Browser, type Locator, type Page } from '@playwright
 
 import { BOARD_URL, HOME_URL } from '../e2e/routes.js'
 import { signedIn } from '../e2e/signed-in.js'
+import { join, newRoomId } from './rooms.js'
 
 /**
  * Two people, one board, a real Durable Object.
@@ -45,23 +46,6 @@ interface DebugWindow {
  */
 
 /** A fresh room per test: wrangler keeps local Durable Object state on disk. */
-function newRoomId(): string {
-  return `brd_${Math.random().toString(36).slice(2, 12)}${Date.now().toString(36)}`
-}
-
-async function join(browser: Browser, room: string): Promise<Page> {
-  const context = await browser.newContext()
-  const page = await context.newPage()
-  await page.goto(`/?room=${room}`)
-  await page.waitForSelector('[data-testid="status-bar"]')
-  await expect(page.locator('[data-testid="room-status"]')).toHaveAttribute(
-    'data-status',
-    'connected',
-    { timeout: 20_000 },
-  )
-  return page
-}
-
 /**
  * `at` matters: two notes at the same coordinates overlap, and the upper one
  * swallows every click aimed at the lower. That cost a test run.
