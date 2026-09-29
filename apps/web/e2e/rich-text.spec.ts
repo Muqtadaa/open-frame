@@ -417,7 +417,7 @@ test('pasting markup with images fetches none of them', async ({ page }) => {
   await expect(page.locator(`${EDITOR} [data-list="bullet"] strong`)).toHaveText('kept')
   // Nothing to wait FOR: the claim is that no request is ever made, so the
   // only test of it is to let time pass and see that none arrived.
-  // eslint-disable-next-line playwright/no-wait-for-timeout
+  // eslint-disable-next-line playwright/no-wait-for-timeout, no-restricted-syntax
   await page.waitForTimeout(500)
   expect(fetched).toEqual([])
 })

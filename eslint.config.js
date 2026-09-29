@@ -176,6 +176,20 @@ export default tseslint.config(
       'playwright/no-networkidle': 'error',
       'playwright/no-page-pause': 'error',
       'playwright/valid-expect': 'error',
+      /*
+       * The plugin's sleep rule only recognises the `page` fixture, and the
+       * rooms suite opens its pages as `bob`, `first`, `second` — four
+       * sleeps passed it that way (Codex, on #28). This catches the call on
+       * any receiver.
+       */
+      'no-restricted-syntax': [
+        'error',
+        {
+          selector: "CallExpression[callee.property.name='waitForTimeout']",
+          message:
+            'Wait for the state the sleep stands for, not for time (playwright/no-wait-for-timeout, on any page).',
+        },
+      ],
     },
   },
 
@@ -185,6 +199,7 @@ export default tseslint.config(
     files: ['**/*.bench.spec.ts'],
     rules: {
       'playwright/no-wait-for-timeout': 'off',
+      'no-restricted-syntax': 'off',
       'playwright/no-conditional-in-test': 'off',
     },
   },

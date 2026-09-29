@@ -29,3 +29,43 @@ export async function join(browser: Browser, room: string): Promise<Page> {
   )
   return page
 }
+
+/**
+ * Waits until an edit made after `since` is kept on this device: the board
+ * document written (the save state reads `saved`) and the board's CRDT row
+ * rewritten after `since`. What a session that closes the tab next needs, and
+ * what a fixed sleep before `close()` used to guess at.
+ *
+ * `since` is the page's own clock, read just BEFORE the edit, so the row it
+ * waits for can only be a write queued by the edit or after it.
+ */
+export async function keptLocally(page: Page, room: string, since: number): Promise<void> {
+  await expect(page.getByTestId('save-state')).toHaveAttribute('data-state', 'saved')
+  await expect
+    .poll(() =>
+      page.evaluate(
+        (id) =>
+          new Promise<number>((resolve) => {
+            const open = indexedDB.open('openframe')
+            open.onerror = () => resolve(0)
+            open.onsuccess = () => {
+              const db = open.result
+              const read = db.transaction('crdt', 'readonly').objectStore('crdt').get(id)
+              read.onerror = () => resolve(0)
+              read.onsuccess = () => {
+                const row = read.result as { savedAt?: number } | undefined
+                db.close()
+                resolve(row?.savedAt ?? 0)
+              }
+            }
+          }),
+        room,
+      ),
+    )
+    .toBeGreaterThan(since)
+}
+
+/** The page's clock, for `keptLocally`. */
+export function pageNow(page: Page): Promise<number> {
+  return page.evaluate(() => Date.now())
+}
