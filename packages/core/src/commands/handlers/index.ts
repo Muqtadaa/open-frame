@@ -3,6 +3,11 @@ import { setBoardTitle } from './set-board-title.js'
 import type { Patch } from '../../domain/patch.js'
 import type { CommandContext, Command } from '../types.js'
 import { applyRemotePatches } from './apply-remote-patches.js'
+import { alignObjects, distributeObjects } from './arrange-objects.js'
+import { deriveObject } from './derive-object.js'
+import { duplicateObjects } from './duplicate-objects.js'
+import { groupObjects } from './group-objects.js'
+import { ungroupObjects } from './ungroup-objects.js'
 import { convertObjects } from './convert-objects.js'
 import { createObjects } from './create-objects.js'
 import { reorderObjects } from './reorder-objects.js'
@@ -56,6 +61,18 @@ export function handleCommand(
       return setHidden(doc, command)
     case 'ReparentObjects':
       return reparentObjects(doc, command, ctx)
+    case 'GroupObjects':
+      return groupObjects(doc, command, ctx)
+    case 'UngroupObjects':
+      return ungroupObjects(doc, command, ctx)
+    case 'AlignObjects':
+      return alignObjects(doc, command, ctx)
+    case 'DistributeObjects':
+      return distributeObjects(doc, command, ctx)
+    case 'DuplicateObjects':
+      return duplicateObjects(doc, command, ctx)
+    case 'DeriveObject':
+      return deriveObject(doc, command, ctx)
     case 'ApplyRemotePatches':
       return applyRemotePatches(doc, command, ctx)
     case 'RepairParentage':
@@ -64,7 +81,13 @@ export function handleCommand(
 }
 
 export {
+  alignObjects,
   applyRemotePatches,
+  deriveObject,
+  distributeObjects,
+  duplicateObjects,
+  groupObjects,
+  ungroupObjects,
   convertObjects,
   createObjects,
   deleteObjects,

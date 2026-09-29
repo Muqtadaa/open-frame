@@ -1,6 +1,5 @@
 import type {
   ColorToken,
-  Command,
   DispatchResult,
   ObjectStyle,
   ConnectorEndpoint,
@@ -13,9 +12,8 @@ import type {
   TransactionId,
 } from '@openframe/core'
 import {
-  alignOffsets,
-  childrenOf,
-  distributeOffsets,
+  copySpec,
+  groupByParent,
   uncrop,
   unionAll,
   type AlignEdge,
@@ -27,16 +25,6 @@ import { useMemo } from 'react'
 import type { LoggedChange } from '@openframe/collab'
 import { guestIdentity } from '../app/guest.js'
 import { renameRemoteBoard } from '../app/remote-boards.js'
-
-/** What the undo entry says, which is the only place these names show up. */
-const ALIGN_LABELS: Readonly<Record<AlignEdge, string>> = {
-  left: 'Align left',
-  centerX: 'Align centres',
-  right: 'Align right',
-  top: 'Align top',
-  middleY: 'Align middles',
-  bottom: 'Align bottom',
-}
 import { useOpenFrame } from '../runtime/context.js'
 import { useInteractionStore } from '../interaction/interaction-store.js'
 import { objectsInMarquee } from '../scene/hit-testing.js'
@@ -94,14 +82,7 @@ export interface BoardCommands {
   cropImage(id: ObjectId, crop: ImageCrop, frame: ObjectFrame): void
   /** Puts the whole picture back, growing the frame to match. */
   uncropImage(id: ObjectId): void
-  /**
-   * Lines the selection up on one edge of its own bounding box.
-   *
-   * Not a command of its own: it is a move, and `MoveObjects` already cascades
-   * into a container's contents, which aligning a group needs. The dispatcher
-   * takes an explicit label, so the undo entry still reads "Align left"
-   * rather than "Move 5 objects".
-   */
+  /** Lines the selection up on one edge of its own bounding box. */
   align(edge: AlignEdge): void
   /** Evens out the gaps between the selection, along one axis. */
   distribute(axis: DistributeAxis): void
@@ -291,57 +272,8 @@ export function useCommands(): BoardCommands {
       return result.ok ? id : null
     }
 
-    /**
-     * Applies an arrangement to the selection, as ONE move.
-     *
-     * The selection is turned into what the geometry needs — an id and the
-     * extent it presents — and two kinds of object are held out of it:
-     *
-     * A type whose shape IS its ends, which is asked of the registry rather
-     * than compared against 'connector'. A connector has no position of its
-     * own; it is wherever the things it joins are, so moving it would be a
-     * patch that changes nothing (rule 16) and counting it as a thing to line
-     * up would be lining up a consequence.
-     *
-     * A locked object, because the command refuses those outright — but it
-     * still counts toward the bounding box everything lines up on, since it is
-     * visibly part of what was selected and aligning TO something pinned down
-     * is a reasonable thing to want.
-     */
-    const arrange = (
-      offsetsOf: (items: readonly { id: ObjectId; bounds: Rect }[]) => readonly {
-        id: ObjectId
-        dx: number
-        dy: number
-      }[],
-      label: string,
-    ): void => {
-      const store = useInteractionStore.getState()
-      const doc = runtime.store.getDocument()
-
-      const selected = [...store.selection]
-        .map((id) => doc.objects.get(id))
-        .filter((object) => object !== undefined)
-        .filter((object) => runtime.registry.get(object.type)?.capabilities.spatial === true)
-        .filter((object) => runtime.registry.endpointsOf(object, doc).length === 0)
-
-      const items = selected.map((object) => ({
-        id: object.id,
-        // From the REGISTRY: a rotated object's extent is not its frame, and
-        // lining up frames would leave a rotated note visibly off the line.
-        bounds: runtime.registry.boundsOf(object, doc),
-      }))
-
-      const movable = new Set(selected.filter((object) => !object.locked).map((o) => o.id))
-      const moves = offsetsOf(items)
-        .filter((offset) => movable.has(offset.id))
-        .filter((offset) => offset.dx !== 0 || offset.dy !== 0)
-      // Everything already where it belongs: nothing to do, and nothing that
-      // should cost an undo step.
-      if (moves.length === 0) return
-
-      report(dispatcher.dispatch({ kind: 'MoveObjects', moves }, { label }))
-    }
+    /** The selection as a command's ids, or nothing to do when it is empty. */
+    const selected = (): ObjectId[] => [...useInteractionStore.getState().selection]
 
     return {
       createObject(type, at, data) {
@@ -390,44 +322,25 @@ export function useCommands(): BoardCommands {
       },
 
       align(edge) {
-        arrange((items) => alignOffsets(items, edge), ALIGN_LABELS[edge])
+        const ids = selected()
+        if (ids.length === 0) return
+        report(dispatcher.dispatch({ kind: 'AlignObjects', ids, edge }))
       },
       distribute(axis) {
-        arrange(
-          (items) => distributeOffsets(items, axis),
-          axis === 'x' ? 'Distribute horizontally' : 'Distribute vertically',
-        )
+        const ids = selected()
+        if (ids.length === 0) return
+        report(dispatcher.dispatch({ kind: 'DistributeObjects', ids, axis }))
       },
       group() {
-        const store = useInteractionStore.getState()
-        const doc = runtime.store.getDocument()
-        const members = [...store.selection]
-          .map((id) => doc.objects.get(id))
-          .filter((object) => object !== undefined)
-
-        // One object is already a unit, and nothing cannot be grouped.
-        if (members.length < 2) return
-        // Mixed parents would mean lifting objects out of their frames as a
-        // side effect of grouping, which is not what was asked for.
-        const parentId = members[0]?.parentId ?? null
-        if (members.some((object) => (object.parentId ?? null) !== parentId)) return
-
-        /*
-         * The id is minted HERE because the second command has to name the
-         * object the first one creates, and `transact` takes its commands
-         * upfront. That is the whole reason `NewObjectSpec.id` exists.
-         */
+        const ids = selected()
+        // One object is already a unit. The command refuses it too; a shortcut
+        // pressed on one object is not worth a warning.
+        if (ids.length < 2) return
+        // Minted here so the new group can be selected once it exists.
         const id = runtime.ids.objectId()
-        const result = runtime.dispatcher.transact('Group', [
-          {
-            kind: 'CreateObjects',
-            // A group has no frame of its own; its extent is its members'.
-            objects: [{ type: 'group', id, x: 0, y: 0, parentId }],
-          },
-          { kind: 'ReparentObjects', ids: members.map((object) => object.id), parentId: id },
-        ])
+        const result = dispatcher.dispatch({ kind: 'GroupObjects', ids, id })
         report(result)
-        if (result.ok) store.setSelection([id])
+        if (result.ok) useInteractionStore.getState().setSelection([id])
       },
 
       reveal: revealObject,
@@ -483,33 +396,17 @@ export function useCommands(): BoardCommands {
           store.snapToGrid ? snapPoint : undefined,
         )
 
-        // Minted here because the relations must name the insight, and
-        // `transact` takes its commands upfront — the grouping precedent.
+        // Minted here so the new object can be revealed and edited once it exists.
         const derivedId = runtime.ids.objectId()
-        const result = runtime.dispatcher.transact(`Derive ${toType}`, [
-          {
-            kind: 'CreateObjects',
-            objects: [{ type: toType, id: derivedId, x: at.x, y: at.y }],
-          },
-          {
-            kind: 'CreateObjects',
-            /*
-             * One relation per source object, all in the same transaction as
-             * the new one. Split across transactions, an undo would leave an
-             * insight standing on nothing — a claim whose provenance vanished,
-             * which is the one thing this product must not do.
-             *
-             * Direction is new → selected: the new object is the one making the
-             * claim, so it is the one that cites, derives from or tests.
-             */
-            objects: cited.map((object) => ({
-              type: 'relation',
-              x: 0,
-              y: 0,
-              data: { from: derivedId, to: object.id, predicate },
-            })),
-          },
-        ])
+        const result = dispatcher.dispatch({
+          kind: 'DeriveObject',
+          toType,
+          from: cited.map((object) => object.id),
+          predicate,
+          x: at.x,
+          y: at.y,
+          id: derivedId,
+        })
         report(result)
         if (!result.ok) return null
         /*
@@ -531,65 +428,38 @@ export function useCommands(): BoardCommands {
       },
 
       ungroup() {
-        const store = useInteractionStore.getState()
-        const doc = runtime.store.getDocument()
-        const groups = [...store.selection]
-          .map((id) => doc.objects.get(id))
-          .filter((object) => object !== undefined)
-          .filter(
-            (object) => runtime.registry.get(object.type)?.capabilities.selectsAsUnit === true,
-          )
-        if (groups.length === 0) return
-
-        const commands: Command[] = []
-        const freed: ObjectId[] = []
-        for (const group of groups) {
-          const members = childrenOf(doc, group.id)
-          if (members.length > 0) {
-            commands.push({
-              kind: 'ReparentObjects',
-              ids: members.map((object) => object.id),
-              parentId: group.parentId ?? null,
-            })
-            freed.push(...members.map((object) => object.id))
-          }
-        }
+        const ids = selected()
+        if (ids.length === 0) return
         /*
-         * Members are lifted out BEFORE the group is deleted. The other order
-         * would cascade the delete into its own contents — deleting a container
-         * takes its children with it.
+         * What is freed is what the groups HELD, read before they go. Not what
+         * the command touched: deleting a group also detaches any line joined
+         * to it, and selecting that line with the members would hand the next
+         * restyle or delete an object nobody chose.
          */
-        commands.push({ kind: 'DeleteObjects', ids: groups.map((object) => object.id) })
-
-        const result = runtime.dispatcher.transact('Ungroup', commands)
+        const doc = runtime.store.getDocument()
+        const children = groupByParent(doc)
+        const freed = ids
+          .filter((id) => {
+            const type = doc.objects.get(id)?.type
+            return type !== undefined && runtime.registry.get(type)?.capabilities.selectsAsUnit
+          })
+          .flatMap((id) => (children.get(id) ?? []).map((object) => object.id))
+        const result = dispatcher.dispatch({ kind: 'UngroupObjects', ids })
         report(result)
-        if (result.ok) store.setSelection(freed)
+        if (result.ok) useInteractionStore.getState().setSelection(freed)
       },
 
       duplicateSelection() {
-        const store = useInteractionStore.getState()
-        const document = runtime.store.getDocument()
-        const sources = [...store.selection]
-          .map((id) => document.objects.get(id))
-          .filter((object) => object !== undefined)
-        if (sources.length === 0) return
-
-        // Built from ordinary CreateObjects rather than a bespoke command: the
-        // copy goes through the same validation and history as anything else.
+        const ids = selected()
+        if (ids.length === 0) return
         const result = dispatcher.dispatch({
-          kind: 'CreateObjects',
-          objects: sources.map((object) => ({
-            type: object.type,
-            x: object.frame.x + DUPLICATE_OFFSET,
-            y: object.frame.y + DUPLICATE_OFFSET,
-            width: object.frame.width,
-            height: object.frame.height,
-            style: object.style,
-            data: { ...(object.data as Record<string, unknown>) },
-          })),
+          kind: 'DuplicateObjects',
+          ids,
+          dx: DUPLICATE_OFFSET,
+          dy: DUPLICATE_OFFSET,
         })
         report(result)
-        if (result.ok) store.setSelection(result.affected)
+        if (result.ok) useInteractionStore.getState().setSelection(result.affected)
       },
 
       copySelection() {
@@ -618,15 +488,9 @@ export function useCommands(): BoardCommands {
 
         const result = dispatcher.dispatch({
           kind: 'CreateObjects',
-          objects: clipboard.map((object) => ({
-            type: object.type,
-            x: object.frame.x + offsetX,
-            y: object.frame.y + offsetY,
-            width: object.frame.width,
-            height: object.frame.height,
-            style: object.style,
-            data: { ...(object.data as Record<string, unknown>) },
-          })),
+          // The clipboard may hold objects the board no longer has, so these are
+          // made from the copies rather than duplicated by id.
+          objects: clipboard.map((object) => copySpec(object, offsetX, offsetY)),
         })
         report(result)
         if (result.ok) store.setSelection(result.affected)

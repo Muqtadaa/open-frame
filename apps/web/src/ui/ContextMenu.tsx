@@ -178,7 +178,13 @@ export function ContextMenu() {
     })
     .reduce<readonly { type: string; predicate: string }[]>(
       (common, list, index) =>
-        index === 0 ? [...list] : common.filter((d) => list.some((o) => o.type === d.type)),
+        index === 0
+          ? [...list]
+          : // Type AND predicate: the command refuses a pairing any source
+            // did not declare, so the menu must not offer one.
+            common.filter((d) =>
+              list.some((o) => o.type === d.type && o.predicate === d.predicate),
+            ),
       [],
     )
 

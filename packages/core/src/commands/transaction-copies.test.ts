@@ -91,6 +91,35 @@ describe('a transaction of many commands', () => {
   })
 })
 
+/**
+ * A command that is several others to the document — group is a create and a
+ * reparent into it — runs them over an overlay of what it changed, not over a
+ * copy of the board (rule 10). So it costs what any single command costs.
+ */
+describe('a command made of others', () => {
+  it('copies the board no more than a plain command does', () => {
+    const h = board()
+    const [a, b] = [...h.store.getDocument().objects.keys()]
+    if (a === undefined || b === undefined) throw new Error('expected objects')
+
+    const plain = countingCopies(BOARD, () =>
+      h.dispatcher.dispatch({ kind: 'MoveObjects', moves: [{ id: a, dx: 1, dy: 1 }] }),
+    )
+    const group = asObjectId('obj_group')
+    const grouped = countingCopies(BOARD, () =>
+      h.dispatcher.dispatch({ kind: 'GroupObjects', ids: [a, b], id: group }),
+    )
+    if (!grouped.result.ok) throw grouped.result.error
+    expect(grouped.copies).toBeLessThanOrEqual(plain.copies)
+
+    const ungrouped = countingCopies(BOARD, () =>
+      h.dispatcher.dispatch({ kind: 'UngroupObjects', ids: [group] }),
+    )
+    if (!ungrouped.result.ok) throw ungrouped.result.error
+    expect(ungrouped.copies).toBeLessThanOrEqual(plain.copies)
+  })
+})
+
 describe('the top of a container', () => {
   it('is the last of its children in sibling order, for every container', async () => {
     const { childrenOf, lastChildOrder } = await import('../domain/document.js')

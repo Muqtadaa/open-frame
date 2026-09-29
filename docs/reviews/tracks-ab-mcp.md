@@ -360,3 +360,17 @@ cover:
   - `slices.test.ts` holds every key to one slice, because a spread keeps the
     later of two keys silently. A duplicated `drag` key failed it.
   - With this, the review programme's structural track is complete.
+- **Multi-step edits became core commands** (the first of the follow-ups):
+  - Group, ungroup, align, distribute, duplicate and derive were assembled
+    inside `hooks/use-commands.ts`, where only a browser could test them and
+    only the web app could perform them.
+  - They are now `GroupObjects`, `UngroupObjects`, `AlignObjects`,
+    `DistributeObjects`, `DuplicateObjects` and `DeriveObject`, with 19 tests
+    that failed before the handlers existed.
+  - The handlers compose the existing ones through `sequence`, over an overlay
+    rather than a copy of the board. A copy-count test holds them to a plain
+    command's cost, and failed when the overlay was swapped for a copy.
+  - The hook keeps only what a view knows: the selection, where a derived card
+    goes on screen, and what to select or reveal afterwards.
+  - Next: MCP tools on these commands, then a services layer for `app/`, e2e
+    fixtures, and cross-browser runs.
