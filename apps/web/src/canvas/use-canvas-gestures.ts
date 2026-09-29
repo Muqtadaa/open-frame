@@ -1,26 +1,14 @@
 import {
-  attachmentAnchor,
-  FULL_CROP,
-  panViewport,
-  rectFromPoints,
   screenToWorld,
-  visibleWorldRect,
-  type AnyOpenFrameObject,
-  type BoardDocument,
-  type ConnectorEndpoint,
-  type ObjectTypeRegistry,
-  type ObjectFrame,
-  type ObjectId,
-  type Point,
-  type Rect,
-  type Viewport,
-  type ImageCrop,
   unionAll,
   worldRectToScreen,
+  type AnyOpenFrameObject,
+  type Point,
 } from '@openframe/core'
 import {
   useCallback,
   useEffect,
+  useMemo,
   useRef,
   type MouseEvent as ReactMouseEvent,
   type PointerEvent as ReactPointerEvent,
@@ -34,456 +22,27 @@ import { makeFor } from '../scene/tools.js'
 import { useCommands } from '../hooks/use-commands.js'
 import { useInteractionStore } from '../interaction/interaction-store.js'
 import {
-  exceedsDragThreshold,
   onDoubleClick as decideDoubleClick,
   onPointerDown as decidePointerDown,
   type PointerIntent,
 } from '../interaction/pointer-controller.js'
-import { anchorForSide } from './ConnectPoints.js'
-import { anchorReach } from '../scene/connect-points.js'
-import { croppedBy } from './CropOverlay.js'
-import { committedRect, constrainToAxis } from '../scene/draw.js'
+import { hitTest, hitTestRaw } from '../scene/hit-testing.js'
+import { boundsOfAll } from '../scene/resize.js'
+import { beginConnectPointDrag } from './gestures/connect.js'
+import { beginCropDrag } from './gestures/crop.js'
+import { beginDividerDrag } from './gestures/divider.js'
+import { beginEndpointDrag } from './gestures/endpoint.js'
+import { HANDLERS } from './gestures/index.js'
 import {
-  attachTargetAt,
-  containerAt,
-  hitTest,
-  hitTestRaw,
-  objectsInMarquee,
-} from '../scene/hit-testing.js'
-import { alignToNeighbours, alignmentTargets, type AlignmentGuide } from '../scene/alignment.js'
-import { cullToViewport } from '../scene/culling.js'
-import { snapDelta, snapRect } from '../scene/snapping.js'
-import {
-  CORNER_HANDLES,
-  angleFrom,
-  boundsOfAll,
-  framesBounds,
-  resizeBounds,
-  scaleFrames,
-  snapAngle,
-  type HandleId,
-} from '../scene/resize.js'
-
-type GestureMode =
-  | 'pan'
-  | 'translate'
-  | 'marquee'
-  /** Sweeping out a NEW object's size, before anything exists. */
-  | 'draw'
-  | 'resize'
-  | 'rotate'
-  | 'connect'
-  /** Dragging one END of an already-existing object, rather than drawing a new one. */
-  | 'endpoint'
-  /** Dragging a division INSIDE one — a table's column or row boundary. */
-  | 'divider'
-  | 'crop'
-  | 'none'
-
-/**
- * Pointer events originating in a text control, or in the chrome that drives
- * one, belong to that control.
- *
- * The format bar counts. It lives INSIDE the canvas, beside the editor it acts
- * on, so without this a press on "bold" reads as a canvas gesture: the handler
- * below blurs the active element, the editor commits and unmounts, and the mark
- * is then applied to a selection that no longer exists. The symptom is a button
- * that silently does nothing while the same action from the keyboard works.
- */
-/**
- * Chrome that belongs to an OPEN EDITOR, marked with one class rather than
- * listed here by name.
- *
- * The same bug has now been found three times: the format bar, a table's add
- * and remove buttons, and a code block's language menu. Each time, pressing
- * the control read as a canvas gesture — the handler below ends the edit, the
- * editor commits and unmounts, and the press lands on nothing. The symptom is
- * a control that silently does nothing.
- *
- * The marker goes on the EDITOR, not on each control, so the next thing added
- * inside one is covered without anybody remembering to do it. That is the
- * difference between a rule and a list of the places it was applied.
- */
-const EDITOR_CHROME = '.of-editor-chrome'
-
-/**
- * Which of these are locked, asked of the document once.
- *
- * Takes the candidates rather than scanning: a press only ever concerns the
- * object under the pointer and the current selection, and asking about the
- * whole board would put an O(n) walk on every pointerdown.
- */
-function lockedAmong(
-  doc: BoardDocument,
-  candidates: readonly (ObjectId | null)[],
-): ReadonlySet<ObjectId> {
-  const locked = new Set<ObjectId>()
-  for (const id of candidates) {
-    if (id === null) continue
-    if (doc.objects.get(id)?.locked === true) locked.add(id)
-  }
-  return locked
-}
-
-function isTextEntry(target: EventTarget | null): boolean {
-  if (target instanceof HTMLTextAreaElement || target instanceof HTMLInputElement) return true
-  if (target instanceof HTMLElement && target.isContentEditable) return true
-  /*
-   * `Element`, NOT `HTMLElement`.
-   *
-   * A control whose face is a drawn icon puts an `SVGElement` under the
-   * pointer, and an SVGElement is not an HTMLElement — so the chrome check
-   * never ran for it, the canvas read the press as a board gesture, and the
-   * selection was cleared. The apparatus then unmounted between `pointerdown`
-   * and `click`, which means the click event never fired at all: a button that
-   * looks fine, highlights on hover, and does nothing.
-   *
-   * The fifth appearance of this family of fault, and the first one where the
-   * marker was present and correct — it was the type test that let the press
-   * through.
-   */
-  return target instanceof Element && target.closest(EDITOR_CHROME) !== null
-}
-
-interface Gesture {
-  readonly pointerId: number
-  readonly mode: GestureMode
-  /** Which internal division is being dragged, for a `divider` gesture. */
-  readonly dividerId?: string
-  readonly startWorld: Point
-  readonly startClient: Point
-  readonly startViewport: Viewport
-  /** Snapshot of the objects being transformed, taken once at gesture start. */
-  readonly subjects: readonly AnyOpenFrameObject[]
-  readonly startBounds: Rect | null
-  /** Snapshot too: static objects do not move during a drag (see alignment.ts). */
-  readonly alignTargets: readonly Rect[]
-  readonly handle: HandleId | null
-  /**
-   * Which end is being dragged, in the owning type's own naming.
-   *
-   * Not readonly, because a handle can hand the drag over: one that creates
-   * something names its successor (`becomes`) and the rest of the drag belongs
-   * to that. See `reshapeOf`.
-   */
-  endpointId: string | null
-  readonly startAngle: number
-  moved: boolean
-}
-
-/**
- * How close, in SCREEN pixels, a drag must come before a divider captures it.
- *
- * Screen pixels rather than world units, divided by the zoom at use: a fixed
- * world tolerance would grab from across the board when zoomed out and be
- * unreachable when zoomed in.
- */
-const ALIGN_TOLERANCE_PX = 6
-
-/**
- * Where a dragged selection actually lands.
- *
- * Alignment to neighbours BEATS the grid, per axis. Lining up with the object
- * next to it is what the user is looking at; the grid is the fallback for an
- * axis nothing is near. Applying both would fight — the grid would drag the
- * selection back off an alignment it had just captured.
- *
- * Cmd/Ctrl suspends both, because it is the "stop helping" key rather than the
- * "grid off" key.
- */
-function resolveDragDelta(
-  startBounds: Rect | null,
-  targets: readonly Rect[],
-  raw: Point,
-  snapping: boolean,
-  zoom: number,
-): { x: number; y: number; guides: readonly AlignmentGuide[] } {
-  if (!snapping || startBounds === null) return { ...raw, guides: [] }
-
-  const aligned = alignToNeighbours(startBounds, raw, targets, ALIGN_TOLERANCE_PX / zoom)
-  const grid = snapDelta(startBounds, aligned.delta)
-
-  return {
-    x: aligned.snapped.x ? aligned.delta.x : grid.x,
-    y: aligned.snapped.y ? aligned.delta.y : grid.y,
-    guides: aligned.guides,
-  }
-}
-
-/** Reads the handle under the pointer, if the gesture began on one. */
-function handleUnderPointer(target: EventTarget | null): string | null {
-  if (!(target instanceof HTMLElement)) return null
-  return target.closest<HTMLElement>('[data-handle]')?.dataset.handle ?? null
-}
-
-/**
- * The handle at a point on screen, if any.
- *
- * `handleUnderPointer` reads the event's target, which is right for a press —
- * a `pointerdown` is addressed to exactly what it landed on. A `dblclick` is
- * not: it targets the nearest common ancestor of its two clicks, so one that
- * begins on a handle and ends on what is beneath arrives addressed to the
- * canvas, and the handle is invisible to it.
- */
-function handleAt(clientX: number, clientY: number): string | null {
-  if (typeof window === 'undefined') return null
-  return handleUnderPointer(window.document.elementFromPoint(clientX, clientY))
-}
-
-/**
- * Whether a handle claims the DOUBLE-click as well as the drag.
- *
- * A table's divider does: double-clicking it fits the column to its content,
- * and the object underneath must not also open its editor on top of that.
- *
- * An endpoint handle does not. It is a drag target and nothing else — and a
- * connector's midpoint handle sits exactly where somebody double-clicks to
- * label the line, so treating it as in the way made a connector's label
- * unreachable the moment stops were added.
- */
-function claimsDoubleClick(handle: string | null): boolean {
-  return handle !== null && handle !== 'endpoint'
-}
-
-/**
- * Grabbing a division inside an object, which the REGISTRY named.
- *
- * Nothing type-specific here: the handle carries its own id, the registry
- * turns a position into a data patch, and this only has to know that both
- * exist. The same handshake the endpoint handles use.
- */
-/**
- * Grabbing one of an image's crop grips.
- *
- * The subject is the object being CROPPED rather than the selection, because
- * crop mode is about one object by definition — and the two can disagree for
- * an instant while a click lands.
- */
-function beginCropDrag(
-  event: ReactPointerEvent<HTMLElement>,
-  store: ReturnType<typeof useInteractionStore.getState>,
-  runtime: { store: { getDocument: () => BoardDocument }; registry: ObjectTypeRegistry },
-  toWorld: (clientX: number, clientY: number) => Point,
-): Gesture | null {
-  const element = event.target instanceof HTMLElement ? event.target : null
-  const handle = element?.closest<HTMLElement>('[data-crop-handle]')?.dataset.cropHandle
-  if (handle === undefined || store.croppingId === null) return null
-
-  const doc = runtime.store.getDocument()
-  const object = doc.objects.get(store.croppingId)
-  if (object === undefined || object.locked) return null
-
-  store.beginCrop(object.id, handle)
-
-  return {
-    pointerId: event.pointerId,
-    mode: 'crop',
-    startWorld: toWorld(event.clientX, event.clientY),
-    startClient: { x: event.clientX, y: event.clientY },
-    startViewport: store.viewport,
-    subjects: [object],
-    startBounds: runtime.registry.boundsOf(object, doc),
-    alignTargets: [],
-    handle: null,
-    endpointId: null,
-    dividerId: handle,
-    startAngle: 0,
-    moved: false,
-  }
-}
-
-function beginDividerDrag(
-  event: ReactPointerEvent<HTMLElement>,
-  store: ReturnType<typeof useInteractionStore.getState>,
-  runtime: { store: { getDocument: () => BoardDocument }; registry: ObjectTypeRegistry },
-  toWorld: (clientX: number, clientY: number) => Point,
-): Gesture | null {
-  const element = event.target instanceof HTMLElement ? event.target : null
-  const dividerId = element?.closest<HTMLElement>('[data-divider-id]')?.dataset.dividerId
-  if (dividerId === undefined) return null
-
-  const [selectedId] = [...store.selection]
-  const doc = runtime.store.getDocument()
-  const object = selectedId === undefined ? undefined : doc.objects.get(selectedId)
-  if (object === undefined || selectedId === undefined) return null
-
-  store.beginDivider(selectedId, dividerId)
-
-  return {
-    pointerId: event.pointerId,
-    mode: 'divider',
-    startWorld: toWorld(event.clientX, event.clientY),
-    startClient: { x: event.clientX, y: event.clientY },
-    startViewport: store.viewport,
-    subjects: [object],
-    startBounds: runtime.registry.boundsOf(object, doc),
-    alignTargets: [],
-    handle: null,
-    endpointId: null,
-    dividerId,
-    startAngle: 0,
-    moved: false,
-  }
-}
-
-/**
- * Sets up a drag of one existing endpoint.
- *
- * Returns `null` — leaving the press to fall through to ordinary handling — if
- * anything about the grab does not add up, rather than starting a gesture that
- * cannot commit.
- *
- * The preview reuses the connect drag: it anchors at the end NOT being dragged,
- * so the line rubber-bands from the fixed end to the pointer exactly as drawing
- * a new connector does, and the object under the pointer highlights for free.
- * Nothing is written until pointer-up (rule 4).
- */
-/**
- * How close, in SCREEN pixels, an orthogonal elbow has to come to a single
- * corner before the route collapses to an L.
- *
- * Screen pixels because it is a pointer's worth of precision, converted at
- * use: fourteen world units would be a hand's width at 25% and unhittable at
- * 400%. How much STICKIER the L is once taken is the connector's own business
- * and lives in the type.
- */
-const SNAP_L_PX = 14
-
-/**
- * What this drag would do to the line it is reshaping, or null if it is not
- * reshaping one.
- *
- * Only a CONTROL point: dragging an END rubber-bands to the pointer, which is
- * the honest preview of "this end goes there" and highlights what it would
- * attach to. A bend has nothing to attach to, and rubber-banding it drew a
- * diagonal to nowhere while the line being bent sat still until the drop.
- *
- * The patch is the SAME ONE the pointer-up will dispatch, computed through the
- * registry, so what is drawn and what is committed cannot disagree. It is also
- * fed back in: the object is merged with the last preview before being asked
- * again, which is how the type can make its snap sticky — it sees its own
- * previous answer as the object's data — without this having to know what a
- * bend is.
- */
-function reshapeOf(
-  active: Gesture,
-  at: Point,
-  runtime: { store: { getDocument: () => BoardDocument }; registry: ObjectTypeRegistry },
-  previous: {
-    readonly objectId: ObjectId
-    readonly data: Readonly<Record<string, unknown>>
-  } | null,
-  zoom: number,
-  /**
-   * Whether this is the RELEASE rather than another preview frame.
-   *
-   * The drop is asked one last time on pointer-up, from the same position and
-   * against the same previewed object, so the answer is the one already on
-   * screen — plus whatever only a release may do. A connector's stop dragged
-   * onto its neighbour is merged into it while the pointer is down and only
-   * taken out of the list here, because a list that got shorter mid-drag would
-   * shift every index after it and the hand would carry on moving a different
-   * point.
-   */
-  final = false,
-): { objectId: ObjectId; data: Readonly<Record<string, unknown>> } | null {
-  const subject = active.subjects[0]
-  if (active.mode !== 'endpoint' || subject === undefined || active.endpointId === null) return null
-
-  const doc = runtime.store.getDocument()
-  const committed = doc.objects.get(subject.id)
-  if (committed === undefined) return null
-
-  const object =
-    previous !== null && previous.objectId === committed.id
-      ? { ...committed, data: { ...(committed.data as object), ...previous.data } }
-      : committed
-
-  const dragged = runtime.registry
-    .endpointsOf(object, doc)
-    .find((endpoint) => endpoint.id === active.endpointId)
-  if (dragged?.role !== 'control') return null
-
-  const data = runtime.registry.retargetEndpoint(object, doc, active.endpointId, {
-    kind: 'point',
-    x: at.x,
-    y: at.y,
-    tolerance: SNAP_L_PX / Math.max(zoom, 0.0001),
-    final,
-  })
-  if (data === null) return null
-
-  /*
-   * A handle that CREATED something hands the rest of the drag over.
-   *
-   * The midpoint of a connector's segment adds a vertex the first time it is
-   * moved, and the preview it produced is fed straight back in — so asked a
-   * second time it would add another, once per pointer event. Which handle
-   * takes over is the type's declaration, not this function's guess: all that
-   * happens here is that the gesture goes on dragging whatever it was told.
-   */
-  if (dragged.becomes !== undefined) active.endpointId = dragged.becomes
-  return { objectId: object.id, data }
-}
-
-function beginEndpointDrag(
-  event: ReactPointerEvent<HTMLElement>,
-  store: ReturnType<typeof useInteractionStore.getState>,
-  runtime: { store: { getDocument: () => BoardDocument }; registry: ObjectTypeRegistry },
-  toWorld: (clientX: number, clientY: number) => Point,
-): Gesture | null {
-  const element = event.target instanceof HTMLElement ? event.target : null
-  const endpointId = element?.closest<HTMLElement>('[data-endpoint-id]')?.dataset.endpointId
-  if (endpointId === undefined) return null
-
-  const [selectedId] = [...store.selection]
-  const doc = runtime.store.getDocument()
-  const object = selectedId === undefined ? undefined : doc.objects.get(selectedId)
-  if (object === undefined) return null
-
-  const endpoints = runtime.registry.endpointsOf(object, doc)
-  const fixed = endpoints.find((endpoint) => endpoint.id !== endpointId)
-  if (fixed === undefined) return null
-
-  const anchor: ConnectorEndpoint =
-    fixed.attachedTo === undefined
-      ? { kind: 'point', x: fixed.at.x, y: fixed.at.y }
-      : { kind: 'object', objectId: fixed.attachedTo, anchor: { kind: 'auto' } }
-
-  const worldStart = toWorld(event.clientX, event.clientY)
-  store.beginConnect(anchor, worldStart)
-
-  return {
-    pointerId: event.pointerId,
-    mode: 'endpoint',
-    startWorld: worldStart,
-    startClient: { x: event.clientX, y: event.clientY },
-    startViewport: store.viewport,
-    subjects: [object],
-    startBounds: null,
-    alignTargets: [],
-    handle: null,
-    endpointId,
-    startAngle: 0,
-    moved: false,
-  }
-}
-
-/**
- * The object whose rendered chrome was pressed, for chrome that sits OUTSIDE
- * the object's world bounds.
- *
- * A frame's title is drawn above the frame and counter-scaled to stay a
- * constant size on screen, so it has no fixed world geometry and world-space
- * hit testing cannot see it — clicking it would deselect instead of selecting.
- * Rather than special-casing frames in the geometry, the DOM answers for the
- * cases only the DOM knows about.
- */
-function objectChromeUnderPointer(target: EventTarget | null): ObjectId | null {
-  if (!(target instanceof HTMLElement)) return null
-  const id = target.closest<HTMLElement>('[data-object-id]')?.dataset.objectId
-  return id === undefined ? null : (id as ObjectId)
-}
+  claimsDoubleClick,
+  handleAt,
+  handleUnderPointer,
+  isTextEntry,
+  lockedAmong,
+  objectChromeUnderPointer,
+} from './gestures/targets.js'
+import { beginTransformDrag } from './gestures/transform.js'
+import type { Gesture, GestureContext, GestureMode } from './gestures/types.js'
 
 /**
  * Turns raw pointer input into store updates and commands.
@@ -493,11 +52,27 @@ function objectChromeUnderPointer(target: EventTarget | null): ObjectId | null {
  * lets interaction rules be tested without synthesising DOM events.
  *
  * Nothing here writes to the document except on pointer-up.
+ *
+ * What each MODE does once it is running — its preview and its one commit —
+ * lives in `gestures/`, one module apiece, and this hook dispatches to it.
+ * What stays here is what belongs to no mode: deciding what a press is,
+ * touch and pinch, and putting a gesture back when it is interrupted.
  */
 export function useCanvasGestures(containerRef: RefObject<HTMLElement | null>) {
   const { runtime, views } = useOpenFrame()
   const commands = useCommands()
   const gesture = useRef<Gesture | null>(null)
+
+  /**
+   * Puts back whatever one-finger gesture was running, writing nothing — the
+   * one way every interruption ends a gesture (rule 28): Escape, a lost
+   * window, a second finger, a cancelled pointer, lost capture.
+   */
+  const abandon = useCallback((): void => {
+    if (gesture.current === null) return
+    gesture.current = null
+    useInteractionStore.getState().endDrag()
+  }, [])
 
   /*
    * ESCAPE CANCELS A GESTURE IN FLIGHT: whatever was being dragged goes back
@@ -511,8 +86,7 @@ export function useCanvasGestures(containerRef: RefObject<HTMLElement | null>) {
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent): void => {
       if (event.key !== 'Escape' || gesture.current === null) return
-      gesture.current = null
-      useInteractionStore.getState().endDrag()
+      abandon()
       event.preventDefault()
       event.stopPropagation()
     }
@@ -521,18 +95,14 @@ export function useCanvasGestures(containerRef: RefObject<HTMLElement | null>) {
      * app — will never send the pointer-up. The gesture is put back, as
      * Escape would, rather than left running for a release that never comes.
      */
-    const onBlur = (): void => {
-      if (gesture.current === null) return
-      gesture.current = null
-      useInteractionStore.getState().endDrag()
-    }
+    const onBlur = abandon
     window.addEventListener('keydown', onKeyDown, true)
     window.addEventListener('blur', onBlur)
     return () => {
       window.removeEventListener('keydown', onKeyDown, true)
       window.removeEventListener('blur', onBlur)
     }
-  }, [])
+  }, [abandon])
 
   /*
    * FINGERS ON THE BOARD, by pointer id, in canvas pixels.
@@ -587,12 +157,6 @@ export function useCanvasGestures(containerRef: RefObject<HTMLElement | null>) {
     },
     [containerRef],
   )
-  /** Puts back whatever one-finger gesture was running, writing nothing. */
-  const abandon = useCallback((): void => {
-    if (gesture.current === null) return
-    gesture.current = null
-    useInteractionStore.getState().endDrag()
-  }, [])
   /**
    * Whether the last press landed on a handle.
    *
@@ -612,6 +176,12 @@ export function useCanvasGestures(containerRef: RefObject<HTMLElement | null>) {
       })
     },
     [containerRef],
+  )
+
+  /** What every mode is handed. */
+  const context = useMemo<GestureContext>(
+    () => ({ runtime, commands, toWorld }),
+    [runtime, commands, toWorld],
   )
 
   const applyIntent = useCallback(
@@ -797,119 +367,27 @@ export function useCanvasGestures(containerRef: RefObject<HTMLElement | null>) {
        */
       pressedHandle.current = claimsDoubleClick(grabbed)
 
-      if (grabbed === 'crop') {
-        const started = beginCropDrag(event, store, runtime, toWorld)
-        if (started !== null) {
-          event.currentTarget.setPointerCapture(event.pointerId)
-          gesture.current = started
-          return
-        }
-      }
-
-      if (grabbed === 'divider') {
-        const started = beginDividerDrag(event, store, runtime, toWorld)
-        if (started !== null) {
-          event.currentTarget.setPointerCapture(event.pointerId)
-          gesture.current = started
-          return
-        }
-      }
-
-      if (grabbed === 'endpoint') {
-        const started = beginEndpointDrag(event, store, runtime, toWorld)
-        if (started !== null) {
-          event.currentTarget.setPointerCapture(event.pointerId)
-          gesture.current = started
-          return
-        }
-      }
-
       /*
-       * Dragging off a connection point draws a connector FROM that object,
-       * attached at the side the point sits on. Starting a line at the right
-       * edge and having it leave from the left is the kind of thing that makes
-       * a tool feel like it is arguing with you.
+       * A press on a HANDLE starts the gesture that handle belongs to. Each is
+       * the mode's own to set up; null means the grab did not add up, and the
+       * press falls through to ordinary handling.
        */
-      if (grabbed === 'connect') {
-        const side =
-          event.target instanceof Element
-            ? (event.target.closest<HTMLElement>('[data-connect-side]')?.dataset.connectSide ??
-              null)
-            : null
-        const [subject] = [...store.selection]
-        if (subject !== undefined && side !== null) {
-          const at = toWorld(event.clientX, event.clientY)
-          store.beginConnect({ kind: 'object', objectId: subject, anchor: anchorForSide(side) }, at)
-          event.currentTarget.setPointerCapture(event.pointerId)
-          gesture.current = {
-            pointerId: event.pointerId,
-            mode: 'connect',
-            startWorld: at,
-            startClient: { x: event.clientX, y: event.clientY },
-            startViewport: store.viewport,
-            subjects: [],
-            startBounds: null,
-            alignTargets: [],
-            handle: null,
-            endpointId: null,
-            startAngle: 0,
-            moved: false,
-          }
-          return
-        }
-      }
-
-      if (
-        grabbed !== null &&
-        grabbed !== 'endpoint' &&
-        grabbed !== 'connect' &&
-        grabbed !== 'divider' &&
-        // A crop grip has already been handled above; falling through would
-        // start a resize on the same press and the two would fight.
-        grabbed !== 'crop'
-      ) {
-        const document = runtime.store.getDocument()
-        /*
-         * Only the objects a transform can actually act on.
-         *
-         * A connector is not resizable and has no meaningful frame — a
-         * vestigial 0x0 at the origin — so including one would stretch the
-         * gesture's bounds all the way back to world zero. It does not need to
-         * be transformed anyway: its geometry is derived from its endpoints, so
-         * it follows whatever it is attached to for free.
-         */
-        const subjects = [...store.selection]
-          .map((id) => document.objects.get(id))
-          .filter((object): object is AnyOpenFrameObject => object !== undefined)
-          .filter((object) => runtime.registry.get(object.type)?.capabilities.resizable === true)
-        const startBounds = framesBounds(subjects)
-        if (startBounds !== null) {
-          const worldStart = toWorld(event.clientX, event.clientY)
-          const centre = {
-            x: startBounds.x + startBounds.width / 2,
-            y: startBounds.y + startBounds.height / 2,
-          }
-          const rotating = grabbed === 'rotate'
-          if (rotating) store.beginRotate()
-          else store.beginResize(grabbed as HandleId)
-
-          event.currentTarget.setPointerCapture(event.pointerId)
-          gesture.current = {
-            pointerId: event.pointerId,
-            mode: rotating ? 'rotate' : 'resize',
-            startWorld: worldStart,
-            startClient: { x: event.clientX, y: event.clientY },
-            startViewport: store.viewport,
-            subjects,
-            startBounds,
-            alignTargets: [],
-            handle: rotating ? null : (grabbed as HandleId),
-            endpointId: null,
-            startAngle: angleFrom(centre, worldStart) - (subjects[0]?.frame.rotation ?? 0),
-            moved: false,
-          }
-          return
-        }
+      const started =
+        grabbed === 'crop'
+          ? beginCropDrag(context, event, store)
+          : grabbed === 'divider'
+            ? beginDividerDrag(context, event, store)
+            : grabbed === 'endpoint'
+              ? beginEndpointDrag(context, event, store)
+              : grabbed === 'connect'
+                ? beginConnectPointDrag(context, event, store)
+                : grabbed === null
+                  ? null
+                  : beginTransformDrag(context, event, store, grabbed)
+      if (started !== null) {
+        event.currentTarget.setPointerCapture(event.pointerId)
+        gesture.current = started
+        return
       }
 
       const worldPoint = toWorld(event.clientX, event.clientY)
@@ -940,58 +418,41 @@ export function useCanvasGestures(containerRef: RefObject<HTMLElement | null>) {
         if (next !== null) mode = next
       }
 
-      if (mode !== 'none') {
-        event.currentTarget.setPointerCapture(event.pointerId)
-        // Re-read: `store` is a snapshot from BEFORE the intents ran, so its
-        // selection and viewport are stale by this point.
-        const settled = useInteractionStore.getState()
-        const doc = runtime.store.getDocument()
-        const subjects =
-          mode === 'translate'
-            ? [...settled.selection]
-                .map((id) => doc.objects.get(id))
-                .filter((object): object is AnyOpenFrameObject => object !== undefined)
-            : []
+      if (mode === 'none') return
+      event.currentTarget.setPointerCapture(event.pointerId)
+      // Re-read: `store` is a snapshot from BEFORE the intents ran, so its
+      // selection and viewport are stale by this point.
+      const settled = useInteractionStore.getState()
+      const doc = runtime.store.getDocument()
+      // What the mode snapshots at its start: anything a gesture compares
+      // against is taken HERE, never per pointer event (rule 17).
+      const prepared = HANDLERS[mode].prepare?.(context, settled) ?? {
+        subjects: [],
+        alignTargets: [],
+      }
 
-        gesture.current = {
-          pointerId: event.pointerId,
-          mode,
-          startWorld: worldPoint,
-          startClient: { x: event.clientX, y: event.clientY },
-          startViewport: settled.viewport,
-          subjects,
-          // Captured so the whole selection snaps as ONE unit rather than each
-          // object independently, which would shuffle them apart. Measured by
-          // each object's own bounds: a selected connector's frame sits at
-          // world zero, and the selection snapped as if it began there.
-          startBounds: boundsOfAll(subjects, (object) =>
-            runtime.registry.drawnFromEnds(object) ? null : runtime.registry.boundsOf(object, doc),
-          ),
-          alignTargets:
-            mode === 'translate'
-              ? alignmentTargets(
-                  doc,
-                  runtime.registry,
-                  cullToViewport(
-                    doc,
-                    runtime.registry,
-                    visibleWorldRect(
-                      settled.viewport,
-                      settled.canvasSize.width,
-                      settled.canvasSize.height,
-                    ),
-                  ),
-                  settled.selection,
-                )
-              : [],
-          handle: null,
-          endpointId: null,
-          startAngle: 0,
-          moved: false,
-        }
+      gesture.current = {
+        pointerId: event.pointerId,
+        mode,
+        startWorld: worldPoint,
+        startClient: { x: event.clientX, y: event.clientY },
+        startViewport: settled.viewport,
+        subjects: prepared.subjects,
+        // Captured so the whole selection snaps as ONE unit rather than each
+        // object independently, which would shuffle them apart. Measured by
+        // each object's own bounds: a selected connector's frame sits at
+        // world zero, and the selection snapped as if it began there.
+        startBounds: boundsOfAll(prepared.subjects, (object) =>
+          runtime.registry.drawnFromEnds(object) ? null : runtime.registry.boundsOf(object, doc),
+        ),
+        alignTargets: prepared.alignTargets,
+        handle: null,
+        endpointId: null,
+        startAngle: 0,
+        moved: false,
       }
     },
-    [abandon, applyIntent, beginPinch, canvasPoint, runtime, toWorld, views],
+    [abandon, applyIntent, beginPinch, canvasPoint, context, runtime, toWorld, views],
   )
 
   const onPointerMove = useCallback(
@@ -1021,205 +482,19 @@ export function useCanvasGestures(containerRef: RefObject<HTMLElement | null>) {
         return
       }
 
-      const worldPoint = toWorld(event.clientX, event.clientY)
-
-      if (active.mode === 'pan') {
-        store.setViewport(
-          panViewport(
-            active.startViewport,
-            event.clientX - active.startClient.x,
-            event.clientY - active.startClient.y,
-          ),
-        )
-        return
-      }
-
-      if (active.mode === 'crop') {
-        const subject = active.subjects[0]
-        if (subject === undefined || active.dividerId === undefined) return
-        const world = toWorld(event.clientX, event.clientY)
-        const result = croppedBy(
-          subject.frame,
-          (subject.data as { crop?: ImageCrop | null }).crop ?? FULL_CROP,
-          active.dividerId,
-          world.x - active.startWorld.x,
-          world.y - active.startWorld.y,
-        )
-        if (result !== null) {
-          /*
-           * `moved` is set PER MODE, and a gesture that never sets it commits
-           * nothing on release — the guard exists so a press with a tremor
-           * does not fill the undo stack with actions nobody took. Marked on
-           * the frame actually changing rather than on the pointer twitching,
-           * which is the same distinction the divider drag makes.
-           */
-          if (
-            result.frame.width !== subject.frame.width ||
-            result.frame.height !== subject.frame.height
-          ) {
-            active.moved = true
-          }
-          store.previewCrop(result.frame, result.crop)
-        }
-        return
-      }
-
-      if (active.mode === 'divider') {
-        const bounds = active.startBounds
-        const [subject] = active.subjects
-        if (bounds === null || subject === undefined || active.dividerId === undefined) return
-
-        /*
-         * The pointer as a FRACTION of the object, which is the only unit the
-         * type understands. Bounds are the ones taken at gesture start: rule
-         * 17's reasoning, and here also because nothing has moved — the
-         * document is untouched until the pointer comes up.
-         */
-        const along =
-          bounds.width === 0 || bounds.height === 0
-            ? 0
-            : active.dividerId.startsWith('c')
-              ? (worldPoint.x - bounds.x) / bounds.width
-              : (worldPoint.y - bounds.y) / bounds.height
-
-        const moved = runtime.registry.moveDivider(subject, active.dividerId, along)
-        if (moved !== null) {
-          active.moved = true
-          /*
-           * The data AND the size it needs. Resizing one track no longer takes
-           * the space from its neighbour, so the table itself grows — and the
-           * preview has to show that, or the drag looks like it is doing
-           * nothing past the point the old model would have stopped at.
-           */
-          store.previewDivider(moved.data, moved.grow)
-        }
-        return
-      }
-
-      if (active.mode === 'translate') {
-        // A press with a tremor must not become a move command that fills the
-        // undo stack with actions the user never took.
-        if (
-          !active.moved &&
-          !exceedsDragThreshold(active.startWorld, worldPoint, store.viewport.zoom)
-        ) {
-          return
-        }
-        active.moved = true
-        const raw = { x: worldPoint.x - active.startWorld.x, y: worldPoint.y - active.startWorld.y }
-        /*
-         * Cmd/Ctrl suspends snapping for this gesture without touching the
-         * preference — the convention in design tools, and the only override
-         * that can be reached while already dragging.
-         */
-        const snapping = store.snapToGrid && !(event.metaKey || event.ctrlKey)
-        const delta = resolveDragDelta(
-          active.startBounds,
-          active.alignTargets,
-          raw,
-          snapping,
-          store.viewport.zoom,
-        )
-        store.setGuides(delta.guides)
-        store.updateTranslate(delta.x, delta.y)
-        return
-      }
-
-      if (active.mode === 'marquee') {
-        active.moved = true
-        store.updateMarquee(worldPoint)
-        return
-      }
-
-      if (active.mode === 'draw') {
-        active.moved = true
-        // Shift is read per FRAME, not at gesture start: a user decides a shape
-        // should be square halfway through drawing it, which is exactly when
-        // they reach for the key.
-        store.updateDraw(worldPoint, event.shiftKey)
-        return
-      }
-
-      if (active.mode === 'connect' || active.mode === 'endpoint') {
-        active.moved = true
-        /*
-         * Shift holds the connector to one axis, as it does in every graphics
-         * tool. The hit test uses the CONSTRAINED point, not the raw pointer:
-         * attaching to whatever happens to be under the cursor while the drawn
-         * line points somewhere else would make the connector attach to
-         * something it visibly does not touch.
-         */
-        const free = event.shiftKey ? constrainToAxis(active.startWorld, worldPoint) : worldPoint
-        /*
-         * The anchors as well as the object. They are drawn clear of its
-         * edges, so aiming at one means letting go OUTSIDE the thing being
-         * aimed at — and hit testing the objects alone reported nothing at
-         * exactly the moment somebody was being most deliberate.
-         */
-        const over = attachTargetAt(
-          runtime.store.getDocument(),
-          runtime.registry,
-          free,
-          anchorReach(store.viewport.zoom),
-        )
-        // The object being edited must not offer itself as a target: attaching
-        // an end to its own connector is unresolvable, so it would silently
-        // become a no-op rather than the free point the drop implied.
-        const editing = active.subjects[0]?.id
-        store.updateConnect(
-          free,
-          over === editing ? null : over,
-          reshapeOf(
-            active,
-            free,
-            runtime,
-            store.drag.kind === 'connect' ? store.drag.reshaping : null,
-            store.viewport.zoom,
-          ),
-        )
-        return
-      }
-
-      if (active.mode === 'resize' && active.startBounds !== null && active.handle !== null) {
-        active.moved = true
-        const delta = {
-          x: worldPoint.x - active.startWorld.x,
-          y: worldPoint.y - active.startWorld.y,
-        }
-        const resized = resizeBounds(active.startBounds, active.handle, delta, {
-          // Corners keep proportions by default; Shift releases that, matching
-          // the convention in design tools.
-          preserveAspect: CORNER_HANDLES.includes(active.handle) ? !event.shiftKey : event.shiftKey,
-          fromCentre: event.altKey,
-        })
-        const next =
-          store.snapToGrid && !(event.metaKey || event.ctrlKey) ? snapRect(resized) : resized
-        store.previewFrames(toFrameMap(scaleFrames(active.subjects, active.startBounds, next)))
-        return
-      }
-
-      if (active.mode === 'rotate' && active.startBounds !== null) {
-        active.moved = true
-        const centre = {
-          x: active.startBounds.x + active.startBounds.width / 2,
-          y: active.startBounds.y + active.startBounds.height / 2,
-        }
-        const rotation = snapAngle(
-          angleFrom(centre, worldPoint) - active.startAngle,
-          event.shiftKey,
-        )
-        store.previewFrames(
-          new Map(active.subjects.map((object) => [object.id, { ...object.frame, rotation }])),
-        )
-      }
+      HANDLERS[active.mode].move(
+        context,
+        active,
+        event,
+        toWorld(event.clientX, event.clientY),
+        store,
+      )
     },
-    [canvasPoint, runtime, toWorld],
+    [canvasPoint, context, runtime, toWorld],
   )
 
   const onPointerUp = useCallback(
     (event: ReactPointerEvent<HTMLElement>): void => {
-      const worldPointOf = (e: ReactPointerEvent<HTMLElement>): Point =>
-        toWorld(e.clientX, e.clientY)
       if (event.pointerType === 'touch') {
         const pinching = pinch.current !== null
         liftFinger(event.pointerId)
@@ -1240,238 +515,12 @@ export function useCanvasGestures(containerRef: RefObject<HTMLElement | null>) {
 
       const store = useInteractionStore.getState()
 
-      // THE COMMIT. One command for the whole gesture, whatever its length.
-      //
-      // The ids come from the live drag state rather than a copy taken at
-      // pointer-down: caching them invites exactly the staleness bug where a
-      // click that both selects and starts a drag commits an empty move.
-      if (active.mode === 'translate' && active.moved && store.drag.kind === 'translate') {
-        const { dx, dy, ids } = store.drag
-        const moves = [...ids].map((id) => ({ id, dx, dy }))
-        const document = runtime.store.getDocument()
-
-        /*
-         * Dropping onto a frame changes membership. The excluded set is the
-         * dragged objects and everything inside them, so a frame cannot be
-         * dropped into itself or into its own contents.
-         */
-        const excluded = new Set<ObjectId>()
-        const stack = [...ids]
-        while (stack.length > 0) {
-          const id = stack.pop()
-          if (id === undefined || excluded.has(id)) continue
-          excluded.add(id)
-          for (const object of document.objects.values()) {
-            if (object.parentId === id) stack.push(object.id)
-          }
-        }
-
-        const target = containerAt(document, runtime.registry, worldPointOf(event), excluded)
-        const currentParents = new Set(
-          [...ids].map((id) => document.objects.get(id)?.parentId ?? null),
-        )
-        const membershipChanged = currentParents.size !== 1 || !currentParents.has(target)
-
-        if (membershipChanged) commands.moveAndReparent(moves, target)
-        else commands.moveObjects(moves)
-      }
-
-      /*
-       * THE COMMIT for a divider: one command carrying the whole drag.
-       *
-       * Read from the live drag state rather than recomputed here, so what is
-       * written is exactly what was on screen — and `moved` gates it, because
-       * a press that never moved is a click on a handle, not a resize, and
-       * must not put an entry in the undo stack.
-       */
-      if (active.mode === 'crop') {
-        const drag = store.drag
-        if (drag.kind === 'crop' && drag.frame !== null && drag.crop !== null && active.moved) {
-          // One transaction: the window shown and the box showing it are two
-          // kinds of change that only mean anything together.
-          commands.cropImage(drag.objectId, drag.crop, drag.frame)
-        }
-        store.endDrag()
-        return
-      }
-
-      if (active.mode === 'divider') {
-        const drag = store.drag
-        const subject = active.subjects[0]
-        if (
-          drag.kind === 'divider' &&
-          drag.data !== null &&
-          active.moved &&
-          subject !== undefined
-        ) {
-          /*
-           * ONE transaction for the two changes. Weights are data and a frame
-           * is geometry, so they are two commands — but they are one action,
-           * and undoing a drag has to put both back.
-           */
-          commands.resizeDivider(drag.objectId, drag.data, {
-            ...subject.frame,
-            width: subject.frame.width + drag.grow.width,
-            height: subject.frame.height + drag.grow.height,
-          })
-        }
-        store.endDrag()
-      }
-
-      if (
-        active.mode === 'endpoint' &&
-        active.endpointId !== null &&
-        store.drag.kind === 'connect'
-      ) {
-        const subject = active.subjects[0]
-        const { to, over, reshaping } = store.drag
-        if (subject !== undefined && active.moved && reshaping?.objectId === subject.id) {
-          /*
-           * COMMIT WHAT WAS DRAWN, and let the type settle it.
-           *
-           * The same question, from the same place, against the PREVIEWED
-           * object rather than the committed one — asking from committed data
-           * would let a snap that holds its shape by reading its own last
-           * answer go at the moment of release. So the answer is the shape
-           * already on screen, plus anything only a release may do: a stop
-           * merged into its neighbour is dropped from the list here, where no
-           * further pointer event can be confused by the indices moving.
-           */
-          const settled = reshapeOf(
-            active,
-            to,
-            { store: runtime.store, registry: runtime.registry },
-            reshaping,
-            store.viewport.zoom,
-            true,
-          )
-          commands.updateData(subject.id, settled?.data ?? reshaping.data)
-        } else if (subject !== undefined && active.moved) {
-          commands.retargetEndpoint(
-            subject.id,
-            active.endpointId,
-            /*
-             * The drop POINT travels either way. A type that attaches cares
-             * only what was under the pointer; a dragged point that attaches
-             * to nothing — a connector's bend — needs where the pointer
-             * actually was, and objects cover most of a working board.
-             */
-            over === null
-              ? {
-                  kind: 'point',
-                  x: to.x,
-                  y: to.y,
-                  tolerance: anchorReach(store.viewport.zoom),
-                  final: true,
-                }
-              : {
-                  kind: 'object',
-                  objectId: over,
-                  x: to.x,
-                  y: to.y,
-                  /*
-                   * How precise a pointer is, in world units at this zoom.
-                   * The type uses it to tell "dropped on that anchor" from
-                   * "dropped on the object" — and a constant here would mean
-                   * something different at 25% than at 400%, which is the
-                   * whole reason it travels with the drop rather than living
-                   * in the type.
-                   */
-                  tolerance: anchorReach(store.viewport.zoom),
-                  final: true,
-                },
-          )
-        }
-      }
-
-      if (active.mode === 'connect' && store.drag.kind === 'connect') {
-        const { from, to, over, make } = store.drag
-        /*
-         * A NEW line answers "where does this attach" exactly as a re-dragged
-         * end does, through the same function in the type. Two answers to one
-         * question is how drawing a connector onto an anchor and dropping an
-         * existing one there came to behave differently.
-         */
-        const document = runtime.store.getDocument()
-        const onto = over === null ? undefined : document.objects.get(over)
-        const target =
-          over === null || onto === undefined
-            ? ({ kind: 'point', x: to.x, y: to.y } as const)
-            : ({
-                kind: 'object',
-                objectId: over,
-                anchor: attachmentAnchor(
-                  onto,
-                  { x: to.x, y: to.y },
-                  anchorReach(store.viewport.zoom),
-                  (other) => runtime.registry.boundsOf(other, document),
-                ),
-              } as const)
-
-        // A connector to nowhere from nowhere is a stray click, not a gesture.
-        const trivial =
-          from.kind === 'point' &&
-          target.kind === 'point' &&
-          Math.hypot(target.x - from.x, target.y - from.y) < 8
-        if (!trivial) {
-          const id = commands.createConnector(from, target, make)
-          if (id !== null) {
-            store.setSelection([id])
-            store.setTool('select')
-          }
-        }
-      }
-
-      if (active.mode === 'resize' && active.moved && store.drag.kind === 'resize') {
-        commands.resizeObjects([...store.drag.frames].map(([id, frame]) => ({ id, frame })))
-      }
-
-      if (active.mode === 'rotate' && active.moved && store.drag.kind === 'rotate') {
-        commands.rotateObjects(
-          [...store.drag.frames].map(([id, frame]) => ({ id, rotation: frame.rotation })),
-        )
-      }
-
-      if (active.mode === 'draw' && store.drag.kind === 'draw') {
-        const { objectType, data, origin, current, constrained } = store.drag
-        const rect = committedRect(origin, current, constrained, store.snapToGrid)
-        /*
-         * A gesture too small to be a drag falls back to click-to-place, at the
-         * type's own default size and centred where the pointer went down. The
-         * shape tool must still work with a single click.
-         */
-        const id =
-          rect === null
-            ? commands.createObject(objectType, origin, data)
-            : commands.createObjectInRect(objectType, rect, data)
-        if (id !== null) {
-          store.setSelection([id])
-          /*
-           * Back to the select tool, exactly as click-to-place does. Without
-           * this the shape tool stays armed and the very next click — the one
-           * that commits the label you just typed — draws a second shape.
-           */
-          store.setTool('select')
-          // The next thing anyone does with a new shape or frame is name it.
-          store.setEditing(id)
-        }
-        store.endDrag()
-        return
-      }
-
-      if (active.mode === 'marquee' && store.drag.kind === 'marquee') {
-        const region = rectFromPoints(store.drag.origin, store.drag.current)
-        const ids = objectsInMarquee(runtime.store.getDocument(), runtime.registry, region)
-        if (event.shiftKey) {
-          store.setSelection([...new Set([...store.selection, ...ids])])
-        } else {
-          store.setSelection(ids)
-        }
-      }
-
+      // THE COMMIT. One command for the whole gesture, whatever its length,
+      // and the drag state ended after it whatever the mode.
+      HANDLERS[active.mode].commit(context, active, event, store)
       store.endDrag()
     },
-    [commands, liftFinger, runtime.registry, runtime.store, toWorld],
+    [context, liftFinger],
   )
 
   const onDoubleClick = useCallback(
@@ -1650,10 +699,4 @@ export function useCanvasGestures(containerRef: RefObject<HTMLElement | null>) {
     onContextMenu,
     setSpaceHeld,
   }
-}
-
-function toFrameMap(
-  entries: readonly { readonly id: ObjectId; readonly frame: ObjectFrame }[],
-): ReadonlyMap<ObjectId, ObjectFrame> {
-  return new Map(entries.map((entry) => [entry.id, entry.frame]))
 }

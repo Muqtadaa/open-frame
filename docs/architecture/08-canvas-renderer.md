@@ -72,7 +72,9 @@ pointer event
    ↓
 interaction/pointer-controller.ts   ← PURE functions: event context → intents
    ↓
-canvas/use-canvas-gestures.ts       ← performs the effects
+canvas/use-canvas-gestures.ts       ← decides the press, dispatches to the mode
+   ↓
+canvas/gestures/<mode>.ts           ← that mode's preview, and its ONE commit
    ↓
 store update  or  command dispatch
 ```
@@ -105,7 +107,8 @@ because they are invisible until they bite.
 | `ObjectView.tsx`                | Subscribes to one object; applies live drag delta at render time      |
 | `ObjectErrorBoundary.tsx`       | Contains a render failure to the one object that caused it            |
 | `MarqueeOverlay.tsx`            | The rubber band                                                       |
-| `use-canvas-gestures.ts`        | Pointer effects                                                       |
+| `use-canvas-gestures.ts`        | Pointer effects: the press, touch and pinch, interruption; dispatch   |
+| `gestures/<mode>.ts`            | One gesture mode each — pan, translate, resize, crop, … (`HANDLERS`)  |
 | `use-canvas-size.ts`            | ResizeObserver                                                        |
 | `culling.ts` / `hit-testing.ts` | Pure geometry over the document                                       |
 

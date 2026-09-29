@@ -539,7 +539,10 @@ method shorthand, because methods are bivariant and properties are not.
 BEHAVIOUR, not different appearance: the four shape variants are one `shape`
 type with a discriminant, while `text` and `sticky` are separate because they
 mean different things. Components stay small; if `Canvas.tsx` starts growing
-state or geometry, extract it.
+state or geometry, extract it. A pointer gesture mode is its own module in
+`canvas/gestures/`, and `HANDLERS` is a `Record` over the modes, so a new
+mode that has no handler fails to compile. The hook dispatches to the mode's
+handler and never branches on its name (`gestures.test.ts`).
 
 **Ports** — `Clock` and `IdGenerator` are injected, so tests are deterministic
 without fake timers or mocks. Use `createTestHarness()` from `core/src/testing.ts`.

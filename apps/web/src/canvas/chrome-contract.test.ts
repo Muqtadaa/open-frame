@@ -12,7 +12,8 @@ const read = (path: string): string => readFileSync(resolve(process.cwd(), path)
 
 const LAYER = read('src/controls/AnchoredSurface.tsx')
 const WORLD_LAYER = read('src/canvas/EditorChrome.tsx')
-const GESTURES = read('src/canvas/use-canvas-gestures.ts')
+// Where the canvas decides a press belongs to an editor rather than to the board.
+const GESTURES = read('src/canvas/gestures/targets.ts')
 const VIEWS = ['TableView', 'CodeView', 'RichTextEditor'].map((name) => ({
   name,
   source: read(`src/views/${name}.tsx`),
