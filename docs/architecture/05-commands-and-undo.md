@@ -135,15 +135,34 @@ It is the most important operational rule in the codebase and it is stated in
 ## Transactions
 
 ```ts
-dispatcher.transact('Group selection', [
-  { kind: 'CreateObjects', objects: [frameSpec] },
-  { kind: 'ReparentObjects', ids: selection, parentId: frameId },
+dispatcher.transact('Crop image', [
+  { kind: 'UpdateObjectData', id, patch: { crop } },
+  { kind: 'ResizeObjects', resizes: [{ id, frame }] },
 ])
 ```
 
 Several commands, one undo entry. Later commands see the results of earlier ones,
 but **nothing is written to the store until every command has succeeded** — a
 failure part-way through leaves the document untouched.
+
+### When a transaction always has the same shape, it is a command
+
+Grouping is a create and then a reparent into what was created; ungrouping is
+the reverse, in an order that matters. Those used to be assembled as
+transactions inside a React hook, so nothing but a browser could test them and
+nothing but the web app could do them — an agent that wanted to group two notes
+had to know the recipe. They are now commands: `GroupObjects`, `UngroupObjects`,
+`AlignObjects`, `DistributeObjects`, `DuplicateObjects` and `DeriveObject`.
+
+Their handlers compose the existing ones through `sequence` (in
+`handlers/shared.ts`), which shows each step what the earlier steps did through
+an overlay of the changed objects rather than a copy of the board — a copy per
+command is the O(n) that rule 10 records costing an agent 406ms.
+`transaction-copies.test.ts` holds them to what a plain command costs.
+
+`transact` remains for edits that are two different KINDS of change meaning one
+thing together — a crop's window and the frame showing it — where there is no
+recipe worth naming.
 
 ---
 
