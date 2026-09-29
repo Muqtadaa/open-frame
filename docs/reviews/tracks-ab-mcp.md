@@ -352,3 +352,11 @@ cover:
   - Escape and a blurred window now call the same `abandon` as every other
     interruption, instead of a copy of it.
   - No behaviour change: the e2e specs for every mode pass.
+- **The interaction store split into slices** (the last structural item):
+  - `interaction-store.ts` was one 739-line `create()`. It is now six slices in
+    `interaction/store/`, joined into the same single store: tools,
+    selection, viewport, gesture, discussion and chrome.
+  - None of the 43 files that use it changed.
+  - `slices.test.ts` holds every key to one slice, because a spread keeps the
+    later of two keys silently. A duplicated `drag` key failed it.
+  - With this, the review programme's structural track is complete.
