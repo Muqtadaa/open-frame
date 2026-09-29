@@ -1,6 +1,17 @@
+import type { AlignEdge } from '../geometry/arrange.js'
 import type { Command } from './types.js'
 
 const plural = (count: number, noun: string): string => `${count} ${noun}${count === 1 ? '' : 's'}`
+
+/** Named for the edge, so the undo entry says what happened: "Align left". */
+const ALIGN_LABELS: Readonly<Record<AlignEdge, string>> = {
+  left: 'Align left',
+  centerX: 'Align centres',
+  right: 'Align right',
+  top: 'Align top',
+  middleY: 'Align middles',
+  bottom: 'Align bottom',
+}
 
 /** Human-readable undo labels. The one place command wording lives. */
 export function describeCommand(command: Command): string {
@@ -41,6 +52,18 @@ export function describeCommand(command: Command): string {
       return command.parentId === null
         ? `Remove ${plural(command.ids.length, 'object')} from frame`
         : `Move ${plural(command.ids.length, 'object')} into frame`
+    case 'GroupObjects':
+      return 'Group'
+    case 'UngroupObjects':
+      return 'Ungroup'
+    case 'AlignObjects':
+      return ALIGN_LABELS[command.edge]
+    case 'DistributeObjects':
+      return command.axis === 'x' ? 'Distribute horizontally' : 'Distribute vertically'
+    case 'DuplicateObjects':
+      return `Duplicate ${plural(command.ids.length, 'object')}`
+    case 'DeriveObject':
+      return `Derive ${command.toType}`
     // Both of these are skipUndo by construction, so neither label reaches an
     // undo menu. They are still written for a person, because they are what a
     // change log or a sync trace will show when something has gone wrong.

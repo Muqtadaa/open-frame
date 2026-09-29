@@ -2,6 +2,7 @@ import type { ObjectId, TransactionId, UserId } from '../domain/ids.js'
 import type { ObjectFrame, ObjectStyle, Origin } from '../domain/object.js'
 import type { Patch } from '../domain/patch.js'
 import type { ObjectTypeRegistry } from '../domain/registry.js'
+import type { AlignEdge, DistributeAxis } from '../geometry/arrange.js'
 import type { Clock } from '../ports/clock.js'
 import type { IdGenerator } from '../ports/id-generator.js'
 
@@ -90,6 +91,51 @@ export type Command =
       readonly ids: readonly ObjectId[]
       /** `null` moves the objects back to the board root. */
       readonly parentId: ObjectId | null
+    }
+  /**
+   * Wraps objects that share a parent in a new group, inside that parent.
+   *
+   * `id` names the group when the caller has to know it — to select it
+   * afterwards — exactly as `NewObjectSpec.id` does. Omitted, one is minted.
+   */
+  | { readonly kind: 'GroupObjects'; readonly ids: readonly ObjectId[]; readonly id?: ObjectId }
+  /**
+   * Dissolves the groups among `ids`, handing their members to the group's own
+   * parent. Anything in `ids` that is not a group is passed over, so a mixed
+   * selection ungroups what it can.
+   */
+  | { readonly kind: 'UngroupObjects'; readonly ids: readonly ObjectId[] }
+  /** Lines objects up on one edge of their own bounding box. */
+  | { readonly kind: 'AlignObjects'; readonly ids: readonly ObjectId[]; readonly edge: AlignEdge }
+  /** Evens out the gaps between objects along one axis. */
+  | {
+      readonly kind: 'DistributeObjects'
+      readonly ids: readonly ObjectId[]
+      readonly axis: DistributeAxis
+    }
+  /** Copies objects — geometry, style and data — offset by a delta, under new ids. */
+  | {
+      readonly kind: 'DuplicateObjects'
+      readonly ids: readonly ObjectId[]
+      readonly dx: number
+      readonly dy: number
+    }
+  /**
+   * Creates an object of `toType` at a point and relates it back to each of
+   * `from`: evidence becoming an insight that cites it, an insight becoming a
+   * hypothesis derived from it.
+   *
+   * WHERE it goes is the caller's: the good place depends on what is on
+   * screen, which only a view knows.
+   */
+  | {
+      readonly kind: 'DeriveObject'
+      readonly toType: string
+      readonly from: readonly ObjectId[]
+      readonly predicate: string
+      readonly x: number
+      readonly y: number
+      readonly id?: ObjectId
     }
   | {
       /**
