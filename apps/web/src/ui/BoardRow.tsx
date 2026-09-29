@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState, type CSSProperties } from 'react'
 
-import { canDelete, canLeave, describeWhen, type ListedBoard } from '../app/boards.js'
+import { canDelete, canLeave, describeWhen } from '../app/board-rows.js'
+import type { ListedBoard } from '../runtime/services.js'
 import { setLocalPin } from '../app/board-prefs.js'
 import { shareLink } from '../app/collab-config.js'
 import { boardHref } from '../app/route.js'

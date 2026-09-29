@@ -1,7 +1,7 @@
 import { useState } from 'react'
 
 import { useServices } from '../runtime/services.js'
-import type { ListedBoard } from '../app/boards.js'
+import type { ListedBoard } from '../runtime/services.js'
 
 /**
  * The offer to move boards that live only in this browser.

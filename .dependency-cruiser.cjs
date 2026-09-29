@@ -243,7 +243,9 @@ module.exports = {
         'and are reached only through useServices() — importing one directly is a way round the ' +
         'port, and it is how the network came to be called from the UI with nothing to stand in.',
       from: { path: '^apps/web/src/(ui|hooks|canvas|interaction|views|controls)' },
-      to: { path: '^apps/web/src/app/(share|board-password|board-lifecycle|services)[.]ts$' },
+      to: {
+        path: '^apps/web/src/app/(share|board-password|board-lifecycle|boards|services)[.]ts$',
+      },
     },
     {
       name: 'adapters-do-not-import-app',

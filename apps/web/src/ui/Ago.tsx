@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 
-import { describeWhen } from '../app/boards.js'
+import { describeWhen } from '../app/board-rows.js'
 
 /**
  * When something was said, as the board list says when a board was edited.

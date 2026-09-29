@@ -8,17 +8,9 @@ import {
 } from '@openframe/core'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
-import type { RemoteBoard, RemoteBoardService } from '../runtime/services.js'
-import {
-  canDelete,
-  canLeave,
-  createLocalBoard,
-  keepCopy,
-  describeWhen,
-  listAllBoards as listAll,
-  listLocalBoards,
-  type ListedBoard,
-} from './boards.js'
+import type { ListedBoard, RemoteBoard, RemoteBoardService } from '../runtime/services.js'
+import { canDelete, canLeave, describeWhen } from './board-rows.js'
+import { createLocalBoard, keepCopy, listAllBoards as listAll, listLocalBoards } from './boards.js'
 
 const summary = (id: string, updatedAt: number): BoardSummary => ({
   id: asBoardId(id),
