@@ -2,7 +2,7 @@ import { createContext, useContext } from 'react'
 
 import type { BoardId } from '@openframe/core'
 
-import type { BoardComment, BoardPerson, NewComment } from './discussion.js'
+import type { BoardComment, BoardPerson, NewComment } from '../runtime/services.js'
 
 /**
  * One copy of the discussion, for the two halves that show it.

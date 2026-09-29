@@ -1,11 +1,6 @@
 import { useEffect, useState } from 'react'
 
-import {
-  ACCOUNTS_ENABLED,
-  currentIdentity,
-  onIdentityChange,
-  type Identity,
-} from '../app/identity.js'
+import { useServices, type Identity } from '../runtime/services.js'
 
 /**
  * Who is signed in, or `null` for a guest.
@@ -14,19 +9,20 @@ import {
  * the time, and every consumer renders something sensible for it.
  */
 export function useIdentity(): Identity | null {
+  const { accounts } = useServices()
   const [identity, setIdentity] = useState<Identity | null>(null)
 
   useEffect(() => {
-    if (!ACCOUNTS_ENABLED) return
+    if (!accounts.enabled) return
     let live = true
 
     // The session is restored from storage asynchronously, so the first answer
     // arrives after the first render. Signed out until told otherwise.
-    void currentIdentity().then((found) => {
+    void accounts.current().then((found) => {
       if (live) setIdentity(found)
     })
 
-    const stop = onIdentityChange((next) => {
+    const stop = accounts.onChange((next) => {
       if (live) setIdentity(next)
     })
 
@@ -34,7 +30,7 @@ export function useIdentity(): Identity | null {
       live = false
       stop()
     }
-  }, [])
+  }, [accounts])
 
   return identity
 }

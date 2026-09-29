@@ -1,4 +1,4 @@
-import type { BoardPerson } from '../app/discussion.js'
+import type { BoardPerson } from '../runtime/services.js'
 
 /**
  * Who a comment is speaking to, and how that survives a rename.

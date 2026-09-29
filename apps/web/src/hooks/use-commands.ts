@@ -24,8 +24,8 @@ import { useMemo } from 'react'
 
 import type { LoggedChange } from '@openframe/collab'
 import { guestIdentity } from '../app/guest.js'
-import { renameRemoteBoard } from '../app/remote-boards.js'
 import { useOpenFrame } from '../runtime/context.js'
+import { useServices } from '../runtime/services.js'
 import { useInteractionStore } from '../interaction/interaction-store.js'
 import { objectsInMarquee } from '../scene/hit-testing.js'
 import { pasteOrigin } from '../scene/paste.js'
@@ -166,6 +166,7 @@ const SYNTHESIS_GAP = 80
 
 export function useCommands(): BoardCommands {
   const { runtime, collaboration } = useOpenFrame()
+  const { remoteBoards } = useServices()
   const dispatcher = runtime.dispatcher
 
   return useMemo<BoardCommands>(() => {
@@ -517,7 +518,7 @@ export function useCommands(): BoardCommands {
          * database refuses anyone but the owner, and a board list showing a
          * stale name is not worth failing a rename over.
          */
-        void renameRemoteBoard(runtime.boardId, runtime.store.getDocument().meta.title)
+        void remoteBoards.rename(runtime.boardId, runtime.store.getDocument().meta.title)
         return true
       },
 
@@ -713,5 +714,5 @@ export function useCommands(): BoardCommands {
         return result.transactionId
       },
     }
-  }, [dispatcher, runtime, collaboration])
+  }, [dispatcher, runtime, collaboration, remoteBoards])
 }

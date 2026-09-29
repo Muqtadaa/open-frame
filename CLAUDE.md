@@ -58,6 +58,18 @@ depending on the module that builds it.
 `ui`, `canvas` and `interaction` must never import from `adapters`. Nothing in
 `core` may import from `apps`. No cycles.
 
+**I/O reaches the interface only through `runtime/services.ts`.** Every call
+the interface can make to the outside world — the room server, accounts, the
+board list, comments, workspaces — is a port there, built once by
+`app/services.ts` and provided to both routes through `useServices()`. The use
+cases that compose ports (sharing, passwords, deleting) live in `app/`, take
+their dependencies, and are reached only through the services; adapters are
+handed their `fetch` and never import `app/`. A module that re-exported an
+adapter from `app/` once let the whole UI reach Supabase while
+`ui-does-not-touch-persistence` passed; `ui-reaches-io-through-services`,
+`adapters-do-not-import-app` and `io-boundary.test.ts` (no bare `fetch(` above
+the adapters) are what hold it now.
+
 **`no-circular` does not enforce this.** It detects cycles between FILES, so it
 silently permitted `interaction → canvas` alongside `canvas → interaction` — a
 mutual dependency between layers. The explicit layer rules in

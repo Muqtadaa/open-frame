@@ -5,7 +5,6 @@ import { AnchoredSurface } from '../controls/AnchoredSurface.js'
 import { useAnchoredTo } from '../controls/use-anchor.js'
 import { useDismiss, useFocusOnOpen } from '../controls/use-dismiss.js'
 import { accessKey, COLLAB_ENABLED, shareLink } from '../app/collab-config.js'
-import { ACCOUNTS_ENABLED } from '../app/identity.js'
 import { guestIdentity } from '../app/guest.js'
 import { useIdentity } from '../hooks/use-identity.js'
 import { usePeers } from '../hooks/use-peers.js'
@@ -103,7 +102,7 @@ export function ShareControl() {
      * much included: the first version of this guard sat above both and took
      * a guest's connection indicator away with it.
      */
-    if (ACCOUNTS_ENABLED && identity === null) return null
+    if (services.accounts.enabled && identity === null) return null
 
     const shareHint = runtime.readOnly
       ? 'This board is read-only and cannot be shared'

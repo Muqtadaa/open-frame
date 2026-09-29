@@ -1,11 +1,6 @@
 import { useCallback, useEffect, useState } from 'react'
 
-import {
-  createWorkspace,
-  listMyWorkspaces,
-  shareWorkspace,
-  type Workspace,
-} from '../app/workspaces.js'
+import { useServices, type Workspace } from '../runtime/services.js'
 
 export type { Workspace }
 
@@ -29,6 +24,7 @@ export interface Workspaces {
 }
 
 export function useWorkspaces(enabled: boolean): Workspaces {
+  const { workspaces: service } = useServices()
   const [workspaces, setWorkspaces] = useState<readonly Workspace[]>([])
   const [loaded, setLoaded] = useState(false)
   const [revision, setRevision] = useState(0)
@@ -36,7 +32,8 @@ export function useWorkspaces(enabled: boolean): Workspaces {
   useEffect(() => {
     if (!enabled) return
     let live = true
-    listMyWorkspaces()
+    service
+      .listMine()
       .then((found) => {
         if (!live) return
         setWorkspaces(found)
@@ -49,7 +46,7 @@ export function useWorkspaces(enabled: boolean): Workspaces {
     return () => {
       live = false
     }
-  }, [enabled, revision])
+  }, [enabled, revision, service])
 
   const refresh = useCallback(() => {
     setRevision((current) => current + 1)
@@ -57,14 +54,14 @@ export function useWorkspaces(enabled: boolean): Workspaces {
 
   const create = useCallback(
     async (name: string): Promise<string | null> => {
-      const id = await createWorkspace(name)
+      const id = await service.create(name)
       if (id !== null) refresh()
       return id
     },
-    [refresh],
+    [refresh, service],
   )
 
-  const share = useCallback(async (id: string) => shareWorkspace(id), [])
+  const share = useCallback(async (id: string) => service.share(id), [service])
 
   /*
    * Answered directly when there is nobody signed in, rather than pushed
