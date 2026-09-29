@@ -8,17 +8,17 @@ import {
 } from '@openframe/core'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
+import type { RemoteBoard, RemoteBoardService } from '../runtime/services.js'
 import {
   canDelete,
   canLeave,
   createLocalBoard,
   keepCopy,
   describeWhen,
-  listAllBoards,
+  listAllBoards as listAll,
   listLocalBoards,
   type ListedBoard,
 } from './boards.js'
-import { listMyBoards, type RemoteBoard } from './remote-boards.js'
 
 const summary = (id: string, updatedAt: number): BoardSummary => ({
   id: asBoardId(id),
@@ -106,15 +106,15 @@ describe('how long ago', () => {
 /**
  * The two places a board can live, in one list.
  *
- * `listMyBoards` is mocked because the real one is a network call to a service
+ * `listMine` is faked because the real one is a network call to a service
  * this test has no business reaching. What is NOT mocked is the merging, which
  * is where the decisions are.
  */
-vi.mock('./remote-boards.js', () => ({
-  listMyBoards: vi.fn(),
-}))
+const remote = vi.fn<RemoteBoardService['listMine']>()
 
-const remote = vi.mocked(listMyBoards)
+// The merge as the front door calls it, with only the remote list faked.
+const listAllBoards = (repository: BoardRepository, signedIn: boolean) =>
+  listAll({ repository, remoteBoards: { listMine: remote }, accountsEnabled: true }, signedIn)
 
 const sharedBoard = (
   id: string,

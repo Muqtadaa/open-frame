@@ -9,8 +9,9 @@ import {
 
 import { localOpenedAt, localPins } from './board-prefs.js'
 import { isSharedBoardId } from './collab-config.js'
-import { ACCOUNTS_ENABLED } from './supabase-config.js'
-import { listMyBoards, type RemoteBoard } from './remote-boards.js'
+import type { ListedBoard, RemoteBoardService } from '../runtime/services.js'
+
+export type { ListedBoard }
 import { newLocalBoardId } from './route.js'
 
 /**
@@ -88,41 +89,6 @@ export function describeWhen(updatedAt: number, now: number): string {
 }
 
 /**
- * A board as the front door lists it, from either place it can live.
- *
- * The two are shown together rather than in separate sections, because "the
- * board I was working on" is one idea and the person does not care which
- * storage it happens to be in. What they do care about is whether other people
- * can see it, which is what `shared` says.
- */
-export interface ListedBoard {
-  readonly boardId: BoardId
-  readonly title: string
-  readonly updatedAt: number
-  readonly shared: boolean
-  /** Only meaningful for a shared board; `null` for one with no account behind it. */
-  readonly role: RemoteBoard['role'] | null
-  /** The key that opens it, for a shared board that has one. */
-  readonly accessKey: string | null
-  /** The view-only key, for a board you own. `null` for anybody else's. */
-  readonly viewKey: string | null
-  /** The owner's key, which is not a link. `null` for anybody else's. */
-  readonly ownerKey: string | null
-  readonly pinned: boolean
-  /** When YOU last opened it. What the list is ordered by. */
-  readonly openedAt: number
-  /**
-   * The workspace it lives in, or `null` for a board that lives only in this
-   * browser.
-   *
-   * Null is not a gap to be filled. A local board is in no workspace because
-   * there is nobody else involved; claiming it into an account is what gives
-   * it one.
-   */
-  readonly workspaceId: string | null
-}
-
-/**
  * Deleting removes the board from everybody; leaving removes you from it.
  *
  * Two verbs that look alike in a list and must never be one control. Only an
@@ -153,16 +119,21 @@ export function canLeave(board: ListedBoard): boolean {
  * each of them twice.
  */
 export async function listAllBoards(
-  repository: BoardRepository,
+  deps: {
+    readonly repository: BoardRepository
+    readonly remoteBoards: Pick<RemoteBoardService, 'listMine'>
+    /** Whether this build has accounts at all. */
+    readonly accountsEnabled: boolean
+  },
   signedIn: boolean,
 ): Promise<readonly ListedBoard[]> {
-  const local = await listLocalBoards(repository)
+  const local = await listLocalBoards(deps.repository)
   /*
    * Asked for only when there is somebody to ask about. A signed-out visitor
    * making an RPC that can only ever return nothing is a round trip spent on
    * the front door of a local-first product.
    */
-  const remote = signedIn && ACCOUNTS_ENABLED ? await listMyBoards() : []
+  const remote = signedIn && deps.accountsEnabled ? await deps.remoteBoards.listMine() : []
 
   const shared = new Set(remote.map((board) => board.boardId))
   // A local board keeps its preferences here, because it exists here and

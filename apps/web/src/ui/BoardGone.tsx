@@ -1,8 +1,8 @@
 import { useEffect, useRef, useState } from 'react'
 
-import { keepCopy } from '../app/boards.js'
 import { boardHref } from '../app/route.js'
 import { useOpenFrame } from '../runtime/context.js'
+import { useServices } from '../runtime/services.js'
 import { Gate, GateActions, GateBody } from './Gate.js'
 
 /**
@@ -24,6 +24,7 @@ import { Gate, GateActions, GateBody } from './Gate.js'
  */
 export function BoardGone() {
   const { runtime, collaboration } = useOpenFrame()
+  const services = useServices()
   // Read once at mount as well as subscribed: the room can have put us out
   // before this ever rendered, and a subscription only reports what happens
   // NEXT.
@@ -52,7 +53,7 @@ export function BoardGone() {
     if (keeping) return
     setKeeping(true)
     setKeepFailed(false)
-    keepCopy(runtime.repository, runtime.store.getDocument()).then(
+    services.boards.keepCopy(runtime.store.getDocument()).then(
       (id) => {
         window.location.assign(boardHref(id, false))
       },

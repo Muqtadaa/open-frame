@@ -1,7 +1,6 @@
 import { useState } from 'react'
-import type { BoardRepository } from '@openframe/core'
 
-import { claimLocalBoard } from '../app/share.js'
+import { useServices } from '../runtime/services.js'
 import type { ListedBoard } from '../app/boards.js'
 
 /**
@@ -15,13 +14,12 @@ import type { ListedBoard } from '../app/boards.js'
  */
 export function ClaimLocalBoards({
   boards,
-  repository,
   onChanged,
 }: {
   readonly boards: readonly ListedBoard[]
-  readonly repository: BoardRepository
   readonly onChanged: () => void
 }) {
+  const services = useServices()
   const [moving, setMoving] = useState(false)
   const [failed, setFailed] = useState<readonly string[]>([])
 
@@ -40,7 +38,7 @@ export function ClaimLocalBoards({
        */
       for (const board of boards) {
         try {
-          await claimLocalBoard(repository, board.boardId)
+          await services.boards.claimLocal(board.boardId)
         } catch {
           problems.push(board.title)
         }

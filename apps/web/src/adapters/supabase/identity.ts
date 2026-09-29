@@ -1,6 +1,7 @@
 import type { Session, SupabaseClient } from '@supabase/supabase-js'
 
 import { onClientBuilt, sessionPossible, supabaseClient } from './client.js'
+import type { AuthResult, Identity } from '../../runtime/services.js'
 
 /**
  * Who you are, if you are anybody.
@@ -15,27 +16,6 @@ import { onClientBuilt, sessionPossible, supabaseClient } from './client.js'
  * seen by everybody else, and is refused nothing. So everything here is
  * allowed to answer "nobody" and the app carries on.
  */
-
-export interface Identity {
-  readonly userId: string
-  readonly email: string | null
-  readonly displayName: string
-  /** An index into the presence palette, never a colour. */
-  readonly hue: number
-  /**
-   * The current access token, for the room to check.
-   *
-   * Read fresh rather than stored: it is refreshed on a timer, and a copy kept
-   * in a component is a token that expires while the tab is open.
-   */
-  readonly accessToken: string
-}
-
-export interface AuthResult {
-  readonly ok: boolean
-  /** Written for the person who hit it, not copied from the provider. */
-  readonly message?: string
-}
 
 const PROFILE_COLUMNS = 'display_name, hue'
 
@@ -184,3 +164,5 @@ export async function signUp(
 export async function signOut(): Promise<void> {
   await (await supabaseClient())?.auth.signOut()
 }
+
+export type { AuthResult, Identity }

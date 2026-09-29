@@ -7,9 +7,15 @@ import {
 } from '@openframe/core'
 
 import type { OpenFrameRuntime } from '../runtime/context.js'
-import { claimUrl, newSharedBoardId, shareLink } from './collab-config.js'
-import { ACCOUNTS_ENABLED, currentIdentity } from './identity.js'
-import { recordSharedBoard } from './remote-boards.js'
+import {
+  ShareFailed,
+  type AccountService,
+  type RemoteBoardService,
+  type RoomKeys,
+  type RoomService,
+  type SharedBoard,
+} from '../runtime/services.js'
+import { newSharedBoardId, shareLink } from './collab-config.js'
 
 /**
  * Turns the board you are looking at into one other people can open.
@@ -31,15 +37,17 @@ import { recordSharedBoard } from './remote-boards.js'
  * and the document has already been through validation on the way in.
  */
 
-export interface SharedBoard {
-  readonly boardId: BoardId
-  /** Whoever holds this can change the board. */
-  readonly editLink: string
-  /** Whoever holds this can watch it, and be seen watching. */
-  readonly viewLink: string
-}
+export { ShareFailed, type SharedBoard }
 
-export class ShareFailed extends Error {}
+/** What sharing needs from the outside world. */
+export interface ShareDeps {
+  readonly repository: BoardRepository
+  readonly rooms: RoomService
+  readonly accounts: AccountService
+  readonly remoteBoards: RemoteBoardService
+  /** Where this page is served from, which is what the links point at. */
+  readonly origin: () => string
+}
 
 /**
  * The room's two keys, asked for BEFORE the board is written into it.
@@ -49,38 +57,22 @@ export class ShareFailed extends Error {}
  * somebody else's board. Claiming first is therefore not an optimisation, it
  * is the only order that works.
  */
-async function claimRoom(
-  boardId: BoardId,
-): Promise<{ editor: string; viewer: string; owner?: string }> {
-  let response: Response
-  try {
-    response = await fetch(claimUrl(boardId), { method: 'POST' })
-  } catch {
+async function claimRoom(rooms: RoomService, boardId: BoardId): Promise<RoomKeys> {
+  const claimed = await rooms.claim(boardId)
+  if (claimed.ok) return claimed.keys
+  if (claimed.reason === 'unreachable') {
     throw new ShareFailed('OpenFrame could not reach the server.')
   }
-
-  if (!response.ok) {
-    /*
-     * Deliberately fatal rather than falling back to a link without keys. A
-     * silent downgrade would hand somebody an unprotected board at the moment
-     * they asked for a view-only one — the failure mode where the interface
-     * says a thing it is not doing.
-     */
+  /*
+   * Deliberately fatal rather than falling back to a link without keys. A
+   * silent downgrade would hand somebody an unprotected board at the moment
+   * they asked for a view-only one — the failure mode where the interface
+   * says a thing it is not doing.
+   */
+  if (claimed.reason === 'refused') {
     throw new ShareFailed('This board could not be given its links.')
   }
-
-  const keys: unknown = await response.json()
-  if (
-    typeof keys !== 'object' ||
-    keys === null ||
-    typeof (keys as { editor?: unknown }).editor !== 'string' ||
-    typeof (keys as { viewer?: unknown }).viewer !== 'string'
-  ) {
-    throw new ShareFailed('The server sent something this version of OpenFrame cannot read.')
-  }
-  // `owner` is absent only from a room running a build older than owner keys,
-  // which cannot happen once this deploys but costs nothing to allow.
-  return keys as { editor: string; viewer: string; owner?: string }
+  throw new ShareFailed('The server sent something this version of OpenFrame cannot read.')
 }
 
 /**
@@ -93,20 +85,17 @@ async function claimRoom(
  * only thing standing between a failure and a lost board.
  */
 async function publishToRoom(
-  repository: BoardRepository,
+  deps: ShareDeps,
   document: BoardDocument,
   workspaceId?: string,
-): Promise<{
-  readonly boardId: BoardId
-  readonly keys: { editor: string; viewer: string; owner?: string }
-}> {
+): Promise<{ readonly boardId: BoardId; readonly keys: RoomKeys }> {
   const boardId = newSharedBoardId()
   // Claimed BEFORE anything is written: the server only lets an empty room be
   // claimed, which is what stops anyone holding a link claiming someone
   // else's board. This is the only order that works, not an optimisation.
-  const keys = await claimRoom(boardId)
+  const keys = await claimRoom(deps.rooms, boardId)
 
-  await repository.saveBoard({ ...document, id: boardId })
+  await deps.repository.saveBoard({ ...document, id: boardId })
 
   /*
    * Recorded so it appears in the owner's list, and best effort on purpose:
@@ -117,8 +106,8 @@ async function publishToRoom(
    * no identity service has nobody to record, and this is the one place that
    * would otherwise ask a client that does not exist.
    */
-  if ((await currentIdentity()) !== null) {
-    await recordSharedBoard({
+  if ((await deps.accounts.current()) !== null) {
+    await deps.remoteBoards.recordShared({
       boardId,
       title: document.meta.title,
       editorKey: keys.editor,
@@ -146,14 +135,14 @@ async function publishToRoom(
  * making a NEW one does not, because there is nowhere yet for it to be.
  */
 export async function createOwnedBoard(
-  repository: BoardRepository,
+  deps: ShareDeps,
   title = 'Untitled board',
   workspaceId?: string,
 ): Promise<SharedBoard> {
   const document = createEmptyDocument(newSharedBoardId(), title, systemClock.now())
-  const { boardId, keys } = await publishToRoom(repository, document, workspaceId)
+  const { boardId, keys } = await publishToRoom(deps, document, workspaceId)
 
-  const origin = window.location.origin
+  const origin = deps.origin()
   return {
     boardId,
     editLink: shareLink(boardId, origin, keys.editor),
@@ -168,11 +157,8 @@ export async function createOwnedBoard(
  * work to a server without asking is not a migration, it is a surprise. Same
  * order as sharing: written into the room first, original removed only after.
  */
-export async function claimLocalBoard(
-  repository: BoardRepository,
-  boardId: BoardId,
-): Promise<BoardId> {
-  const loaded = await repository.getBoard(boardId)
+export async function claimLocalBoard(deps: ShareDeps, boardId: BoardId): Promise<BoardId> {
+  const loaded = await deps.repository.getBoard(boardId)
   /*
    * A board that could not be fully read is never written anywhere, and this
    * path would write a partial copy and then delete the original it came
@@ -180,12 +166,15 @@ export async function claimLocalBoard(
    */
   if (loaded.status !== 'ok') throw new ShareFailed('This board could not be read.')
 
-  const published = await publishToRoom(repository, loaded.document)
-  await repository.deleteBoard(boardId)
+  const published = await publishToRoom(deps, loaded.document)
+  await deps.repository.deleteBoard(boardId)
   return published.boardId
 }
 
-export async function shareCurrentBoard(runtime: OpenFrameRuntime): Promise<SharedBoard> {
+export async function shareCurrentBoard(
+  deps: ShareDeps,
+  runtime: OpenFrameRuntime,
+): Promise<SharedBoard> {
   /*
    * A board we could not fully read is never written anywhere, and this is the
    * one path where getting that wrong destroys everything: it would write a
@@ -207,11 +196,15 @@ export async function shareCurrentBoard(runtime: OpenFrameRuntime): Promise<Shar
    *
    * Checked here rather than only in the interface, because this is the rule.
    */
-  if (ACCOUNTS_ENABLED && (await currentIdentity()) === null) {
+  if (deps.accounts.enabled && (await deps.accounts.current()) === null) {
     throw new ShareFailed('Sign in to share a board.')
   }
 
-  const { boardId, keys } = await publishToRoom(runtime.repository, runtime.store.getDocument())
+  // The board's own repository, which is the one that holds it.
+  const { boardId, keys } = await publishToRoom(
+    { ...deps, repository: runtime.repository },
+    runtime.store.getDocument(),
+  )
 
   /*
    * The move, completed — and in this order for two separate reasons.
@@ -227,7 +220,7 @@ export async function shareCurrentBoard(runtime: OpenFrameRuntime): Promise<Shar
   runtime.dispose()
   await runtime.repository.deleteBoard(runtime.boardId)
 
-  const origin = window.location.origin
+  const origin = deps.origin()
   return {
     boardId,
     editLink: shareLink(boardId, origin, keys.editor),

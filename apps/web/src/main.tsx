@@ -8,14 +8,14 @@ import { createBoardCapabilities } from './app/board-capabilities.js'
 import type { BoardConnection } from '@openframe/collab'
 import { COLLAB_ENABLED } from './app/collab-config.js'
 import { healAssets, publishRewrite } from './app/heal-assets.js'
-import { forgetDeletedBoard } from './app/board-lifecycle.js'
 import { createRuntime } from './app/composition-root.js'
 import { markLocalOpened } from './app/board-prefs.js'
-import { joinBoard, touchBoardOpened } from './app/remote-boards.js'
 import { readRoute } from './app/route.js'
+import { createServices } from './app/services.js'
 import { abandonSplash, dismissSplash } from './app/splash.js'
 import { restoreTheme } from './app/theme.js'
 import { OpenFrameContext } from './runtime/context.js'
+import { ServicesContext } from './runtime/services.js'
 import { Home } from './ui/Home.js'
 import { StartFailed } from './ui/StartFailed.js'
 import { createDefaultViewRegistry } from './views/index.js'
@@ -33,6 +33,14 @@ const route = readRoute(window.location.search)
 const root = createRoot(container)
 
 /*
+ * The outside world, wired once and handed to both routes: the front door has
+ * no board runtime, and it is where most of this is used. One repository, so
+ * the list and the board read the same boards through the same object.
+ */
+const repository = new IndexedDbBoardRepository()
+const services = createServices({ repository })
+
+/*
  * The front door needs no board, so it builds no runtime: opening IndexedDB for
  * a document nobody asked for costs a round trip before the first paint, and
  * `createRuntime` would have to invent a board id to do it. It gets the
@@ -42,7 +50,9 @@ if (route.kind === 'home') {
   root.render(
     <StrictMode>
       <AppErrorBoundary>
-        <Home repository={new IndexedDbBoardRepository()} />
+        <ServicesContext.Provider value={services}>
+          <Home />
+        </ServicesContext.Provider>
       </AppErrorBoundary>
     </StrictMode>,
   )
@@ -64,7 +74,7 @@ if (route.kind === 'home') {
   let runtime: Awaited<ReturnType<typeof createRuntime>>
   let collaboration: BoardConnection | null
   try {
-    runtime = await createRuntime({ boardId: route.boardId, capabilities })
+    runtime = await createRuntime({ boardId: route.boardId, capabilities, repository })
 
     /*
      * Attached after the runtime exists and before the first render, so the
@@ -150,7 +160,7 @@ if (route.kind === 'home') {
   collaboration?.onStatus((status) => {
     if (status !== 'gone') return
     runtime.dispose()
-    void forgetDeletedBoard(runtime.repository, route.boardId)
+    void services.boards.forgetDeleted(route.boardId)
   })
 
   /*
@@ -190,10 +200,11 @@ if (route.kind === 'home') {
      * no membership to redeem — only the recency to record, which does nothing
      * unless you already are a member.
      */
-    const kept = key === null ? Promise.resolve(null) : joinBoard(route.boardId, key)
+    const kept =
+      key === null ? Promise.resolve(null) : services.remoteBoards.join(route.boardId, key)
 
     void kept
-      .then(() => touchBoardOpened(route.boardId))
+      .then(() => services.remoteBoards.touchOpened(route.boardId))
       .catch(() => {
         // A board that could not be kept is still a board you are looking at.
       })
@@ -206,9 +217,11 @@ if (route.kind === 'home') {
   root.render(
     <StrictMode>
       <AppErrorBoundary>
-        <OpenFrameContext.Provider value={{ runtime, views, collaboration }}>
-          <App />
-        </OpenFrameContext.Provider>
+        <ServicesContext.Provider value={services}>
+          <OpenFrameContext.Provider value={{ runtime, views, collaboration }}>
+            <App />
+          </OpenFrameContext.Provider>
+        </ServicesContext.Provider>
       </AppErrorBoundary>
     </StrictMode>,
   )

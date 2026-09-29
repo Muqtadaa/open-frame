@@ -1,10 +1,11 @@
 import { asBoardId, richFromPlain } from '@openframe/core'
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
+import { beforeEach, describe, expect, it } from 'vitest'
 
 import { MemoryBoardRepository } from '../adapters/memory/memory-board-repository.js'
+import type { OpenFrameRuntime } from '../runtime/context.js'
 import { createRuntime } from './composition-root.js'
-import { currentIdentity } from './identity.js'
-import { shareCurrentBoard, ShareFailed } from './share.js'
+import { fakeAccounts, fakeRemoteBoards, fakeRooms } from './services.fake.js'
+import { shareCurrentBoard as share, ShareFailed, type ShareDeps } from './share.js'
 
 /**
  * Sharing MOVES a board.
@@ -24,38 +25,26 @@ import { shareCurrentBoard, ShareFailed } from './share.js'
  * Signed in by default, because sharing takes an account now. The guest case
  * is its own test below rather than the ambient condition of every other one.
  */
-const SOMEBODY = {
-  userId: 'u1',
-  email: 'someone@example.test',
-  displayName: 'Someone',
-  hue: 0,
-  accessToken: 't',
-}
-vi.mock('./identity.js', () => ({
-  ACCOUNTS_ENABLED: true,
-  currentIdentity: vi.fn(() => Promise.resolve(SOMEBODY)),
-}))
-vi.mock('./remote-boards.js', () => ({ recordSharedBoard: vi.fn(() => Promise.resolve(true)) }))
-
 const LOCAL = asBoardId('board_origin')
 
-function claimAnswers(body: unknown, ok = true): void {
-  vi.stubGlobal(
-    'fetch',
-    vi.fn(() => Promise.resolve({ ok, json: () => Promise.resolve(body) } as Response)),
-  )
-}
+let rooms = fakeRooms()
+let accounts = fakeAccounts()
 
-const KEYS = { editor: 'e'.repeat(32), viewer: 'v'.repeat(32) }
+function shareCurrentBoard(runtime: OpenFrameRuntime) {
+  const deps: ShareDeps = {
+    repository: runtime.repository,
+    rooms,
+    accounts,
+    remoteBoards: fakeRemoteBoards(),
+    origin: () => 'https://example.test',
+  }
+  return share(deps, runtime)
+}
 
 describe('sharing a board', () => {
   beforeEach(() => {
-    vi.mocked(currentIdentity).mockResolvedValue(SOMEBODY)
-    vi.stubGlobal('location', { origin: 'https://example.test' })
-  })
-
-  afterEach(() => {
-    vi.unstubAllGlobals()
+    rooms = fakeRooms()
+    accounts = fakeAccounts()
   })
 
   async function boardWithContent() {
@@ -70,7 +59,6 @@ describe('sharing a board', () => {
   }
 
   it('writes the board under its new id', async () => {
-    claimAnswers(KEYS)
     const { repository, runtime } = await boardWithContent()
 
     const shared = await shareCurrentBoard(runtime)
@@ -82,7 +70,6 @@ describe('sharing a board', () => {
   })
 
   it('leaves no original behind', async () => {
-    claimAnswers(KEYS)
     const { repository, runtime } = await boardWithContent()
 
     await shareCurrentBoard(runtime)
@@ -100,7 +87,6 @@ describe('sharing a board', () => {
    * rows this change exists to prevent.
    */
   it('stops the old board being written back by a later edit', async () => {
-    claimAnswers(KEYS)
     const { repository, runtime } = await boardWithContent()
 
     await shareCurrentBoard(runtime)
@@ -119,7 +105,7 @@ describe('sharing a board', () => {
    * stops existing.
    */
   it('keeps the original when the room refuses to be claimed', async () => {
-    claimAnswers({}, false)
+    rooms.claim.mockResolvedValue({ ok: false, reason: 'refused' })
     const { repository, runtime } = await boardWithContent()
 
     await expect(shareCurrentBoard(runtime)).rejects.toBeInstanceOf(ShareFailed)
@@ -133,7 +119,7 @@ describe('sharing a board', () => {
   })
 
   it('keeps the original when the room sends something unreadable', async () => {
-    claimAnswers({ editor: 42 })
+    rooms.claim.mockResolvedValue({ ok: false, reason: 'unreadable' })
     const { repository, runtime } = await boardWithContent()
 
     await expect(shareCurrentBoard(runtime)).rejects.toBeInstanceOf(ShareFailed)
@@ -149,21 +135,18 @@ describe('sharing a board', () => {
    * is touched, so nothing is claimed and the original is untouched.
    */
   it('refuses a guest, without claiming a room', async () => {
-    const fetcher = vi.fn()
-    vi.stubGlobal('fetch', fetcher)
-    vi.mocked(currentIdentity).mockResolvedValue(null)
+    accounts = fakeAccounts(null)
     const { repository, runtime } = await boardWithContent()
 
     await expect(shareCurrentBoard(runtime)).rejects.toBeInstanceOf(ShareFailed)
 
-    expect(fetcher).not.toHaveBeenCalled()
+    expect(rooms.claim).not.toHaveBeenCalled()
     expect((await repository.getBoard(LOCAL)).status).toBe('ok')
 
     runtime.dispose()
   })
 
   it('hands back both links, each carrying its own key', async () => {
-    claimAnswers(KEYS)
     const { runtime } = await boardWithContent()
 
     const shared = await shareCurrentBoard(runtime)

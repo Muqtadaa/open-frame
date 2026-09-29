@@ -1,12 +1,10 @@
 import { useEffect, useRef, useState, type CSSProperties } from 'react'
-import type { BoardRepository } from '@openframe/core'
 
 import { canDelete, canLeave, describeWhen, type ListedBoard } from '../app/boards.js'
 import { setLocalPin } from '../app/board-prefs.js'
-import { deleteBoardEverywhere, leaveBoard, renameBoard } from '../app/board-lifecycle.js'
 import { shareLink } from '../app/collab-config.js'
-import { setBoardPinned } from '../app/remote-boards.js'
 import { boardHref } from '../app/route.js'
+import { useServices } from '../runtime/services.js'
 import { LeaveIcon, LinkIcon, PinIcon, RenameIcon, TrashIcon } from '../controls/icons.js'
 
 /**
@@ -29,15 +27,14 @@ export function BoardRow({
   board,
   index,
   readAt,
-  repository,
   onChanged,
 }: {
   readonly board: ListedBoard
   readonly index: number
   readonly readAt: number
-  readonly repository: BoardRepository
   readonly onChanged: () => void
 }) {
+  const services = useServices()
   const [mode, setMode] = useState<Mode>('rest')
   const [draft, setDraft] = useState(board.title)
   const [pinned, setPinned] = useState(board.pinned)
@@ -79,7 +76,7 @@ export function BoardRow({
     // ordering, and making somebody wait for a round trip to see a pin go in
     // is the wrong trade; if the write fails the list is re-read anyway.
     setPinned(next)
-    if (board.shared) void setBoardPinned(board.boardId, next).then(onChanged)
+    if (board.shared) void services.remoteBoards.setPinned(board.boardId, next).then(onChanged)
     else {
       setLocalPin(board.boardId, next)
       onChanged()
@@ -93,7 +90,7 @@ export function BoardRow({
       setDraft(board.title)
       return
     }
-    void renameBoard(repository, board, trimmed).then((ok) => {
+    void services.boards.rename(board, trimmed).then((ok) => {
       if (!ok) {
         setDraft(board.title)
         setProblem('That name could not be saved.')
@@ -115,8 +112,8 @@ export function BoardRow({
     setMode('working')
     setProblem(null)
     const done = canLeave(board)
-      ? leaveBoard(repository, board.boardId)
-      : deleteBoardEverywhere(repository, board)
+      ? services.boards.leave(board.boardId)
+      : services.boards.deleteEverywhere(board)
 
     void done.then((outcome) => {
       if (outcome.ok) {

@@ -235,6 +235,16 @@ module.exports = {
       to: { path: '^apps/web/src/adapters' },
     },
     {
+      name: 'adapters-do-not-import-app',
+      severity: 'error',
+      comment:
+        'An adapter implements a port and is wired by the composition root. Reaching back into ' +
+        'app/ — the Supabase client once read its config there — makes the implementation depend ' +
+        'on the application that is supposed to choose it.',
+      from: { path: '^apps/web/src/adapters' },
+      to: { path: '^apps/web/src/app' },
+    },
+    {
       name: 'no-orphans',
       severity: 'warn',
       comment: 'An unreferenced module is usually a leftover.',

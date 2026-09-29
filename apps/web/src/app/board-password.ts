@@ -1,7 +1,12 @@
 import type { BoardId } from '@openframe/core'
 
-import { ownerKeyUrl, passwordUrl, unlockUrl } from './collab-config.js'
-import { listMyBoards, recordOwnerKey } from '../adapters/supabase/boards.js'
+import type { RemoteBoard, RemoteBoardService, RoomService } from '../runtime/services.js'
+
+/** What a password needs from the outside world: the room, and your account's boards. */
+export interface PasswordDeps {
+  readonly rooms: RoomService
+  readonly remoteBoards: RemoteBoardService
+}
 
 /**
  * A board's optional password, from the browser's side.
@@ -54,13 +59,16 @@ export function rememberOwnerKey(boardId: BoardId, key: string): void {
  * Answers `null` for anybody who is not the owner, because `my_boards()`
  * returns the column to nobody else.
  */
-export async function recoverOwnerKey(boardId: BoardId): Promise<string | null> {
+export async function recoverOwnerKey(
+  deps: PasswordDeps,
+  boardId: BoardId,
+): Promise<string | null> {
   const cached = heldOwnerKey(boardId)
   if (cached !== null) return cached
 
-  let mine: Awaited<ReturnType<typeof listMyBoards>>
+  let mine: readonly RemoteBoard[]
   try {
-    mine = await listMyBoards()
+    mine = await deps.remoteBoards.listMine()
   } catch {
     return null
   }
@@ -83,24 +91,15 @@ export async function recoverOwnerKey(boardId: BoardId): Promise<string | null> 
  * only after there is somewhere to put the answer, and a failure to record it
  * is reported rather than swallowed.
  */
-async function adoptOwnerKey(boardId: BoardId, editorKey: string): Promise<string | null> {
-  let response: Response
-  try {
-    response = await fetch(ownerKeyUrl(boardId), {
-      method: 'POST',
-      headers: { 'content-type': 'application/json' },
-      body: JSON.stringify({ key: editorKey }),
-    })
-  } catch {
-    return null
-  }
-  if (!response.ok) return null
+async function adoptOwnerKey(
+  deps: PasswordDeps,
+  boardId: BoardId,
+  editorKey: string,
+): Promise<string | null> {
+  const owner = await deps.rooms.adoptOwnerKey(boardId, editorKey)
+  if (owner === null) return null
 
-  const body: unknown = await response.json().catch(() => null)
-  const owner = (body as { owner?: unknown } | null)?.owner
-  if (typeof owner !== 'string') return null
-
-  if (!(await recordOwnerKey(boardId, owner))) return null
+  if (!(await deps.remoteBoards.recordOwnerKey(boardId, owner))) return null
   rememberOwnerKey(boardId, owner)
   return owner
 }
@@ -152,39 +151,29 @@ export type UnlockOutcome = { readonly ok: true } | { readonly ok: false; readon
  * somebody without the link learns nothing about whether a board is protected.
  */
 export async function unlockBoard(
+  deps: PasswordDeps,
   boardId: BoardId,
   key: string | null,
   password: string,
 ): Promise<UnlockOutcome> {
-  let response: Response
-  try {
-    response = await fetch(unlockUrl(boardId), {
-      method: 'POST',
-      headers: { 'content-type': 'application/json' },
-      body: JSON.stringify({ key, password }),
-    })
-  } catch {
+  const unlocked = await deps.rooms.unlock(boardId, key, password)
+  if (unlocked.ok) {
+    rememberToken(boardId, unlocked.token)
+    return { ok: true }
+  }
+  if (unlocked.reason === 'unreachable') {
     return {
       ok: false,
       reason: 'OpenFrame could not be reached. Check the connection and try again.',
     }
   }
-
-  if (!response.ok) {
+  if (unlocked.reason === 'refused') {
     // One message for every way of being refused. Saying "that link is wrong"
     // rather than "that password is wrong" tells somebody probing which half
     // of the guess to keep — the same reasoning the room applies.
     return { ok: false, reason: 'That is not the password.' }
   }
-
-  const body: unknown = await response.json().catch(() => null)
-  const token = (body as { token?: unknown } | null)?.token
-  if (typeof token !== 'string') {
-    return { ok: false, reason: 'OpenFrame did not answer as expected. Try again in a moment.' }
-  }
-
-  rememberToken(boardId, token)
-  return { ok: true }
+  return { ok: false, reason: 'OpenFrame did not answer as expected. Try again in a moment.' }
 }
 
 export type PasswordOutcome =
@@ -202,36 +191,28 @@ export type PasswordOutcome =
  * returns. Keeping it would mean the next visit presenting something stale.
  */
 export async function setBoardPassword(
+  deps: PasswordDeps,
   boardId: BoardId,
   keys: { readonly owner: string | null; readonly editor: string },
   password: string | null,
 ): Promise<PasswordOutcome> {
-  const key = keys.owner ?? (await adoptOwnerKey(boardId, keys.editor))
+  const key = keys.owner ?? (await adoptOwnerKey(deps, boardId, keys.editor))
   if (key === null) {
     return { ok: false, reason: 'This board could not be given an owner key.' }
   }
 
-  let response: Response
-  try {
-    response = await fetch(passwordUrl(boardId), {
-      method: 'POST',
-      headers: { 'content-type': 'application/json' },
-      body: JSON.stringify({ key, password }),
-    })
-  } catch {
+  const changed = await deps.rooms.setPassword(boardId, key, password)
+  if (!changed.ok && changed.reason === 'unreachable') {
     return {
       ok: false,
       reason: 'OpenFrame could not be reached. Check the connection and try again.',
     }
   }
 
+  // The room answered, so any token held here is stale either way.
   forgetToken(boardId)
 
-  if (!response.ok) {
-    const body: unknown = await response.json().catch(() => null)
-    const error = (body as { error?: unknown } | null)?.error
-    return { ok: false, reason: typeof error === 'string' ? error : 'That could not be changed.' }
-  }
+  if (!changed.ok) return { ok: false, reason: changed.message ?? 'That could not be changed.' }
   return { ok: true }
 }
 
@@ -246,14 +227,17 @@ export async function setBoardPassword(
  * presence is also the answer to "is this mine" — asked once, when the room
  * chip mounts, rather than on every press.
  */
-export async function ownedKeys(boardId: BoardId): Promise<{
+export async function ownedKeys(
+  deps: PasswordDeps,
+  boardId: BoardId,
+): Promise<{
   readonly edit: string | null
   readonly view: string
   readonly owner: string | null
 } | null> {
-  let mine: Awaited<ReturnType<typeof listMyBoards>>
+  let mine: readonly RemoteBoard[]
   try {
-    mine = await listMyBoards()
+    mine = await deps.remoteBoards.listMine()
   } catch {
     return null
   }

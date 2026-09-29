@@ -1,6 +1,7 @@
 import { asBoardId, type BoardId } from '@openframe/core'
 
 import { supabaseClient } from './client.js'
+import type { RemoteBoard } from '../../runtime/services.js'
 
 /**
  * Boards that follow you between browsers.
@@ -15,51 +16,6 @@ import { supabaseClient } from './client.js'
  * cannot be reached must degrade to "no remote boards", never to a broken
  * front door. What it costs is the LIST, not the boards.
  */
-
-export interface RemoteBoard {
-  readonly boardId: BoardId
-  readonly title: string
-  /** What this person may do with it, as the database computed it. */
-  readonly role: 'owner' | 'editor' | 'viewer'
-  /** The key that opens it for that role. `null` for a board shared before roles. */
-  readonly accessKey: string | null
-  /**
-   * The VIEW-ONLY key, for a board you own and nobody else's.
-   *
-   * An owner already holds the editor key, which is strictly more powerful, so
-   * handing them both leaks nothing — and without it the view-only link was
-   * visible once, in the panel that appears when a board is shared, and
-   * unrecoverable afterwards.
-   */
-  readonly viewKey: string | null
-  /**
-   * The OWNER's key, for a board you own and nobody else's.
-   *
-   * Not a link — it is never put in one. It authorizes the board's password
-   * and excuses its owner from being asked for it.
-   */
-  readonly ownerKey: string | null
-  readonly updatedAt: number
-  /** Whether YOU pinned it. Nobody else's pin is visible, or any of their business. */
-  readonly pinned: boolean
-  /**
-   * When YOU last opened it, which is what the list is ordered by.
-   *
-   * Not `updatedAt`: that is when the board last CHANGED, which on a shared
-   * board is somebody else's typing — so ordering by it let a collaborator
-   * working at midnight rearrange your list while you slept.
-   */
-  readonly openedAt: number
-  /**
-   * The workspace this board lives in. Every board has one.
-   *
-   * Not optional, and that is the point of the migration that introduced it:
-   * a board without a workspace would be a second case in every listing and
-   * every access check, kept alive forever by boards nobody moved.
-   */
-  readonly workspaceId: string
-  readonly workspaceName: string
-}
 
 const ROLES = new Set(['owner', 'editor', 'viewer'])
 const BOARD_ID = /^brd_[A-Za-z0-9]{8,48}$/
@@ -340,3 +296,5 @@ export async function renameRemoteBoard(boardId: BoardId, title: string): Promis
   })) as { error: unknown }
   return response.error === null
 }
+
+export type { RemoteBoard }

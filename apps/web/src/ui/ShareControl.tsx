@@ -7,12 +7,16 @@ import { useDismiss, useFocusOnOpen } from '../controls/use-dismiss.js'
 import { accessKey, COLLAB_ENABLED, shareLink } from '../app/collab-config.js'
 import { ACCOUNTS_ENABLED } from '../app/identity.js'
 import { guestIdentity } from '../app/guest.js'
-import { ownedKeys, setBoardPassword } from '../app/board-password.js'
-import { shareCurrentBoard, ShareFailed, type SharedBoard } from '../app/share.js'
 import { useIdentity } from '../hooks/use-identity.js'
 import { usePeers } from '../hooks/use-peers.js'
 import { useInteractionStore } from '../interaction/interaction-store.js'
 import { useOpenFrame } from '../runtime/context.js'
+import {
+  ShareFailed,
+  useServices,
+  type PasswordService,
+  type SharedBoard,
+} from '../runtime/services.js'
 import { canFollow, hueVar, initialOf } from '../scene/presence.js'
 import { Gate, GateActions, GateBody } from './Gate.js'
 
@@ -29,6 +33,7 @@ import { Gate, GateActions, GateBody } from './Gate.js'
  */
 export function ShareControl() {
   const { runtime, collaboration } = useOpenFrame()
+  const services = useServices()
   const [status, setStatus] = useState(collaboration?.status ?? 'offline')
   const peers = usePeers()
   const following = useInteractionStore((state) => state.following)
@@ -52,7 +57,7 @@ export function ShareControl() {
    * Whether this board is YOURS, which decides what the chip does. Asked once,
    * of the account, when a signed-in person is on a board in a room.
    */
-  const [owned, setOwned] = useState<Awaited<ReturnType<typeof ownedKeys>>>(null)
+  const [owned, setOwned] = useState<Awaited<ReturnType<PasswordService['ownedKeys']>>>(null)
   const [role, setRole] = useState(collaboration?.role ?? 'editor')
   /*
    * The links hang off the room chip, on the board a move lands on. A failed
@@ -72,13 +77,13 @@ export function ShareControl() {
   useEffect(() => {
     if (collaboration === null || collaboration === undefined || identity === null) return
     let live = true
-    void ownedKeys(runtime.boardId).then((keys) => {
+    void services.passwords.ownedKeys(runtime.boardId).then((keys) => {
       if (live) setOwned(keys)
     })
     return () => {
       live = false
     }
-  }, [collaboration, identity, runtime.boardId])
+  }, [collaboration, identity, runtime.boardId, services.passwords])
 
   useEffect(() => {
     if (collaboration === null || collaboration === undefined) return
@@ -129,7 +134,7 @@ export function ShareControl() {
             onMove={() => {
               setSharing(true)
               setShareError(null)
-              void shareCurrentBoard(runtime).then(
+              void services.boards.shareCurrent(runtime).then(
                 (shared) => {
                   /*
                    * Straight onto the board that now exists. The links used to
@@ -502,6 +507,7 @@ function SharePassword({
   readonly editor: string
   readonly owner: string | null
 }) {
+  const services = useServices()
   const [secret, setSecret] = useState('')
   const [busy, setBusy] = useState(false)
   const [said, setSaid] = useState<{ readonly ok: boolean; readonly text: string } | null>(null)
@@ -509,7 +515,7 @@ function SharePassword({
   const apply = (next: string | null): void => {
     setBusy(true)
     setSaid(null)
-    void setBoardPassword(boardId, { owner, editor }, next).then((outcome) => {
+    void services.passwords.set(boardId, { owner, editor }, next).then((outcome) => {
       setBusy(false)
       if (!outcome.ok) {
         setSaid({ ok: false, text: outcome.reason })

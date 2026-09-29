@@ -15,4 +15,4 @@ export {
   type Identity,
 } from '../adapters/supabase/identity.js'
 
-export { ACCOUNTS_ENABLED } from './supabase-config.js'
+export { ACCOUNTS_ENABLED } from '../adapters/supabase/config.js'
