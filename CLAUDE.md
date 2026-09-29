@@ -544,6 +544,11 @@ state or geometry, extract it. A pointer gesture mode is its own module in
 mode that has no handler fails to compile. The hook dispatches to the mode's
 handler and never branches on its name (`gestures.test.ts`).
 
+Interaction state is one store built from slices in `interaction/store/`: tools,
+selection, viewport, gesture, discussion and chrome. A new field goes in the
+slice that owns it. Two slices must never define the same key, because the
+spread that joins them silently keeps the later one (`slices.test.ts`).
+
 **Ports** — `Clock` and `IdGenerator` are injected, so tests are deterministic
 without fake timers or mocks. Use `createTestHarness()` from `core/src/testing.ts`.
 
