@@ -517,7 +517,12 @@ export function Inspector() {
               {title}
             </h2>
             {summary !== '' && (
-              <p className="of-inspector__summary" data-tip={summary} aria-description={summary}>
+              <p
+                className="of-inspector__summary"
+                data-testid="inspector-summary"
+                data-tip={summary}
+                aria-description={summary}
+              >
                 {summary}
               </p>
             )}

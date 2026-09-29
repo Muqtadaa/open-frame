@@ -179,8 +179,12 @@ export function SearchPanel() {
             >
               {/* The type, so a result is legible when two objects say the
                   same words — which is exactly what promotion produces. */}
-              <span className="of-search__type">{result.type}</span>
-              <span className="of-search__summary">{gist !== '' ? gist : result.summary}</span>
+              <span className="of-search__type" data-testid="search-type">
+                {result.type}
+              </span>
+              <span className="of-search__summary" data-testid="search-summary">
+                {gist !== '' ? gist : result.summary}
+              </span>
             </li>
           )
         })}

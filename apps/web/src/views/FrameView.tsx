@@ -72,6 +72,7 @@ function FrameRenderer({ object, zoom }: ObjectViewProps<FrameData>) {
       <FrameEdge zoom={zoom} color={inkColor(object.style.strokeColor)} />
       <div
         className="of-frame__title"
+        data-testid="frame-title"
         style={{
           /*
            * Counter-scaling keeps the title legible at 25% and unobtrusive at

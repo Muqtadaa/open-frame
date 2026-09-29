@@ -183,7 +183,7 @@ export function Toolbar() {
           }}
         >
           {spec.icon}
-          <span className="of-tool__tip" aria-hidden="true">
+          <span className="of-tool__tip" data-testid="rail-tip" aria-hidden="true">
             {spec.label}
             <kbd>{spec.shortcut}</kbd>
           </span>
@@ -255,7 +255,7 @@ export function Toolbar() {
         onClick={() => fileInput.current?.click()}
       >
         <ImageIcon />
-        <span className="of-tool__tip" aria-hidden="true">
+        <span className="of-tool__tip" data-testid="rail-tip" aria-hidden="true">
           Image
         </span>
       </button>

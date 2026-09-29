@@ -708,6 +708,7 @@ function Remark({
       {/* The initial is the name again, in a circle: shown, not read out. */}
       <span
         className="of-comment__who"
+        data-testid="comment-who"
         style={{ background: hueVar(comment.authorHue) }}
         aria-hidden="true"
       >
@@ -718,7 +719,7 @@ function Remark({
           <span className="of-comment__name">{comment.authorName}</span>
           <Ago at={comment.createdAt} />
         </span>
-        <p className="of-comment__text">
+        <p className="of-comment__text" data-testid="comment-text">
           <MentionText body={comment.body} whoIsMe={whoIsMe} />
         </p>
       </div>

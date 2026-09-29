@@ -106,6 +106,7 @@ export function WorkspaceBar({
       {naming && (
         <form
           className="of-spaces__naming"
+          data-testid="workspace-naming"
           onSubmit={(event) => {
             event.preventDefault()
             const trimmed = name.trim()
@@ -167,7 +168,7 @@ export function WorkspaceBar({
        * possible thing to send by mistake.
        */}
       {current !== null && current.role === 'admin' && !current.personal && (
-        <div className="of-spaces__share">
+        <div className="of-spaces__share" data-testid="workspace-share-note">
           <button
             type="button"
             className="of-button of-button--ghost"

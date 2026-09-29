@@ -353,6 +353,7 @@ export function SelectionOverlay() {
           <div
             key={member.id}
             className="of-selection__member"
+            data-testid="selection-member"
             aria-hidden="true"
             style={{
               left: `${String(member.x)}px`,

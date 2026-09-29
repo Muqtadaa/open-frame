@@ -111,6 +111,7 @@ function ConnectorRenderer({
       <path d={path} fill="none" stroke="transparent" strokeWidth={Math.max(12, width * 4)} />
       <path
         className="of-connector__line"
+        data-testid="connector-line"
         d={path}
         fill="none"
         stroke={stroke}
@@ -167,6 +168,7 @@ function ConnectorRenderer({
             <div className="of-connector__label-centre">
               <div
                 className={`of-connector__label${ground === undefined ? '' : ' of-connector__label--plated'}`}
+                data-testid="connector-label"
                 style={{
                   /*
                    * A plate is a surface, so unless an ink was chosen the

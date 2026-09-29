@@ -112,7 +112,14 @@ export function ArrangeBar() {
            * and the pair a hand is looking for is "left or right", not "the
            * fourth one".
            */
-          index === 3 && <span key="across" className="of-arrange__rule" aria-hidden="true" />,
+          index === 3 && (
+            <span
+              key="across"
+              className="of-arrange__rule"
+              data-testid="arrange-rule"
+              aria-hidden="true"
+            />
+          ),
           <button
             key={edge}
             type="button"
@@ -128,7 +135,7 @@ export function ArrangeBar() {
           </button>,
         ])}
 
-        <span className="of-arrange__rule" aria-hidden="true" />
+        <span className="of-arrange__rule" data-testid="arrange-rule" aria-hidden="true" />
 
         {DISTRIBUTIONS.map(({ axis, label, Icon }) => (
           <button

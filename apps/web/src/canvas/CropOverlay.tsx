@@ -175,6 +175,7 @@ export function CropOverlay() {
             <Fragment key={handle}>
               <div
                 className={`of-crop__grip of-crop__grip--${handle}`}
+                data-testid={`crop-grip-${handle}`}
                 aria-hidden="true"
                 style={{
                   left: `${String(left)}px`,

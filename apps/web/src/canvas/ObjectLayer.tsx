@@ -32,7 +32,7 @@ export function ObjectLayer({ width, height }: Props) {
   )
 
   return (
-    <div className="of-object-layer" data-visible-count={visible.length}>
+    <div className="of-object-layer" data-testid="object-layer" data-visible-count={visible.length}>
       {visible.map((object) => (
         <ObjectView key={object.id} id={object.id} views={views} />
       ))}

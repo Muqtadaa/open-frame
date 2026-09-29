@@ -229,6 +229,9 @@ function ObjectViewInner({ id, views }: Props) {
    * compared against 'frame', so any later container type is right for free.
    */
   const holdsChildren = runtime.registry.get(object.type)?.capabilities.canHaveChildren === true
+  // The same condition as the lifting class, so "selected" here means what
+  // it means on screen: a container is not lifted, and is not marked either.
+  const lifted = selected && !holdsChildren
   /*
    * Your own drag wins over somebody else's.
    *
@@ -244,11 +247,12 @@ function ObjectViewInner({ id, views }: Props) {
 
   return (
     <div
-      className={`of-object${selected && !holdsChildren ? ' of-object--selected' : ''}${
+      className={`of-object${lifted ? ' of-object--selected' : ''}${
         selfPositioned ? ' of-object--self-positioned' : ''
       }${object.locked ? ' of-object--locked' : ''}`}
       data-object-id={id}
       data-object-type={object.type}
+      data-selected={lifted ? 'true' : undefined}
       data-testid={`object-${id}`}
       style={{
         transform: selfPositioned
