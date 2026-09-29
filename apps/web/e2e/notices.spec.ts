@@ -1,6 +1,6 @@
 import { expect, test, type Page } from '@playwright/test'
 
-import { CANVAS } from './fixtures.js'
+import { CANVAS, boxOf } from './fixtures.js'
 import { BOARD_URL } from './routes.js'
 
 /**
@@ -143,11 +143,8 @@ test.describe('the toast', () => {
     await page.setViewportSize({ width: 760, height: 800 })
     await boardWithAnUnknownObject(page)
     await rejectAnUpload(page)
-    const notice = await page.getByTestId('notice-banner').boundingBox()
-    const toast = await page.getByTestId('toast').boundingBox()
-    expect(notice).not.toBeNull()
-    expect(toast).not.toBeNull()
-    if (notice === null || toast === null) return
+    const notice = await boxOf(page.getByTestId('notice-banner'))
+    const toast = await boxOf(page.getByTestId('toast'))
     expect(toast.y).toBeGreaterThanOrEqual(notice.y + notice.height + 4)
   })
 })

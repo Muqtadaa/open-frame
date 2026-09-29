@@ -1,6 +1,6 @@
 import type { Page } from '@playwright/test'
 
-import { CANVAS, EDITOR, expect, test, undo } from './fixtures.js'
+import { CANVAS, EDITOR, expect, test, undo, boxOf } from './fixtures.js'
 
 /**
  * The shape palette, and the label geometry that made the triangle look broken.
@@ -45,11 +45,8 @@ test.describe('shapes', () => {
       const shape = page.locator('[data-object-type="shape"]')
       await expect(shape).toContainText('Review')
 
-      const outline = await shape.locator('.of-shape__svg').boundingBox()
-      const label = await shape.locator('.of-shape__label').boundingBox()
-      expect(outline).not.toBeNull()
-      expect(label).not.toBeNull()
-      if (outline === null || label === null) return
+      const outline = await boxOf(shape.locator('.of-shape__svg'))
+      const label = await boxOf(shape.locator('.of-shape__label'))
 
       /*
        * The bug this guards: with a uniform inset the triangle's label sat in

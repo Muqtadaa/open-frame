@@ -1,6 +1,6 @@
 import { expect, test, type Page } from '@playwright/test'
 
-import { CANVAS, EDITOR } from './fixtures.js'
+import { CANVAS, EDITOR, boxOf } from './fixtures.js'
 import { BOARD_URL } from './routes.js'
 
 /**
@@ -72,9 +72,7 @@ test('drags a note and undoes the move as a single action', async ({ page }) => 
   await createSticky(page, 300, 250, 'Draggable')
 
   const note = page.locator(STICKY)
-  const before = await note.boundingBox()
-  expect(before).not.toBeNull()
-  if (before === null) return
+  const before = await boxOf(note)
 
   // Many pointer events, one undoable action.
   await page.mouse.move(before.x + 40, before.y + 40)
@@ -84,16 +82,12 @@ test('drags a note and undoes the move as a single action', async ({ page }) => 
   }
   await page.mouse.up()
 
-  const after = await note.boundingBox()
-  expect(after).not.toBeNull()
-  if (after === null) return
+  const after = await boxOf(note)
   expect(Math.round(after.x - before.x)).toBeGreaterThan(100)
 
   await page.getByTestId('undo').click()
 
-  const restored = await note.boundingBox()
-  expect(restored).not.toBeNull()
-  if (restored === null) return
+  const restored = await boxOf(note)
   expect(Math.round(restored.x)).toBe(Math.round(before.x))
 
   // One drag produced exactly one history entry, so undo is now exhausted

@@ -1,4 +1,5 @@
 import { expect, test, type Page } from '@playwright/test'
+import { boxOf, viewportOf } from './fixtures.js'
 
 import { HOME_URL } from './routes.js'
 import { signedIn } from './signed-in.js'
@@ -541,11 +542,8 @@ test('keeps the mentions list on screen when the bell is on the bottom edge', as
   const list = page.getByTestId('mentions-list')
   await expect(list).toBeVisible()
 
-  const box = await list.boundingBox()
-  const window = page.viewportSize()
-  expect(box).not.toBeNull()
-  expect(window).not.toBeNull()
-  if (box === null || window === null) return
+  const box = await boxOf(list)
+  const window = viewportOf(page)
 
   expect(box.y, 'ran off the top').toBeGreaterThanOrEqual(0)
   expect(box.x, 'ran off the left').toBeGreaterThanOrEqual(0)
@@ -578,9 +576,8 @@ test('still opens the mentions list on the front door', async ({ page }) => {
   await expect(page.getByTestId('mentions-list')).toBeVisible()
   await expect(page.getByTestId('mention-cmt_home')).toContainText('what do you think')
 
-  const box = await page.getByTestId('mentions-list').boundingBox()
-  const window = page.viewportSize()
-  if (box === null || window === null) return
+  const box = await boxOf(page.getByTestId('mentions-list'))
+  const window = viewportOf(page)
   expect(box.y).toBeGreaterThanOrEqual(0)
   expect(box.y + box.height).toBeLessThanOrEqual(window.height)
 })
@@ -755,11 +752,8 @@ test('arriving from a link puts the remark in the middle, not at the edge', asyn
   await page.waitForSelector('[data-testid="status-bar"]')
   await expect(page.getByTestId('comment-panel')).toBeVisible()
 
-  const box = await page.locator('[data-testid^="comment-pin-cmt_"]').first().boundingBox()
-  const canvas = await page.locator('[data-testid="canvas"]').boundingBox()
-  expect(box).not.toBeNull()
-  expect(canvas).not.toBeNull()
-  if (box === null || canvas === null) return
+  const box = await boxOf(page.locator('[data-testid^="comment-pin-cmt_"]').first())
+  const canvas = await boxOf(page.locator('[data-testid="canvas"]'))
 
   /*
    * Within a quarter of the window of the middle. Loose enough not to care
@@ -1176,14 +1170,11 @@ test.describe('the marks themselves', () => {
     await signedIn(page, [{ id: BOARD, title: 'Shared', role: 'owner' }])
     await openBoard(page)
     await page.getByTestId('tool-comment').click()
-    const canvas = await page.locator('[data-testid="canvas"]').boundingBox()
+    const canvas = await boxOf(page.locator('[data-testid="canvas"]'))
     await page.locator('[data-testid="canvas"]').click({ position: { x: 400, y: 300 } })
     await page.getByTestId('comment-input').fill('Here')
     await page.getByTestId('comment-post').click()
-    const pin = await page.locator('[data-testid^="comment-pin-cmt_"]').first().boundingBox()
-    expect(pin).not.toBeNull()
-    expect(canvas).not.toBeNull()
-    if (pin === null || canvas === null) return
+    const pin = await boxOf(page.locator('[data-testid^="comment-pin-cmt_"]').first())
     expect(Math.abs(pin.x - (canvas.x + 400))).toBeLessThan(2)
     expect(Math.abs(pin.y + pin.height - (canvas.y + 300))).toBeLessThan(2)
   })

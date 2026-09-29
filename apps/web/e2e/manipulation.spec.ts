@@ -1,6 +1,6 @@
 import type { Page } from '@playwright/test'
 
-import { CANVAS, drag, EDITOR, expect, place, test, undo } from './fixtures.js'
+import { CANVAS, drag, EDITOR, expect, place, test, undo, boxOf } from './fixtures.js'
 
 /**
  * Direct manipulation: resize, rotate, z-order, clipboard, lock.
@@ -33,11 +33,8 @@ test.describe('resize', () => {
     await create(page, 's', 400, 300, 'Resize me')
     await page.locator('[data-object-type="sticky"]').click()
 
-    const before = await page.locator('[data-object-type="sticky"]').boundingBox()
-    const handle = await page.getByTestId('handle-se').boundingBox()
-    expect(before).not.toBeNull()
-    expect(handle).not.toBeNull()
-    if (before === null || handle === null) return
+    const before = await boxOf(page.locator('[data-object-type="sticky"]'))
+    const handle = await boxOf(page.getByTestId('handle-se'))
 
     await drag(
       page,
@@ -45,9 +42,7 @@ test.describe('resize', () => {
       { x: handle.x + 120, y: handle.y + 120 },
     )
 
-    const after = await page.locator('[data-object-type="sticky"]').boundingBox()
-    expect(after).not.toBeNull()
-    if (after === null) return
+    const after = await boxOf(page.locator('[data-object-type="sticky"]'))
     expect(after.width).toBeGreaterThan(before.width + 80)
   })
 
@@ -56,9 +51,8 @@ test.describe('resize', () => {
     await create(page, 's', 400, 300, 'Resize me')
     await page.locator('[data-object-type="sticky"]').click()
 
-    const before = await page.locator('[data-object-type="sticky"]').boundingBox()
-    const handle = await page.getByTestId('handle-se').boundingBox()
-    if (before === null || handle === null) return
+    const before = await boxOf(page.locator('[data-object-type="sticky"]'))
+    const handle = await boxOf(page.getByTestId('handle-se'))
 
     await drag(
       page,
@@ -67,9 +61,7 @@ test.describe('resize', () => {
     )
     await undo(page)
 
-    const restored = await page.locator('[data-object-type="sticky"]').boundingBox()
-    expect(restored).not.toBeNull()
-    if (restored === null) return
+    const restored = await boxOf(page.locator('[data-object-type="sticky"]'))
     expect(Math.round(restored.width)).toBe(Math.round(before.width))
   })
 
@@ -89,11 +81,8 @@ test.describe('resize', () => {
     await create(page, 'u', 600, 400)
     await page.locator('[data-object-type="shape"]').click()
 
-    const grip = await page.getByTestId('handle-rotate').boundingBox()
-    const box = await page.locator('[data-object-type="shape"]').boundingBox()
-    expect(grip).not.toBeNull()
-    expect(box).not.toBeNull()
-    if (grip === null || box === null) return
+    const grip = await boxOf(page.getByTestId('handle-rotate'))
+    const box = await boxOf(page.locator('[data-object-type="shape"]'))
 
     await drag(
       page,
@@ -218,22 +207,18 @@ test.describe('frames', () => {
     await create(page, 's', 200, 200, 'Inside')
 
     const note = page.locator('[data-object-type="sticky"]')
-    const before = await note.boundingBox()
-    if (before === null) return
+    const before = await boxOf(note)
 
     // Drag the note onto the frame.
     await drag(page, { x: before.x + 40, y: before.y + 40 }, { x: 700, y: 400 })
 
-    const inFrame = await note.boundingBox()
-    if (inFrame === null) return
+    const inFrame = await boxOf(note)
 
     // Now drag the FRAME by its title and confirm the note travels with it.
-    const title = await page.locator('.of-frame__title').boundingBox()
-    if (title === null) return
+    const title = await boxOf(page.locator('.of-frame__title'))
     await drag(page, { x: title.x + 10, y: title.y + 5 }, { x: title.x + 10, y: title.y - 120 })
 
-    const after = await note.boundingBox()
-    if (after === null) return
+    const after = await boxOf(note)
     expect(Math.round(after.y - inFrame.y)).toBeLessThan(-80)
   })
 
@@ -245,14 +230,12 @@ test.describe('frames', () => {
 
     await create(page, 's', 200, 200, 'Note')
     const note = page.locator('[data-object-type="sticky"]')
-    const start = await note.boundingBox()
-    if (start === null) return
+    const start = await boxOf(note)
 
     await drag(page, { x: start.x + 40, y: start.y + 40 }, { x: 700, y: 400 })
     await undo(page)
 
-    const restored = await note.boundingBox()
-    if (restored === null) return
+    const restored = await boxOf(note)
     expect(Math.round(restored.x)).toBe(Math.round(start.x))
   })
 
@@ -264,8 +247,7 @@ test.describe('frames', () => {
 
     await create(page, 's', 200, 200, 'Doomed')
     const note = page.locator('[data-object-type="sticky"]')
-    const start = await note.boundingBox()
-    if (start === null) return
+    const start = await boxOf(note)
     await drag(page, { x: start.x + 40, y: start.y + 40 }, { x: 700, y: 400 })
 
     await page.locator('.of-frame__title').click()
@@ -285,8 +267,7 @@ test.describe('snap to grid', () => {
     await create(page, 's', 405, 307, 'Snappy')
 
     const note = page.locator('[data-object-type="sticky"]')
-    const before = await note.boundingBox()
-    if (before === null) return
+    const before = await boxOf(note)
 
     // A deliberately awkward distance: 37 and 23 are not grid multiples.
     await drag(
@@ -295,8 +276,7 @@ test.describe('snap to grid', () => {
       { x: before.x + 40 + 37, y: before.y + 40 + 23 },
     )
 
-    const after = await note.boundingBox()
-    if (after === null) return
+    const after = await boxOf(note)
     // The POSITION is what snaps, not the distance travelled — an object that
     // began off-grid must end up on it.
     expect(Math.round(after.x) % 10).toBe(0)
@@ -306,8 +286,7 @@ test.describe('snap to grid', () => {
 
   test('places a newly created object on the grid', async ({ page }) => {
     await create(page, 's', 407, 313, 'Aligned')
-    const box = await page.locator('[data-object-type="sticky"]').boundingBox()
-    if (box === null) return
+    const box = await boxOf(page.locator('[data-object-type="sticky"]'))
     expect(Math.round(box.x) % 10).toBe(0)
     expect(Math.round(box.y) % 10).toBe(0)
   })
@@ -319,8 +298,7 @@ test.describe('snap to grid', () => {
     await create(page, 's', 405, 307, 'Free')
 
     const note = page.locator('[data-object-type="sticky"]')
-    const before = await note.boundingBox()
-    if (before === null) return
+    const before = await boxOf(note)
 
     const key = process.platform === 'darwin' ? 'Meta' : 'Control'
     await page.keyboard.down(key)
@@ -331,8 +309,7 @@ test.describe('snap to grid', () => {
     )
     await page.keyboard.up(key)
 
-    const after = await note.boundingBox()
-    if (after === null) return
+    const after = await boxOf(note)
     expect(Math.round(after.x - before.x)).toBe(37)
     expect(Math.round(after.y - before.y)).toBe(23)
 
@@ -346,8 +323,7 @@ test.describe('snap to grid', () => {
 
     await create(page, 's', 405, 307, 'Loose')
     const note = page.locator('[data-object-type="sticky"]')
-    const before = await note.boundingBox()
-    if (before === null) return
+    const before = await boxOf(note)
 
     await drag(
       page,
@@ -355,8 +331,7 @@ test.describe('snap to grid', () => {
       { x: before.x + 40 + 37, y: before.y + 40 + 23 },
     )
 
-    const after = await note.boundingBox()
-    if (after === null) return
+    const after = await boxOf(note)
     expect(Math.round(after.x - before.x)).toBe(37)
 
     await page.reload()
@@ -367,16 +342,14 @@ test.describe('snap to grid', () => {
     await create(page, 's', 405, 307, 'Resize')
     await page.locator('[data-object-type="sticky"]').click()
 
-    const handle = await page.getByTestId('handle-se').boundingBox()
-    if (handle === null) return
+    const handle = await boxOf(page.getByTestId('handle-se'))
     await drag(
       page,
       { x: handle.x + handle.width / 2, y: handle.y + handle.height / 2 },
       { x: handle.x + 73, y: handle.y + 47 },
     )
 
-    const after = await page.locator('[data-object-type="sticky"]').boundingBox()
-    if (after === null) return
+    const after = await boxOf(page.locator('[data-object-type="sticky"]'))
     expect(Math.round(after.width) % 10).toBe(0)
     expect(Math.round(after.height) % 10).toBe(0)
   })

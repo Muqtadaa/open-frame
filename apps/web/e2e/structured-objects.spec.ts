@@ -1,6 +1,6 @@
 import type { Page } from '@playwright/test'
 
-import { CANVAS, EDITOR, expect, place, test, undo } from './fixtures.js'
+import { CANVAS, EDITOR, expect, place, test, undo, boxOf } from './fixtures.js'
 
 /**
  * Phase 3's claim, walked end to end by a user.
@@ -495,11 +495,8 @@ test('folds appearance away on evidence, and opens it on request', async ({ page
   await expect(toggle).toHaveAttribute('aria-expanded', 'false')
   await expect(page.getByTestId('swatch-gray')).toHaveCount(0)
 
-  const panel = await page.getByTestId('inspector').boundingBox()
-  const line = await page.getByTestId('status-bar').boundingBox()
-  expect(panel).not.toBeNull()
-  expect(line).not.toBeNull()
-  if (panel === null || line === null) return
+  const panel = await boxOf(page.getByTestId('inspector'))
+  const line = await boxOf(page.getByTestId('status-bar'))
   // Clear of the navigation bar, which runs along the top of the window now.
   expect(panel.y).toBeGreaterThanOrEqual(line.y + line.height)
 

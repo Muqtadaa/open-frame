@@ -1,6 +1,6 @@
 import type { Locator, Page } from '@playwright/test'
 
-import { CANVAS, expect, openBoard, test } from './fixtures.js'
+import { boxOf, CANVAS, expect, openBoard, test, viewportOf } from './fixtures.js'
 
 /**
  * Every floating surface, held to one invariant.
@@ -22,10 +22,8 @@ import { CANVAS, expect, openBoard, test } from './fixtures.js'
 
 async function onScreen(page: Page, surface: Locator, what: string): Promise<void> {
   await expect(surface).toBeVisible()
-  const box = await surface.boundingBox()
-  const window = page.viewportSize()
-  expect(box, `${what} has no box`).not.toBeNull()
-  if (box === null || window === null) return
+  const box = await boxOf(surface)
+  const window = viewportOf(page)
 
   expect(box.x, `${what} ran off the left`).toBeGreaterThanOrEqual(0)
   expect(box.y, `${what} ran off the top`).toBeGreaterThanOrEqual(0)
@@ -102,9 +100,7 @@ test('the record panel keeps off the object it is describing', async ({ page }) 
   await expect(page.getByTestId('zoom-percent')).toHaveText('200%')
 
   await page.locator('[data-object-id]').first().click()
-  const grip = await page.getByTestId('divider-c0').boundingBox()
-  expect(grip).not.toBeNull()
-  if (grip === null) return
+  const grip = await boxOf(page.getByTestId('divider-c0'))
 
   /*
    * The POINT you would press, not the whole rectangle. A 360px panel beside
@@ -145,11 +141,8 @@ test('the record panel keeps off the screen-edge furniture', async ({ page }) =>
   await page.keyboard.press('Escape')
   await page.locator('[data-object-id]').first().click()
 
-  const panel = await page.getByTestId('inspector').boundingBox()
-  const zoom = await page.getByTestId('zoom-control').boundingBox()
-  expect(panel).not.toBeNull()
-  expect(zoom).not.toBeNull()
-  if (panel === null || zoom === null) return
+  const panel = await boxOf(page.getByTestId('inspector'))
+  const zoom = await boxOf(page.getByTestId('zoom-control'))
 
   const across = Math.min(panel.x + panel.width, zoom.x + zoom.width) - Math.max(panel.x, zoom.x)
   const down = Math.min(panel.y + panel.height, zoom.y + zoom.height) - Math.max(panel.y, zoom.y)

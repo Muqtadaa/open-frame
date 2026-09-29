@@ -1,4 +1,5 @@
 import { expect, test, type Page } from '@playwright/test'
+import { boxOf } from './fixtures.js'
 
 import { BOARD_URL, HOME_URL } from './routes.js'
 
@@ -164,9 +165,7 @@ test('nothing covers the zoom controls', async ({ page }) => {
  */
 test('the context menu stays on screen near the bottom edge', async ({ page }) => {
   const canvas = page.locator('[data-testid="canvas"]')
-  const box = await canvas.boundingBox()
-  expect(box).not.toBeNull()
-  if (box === null) return
+  const box = await boxOf(canvas)
 
   /*
    * Low enough that a menu placed at the pointer runs off the bottom, but

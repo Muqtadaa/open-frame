@@ -1,6 +1,6 @@
 import type { Page } from '@playwright/test'
 
-import { CANVAS, EDITOR, expect, test } from './fixtures.js'
+import { CANVAS, EDITOR, expect, test, boxOf } from './fixtures.js'
 
 /**
  * Tools, shortcuts and viewport navigation.
@@ -248,15 +248,11 @@ test.describe('selection shortcuts', () => {
     await page.keyboard.press('v')
 
     await page.locator('[data-object-type="sticky"]').click()
-    const before = await page.locator('[data-object-type="sticky"]').boundingBox()
-    expect(before).not.toBeNull()
-    if (before === null) return
+    const before = await boxOf(page.locator('[data-object-type="sticky"]'))
 
     for (let i = 0; i < 5; i++) await page.keyboard.press('Shift+ArrowRight')
 
-    const after = await page.locator('[data-object-type="sticky"]').boundingBox()
-    expect(after).not.toBeNull()
-    if (after === null) return
+    const after = await boxOf(page.locator('[data-object-type="sticky"]'))
     expect(Math.round(after.x - before.x)).toBe(50)
   })
 })

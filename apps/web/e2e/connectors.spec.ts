@@ -1,6 +1,6 @@
 import type { Page } from '@playwright/test'
 
-import { CANVAS, drag, EDITOR, expect, place, test, undo } from './fixtures.js'
+import { CANVAS, drag, EDITOR, expect, place, test, undo, boxOf } from './fixtures.js'
 
 /**
  * Connectors: drawing, following their endpoints, and what happens when the
@@ -1247,10 +1247,7 @@ test('offers its line one colour, and marks the one it is drawn in', async ({ pa
   await page.getByTestId('paint-strokeColor').click()
   await expect(page.getByTestId('line-gray')).toHaveAttribute('aria-pressed', 'true')
 
-  const panel = await page.getByTestId('inspector').boundingBox()
-  const targets = await page.locator('.of-paint__target').boundingBox()
-  expect(panel).not.toBeNull()
-  expect(targets).not.toBeNull()
-  if (panel === null || targets === null) return
+  const panel = await boxOf(page.getByTestId('inspector'))
+  const targets = await boxOf(page.locator('.of-paint__target'))
   expect(targets.x + targets.width).toBeLessThanOrEqual(panel.x + panel.width)
 })

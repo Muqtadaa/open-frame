@@ -119,6 +119,13 @@ export async function boxOf(
   return box
 }
 
+/** The window's size, or a failure: a spec that measures against it must not skip. */
+export function viewportOf(page: Page): { width: number; height: number } {
+  const size = page.viewportSize()
+  if (size === null) throw new Error('the page has no viewport')
+  return size
+}
+
 /**
  * Makes an object with a tool's key and, if given, types into it.
  *

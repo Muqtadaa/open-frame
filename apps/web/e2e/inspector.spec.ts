@@ -1,6 +1,6 @@
 import type { Page } from '@playwright/test'
 
-import { CANVAS, EDITOR, expect, place, test, undo } from './fixtures.js'
+import { CANVAS, EDITOR, expect, place, test, undo, boxOf } from './fixtures.js'
 
 /**
  * The record panel.
@@ -294,9 +294,7 @@ test.describe('continuous controls write once', () => {
     const before = await surfaceOf(page)
 
     await page.getByTestId('swatch-custom').click()
-    const area = await page.getByTestId('picker-area').boundingBox()
-    expect(area).not.toBeNull()
-    if (area === null) return
+    const area = await boxOf(page.getByTestId('picker-area'))
     await page.mouse.move(area.x + 4, area.y + 4)
     await page.mouse.down()
     for (let step = 1; step <= 20; step++) {
@@ -380,11 +378,8 @@ test.describe('the panel is not in the way', () => {
     await page.locator(CANVAS).click({ position: { x: 340, y: 260 }, button: 'right' })
     await expect(page.getByTestId('context-menu')).toBeVisible()
 
-    const panel = await page.getByTestId('inspector').boundingBox()
-    const menu = await page.getByTestId('context-menu').boundingBox()
-    expect(panel).not.toBeNull()
-    expect(menu).not.toBeNull()
-    if (panel === null || menu === null) return
+    const panel = await boxOf(page.getByTestId('inspector'))
+    const menu = await boxOf(page.getByTestId('context-menu'))
     // A point inside both: whatever is drawn there is what gets clicked.
     const x = Math.max(panel.x, menu.x) + 4
     const y = Math.max(panel.y, menu.y) + 4
@@ -413,9 +408,7 @@ test.describe('the panel is not in the way', () => {
     await place(page, 's', { x: 640, y: 300 }, 'Beside', EMPTY)
     await place(page, 's', { x: 300, y: 300 }, 'First', EMPTY)
     await page.locator(CANVAS).click({ position: { x: 300, y: 300 } })
-    const panel = await page.getByTestId('inspector').boundingBox()
-    expect(panel).not.toBeNull()
-    if (panel === null) return
+    const panel = await boxOf(page.getByTestId('inspector'))
     expect(panel.x).toBeLessThan(640)
     expect(panel.x + panel.width).toBeGreaterThan(640)
 

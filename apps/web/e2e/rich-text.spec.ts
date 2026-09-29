@@ -29,7 +29,7 @@ async function selectFirst(page: Page, count: number): Promise<void> {
     // The first TEXT, wherever it sits: each paragraph is a block now
     // (ADR 0014), so the editor's first child is a paragraph, not the words.
     const node = document.createTreeWalker(element, NodeFilter.SHOW_TEXT).nextNode()
-    if (node === null) return
+    if (node === null) throw new Error('the editor holds no text to select')
     const range = document.createRange()
     range.setStart(node, 0)
     range.setEnd(node, n)

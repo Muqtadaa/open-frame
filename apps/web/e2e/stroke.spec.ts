@@ -1,6 +1,6 @@
 import type { Page } from '@playwright/test'
 
-import { CANVAS, expect, openBoard, test } from './fixtures.js'
+import { CANVAS, expect, openBoard, test, boxOf } from './fixtures.js'
 
 /**
  * A line's pattern, on everything that offers one.
@@ -122,11 +122,8 @@ test.describe('an edge resizes, not just the square on it', () => {
     await shape(page, { x: 600, y: 320 })
 
     const before = await widthOf(page)
-    const edge = await page.getByTestId('edge-e').boundingBox()
-    const midpoint = await page.getByTestId('handle-e').boundingBox()
-    expect(edge).not.toBeNull()
-    expect(midpoint).not.toBeNull()
-    if (edge === null || midpoint === null) return
+    const edge = await boxOf(page.getByTestId('edge-e'))
+    const midpoint = await boxOf(page.getByTestId('handle-e'))
 
     // A quarter of the way down the edge, which is well clear of the square
     // at its middle and of both corners.
@@ -160,9 +157,8 @@ test.describe('an edge resizes, not just the square on it', () => {
     await openBoard(page)
     await shape(page, { x: 600, y: 320 })
 
-    const edge = await page.getByTestId('edge-n').boundingBox()
-    const corner = await page.getByTestId('handle-nw').boundingBox()
-    if (edge === null || corner === null) return
+    const edge = await boxOf(page.getByTestId('edge-n'))
+    const corner = await boxOf(page.getByTestId('handle-nw'))
     expect(edge.x, 'the strip runs into the corner').toBeGreaterThanOrEqual(corner.x + corner.width)
   })
 })
