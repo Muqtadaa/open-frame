@@ -107,6 +107,20 @@ fixtures and **report** measurements rather than asserting thresholds — with o
 exception, which is asserted because the architecture depends on it: DOM node
 count must not grow with board size.
 
+### Writing a browser test
+
+Start from `e2e/fixtures.ts`, not `@playwright/test`. `test.use({ board:
+'fresh' })` opens the local board with nothing stored and waits for the rail,
+so the first keystroke is never dropped; `'open'` opens it as it was left.
+The file also holds the gestures every spec needs — `drag`, `place`,
+`clickLine` — and the waits: `saved(page)` before a reload, never a sleep
+guessing at the autosave debounce.
+
+A missing element fails the test. Read a box with `boxOf`, an index with
+`defined`; a test that returned on `null` passed while checking nothing, as
+47 places once did. The lint (`eslint-plugin-playwright`) refuses sleeps,
+branches in a test body and forced clicks, so these stay true.
+
 `pnpm test:e2e` needs a Chromium. In an environment with a pre-installed browser
 whose build differs from Playwright's expected one, set
 `OPENFRAME_CHROMIUM_PATH=/path/to/chromium`.
