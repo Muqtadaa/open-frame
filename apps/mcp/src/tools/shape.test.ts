@@ -200,3 +200,36 @@ describe('derive_object', () => {
     await context.close()
   })
 })
+
+describe('what an agent is told', () => {
+  /**
+   * An arrangement that moves nothing records no change, so there is nothing
+   * to revert — and an answer offering a change id to revert would send the
+   * agent after a change that does not exist.
+   */
+  it('says so when nothing needed doing, and offers nothing to revert', async () => {
+    const { context } = await board()
+    const ids = await make(context, [
+      { type: 'sticky', x: 37, y: 0 },
+      { type: 'sticky', x: 37, y: 300 },
+    ])
+    const answer = await alignObjects.run({ board: TEST_BOARD, ids, edge: 'left' }, context)
+    expect(answer.isError, answer.text).toBeFalsy()
+    const payload = payloadOf(answer.text)
+    expect(payload.change).toBeUndefined()
+    expect(payload.undo).toBeUndefined()
+    expect(payload.changed).toBe(false)
+    await context.close()
+  })
+
+  /** Two copies of one id are one object, not two. */
+  it('refuses the same object named twice', async () => {
+    const { peer, context } = await board()
+    const [only] = await make(context, [{ type: 'sticky', x: 0, y: 0 }])
+    const answer = await groupObjects.run({ board: TEST_BOARD, ids: [only, only] }, context)
+    expect(answer.isError).toBe(true)
+    expect(answer.text).toMatch(/more than once/)
+    expect(objectsOn(peer).some((object) => object.type === 'group')).toBe(false)
+    await context.close()
+  })
+})

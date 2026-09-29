@@ -23,7 +23,8 @@ export function deriveObject(
 ): Patch[] {
   requireFinite(command.x, 'Derive x')
   requireFinite(command.y, 'Derive y')
-  const sources = command.from
+  // Each source cited once, however many times it was named.
+  const sources = [...new Set(command.from)]
     .map((id) => requireObject(doc, id))
     // A relation to something with no place on the board would be a citation
     // of a citation, which nothing today means.

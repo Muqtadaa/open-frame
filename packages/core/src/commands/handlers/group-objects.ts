@@ -20,7 +20,9 @@ export function groupObjects(
   command: GroupObjects,
   ctx: CommandContext,
 ): Patch[] {
-  const members = command.ids.map((id) => requireObject(doc, id))
+  // Distinct: a command is JSON anybody can build, and one object named twice
+  // is still one object — not a group of two.
+  const members = [...new Set(command.ids)].map((id) => requireObject(doc, id))
   // One object is already a unit, and nothing cannot be grouped.
   if (members.length < 2) {
     throw new CommandError('invalid-input', 'GroupObjects needs at least two objects')
@@ -41,6 +43,10 @@ export function groupObjects(
         ctx,
       ),
     (view) =>
-      reparentObjects(view, { kind: 'ReparentObjects', ids: command.ids, parentId: id }, ctx),
+      reparentObjects(
+        view,
+        { kind: 'ReparentObjects', ids: members.map((m) => m.id), parentId: id },
+        ctx,
+      ),
   ])
 }

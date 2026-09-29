@@ -67,6 +67,21 @@ function commit(
 ): ToolResponse {
   const result = peer.dispatcher.transact(label, commands, { origin: 'mcp' })
   if (!result.ok) return problem(`The board refused that: ${result.error.message}`)
+  /*
+   * Nothing to do — already lined up, or everything asked about locked. The
+   * dispatcher records no change for that, so there is none to name: an
+   * answer offering a change id would send the agent to revert something the
+   * log never held.
+   */
+  if (result.patches.length === 0) {
+    return data({
+      board: { id: peer.boardId, title: peer.store.getDocument().meta.title },
+      did: label,
+      changed: false,
+      note: 'Nothing needed changing, so nothing was recorded.',
+      ...also,
+    })
+  }
   return data({
     board: { id: peer.boardId, title: peer.store.getDocument().meta.title },
     did: label,
@@ -553,7 +568,20 @@ export const revertChange: ToolDefinition = {
  * the change log is the same one the web writes.
  */
 
-const objectIds = (min: number) => z.array(z.string()).min(min).max(500)
+/*
+ * Each object once. `min` counts entries, not objects, so `[id, id]` would
+ * pass for two and make a group of one; refused here with a reason an agent
+ * can act on, and counted distinctly again by the command itself.
+ */
+const objectIds = (min: number) =>
+  z
+    .array(z.string())
+    .max(500)
+    .refine(
+      (list) => new Set(list).size === list.length,
+      'Name each object only once, not more than once.',
+    )
+    .refine((list) => list.length >= min, `Name at least ${String(min)} objects.`)
 
 /** Dispatches one command under the label everyone else uses for it. */
 const commitOne = (peer: BoardPeer, command: Command, also: Record<string, unknown> = {}) =>
