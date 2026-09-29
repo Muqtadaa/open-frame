@@ -1,6 +1,6 @@
 import type { Page } from '@playwright/test'
 
-import { CANVAS, expect, openBoard, test, undo, boxOf } from './fixtures.js'
+import { CANVAS, expect, openBoard, test, undo, boxOf, viewOf } from './fixtures.js'
 
 /**
  * What text does when there is more of it than there is room.
@@ -34,7 +34,7 @@ test('a sticky note aligns its text down the box', async ({ page }) => {
 
   const top = async (): Promise<number> =>
     await page
-      .locator('.of-sticky__text')
+      .getByTestId('sticky-text')
       .first()
       .evaluate((el) => (el as HTMLElement).getBoundingClientRect().top)
 
@@ -73,7 +73,8 @@ test('a table cell aligns its text down', async ({ page }) => {
 
   const top = async (): Promise<number> =>
     await page
-      .locator('[role="table"] .of-table__cell-text')
+      .locator('[role="table"]')
+      .getByTestId('table-cell-text')
       .first()
       .evaluate((el) => (el as HTMLElement).getBoundingClientRect().top)
 
@@ -94,10 +95,10 @@ test('shape text stays inside the shape', async ({ page }) => {
   await write(page, 'shape', { x: 560, y: 300 }, LONG)
 
   const escaped = await page
-    .locator('.of-shape__label-text')
+    .getByTestId('shape-label-text')
     .first()
     .evaluate((el) => {
-      const label = el.closest('.of-shape__label')!
+      const label = el.closest('[data-testid="shape-label"]')!
       const text = el.getBoundingClientRect()
       const box = label.getBoundingClientRect()
       return { over: text.bottom - box.bottom, hidden: el.scrollHeight > el.clientHeight }
@@ -123,7 +124,7 @@ test('hidden text is marked rather than silently cut', async ({ page }) => {
   await write(page, 'sticky', { x: 500, y: 300 }, LONG)
 
   const clamp = await page
-    .locator('.of-sticky__text')
+    .getByTestId('sticky-text')
     .first()
     .evaluate((el) => {
       const style = getComputedStyle(el)
@@ -159,7 +160,7 @@ test('double-clicking the bottom handle fits a sticky to its text', async ({ pag
 
   const hidden = async (): Promise<boolean> =>
     await page
-      .locator('.of-sticky__text')
+      .getByTestId('sticky-text')
       .first()
       .evaluate((el) => el.scrollHeight > el.clientHeight + 1)
 
@@ -209,7 +210,7 @@ test('double-clicking the right handle fits a shape to its widest line', async (
    * sticky note's fixed padding — lands short here every time.
    */
   const lines = await page
-    .locator('.of-shape__label-text')
+    .getByTestId('shape-label-text')
     .first()
     .evaluate((el) => {
       const lineHeight = Number.parseFloat(window.getComputedStyle(el).lineHeight)
@@ -233,11 +234,11 @@ test('a structured slip aligns its text down', async ({ page }) => {
   await expect(page.getByTestId('context-menu')).toBeVisible()
   await page.getByTestId('menu-promote-to').click()
   await page.getByTestId('menu-evidence').click()
-  await expect(page.locator('.of-slip')).toHaveCount(1)
+  await expect(viewOf(page, 'evidence')).toHaveCount(1)
 
   const top = async (): Promise<number> =>
     await page
-      .locator('.of-slip__text')
+      .getByTestId('slip-text')
       .first()
       .evaluate((el) => (el as HTMLElement).getBoundingClientRect().top)
 

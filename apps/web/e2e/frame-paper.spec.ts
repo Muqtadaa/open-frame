@@ -1,6 +1,6 @@
 import { expect, test, type Page } from '@playwright/test'
 
-import { CANVAS } from './fixtures.js'
+import { CANVAS, viewOf } from './fixtures.js'
 import { BOARD_URL } from './routes.js'
 
 /**
@@ -20,11 +20,11 @@ async function placeFrame(page: Page): Promise<void> {
   await page.locator(CANVAS).click({ position: { x: 500, y: 350 } })
   await expect(page.locator(EDITOR)).toBeFocused()
   await page.keyboard.press('Escape')
-  await expect(page.locator('.of-frame')).toHaveCount(1)
+  await expect(viewOf(page, 'frame')).toHaveCount(1)
 }
 
 const paper = (page: Page) =>
-  page.locator('.of-frame').evaluate((frame) => getComputedStyle(frame).backgroundColor)
+  viewOf(page, 'frame').evaluate((frame) => getComputedStyle(frame).backgroundColor)
 
 const token = (page: Page, name: string) =>
   page.evaluate(
@@ -57,7 +57,7 @@ test.describe('after hours', () => {
 
   test('marks no colour for it, and a chosen white is white', async ({ page }) => {
     await placeFrame(page)
-    await page.locator('.of-frame__title').click()
+    await page.getByTestId('frame-title').click()
     await expect(page.getByTestId('inspector')).toBeVisible()
     // No swatch is what it is drawn in, so none claims to be.
     await expect(page.locator('[data-testid^="swatch-"][aria-pressed="true"]')).toHaveCount(0)

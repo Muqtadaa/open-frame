@@ -1,6 +1,6 @@
 import type { Page } from '@playwright/test'
 
-import { CANVAS, expect, test, undo, saved } from './fixtures.js'
+import { CANVAS, expect, test, undo, saved, viewOf } from './fixtures.js'
 
 /**
  * Formatting selected text (ADR 0012), walked in a browser.
@@ -191,8 +191,8 @@ test.describe('formatting selected text', () => {
     await page.getByTestId('format-bold').click()
     await page.locator(CANVAS).click({ position: CLEAR })
 
-    await expect(page.locator('.of-sticky strong')).toHaveText('Pricing')
-    await expect(page.locator('.of-sticky')).toContainText('Pricing is unclear')
+    await expect(viewOf(page, 'sticky').locator('strong')).toHaveText('Pricing')
+    await expect(viewOf(page, 'sticky')).toContainText('Pricing is unclear')
   })
 
   /** The document is what persists, so this is the model surviving, not the DOM. */
@@ -201,11 +201,11 @@ test.describe('formatting selected text', () => {
     await selectFirst(page, 7)
     await page.getByTestId('format-bold').click()
     await page.locator(CANVAS).click({ position: CLEAR })
-    await expect(page.locator('.of-sticky strong')).toHaveText('Pricing')
+    await expect(viewOf(page, 'sticky').locator('strong')).toHaveText('Pricing')
 
     await saved(page)
     await page.reload()
-    await expect(page.locator('.of-sticky strong')).toHaveText('Pricing')
+    await expect(viewOf(page, 'sticky').locator('strong')).toHaveText('Pricing')
   })
 
   /** One command per edit, however many marks were applied along the way. */
@@ -217,11 +217,11 @@ test.describe('formatting selected text', () => {
     await page.getByTestId('format-bold').click()
     await page.getByTestId('format-italic').click()
     await page.locator(CANVAS).click({ position: CLEAR })
-    await expect(page.locator('.of-sticky strong')).toHaveCount(1)
+    await expect(viewOf(page, 'sticky').locator('strong')).toHaveCount(1)
 
     await undo(page)
-    await expect(page.locator('.of-sticky strong')).toHaveCount(0)
-    await expect(page.locator('.of-sticky')).toContainText('A plain note')
+    await expect(viewOf(page, 'sticky').locator('strong')).toHaveCount(0)
+    await expect(viewOf(page, 'sticky')).toContainText('A plain note')
   })
 
   // Escape ends the edit and keeps it, formatting included; undo takes it back.
@@ -233,10 +233,10 @@ test.describe('formatting selected text', () => {
     await page.getByTestId('format-bold').click()
     await page.keyboard.press('Escape')
 
-    await expect(page.locator('.of-sticky strong')).toHaveCount(1)
+    await expect(viewOf(page, 'sticky').locator('strong')).toHaveCount(1)
     await undo(page)
-    await expect(page.locator('.of-sticky strong')).toHaveCount(0)
-    await expect(page.locator('.of-sticky')).toContainText('A plain note')
+    await expect(viewOf(page, 'sticky').locator('strong')).toHaveCount(0)
+    await expect(viewOf(page, 'sticky')).toContainText('A plain note')
   })
 
   /*
@@ -268,7 +268,9 @@ test.describe('formatting selected text', () => {
     await page.locator(EDITOR).click()
     await page.getByTestId('format-bigger').click()
     await page.locator(CANVAS).click({ position: CLEAR })
-    await expect(page.locator('.of-sticky [data-size="lg"]')).toHaveText('Pricing is unclear')
+    await expect(viewOf(page, 'sticky').locator('[data-size="lg"]')).toHaveText(
+      'Pricing is unclear',
+    )
   })
 })
 
@@ -385,7 +387,7 @@ test('a frame title takes formatting and a list', async ({ page }) => {
   await page.keyboard.press('ControlOrMeta+a')
   await page.getByTestId('format-bold').click()
   await page.locator(CANVAS).click({ position: CLEAR })
-  await expect(page.locator('.of-frame__title strong')).toHaveText('Findings')
+  await expect(page.getByTestId('frame-title').locator('strong')).toHaveText('Findings')
 })
 
 /*

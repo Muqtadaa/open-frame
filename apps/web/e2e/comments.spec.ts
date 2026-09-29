@@ -412,7 +412,7 @@ test('shows a picked mention as a name, never as the token it is stored as', asy
 
   await page.locator('[data-testid^="comment-pin-cmt_"]').first().click()
 
-  const said = page.locator('.of-comment__text').first()
+  const said = page.getByTestId('comment-text').first()
   await expect(said).toContainText('@Rowan')
   await expect(said).toContainText('have a look')
   // The two halves of the token, neither of which is for reading.
@@ -1097,7 +1097,7 @@ test.describe('when, how many, and where', () => {
     await page.getByTestId('comment-input').fill('Second')
     await page.getByTestId('comment-post').click()
 
-    const times = page.locator('.of-comment time.of-ago')
+    const times = page.getByRole('article').locator('time')
     await expect(times).toHaveCount(2)
     await expect(times.first()).toHaveText('just now')
     await expect(times.first()).toHaveAttribute('datetime', /^\d{4}-\d\d-\d\dT/)
@@ -1257,6 +1257,6 @@ test.describe('the small things', () => {
     await page.getByTestId('comment-input').fill('One')
     await page.getByTestId('comment-post').click()
     await page.locator('[data-testid^="comment-pin-cmt_"]').first().click()
-    await expect(page.locator('.of-comment__who').first()).toHaveAttribute('aria-hidden', 'true')
+    await expect(page.getByTestId('comment-who').first()).toHaveAttribute('aria-hidden', 'true')
   })
 })

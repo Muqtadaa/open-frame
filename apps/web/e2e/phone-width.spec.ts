@@ -55,9 +55,9 @@ test('a board is named in full and dated on one line', async ({ page }) => {
   await page.waitForSelector('[data-testid="home-boards"] li')
 
   const rows = await page.evaluate(() =>
-    [...document.querySelectorAll('.of-home__board')].map((row) => {
-      const title = row.querySelector<HTMLElement>('.of-home__board-title')
-      const when = row.querySelector<HTMLElement>('.of-home__board-when')
+    [...document.querySelectorAll('[data-testid="board-link"]')].map((row) => {
+      const title = row.querySelector<HTMLElement>('[data-testid="board-title-text"]')
+      const when = row.querySelector<HTMLElement>('[data-testid="board-when"]')
       // One rect per line the words occupy.
       const range = document.createRange()
       if (when !== null) range.selectNodeContents(when)
@@ -73,7 +73,7 @@ test('a board is named in full and dated on one line', async ({ page }) => {
         overlaps: (() => {
           const time = when?.getBoundingClientRect()
           const actions = row.parentElement
-            ?.querySelector('.of-home__row-actions')
+            ?.querySelector('[data-testid="board-row-actions"]')
             ?.getBoundingClientRect()
           if (time === undefined || actions === undefined) return false
           return (
@@ -101,7 +101,7 @@ test('a confirmation reads as a sentence, inside the screen', async ({ page }) =
   await page.goto(HOME_URL)
   const row = page.getByTestId('home-boards').locator('li').first()
   await row.getByTestId('delete-board').click()
-  const what = row.locator('.of-home__confirm-what')
+  const what = row.getByTestId('board-confirm-what')
   const box = await boxOf(what)
   expect(box.width).toBeGreaterThan(250)
   expect(await overflow(page)).toBeLessThanOrEqual(0)
@@ -120,7 +120,7 @@ test("the board's bar fits, with the account as a face and the source in its she
   const account = page.getByTestId('account')
   const chip = await boxOf(account)
   expect(chip.x + chip.width).toBeLessThanOrEqual(390)
-  await expect(account.locator('.of-status__share-label')).toBeHidden()
+  await expect(account.getByTestId('status-label')).toBeHidden()
 
   // Reachable from inside the running app (AGPL §13), from the account.
   await expect(page.getByTestId('source-link')).toBeHidden()
@@ -140,7 +140,7 @@ test('signed out, the bar still says Sign in, and the source is behind it', asyn
   await page.waitForSelector('[data-testid="status-bar"]')
   const signIn = page.getByTestId('sign-in')
   await expect(signIn).toHaveText('Sign in')
-  await expect(signIn.locator('.of-status__share-label')).toBeVisible()
+  await expect(signIn.getByTestId('status-label')).toBeVisible()
   const box = await boxOf(signIn)
   expect(box.width).toBeGreaterThanOrEqual(30)
   expect(box.x + box.width).toBeLessThanOrEqual(390)

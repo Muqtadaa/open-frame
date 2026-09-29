@@ -1,6 +1,6 @@
 import { expect, test, type Page } from '@playwright/test'
 
-import { CANVAS, EDITOR, boxOf, saved } from './fixtures.js'
+import { CANVAS, EDITOR, boxOf, saved, viewOf } from './fixtures.js'
 import { BOARD_URL } from './routes.js'
 
 /**
@@ -99,10 +99,10 @@ test('selects a note and changes its colour', async ({ page }) => {
   await createSticky(page, 300, 250, 'Colour me')
 
   await page.locator(STICKY).click()
-  await expect(page.locator('.of-object--selected')).toHaveCount(1)
+  await expect(page.locator('[data-selected="true"]')).toHaveCount(1)
 
   await page.getByTestId('swatch-blue').click()
-  await expect(page.locator('.of-sticky')).toHaveCSS('background-color', 'rgb(207, 226, 255)')
+  await expect(viewOf(page, 'sticky')).toHaveCSS('background-color', 'rgb(207, 226, 255)')
 })
 
 test('deletes the selection and restores it with undo', async ({ page }) => {

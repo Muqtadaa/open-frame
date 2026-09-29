@@ -134,7 +134,7 @@ test.describe('every grip is a 24px target', () => {
     await page.keyboard.press('Escape')
     await expect(page.getByTestId('selection-overlay')).toBeVisible()
     atLeast24(await targets(page, '[data-testid^="handle-"]'))
-    atLeast24(await targets(page, '.of-connect-point'))
+    atLeast24(await targets(page, '[data-handle="connect"]'))
   })
 
   test("a line's ends, bends and legs", async ({ page }) => {
@@ -153,7 +153,7 @@ test.describe('every grip is a 24px target', () => {
     atLeast24(await targets(page, '[data-testid="endpoint-from"], [data-testid="endpoint-to"]'))
 
     await page.getByTestId('field-routing').selectOption('orthogonal')
-    const line = page.locator('.of-connector__line')
+    const line = page.getByTestId('connector-line')
     const middle = await line.evaluate((element) => {
       const path = element as unknown as SVGPathElement
       const point = path.getPointAtLength(path.getTotalLength() / 2)
@@ -202,7 +202,7 @@ test('a small selection keeps its corners, and its middle moves it', async ({ pa
   await expect(page.getByTestId('handle-nw')).toBeVisible()
   await expect(page.locator('[data-testid^="edge-"]')).toHaveCount(0)
   await expect(page.getByTestId('handle-rotate')).toHaveCount(0)
-  await expect(page.locator('.of-connect-point')).toHaveCount(0)
+  await expect(page.locator('[data-handle="connect"]')).toHaveCount(0)
 
   const before = await boxOf(shape)
   const middle = { x: before.x + before.width / 2, y: before.y + before.height / 2 }
@@ -244,7 +244,7 @@ test.describe('the board from the keyboard', () => {
       /Tab moves between objects/,
     )
 
-    const selected = page.locator('.of-object--selected')
+    const selected = page.locator('[data-selected="true"]')
     await page.keyboard.press('Tab')
     await expect(selected).toContainText('First')
     await expect(announcer(page)).toContainText('First')
@@ -447,7 +447,7 @@ test.describe('a selection says what it is', () => {
     await note(page, { x: 300, y: 260 }, 'One')
     await note(page, { x: 600, y: 260 }, 'Two')
     await page.keyboard.press('ControlOrMeta+a')
-    await expect(page.locator('.of-selection__member')).toHaveCount(2)
+    await expect(page.getByTestId('selection-member')).toHaveCount(2)
   })
 
   test('a resize shows the size it is reaching for, and a turn its angle', async ({ page }) => {
@@ -531,7 +531,7 @@ test.describe('the apparatus under the pointer', () => {
 
   // Dragging from the zoom cluster used to select the chrome's words.
   test('a drag across the chrome selects no text', async ({ page }) => {
-    const cluster = await boxOf(page.locator('.of-zoom'))
+    const cluster = await boxOf(page.getByTestId('zoom-control'))
     await page.mouse.move(cluster.x + 4, cluster.y + cluster.height / 2)
     await page.mouse.down()
     await page.mouse.move(200, 120, { steps: 8 })

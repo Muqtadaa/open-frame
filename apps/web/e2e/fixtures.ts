@@ -83,6 +83,17 @@ export const test = base.extend<{ board: BoardState; openedBoard: undefined }>({
 })
 
 /**
+ * An object as its type's view draws it: the named group inside the object's
+ * wrapper. The wrapper is the canvas's — positioned, sized, lifted when
+ * selected — while the group is what carries the type's own paper, ink and
+ * opacity, so a spec reading those reads them here. An open editor is a
+ * textbox, not a group, so this is the drawn object and never the editor.
+ */
+export function viewOf(scope: Page | Locator, type: string): Locator {
+  return scope.locator(`[data-object-type="${type}"]`).getByRole('group')
+}
+
+/**
  * Presses, moves in eight steps, releases.
  *
  * Steps rather than a jump because a gesture decides what it is from the
@@ -113,7 +124,7 @@ export async function drag(
  * pass or fail for the wrong reason.
  */
 export async function alongTheLine(page: Page, fraction = 0.5): Promise<{ x: number; y: number }> {
-  return page.locator('.of-connector__line').evaluate((element, at: number) => {
+  return page.getByTestId('connector-line').evaluate((element, at: number) => {
     const path = element as unknown as SVGPathElement
     const point = path.getPointAtLength(path.getTotalLength() * at)
     const matrix = path.getScreenCTM()

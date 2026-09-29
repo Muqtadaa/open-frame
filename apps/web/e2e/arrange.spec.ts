@@ -143,17 +143,17 @@ test('groups the alignments across and down', async ({ page }) => {
   await note(page, { x: 420, y: 260 })
   await note(page, { x: 700, y: 400 })
   await selectAll(page)
-  const bar = page.locator('.of-arrange')
-  await expect(bar.locator('.of-arrange__rule')).toHaveCount(2)
+  const bar = page.getByRole('group', { name: 'Arrange selection' })
+  await expect(bar.getByTestId('arrange-rule')).toHaveCount(2)
   // The first rule sits between "right" and "top".
   const order = await bar.evaluate((node) =>
-    [...node.children].map((child) => child.getAttribute('data-testid') ?? 'rule'),
+    [...node.children].map((child) => child.getAttribute('data-testid')),
   )
   expect(order.slice(0, 7)).toEqual([
     'align-left',
     'align-centerX',
     'align-right',
-    'rule',
+    'arrange-rule',
     'align-top',
     'align-middleY',
     'align-bottom',

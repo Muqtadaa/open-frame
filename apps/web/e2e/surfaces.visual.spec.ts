@@ -153,7 +153,9 @@ for (const world of WORLDS) {
       await page.locator('[data-testid="canvas"]').click({ position: { x: 640, y: 380 } })
       await page.keyboard.type('Discovery')
       await page.keyboard.press('Escape')
-      await expect(page.locator('.of-frame')).toHaveCount(1)
+      await expect(
+        page.locator('[data-object-type="frame"]').getByRole('group', { name: 'Frame' }),
+      ).toHaveCount(1)
       await placeSticky(page, 'Customers do not understand pricing')
       await page.keyboard.press('Escape')
       await snap(page, `${world}-frame`)
@@ -337,7 +339,7 @@ for (const world of WORLDS) {
       await expect(page.getByTestId('toast')).toBeVisible()
       // Held by the pointer over its words, so the photograph is not a race
       // against its five seconds.
-      await page.getByTestId('toast').locator('.of-toast__body').hover()
+      await page.getByTestId('toast').getByTestId('toast-body').hover()
       await expect(page).toHaveScreenshot(`${world}-notice-and-toast.png`, {
         animations: 'disabled',
         caret: 'hide',

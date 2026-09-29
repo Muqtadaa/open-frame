@@ -137,7 +137,7 @@ test('nothing covers the zoom controls', async ({ page }) => {
   await rename(page, 'A board name long enough to push this line right across the screen')
 
   const covered = await page.evaluate(() => {
-    const zoom = document.querySelector('.of-zoom')
+    const zoom = document.querySelector('[data-testid="zoom-control"]')
     if (zoom === null) return ['no zoom cluster']
 
     const blocked: string[] = []

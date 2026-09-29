@@ -70,7 +70,7 @@ test.describe('creating each object type', () => {
     await page.locator(EDITOR).fill('Process')
     await page.locator(CANVAS).click({ position: { x: 800, y: 500 } })
     await expect(page.locator('[data-object-type="shape"]')).toContainText('Process')
-    await expect(page.locator('.of-shape__svg')).toBeVisible()
+    await expect(page.getByTestId('shape-outline')).toBeVisible()
   })
 })
 
@@ -149,7 +149,7 @@ test.describe('zoom', () => {
     await page.keyboard.press('Escape')
     await page.keyboard.press('v')
 
-    const title = page.locator('.of-frame__title')
+    const title = page.getByTestId('frame-title')
     const heightAt = async (percent: string): Promise<number> => {
       await page.getByTestId('zoom-percent').click()
       await page.getByTestId('zoom-input').fill(percent)
@@ -228,7 +228,7 @@ test.describe('selection shortcuts', () => {
     await page.keyboard.press('v')
 
     await page.keyboard.press(`ControlOrMeta+a`)
-    await expect(page.locator('.of-object--selected')).toHaveCount(1)
+    await expect(page.locator('[data-selected="true"]')).toHaveCount(1)
 
     await page.keyboard.press(`ControlOrMeta+d`)
     await expect(page.locator('[data-object-type="sticky"]')).toHaveCount(2)

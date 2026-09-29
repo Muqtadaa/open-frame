@@ -1,6 +1,6 @@
 import type { Page } from '@playwright/test'
 
-import { CANVAS, drag, EDITOR, expect, place, test, undo, boxOf } from './fixtures.js'
+import { CANVAS, drag, EDITOR, expect, place, test, undo, boxOf, viewOf } from './fixtures.js'
 
 /**
  * Direct manipulation: resize, rotate, z-order, clipboard, lock.
@@ -190,7 +190,7 @@ test.describe('frames', () => {
     await page.keyboard.press('v')
 
     await expect(page.locator('[data-object-type="frame"]')).toHaveCount(1)
-    await expect(page.locator('.of-frame__title')).toContainText('Discovery')
+    await expect(page.getByTestId('frame-title')).toContainText('Discovery')
   })
 
   /**
@@ -215,7 +215,7 @@ test.describe('frames', () => {
     const inFrame = await boxOf(note)
 
     // Now drag the FRAME by its title and confirm the note travels with it.
-    const title = await boxOf(page.locator('.of-frame__title'))
+    const title = await boxOf(page.getByTestId('frame-title'))
     await drag(page, { x: title.x + 10, y: title.y + 5 }, { x: title.x + 10, y: title.y - 120 })
 
     const after = await boxOf(note)
@@ -250,7 +250,7 @@ test.describe('frames', () => {
     const start = await boxOf(note)
     await drag(page, { x: start.x + 40, y: start.y + 40 }, { x: 700, y: 400 })
 
-    await page.locator('.of-frame__title').click()
+    await page.getByTestId('frame-title').click()
     await page.keyboard.press('Delete')
     await expect(page.locator('[data-object-type="frame"]')).toHaveCount(0)
     await expect(page.locator('[data-object-type="sticky"]')).toHaveCount(0)
@@ -376,7 +376,7 @@ test.describe('reported regressions', () => {
     await page.keyboard.press('v')
 
     await page.locator(CANVAS).click({ position: AT })
-    const text = page.locator('.of-shape__label-text')
+    const text = page.getByTestId('shape-label-text')
 
     await page.getByTestId('align-start').click()
     const left = (await text.boundingBox())?.x ?? 0
@@ -410,7 +410,7 @@ test.describe('reported regressions', () => {
     await page.keyboard.press('v')
 
     // The frame adopted the note it landed on, rather than covering it.
-    const note = page.locator('.of-sticky').first()
+    const note = viewOf(page, 'sticky').first()
     await expect(note).toBeVisible()
 
     // Selecting the frame by its edge, away from the note.

@@ -77,7 +77,7 @@ test('the context menu stays on screen in the bottom right corner', async ({ pag
 
   // And its last row is reachable, which is what being on screen is for.
   const menu = page.getByTestId('context-menu')
-  await expect(menu.locator('.of-menu__item').last()).toBeVisible()
+  await expect(menu.getByRole('menuitem').last()).toBeVisible()
 })
 
 /**

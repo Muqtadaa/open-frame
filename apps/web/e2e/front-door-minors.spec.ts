@@ -13,7 +13,7 @@ test('a time stays on one line', async ({ page }) => {
     { id: 'brd_aaaaaaaaaaaaaaaa', title: 'Journey map', role: 'owner', agoMs: 9 * MINUTE },
   ])
   await page.goto(HOME_URL)
-  const when = page.locator('.of-home__board-when').first()
+  const when = page.getByTestId('board-when').first()
   await expect(when).toHaveText('9 minutes ago')
   const box = await when.boundingBox()
   // "9 minutes ago" wrapped onto two lines at 1280, three on a phone.
@@ -28,8 +28,8 @@ test('a board of your own says it is yours, not merely shared', async ({ page })
   await page.goto(HOME_URL)
   const rows = page.getByTestId('home-boards').locator('li')
   // Every row read "shared", which told nobody anything.
-  await expect(rows.filter({ hasText: 'Mine' }).locator('.of-home__board-tag')).toHaveText('yours')
-  await expect(rows.filter({ hasText: 'Theirs' }).locator('.of-home__board-tag')).toHaveText(
+  await expect(rows.filter({ hasText: 'Mine' }).getByTestId('board-tag')).toHaveText('yours')
+  await expect(rows.filter({ hasText: 'Theirs' }).getByTestId('board-tag')).toHaveText(
     'shared with you',
   )
 })
@@ -53,7 +53,7 @@ test('naming a workspace has a label, and a way back', async ({ page }) => {
   await page.getByTestId('workspace-new').click()
   const name = page.getByLabel('Name for the new workspace')
   await expect(name).toBeFocused()
-  await expect(page.locator('.of-spaces__naming label')).toBeVisible()
+  await expect(page.getByTestId('workspace-naming').locator('label')).toBeVisible()
   await page.keyboard.press('Escape')
   await expect(name).toHaveCount(0)
   await expect(page.getByTestId('workspace-new')).toBeFocused()
@@ -68,7 +68,7 @@ test('an invite link can be copied, and says what it gives', async ({ page, cont
   await page.getByTestId('workspace-create').click()
   await page.getByTestId('workspace-share').click()
   // The link makes people editors, and it used to say nothing of the kind.
-  await expect(page.locator('.of-spaces__share')).toContainText('join as editors')
+  await expect(page.getByTestId('workspace-share-note')).toContainText('join as editors')
   await page.getByTestId('workspace-copy').click()
   expect(await page.evaluate(() => navigator.clipboard.readText())).toContain('workspace=')
 })

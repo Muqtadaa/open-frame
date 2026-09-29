@@ -17,7 +17,7 @@ async function note(page: Page, at: { x: number; y: number }, text: string): Pro
 /**
  * The cursor over an object.
  *
- * There was no cursor rule on `.of-object` at all, so it fell through to
+ * There was no cursor rule on an object's wrapper at all, so it fell through to
  * `auto` — and `auto` over selectable text is an I-beam. Every note and label
  * promised typing on hover and gave a selection on click.
  */

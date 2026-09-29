@@ -24,7 +24,7 @@ test.describe('a line pattern reaches the shape it is set on', () => {
     await openBoard(page)
     await shape(page, { x: 600, y: 320 })
 
-    const outline = page.locator('.of-shape__svg path').first()
+    const outline = page.getByTestId('shape-outline').locator('path').first()
     await expect(outline).toHaveCount(1)
 
     await page.getByTestId('line-dashed').click()
@@ -47,7 +47,7 @@ test.describe('a line pattern reaches the shape it is set on', () => {
     await page.keyboard.press('Escape')
     await page.locator('[data-object-id]').first().click()
 
-    const outline = page.locator('.of-shape__svg ellipse, .of-shape__svg path').first()
+    const outline = page.getByTestId('shape-outline').locator('ellipse, path').first()
     await page.getByTestId('line-dotted').click()
 
     expect(await outline.getAttribute('stroke-dasharray')).not.toBeNull()
@@ -81,7 +81,7 @@ test.describe('a line pattern reaches the shape it is set on', () => {
       await object.click()
       await page.getByTestId('line-dashed').click()
 
-      const outline = page.locator('.of-shape__svg ellipse, .of-shape__svg path').first()
+      const outline = page.getByTestId('shape-outline').locator('ellipse, path').first()
       expect(
         await outline.getAttribute('stroke-dasharray'),
         `variant ${String(index)} ignored the pattern`,
@@ -98,7 +98,7 @@ test.describe('a line pattern reaches the shape it is set on', () => {
 
     await page.getByTestId('line-dashed').click()
     await page.getByTestId('line-solid').click()
-    const outline = page.locator('.of-shape__svg path').first()
+    const outline = page.getByTestId('shape-outline').locator('path').first()
     expect(await outline.getAttribute('stroke-dasharray')).toBeNull()
   })
 })
