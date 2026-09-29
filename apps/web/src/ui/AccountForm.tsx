@@ -1,6 +1,6 @@
 import { useId, useRef, useState, type FormEvent } from 'react'
 
-import { signIn, signUp } from '../app/identity.js'
+import { useServices } from '../runtime/services.js'
 
 /**
  * Signing in, without deciding where it appears.
@@ -12,6 +12,7 @@ import { signIn, signUp } from '../app/identity.js'
  * Only the chrome differs, so only the chrome is the caller's business.
  */
 export function AccountForm({ onDone }: { readonly onDone: () => void }) {
+  const { accounts } = useServices()
   const [mode, setMode] = useState<'in' | 'up'>('in')
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
@@ -46,7 +47,10 @@ export function AccountForm({ onDone }: { readonly onDone: () => void }) {
     setBusy(true)
     setWrong(null)
     setError(null)
-    const attempt = mode === 'in' ? signIn(email, password) : signUp(email, password, displayName)
+    const attempt =
+      mode === 'in'
+        ? accounts.signIn(email, password)
+        : accounts.signUp(email, password, displayName)
     void attempt.then((result) => {
       setBusy(false)
       if (result.ok) onDone()

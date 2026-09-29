@@ -2,14 +2,12 @@ import { useCallback, useEffect, useState } from 'react'
 
 import { abandonSplash } from '../app/splash.js'
 import type { ListedBoard } from '../app/boards.js'
-import { ACCOUNTS_ENABLED, signOut } from '../app/identity.js'
 import { boardHref } from '../app/route.js'
 import { ShareFailed, useServices } from '../runtime/services.js'
 import { useIdentity } from '../hooks/use-identity.js'
 import { Mentions } from './Mentions.js'
 import { WorkspaceBar } from './WorkspaceBar.js'
 import { useWorkspaces } from '../hooks/use-workspaces.js'
-import { joinWorkspace } from '../app/workspaces.js'
 import { workspaceInvite } from '../app/collab-config.js'
 import { hueVar, initialOf } from '../scene/presence.js'
 import { AccountSheet } from './AccountControl.js'
@@ -96,7 +94,8 @@ export function Home() {
   useEffect(() => {
     if (invitation === null || identity === null) return
     let live = true
-    joinWorkspace(invitation.id, invitation.key)
+    services.workspaces
+      .join(invitation.id, invitation.key)
       .then((role) => {
         if (!live || role === null) return
         setInvited(role)
@@ -115,7 +114,7 @@ export function Home() {
     return () => {
       live = false
     }
-  }, [identity, invitation, refreshSpaces])
+  }, [identity, invitation, refreshSpaces, services.workspaces])
 
   /*
    * Re-read when the identity settles, not only on mount: the session is
@@ -169,13 +168,13 @@ export function Home() {
    * making local boards — otherwise the change would leave such a deployment
    * with no way to create anything at all.
    */
-  const canStart = !ACCOUNTS_ENABLED || identity !== null
+  const canStart = !services.accounts.enabled || identity !== null
 
   const start = (): void => {
     setStarting(true)
     setStartError(null)
 
-    const created = ACCOUNTS_ENABLED
+    const created = services.accounts.enabled
       ? // Into the workspace being shown, so a board lands where you were
         // looking. `undefined` for "everything" means the person's own, which
         // is what the database falls back to.
@@ -348,7 +347,7 @@ export function Home() {
             </section>
           )}
 
-          {ACCOUNTS_ENABLED && identity === null && (
+          {services.accounts.enabled && identity === null && (
             <section className="of-home__signin" aria-labelledby="of-home-signin">
               <h2 className="of-home__heading" id="of-home-signin">
                 sign in
@@ -400,6 +399,7 @@ function HomeAccount({
   readonly hue: number
   readonly email: string | null
 }) {
+  const { accounts } = useServices()
   const [open, setOpen] = useState(false)
   const { ref, anchor, surface } = useAnchoredTo<HTMLButtonElement>(open)
   const close = useCallback(() => {
@@ -440,7 +440,7 @@ function HomeAccount({
           onClose={close}
           onSignOut={() => {
             setOpen(false)
-            void signOut()
+            void accounts.signOut()
           }}
         />
       )}

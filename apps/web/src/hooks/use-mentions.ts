@@ -1,7 +1,6 @@
 import { useCallback, useEffect, useState } from 'react'
 
-import { listMyBoards } from '../app/remote-boards.js'
-import { markMentionsRead, myMentions, watchMyMentions, type Mention } from '../app/discussion.js'
+import { useServices, type Mention } from '../runtime/services.js'
 import { useIdentity } from './use-identity.js'
 
 export type { Mention }
@@ -47,6 +46,7 @@ export interface Notifications {
 }
 
 export function useMentions(): Notifications {
+  const { discussion, remoteBoards } = useServices()
   const [mentions, setMentions] = useState<readonly Mention[]>([])
   const [keys, setKeys] = useState<ReadonlyMap<string, string | null>>(new Map())
   const [revision, setRevision] = useState(0)
@@ -62,7 +62,7 @@ export function useMentions(): Notifications {
     if (userId === null) return
     let live = true
 
-    Promise.all([myMentions(), listMyBoards()])
+    Promise.all([discussion.mentions(), remoteBoards.listMine()])
       .then(([found, boards]) => {
         if (!live) return
         setKeys(new Map(boards.map((board) => [board.boardId as string, board.accessKey])))
@@ -75,7 +75,7 @@ export function useMentions(): Notifications {
     return () => {
       live = false
     }
-  }, [userId, revision])
+  }, [userId, revision, discussion, remoteBoards])
 
   /*
    * Separate from the read above so that a nudge re-runs the READ and not the
@@ -85,32 +85,35 @@ export function useMentions(): Notifications {
    */
   useEffect(() => {
     if (userId === null) return
-    return watchMyMentions(userId, () => {
+    return discussion.watchMentions(userId, () => {
       setRevision((current) => current + 1)
     })
-  }, [userId])
+  }, [userId, discussion])
 
   const keyFor = useCallback((boardId: string) => keys.get(boardId) ?? null, [keys])
 
-  const markRead = useCallback((commentId: string) => {
-    /*
-     * Marked here as well as written, so the row quietens under the pointer
-     * rather than after a round trip. The realtime nudge confirms it; this is
-     * what makes the change visible when the click is also a navigation.
-     */
-    setMentions((current) =>
-      current.map((mention) =>
-        mention.commentId === commentId && mention.readAt === null
-          ? { ...mention, readAt: Date.now() }
-          : mention,
-      ),
-    )
-    // Recorded on the way out. The navigation is what matters, so a failure to
-    // write this must not stop the link working.
-    markMentionsRead([commentId]).catch(() => {
-      // Still unread next time, which is the safe direction to fail in.
-    })
-  }, [])
+  const markRead = useCallback(
+    (commentId: string) => {
+      /*
+       * Marked here as well as written, so the row quietens under the pointer
+       * rather than after a round trip. The realtime nudge confirms it; this is
+       * what makes the change visible when the click is also a navigation.
+       */
+      setMentions((current) =>
+        current.map((mention) =>
+          mention.commentId === commentId && mention.readAt === null
+            ? { ...mention, readAt: Date.now() }
+            : mention,
+        ),
+      )
+      // Recorded on the way out. The navigation is what matters, so a failure to
+      // write this must not stop the link working.
+      discussion.markRead([commentId]).catch(() => {
+        // Still unread next time, which is the safe direction to fail in.
+      })
+    },
+    [discussion],
+  )
 
   const shown = userId === null ? [] : mentions
   return {

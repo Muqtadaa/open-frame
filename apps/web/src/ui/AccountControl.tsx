@@ -1,11 +1,11 @@
 import { useCallback, useRef, useState, type RefObject } from 'react'
 
-import { ACCOUNTS_ENABLED, signOut } from '../app/identity.js'
 import { SOURCE_URL } from '../app/source-link.js'
 import { AnchoredSurface } from '../controls/AnchoredSurface.js'
 import { useAnchoredTo } from '../controls/use-anchor.js'
 import { useDismiss, useFocusOnOpen } from '../controls/use-dismiss.js'
 import { useIdentity } from '../hooks/use-identity.js'
+import { useServices } from '../runtime/services.js'
 import { AccountForm } from './AccountForm.js'
 import { hueVar, initialOf } from '../scene/presence.js'
 import type { Size } from '../scene/anchoring.js'
@@ -19,6 +19,7 @@ import type { Size } from '../scene/anchoring.js'
  * product decision this component has to keep visible.
  */
 export function AccountControl() {
+  const { accounts } = useServices()
   const identity = useIdentity()
   const [open, setOpen] = useState(false)
   const { ref, anchor, surface } = useAnchoredTo<HTMLButtonElement>(open)
@@ -27,7 +28,7 @@ export function AccountControl() {
     ref.current?.focus()
   }, [ref])
 
-  if (!ACCOUNTS_ENABLED) return null
+  if (!accounts.enabled) return null
 
   if (identity !== null) {
     return (
@@ -68,7 +69,7 @@ export function AccountControl() {
             onClose={close}
             onSignOut={() => {
               setOpen(false)
-              void signOut()
+              void accounts.signOut()
             }}
           />
         )}

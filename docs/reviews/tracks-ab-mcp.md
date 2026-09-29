@@ -400,3 +400,14 @@ cover:
     failed once on purpose.
   - Part two moves the hooks and the remaining ui imports onto the services,
     deletes the re-export modules, and adds the rule that makes it stick.
+- **A services layer for `app/`, part two** (item 2, PR 2b):
+  - The hooks (`use-identity`, `use-comments`, `use-mentions`,
+    `use-workspaces`, and the rename in `use-commands`) and the remaining
+    screens (`Home`, `AccountControl`, `AccountForm`, `ShareControl`) ask
+    `useServices()`.
+  - The four `app/` modules that only re-exported adapters (`identity`,
+    `remote-boards`, `workspaces`, `discussion`) are deleted.
+  - `ui-reaches-io-through-services` stops ui, hooks, canvas, interaction,
+    views and controls importing the I/O use cases directly. It failed once
+    on purpose.
+  - CLAUDE.md rule 2 says where I/O comes from. Item 2 is complete.

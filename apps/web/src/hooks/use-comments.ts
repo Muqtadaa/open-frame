@@ -5,14 +5,11 @@ import type { BoardId } from '@openframe/core'
 import { useInteractionStore } from '../interaction/interaction-store.js'
 
 import {
-  boardPeople,
-  listComments,
-  postComment,
-  resolveComment,
+  useServices,
   type BoardComment,
   type BoardPerson,
   type NewComment,
-} from '../app/discussion.js'
+} from '../runtime/services.js'
 
 /*
  * Re-exported so the interface never imports the adapter itself. `ui` and
@@ -45,6 +42,7 @@ export interface LoadedComments {
 }
 
 export function useComments(boardId: BoardId, enabled: boolean): LoadedComments {
+  const { discussion } = useServices()
   const [comments, setComments] = useState<readonly BoardComment[]>([])
   const [people, setPeople] = useState<readonly BoardPerson[]>([])
   const [revision, setRevision] = useState(0)
@@ -57,17 +55,17 @@ export function useComments(boardId: BoardId, enabled: boolean): LoadedComments 
     if (!enabled) return
     let live = true
 
-    void listComments(boardId).then((found) => {
+    void discussion.list(boardId).then((found) => {
       if (live) setComments(found)
     })
-    void boardPeople(boardId).then((found) => {
+    void discussion.people(boardId).then((found) => {
       if (live) setPeople(found)
     })
 
     return () => {
       live = false
     }
-  }, [boardId, enabled, revision])
+  }, [boardId, enabled, revision, discussion])
 
   // Coming back to the board is when a conversation that happened while you
   // were away should appear.
@@ -92,24 +90,24 @@ export function useComments(boardId: BoardId, enabled: boolean): LoadedComments 
 
   const post = useCallback(
     async (comment: NewComment): Promise<boolean> => {
-      const id = await postComment(comment)
+      const id = await discussion.post(comment)
       if (id === null) return false
       refresh()
       noteSaid()
       return true
     },
-    [refresh, noteSaid],
+    [refresh, noteSaid, discussion],
   )
 
   const resolve = useCallback(
     async (id: string, resolved: boolean): Promise<boolean> => {
-      const ok = await resolveComment(id, resolved)
+      const ok = await discussion.resolve(id, resolved)
       if (!ok) return false
       refresh()
       noteSaid()
       return true
     },
-    [refresh, noteSaid],
+    [refresh, noteSaid, discussion],
   )
 
   return { comments, people, refresh, post, resolve }

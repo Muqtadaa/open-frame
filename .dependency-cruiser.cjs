@@ -235,6 +235,17 @@ module.exports = {
       to: { path: '^apps/web/src/adapters' },
     },
     {
+      name: 'ui-reaches-io-through-services',
+      severity: 'error',
+      comment:
+        'Everything the interface can ask of the outside world is a port in runtime/services.ts, ' +
+        'handed in by the composition root. The use cases that compose those ports live in app/ ' +
+        'and are reached only through useServices() — importing one directly is a way round the ' +
+        'port, and it is how the network came to be called from the UI with nothing to stand in.',
+      from: { path: '^apps/web/src/(ui|hooks|canvas|interaction|views|controls)' },
+      to: { path: '^apps/web/src/app/(share|board-password|board-lifecycle|services)[.]ts$' },
+    },
+    {
       name: 'adapters-do-not-import-app',
       severity: 'error',
       comment:
