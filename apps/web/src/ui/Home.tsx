@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useState } from 'react'
 
 import { abandonSplash } from '../app/splash.js'
-import type { ListedBoard } from '../app/boards.js'
+import type { ListedBoard } from '../runtime/services.js'
 import { boardHref } from '../app/route.js'
 import { ShareFailed, useServices } from '../runtime/services.js'
 import { useIdentity } from '../hooks/use-identity.js'
