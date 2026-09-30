@@ -10,6 +10,7 @@ import {
 } from './registry.js'
 import { RichTextEditor } from './RichTextEditor.js'
 import { RichTextView } from './RichTextView.js'
+import { lineClamp } from './line-clamp.js'
 
 /**
  * A text object's ink.
@@ -47,7 +48,7 @@ function TextRenderer({ object }: ObjectViewProps<TextData>) {
        * `100cqh` is measured against the nearest container ANCESTOR — an
        * element cannot query itself.
        */}
-      <div className="of-text__body" data-testid="text-body" data-fit-text>
+      <div className="of-text__body" data-testid="text-body" data-fit-text ref={lineClamp}>
         {empty ? 'Text' : <RichTextView value={object.data.text} />}
       </div>
     </div>

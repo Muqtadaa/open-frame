@@ -32,6 +32,7 @@ import {
   verticalAlign,
   strokeWidth,
 } from '../scene/style-tokens.js'
+import { lineClamp } from './line-clamp.js'
 
 function ShapeOutline({ object }: { object: ObjectBase<string, ShapeData> }) {
   // `strokeColor` when it is set, the object's own colour otherwise — which
@@ -160,7 +161,12 @@ function ShapeRenderer({ object }: ObjectViewProps<ShapeData>) {
            * of why "shape labels are permanently centred" reached a deployed
            * build. Layout is unchanged: one flex item either way.
            */}
-          <div className="of-shape__label-text" data-testid="shape-label-text" data-fit-text>
+          <div
+            className="of-shape__label-text"
+            data-testid="shape-label-text"
+            data-fit-text
+            ref={lineClamp}
+          >
             <RichTextView value={label} />
           </div>
         </div>

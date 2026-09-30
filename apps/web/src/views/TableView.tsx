@@ -99,6 +99,7 @@ import {
   TableIcon,
   VAlignIcon,
 } from '../controls/icons.js'
+import { lineClamp } from './line-clamp.js'
 
 /*
  * ---------------------------------------------------------------------------
@@ -459,7 +460,11 @@ function TableGrid({
                   }
                 >
                   {content?.(index, cell) ?? (
-                    <div className="of-table__cell-text" data-testid="table-cell-text">
+                    <div
+                      className="of-table__cell-text"
+                      data-testid="table-cell-text"
+                      ref={lineClamp}
+                    >
                       <RichTextView value={cell.text} />
                     </div>
                   )}
@@ -1216,7 +1221,7 @@ function TableEditor({
               }}
             />
           ) : (
-            <div className="of-table__cell-text" data-testid="table-cell-text">
+            <div className="of-table__cell-text" data-testid="table-cell-text" ref={lineClamp}>
               <RichTextView value={cell.text} />
             </div>
           )

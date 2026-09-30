@@ -17,6 +17,7 @@ import {
   readableInkOn,
   surfaceOf,
 } from '../scene/style-tokens.js'
+import { lineClamp } from './line-clamp.js'
 
 function background(color: ColorValue | undefined): string {
   return surfaceOf(color, 'yellow')
@@ -42,7 +43,7 @@ function StickyRenderer({ object }: ObjectViewProps<StickyData>) {
       // and naming the group by it read every note twice.
       aria-label={isEmptyText(object.data.text) ? 'Empty sticky note' : 'Sticky note'}
     >
-      <div className="of-sticky__text" data-testid="sticky-text" data-fit-text>
+      <div className="of-sticky__text" data-testid="sticky-text" data-fit-text ref={lineClamp}>
         <RichTextView value={object.data.text} />
       </div>
     </div>
