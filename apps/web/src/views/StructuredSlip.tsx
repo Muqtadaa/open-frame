@@ -11,6 +11,7 @@ import {
   readableInkOn,
   surfaceOf,
 } from '../scene/style-tokens.js'
+import { lineClamp } from './line-clamp.js'
 
 /**
  * The card every structured type is drawn as.
@@ -85,7 +86,7 @@ export function StructuredSlip<TData extends { readonly text: RichText }>({
         {/* Its own element, so the clamp that marks hidden text has something
             to sit on: `100cqh` measures against the nearest container
             ANCESTOR, and an element cannot query itself. */}
-        <div className="of-slip__text" data-testid="slip-text" data-fit-text>
+        <div className="of-slip__text" data-testid="slip-text" data-fit-text ref={lineClamp}>
           <RichTextView value={text} />
         </div>
       </div>

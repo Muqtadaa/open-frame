@@ -412,9 +412,12 @@ test('pasting markup with images fetches none of them', async ({ page }) => {
       '<ul><li><b>kept</b></li></ul><img src="/paste-probe-img.png"><iframe src="/paste-probe-frame"></iframe><img srcset="/paste-probe-srcset.png 1x">',
     )
     data.setData('text/plain', 'kept')
-    element.dispatchEvent(
-      new ClipboardEvent('paste', { clipboardData: data, bubbles: true, cancelable: true }),
-    )
+    // A plain event carrying the data, not a ClipboardEvent: Firefox's
+    // constructor ignores the `clipboardData` it is given and hands the
+    // handler an empty one.
+    const paste = new Event('paste', { bubbles: true, cancelable: true })
+    Object.defineProperty(paste, 'clipboardData', { value: data })
+    element.dispatchEvent(paste)
   })
   await expect(page.locator(`${EDITOR} [data-list="bullet"] strong`)).toHaveText('kept')
   // Nothing to wait FOR: the claim is that no request is ever made, so the

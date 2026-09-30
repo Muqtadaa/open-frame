@@ -444,3 +444,11 @@ cover:
   - The engines cannot be downloaded in the development sandbox, so their
     first runs are in CI; what they find is fixed in this PR where it is in
     the smoke set, and listed for the owner otherwise.
+  - The first full run (after merge) failed 12 + 1 flaky in Firefox and 11 + 2
+    flaky in WebKit. The follow-up fixed every one without an exclusion: six
+    app bugs (a gate's focus under the splash, Shift+F10 in Safari and Firefox,
+    the Firefox text clamp, the caret outside the paragraph, a mention's read
+    lost on navigation, comments handing focus to a vanished editor) and the
+    suite's own assumptions (a blocked port, keys pressed at an inert root,
+    three Chromium-only gestures). All three engines green on the branch
+    nightly.

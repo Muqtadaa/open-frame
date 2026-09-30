@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
 
 import { useCommentAnchor } from '../hooks/use-comment-anchor.js'
 import { useComments } from '../hooks/use-comments.js'
@@ -8,6 +8,7 @@ import { useIdentity } from '../hooks/use-identity.js'
 import { CommentPanel } from '../ui/CommentPanel.js'
 import { useInteractionStore } from '../interaction/interaction-store.js'
 import { useOpenFrame } from '../runtime/context.js'
+import { useServices } from '../runtime/services.js'
 import { CommentsContext, useDiscussion, type Discussion } from './comments-context.js'
 
 /**
@@ -35,7 +36,16 @@ export function CommentsProvider({ children }: { readonly children: ReactNode })
    * one of them quietly stops matching the other.
    */
   const focusComment = useFocusComment(comments)
-  useCommentAnchor(focusComment, comments.length > 0, enabled)
+  const { discussion } = useServices()
+  const arrived = useCallback(
+    (commentId: string) => {
+      discussion.markRead([commentId]).catch(() => {
+        // Still unread next time, which is the safe direction to fail in.
+      })
+    },
+    [discussion],
+  )
+  useCommentAnchor(focusComment, comments.length > 0, enabled, arrived)
 
   const value = useMemo<Discussion>(() => {
     const replyCounts = new Map<string, number>()
@@ -83,6 +93,14 @@ export function Comments() {
    * back; otherwise the comment tool does.
    */
   const returnTo = useRef<HTMLElement | null>(null)
+  /*
+   * And the board it was on. The board takes the keyboard back from an edit
+   * a frame after the edit ends, and M pressed inside that frame found the
+   * note's editor still recorded here — gone by the time the panel closed, so
+   * the keyboard went to the comment tool instead of the board. WebKit's
+   * frames are slow enough for a quick hand to beat.
+   */
+  const returnToBoard = useRef<HTMLElement | null>(null)
   const wasOpen = useRef(false)
   /*
    * Tracked as focus MOVES rather than read when the panel opens: the panel
@@ -94,6 +112,7 @@ export function Comments() {
       const target = event.target
       if (target instanceof HTMLElement && target.closest('.of-comment-panel') === null) {
         returnTo.current = target
+        returnToBoard.current = target.closest<HTMLElement>('[data-testid="canvas"]')
       }
     }
     window.addEventListener('focusin', note)
@@ -107,7 +126,9 @@ export function Comments() {
       const back =
         returnTo.current?.isConnected === true
           ? returnTo.current
-          : document.querySelector<HTMLElement>('[data-testid="tool-comment"]')
+          : returnToBoard.current?.isConnected === true
+            ? returnToBoard.current
+            : document.querySelector<HTMLElement>('[data-testid="tool-comment"]')
       back?.focus()
     }
     wasOpen.current = open

@@ -233,11 +233,12 @@ test.describe('the board from the keyboard', () => {
     await note(page, { x: 300, y: 480 }, 'Third')
     await page.keyboard.press('Escape')
 
-    // From the top of the page, the board is a stop in the order.
-    // Nothing focused: the body cannot take focus, so blur whatever has it.
-    await page.evaluate(() => {
-      if (document.activeElement instanceof HTMLElement) document.activeElement.blur()
-    })
+    // From the top of the page, the board is a stop in the order. Started
+    // from the bar's first control rather than from nothing focused: a blur
+    // left the canvas as where Tab resumed, so reaching it again meant
+    // wrapping past the end of the page — which Firefox does not do back
+    // into it, and which was never the claim.
+    await page.getByTestId('status-bar').locator('a, button, input').first().focus()
     expect(await tabsTo(page, 'canvas', 60)).toBe(true)
     await expect(page.locator(CANVAS)).toHaveAttribute(
       'aria-description',

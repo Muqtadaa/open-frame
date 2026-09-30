@@ -262,7 +262,10 @@ test.describe('rows and columns, anywhere', () => {
     await newTable(page)
     await page.getByTestId('table-row-1').click()
     await page.getByTestId('table-row-2').click({ modifiers: ['Shift'] })
-    await cell(page, 0).click({ button: 'right', modifiers: ['Shift'] })
+    // No Shift on the right-click: Firefox keeps Shift+right-click for its
+    // own menu and never tells the page. The selection survives a
+    // right-press anyway, which is the point of pressing inside it.
+    await cell(page, 0).click({ button: 'right' })
     await page.getByTestId('table-menu-row-above').click()
     await leave(page)
     await expect(page.locator('[role="table"]')).toHaveAttribute(

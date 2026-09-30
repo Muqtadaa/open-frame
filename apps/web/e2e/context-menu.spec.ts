@@ -113,6 +113,37 @@ test('Shift+F10 opens it on the selection, not in the corner', async ({ page }) 
   expect(touches).toBe(true)
 })
 
+/*
+ * The KEYSTROKE opens it, not the browser's reaction to it. Chromium turns
+ * Shift+F10 into a contextmenu event; Safari does not, and neither does
+ * Firefox under automation, so the menu used to be unreachable from the
+ * keyboard there. A key event dispatched by script carries no default
+ * action at all, which is exactly that condition.
+ */
+for (const [name, init] of [
+  ['Shift+F10', { key: 'F10', code: 'F10', shiftKey: true }],
+  ['the menu key', { key: 'ContextMenu', code: 'ContextMenu' }],
+] as const) {
+  test(`${name} opens it without the browser's help`, async ({ page }) => {
+    await page.locator(CANVAS).click({ position: NOTE })
+    await page.evaluate((keyInit) => {
+      const target = document.activeElement ?? document.body
+      target.dispatchEvent(
+        new KeyboardEvent('keydown', { ...keyInit, bubbles: true, cancelable: true }),
+      )
+    }, init)
+    await expect(menu(page)).toBeVisible()
+    await expect(item(page, 'Derive insight')).toBeFocused()
+  })
+}
+
+test('a real Shift+F10 opens one menu, not one per path', async ({ page }) => {
+  await page.locator(CANVAS).click({ position: NOTE })
+  await page.keyboard.press('Shift+F10')
+  await expect(menu(page)).toHaveCount(1)
+  await expect(item(page, 'Derive insight')).toBeFocused()
+})
+
 test('names an item by its label, with the shortcut declared rather than read out', async ({
   page,
 }) => {

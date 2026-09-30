@@ -410,3 +410,31 @@ function inlineNode(owner: Document, span: TextSpan): Node {
   }
   return node
 }
+
+/**
+ * The selection a field opens with: everything, for a note that is almost
+ * always retyped, or the end, for a cell that is usually added to.
+ *
+ * Both ends sit INSIDE paragraph blocks, never on the field itself. Selecting
+ * the field's contents left them outside every block: Chromium moves typing
+ * back into one, but Firefox types beside the block, and a table cell typed
+ * into that way read back as an empty line followed by the text — so bold
+ * applied to it no longer covered it. An empty block's placeholder `<br>` is
+ * kept AFTER the caret, where it goes the moment there is text.
+ */
+export function openingRange(root: Element, where: 'all' | 'end'): Range {
+  const range = root.ownerDocument.createRange()
+  const blocks = [...root.children].filter((child) => child.classList.contains('of-p'))
+  const first = blocks[0]
+  const last = blocks.at(-1)
+  if (first === undefined || last === undefined) {
+    range.selectNodeContents(root)
+    if (where === 'end') range.collapse(false)
+    return range
+  }
+  const placeholder = last.lastChild instanceof HTMLBRElement ? 1 : 0
+  range.setEnd(last, last.childNodes.length - (where === 'end' ? placeholder : 0))
+  if (where === 'end') range.collapse(false)
+  else range.setStart(first, 0)
+  return range
+}

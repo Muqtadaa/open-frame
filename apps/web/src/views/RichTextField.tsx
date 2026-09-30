@@ -28,6 +28,7 @@ import {
 } from 'react'
 
 import {
+  openingRange,
   renderSpansInto,
   selectionOffsets,
   setSelectionOffsets,
@@ -149,13 +150,8 @@ export function RichTextField({
     if (element === null || focusOnMount === false) return
     element.focus()
     const selection = element.ownerDocument.getSelection()
-    const range = element.ownerDocument.createRange()
-    range.selectNodeContents(element)
-    // Select everything for a note, which is almost always retyped rather than
-    // appended to; the end for a cell, which is usually added to.
-    if (focusOnMount === 'end') range.collapse(false)
     selection?.removeAllRanges()
-    selection?.addRange(range)
+    selection?.addRange(openingRange(element, focusOnMount === 'end' ? 'end' : 'all'))
     // Once, on mount.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])

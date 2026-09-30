@@ -133,12 +133,18 @@ export default defineConfig({
      * honest. Pointing at a closed local port reproduces that state
      * deliberately instead of relying on the network being unavailable.
      *
-     * Port 9 is discard — nothing listens, so the connection is refused at
-     * once rather than hanging. `COLLAB_ENABLED` stays true, because the specs
+     * A closed high port, so the connection is refused at once rather than
+     * hanging. It used to be 9, the discard port, and that is on the list of
+     * ports browsers refuse outright: Firefox and WebKit turned the request
+     * away before Playwright could route it, so every spec that answers
+     * `/room/…/unlock` itself read "could not be reached" instead, and in
+     * WebKit a socket to it never even surfaced as a `websocket` event.
+     * Chromium let the route see it first, which is why it went unnoticed
+     * until the first full run in the other two. `COLLAB_ENABLED` stays true, because the specs
      * that exercise sharing need a build that believes it collaborates; what
      * they must not have is somewhere real to do it. Rooms are tested for real
      * in `pnpm test:rooms`, against a local workerd.
      */
-    env: { VITE_COLLAB_URL: 'ws://127.0.0.1:9' },
+    env: { VITE_COLLAB_URL: 'ws://127.0.0.1:59999' },
   },
 })

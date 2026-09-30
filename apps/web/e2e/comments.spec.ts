@@ -674,6 +674,40 @@ test('a mention link for a remark that is gone still opens the board', async ({ 
  * see disappeared at the moment you looked at it, taking the only link back
  * with it.
  */
+/*
+ * Arriving IS reading. The click used to be the only thing that marked a
+ * mention read, sent on the way out of a page that was already navigating —
+ * Firefox cancelled it about a third of the time, and a notification opened
+ * in a new tab, or pasted, never sent it at all.
+ */
+test('opening the link a mention gives marks it read, however it was opened', async ({ page }) => {
+  const account = await signedIn(
+    page,
+    [{ id: BOARD, title: 'Shared', role: 'owner' }],
+    'Muqtadaa Miandara',
+    {
+      mentions: [
+        {
+          commentId: 'cmt_arrived',
+          boardId: BOARD,
+          boardTitle: 'Shared',
+          authorName: 'Rowan',
+          body: 'over here',
+        },
+      ],
+    },
+  )
+  await page.goto(HOME_URL)
+  await page.getByTestId('mentions-button').click()
+  const href = await page.getByTestId('mention-cmt_arrived').getAttribute('href')
+  expect(href).toContain('c=cmt_arrived')
+
+  // Not clicked: followed, the way a new tab or a pasted link arrives.
+  await page.goto(href ?? '')
+  await page.waitForSelector('[data-testid="status-bar"]')
+  await expect.poll(() => account.read).toContain('cmt_arrived')
+})
+
 test('reading a mention keeps it, quietened, rather than destroying it', async ({ page }) => {
   const account = await signedIn(
     page,
@@ -1026,6 +1060,34 @@ test.describe('by keyboard', () => {
     await expect(page.getByTestId('comment-panel')).toHaveCount(0)
     // Back where M was pressed: the board, which keeps the keyboard after an
     // edit now (audit 2026-09-27) rather than dropping it on the page.
+    await expect(page.getByTestId('canvas')).toBeFocused()
+  })
+
+  /*
+   * The same, with M pressed before the board has taken the keyboard back
+   * from the edit — it does that a frame later, and WebKit's frames are slow
+   * enough for a quick hand to beat it. The panel then remembered the note's
+   * editor, which was gone by the time it closed, and handed focus to the
+   * comment tool instead of the board. No frames at all makes that certain.
+   */
+  test('M pressed straight after an edit still hands the keyboard back to the board', async ({
+    page,
+  }) => {
+    await signedIn(page, [{ id: BOARD, title: 'Shared', role: 'owner' }])
+    await openBoard(page)
+    await page.keyboard.press('s')
+    await page.locator('[data-testid="canvas"]').click({ position: { x: 320, y: 260 } })
+    await page.keyboard.type('A note')
+    await page.evaluate(() => {
+      window.requestAnimationFrame = () => 0
+    })
+    await page.keyboard.press('Escape')
+    await expect(page.getByTestId('selection-count')).toContainText('1')
+
+    await page.keyboard.press('m')
+    await expect(page.getByTestId('comment-input')).toBeFocused()
+    await page.keyboard.press('Escape')
+    await expect(page.getByTestId('comment-panel')).toHaveCount(0)
     await expect(page.getByTestId('canvas')).toBeFocused()
   })
 

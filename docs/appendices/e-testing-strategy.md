@@ -134,6 +134,29 @@ excluded from Firefox, which cannot. A spec that needs the clipboard calls
 `useClipboard()`: the real one in Chromium, an in-memory one elsewhere,
 because the other engines have no clipboard permission to grant.
 
+What the first full runs in Firefox and WebKit taught — each was a real
+failure, fixed rather than excluded:
+
+- **A port browsers block is refused before Playwright can route it.** The
+  suite's room server is a closed high port (59999), not 9, which Firefox and
+  WebKit turn away before any `page.route` sees the request.
+- **`#root` is inert until the splash leaves.** A visible element can still be
+  inert, and focus asked of one goes nowhere; the fixtures wait for the root to
+  be reachable, and anything that must focus at start-up (a gate) takes the
+  splash away first.
+- **Firefox gives a constructed `ClipboardEvent` an empty `clipboardData`**, and
+  keeps Shift+right-click for its own menu. Specs paste with a plain event
+  carrying the data, and right-click without Shift.
+- **Firefox cannot divide a length by a length** in CSS, so the text clamp's
+  line count is measured there instead (`views/line-clamp.ts`).
+- **Only Chromium turns Shift+F10 into a `contextmenu` event.** The canvas
+  claims the key itself.
+- **A caret goes inside a paragraph block, never on the field.** Chromium moves
+  typing into the block; Firefox types beside it (`openingRange`).
+- **WebKit's animation frames are slow enough for a quick hand to beat.**
+  Anything that happens "a frame later" needs a fallback for the key pressed
+  before it.
+
 `pnpm test:e2e` needs a Chromium. In an environment with a pre-installed browser
 whose build differs from Playwright's expected one, set
 `OPENFRAME_CHROMIUM_PATH=/path/to/chromium`.
