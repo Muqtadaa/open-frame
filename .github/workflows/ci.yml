@@ -51,6 +51,16 @@ jobs:
       - name: Benchmark fixture smoke
         run: pnpm bench:smoke
 
+      # The agent-peer benchmark on a small board, so the script the nightly
+      # budgets depend on cannot rot between nights. `pnpm verify` ran it;
+      # this job did not.
+      - name: MCP benchmark smoke
+        run: pnpm bench:mcp:smoke
+
+      # The budget judge's own tests: a budget nothing measured must fail.
+      - name: Tooling tests
+        run: pnpm test:tools
+
       - name: Build
         run: pnpm build
 
