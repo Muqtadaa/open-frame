@@ -20,6 +20,8 @@ import type { BoardDocument } from '@openframe/core'
 
 import { cullToViewport } from '../../apps/web/src/scene/culling.js'
 
+import { jsonTarget, writeMeasurements, type Measurement } from './results.js'
+
 const registry = createDefaultRegistry()
 const visible = visibleWorldRect({ x: 0, y: 0, zoom: 1 }, 1280, 800)
 
@@ -79,14 +81,24 @@ console.log(
 console.log(
   '  ------------------|---------|--------|------------|-----------|---------|----------------|------------',
 )
+const measurements: Measurement[] = []
 for (const name of ['board-1000', 'board-10000', 'board-mixed-1000', 'board-mixed-10000']) {
   const doc = load(`tools/bench/fixtures/${name}.json`)
+  const cull = timeCull(doc)
+  const lookups = timeRelationLookup(doc)
+  measurements.push(
+    { metric: `cull/${name}`, value: cull, unit: 'ms' },
+    { metric: `relations/${name}`, value: lookups, unit: 'ms' },
+  )
   console.log(
     `  ${name.padEnd(17)} | ${String(doc.objects.size).padStart(7)} | ` +
       `${String(count(doc, 'group')).padStart(6)} | ${String(count(doc, 'connector')).padStart(10)} | ` +
       `${String(count(doc, 'relation')).padStart(9)} | ` +
-      `${timeCull(doc).toFixed(2).padStart(6)}ms | ${timeCull(withoutGroups(doc)).toFixed(2).padStart(12)}ms | ` +
-      `${timeRelationLookup(doc).toFixed(2).padStart(9)}ms`,
+      `${cull.toFixed(2).padStart(6)}ms | ${timeCull(withoutGroups(doc)).toFixed(2).padStart(12)}ms | ` +
+      `${lookups.toFixed(2).padStart(9)}ms`,
   )
 }
 console.log()
+
+const target = jsonTarget(process.argv)
+if (target !== null) writeMeasurements(target, measurements)

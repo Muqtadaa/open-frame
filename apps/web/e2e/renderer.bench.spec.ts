@@ -1,3 +1,6 @@
+import { mkdirSync, writeFileSync } from 'node:fs'
+import { dirname } from 'node:path'
+
 import { expect, test, type Page } from '@playwright/test'
 
 import { BOARD_URL } from './routes.js'
@@ -123,6 +126,25 @@ test('renderer scaling probe', async ({ page }) => {
     )
   }
   console.log()
+
+  /*
+   * For the nightly's trend. Reported, not budgeted: headless frame and load
+   * times say more about the runner than about the renderer — the node count
+   * below is the claim this probe asserts.
+   */
+  const out = process.env.OPENFRAME_BENCH_JSON
+  if (out !== undefined && out !== '') {
+    mkdirSync(dirname(out), { recursive: true })
+    const rows = results.flatMap((r) => {
+      const at = `${r.board}-${String(r.size)}`
+      return [
+        { metric: `load/${at}`, value: r.loadMs, unit: 'ms' },
+        { metric: `dom/${at}`, value: r.domNodes, unit: 'nodes' },
+        { metric: `pan-p95/${at}`, value: r.panP95, unit: 'ms' },
+      ]
+    })
+    writeFileSync(out, `${JSON.stringify(rows, null, 2)}\n`)
+  }
 
   /*
    * THE property the DOM-renderer strategy depends on: node count must track

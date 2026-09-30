@@ -40,6 +40,8 @@ import type { SignedIn } from '../../apps/mcp/src/supabase/account.js'
 import { toolContext } from '../../apps/mcp/src/tools/context.js'
 import { getObjects, searchBoard } from '../../apps/mcp/src/tools/read.js'
 
+import { jsonTarget, writeMeasurements, type Measurement } from './results.js'
+
 const smoke = process.argv.includes('--smoke')
 const boards = smoke ? ['board-mixed-60'] : ['board-mixed-1000', 'board-mixed-10000']
 const WARM = smoke ? 0 : 3
@@ -229,6 +231,13 @@ async function bench(name: string): Promise<void> {
     ],
   ]
 
+  for (const [label, { ms, copies: made }] of rows) {
+    measurements.push(
+      { metric: `mcp/${name}/${label}`, value: ms, unit: 'ms' },
+      { metric: `copies/${name}/${label}`, value: made, unit: 'copies' },
+    )
+  }
+
   console.log(`\n${name} — ${String(size)} objects`)
   console.log(`${'case'.padEnd(44)}${'ms'.padStart(10)}${'map copies'.padStart(13)}`)
   for (const [label, { ms, copies: made }] of rows) {
@@ -236,4 +245,8 @@ async function bench(name: string): Promise<void> {
   }
 }
 
+const measurements: Measurement[] = []
 for (const name of boards) await bench(name)
+
+const target = jsonTarget(process.argv)
+if (target !== null) writeMeasurements(target, measurements)
