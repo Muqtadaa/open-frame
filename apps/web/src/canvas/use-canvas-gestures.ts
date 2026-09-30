@@ -10,6 +10,7 @@ import {
   useEffect,
   useMemo,
   useRef,
+  type KeyboardEvent as ReactKeyboardEvent,
   type MouseEvent as ReactMouseEvent,
   type PointerEvent as ReactPointerEvent,
   type RefObject,
@@ -585,42 +586,69 @@ export function useCanvasGestures(containerRef: RefObject<HTMLElement | null>) {
     [applyIntent, runtime.registry, runtime.store, toWorld],
   )
 
+  /*
+   * Opens the menu from the KEYBOARD, on what is already selected — or
+   * mid-board when nothing is. Its position comes from the selection, never
+   * from a pointer: the keyboard has none.
+   */
+  const openContextMenuFromKeyboard = useCallback((): void => {
+    const store = useInteractionStore.getState()
+    const rect = containerRef.current?.getBoundingClientRect()
+    const left = rect?.left ?? 0
+    const top = rect?.top ?? 0
+    const doc = runtime.store.getDocument()
+    const selected = unionAll(
+      [...store.selection]
+        .map((id) => doc.objects.get(id))
+        .filter((object): object is AnyOpenFrameObject => object !== undefined)
+        .map((object) => runtime.registry.boundsOf(object, doc)),
+    )
+    const box =
+      selected === null
+        ? { x: store.canvasSize.width / 2, y: store.canvasSize.height / 2, width: 0, height: 0 }
+        : worldRectToScreen(store.viewport, selected)
+    store.openContextMenu({
+      ...box,
+      x: box.x + left,
+      y: box.y + top,
+      via: 'keyboard',
+      world: screenToWorld(store.viewport, {
+        x: box.x + box.width / 2,
+        y: box.y + box.height / 2,
+      }),
+    })
+  }, [containerRef, runtime.registry, runtime.store])
+
+  /*
+   * Shift+F10 and the menu key are claimed HERE rather than left to become a
+   * contextmenu event. Chromium makes that event from the keystroke; Safari
+   * does not, and neither does Firefox under automation, so the menu was
+   * unreachable from the keyboard in two of three engines. Claiming the key
+   * also stops Chromium's event, so the menu opens once.
+   */
+  const onKeyDown = useCallback(
+    (event: ReactKeyboardEvent<HTMLElement>): void => {
+      const menuKey = event.key === 'ContextMenu' || (event.key === 'F10' && event.shiftKey)
+      if (!menuKey || event.altKey || event.ctrlKey || event.metaKey) return
+      event.preventDefault()
+      openContextMenuFromKeyboard()
+    },
+    [openContextMenuFromKeyboard],
+  )
+
   const onContextMenu = useCallback(
     (event: ReactMouseEvent<HTMLElement>): void => {
       event.preventDefault()
       const store = useInteractionStore.getState()
       /*
-       * From the KEYBOARD — Shift+F10 or the menu key — the browser still
-       * sends a contextmenu event, with `button` -1 rather than 2 and a
+       * From the KEYBOARD — Shift+F10 or the menu key, where `onKeyDown` did
+       * not claim it first — the browser may still send a contextmenu event, with `button` -1 rather than 2 and a
        * position at the corner of whatever had focus. Hit testing that point
        * would select whatever happened to be there; the menu belongs on what
        * is already selected, or mid-board when nothing is.
        */
       if (event.button !== 2) {
-        const rect = containerRef.current?.getBoundingClientRect()
-        const left = rect?.left ?? 0
-        const top = rect?.top ?? 0
-        const doc = runtime.store.getDocument()
-        const selected = unionAll(
-          [...store.selection]
-            .map((id) => doc.objects.get(id))
-            .filter((object): object is AnyOpenFrameObject => object !== undefined)
-            .map((object) => runtime.registry.boundsOf(object, doc)),
-        )
-        const box =
-          selected === null
-            ? { x: store.canvasSize.width / 2, y: store.canvasSize.height / 2, width: 0, height: 0 }
-            : worldRectToScreen(store.viewport, selected)
-        store.openContextMenu({
-          ...box,
-          x: box.x + left,
-          y: box.y + top,
-          via: 'keyboard',
-          world: screenToWorld(store.viewport, {
-            x: box.x + box.width / 2,
-            y: box.y + box.height / 2,
-          }),
-        })
+        openContextMenuFromKeyboard()
         return
       }
       const worldPoint = toWorld(event.clientX, event.clientY)
@@ -642,7 +670,7 @@ export function useCanvasGestures(containerRef: RefObject<HTMLElement | null>) {
         world: worldPoint,
       })
     },
-    [containerRef, runtime.registry, runtime.store, toWorld],
+    [openContextMenuFromKeyboard, runtime.registry, runtime.store, toWorld],
   )
 
   const setSpaceHeld = useCallback((held: boolean): void => {
@@ -697,6 +725,7 @@ export function useCanvasGestures(containerRef: RefObject<HTMLElement | null>) {
     onPointerLeave,
     onDoubleClick,
     onContextMenu,
+    onKeyDown,
     setSpaceHeld,
   }
 }
