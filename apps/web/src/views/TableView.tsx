@@ -100,6 +100,7 @@ import {
   VAlignIcon,
 } from '../controls/icons.js'
 import { lineClamp } from './line-clamp.js'
+import { openingRange } from './rich-text-dom.js'
 
 /*
  * ---------------------------------------------------------------------------
@@ -752,12 +753,12 @@ function TableEditor({
     const element = root.current?.querySelector<HTMLElement>('[data-testid="table-cell-field"]')
     if (element === null || element === undefined) return
     element.focus()
-    const range = element.ownerDocument.createRange()
-    range.selectNodeContents(element)
-    range.collapse(false)
+    // Inside the paragraph, not beside it: Firefox types the first key
+    // wherever the caret is, and a caret on the field itself left the cell
+    // reading as a blank line and then the text.
     const selection = element.ownerDocument.getSelection()
     selection?.removeAllRanges()
-    selection?.addRange(range)
+    selection?.addRange(openingRange(element, 'end'))
   }
 
   const writeCell = (cell: Cell, text: RichText): void => {
