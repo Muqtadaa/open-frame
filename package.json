@@ -18,6 +18,8 @@
     "depcruise": "depcruise packages apps --config .dependency-cruiser.cjs",
     "test": "pnpm -r --no-bail test",
     "test:e2e": "pnpm --filter @openframe/web test:e2e",
+    "test:e2e:smoke": "pnpm --filter @openframe/web test:e2e:smoke",
+    "test:e2e:all": "pnpm --filter @openframe/web test:e2e:all",
     "build": "pnpm -r build",
     "dev": "pnpm --filter @openframe/web dev",
     "verify": "pnpm format:check && pnpm typecheck && pnpm lint && pnpm depcruise && pnpm test && pnpm bench:smoke && pnpm bench:mcp:smoke && pnpm build",

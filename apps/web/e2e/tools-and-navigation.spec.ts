@@ -17,7 +17,7 @@ async function zoomPercent(page: Page): Promise<number> {
 }
 
 test.describe('keyboard tool selection', () => {
-  test('V, S, T and H select their tools', async ({ page }) => {
+  test('V, S, T and H select their tools', { tag: '@smoke' }, async ({ page }) => {
     await page.keyboard.press('s')
     await expect(page.getByTestId('tool-sticky')).toHaveAttribute('aria-pressed', 'true')
 
@@ -98,21 +98,25 @@ test.describe('zoom', () => {
    * canvas. The fix is that the keymap claims these and the handler calls
    * preventDefault, so the canvas percentage changes and the page does not.
    */
-  test('claims Mod+plus, Mod+minus and Mod+0 instead of the browser', async ({ page }) => {
-    await page.keyboard.press(`ControlOrMeta+=`)
-    await expect(zoomPercent(page)).resolves.toBe(200)
+  test(
+    'claims Mod+plus, Mod+minus and Mod+0 instead of the browser',
+    { tag: '@smoke' },
+    async ({ page }) => {
+      await page.keyboard.press(`ControlOrMeta+=`)
+      await expect(zoomPercent(page)).resolves.toBe(200)
 
-    await page.keyboard.press(`ControlOrMeta+-`)
-    await expect(zoomPercent(page)).resolves.toBe(100)
+      await page.keyboard.press(`ControlOrMeta+-`)
+      await expect(zoomPercent(page)).resolves.toBe(100)
 
-    await page.keyboard.press(`ControlOrMeta+=`)
-    await page.keyboard.press(`ControlOrMeta+0`)
-    await expect(zoomPercent(page)).resolves.toBe(100)
+      await page.keyboard.press(`ControlOrMeta+=`)
+      await page.keyboard.press(`ControlOrMeta+0`)
+      await expect(zoomPercent(page)).resolves.toBe(100)
 
-    // The page itself must not have scaled.
-    await expect(page.evaluate(() => window.devicePixelRatio)).resolves.toBeGreaterThan(0)
-    await expect(page.evaluate(() => window.visualViewport?.scale ?? 1)).resolves.toBe(1)
-  })
+      // The page itself must not have scaled.
+      await expect(page.evaluate(() => window.devicePixelRatio)).resolves.toBeGreaterThan(0)
+      await expect(page.evaluate(() => window.visualViewport?.scale ?? 1)).resolves.toBe(1)
+    },
+  )
 
   test('scroll zooms by default and the preference can be switched', async ({ page }) => {
     await expect(page.getByTestId('wheel-mode')).toHaveAttribute('data-mode', 'zoom')

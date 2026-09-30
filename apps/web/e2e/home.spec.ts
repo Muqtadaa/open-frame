@@ -69,7 +69,7 @@ test.describe('arriving with nothing', () => {
  * boards are reached anyway.
  */
 test.describe('boards already in this browser', () => {
-  test('opens by id and is listed when you come back', async ({ page }) => {
+  test('opens by id and is listed when you come back', { tag: '@smoke' }, async ({ page }) => {
     await seedLocalBoard(page, 'one')
 
     await page.goto(HOME_URL)

@@ -24,26 +24,30 @@ async function openBoard(page: Page): Promise<void> {
   await page.waitForSelector('[data-testid="status-bar"]')
 }
 
-test('drops a comment where you click, and shows it as a pin', async ({ page }) => {
-  await signedIn(page, [{ id: BOARD, title: 'Shared', role: 'owner' }])
-  await openBoard(page)
+test(
+  'drops a comment where you click, and shows it as a pin',
+  { tag: '@smoke' },
+  async ({ page }) => {
+    await signedIn(page, [{ id: BOARD, title: 'Shared', role: 'owner' }])
+    await openBoard(page)
 
-  // Nothing before anybody says anything.
-  await expect(page.getByTestId('comment-panel')).toHaveCount(0)
+    // Nothing before anybody says anything.
+    await expect(page.getByTestId('comment-panel')).toHaveCount(0)
 
-  await page.getByTestId('tool-comment').click()
-  await page.locator('[data-testid="canvas"]').click({ position: { x: 320, y: 240 } })
+    await page.getByTestId('tool-comment').click()
+    await page.locator('[data-testid="canvas"]').click({ position: { x: 320, y: 240 } })
 
-  // The composer opens where the click landed, with a pin marking the spot.
-  await expect(page.getByTestId('comment-panel')).toBeVisible()
-  await expect(page.getByTestId('comment-pin-new')).toBeVisible()
+    // The composer opens where the click landed, with a pin marking the spot.
+    await expect(page.getByTestId('comment-panel')).toBeVisible()
+    await expect(page.getByTestId('comment-pin-new')).toBeVisible()
 
-  await page.getByTestId('comment-input').fill('Is this the right framing?')
-  await page.getByTestId('comment-post').click()
+    await page.getByTestId('comment-input').fill('Is this the right framing?')
+    await page.getByTestId('comment-post').click()
 
-  // It becomes a pin on the board.
-  await expect(page.locator('[data-testid^="comment-pin-cmt_"]')).toHaveCount(1)
-})
+    // It becomes a pin on the board.
+    await expect(page.locator('[data-testid^="comment-pin-cmt_"]')).toHaveCount(1)
+  },
+)
 
 test('replies count on the pin, and resolving takes it off the board', async ({ page }) => {
   await signedIn(page, [{ id: BOARD, title: 'Shared', role: 'owner' }])

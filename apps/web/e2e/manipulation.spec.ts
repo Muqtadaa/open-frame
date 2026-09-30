@@ -29,7 +29,7 @@ test.describe('resize', () => {
     await expect(page.getByTestId('handle-n')).toBeVisible()
   })
 
-  test('resizes from the south-east corner', async ({ page }) => {
+  test('resizes from the south-east corner', { tag: '@smoke' }, async ({ page }) => {
     await create(page, 's', 400, 300, 'Resize me')
     await page.locator('[data-object-type="sticky"]').click()
 
@@ -101,7 +101,7 @@ test.describe('resize', () => {
 })
 
 test.describe('clipboard and ordering', () => {
-  test('copies and pastes', async ({ page }) => {
+  test('copies and pastes', { tag: '@smoke' }, async ({ page }) => {
     await create(page, 's', 400, 300, 'Original')
     await page.locator('[data-object-type="sticky"]').click()
 

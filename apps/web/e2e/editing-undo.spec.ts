@@ -12,7 +12,7 @@ import { CANVAS, expect, openBoard, test } from './fixtures.js'
  * Two controls bound to one shortcut have to agree, which is what these test.
  */
 
-test('the keyboard undoes typing rather than the board', async ({ page }) => {
+test('the keyboard undoes typing rather than the board', { tag: '@smoke' }, async ({ page }) => {
   await openBoard(page)
   await page.getByTestId('tool-code').click()
   await page.locator(CANVAS).click({ position: { x: 340, y: 240 } })

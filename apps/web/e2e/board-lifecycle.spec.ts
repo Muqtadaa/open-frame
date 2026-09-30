@@ -49,7 +49,7 @@ test.beforeEach(async ({ page }) => {
   await expect(page.getByTestId('tool-select')).toBeVisible()
 })
 
-test('creates a sticky note and shows its text', async ({ page }) => {
+test('creates a sticky note and shows its text', { tag: '@smoke' }, async ({ page }) => {
   await createSticky(page, 300, 250, 'Customers do not understand pricing')
 
   await expect(page.locator(STICKY)).toHaveCount(1)
@@ -58,7 +58,7 @@ test('creates a sticky note and shows its text', async ({ page }) => {
   await expect(page.getByTestId('save-state')).toHaveText('Saved')
 })
 
-test('persists across a reload', async ({ page }) => {
+test('persists across a reload', { tag: '@smoke' }, async ({ page }) => {
   await createSticky(page, 300, 250, 'Survives a reload')
 
   await saved(page)
@@ -68,7 +68,7 @@ test('persists across a reload', async ({ page }) => {
   await expect(page.locator(STICKY)).toContainText('Survives a reload')
 })
 
-test('drags a note and undoes the move as a single action', async ({ page }) => {
+test('drags a note and undoes the move as a single action', { tag: '@smoke' }, async ({ page }) => {
   await createSticky(page, 300, 250, 'Draggable')
 
   const note = page.locator(STICKY)
@@ -95,7 +95,7 @@ test('drags a note and undoes the move as a single action', async ({ page }) => 
   await expect(page.getByTestId('redo')).toBeEnabled()
 })
 
-test('selects a note and changes its colour', async ({ page }) => {
+test('selects a note and changes its colour', { tag: '@smoke' }, async ({ page }) => {
   await createSticky(page, 300, 250, 'Colour me')
 
   await page.locator(STICKY).click()
@@ -105,7 +105,7 @@ test('selects a note and changes its colour', async ({ page }) => {
   await expect(viewOf(page, 'sticky')).toHaveCSS('background-color', 'rgb(207, 226, 255)')
 })
 
-test('deletes the selection and restores it with undo', async ({ page }) => {
+test('deletes the selection and restores it with undo', { tag: '@smoke' }, async ({ page }) => {
   await createSticky(page, 300, 250, 'Temporary')
 
   await page.locator(STICKY).click()

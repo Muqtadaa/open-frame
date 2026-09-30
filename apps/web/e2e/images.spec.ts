@@ -79,13 +79,17 @@ function pngOf(width: number, height: number): Buffer {
 }
 
 test.describe('images', () => {
-  test('places an uploaded image and names it after the file', async ({ page }) => {
-    await upload(page, 'holiday.png', 'image/png', png())
+  test(
+    'places an uploaded image and names it after the file',
+    { tag: '@smoke' },
+    async ({ page }) => {
+      await upload(page, 'holiday.png', 'image/png', png())
 
-    const image = page.locator('[data-object-type="image"]')
-    await expect(image).toHaveCount(1)
-    await expect(image.locator('img')).toHaveAttribute('alt', 'holiday')
-  })
+      const image = page.locator('[data-object-type="image"]')
+      await expect(image).toHaveCount(1)
+      await expect(image.locator('img')).toHaveAttribute('alt', 'holiday')
+    },
+  )
 
   test('places an image at its natural aspect ratio', async ({ page }) => {
     await upload(page, 'tall.png', 'image/png', png())

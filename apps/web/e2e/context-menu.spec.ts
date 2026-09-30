@@ -32,34 +32,38 @@ test.beforeEach(async ({ page }) => {
   await boardWithNote(page)
 })
 
-test('moves focus in and walks the items with arrows, Home, End and a letter', async ({ page }) => {
-  await page.locator(CANVAS).click({ position: NOTE, button: 'right' })
-  await expect(menu(page)).toBeVisible()
-  await expect(item(page, 'Derive insight')).toBeFocused()
+test(
+  'moves focus in and walks the items with arrows, Home, End and a letter',
+  { tag: '@smoke' },
+  async ({ page }) => {
+    await page.locator(CANVAS).click({ position: NOTE, button: 'right' })
+    await expect(menu(page)).toBeVisible()
+    await expect(item(page, 'Derive insight')).toBeFocused()
 
-  await page.keyboard.press('ArrowDown')
-  await page.keyboard.press('ArrowDown')
-  await expect(item(page, 'Cut')).toBeFocused()
-  await page.keyboard.press('ArrowDown')
-  await expect(item(page, 'Copy')).toBeFocused()
-  // An unavailable item is still reachable, and says so.
-  await page.keyboard.press('ArrowDown')
-  await expect(item(page, 'Paste')).toBeFocused()
-  await expect(item(page, 'Paste')).toHaveAttribute('aria-disabled', 'true')
-  await page.keyboard.press('Enter')
-  await expect(menu(page)).toBeVisible()
+    await page.keyboard.press('ArrowDown')
+    await page.keyboard.press('ArrowDown')
+    await expect(item(page, 'Cut')).toBeFocused()
+    await page.keyboard.press('ArrowDown')
+    await expect(item(page, 'Copy')).toBeFocused()
+    // An unavailable item is still reachable, and says so.
+    await page.keyboard.press('ArrowDown')
+    await expect(item(page, 'Paste')).toBeFocused()
+    await expect(item(page, 'Paste')).toHaveAttribute('aria-disabled', 'true')
+    await page.keyboard.press('Enter')
+    await expect(menu(page)).toBeVisible()
 
-  await page.keyboard.press('End')
-  await expect(item(page, 'Delete')).toBeFocused()
-  await page.keyboard.press('ArrowDown')
-  await expect(item(page, 'Derive insight')).toBeFocused()
-  await page.keyboard.press('ArrowUp')
-  await expect(item(page, 'Delete')).toBeFocused()
-  await page.keyboard.press('Home')
-  await expect(item(page, 'Derive insight')).toBeFocused()
-  await page.keyboard.press('d')
-  await expect(item(page, 'Duplicate')).toBeFocused()
-})
+    await page.keyboard.press('End')
+    await expect(item(page, 'Delete')).toBeFocused()
+    await page.keyboard.press('ArrowDown')
+    await expect(item(page, 'Derive insight')).toBeFocused()
+    await page.keyboard.press('ArrowUp')
+    await expect(item(page, 'Delete')).toBeFocused()
+    await page.keyboard.press('Home')
+    await expect(item(page, 'Derive insight')).toBeFocused()
+    await page.keyboard.press('d')
+    await expect(item(page, 'Duplicate')).toBeFocused()
+  },
+)
 
 test('arrows move through the menu, not the object under it', async ({ page }) => {
   const note = page.locator('[data-object-type="sticky"]')
