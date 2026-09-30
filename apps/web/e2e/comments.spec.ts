@@ -1,5 +1,5 @@
 import { expect, test, type Page } from '@playwright/test'
-import { boxOf, viewportOf } from './fixtures.js'
+import { boxOf, viewportOf, useClipboard } from './fixtures.js'
 
 import { HOME_URL } from './routes.js'
 import { signedIn } from './signed-in.js'
@@ -274,7 +274,7 @@ test('a pin follows the element it was dropped on', async ({ page }) => {
  */
 test('offers the board link when you name somebody who is not here', async ({ page }) => {
   await signedIn(page, [{ id: BOARD, title: 'Shared', role: 'owner' }])
-  await page.context().grantPermissions(['clipboard-read', 'clipboard-write'])
+  await useClipboard(page.context())
   await openBoard(page)
 
   await page.getByTestId('tool-comment').click()

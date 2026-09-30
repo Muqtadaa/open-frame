@@ -25,6 +25,13 @@ const NOT_FUNCTIONAL = ['**/*.bench.spec.ts', '**/*.visual.spec.ts']
  */
 const CHROMIUM_ONLY = ['**/touch.spec.ts']
 
+/**
+ * Specs that emulate a phone (`isMobile`), which Playwright cannot do in
+ * Firefox — it refuses the option outright. Their claims are about a phone's
+ * browser, so Chromium and WebKit (Safari's engine) still carry them.
+ */
+const NOT_FIREFOX = ['**/phone-width.spec.ts', '**/rail-overflow.spec.ts']
+
 export default defineConfig({
   testDir: './e2e',
   fullyParallel: true,
@@ -74,7 +81,7 @@ export default defineConfig({
      */
     {
       name: 'firefox',
-      testIgnore: [...NOT_FUNCTIONAL, ...CHROMIUM_ONLY],
+      testIgnore: [...NOT_FUNCTIONAL, ...CHROMIUM_ONLY, ...NOT_FIREFOX],
       use: { ...devices['Desktop Firefox'] },
     },
     {

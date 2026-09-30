@@ -129,7 +129,10 @@ Firefox and WebKit on every push (`pnpm test:e2e:smoke`), and the whole suite
 runs in all three every night (`.github/workflows/nightly.yml`, which can also
 be started by hand). Goldens and benchmarks stay in Chromium. `touch.spec.ts`
 drives touch through CDP, which only Chromium has, and is excluded from the
-other two in the config.
+other two in the config; the two specs that emulate a phone (`isMobile`) are
+excluded from Firefox, which cannot. A spec that needs the clipboard calls
+`useClipboard()`: the real one in Chromium, an in-memory one elsewhere,
+because the other engines have no clipboard permission to grant.
 
 `pnpm test:e2e` needs a Chromium. In an environment with a pre-installed browser
 whose build differs from Playwright's expected one, set

@@ -1,4 +1,5 @@
 import { expect, test } from '@playwright/test'
+import { useClipboard } from './fixtures.js'
 
 import { BOARD_URL, HOME_URL } from './routes.js'
 import { signedIn } from './signed-in.js'
@@ -60,7 +61,7 @@ test('naming a workspace has a label, and a way back', async ({ page }) => {
 })
 
 test('an invite link can be copied, and says what it gives', async ({ page, context }) => {
-  await context.grantPermissions(['clipboard-read', 'clipboard-write'])
+  await useClipboard(context)
   await signedIn(page, [{ id: 'brd_aaaaaaaaaaaaaaaa', title: 'Mine', role: 'owner' }])
   await page.goto(HOME_URL)
   await page.getByTestId('workspace-new').click()

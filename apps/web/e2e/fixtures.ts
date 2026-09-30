@@ -1,4 +1,10 @@
-import { test as base, expect, type Locator, type Page } from '@playwright/test'
+import {
+  test as base,
+  expect,
+  type BrowserContext,
+  type Locator,
+  type Page,
+} from '@playwright/test'
 
 import { BOARD_URL } from './routes.js'
 
@@ -236,4 +242,35 @@ export async function undo(page: Page): Promise<void> {
 
 export async function redo(page: Page): Promise<void> {
   await page.keyboard.press('ControlOrMeta+Shift+z')
+}
+
+/**
+ * A clipboard the page can write to and the test can read back, in every
+ * engine. Call before the page loads.
+ *
+ * Chromium gets the real one: Playwright grants it the clipboard permissions.
+ * Firefox and WebKit have no such permission to grant — asking for it fails
+ * the test before it starts (Codex, on #31) — and a page there cannot read the
+ * clipboard without a person's gesture at all. So they get an in-memory
+ * `navigator.clipboard` holding what the app last wrote, which is the thing
+ * these specs check: that the right link was copied.
+ */
+export async function useClipboard(context: BrowserContext): Promise<void> {
+  if (context.browser()?.browserType().name() === 'chromium') {
+    await context.grantPermissions(['clipboard-read', 'clipboard-write'])
+    return
+  }
+  await context.addInitScript(() => {
+    let held = ''
+    Object.defineProperty(navigator, 'clipboard', {
+      configurable: true,
+      value: {
+        writeText: (text: string) => {
+          held = text
+          return Promise.resolve()
+        },
+        readText: () => Promise.resolve(held),
+      },
+    })
+  })
 }
