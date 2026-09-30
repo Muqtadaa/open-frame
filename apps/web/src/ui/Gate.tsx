@@ -10,6 +10,8 @@ import {
   type RefObject,
 } from 'react'
 
+import { abandonSplash } from '../app/splash.js'
+
 interface Props {
   readonly heading: string
   readonly children: ReactNode
@@ -59,6 +61,13 @@ export function Gate({
       (child): child is HTMLElement => child instanceof HTMLElement && !child.contains(own),
     )
     for (const element of behind) element.inert = true
+    /*
+     * A gate is news the artwork must not hold back — and its one focus on
+     * arrival lands on nothing while the root is still inert under the splash.
+     * A locked board's room answers inside the brand hold, so on a first visit
+     * the password field never had the keyboard. Same fix as `StartFailed`.
+     */
+    abandonSplash()
     ;(initialFocus?.current ?? panel.current)?.focus()
     return () => {
       for (const element of behind) element.inert = false

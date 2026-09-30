@@ -163,6 +163,27 @@ test('never puts the owner key in the page URL', async ({ page }) => {
  * wrong password disabled the field mid-press, which threw the keyboard onto
  * the page body.
  */
+/*
+ * A gate that arrives during the brand hold. `#root` stays inert until the
+ * splash leaves, and focus asked of an inert element goes nowhere, so the
+ * gate's one focus on arrival was spent while the page could not take it: on
+ * a first visit the password field never had the keyboard. WebKit's slower
+ * frames exposed it in the suite; the hold makes it certain everywhere.
+ */
+test('a gate that arrives during the brand hold still gets the keyboard', async ({ page }) => {
+  await signedIn(page, [])
+  await page.addInitScript(() => {
+    localStorage.removeItem('openframe:splash-hold')
+  })
+  // A clock that never moves holds the artwork up for as long as the test
+  // needs, so the gate arrives under it whatever the machine's speed.
+  await page.clock.install()
+  await lockedRoom(page, { with: TOKEN })
+  await page.goto(`/?room=${BOARD}&k=${KEY}`)
+  await expect(page.getByTestId('board-locked')).toBeVisible()
+  await expect(page.getByTestId('board-password')).toBeFocused()
+})
+
 test.describe('as a dialog', () => {
   test.beforeEach(async ({ page }) => {
     await signedIn(page, [])
