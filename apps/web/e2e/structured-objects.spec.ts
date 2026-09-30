@@ -30,18 +30,22 @@ async function promote(page: Page, at: { x: number; y: number }): Promise<void> 
 }
 
 test.describe('structured objects', () => {
-  test('a note is promoted to evidence and keeps its text and place', async ({ page }) => {
-    await placeNote(page, 'Participants skipped the pricing page')
+  test(
+    'a note is promoted to evidence and keeps its text and place',
+    { tag: '@smoke' },
+    async ({ page }) => {
+      await placeNote(page, 'Participants skipped the pricing page')
 
-    const before = await page.locator('[data-object-id]').first().boundingBox()
-    await promote(page, NOTE)
+      const before = await page.locator('[data-object-id]').first().boundingBox()
+      await promote(page, NOTE)
 
-    // The quote survived, and so did where it sits.
-    await expect(page.locator(CANVAS)).toContainText('Participants skipped the pricing page')
-    const after = await page.locator('[data-object-id]').first().boundingBox()
-    expect(after?.x).toBeCloseTo(before?.x ?? -1, 0)
-    expect(after?.y).toBeCloseTo(before?.y ?? -1, 0)
-  })
+      // The quote survived, and so did where it sits.
+      await expect(page.locator(CANVAS)).toContainText('Participants skipped the pricing page')
+      const after = await page.locator('[data-object-id]').first().boundingBox()
+      expect(after?.x).toBeCloseTo(before?.x ?? -1, 0)
+      expect(after?.y).toBeCloseTo(before?.y ?? -1, 0)
+    },
+  )
 
   /**
    * The point of the type. A sticky's panel has colour and face; an evidence

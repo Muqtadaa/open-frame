@@ -13,6 +13,8 @@ pnpm dev          # http://localhost:5173
 pnpm verify       # format + typecheck + lint + depcruise + test + bench smoke + build  ← run before every commit
 pnpm test         # unit + integration (~1s)
 pnpm test:e2e     # Playwright; set OPENFRAME_CHROMIUM_PATH if the sandbox ships its own Chromium
+pnpm test:e2e:smoke   # the @smoke core loop in Firefox and WebKit (every PR)
+pnpm test:e2e:all     # the whole suite in all three engines (nightly)
 pnpm bench:fixtures   # generate 100/1k/5k/10k boards into apps/web/public/bench/
 pnpm test:bench       # renderer scaling probe (needs the fixtures above)
 pnpm build:bench      # deployable build WITH the bench panel and fixtures
@@ -568,6 +570,11 @@ FAILURE, never a `return` — 47 places once returned early on a null read and p
 while checking nothing. `eslint-plugin-playwright` holds the rest: no sleeps
 (wait for the state the sleep stood for), no branches in a test body, no
 forced clicks. `e2e-rooms/rooms.ts` is the same for the rooms suite.
+
+A test of the core loop — placing, editing, moving, saving — carries
+`{ tag: '@smoke' }`, and so runs in Firefox and WebKit on every PR. A spec
+that can only run in Chromium by construction (CDP) is excluded in
+`playwright.config.ts` with its reason, never skipped.
 
 Reach an element by its role and name, or by a `data-testid` — never by a
 styling class. The class names are the design's to change, and 188 selectors

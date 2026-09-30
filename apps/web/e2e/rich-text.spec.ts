@@ -48,7 +48,7 @@ test.describe('formatting selected text', () => {
     await expect(page.getByTestId('format-bar')).toHaveCount(0)
   })
 
-  test('bolds the selection and leaves the rest alone', async ({ page }) => {
+  test('bolds the selection and leaves the rest alone', { tag: '@smoke' }, async ({ page }) => {
     await noteSaying(page, 'Pricing is unclear')
     await selectFirst(page, 7)
     await page.getByTestId('format-bold').click()

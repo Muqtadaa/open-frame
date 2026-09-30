@@ -40,7 +40,7 @@ test.describe('grouping', () => {
     await twoNotes(page)
   })
 
-  test('wraps the selection in one group', async ({ page }) => {
+  test('wraps the selection in one group', { tag: '@smoke' }, async ({ page }) => {
     await groupBoth(page)
     // The notes survive: a group contains them, it does not replace them.
     await expect(page.locator('[data-object-type="sticky"]')).toHaveCount(2)
@@ -64,7 +64,7 @@ test.describe('grouping', () => {
     expect(box.width).toBeGreaterThan(400)
   })
 
-  test('moves every member together', async ({ page }) => {
+  test('moves every member together', { tag: '@smoke' }, async ({ page }) => {
     await groupBoth(page)
     await page.locator(CANVAS).click({ position: A })
 

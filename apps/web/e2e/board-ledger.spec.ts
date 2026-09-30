@@ -1,4 +1,5 @@
 import { expect, test } from '@playwright/test'
+import { useClipboard } from './fixtures.js'
 
 import { HOME_URL } from './routes.js'
 import { seedLocalBoard } from './seed.js'
@@ -161,7 +162,7 @@ test('offers the view-only link for a board you own, and for nobody else’s', a
   page,
   context,
 }) => {
-  await context.grantPermissions(['clipboard-read', 'clipboard-write'])
+  await useClipboard(context)
   await signedIn(page, [
     { id: 'brd_aaaaaaaa11111111', title: 'Mine', role: 'owner' },
     { id: 'brd_bbbbbbbb22222222', title: 'Theirs', role: 'editor' },

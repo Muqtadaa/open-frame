@@ -14,6 +14,24 @@ const chromiumPath = process.env['OPENFRAME_CHROMIUM_PATH']
 const launchOverrides =
   chromiumPath === undefined ? {} : { launchOptions: { executablePath: chromiumPath } }
 
+/** Benchmarks and goldens have projects of their own, in Chromium only. */
+const NOT_FUNCTIONAL = ['**/*.bench.spec.ts', '**/*.visual.spec.ts']
+
+/**
+ * Specs that can only run in Chromium, by how they are built rather than by
+ * what they find: `touch.spec.ts` dispatches touches through a CDP session,
+ * and only Chromium speaks CDP. Excluded here, with the reason, rather than
+ * skipped inside the spec.
+ */
+const CHROMIUM_ONLY = ['**/touch.spec.ts']
+
+/**
+ * Specs that emulate a phone (`isMobile`), which Playwright cannot do in
+ * Firefox — it refuses the option outright. Their claims are about a phone's
+ * browser, so Chromium and WebKit (Safari's engine) still carry them.
+ */
+const NOT_FIREFOX = ['**/phone-width.spec.ts', '**/rail-overflow.spec.ts']
+
 export default defineConfig({
   testDir: './e2e',
   fullyParallel: true,
@@ -51,8 +69,25 @@ export default defineConfig({
     {
       // The functional suite. Fast, deterministic, runs in CI.
       name: 'chromium',
-      testIgnore: ['**/*.bench.spec.ts', '**/*.visual.spec.ts'],
+      testIgnore: NOT_FUNCTIONAL,
       use: { ...devices['Desktop Chrome'], ...launchOverrides },
+    },
+    /*
+     * The same suite in the two other engines people use, because the board
+     * leans on exactly what differs between them: pointer and wheel events,
+     * contenteditable and selection, the clipboard, focus. Every PR runs the
+     * `@smoke` core loop in both (`test:e2e:smoke`); the full suite runs in
+     * all three nightly (`test:e2e:all`).
+     */
+    {
+      name: 'firefox',
+      testIgnore: [...NOT_FUNCTIONAL, ...CHROMIUM_ONLY, ...NOT_FIREFOX],
+      use: { ...devices['Desktop Firefox'] },
+    },
+    {
+      name: 'webkit',
+      testIgnore: [...NOT_FUNCTIONAL, ...CHROMIUM_ONLY],
+      use: { ...devices['Desktop Safari'] },
     },
     {
       /*

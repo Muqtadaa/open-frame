@@ -1,4 +1,5 @@
 import { expect, test } from '@playwright/test'
+import { useClipboard } from './fixtures.js'
 
 import { signedIn } from './signed-in.js'
 
@@ -20,7 +21,7 @@ const EDIT = 'a'.repeat(32)
 const VIEW = 'b'.repeat(32)
 
 test.beforeEach(async ({ context }) => {
-  await context.grantPermissions(['clipboard-read', 'clipboard-write'])
+  await useClipboard(context)
 })
 
 test("the owner's chip offers both links, and the password beside them", async ({ page }) => {

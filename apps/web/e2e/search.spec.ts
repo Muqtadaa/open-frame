@@ -62,7 +62,7 @@ test.describe('finding things on a board', () => {
     await expect(page.getByTestId('search-panel')).toHaveCount(0)
   })
 
-  test('finds a note by its text', async ({ page }) => {
+  test('finds a note by its text', { tag: '@smoke' }, async ({ page }) => {
     await note(page, AT, 'Customers do not understand pricing')
     await openSearch(page)
     await page.getByTestId('search-input').fill('understand')

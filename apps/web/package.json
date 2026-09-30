@@ -11,6 +11,8 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "test:e2e": "playwright test --project=chromium",
+    "test:e2e:smoke": "playwright test --project=firefox --project=webkit --grep @smoke",
+    "test:e2e:all": "playwright test --project=chromium --project=firefox --project=webkit",
     "build": "vite build",
     "preview": "vite preview",
     "test:bench": "playwright test --project=bench",

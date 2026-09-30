@@ -68,7 +68,7 @@ async function connectedPair(page: Page): Promise<void> {
 /** Midpoint of the drawn connector, in canvas coordinates. */
 const MIDPOINT = { x: (A_AT.x + B_AT.x) / 2, y: (A_AT.y + B_AT.y) / 2 }
 
-test('draws a connector between two objects', async ({ page }) => {
+test('draws a connector between two objects', { tag: '@smoke' }, async ({ page }) => {
   await connectedPair(page)
   await expect(page.getByTestId('connector-line')).toBeVisible()
 })
@@ -83,7 +83,7 @@ test('does not create a connector from a stray click on empty canvas', async ({ 
  * THE property connectors are built around: the path is derived, so moving an
  * endpoint's object must move the line without ever writing to the connector.
  */
-test('follows an endpoint when its object moves', async ({ page }) => {
+test('follows an endpoint when its object moves', { tag: '@smoke' }, async ({ page }) => {
   await connectedPair(page)
 
   const pathOf = async () => page.getByTestId('connector-line').getAttribute('d')

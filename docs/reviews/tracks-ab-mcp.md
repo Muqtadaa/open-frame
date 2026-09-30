@@ -435,3 +435,12 @@ cover:
     stay, allowlisted with reasons: the editing outline's dash, a shaded
     header strip, and the editor's paragraph element (ADR 0014).
   - Item 3 is complete. Next: item 4, cross-browser runs.
+- **Cross-browser** (item 4):
+  - Firefox and WebKit projects run the same suite, less `touch.spec.ts`,
+    which needs CDP.
+  - 21 core-loop tests carry `@smoke` and run in both engines on every push
+    (a new CI job); the full suite runs in all three nightly, one job per
+    engine, and can be dispatched by hand.
+  - The engines cannot be downloaded in the development sandbox, so their
+    first runs are in CI; what they find is fixed in this PR where it is in
+    the smoke set, and listed for the owner otherwise.

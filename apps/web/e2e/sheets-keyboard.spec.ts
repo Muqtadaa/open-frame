@@ -1,4 +1,5 @@
 import { expect, test } from '@playwright/test'
+import { useClipboard } from './fixtures.js'
 
 import { BOARD_URL, HOME_URL } from './routes.js'
 import { signedIn } from './signed-in.js'
@@ -38,7 +39,7 @@ test('the account sheet takes the keyboard', async ({ page }) => {
 })
 
 test('the share sheet closes on a press elsewhere', async ({ page, context }) => {
-  await context.grantPermissions(['clipboard-read', 'clipboard-write'])
+  await useClipboard(context)
   await signedIn(page, [{ id: 'brd_aaaaaaaa11111111', title: 'Mine', role: 'owner' }])
   await page.goto(`/?room=brd_aaaaaaaa11111111&k=${'a'.repeat(32)}`)
   // Mine once the account has said so; until then the chip is an editor's.
