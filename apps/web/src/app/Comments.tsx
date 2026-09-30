@@ -93,6 +93,14 @@ export function Comments() {
    * back; otherwise the comment tool does.
    */
   const returnTo = useRef<HTMLElement | null>(null)
+  /*
+   * And the board it was on. The board takes the keyboard back from an edit
+   * a frame after the edit ends, and M pressed inside that frame found the
+   * note's editor still recorded here — gone by the time the panel closed, so
+   * the keyboard went to the comment tool instead of the board. WebKit's
+   * frames are slow enough for a quick hand to beat.
+   */
+  const returnToBoard = useRef<HTMLElement | null>(null)
   const wasOpen = useRef(false)
   /*
    * Tracked as focus MOVES rather than read when the panel opens: the panel
@@ -104,6 +112,7 @@ export function Comments() {
       const target = event.target
       if (target instanceof HTMLElement && target.closest('.of-comment-panel') === null) {
         returnTo.current = target
+        returnToBoard.current = target.closest<HTMLElement>('[data-testid="canvas"]')
       }
     }
     window.addEventListener('focusin', note)
@@ -117,7 +126,9 @@ export function Comments() {
       const back =
         returnTo.current?.isConnected === true
           ? returnTo.current
-          : document.querySelector<HTMLElement>('[data-testid="tool-comment"]')
+          : returnToBoard.current?.isConnected === true
+            ? returnToBoard.current
+            : document.querySelector<HTMLElement>('[data-testid="tool-comment"]')
       back?.focus()
     }
     wasOpen.current = open

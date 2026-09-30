@@ -1063,6 +1063,34 @@ test.describe('by keyboard', () => {
     await expect(page.getByTestId('canvas')).toBeFocused()
   })
 
+  /*
+   * The same, with M pressed before the board has taken the keyboard back
+   * from the edit — it does that a frame later, and WebKit's frames are slow
+   * enough for a quick hand to beat it. The panel then remembered the note's
+   * editor, which was gone by the time it closed, and handed focus to the
+   * comment tool instead of the board. No frames at all makes that certain.
+   */
+  test('M pressed straight after an edit still hands the keyboard back to the board', async ({
+    page,
+  }) => {
+    await signedIn(page, [{ id: BOARD, title: 'Shared', role: 'owner' }])
+    await openBoard(page)
+    await page.keyboard.press('s')
+    await page.locator('[data-testid="canvas"]').click({ position: { x: 320, y: 260 } })
+    await page.keyboard.type('A note')
+    await page.evaluate(() => {
+      window.requestAnimationFrame = () => 0
+    })
+    await page.keyboard.press('Escape')
+    await expect(page.getByTestId('selection-count')).toContainText('1')
+
+    await page.keyboard.press('m')
+    await expect(page.getByTestId('comment-input')).toBeFocused()
+    await page.keyboard.press('Escape')
+    await expect(page.getByTestId('comment-panel')).toHaveCount(0)
+    await expect(page.getByTestId('canvas')).toBeFocused()
+  })
+
   test('a pin that opened a thread gets the keyboard back', async ({ page }) => {
     await signedIn(page, [{ id: BOARD, title: 'Shared', role: 'owner' }])
     await openBoard(page)
