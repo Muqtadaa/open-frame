@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
 
 import { useCommentAnchor } from '../hooks/use-comment-anchor.js'
 import { useComments } from '../hooks/use-comments.js'
@@ -8,6 +8,7 @@ import { useIdentity } from '../hooks/use-identity.js'
 import { CommentPanel } from '../ui/CommentPanel.js'
 import { useInteractionStore } from '../interaction/interaction-store.js'
 import { useOpenFrame } from '../runtime/context.js'
+import { useServices } from '../runtime/services.js'
 import { CommentsContext, useDiscussion, type Discussion } from './comments-context.js'
 
 /**
@@ -35,7 +36,16 @@ export function CommentsProvider({ children }: { readonly children: ReactNode })
    * one of them quietly stops matching the other.
    */
   const focusComment = useFocusComment(comments)
-  useCommentAnchor(focusComment, comments.length > 0, enabled)
+  const { discussion } = useServices()
+  const arrived = useCallback(
+    (commentId: string) => {
+      discussion.markRead([commentId]).catch(() => {
+        // Still unread next time, which is the safe direction to fail in.
+      })
+    },
+    [discussion],
+  )
+  useCommentAnchor(focusComment, comments.length > 0, enabled, arrived)
 
   const value = useMemo<Discussion>(() => {
     const replyCounts = new Map<string, number>()

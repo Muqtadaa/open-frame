@@ -22,8 +22,26 @@ export function useCommentAnchor(
   focus: (commentId: string) => boolean,
   ready: boolean,
   enabled: boolean,
+  arrived?: (commentId: string) => void,
 ): void {
   const done = useRef(false)
+  const told = useRef(false)
+
+  /*
+   * Arriving is reading, so it is said the moment the link is seen rather
+   * than when the remark can be shown. The click that followed the link used
+   * to be the only thing that said so — a request sent from a page already
+   * navigating away, which Firefox cancelled about a third of the time, and
+   * which a link opened in a new tab never sent at all.
+   */
+  useEffect(() => {
+    if (!enabled || told.current || arrived === undefined) return
+    if (typeof window === 'undefined') return
+    const wanted = commentAnchor(window.location.search)
+    if (wanted === null) return
+    told.current = true
+    arrived(wanted)
+  }, [enabled, arrived])
 
   useEffect(() => {
     if (!enabled || done.current) return

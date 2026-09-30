@@ -674,6 +674,40 @@ test('a mention link for a remark that is gone still opens the board', async ({ 
  * see disappeared at the moment you looked at it, taking the only link back
  * with it.
  */
+/*
+ * Arriving IS reading. The click used to be the only thing that marked a
+ * mention read, sent on the way out of a page that was already navigating —
+ * Firefox cancelled it about a third of the time, and a notification opened
+ * in a new tab, or pasted, never sent it at all.
+ */
+test('opening the link a mention gives marks it read, however it was opened', async ({ page }) => {
+  const account = await signedIn(
+    page,
+    [{ id: BOARD, title: 'Shared', role: 'owner' }],
+    'Muqtadaa Miandara',
+    {
+      mentions: [
+        {
+          commentId: 'cmt_arrived',
+          boardId: BOARD,
+          boardTitle: 'Shared',
+          authorName: 'Rowan',
+          body: 'over here',
+        },
+      ],
+    },
+  )
+  await page.goto(HOME_URL)
+  await page.getByTestId('mentions-button').click()
+  const href = await page.getByTestId('mention-cmt_arrived').getAttribute('href')
+  expect(href).toContain('c=cmt_arrived')
+
+  // Not clicked: followed, the way a new tab or a pasted link arrives.
+  await page.goto(href ?? '')
+  await page.waitForSelector('[data-testid="status-bar"]')
+  await expect.poll(() => account.read).toContain('cmt_arrived')
+})
+
 test('reading a mention keeps it, quietened, rather than destroying it', async ({ page }) => {
   const account = await signedIn(
     page,
