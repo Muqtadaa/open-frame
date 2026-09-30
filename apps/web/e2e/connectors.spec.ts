@@ -14,7 +14,9 @@ import {
   clickLine,
   defined,
   pairs,
+  seedBoard,
 } from './fixtures.js'
+import { buildBoard } from './boards.js'
 
 /**
  * Connectors: drawing, following their endpoints, and what happens when the
@@ -56,7 +58,7 @@ async function legAt(page: Page, fraction = 0.5): Promise<{ x: number; y: number
 const A_AT = { x: 280, y: 250 }
 const B_AT = { x: 780, y: 470 }
 
-async function connectedPair(page: Page): Promise<void> {
+async function drawnPair(page: Page): Promise<void> {
   await sticky(page, A_AT.x, A_AT.y, 'A')
   await sticky(page, B_AT.x, B_AT.y, 'B')
   await page.keyboard.press('c')
@@ -65,11 +67,38 @@ async function connectedPair(page: Page): Promise<void> {
   await expect(page.locator('[data-object-type="connector"]')).toHaveCount(1)
 }
 
+/**
+ * The same pair, already on the board: for the tests about what a line does
+ * rather than how one is drawn, which is `drawnPair` and its own tests.
+ * Attached to both bodies, as a line dropped on the middle of an object is.
+ */
+async function connectedPair(page: Page): Promise<void> {
+  await seedBoard(
+    page,
+    buildBoard((board) => {
+      const a = board.note('A', A_AT)
+      const b = board.note('B', B_AT)
+      board.connect(a, b)
+    }),
+  )
+}
+
+/** Notes A and B with nothing between them yet. */
+async function twoNotes(page: Page): Promise<void> {
+  await seedBoard(
+    page,
+    buildBoard((board) => {
+      board.note('A', A_AT)
+      board.note('B', B_AT)
+    }),
+  )
+}
+
 /** Midpoint of the drawn connector, in canvas coordinates. */
 const MIDPOINT = { x: (A_AT.x + B_AT.x) / 2, y: (A_AT.y + B_AT.y) / 2 }
 
 test('draws a connector between two objects', { tag: '@smoke' }, async ({ page }) => {
-  await connectedPair(page)
+  await drawnPair(page)
   await expect(page.getByTestId('connector-line')).toBeVisible()
 })
 
@@ -144,7 +173,9 @@ test('is selectable and labellable', async ({ page }) => {
 })
 
 test('survives a reload', async ({ page }) => {
-  await connectedPair(page)
+  // Drawn, not seeded: a seeded board is written by its first real edit, and
+  // this test's claim is about a line that was saved.
+  await drawnPair(page)
   await saved(page)
   await page.reload()
   await expect(page.locator('[data-object-type="connector"]')).toHaveCount(1)
@@ -724,8 +755,7 @@ test.describe('aiming at an anchor', () => {
   }
 
   test('attaches to the anchor the line was dropped on, not the nearest side', async ({ page }) => {
-    await sticky(page, A_AT.x, A_AT.y, 'A')
-    await sticky(page, B_AT.x, B_AT.y, 'B')
+    await twoNotes(page)
     const at = await anchors(page)
 
     await page.keyboard.press('c')
@@ -743,8 +773,7 @@ test.describe('aiming at an anchor', () => {
   })
 
   test('still takes a drop on the face of an object as "join this"', async ({ page }) => {
-    await sticky(page, A_AT.x, A_AT.y, 'A')
-    await sticky(page, B_AT.x, B_AT.y, 'B')
+    await twoNotes(page)
     const at = await anchors(page)
 
     await page.keyboard.press('c')
@@ -766,8 +795,7 @@ test.describe('aiming at an anchor', () => {
   test('shows the anchors on whatever is under the line, and marks the one being aimed at', async ({
     page,
   }) => {
-    await sticky(page, A_AT.x, A_AT.y, 'A')
-    await sticky(page, B_AT.x, B_AT.y, 'B')
+    await twoNotes(page)
     const at = await anchors(page)
 
     await page.keyboard.press('c')
@@ -794,8 +822,7 @@ test.describe('aiming at an anchor', () => {
    * the object rather than into it.
    */
   test('arrives perpendicular to the edge it is attached to', async ({ page }) => {
-    await sticky(page, A_AT.x, A_AT.y, 'A')
-    await sticky(page, B_AT.x, B_AT.y, 'B')
+    await twoNotes(page)
     const at = await anchors(page)
 
     await page.keyboard.press('c')
@@ -955,8 +982,7 @@ test.describe('joining a line to a container', () => {
  */
 test.describe('reshaping a line', () => {
   async function bendable(page: Page, routing: 'orthogonal' | 'curved') {
-    await sticky(page, A_AT.x, A_AT.y, 'A')
-    await sticky(page, B_AT.x, B_AT.y, 'B')
+    await twoNotes(page)
     await page.keyboard.press('c')
     await drag(page, A_AT, B_AT)
     await page.keyboard.press('v')
