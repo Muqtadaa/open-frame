@@ -275,7 +275,7 @@ export function ShareControl() {
         }}
       >
         <span className={`of-status__dot of-status__dot--${status}`} aria-hidden="true" />
-        <span className="of-status__share-label">
+        <span className="of-status__share-label" data-testid="status-label">
           {copyFailed
             ? 'Could not copy'
             : copied !== null
@@ -319,6 +319,7 @@ export function ShareControl() {
               <span
                 key={person.key}
                 className="of-status__person"
+                data-testid="room-person"
                 style={{ background: hueVar(person.hue) }}
                 data-tip={person.name}
                 role="img"

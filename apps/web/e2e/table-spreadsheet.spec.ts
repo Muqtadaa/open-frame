@@ -326,7 +326,8 @@ test.describe('merging', () => {
 })
 
 test.describe('borders', () => {
-  const lines = (page: Page): Locator => page.locator('[role="table"] ~ svg.of-table__lines line')
+  const lines = (page: Page): Locator =>
+    page.locator('[role="table"] ~ svg[data-testid="table-lines"] line')
 
   test('rules the outside of a block thick and red', async ({ page }) => {
     await newTable(page)
@@ -339,7 +340,7 @@ test.describe('borders', () => {
     await leave(page)
 
     // Four runs: the block's top, bottom, left and right, each two cells long.
-    const thick = page.locator('svg.of-table__lines line[stroke-width="4"]')
+    const thick = page.getByTestId('table-lines').locator('line[stroke-width="4"]')
     await expect(thick).toHaveCount(4)
     for (const line of await thick.all()) {
       await expect(line).toHaveAttribute('stroke', /red/)
@@ -358,8 +359,8 @@ test.describe('borders', () => {
     await page.getByTestId('borders-dash-dashed').click()
     await page.getByTestId('borders-left').click()
     await leave(page)
-    await expect(page.locator('svg.of-table__lines line[stroke-dasharray]')).toHaveCount(1)
-    await expect(page.locator('svg.of-table__lines line[stroke-width="4"]')).toHaveCount(1)
+    await expect(page.getByTestId('table-lines').locator('line[stroke-dasharray]')).toHaveCount(1)
+    await expect(page.getByTestId('table-lines').locator('line[stroke-width="4"]')).toHaveCount(1)
   })
 
   test('takes lines away with none, and hands them back with reset', async ({ page }) => {

@@ -34,8 +34,8 @@ test.beforeEach(async ({ page }) => {
 })
 
 for (const { tool, drawn } of [
-  { tool: 's', drawn: '.of-sticky__text' },
-  { tool: 't', drawn: '.of-text__body' },
+  { tool: 's', drawn: '[data-testid="sticky-text"]' },
+  { tool: 't', drawn: '[data-testid="text-body"]' },
 ]) {
   test(`a ${tool === 's' ? 'note' : 'text'} breaks its lines in the same places while edited`, async ({
     page,

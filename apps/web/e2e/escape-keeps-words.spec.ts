@@ -63,7 +63,7 @@ test('keeps a frame name', async ({ page }) => {
   await page.keyboard.press(`${MOD}+a`)
   await page.keyboard.type('Discovery')
   await page.keyboard.press('Escape')
-  await expect(page.locator('.of-frame__title')).toContainText('Discovery')
+  await expect(page.getByTestId('frame-title')).toContainText('Discovery')
 })
 
 test('keeps code', async ({ page }) => {

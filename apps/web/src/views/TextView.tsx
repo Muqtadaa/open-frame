@@ -47,7 +47,7 @@ function TextRenderer({ object }: ObjectViewProps<TextData>) {
        * `100cqh` is measured against the nearest container ANCESTOR — an
        * element cannot query itself.
        */}
-      <div className="of-text__body" data-fit-text>
+      <div className="of-text__body" data-testid="text-body" data-fit-text>
         {empty ? 'Text' : <RichTextView value={object.data.text} />}
       </div>
     </div>

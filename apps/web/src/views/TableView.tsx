@@ -325,6 +325,7 @@ function GridLines({
   return (
     <svg
       className="of-table__lines"
+      data-testid="table-lines"
       width={width}
       height={height}
       aria-hidden="true"
@@ -458,7 +459,7 @@ function TableGrid({
                   }
                 >
                   {content?.(index, cell) ?? (
-                    <div className="of-table__cell-text">
+                    <div className="of-table__cell-text" data-testid="table-cell-text">
                       <RichTextView value={cell.text} />
                     </div>
                   )}
@@ -1215,7 +1216,7 @@ function TableEditor({
               }}
             />
           ) : (
-            <div className="of-table__cell-text">
+            <div className="of-table__cell-text" data-testid="table-cell-text">
               <RichTextView value={cell.text} />
             </div>
           )

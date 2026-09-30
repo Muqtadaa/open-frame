@@ -119,7 +119,9 @@ test('faces are targets, side by side, and a crowd is counted', async ({ browser
     timeout: 20_000,
   })
 
-  const faces = me.locator('[data-testid="room-people"] .of-status__person')
+  const faces = me
+    .getByTestId('room-people')
+    .locator('[data-testid="room-person"], [data-testid^="follow-"]')
   await expect(faces).toHaveCount(3)
   const boxes = await faces.evaluateAll((all) =>
     all.map((face) => face.getBoundingClientRect().toJSON() as DOMRect),
@@ -252,7 +254,7 @@ test.describe('other people', () => {
     await bob.mouse.move(400, 300)
     await bob.mouse.move(420, 320)
 
-    const cursor = alice.locator('.of-presence__cursor')
+    const cursor = alice.getByTestId('presence-cursor')
     await expect(cursor).toHaveCount(1, { timeout: 15_000 })
     // The name travels with the pointer; an unlabelled cursor says who is here
     // but not who they are.
@@ -269,7 +271,7 @@ test.describe('other people', () => {
 
     await bob.locator(NOTE).first().click()
 
-    const outline = alice.locator('.of-presence__outline')
+    const outline = alice.getByTestId('presence-outline')
     await expect(outline).toHaveCount(1, { timeout: 15_000 })
 
     /*

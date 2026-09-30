@@ -43,7 +43,11 @@ export function ConnectorPreview() {
   const to = worldToScreen(viewport, drag.to)
 
   return (
-    <svg className="of-connector of-connector--preview" aria-hidden="true">
+    <svg
+      className="of-connector of-connector--preview"
+      data-testid="connector-preview"
+      aria-hidden="true"
+    >
       <path
         d={connectorPath(from, to, 'straight')}
         fill="none"

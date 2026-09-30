@@ -48,7 +48,9 @@ test.describe('the rail from the keyboard', () => {
      * run in three however it was awaited.
      */
     await page.evaluate(() => {
-      const input = document.querySelector<HTMLInputElement>('.of-rail input[type="file"]')
+      const input = document.querySelector<HTMLInputElement>(
+        '[role="toolbar"][aria-label="Board tools"] input[type="file"]',
+      )
       input?.addEventListener('click', (event) => {
         event.preventDefault()
         document.body.dataset.askedForFile = 'yes'
@@ -111,7 +113,7 @@ test('the rail is grouped into getting around, making and annotating', async ({ 
   const ids = async (index: number): Promise<(string | null)[]> =>
     groups
       .nth(index)
-      .locator('.of-tool')
+      .locator('[data-testid^="tool-"]')
       .evaluateAll((tools) => tools.map((tool) => tool.getAttribute('data-testid')))
   expect(await ids(0)).toEqual(['tool-select', 'tool-pan'])
   // Image is something you make, not an afterthought below a rule.
@@ -133,12 +135,14 @@ test('each tool announces its key, and nothing on the rail is nameless', async (
   await expect(page.getByTestId('tool-sticky')).toHaveAttribute('aria-keyshortcuts', 'S')
   await expect(page.getByTestId('tool-shape')).toHaveAttribute('aria-keyshortcuts', 'U')
   // axe's one finding on the rail: the image input had no accessible name.
-  await expect(page.locator('.of-rail input[type="file"]')).toHaveAccessibleName('Image file')
+  await expect(
+    page.getByRole('toolbar', { name: 'Board tools' }).locator('input[type="file"]'),
+  ).toHaveAccessibleName('Image file')
 })
 
 test('a tip waits for a pointer, but not for the keyboard', async ({ page }) => {
   await board(page)
-  const tip = page.getByTestId('tool-text').locator('.of-tool__tip')
+  const tip = page.getByTestId('tool-text').getByTestId('rail-tip')
   const delay = (): Promise<string> => tip.evaluate((el) => getComputedStyle(el).transitionDelay)
 
   await page.getByTestId('tool-text').hover()
@@ -163,9 +167,12 @@ async function tipsOver(
   panel: { x: number; y: number; width: number; height: number },
 ): Promise<[number, number][]> {
   const centres: [number, number][] = []
-  for (const tool of await page.locator('.of-rail .of-tool').all()) {
+  for (const tool of await page
+    .getByRole('toolbar', { name: 'Board tools' })
+    .locator('[data-testid^="tool-"]')
+    .all()) {
     await tool.hover()
-    const tip = tool.locator('.of-tool__tip')
+    const tip = tool.getByTestId('rail-tip')
     await expect(tip).toHaveCSS('opacity', '1')
     const box = await boxOf(tip)
     const x = box.x + box.width / 2
@@ -192,12 +199,15 @@ test('a tool’s tip reads over the record panel', async ({ page }) => {
   const panel = await boxOf(page.getByTestId('inspector'))
 
   // Tips take no pointer, which hides them from a hit test; let this one in.
-  await page.addStyleTag({ content: '.of-tool__tip { pointer-events: auto !important; }' })
+  await page.addStyleTag({
+    content: '[data-testid="rail-tip"] { pointer-events: auto !important; }',
+  })
   const centres = await tipsOver(page, panel)
   expect(centres.length, 'no tip crossed the panel, so this proved nothing').toBeGreaterThan(0)
   for (const [x, y] of centres) {
     const top = await page.evaluate(
-      ([px, py]) => document.elementFromPoint(px ?? 0, py ?? 0)?.closest('.of-tool__tip') !== null,
+      ([px, py]) =>
+        document.elementFromPoint(px ?? 0, py ?? 0)?.closest('[data-testid="rail-tip"]') !== null,
       [x, y],
     )
     expect(top, 'a tip under the panel').toBe(true)

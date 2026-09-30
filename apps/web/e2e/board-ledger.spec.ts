@@ -43,7 +43,7 @@ test('keeps the columns in line down the page', async ({ page }) => {
   await expect(page.getByTestId('home-boards').locator('li')).toHaveCount(3)
 
   const lefts = await page.evaluate(() =>
-    [...document.querySelectorAll('.of-home__board-tag')].map((tag) =>
+    [...document.querySelectorAll('[data-testid="board-tag"]')].map((tag) =>
       Math.round(tag.getBoundingClientRect().left),
     ),
   )
@@ -72,7 +72,7 @@ test('shows a board name in full when there is room for it', async ({ page }) =>
   await signedIn(page, [{ id: 'brd_aaaaaaaa11111111', title: LONG, role: 'owner' }])
 
   await page.goto(HOME_URL)
-  const title = page.locator('.of-home__board-title').first()
+  const title = page.getByTestId('board-title-text').first()
   await expect(title).toHaveText(LONG)
 
   const clipped = await title.evaluate((node) => node.scrollWidth > node.clientWidth + 1)
@@ -85,12 +85,12 @@ test('stacks the row on a narrow screen instead of crushing the name', async ({ 
   await signedIn(page, [{ id: 'brd_aaaaaaaa11111111', title: LONG, role: 'owner' }])
 
   await page.goto(HOME_URL)
-  const title = page.locator('.of-home__board-title').first()
+  const title = page.getByTestId('board-title-text').first()
   await expect(title).toHaveText(LONG)
 
   const { titleTop, tagTop } = await page.evaluate(() => {
-    const t = document.querySelector('.of-home__board-title')
-    const g = document.querySelector('.of-home__board-tag')
+    const t = document.querySelector('[data-testid="board-title-text"]')
+    const g = document.querySelector('[data-testid="board-tag"]')
     return {
       titleTop: Math.round(t?.getBoundingClientRect().top ?? 0),
       tagTop: Math.round(g?.getBoundingClientRect().top ?? 0),
@@ -211,7 +211,7 @@ test('keeps a row’s actions inside the space reserved for them', async ({ page
   await expect(page.getByTestId('home-boards').locator('li')).toHaveCount(1)
 
   const overflow = await page.evaluate(() => {
-    const box = document.querySelector('.of-home__row-actions')
+    const box = document.querySelector('[data-testid="board-row-actions"]')
     if (box === null) return 'no actions block'
     const bounds = box.getBoundingClientRect()
     const spilling = [...box.children]

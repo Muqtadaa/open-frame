@@ -61,6 +61,7 @@ function ShapeOutline({ object }: { object: ObjectBase<string, ShapeData> }) {
   return (
     <svg
       className="of-shape__svg"
+      data-testid="shape-outline"
       viewBox={`0 0 ${String(width)} ${String(height)}`}
       preserveAspectRatio="none"
       aria-hidden="true"
@@ -130,6 +131,7 @@ function ShapeRenderer({ object }: ObjectViewProps<ShapeData>) {
       {plain.trim() !== '' && (
         <div
           className="of-shape__label"
+          data-testid="shape-label"
           style={{
             // Per shape, not a uniform 10%: a label centred in the bounding box
             // runs straight out through any sloped edge.
@@ -158,7 +160,7 @@ function ShapeRenderer({ object }: ObjectViewProps<ShapeData>) {
            * of why "shape labels are permanently centred" reached a deployed
            * build. Layout is unchanged: one flex item either way.
            */}
-          <div className="of-shape__label-text" data-fit-text>
+          <div className="of-shape__label-text" data-testid="shape-label-text" data-fit-text>
             <RichTextView value={label} />
           </div>
         </div>

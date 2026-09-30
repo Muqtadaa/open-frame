@@ -1,6 +1,6 @@
 import type { Page } from '@playwright/test'
 
-import { CANVAS, EDITOR, expect, place, test, undo, boxOf } from './fixtures.js'
+import { CANVAS, EDITOR, expect, place, test, undo, boxOf, viewOf } from './fixtures.js'
 
 /**
  * The record panel.
@@ -54,7 +54,7 @@ test.describe('inspector', () => {
   test('says what an object holds under its name, without naming its type again', async ({
     page,
   }) => {
-    const summary = page.locator('.of-inspector__summary')
+    const summary = page.getByTestId('inspector-summary')
 
     await page.keyboard.press('f')
     await page.locator(CANVAS).click({ position: { x: 500, y: 350 } })
@@ -62,7 +62,7 @@ test.describe('inspector', () => {
     await page.locator(EDITOR).fill('Discovery')
     await page.locator(CANVAS).click({ position: { x: 1150, y: 130 } })
     await page.keyboard.press('v')
-    await page.locator('.of-frame__title').click()
+    await page.getByTestId('frame-title').click()
     await expect(summary).toHaveText('Discovery')
 
     // A frame called "Frame" has nothing to add to a head that says Frame.
@@ -70,7 +70,7 @@ test.describe('inspector', () => {
     await expect(page.locator(EDITOR)).toBeFocused()
     await page.locator(EDITOR).fill('Frame')
     await page.locator(CANVAS).click({ position: { x: 1150, y: 130 } })
-    await page.locator('.of-frame__title').click()
+    await page.getByTestId('frame-title').click()
     await expect(page.getByTestId('inspector')).toBeVisible()
     await expect(summary).toHaveCount(0)
 
@@ -85,7 +85,10 @@ test.describe('inspector', () => {
     await page.locator(CANVAS).click({ position: { x: 340, y: 300 } })
 
     await page.getByTestId('fill-none').click()
-    await expect(page.locator('.of-shape__svg path')).toHaveAttribute('fill', 'transparent')
+    await expect(page.getByTestId('shape-outline').locator('path')).toHaveAttribute(
+      'fill',
+      'transparent',
+    )
   })
 
   // The row is keyed `line` for its ids, but it is LABELLED dash, and a
@@ -101,17 +104,17 @@ test.describe('inspector', () => {
     await page.locator(CANVAS).click({ position: { x: 340, y: 260 } })
 
     await page.getByTestId('opacity').fill('50')
-    await expect(page.locator('.of-sticky')).toHaveCSS('opacity', '0.5')
+    await expect(viewOf(page, 'sticky')).toHaveCSS('opacity', '0.5')
   })
 
   test('a style change is one undoable action', async ({ page }) => {
     await place(page, 's', { x: 340, y: 260 }, 'Note', EMPTY)
     await page.locator(CANVAS).click({ position: { x: 340, y: 260 } })
     await page.getByTestId('swatch-green').click()
-    await expect(page.locator('.of-sticky')).toHaveCSS('background-color', 'rgb(191, 240, 212)')
+    await expect(viewOf(page, 'sticky')).toHaveCSS('background-color', 'rgb(191, 240, 212)')
 
     await page.getByTestId('undo').click()
-    await expect(page.locator('.of-sticky')).toHaveCSS('background-color', 'rgb(255, 233, 163)')
+    await expect(viewOf(page, 'sticky')).toHaveCSS('background-color', 'rgb(255, 233, 163)')
   })
 
   /**
@@ -126,15 +129,15 @@ test.describe('inspector', () => {
     await place(page, 's', { x: 340, y: 260 }, 'Note', EMPTY)
     await page.locator(CANVAS).click({ position: { x: 340, y: 260 } })
 
-    const paper = await page
-      .locator('.of-sticky')
-      .evaluate((note) => getComputedStyle(note).backgroundColor)
+    const paper = await viewOf(page, 'sticky').evaluate(
+      (note) => getComputedStyle(note).backgroundColor,
+    )
 
     await page.getByTestId('paint-textColor').click()
     await page.getByTestId('ink-red').click()
-    await expect(page.locator('.of-sticky')).toHaveCSS('color', 'rgb(138, 64, 56)')
+    await expect(viewOf(page, 'sticky')).toHaveCSS('color', 'rgb(138, 64, 56)')
     // The note is still the colour it was: two controls, two properties.
-    await expect(page.locator('.of-sticky')).toHaveCSS('background-color', paper)
+    await expect(viewOf(page, 'sticky')).toHaveCSS('background-color', paper)
   })
 
   /**
@@ -156,7 +159,7 @@ test.describe('inspector', () => {
     await expect(page.getByTestId('ink-blue')).toBeVisible()
 
     await page.getByTestId('ink-blue').click()
-    await expect(page.locator('.of-text')).toHaveCSS('color', 'rgb(23, 82, 158)')
+    await expect(viewOf(page, 'text')).toHaveCSS('color', 'rgb(23, 82, 158)')
   })
 
   /**
@@ -177,8 +180,8 @@ test.describe('inspector', () => {
      */
     await expect(page.getByTestId('paint-color')).toHaveCount(0)
     await page.getByTestId('ink-green').click()
-    await expect(page.locator('.of-sticky')).toHaveCSS('color', 'rgb(20, 96, 69)')
-    await expect(page.locator('.of-text')).toHaveCSS('color', 'rgb(20, 96, 69)')
+    await expect(viewOf(page, 'sticky')).toHaveCSS('color', 'rgb(20, 96, 69)')
+    await expect(viewOf(page, 'text')).toHaveCSS('color', 'rgb(20, 96, 69)')
   })
 
   /**
@@ -198,7 +201,7 @@ test.describe('inspector', () => {
     await expect(page.getByTestId('color-picker')).toBeVisible()
 
     await page.getByTestId('picker-hex').fill('#3a7bd5')
-    await expect(page.locator('.of-sticky')).toHaveCSS('color', 'rgb(58, 123, 213)')
+    await expect(viewOf(page, 'sticky')).toHaveCSS('color', 'rgb(58, 123, 213)')
 
     /*
      * The custom swatch now shows what it holds, so the row still answers
@@ -217,11 +220,11 @@ test.describe('inspector', () => {
     await page.getByTestId('ink-custom').click()
 
     await page.getByTestId('picker-hex').fill('#0a0')
-    await expect(page.locator('.of-sticky')).toHaveCSS('color', 'rgb(0, 170, 0)')
+    await expect(viewOf(page, 'sticky')).toHaveCSS('color', 'rgb(0, 170, 0)')
 
     // `#0a` is on the way to somewhere; the board must not flicker through it.
     await page.getByTestId('picker-hex').fill('#0a')
-    await expect(page.locator('.of-sticky')).toHaveCSS('color', 'rgb(0, 170, 0)')
+    await expect(viewOf(page, 'sticky')).toHaveCSS('color', 'rgb(0, 170, 0)')
   })
 
   /**
@@ -237,7 +240,7 @@ test.describe('inspector', () => {
     // Pale yellow ink on the default yellow slip.
     await page.getByTestId('picker-hex').fill('#ffe9a3')
     await expect(page.getByTestId('picker-contrast')).toContainText('Hard to read')
-    await expect(page.locator('.of-sticky')).toHaveCSS('color', 'rgb(255, 233, 163)')
+    await expect(viewOf(page, 'sticky')).toHaveCSS('color', 'rgb(255, 233, 163)')
 
     await page.getByTestId('picker-hex').fill('#7a5c00')
     await expect(page.getByTestId('picker-contrast')).toContainText('Readable')
@@ -264,7 +267,7 @@ test.describe('inspector', () => {
     await page.keyboard.press('Control+a')
 
     const panel = await boxOf(page.getByTestId('inspector'))
-    const rail = await boxOf(page.locator('.of-rail'))
+    const rail = await boxOf(page.getByRole('toolbar', { name: 'Board tools' }))
     expect(panel.x).toBeGreaterThan(rail.x + rail.width)
   })
 
@@ -285,7 +288,7 @@ test.describe('inspector', () => {
  */
 test.describe('continuous controls write once', () => {
   const surfaceOf = (page: Page) =>
-    page.locator('.of-sticky').evaluate((element) => getComputedStyle(element).backgroundColor)
+    viewOf(page, 'sticky').evaluate((element) => getComputedStyle(element).backgroundColor)
 
   test('a drag across the colour picker is one undo entry', async ({ page }) => {
     await place(page, 's', { x: 340, y: 260 }, 'Note', EMPTY)
@@ -337,14 +340,14 @@ test.describe('continuous controls write once', () => {
 
     await page.getByTestId('opacity').focus()
     for (let step = 0; step < 3; step++) await page.keyboard.press('ArrowLeft')
-    await expect(page.locator('.of-sticky')).toHaveCSS('opacity', '0.85')
+    await expect(viewOf(page, 'sticky')).toHaveCSS('opacity', '0.85')
 
     await page.keyboard.press('Escape')
-    await expect(page.locator('.of-sticky')).toHaveCSS('opacity', '1')
+    await expect(viewOf(page, 'sticky')).toHaveCSS('opacity', '1')
     await expect(page.getByTestId('inspector')).toBeVisible()
     // Leaving now settles nothing: there is nothing aimed at any more.
     await page.locator(CANVAS).click({ position: EMPTY })
-    await expect(page.locator('.of-sticky')).toHaveCSS('opacity', '1')
+    await expect(viewOf(page, 'sticky')).toHaveCSS('opacity', '1')
   })
 
   test('six steps of the opacity slider are one undo entry', async ({ page }) => {
@@ -353,12 +356,12 @@ test.describe('continuous controls write once', () => {
 
     await page.getByTestId('opacity').focus()
     for (let step = 0; step < 6; step++) await page.keyboard.press('ArrowLeft')
-    await expect(page.locator('.of-sticky')).toHaveCSS('opacity', '0.7')
+    await expect(viewOf(page, 'sticky')).toHaveCSS('opacity', '0.7')
 
     await page.locator(CANVAS).click({ position: EMPTY })
-    await expect(page.locator('.of-sticky')).toHaveCSS('opacity', '0.7')
+    await expect(viewOf(page, 'sticky')).toHaveCSS('opacity', '0.7')
     await undo(page)
-    await expect(page.locator('.of-sticky')).toHaveCSS('opacity', '1')
+    await expect(viewOf(page, 'sticky')).toHaveCSS('opacity', '1')
   })
 })
 

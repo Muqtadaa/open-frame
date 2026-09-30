@@ -89,6 +89,7 @@ function PresentPeers({ peers }: { readonly peers: readonly Peer[] }) {
           <div
             key={key}
             className={`of-presence__outline${editing ? ' of-presence__outline--editing' : ''}`}
+            data-testid="presence-outline"
             style={{
               left: screenRect.x,
               top: screenRect.y,
@@ -127,6 +128,7 @@ function PresentPeers({ peers }: { readonly peers: readonly Peer[] }) {
           <div
             key={peer.clientId}
             className="of-presence__cursor"
+            data-testid="presence-cursor"
             style={{
               transform: `translate(${String(at.x)}px, ${String(at.y)}px)`,
               color: hueVar(peer.hue),

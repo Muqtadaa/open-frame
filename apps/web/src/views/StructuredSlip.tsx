@@ -85,7 +85,7 @@ export function StructuredSlip<TData extends { readonly text: RichText }>({
         {/* Its own element, so the clamp that marks hidden text has something
             to sit on: `100cqh` measures against the nearest container
             ANCESTOR, and an element cannot query itself. */}
-        <div className="of-slip__text" data-fit-text>
+        <div className="of-slip__text" data-testid="slip-text" data-fit-text>
           <RichTextView value={text} />
         </div>
       </div>
@@ -96,9 +96,11 @@ export function StructuredSlip<TData extends { readonly text: RichText }>({
        * like a gray note and re-colouring one erased its type. The word
        * survives both, and the first part of the record rides beside it.
        */}
-      <div className="of-slip__record" aria-hidden="true">
+      <div className="of-slip__record" data-testid="slip-record" aria-hidden="true">
         <span className="of-slip__trail">
-          <span className="of-slip__type">{noun.toLowerCase()}</span>
+          <span className="of-slip__type" data-testid="slip-type">
+            {noun.toLowerCase()}
+          </span>
           {first !== undefined && ` · ${first}`}
         </span>
         {rest.map((part) => (

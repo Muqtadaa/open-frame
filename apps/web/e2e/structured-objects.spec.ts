@@ -63,9 +63,9 @@ test.describe('structured objects', () => {
     await expect(
       page.getByRole('button', { name: /^Undo promote 1 object to journey stage/ }),
     ).toBeVisible()
-    const record = page.locator('.of-slip__record')
+    const record = page.getByTestId('slip-record')
     await expect(record).toHaveText('journey stage')
-    await expect(record.locator('.of-slip__type')).toHaveCSS('font-weight', '600')
+    await expect(record.getByTestId('slip-type')).toHaveCSS('font-weight', '600')
 
     await page.locator(CANVAS).click({ position: NOTE })
     await page.getByTestId('inspector-appearance').click()
@@ -218,7 +218,7 @@ test.describe('structured objects', () => {
     await placeNote(page, 'Nothing filled in')
     await promote(page, NOTE)
     // Structure is earned: no row of empty labels, only what the slip now is.
-    await expect(page.locator('.of-slip__record')).toHaveText('evidence')
+    await expect(page.getByTestId('slip-record')).toHaveText('evidence')
   })
 })
 
@@ -475,7 +475,7 @@ test('the panel names what the object is, and puts its record first', async ({ p
   await promote(page, NOTE)
   await page.locator(CANVAS).click({ position: NOTE })
   await expect(page.getByTestId('inspector-title')).toHaveText('Evidence')
-  const bands = page.getByTestId('inspector').locator('.of-inspector__band')
+  const bands = page.getByTestId('inspector').getByRole('heading', { level: 3 })
   await expect(bands).toHaveText([/^record(\d+ blank)?$/, 'appearance'])
 })
 

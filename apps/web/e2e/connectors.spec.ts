@@ -70,7 +70,7 @@ const MIDPOINT = { x: (A_AT.x + B_AT.x) / 2, y: (A_AT.y + B_AT.y) / 2 }
 
 test('draws a connector between two objects', async ({ page }) => {
   await connectedPair(page)
-  await expect(page.locator('.of-connector__line')).toBeVisible()
+  await expect(page.getByTestId('connector-line')).toBeVisible()
 })
 
 test('does not create a connector from a stray click on empty canvas', async ({ page }) => {
@@ -86,7 +86,7 @@ test('does not create a connector from a stray click on empty canvas', async ({ 
 test('follows an endpoint when its object moves', async ({ page }) => {
   await connectedPair(page)
 
-  const pathOf = async () => page.locator('.of-connector__line').getAttribute('d')
+  const pathOf = async () => page.getByTestId('connector-line').getAttribute('d')
   const before = await pathOf()
 
   await page.locator('[data-object-type="sticky"]').first().click()
@@ -140,7 +140,7 @@ test('is selectable and labellable', async ({ page }) => {
   await expect(page.locator(EDITOR)).toBeFocused()
   await page.locator(EDITOR).fill('depends on')
   await page.locator(CANVAS).click({ position: { x: 1180, y: 120 } })
-  await expect(page.locator('.of-connector__label')).toContainText('depends on')
+  await expect(page.getByTestId('connector-label')).toContainText('depends on')
 })
 
 test('survives a reload', async ({ page }) => {
@@ -148,7 +148,7 @@ test('survives a reload', async ({ page }) => {
   await saved(page)
   await page.reload()
   await expect(page.locator('[data-object-type="connector"]')).toHaveCount(1)
-  await expect(page.locator('.of-connector__line')).toBeVisible()
+  await expect(page.getByTestId('connector-line')).toBeVisible()
 })
 
 /**
@@ -226,7 +226,7 @@ test.describe('dragging an existing endpoint', () => {
     await selectConnector(page)
 
     const handle = await boxOf(page.getByTestId('endpoint-to'))
-    const before = await page.locator('.of-connector__line').getAttribute('d')
+    const before = await page.getByTestId('connector-line').getAttribute('d')
 
     await drag(
       page,
@@ -234,7 +234,7 @@ test.describe('dragging an existing endpoint', () => {
       { x: C_AT.x + 40, y: C_AT.y + 40 },
     )
 
-    expect(await page.locator('.of-connector__line').getAttribute('d')).not.toBe(before)
+    expect(await page.getByTestId('connector-line').getAttribute('d')).not.toBe(before)
     // Still one connector, and still attached at both ends.
     await expect(page.locator('[data-object-type="connector"]')).toHaveCount(1)
     await selectConnector(page)
@@ -262,7 +262,7 @@ test.describe('dragging an existing endpoint', () => {
   test('re-attaching is one undoable action', async ({ page }) => {
     await pairPlusSpare(page)
     await selectConnector(page)
-    const before = await page.locator('.of-connector__line').getAttribute('d')
+    const before = await page.getByTestId('connector-line').getAttribute('d')
 
     const handle = await boxOf(page.getByTestId('endpoint-to'))
     await drag(
@@ -270,10 +270,10 @@ test.describe('dragging an existing endpoint', () => {
       { x: handle.x + handle.width / 2, y: handle.y + handle.height / 2 },
       { x: C_AT.x + 40, y: C_AT.y + 40 },
     )
-    expect(await page.locator('.of-connector__line').getAttribute('d')).not.toBe(before)
+    expect(await page.getByTestId('connector-line').getAttribute('d')).not.toBe(before)
 
     await undo(page)
-    expect(await page.locator('.of-connector__line').getAttribute('d')).toBe(before)
+    expect(await page.getByTestId('connector-line').getAttribute('d')).toBe(before)
   })
 
   test('does not offer a plain object any endpoint handles', async ({ page }) => {
@@ -417,7 +417,7 @@ test.describe('bending a route', () => {
      * pointer left it. Read off the path, because a handle that slides while
      * the route stays put is the shape this bug would take.
      */
-    const crossings = await page.locator('.of-connector__line').evaluate((element) => {
+    const crossings = await page.getByTestId('connector-line').evaluate((element) => {
       const path = element as unknown as SVGPathElement
       const matrix = path.getScreenCTM()
       if (matrix === null) throw new Error('the line is not on screen')
@@ -481,16 +481,16 @@ test.describe('putting a line back', () => {
      */
     await expect(page.getByTestId('action-reset')).toHaveCount(0)
 
-    const before = await page.locator('.of-connector__line').getAttribute('d')
+    const before = await page.getByTestId('connector-line').getAttribute('d')
     const leg = await legAt(page)
     await drag(page, leg, { x: leg.x - 90, y: leg.y })
-    expect(await page.locator('.of-connector__line').getAttribute('d')).not.toBe(before)
+    expect(await page.getByTestId('connector-line').getAttribute('d')).not.toBe(before)
 
     await expect(page.getByTestId('action-reset')).toBeVisible()
     await page.getByTestId('action-reset').click()
 
     // Back to the route it draws on its own, and the offer is gone with it.
-    expect(await page.locator('.of-connector__line').getAttribute('d')).toBe(before)
+    expect(await page.getByTestId('connector-line').getAttribute('d')).toBe(before)
     await expect(page.getByTestId('action-reset')).toHaveCount(0)
   })
 
@@ -501,13 +501,13 @@ test.describe('putting a line back', () => {
     await expect(page.locator(EDITOR)).toBeFocused()
     await page.locator(EDITOR).fill('depends on')
     await page.locator(CANVAS).click({ position: { x: 1180, y: 120 } })
-    await expect(page.locator('.of-connector__label')).toContainText('depends on')
+    await expect(page.getByTestId('connector-label')).toContainText('depends on')
 
     await clickLine(page)
     const grip = await boxOf(page.getByTestId('endpoint-label'))
     const from = { x: grip.x + grip.width / 2, y: grip.y + grip.height / 2 }
 
-    const before = await boxOf(page.locator('.of-connector__label'))
+    const before = await boxOf(page.getByTestId('connector-label'))
 
     /*
      * Dragged ALONG the line and pulled well off it at the same time. The
@@ -517,10 +517,10 @@ test.describe('putting a line back', () => {
      */
     await drag(page, from, { x: from.x + 150, y: from.y - 120 })
 
-    const after = await boxOf(page.locator('.of-connector__label'))
+    const after = await boxOf(page.getByTestId('connector-label'))
     expect(Math.abs(after.x - before.x), 'the label did not move along').toBeGreaterThan(40)
 
-    const away = await page.locator('.of-connector__line').evaluate(
+    const away = await page.getByTestId('connector-line').evaluate(
       (element, at: number) => {
         const path = element as unknown as SVGPathElement
         const matrix = path.getScreenCTM()
@@ -539,7 +539,7 @@ test.describe('putting a line back', () => {
     expect(away, 'the label came off the line').toBeLessThan(8)
 
     await page.getByTestId('action-centre-label').click()
-    const back = await boxOf(page.locator('.of-connector__label'))
+    const back = await boxOf(page.getByTestId('connector-label'))
     expect(Math.hypot(back.x - before.x, back.y - before.y)).toBeLessThan(2)
   })
 })
@@ -566,7 +566,7 @@ test.describe('formatting a connector label', () => {
     await page.getByTestId('format-bigger').click()
     await page.locator(CANVAS).click({ position: { x: 1180, y: 120 } })
 
-    const label = page.locator('.of-connector__label')
+    const label = page.getByTestId('connector-label')
     await expect(label.locator('strong')).toHaveText('depends on')
     await expect(label.locator('[data-size="lg"]')).toHaveText('depends on')
   })
@@ -579,7 +579,7 @@ test.describe('formatting a connector label', () => {
     await page.keyboard.type('second')
     await page.locator(CANVAS).click({ position: { x: 1180, y: 120 } })
 
-    const items = page.locator('.of-connector__label [role="listitem"]')
+    const items = page.getByTestId('connector-label').getByRole('listitem')
     await expect(items).toHaveText(['first', 'second'])
   })
 
@@ -592,7 +592,7 @@ test.describe('formatting a connector label', () => {
     await page.locator(CANVAS).click({ position: { x: 1180, y: 120 } })
     await clickLine(page)
 
-    const label = page.locator('.of-connector__label')
+    const label = page.getByTestId('connector-label')
     await expect(label).toHaveCSS('background-color', 'rgba(0, 0, 0, 0)')
     await page.getByTestId('paint-labelFill').click()
     await page.getByTestId('label-white').click()
@@ -614,7 +614,7 @@ test.describe('formatting a connector label', () => {
   test('grows and shrinks with the board, within limits', async ({ page }) => {
     await labelled(page, 'depends on')
     await page.locator(CANVAS).click({ position: { x: 1180, y: 120 } })
-    const label = page.locator('.of-connector__label')
+    const label = page.getByTestId('connector-label')
     const height = async (): Promise<number> => {
       const box = await boxOf(label)
       return box.height
@@ -645,7 +645,7 @@ test.describe('formatting a connector label', () => {
     await labelled(page, 'depends on')
     await page.locator(CANVAS).click({ position: { x: 1180, y: 120 } })
     await clickLine(page)
-    const label = page.locator('.of-connector__label')
+    const label = page.getByTestId('connector-label')
     const ink = await label.evaluate((element) => getComputedStyle(element).color)
 
     await page.getByTestId('paint-labelFill').click()
@@ -661,7 +661,7 @@ test.describe('formatting a connector label', () => {
   test('wears a halo the colour of the page', async ({ page }) => {
     await labelled(page, 'depends on')
     await page.locator(CANVAS).click({ position: { x: 1180, y: 120 } })
-    const { halo, pageColour } = await page.locator('.of-connector__label').evaluate((element) => {
+    const { halo, pageColour } = await page.getByTestId('connector-label').evaluate((element) => {
       const probe = document.createElement('div')
       probe.style.color = 'var(--of-page)'
       element.appendChild(probe)
@@ -685,7 +685,7 @@ test.describe('formatting a connector label', () => {
 
     await page.getByTestId('paint-textColor').click()
     await page.getByTestId('ink-red').click()
-    await expect(page.locator('.of-connector__label')).toHaveCSS('color', 'rgb(138, 64, 56)')
+    await expect(page.getByTestId('connector-label')).toHaveCSS('color', 'rgb(138, 64, 56)')
   })
 })
 
@@ -717,7 +717,7 @@ test.describe('aiming at an anchor', () => {
 
   /** The two ends of the drawn line, read off the path. */
   async function ends(page: Page): Promise<{ from: number[]; to: number[] }> {
-    const d = await page.locator('.of-connector__line').getAttribute('d')
+    const d = await page.getByTestId('connector-line').getAttribute('d')
     if (d === null) throw new Error('no line')
     const numbers = [...d.matchAll(/-?\d+(\.\d+)?/g)].map((m) => Number(m[0]))
     return { from: numbers.slice(0, 2), to: numbers.slice(-2) }
@@ -777,13 +777,13 @@ test.describe('aiming at an anchor', () => {
     await page.mouse.move(at.left.x - 10, at.left.y, { steps: 4 })
 
     // Four anchors on the object being dragged over, and exactly one marked.
-    await expect(page.locator('.of-connect-point')).toHaveCount(4)
-    await expect(page.locator('.of-connect-point.is-aimed')).toHaveCount(1)
+    await expect(page.locator('[data-handle="connect"]')).toHaveCount(4)
+    await expect(page.locator('[data-handle="connect"].is-aimed')).toHaveCount(1)
 
     // Over the FACE instead: still offered, none of them being aimed at.
     await page.mouse.move(at.box.x + at.box.width / 2, at.box.y + at.box.height / 2, { steps: 4 })
-    await expect(page.locator('.of-connect-point')).toHaveCount(4)
-    await expect(page.locator('.of-connect-point.is-aimed')).toHaveCount(0)
+    await expect(page.locator('[data-handle="connect"]')).toHaveCount(4)
+    await expect(page.locator('[data-handle="connect"].is-aimed')).toHaveCount(0)
     await page.mouse.up()
   })
 
@@ -804,7 +804,7 @@ test.describe('aiming at an anchor', () => {
     await clickLine(page)
     await page.getByTestId('field-routing').selectOption('curved')
 
-    const d = defined(await page.locator('.of-connector__line').getAttribute('d'), 'the line')
+    const d = defined(await page.getByTestId('connector-line').getAttribute('d'), 'the line')
     const numbers = [...d.matchAll(/-?\d+(\.\d+)?/g)].map((m) => Number(m[0]))
     // M x y C c1x c1y, c2x c2y, ex ey
     const [c2x, c2y, ex, ey] = [4, 5, 6, 7].map((at) =>
@@ -910,7 +910,7 @@ test.describe('joining a line to a container', () => {
     await page.keyboard.press('v')
 
     const endOfLine = async () => {
-      const d = defined(await page.locator('.of-connector__line').getAttribute('d'), 'the line')
+      const d = defined(await page.getByTestId('connector-line').getAttribute('d'), 'the line')
       const numbers = [...d.matchAll(/-?\d+(\.\d+)?/g)].map((m) => Number(m[0]))
       return {
         x: defined(numbers[numbers.length - 2], 'the end point'),
@@ -966,7 +966,7 @@ test.describe('reshaping a line', () => {
   }
 
   const route = async (page: Page): Promise<string> =>
-    (await page.locator('.of-connector__line').getAttribute('d')) ?? ''
+    (await page.getByTestId('connector-line').getAttribute('d')) ?? ''
 
   /** The points of a drawn polyline, in order. */
   const points = (d: string): { x: number; y: number }[] => {
@@ -1030,7 +1030,7 @@ test.describe('reshaping a line', () => {
     // The line itself has moved, mid-drag, with nothing written to the board.
     expect(await route(page), 'the route did not preview').not.toBe(before)
     // And the rubber band that belongs to an END drag is absent.
-    await expect(page.locator('.of-connector--preview')).toHaveCount(0)
+    await expect(page.getByTestId('connector-preview')).toHaveCount(0)
 
     /*
      * ONE stop, after six pointer events. The handle that created it handed
@@ -1210,7 +1210,7 @@ test('offers its line one colour, and marks the one it is drawn in', async ({ pa
   await expect(page.getByTestId('inspector-title')).toHaveText('Connector')
 
   // Its route and arrowheads are how it is drawn, not a record of anything.
-  await expect(page.locator('.of-inspector__band')).toHaveCount(0)
+  await expect(page.getByTestId('inspector').getByRole('heading', { level: 3 })).toHaveCount(0)
   await expect(page.getByTestId('field-routing')).toBeVisible()
   await expect(page.getByTestId('paint-color')).toHaveCount(0)
   await expect(page.getByTestId('paint-strokeColor')).toHaveText('line')
@@ -1218,6 +1218,6 @@ test('offers its line one colour, and marks the one it is drawn in', async ({ pa
   await expect(page.getByTestId('line-gray')).toHaveAttribute('aria-pressed', 'true')
 
   const panel = await boxOf(page.getByTestId('inspector'))
-  const targets = await boxOf(page.locator('.of-paint__target'))
+  const targets = await boxOf(page.getByRole('group', { name: 'What to colour' }))
   expect(targets.x + targets.width).toBeLessThanOrEqual(panel.x + panel.width)
 })

@@ -57,7 +57,9 @@ export function AccountControl() {
           >
             {initialOf(identity.displayName)}
           </span>
-          <span className="of-status__share-label">{identity.displayName}</span>
+          <span className="of-status__share-label" data-testid="status-label">
+            {identity.displayName}
+          </span>
         </button>
         {open && (
           <AccountSheet
@@ -90,7 +92,9 @@ export function AccountControl() {
         aria-description="Sign in to keep a list of your boards"
         onClick={() => setOpen((was) => !was)}
       >
-        <span className="of-status__share-label">Sign in</span>
+        <span className="of-status__share-label" data-testid="status-label">
+          Sign in
+        </span>
       </button>
 
       {/*

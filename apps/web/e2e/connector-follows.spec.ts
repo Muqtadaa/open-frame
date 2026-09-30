@@ -65,7 +65,11 @@ const connector = (from: string, to: string) => ({
 })
 
 const path = (page: Page) =>
-  page.locator('[data-object-id="obj_line"] .of-connector__line').first().getAttribute('d')
+  page
+    .locator('[data-object-id="obj_line"]')
+    .getByTestId('connector-line')
+    .first()
+    .getAttribute('d')
 
 test('a line follows a note made taller, which leaves x + y + width alone', async ({ page }) => {
   await run(page, [

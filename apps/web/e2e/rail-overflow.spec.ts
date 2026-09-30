@@ -16,7 +16,7 @@ async function open(page: Page): Promise<void> {
 }
 
 const marks = (page: Page) =>
-  page.locator('.of-rail').evaluate((rail) => ({
+  page.getByRole('toolbar', { name: 'Board tools' }).evaluate((rail) => ({
     before: rail.hasAttribute('data-more-before'),
     after: rail.hasAttribute('data-more-after'),
     fade: getComputedStyle(rail, '::after').content !== 'none',
@@ -27,7 +27,7 @@ test.describe('a phone held sideways', () => {
 
   test('the rail says there is more below, then more above', async ({ page }) => {
     await open(page)
-    const rail = page.locator('.of-rail')
+    const rail = page.getByRole('toolbar', { name: 'Board tools' })
     // Not vacuous: at this size the rail really does scroll.
     const overflow = await rail.evaluate((element) => element.scrollHeight - element.clientHeight)
     expect(overflow).toBeGreaterThan(40)
@@ -63,7 +63,7 @@ test.describe('under a finger, at every height', () => {
     test(`the rail stays on screen at ${String(height)}px`, async ({ page }) => {
       await page.setViewportSize({ width: 844, height })
       await open(page)
-      const box = await page.locator('.of-rail').boundingBox()
+      const box = await page.getByRole('toolbar', { name: 'Board tools' }).boundingBox()
       expect(box).not.toBeNull()
       expect((box?.y ?? 0) + (box?.height ?? 0)).toBeLessThanOrEqual(height)
       // A rail that is cut off must scroll; one that fits need not.

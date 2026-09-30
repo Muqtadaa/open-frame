@@ -42,7 +42,7 @@ function StickyRenderer({ object }: ObjectViewProps<StickyData>) {
       // and naming the group by it read every note twice.
       aria-label={isEmptyText(object.data.text) ? 'Empty sticky note' : 'Sticky note'}
     >
-      <div className="of-sticky__text" data-fit-text>
+      <div className="of-sticky__text" data-testid="sticky-text" data-fit-text>
         <RichTextView value={object.data.text} />
       </div>
     </div>

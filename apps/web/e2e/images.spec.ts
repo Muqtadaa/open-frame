@@ -190,7 +190,7 @@ test.describe('cropping', () => {
     await image.dblclick()
     await expect(page.getByTestId('crop-overlay')).toBeVisible()
     const picture = await boxOf(image)
-    const grips = await page.locator('[data-testid^="crop-"].of-crop__target').evaluateAll((all) =>
+    const grips = await page.locator('[data-handle="crop"]').evaluateAll((all) =>
       all.map((grip) => {
         const box = grip.getBoundingClientRect()
         const id = grip.getAttribute('data-testid') ?? ''
@@ -232,7 +232,7 @@ test.describe('cropping', () => {
      * handle it used to be mistaken for.
      */
     // The bracket is drawn; the press lands on its target beside it.
-    const corner = page.locator('.of-crop__grip--nw')
+    const corner = page.getByTestId('crop-grip-nw')
     await expect(corner).toHaveCSS('border-top-style', 'solid')
     await expect(corner).toHaveCSS('border-left-style', 'solid')
     await expect(corner).toHaveCSS('border-right-style', 'none')
@@ -244,7 +244,7 @@ test.describe('cropping', () => {
     await image.dblclick()
 
     const before = await boxOf(image)
-    const picture = await boxOf(page.locator('.of-image'))
+    const picture = await boxOf(image.getByRole('img'))
 
     const grip = await boxOf(page.getByTestId('crop-e'))
     const trim = Math.round(before.width / 4)
@@ -254,7 +254,7 @@ test.describe('cropping', () => {
     await page.mouse.up()
 
     const after = await boxOf(image)
-    const shown = await boxOf(page.locator('.of-image'))
+    const shown = await boxOf(image.getByRole('img'))
 
     // The box is narrower by what was dragged off.
     expect(after.width).toBeCloseTo(before.width - trim, 0)
@@ -274,7 +274,7 @@ test.describe('cropping', () => {
     await image.dblclick()
 
     const before = await boxOf(image)
-    const picture = await boxOf(page.locator('.of-image'))
+    const picture = await boxOf(image.getByRole('img'))
 
     const grip = await boxOf(page.getByTestId('crop-w'))
     const trim = Math.round(before.width / 4)
@@ -284,7 +284,7 @@ test.describe('cropping', () => {
     await page.mouse.up()
 
     const after = await boxOf(image)
-    const shown = await boxOf(page.locator('.of-image'))
+    const shown = await boxOf(image.getByRole('img'))
 
     /*
      * An object's position IS its top-left corner, so a left-edge crop that

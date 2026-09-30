@@ -96,9 +96,9 @@ test('renderer scaling probe', async ({ page }) => {
       await page.waitForTimeout(500)
 
       const visible = Number(
-        (await page.locator('.of-object-layer').getAttribute('data-visible-count')) ?? '0',
+        (await page.getByTestId('object-layer').getAttribute('data-visible-count')) ?? '0',
       )
-      const domNodes = await page.locator('.of-object').count()
+      const domNodes = await page.locator('[data-object-id]').count()
       const { p50, p95 } = await measurePan(page)
 
       results.push({

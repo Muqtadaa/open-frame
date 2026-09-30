@@ -31,8 +31,8 @@ async function grips(page: Page): Promise<Record<Part, number | null>> {
 
     const corner = box('[data-testid="handle-nw"]')
     const rotate = box('[data-testid="handle-rotate"]')
-    const glyph = box('.of-handle__glyph')
-    const connect = box('.of-connect-point')
+    const glyph = box('[data-testid="handle-rotate"] svg')
+    const connect = box('[data-handle="connect"]')
     const edge = box('[data-testid="edge-n"]')
     const north = box('[data-testid="handle-n"]')
 
@@ -179,7 +179,8 @@ test.describe('apparatus is measured in screen pixels', () => {
         if (frame === null) return -1
         let widest = 0
         for (const element of [frame, ...frame.querySelectorAll('*')]) {
-          if (!(element instanceof HTMLElement) || element.closest('.of-frame__title')) continue
+          if (!(element instanceof HTMLElement) || element.closest('[data-testid="frame-title"]'))
+            continue
           const style = window.getComputedStyle(element)
           const declared = Number.parseFloat(style.borderTopWidth)
           if (style.borderTopStyle === 'none' || declared === 0 || element.offsetWidth === 0) {

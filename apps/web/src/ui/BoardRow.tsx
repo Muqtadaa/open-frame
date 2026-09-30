@@ -172,7 +172,9 @@ export function BoardRow({
           />
         ) : (
           <a className="of-home__board" href={href} data-testid="board-link">
-            <span className="of-home__board-title">{board.title}</span>
+            <span className="of-home__board-title" data-testid="board-title-text">
+              {board.title}
+            </span>
             {/*
              * What this board IS, in the column the ledger keeps for it.
              *
@@ -180,7 +182,11 @@ export function BoardRow({
              * below shrink to one line: the rows say which ones they are, so
              * the offer does not have to list them a second time.
              */}
-            <span className="of-home__board-tag" data-kind={board.shared ? 'shared' : 'local'}>
+            <span
+              className="of-home__board-tag"
+              data-testid="board-tag"
+              data-kind={board.shared ? 'shared' : 'local'}
+            >
               {!board.shared
                 ? 'this browser'
                 : board.role === 'viewer'
@@ -191,12 +197,14 @@ export function BoardRow({
                       'yours'
                     : 'shared with you'}
             </span>
-            <span className="of-home__board-when">{describeWhen(board.updatedAt, readAt)}</span>
+            <span className="of-home__board-when" data-testid="board-when">
+              {describeWhen(board.updatedAt, readAt)}
+            </span>
           </a>
         )}
 
         {mode === 'rest' && (
-          <span className="of-home__row-actions">
+          <span className="of-home__row-actions" data-testid="board-row-actions">
             {/*
              * The VIEW-ONLY link, for a board you own.
              *
@@ -308,7 +316,7 @@ export function BoardRow({
             setMode('rest')
           }}
         >
-          <span className="of-home__confirm-what">
+          <span className="of-home__confirm-what" data-testid="board-confirm-what">
             {canLeave(board)
               ? 'Leave this board? It carries on without you.'
               : 'Delete this board for everyone? Its links stop working and this cannot be undone.'}

@@ -1,5 +1,6 @@
 import { readdirSync, readFileSync } from 'node:fs'
 import { resolve } from 'node:path'
+import ts from 'typescript'
 import { describe, expect, it } from 'vitest'
 
 /**
@@ -22,12 +23,67 @@ const SUITES = ['e2e', 'e2e-rooms']
 /** The home spec is about the front door, so it says `HOME_URL` and means it. */
 const BARE_NAVIGATION = /\.goto\(\s*['"`]\/['"`]/
 
-function specFiles(): readonly { readonly name: string; readonly source: string }[] {
+/**
+ * A selector naming a styling class, inside a string. The stylesheet's class
+ * names are the design's to change, and a test about BEHAVIOUR that reaches an
+ * element through one breaks when a surface is restyled — about two hundred
+ * lines did. Reach an element by its role, its label or a `data-testid`.
+ */
+const STYLING_CLASS = /\.(of-[\w-]+)/g
+
+/**
+ * The classes a spec may still name, because the class IS what it tests: a
+ * visual state with nothing semantic to stand in for it.
+ */
+const STYLE_UNDER_TEST: Readonly<Record<string, string>> = {
+  'of-presence__outline--editing': 'held is drawn solid rather than dashed; the look is the claim',
+  'of-table-strip__item--within':
+    'a header inside the selection is shaded, and nothing else says so',
+  'of-p': "a paragraph is the rich-text editor's DOM contract (ADR 0014), not a styling hook",
+}
+
+/**
+ * Every styling class named inside a string or template in `source`, with the
+ * line it is on.
+ *
+ * Read off TypeScript's own parse rather than matched line by line: a
+ * template that spans lines has no line holding both of its backticks, so a
+ * per-line match let `` page.locator(`\n  .of-x`) `` through (Codex, on #30).
+ * The parse also leaves comments out, where a class named in prose is fine.
+ */
+function stylingClassesIn(source: string): { line: number; name: string }[] {
+  const file = ts.createSourceFile('spec.ts', source, ts.ScriptTarget.Latest, true)
+  const found: { line: number; name: string }[] = []
+  const visit = (node: ts.Node): void => {
+    if (
+      ts.isStringLiteral(node) ||
+      ts.isNoSubstitutionTemplateLiteral(node) ||
+      ts.isTemplateHead(node) ||
+      ts.isTemplateMiddle(node) ||
+      ts.isTemplateTail(node)
+    ) {
+      const start = node.getStart(file)
+      // One string can name several classes (`'.of-rail .of-tool'`), each on
+      // its own line when the string spans several.
+      for (const match of node.getText(file).matchAll(STYLING_CLASS)) {
+        const at = file.getLineAndCharacterOfPosition(start + match.index)
+        found.push({ line: at.line + 1, name: match[1] ?? '' })
+      }
+    }
+    ts.forEachChild(node, visit)
+  }
+  visit(file)
+  return found
+}
+
+function specFiles(
+  suffix = '.spec.ts',
+): readonly { readonly name: string; readonly source: string }[] {
   const found: { name: string; source: string }[] = []
   for (const suite of SUITES) {
     const dir = resolve(process.cwd(), suite)
     for (const entry of readdirSync(dir)) {
-      if (!entry.endsWith('.spec.ts')) continue
+      if (!entry.endsWith(suffix)) continue
       found.push({ name: `${suite}/${entry}`, source: readFileSync(resolve(dir, entry), 'utf8') })
     }
   }
@@ -52,5 +108,39 @@ describe('the browser suites', () => {
     // `/` is the front door. A spec that wants a board names one — `BOARD_URL`
     // — and a spec that wants the door says `HOME_URL`.
     expect(offenders).toEqual([])
+  })
+
+  it('reaches elements by role or test id, never by a styling class', () => {
+    const offenders: string[] = []
+    for (const file of specFiles('.ts')) {
+      for (const { line, name } of stylingClassesIn(file.source)) {
+        if (!(name in STYLE_UNDER_TEST)) offenders.push(`${file.name}:${String(line)} .${name}`)
+      }
+    }
+    expect(offenders).toEqual([])
+  })
+})
+
+describe('finding a styling class in a spec', () => {
+  it('finds every class in a string, and says where', () => {
+    const source = "const a = 1\npage.locator('.of-rail .of-tool')\n"
+    expect(stylingClassesIn(source)).toEqual([
+      { line: 2, name: 'of-rail' },
+      { line: 2, name: 'of-tool' },
+    ])
+  })
+
+  it('finds a class in a template that runs over several lines', () => {
+    const source = 'page.locator(`\n  [data-object-type="sticky"]\n  .of-sticky__text\n`)\n'
+    expect(stylingClassesIn(source)).toEqual([{ line: 3, name: 'of-sticky__text' }])
+  })
+
+  it('is not fooled by prose: a class in a comment, an apostrophe', () => {
+    const source = [
+      "// don't reach for .of-sticky here",
+      "/* nor .of-frame, whatever it's called */",
+      "page.getByTestId('frame-title')",
+    ].join('\n')
+    expect(stylingClassesIn(source)).toEqual([])
   })
 })

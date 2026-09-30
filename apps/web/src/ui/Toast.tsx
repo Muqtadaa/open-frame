@@ -58,7 +58,9 @@ export function Toast() {
         setHeld((state) => ({ ...state, keyboard: false }))
       }}
     >
-      <span className="of-toast__body">{toast}</span>
+      <span className="of-toast__body" data-testid="toast-body">
+        {toast}
+      </span>
       {action !== null && (
         <button
           type="button"

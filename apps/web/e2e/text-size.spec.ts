@@ -25,7 +25,9 @@ test('a larger text size grows the interface and leaves the board alone', async 
           .fontSize,
       ),
       note: Number.parseFloat(
-        getComputedStyle(document.querySelector('.of-sticky') ?? document.body).fontSize,
+        getComputedStyle(
+          document.querySelector('[data-object-type="sticky"] [role="group"]') ?? document.body,
+        ).fontSize,
       ),
     }))
 

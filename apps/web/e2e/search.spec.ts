@@ -67,7 +67,7 @@ test.describe('finding things on a board', () => {
     await openSearch(page)
     await page.getByTestId('search-input').fill('understand')
     await expect(page.getByTestId('search-count')).toHaveText('1 found')
-    await expect(page.locator('.of-search__summary')).toContainText('Customers do not')
+    await expect(page.getByTestId('search-summary')).toContainText('Customers do not')
   })
 
   /**
@@ -89,7 +89,7 @@ test.describe('finding things on a board', () => {
     await openSearch(page)
     await page.getByTestId('search-input').fill('September')
     await expect(page.getByTestId('search-count')).toHaveText('1 found')
-    await expect(page.locator('.of-search__type')).toHaveText('evidence')
+    await expect(page.getByTestId('search-type')).toHaveText('evidence')
   })
 
   test('filters by type and by tag', async ({ page }) => {
@@ -149,9 +149,13 @@ test.describe('finding things on a board', () => {
     await note(page, { x: 340, y: 500 }, 'Beta pricing')
     await openSearch(page)
     await page.getByTestId('search-input').fill('pricing')
-    await expect(page.locator('.of-search__result--on')).toContainText('Alpha')
+    await expect(
+      page.getByTestId('search-panel').getByRole('option', { selected: true }),
+    ).toContainText('Alpha')
     await page.keyboard.press('ArrowDown')
-    await expect(page.locator('.of-search__result--on')).toContainText('Beta')
+    await expect(
+      page.getByTestId('search-panel').getByRole('option', { selected: true }),
+    ).toContainText('Beta')
   })
 
   /*
@@ -205,7 +209,7 @@ test.describe('finding things on a board', () => {
     await page.locator(CANVAS).click({ position: CLEAR })
     await openSearch(page)
     await page.getByTestId('search-input').fill('checkout')
-    await expect(page.locator('.of-search__summary')).toHaveText('Checkout box')
+    await expect(page.getByTestId('search-summary')).toHaveText('Checkout box')
   })
 
   /**
