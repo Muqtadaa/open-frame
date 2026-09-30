@@ -38,11 +38,27 @@ function sizeContainerOf(element: HTMLElement): HTMLElement | null {
   return null
 }
 
+/**
+ * The text's line height in pixels — ASKED of the browser as `1lh`, the same
+ * unit the CSS divides by, rather than read off `line-height`. A table cell
+ * sets no line height, so it computes as `normal`, which has no number: its
+ * size depends on the font and the platform, and a guess at 1.2 times the font
+ * size clamped a line early, or let one too many through, in a row sized near
+ * the boundary (Codex, on #32).
+ */
 function lineHeightOf(element: HTMLElement): number {
-  const style = getComputedStyle(element)
-  const stated = parseFloat(style.lineHeight)
-  // `normal` has no number; browsers draw it at about 1.2 times the size.
-  return Number.isFinite(stated) ? stated : parseFloat(style.fontSize) * 1.2
+  const stated = parseFloat(getComputedStyle(element).lineHeight)
+  if (Number.isFinite(stated)) return stated
+  const probe = element.ownerDocument.createElement('div')
+  probe.style.cssText = 'position:absolute;visibility:hidden;height:1lh;padding:0;border:0'
+  element.append(probe)
+  try {
+    // The computed height, not a bounding box: the board is drawn under a
+    // zoom transform, and a line height in world units is what is wanted.
+    return parseFloat(getComputedStyle(probe).height)
+  } finally {
+    probe.remove()
+  }
 }
 
 function contentHeightOf(container: HTMLElement): number {
