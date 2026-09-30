@@ -2,6 +2,7 @@ import { richFromPlain, type RichText } from '@openframe/core'
 import { describe, expect, it } from 'vitest'
 
 import {
+  openingRange,
   renderSpansInto,
   selectionOffsets,
   setSelectionOffsets,
@@ -293,5 +294,45 @@ describe('selections across paragraphs', () => {
       expect(selectionOffsets(host), `${String(from)}–${String(to)}`).toEqual({ from, to })
     }
     host.remove()
+  })
+})
+
+/*
+ * Where the caret goes when a field opens. Selecting the FIELD's contents put
+ * the ends of the range on the field itself, outside every paragraph block —
+ * Chromium moves typing back into the block, Firefox types beside it, and a
+ * cell typed into that way read back as an empty line and then the text.
+ */
+describe('the selection a field opens with', () => {
+  function field(text: RichText): HTMLElement {
+    const root = document.createElement('div')
+    renderSpansInto(root, text)
+    return root
+  }
+
+  it('puts the caret INSIDE the last paragraph of an empty field, before its placeholder', () => {
+    const root = field([])
+    const range = openingRange(root, 'end')
+    const block = root.querySelector('.of-p')
+    expect(range.collapsed).toBe(true)
+    expect(range.startContainer).toBe(block)
+    expect(range.startOffset).toBe(0)
+  })
+
+  it('puts it at the end of the last paragraph when there is text', () => {
+    const root = field(richFromPlain('one\ntwo'))
+    const range = openingRange(root, 'end')
+    const last = root.querySelectorAll('.of-p')[1]
+    expect(range.startContainer).toBe(last)
+    expect(range.startOffset).toBe(last?.childNodes.length)
+  })
+
+  it('selects everything from inside the first paragraph to inside the last', () => {
+    const root = field(richFromPlain('one\ntwo'))
+    const range = openingRange(root, 'all')
+    const blocks = root.querySelectorAll('.of-p')
+    expect(range.startContainer).toBe(blocks[0])
+    expect(range.endContainer).toBe(blocks[1])
+    expect(range.toString()).toBe('onetwo')
   })
 })
