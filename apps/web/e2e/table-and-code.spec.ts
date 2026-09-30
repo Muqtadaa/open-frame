@@ -1,6 +1,7 @@
 import type { Page } from '@playwright/test'
 
-import { CANVAS, expect, openBoard, test, undo, boxOf, defined } from './fixtures.js'
+import { CANVAS, expect, openBoard, test, undo, boxOf, defined, seedBoard } from './fixtures.js'
+import { buildBoard } from './boards.js'
 
 /**
  * A table and a code block: two object types that carry structure rather than
@@ -26,6 +27,22 @@ async function place(page: Page, tool: string, at: { x: number; y: number }): Pr
   await page.keyboard.press('v')
 }
 
+/**
+ * Opens a board holding one object of `type` at `at`, for every test but the
+ * two about placing, which keep the tool since placing is their subject.
+ * Nothing is selected, where `place` left the new object selected: each test
+ * here clicks or double-clicks the object before it does anything else, so
+ * none of them was standing on that.
+ */
+async function seeded(page: Page, type: string, at: { x: number; y: number }): Promise<void> {
+  await seedBoard(
+    page,
+    buildBoard((board) => {
+      board.add(type, at)
+    }),
+  )
+}
+
 test('places a table as a single object with a cell per column per row', async ({ page }) => {
   await openBoard(page)
   await place(page, 'table', { x: 340, y: 260 })
@@ -38,8 +55,7 @@ test('places a table as a single object with a cell per column per row', async (
 })
 
 test('keeps a code block as plain text, with its indentation', async ({ page }) => {
-  await openBoard(page)
-  await place(page, 'code', { x: 340, y: 260 })
+  await seeded(page, 'code', { x: 340, y: 260 })
   await expect(page.locator('[data-object-id]')).toHaveCount(1)
 
   await page.locator('[data-object-id]').first().dblclick()
@@ -71,8 +87,7 @@ test('keeps a code block as plain text, with its indentation', async ({ page }) 
  * asynchronous that the render path needs.
  */
 test('colours a known language once the highlighter arrives', async ({ page }) => {
-  await openBoard(page)
-  await place(page, 'code', { x: 340, y: 260 })
+  await seeded(page, 'code', { x: 340, y: 260 })
 
   await page.locator('[data-object-id]').first().dblclick()
   await page.getByTestId('code-language').selectOption('typescript')
@@ -86,8 +101,7 @@ test('colours a known language once the highlighter arrives', async ({ page }) =
 })
 
 test('leaves an unknown language as plain text', async ({ page }) => {
-  await openBoard(page)
-  await place(page, 'code', { x: 340, y: 260 })
+  await seeded(page, 'code', { x: 340, y: 260 })
 
   await page.locator('[data-object-id]').first().dblclick()
   await page.getByTestId('code-input').fill('const answer = 42')
@@ -141,9 +155,8 @@ test('drops a table at the size picked from the grid', async ({ page }) => {
  * nothing. The guard now marks the whole editor rather than each control.
  */
 test('opens the language menu without dismissing the editor', async ({ page }) => {
-  await openBoard(page)
-  await page.getByTestId('tool-code').click()
-  await page.locator(CANVAS).click({ position: { x: 340, y: 240 } })
+  await seeded(page, 'code', { x: 340, y: 240 })
+  await page.locator('[data-object-id]').first().dblclick()
   await expect(page.getByTestId('code-editor')).toBeVisible()
 
   await page.getByTestId('code-language').click()
@@ -163,8 +176,7 @@ test('opens the language menu without dismissing the editor', async ({ page }) =
  * would use.
  */
 test('widens a column by dragging its boundary, in one undo entry', async ({ page }) => {
-  await openBoard(page)
-  await place(page, 'table', { x: 340, y: 240 })
+  await seeded(page, 'table', { x: 340, y: 240 })
   await page.locator('[data-object-id]').first().click()
 
   // Two boundaries on a 3x3, and two more for the rows.
@@ -201,8 +213,7 @@ test('widens a column by dragging its boundary, in one undo entry', async ({ pag
 test('stops at the narrowest a column may be, and leaves its neighbours alone', async ({
   page,
 }) => {
-  await openBoard(page)
-  await place(page, 'table', { x: 340, y: 240 })
+  await seeded(page, 'table', { x: 340, y: 240 })
   await page.locator('[data-object-id]').first().click()
 
   const widths = async (): Promise<number[]> =>
@@ -248,8 +259,7 @@ test('stops at the narrowest a column may be, and leaves its neighbours alone', 
 })
 
 test('colours a range of cells, in one undo entry', async ({ page }) => {
-  await openBoard(page)
-  await place(page, 'table', { x: 340, y: 240 })
+  await seeded(page, 'table', { x: 340, y: 240 })
   await page.locator('[data-object-id]').first().dblclick()
   await expect(page.getByTestId('table-editor')).toBeVisible()
 
@@ -282,8 +292,7 @@ test('colours a range of cells, in one undo entry', async ({ page }) => {
 })
 
 test('puts a cell back to the colour the table gives it', async ({ page }) => {
-  await openBoard(page)
-  await place(page, 'table', { x: 340, y: 240 })
+  await seeded(page, 'table', { x: 340, y: 240 })
   await page.locator('[data-object-id]').first().dblclick()
 
   /*
@@ -320,8 +329,7 @@ test('puts a cell back to the colour the table gives it', async ({ page }) => {
  * assertion cannot be satisfied by the column staying where it was.
  */
 test('fits a column to its content on a double click', async ({ page }) => {
-  await openBoard(page)
-  await place(page, 'table', { x: 300, y: 240 })
+  await seeded(page, 'table', { x: 300, y: 240 })
 
   await page.locator('[data-object-id]').first().dblclick()
   await page.getByTestId('table-cell-0').click()
@@ -361,14 +369,13 @@ test('fits a column to its content on a double click', async ({ page }) => {
  * dividing by the zoom does nothing at all — it passed throughout.
  */
 test('fits a column to the same width at any zoom', async ({ page }) => {
-  await openBoard(page)
   /*
    * Placed to the lower right ON PURPOSE. Zooming is anchored at the middle of
    * the viewport, so a table near the top left ends up with its boundary
    * underneath the tool rail at 200% — where the press lands on the rail and
    * the test measures a gesture that never happened.
    */
-  await place(page, 'table', { x: 740, y: 460 })
+  await seeded(page, 'table', { x: 740, y: 460 })
 
   await page.locator('[data-object-id]').first().dblclick()
   await page.getByTestId('table-cell-0').click()
@@ -417,8 +424,7 @@ test('fits a column to the same width at any zoom', async ({ page }) => {
  * nothing about the twenty-one languages that take the fallback.
  */
 test('pretty-prints a code block from the button', async ({ page }) => {
-  await openBoard(page)
-  await place(page, 'code', { x: 340, y: 260 })
+  await seeded(page, 'code', { x: 340, y: 260 })
 
   await page.locator('[data-object-id]').first().dblclick()
   await page.getByTestId('code-language').selectOption('javascript')
@@ -432,8 +438,7 @@ test('pretty-prints a code block from the button', async ({ page }) => {
 })
 
 test('pretty-prints with Shift+Alt+F, and commits it as one edit', async ({ page }) => {
-  await openBoard(page)
-  await place(page, 'code', { x: 340, y: 260 })
+  await seeded(page, 'code', { x: 340, y: 260 })
 
   await page.locator('[data-object-id]').first().dblclick()
   await page.getByTestId('code-language').selectOption('go')
@@ -462,8 +467,7 @@ test('pretty-prints with Shift+Alt+F, and commits it as one edit', async ({ page
 })
 
 test('offers no formatting for a language nothing can format', async ({ page }) => {
-  await openBoard(page)
-  await place(page, 'code', { x: 340, y: 260 })
+  await seeded(page, 'code', { x: 340, y: 260 })
 
   await page.locator('[data-object-id]').first().dblclick()
   await page.getByTestId('code-language').selectOption('javascript')
@@ -484,8 +488,7 @@ test('offers no formatting for a language nothing can format', async ({ page }) 
  * cell lost its fill, ink and rule the moment anybody corrected a typo in it.
  */
 test('keeps a cell’s colours when its text is typed', async ({ page }) => {
-  await openBoard(page)
-  await place(page, 'table', { x: 340, y: 240 })
+  await seeded(page, 'table', { x: 340, y: 240 })
   await page.locator('[data-object-id]').first().dblclick()
   await page.getByTestId('table-cell-4').click()
   await page.getByTestId('cell-fill-green').click()
@@ -507,9 +510,10 @@ test('keeps a cell’s colours when its text is typed', async ({ page }) => {
  * ran into one another on the first table anybody placed.
  */
 test('the cell bar’s targets each have room for their name', async ({ page }) => {
-  await openBoard(page)
-  await page.getByTestId('tool-table').click()
-  await page.locator(CANVAS).click({ position: { x: 340, y: 300 } })
+  await seeded(page, 'table', { x: 340, y: 300 })
+  // Opened as placing one left it: selected, in its editor.
+  await page.locator('[data-object-id]').first().click()
+  await page.keyboard.press('Enter')
   await expect(page.getByTestId('table-cell-style')).toBeVisible()
   for (const key of ['fill', 'text', 'borders']) {
     const cramped = await page

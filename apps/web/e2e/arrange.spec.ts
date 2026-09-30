@@ -1,6 +1,7 @@
 import type { Page } from '@playwright/test'
 
-import { CANVAS, expect, openBoard, test, undo } from './fixtures.js'
+import { expect, seedBoard, test, undo } from './fixtures.js'
+import { buildBoard } from './boards.js'
 
 /**
  * Lining a selection up, and evening out the gaps.
@@ -13,18 +14,21 @@ import { CANVAS, expect, openBoard, test, undo } from './fixtures.js'
  */
 
 /**
- * Drops a sticky note, ends its editor, and leaves NOTHING selected.
+ * Opens a board holding an empty sticky at each point, with NOTHING selected.
  *
- * The last part matters: the options panel floats over the board next to
- * whatever is selected, so a second note placed while the first is still
- * selected lands on the panel instead of the canvas. Clicking the far corner
- * both commits the editor and clears the selection.
+ * Seeded: these tests arrange notes, and placing them was only ever the way
+ * to have some. It was also fiddly — the options panel floats beside whatever
+ * is selected, so a note placed while the last one was still selected landed
+ * on the panel instead of the canvas. Made in the order given, so the DOM
+ * order is the same as when they were placed one after another.
  */
-async function note(page: Page, at: { x: number; y: number }): Promise<void> {
-  await page.getByTestId('tool-sticky').click()
-  await page.locator(CANVAS).click({ position: at })
-  await page.locator(CANVAS).click({ position: { x: 1180, y: 150 } })
-  await page.keyboard.press('v')
+async function notes(page: Page, at: readonly { x: number; y: number }[]): Promise<void> {
+  await seedBoard(
+    page,
+    buildBoard((board) => {
+      for (const point of at) board.add('sticky', point)
+    }),
+  )
 }
 
 /** Every object's box on screen, left to right. */
@@ -47,10 +51,10 @@ async function selectAll(page: Page): Promise<void> {
 }
 
 test('offers nothing to arrange until two things are selected', async ({ page }) => {
-  await openBoard(page)
-  // Both placed BEFORE anything is selected, for the reason in `note` above.
-  await note(page, { x: 420, y: 260 })
-  await note(page, { x: 700, y: 430 })
+  await notes(page, [
+    { x: 420, y: 260 },
+    { x: 700, y: 430 },
+  ])
 
   await page.locator('[data-object-id]').first().click()
   await expect(page.getByTestId('arrange-bar')).toHaveCount(0)
@@ -60,9 +64,10 @@ test('offers nothing to arrange until two things are selected', async ({ page })
 })
 
 test('aligns a selection to the top of its own bounding box', async ({ page }) => {
-  await openBoard(page)
-  await note(page, { x: 420, y: 240 })
-  await note(page, { x: 700, y: 430 })
+  await notes(page, [
+    { x: 420, y: 240 },
+    { x: 700, y: 430 },
+  ])
   await selectAll(page)
 
   const before = await boxes(page)
@@ -81,9 +86,10 @@ test('aligns a selection to the top of its own bounding box', async ({ page }) =
 })
 
 test('aligns centres rather than edges', async ({ page }) => {
-  await openBoard(page)
-  await note(page, { x: 420, y: 240 })
-  await note(page, { x: 760, y: 420 })
+  await notes(page, [
+    { x: 420, y: 240 },
+    { x: 760, y: 420 },
+  ])
   await selectAll(page)
 
   await page.getByTestId('align-centerX').click()
@@ -94,10 +100,11 @@ test('aligns centres rather than edges', async ({ page }) => {
 })
 
 test('evens out the gaps, leaving the outermost two where they were', async ({ page }) => {
-  await openBoard(page)
-  await note(page, { x: 320, y: 300 })
-  await note(page, { x: 460, y: 300 })
-  await note(page, { x: 900, y: 300 })
+  await notes(page, [
+    { x: 320, y: 300 },
+    { x: 460, y: 300 },
+    { x: 900, y: 300 },
+  ])
   await selectAll(page)
 
   const before = await boxes(page)
@@ -117,9 +124,10 @@ test('evens out the gaps, leaving the outermost two where they were', async ({ p
 })
 
 test('will not distribute fewer than three', async ({ page }) => {
-  await openBoard(page)
-  await note(page, { x: 420, y: 260 })
-  await note(page, { x: 700, y: 400 })
+  await notes(page, [
+    { x: 420, y: 260 },
+    { x: 700, y: 400 },
+  ])
   await selectAll(page)
 
   /*
@@ -139,9 +147,10 @@ test('will not distribute fewer than three', async ({ page }) => {
 })
 
 test('groups the alignments across and down', async ({ page }) => {
-  await openBoard(page)
-  await note(page, { x: 420, y: 260 })
-  await note(page, { x: 700, y: 400 })
+  await notes(page, [
+    { x: 420, y: 260 },
+    { x: 700, y: 400 },
+  ])
   await selectAll(page)
   const bar = page.getByRole('group', { name: 'Arrange selection' })
   await expect(bar.getByTestId('arrange-rule')).toHaveCount(2)
@@ -161,10 +170,11 @@ test('groups the alignments across and down', async ({ page }) => {
 })
 
 test('is one undo, however many objects moved', async ({ page }) => {
-  await openBoard(page)
-  await note(page, { x: 380, y: 240 })
-  await note(page, { x: 620, y: 400 })
-  await note(page, { x: 860, y: 300 })
+  await notes(page, [
+    { x: 380, y: 240 },
+    { x: 620, y: 400 },
+    { x: 860, y: 300 },
+  ])
   await selectAll(page)
 
   const before = await boxes(page)
@@ -188,9 +198,10 @@ test('is one undo, however many objects moved', async ({ page }) => {
  * That fault has appeared four times on other apparatus.
  */
 test('a press on the bar does not take the selection away', async ({ page }) => {
-  await openBoard(page)
-  await note(page, { x: 420, y: 240 })
-  await note(page, { x: 700, y: 430 })
+  await notes(page, [
+    { x: 420, y: 240 },
+    { x: 700, y: 430 },
+  ])
   await selectAll(page)
 
   await page.getByTestId('align-top').click()

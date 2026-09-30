@@ -1,7 +1,7 @@
 import { expect, test, type Page } from '@playwright/test'
 
-import { CANVAS } from './fixtures.js'
-import { BOARD_URL } from './routes.js'
+import { CANVAS, seedBoard } from './fixtures.js'
+import { buildBoard } from './boards.js'
 
 /**
  * The format bar says what size the text is, stops at the ends of the
@@ -12,15 +12,27 @@ const MOD = process.platform === 'darwin' ? 'Meta' : 'Control'
 /** How a tip writes the same key. */
 const TIP_MOD = process.platform === 'darwin' ? '⌘' : 'Ctrl+'
 
+/**
+ * Opens a board holding `object` alone, then opens its editor as a person
+ * returning to it would: select it, press Enter. Seeded, because the bar is
+ * this spec's subject and placing things is not.
+ */
+async function editing(page: Page, object: 'sticky' | 'table', text = ''): Promise<void> {
+  await seedBoard(
+    page,
+    buildBoard((board) => {
+      if (object === 'sticky') board.note(text, { x: 340, y: 300 })
+      else board.add('table', { x: 340, y: 300 })
+    }),
+  )
+  await page.locator(`[data-object-type="${object}"]`).click()
+  await page.keyboard.press('Enter')
+}
+
+/** A note saying `text`, in its editor with all of it selected. */
 async function editingNote(page: Page, text: string): Promise<void> {
-  await page.goto(BOARD_URL)
-  await expect(page.locator(CANVAS)).toBeVisible()
-  await expect(page.getByTestId('tool-select')).toBeVisible()
-  await page.keyboard.press('s')
-  await expect(page.getByTestId('tool-sticky')).toHaveAttribute('aria-pressed', 'true')
-  await page.locator(CANVAS).click({ position: { x: 340, y: 300 } })
+  await editing(page, 'sticky', text)
   await expect(page.locator(EDITOR)).toBeFocused()
-  await page.keyboard.type(text)
   await page.keyboard.press(`${MOD}+a`)
 }
 
@@ -101,10 +113,9 @@ test('leaving the bar for the board ends the edit and keeps it', async ({ page }
 
 // The same field is every text's, so a table cell reaches its bar the same way.
 test('Alt+F10 reaches the bar from a table cell and Escape comes back to it', async ({ page }) => {
-  await page.goto(BOARD_URL)
-  await expect(page.getByTestId('tool-select')).toBeVisible()
-  await page.getByTestId('tool-table').click()
-  await page.locator(CANVAS).click({ position: { x: 340, y: 300 } })
+  // In its editor, navigating from A1, as placing one leaves it.
+  await editing(page, 'table')
+  await expect(page.getByTestId('table-editor')).toHaveAttribute('data-mode', 'navigate')
   await page.keyboard.type('cell')
   await page.keyboard.press('Alt+F10')
   await expect(page.getByTestId('format-bold')).toBeFocused()

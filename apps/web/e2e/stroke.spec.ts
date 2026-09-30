@@ -1,6 +1,9 @@
 import type { Page } from '@playwright/test'
 
-import { CANVAS, expect, openBoard, test, boxOf } from './fixtures.js'
+import { SHAPE_KINDS } from '@openframe/core'
+
+import { expect, openBoard, test, boxOf, seedBoard } from './fixtures.js'
+import { buildBoard } from './boards.js'
 
 /**
  * A line's pattern, on everything that offers one.
@@ -11,17 +14,27 @@ import { CANVAS, expect, openBoard, test, boxOf } from './fixtures.js'
  * happened here.
  */
 
-async function shape(page: Page, at: { x: number; y: number }): Promise<void> {
-  await page.getByTestId('tool-shape').click()
-  await page.locator(CANVAS).click({ position: at })
-  await page.keyboard.press('Escape')
+/**
+ * A shape of `kind` alone on the board, selected with its panel open. Seeded:
+ * what these tests draw is its outline, not how the shape was put there.
+ */
+async function shape(
+  page: Page,
+  at: { x: number; y: number },
+  kind: (typeof SHAPE_KINDS)[number] = 'rectangle',
+): Promise<void> {
+  await seedBoard(
+    page,
+    buildBoard((board) => {
+      board.add('shape', at, { shape: kind })
+    }),
+  )
   await page.locator('[data-object-id]').first().click()
   await expect(page.getByTestId('inspector')).toBeVisible()
 }
 
 test.describe('a line pattern reaches the shape it is set on', () => {
   test('dashes a rectangle, which is drawn as a path', async ({ page }) => {
-    await openBoard(page)
     await shape(page, { x: 600, y: 320 })
 
     const outline = page.getByTestId('shape-outline').locator('path').first()
@@ -39,13 +52,8 @@ test.describe('a line pattern reaches the shape it is set on', () => {
    * declared, and invisible.
    */
   test('dots an ellipse, which needs a round cap to be dots at all', async ({ page }) => {
-    await openBoard(page)
-    await page.getByTestId('tool-shape').click()
-    // Cycle to the ellipse, which is the one shape drawn as an <ellipse>.
-    await page.keyboard.press('u')
-    await page.locator(CANVAS).click({ position: { x: 600, y: 320 } })
-    await page.keyboard.press('Escape')
-    await page.locator('[data-object-id]').first().click()
+    // The ellipse, which is the one shape drawn as an <ellipse>.
+    await shape(page, { x: 600, y: 320 }, 'ellipse')
 
     const outline = page.getByTestId('shape-outline').locator('ellipse, path').first()
     await page.getByTestId('line-dotted').click()
@@ -67,33 +75,22 @@ test.describe('a line pattern reaches the shape it is set on', () => {
    * this is the one that sets it on each.
    */
   test('dashes every variant, not just the branch that had it', async ({ page }) => {
-    const KINDS = 8
-    await openBoard(page)
-
-    for (let index = 0; index < KINDS; index += 1) {
-      await page.getByTestId('tool-shape').click()
-      // The rail cycles the variant; one press per step from rectangle.
-      for (let step = 0; step < index; step += 1) await page.keyboard.press('u')
-      await page.locator(CANVAS).click({ position: { x: 600, y: 320 } })
-      await page.keyboard.press('Escape')
-
-      const object = page.locator('[data-object-id]').first()
-      await object.click()
+    // Every kind the schema has, so a new one is covered the day it lands.
+    // Each on a board of its own: seeding replaces the last one, which is
+    // what deleting it and placing the next used to do by hand.
+    for (const kind of SHAPE_KINDS) {
+      await shape(page, { x: 600, y: 320 }, kind)
       await page.getByTestId('line-dashed').click()
 
       const outline = page.getByTestId('shape-outline').locator('ellipse, path').first()
       expect(
         await outline.getAttribute('stroke-dasharray'),
-        `variant ${String(index)} ignored the pattern`,
+        `variant ${kind} ignored the pattern`,
       ).not.toBeNull()
-
-      await page.keyboard.press('Delete')
-      await page.keyboard.press('v')
     }
   })
 
   test('and solid puts it back', async ({ page }) => {
-    await openBoard(page)
     await shape(page, { x: 600, y: 320 })
 
     await page.getByTestId('line-dashed').click()
@@ -118,7 +115,6 @@ test.describe('an edge resizes, not just the square on it', () => {
       .evaluate((el) => (el as HTMLElement).getBoundingClientRect().width)
 
   test('pulls from a point nowhere near the midpoint handle', async ({ page }) => {
-    await openBoard(page)
     await shape(page, { x: 600, y: 320 })
 
     const before = await widthOf(page)
@@ -142,7 +138,6 @@ test.describe('an edge resizes, not just the square on it', () => {
   })
 
   test('offers the resize cursor along the whole edge', async ({ page }) => {
-    await openBoard(page)
     await shape(page, { x: 600, y: 320 })
     await expect(page.getByTestId('edge-e')).toHaveCSS('cursor', 'ew-resize')
     await expect(page.getByTestId('edge-s')).toHaveCSS('cursor', 'ns-resize')
@@ -154,7 +149,6 @@ test.describe('an edge resizes, not just the square on it', () => {
    * elements happens to be painted last.
    */
   test('leaves the corners to the corner handles', async ({ page }) => {
-    await openBoard(page)
     await shape(page, { x: 600, y: 320 })
 
     const edge = await boxOf(page.getByTestId('edge-n'))

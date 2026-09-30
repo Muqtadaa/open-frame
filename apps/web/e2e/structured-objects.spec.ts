@@ -1,6 +1,7 @@
 import type { Page } from '@playwright/test'
 
-import { CANVAS, EDITOR, expect, place, test, undo, boxOf, saved } from './fixtures.js'
+import { CANVAS, EDITOR, expect, place, test, undo, boxOf, saved, seedBoard } from './fixtures.js'
+import { buildBoard } from './boards.js'
 
 /**
  * Phase 3's claim, walked end to end by a user.
@@ -16,8 +17,19 @@ const NOTE = { x: 340, y: 260 }
 
 test.use({ board: 'fresh' })
 
+/**
+ * A plain note saying `text`, already on the board and not selected, as
+ * placing one left it. What these tests are about is what the note becomes;
+ * the synthesis tests below still place theirs, since what lands where is
+ * theirs to watch.
+ */
 async function placeNote(page: Page, text: string): Promise<void> {
-  await place(page, 's', NOTE, text, EMPTY)
+  await seedBoard(
+    page,
+    buildBoard((board) => {
+      board.note(text, NOTE)
+    }),
+  )
 }
 
 async function promote(page: Page, at: { x: number; y: number }): Promise<void> {

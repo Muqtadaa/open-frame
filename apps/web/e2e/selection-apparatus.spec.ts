@@ -1,30 +1,42 @@
 import type { Page } from '@playwright/test'
 
-import { CANVAS, expect, test, undo, boxOf, clickLine } from './fixtures.js'
+import { CANVAS, expect, test, undo, boxOf, clickLine, seedBoard } from './fixtures.js'
+import { buildBoard, type BoardBuilder } from './boards.js'
 
 /**
  * The selection apparatus tells the truth about what is selected, where it is
  * NOW — during a gesture as well as after one (C3 #7).
  */
-const EDITOR = '[contenteditable="true"]'
-const AWAY = { x: 1180, y: 120 }
-
 test.use({ board: 'open' })
 
-async function note(page: Page, at: { x: number; y: number }, text: string): Promise<void> {
-  await page.keyboard.press('s')
-  await expect(page.getByTestId('tool-sticky')).toHaveAttribute('aria-pressed', 'true')
-  await page.locator(CANVAS).click({ position: at })
-  await expect(page.locator(EDITOR)).toBeFocused()
-  await page.keyboard.type(text)
-  await page.locator(CANVAS).click({ position: AWAY })
-  await expect(page.locator(EDITOR)).toHaveCount(0)
-  await page.keyboard.press('v')
+/**
+ * What a test's selection is made of, already on the board with nothing
+ * selected, as placing them with a tool and clicking away left them. These
+ * tests are about the apparatus drawn round a selection, not about how its
+ * objects were made.
+ */
+async function seed(page: Page, make: (board: BoardBuilder) => void): Promise<void> {
+  await seedBoard(page, buildBoard(make))
 }
 
-async function canvasPoint(page: Page, at: { x: number; y: number }) {
-  const canvas = await boxOf(page.locator(CANVAS))
-  return { x: canvas.x + at.x, y: canvas.y + at.y }
+/** Notes A and B, and a line attached to both, as dragging one between them leaves it. */
+async function linkedPair(page: Page): Promise<void> {
+  await seed(page, (board) => {
+    board.connect(board.note('A', { x: 280, y: 250 }), board.note('B', { x: 780, y: 470 }))
+  })
+}
+
+/**
+ * A rectangle, selected — what drawing one and pressing Escape left. Drawn
+ * shapes had a size of their own; nothing below depends on it except the
+ * small selection, which is still drawn.
+ */
+async function selectedShape(page: Page, at: { x: number; y: number }): Promise<void> {
+  await seed(page, (board) => {
+    board.add('shape', at, { shape: 'rectangle' })
+  })
+  await page.locator('[data-object-type="shape"]').click()
+  await expect(page.getByTestId('selection-overlay')).toBeVisible()
 }
 
 /*
@@ -33,7 +45,9 @@ async function canvasPoint(page: Page, at: { x: number; y: number }) {
  * frame that looked like a glitch.
  */
 test('the box travels with a moving selection', async ({ page }) => {
-  await note(page, { x: 340, y: 260 }, 'Moving')
+  await seed(page, (board) => {
+    board.note('Moving', { x: 340, y: 260 })
+  })
   const object = page.locator('[data-object-type="sticky"]')
   await object.click()
   const start = await boxOf(object)
@@ -57,18 +71,7 @@ test('the box travels with a moving selection', async ({ page }) => {
  * rectangle nobody could use — and it went stale while the line was reshaped.
  */
 test('a lone connector is selected by its ends, not by a box', async ({ page }) => {
-  await note(page, { x: 280, y: 250 }, 'A')
-  await note(page, { x: 780, y: 470 }, 'B')
-  await page.keyboard.press('c')
-  const from = await canvasPoint(page, { x: 280, y: 250 })
-  const to = await canvasPoint(page, { x: 780, y: 470 })
-  await page.mouse.move(from.x, from.y)
-  await page.mouse.down()
-  for (let i = 1; i <= 8; i++) {
-    await page.mouse.move(from.x + ((to.x - from.x) * i) / 8, from.y + ((to.y - from.y) * i) / 8)
-  }
-  await page.mouse.up()
-  await page.keyboard.press('v')
+  await linkedPair(page)
   await clickLine(page)
 
   await expect(page.getByTestId('endpoint-from')).toBeVisible()
@@ -126,28 +129,13 @@ function atLeast24(found: readonly { id: string; w: number; h: number }[]): void
  */
 test.describe('every grip is a 24px target', () => {
   test('resize handles and connect points', async ({ page }) => {
-    await page.getByTestId('tool-shape').click()
-    await page.mouse.move(340, 220)
-    await page.mouse.down()
-    await page.mouse.move(700, 460, { steps: 10 })
-    await page.mouse.up()
-    await page.keyboard.press('Escape')
-    await expect(page.getByTestId('selection-overlay')).toBeVisible()
+    await selectedShape(page, { x: 520, y: 340 })
     atLeast24(await targets(page, '[data-testid^="handle-"]'))
     atLeast24(await targets(page, '[data-handle="connect"]'))
   })
 
   test("a line's ends, bends and legs", async ({ page }) => {
-    await note(page, { x: 280, y: 250 }, 'A')
-    await note(page, { x: 780, y: 470 }, 'B')
-    await page.keyboard.press('c')
-    const from = await canvasPoint(page, { x: 280, y: 250 })
-    const to = await canvasPoint(page, { x: 780, y: 470 })
-    await page.mouse.move(from.x, from.y)
-    await page.mouse.down()
-    await page.mouse.move(to.x, to.y, { steps: 8 })
-    await page.mouse.up()
-    await page.keyboard.press('v')
+    await linkedPair(page)
     await clickLine(page)
     await expect(page.getByTestId('endpoint-from')).toBeVisible()
     atLeast24(await targets(page, '[data-testid="endpoint-from"], [data-testid="endpoint-to"]'))
@@ -168,10 +156,9 @@ test.describe('every grip is a 24px target', () => {
   })
 
   test("a table's dividers", async ({ page }) => {
-    await page.getByTestId('tool-table').click()
-    await page.locator(CANVAS).click({ position: { x: 340, y: 300 } })
-    await page.locator(CANVAS).click({ position: AWAY })
-    await expect(page.getByTestId('table-editor')).toHaveCount(0)
+    await seed(page, (board) => {
+      board.add('table', { x: 340, y: 300 })
+    })
     await page.locator('[data-object-type="table"]').click()
     await expect(page.locator('[data-testid^="divider-"]').first()).toBeAttached()
     atLeast24(await targets(page, '[data-testid^="divider-"]'))
@@ -228,9 +215,11 @@ test.describe('the board from the keyboard', () => {
   test('Tab reaches the board, walks its objects in reading order, and lets go', async ({
     page,
   }) => {
-    await note(page, { x: 600, y: 260 }, 'Second')
-    await note(page, { x: 300, y: 260 }, 'First')
-    await note(page, { x: 300, y: 480 }, 'Third')
+    await seed(page, (board) => {
+      board.note('Second', { x: 600, y: 260 })
+      board.note('First', { x: 300, y: 260 })
+      board.note('Third', { x: 300, y: 480 })
+    })
     await page.keyboard.press('Escape')
 
     // From the top of the page, the board is a stop in the order. Started
@@ -272,7 +261,9 @@ test.describe('the board from the keyboard', () => {
    */
   test('Tab reaches what is inside a frame', async ({ page }) => {
     // The note first, then a frame drawn round it: drawing one adopts what it lands on.
-    await note(page, { x: 380, y: 330 }, 'Inside')
+    await seed(page, (board) => {
+      board.note('Inside', { x: 380, y: 330 })
+    })
     await page.keyboard.press('Escape')
     await page.getByTestId('tool-frame').click()
     await page.mouse.move(200, 150)
@@ -315,7 +306,9 @@ test.describe('the board from the keyboard', () => {
   })
 
   test('Alt with an arrow resizes, and says the new size', async ({ page }) => {
-    await note(page, { x: 340, y: 260 }, 'Grow')
+    await seed(page, (board) => {
+      board.note('Grow', { x: 340, y: 260 })
+    })
     const object = page.locator('[data-object-type="sticky"]')
     await object.click()
     const before = await boxOf(object)
@@ -334,13 +327,7 @@ test.describe('the board from the keyboard', () => {
   })
 
   test('period and comma rotate, and say the angle', async ({ page }) => {
-    await page.getByTestId('tool-shape').click()
-    await page.mouse.move(340, 220)
-    await page.mouse.down()
-    await page.mouse.move(540, 360, { steps: 6 })
-    await page.mouse.up()
-    await page.keyboard.press('Escape')
-    await expect(page.getByTestId('selection-overlay')).toBeVisible()
+    await selectedShape(page, { x: 440, y: 290 })
 
     await page.keyboard.press('.')
     await expect(announcer(page)).toHaveText('Rotated to 15 degrees')
@@ -356,7 +343,9 @@ test.describe('the board from the keyboard', () => {
   })
 
   test('Mod+Shift+L locks and unlocks, and says which', async ({ page }) => {
-    await note(page, { x: 340, y: 260 }, 'Keep')
+    await seed(page, (board) => {
+      board.note('Keep', { x: 340, y: 260 })
+    })
     await page.locator('[data-object-type="sticky"]').click()
     await page.keyboard.press('ControlOrMeta+Shift+L')
     await expect(page.getByTestId('selection-lock')).toBeVisible()
@@ -374,7 +363,9 @@ test.describe('the board from the keyboard', () => {
  */
 test.describe('Escape backs out one step at a time', () => {
   test('mid-drag it puts the object back and keeps it selected', async ({ page }) => {
-    await note(page, { x: 340, y: 260 }, 'Stay')
+    await seed(page, (board) => {
+      board.note('Stay', { x: 340, y: 260 })
+    })
     const object = page.locator('[data-object-type="sticky"]')
     await object.click()
     const start = await boxOf(object)
@@ -401,7 +392,9 @@ test.describe('Escape backs out one step at a time', () => {
  */
 test.describe('a selection says what it is', () => {
   test('the padlock unlocks what it is on', async ({ page }) => {
-    await note(page, { x: 340, y: 260 }, 'Held')
+    await seed(page, (board) => {
+      board.note('Held', { x: 340, y: 260 })
+    })
     await page.locator('[data-object-type="sticky"]').click()
     await page.keyboard.press('ControlOrMeta+Shift+L')
     const lock = page.getByRole('button', { name: 'Unlock' })
@@ -419,16 +412,7 @@ test.describe('a selection says what it is', () => {
    * a selected locked line looked exactly like an unselected one.
    */
   test('a locked line keeps its box and its padlock', async ({ page }) => {
-    await note(page, { x: 280, y: 250 }, 'A')
-    await note(page, { x: 780, y: 470 }, 'B')
-    await page.keyboard.press('c')
-    const from = await canvasPoint(page, { x: 280, y: 250 })
-    const to = await canvasPoint(page, { x: 780, y: 470 })
-    await page.mouse.move(from.x, from.y)
-    await page.mouse.down()
-    await page.mouse.move(to.x, to.y, { steps: 8 })
-    await page.mouse.up()
-    await page.keyboard.press('v')
+    await linkedPair(page)
     await clickLine(page)
     await expect(page.getByTestId('endpoint-from')).toBeVisible()
     await page.keyboard.press('ControlOrMeta+Shift+L')
@@ -437,27 +421,26 @@ test.describe('a selection says what it is', () => {
   })
 
   test('a group says it is one, and how many it holds', async ({ page }) => {
-    await note(page, { x: 300, y: 260 }, 'One')
-    await note(page, { x: 600, y: 260 }, 'Two')
+    await seed(page, (board) => {
+      board.note('One', { x: 300, y: 260 })
+      board.note('Two', { x: 600, y: 260 })
+    })
     await page.keyboard.press('ControlOrMeta+a')
     await page.keyboard.press('ControlOrMeta+g')
     await expect(page.getByTestId('selection-group')).toHaveText('Group of 2')
   })
 
   test('each member of a multi-selection is marked', async ({ page }) => {
-    await note(page, { x: 300, y: 260 }, 'One')
-    await note(page, { x: 600, y: 260 }, 'Two')
+    await seed(page, (board) => {
+      board.note('One', { x: 300, y: 260 })
+      board.note('Two', { x: 600, y: 260 })
+    })
     await page.keyboard.press('ControlOrMeta+a')
     await expect(page.getByTestId('selection-member')).toHaveCount(2)
   })
 
   test('a resize shows the size it is reaching for, and a turn its angle', async ({ page }) => {
-    await page.getByTestId('tool-shape').click()
-    await page.mouse.move(340, 220)
-    await page.mouse.down()
-    await page.mouse.move(540, 360, { steps: 6 })
-    await page.mouse.up()
-    await page.keyboard.press('Escape')
+    await selectedShape(page, { x: 440, y: 290 })
 
     const corner = await boxOf(page.getByTestId('handle-se'))
     await page.mouse.move(corner.x + corner.width / 2, corner.y + corner.height / 2)
@@ -483,12 +466,7 @@ test.describe('the apparatus under the pointer', () => {
    * down" while it pulled sideways.
    */
   test('cursors turn with the object', async ({ page }) => {
-    await page.getByTestId('tool-shape').click()
-    await page.mouse.move(340, 220)
-    await page.mouse.down()
-    await page.mouse.move(540, 360, { steps: 6 })
-    await page.mouse.up()
-    await page.keyboard.press('Escape')
+    await selectedShape(page, { x: 440, y: 290 })
     await expect(page.getByTestId('handle-n')).toHaveCSS('cursor', 'ns-resize')
     for (let press = 0; press < 6; press += 1) await page.keyboard.press('.')
     await expect(page.getByTestId('handle-n')).toHaveCSS('cursor', 'ew-resize')
@@ -500,7 +478,9 @@ test.describe('the apparatus under the pointer', () => {
    * shows a quiet outline, so what a press will take is visible before it.
    */
   test('an object under the pointer is outlined before it is pressed', async ({ page }) => {
-    await note(page, { x: 340, y: 260 }, 'Hover')
+    await seed(page, (board) => {
+      board.note('Hover', { x: 340, y: 260 })
+    })
     await page.keyboard.press('Escape')
     await expect(page.getByTestId('hover-outline')).toHaveCount(0)
     const box = await boxOf(page.locator('[data-object-type="sticky"]'))
@@ -514,13 +494,17 @@ test.describe('the apparatus under the pointer', () => {
 
   // Yours was 1.5px — a pixel on most screens — and a peer's 2px dashed.
   test('your own selection is drawn at least as firmly as anyone else’s', async ({ page }) => {
-    await note(page, { x: 340, y: 260 }, 'Mine')
+    await seed(page, (board) => {
+      board.note('Mine', { x: 340, y: 260 })
+    })
     await page.locator('[data-object-type="sticky"]').click()
     await expect(page.getByTestId('selection-overlay')).toHaveCSS('outline-width', '2px')
   })
 
   test('a grip answers the pointer', async ({ page }) => {
-    await note(page, { x: 340, y: 260 }, 'Grip')
+    await seed(page, (board) => {
+      board.note('Grip', { x: 340, y: 260 })
+    })
     await page.locator('[data-object-type="sticky"]').click()
     const handle = page.getByTestId('handle-se')
     const rest = await handle.evaluate((element) => getComputedStyle(element).backgroundColor)
