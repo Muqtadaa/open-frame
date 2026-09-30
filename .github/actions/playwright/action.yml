@@ -1,8 +1,14 @@
-name: Playwright Chromium
+name: Playwright browsers
 description: >-
-  Installs Chromium for Playwright, from a cache keyed on the Playwright
-  version actually installed, so a browser is downloaded once per upgrade
-  rather than once per job.
+  Installs Playwright's browsers, from a cache keyed on the Playwright version
+  actually installed and on which browsers, so each is downloaded once per
+  upgrade rather than once per job.
+
+inputs:
+  browsers:
+    description: Space-separated browsers to install (chromium, firefox, webkit).
+    required: false
+    default: chromium
 
 runs:
   using: composite
@@ -14,18 +20,24 @@ runs:
       shell: bash
       run: echo "version=$(pnpm --filter @openframe/web exec playwright --version | awk '{print $2}')" >> "$GITHUB_OUTPUT"
 
+    # Keyed on the browser list too: a job that needs WebKit must not be handed
+    # a cache that only ever held Chromium and then find nothing to launch.
+    - id: key
+      shell: bash
+      run: echo "browsers=$(echo '${{ inputs.browsers }}' | tr ' ' '-')" >> "$GITHUB_OUTPUT"
+
     - id: cache
       uses: actions/cache@v4
       with:
         path: ~/.cache/ms-playwright
-        key: playwright-${{ runner.os }}-${{ steps.version.outputs.version }}
+        key: playwright-${{ runner.os }}-${{ steps.version.outputs.version }}-${{ steps.key.outputs.browsers }}
 
     - if: steps.cache.outputs.cache-hit != 'true'
       shell: bash
-      run: pnpm --filter @openframe/web exec playwright install --with-deps chromium
+      run: pnpm --filter @openframe/web exec playwright install --with-deps ${{ inputs.browsers }}
 
-    # The browser is cached; the system libraries it links against are not,
+    # The browsers are cached; the system libraries they link against are not,
     # because they live outside the cached directory.
     - if: steps.cache.outputs.cache-hit == 'true'
       shell: bash
-      run: pnpm --filter @openframe/web exec playwright install-deps chromium
+      run: pnpm --filter @openframe/web exec playwright install-deps ${{ inputs.browsers }}

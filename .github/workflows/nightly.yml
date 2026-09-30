@@ -1,0 +1,56 @@
+name: Nightly
+
+# The whole functional suite in every engine. Every PR already runs it in
+# Chromium and the @smoke subset in Firefox and WebKit; this is where the
+# rest of the suite meets the other two. A failed scheduled run emails the
+# repository's owner.
+on:
+  schedule:
+    # 03:17 UTC, off the hour, when scheduled runs are least likely to be
+    # delayed.
+    - cron: '17 3 * * *'
+  workflow_dispatch:
+
+jobs:
+  e2e:
+    name: End-to-end, ${{ matrix.browser }}
+    runs-on: ubuntu-latest
+    strategy:
+      # One engine's failures must not cancel, or hide, another's.
+      fail-fast: false
+      matrix:
+        browser: [chromium, firefox, webkit]
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - run: pnpm install --frozen-lockfile
+
+      - name: Install Playwright browsers
+        uses: ./.github/actions/playwright
+        with:
+          browsers: ${{ matrix.browser }}
+
+      - name: Run the end-to-end suite
+        run: pnpm --filter @openframe/web exec playwright test --project=${{ matrix.browser }}
+
+      - uses: actions/upload-artifact@v4
+        if: ${{ !cancelled() }}
+        with:
+          name: playwright-report-${{ matrix.browser }}
+          path: apps/web/playwright-report/
+          retention-days: 14
+
+      - uses: actions/upload-artifact@v4
+        if: ${{ !cancelled() }}
+        with:
+          name: test-results-${{ matrix.browser }}
+          path: apps/web/test-results/
+          retention-days: 14
+          if-no-files-found: ignore

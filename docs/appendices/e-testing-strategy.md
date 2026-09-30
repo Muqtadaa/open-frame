@@ -121,6 +121,16 @@ A missing element fails the test. Read a box with `boxOf`, an index with
 47 places once did. The lint (`eslint-plugin-playwright`) refuses sleeps,
 branches in a test body and forced clicks, so these stay true.
 
+### Which browsers
+
+The functional suite runs in Chromium on every push. The 21 tests tagged
+`@smoke` — the core loop of placing, editing, moving and saving — also run in
+Firefox and WebKit on every push (`pnpm test:e2e:smoke`), and the whole suite
+runs in all three every night (`.github/workflows/nightly.yml`, which can also
+be started by hand). Goldens and benchmarks stay in Chromium. `touch.spec.ts`
+drives touch through CDP, which only Chromium has, and is excluded from the
+other two in the config.
+
 `pnpm test:e2e` needs a Chromium. In an environment with a pre-installed browser
 whose build differs from Playwright's expected one, set
 `OPENFRAME_CHROMIUM_PATH=/path/to/chromium`.

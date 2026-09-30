@@ -123,3 +123,45 @@ jobs:
           path: apps/web/test-results/
           retention-days: 7
           if-no-files-found: ignore
+
+  e2e-browsers:
+    # The core loop in the two other engines. Short on purpose: the whole
+    # suite in all three runs nightly (nightly.yml), and a PR only needs to
+    # know it has not broken placing, editing, moving or saving in Firefox or
+    # Safari's engine.
+    name: End-to-end, Firefox and WebKit (smoke)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - run: pnpm install --frozen-lockfile
+
+      - name: Install Playwright browsers
+        uses: ./.github/actions/playwright
+        with:
+          browsers: firefox webkit
+
+      - name: Run the smoke tests in Firefox and WebKit
+        run: pnpm test:e2e:smoke
+
+      - uses: actions/upload-artifact@v4
+        if: ${{ !cancelled() }}
+        with:
+          name: playwright-report-browsers
+          path: apps/web/playwright-report/
+          retention-days: 7
+
+      - uses: actions/upload-artifact@v4
+        if: ${{ !cancelled() }}
+        with:
+          name: e2e-browsers-test-results
+          path: apps/web/test-results/
+          retention-days: 7
+          if-no-files-found: ignore
