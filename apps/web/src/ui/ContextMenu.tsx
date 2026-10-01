@@ -54,6 +54,11 @@ export function ContextMenu() {
   const clipboardSize = useInteractionStore((state) => state.clipboard.length)
   const commands = useCommands()
   const { runtime } = useOpenFrame()
+  // Read when the menu opens, which is the only time it is asked.
+  const hiddenCount =
+    at === null
+      ? 0
+      : [...runtime.store.getDocument().objects.values()].filter((object) => object.hidden).length
   const ref = useRef<HTMLDivElement>(null)
   const subRef = useRef<HTMLDivElement>(null)
   const surface = useViewportSize()
@@ -225,6 +230,20 @@ export function ContextMenu() {
     ],
     [
       { label: 'Select all', shortcut: 'Mod+A', run: () => commands.selectAll() },
+      /*
+       * Where hidden objects can be found again. Hiding had no way back but
+       * undo, so an object hidden an hour ago was simply lost.
+       */
+      ...(hiddenCount === 0
+        ? []
+        : [
+            {
+              label: `Show ${String(hiddenCount)} hidden ${hiddenCount === 1 ? 'object' : 'objects'}`,
+              run: () => {
+                commands.showHidden()
+              },
+            },
+          ]),
       {
         label: 'Zoom to fit',
         shortcut: 'Mod+1',
