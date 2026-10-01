@@ -4,6 +4,7 @@ import {
   claimDecision,
   destroyDecision,
   isOwnerKey,
+  protectionDecision,
   setPasswordDecision,
   unlockDecision,
   mintKey,
@@ -294,5 +295,29 @@ describe('the owner key', () => {
       false,
     )
     expect(isOwnerKey(undefined, 'a'.repeat(32))).toBe(false)
+  })
+})
+
+/*
+ * Whether a board has a password, for the front door's list. Told to anybody
+ * holding a way into the board — either link, or the owner's key — and to
+ * nobody else: a stranger probing ids learns nothing, not even that.
+ */
+describe('asking whether a board has a password', () => {
+  const owned: AccessKeys = { ...keys, owner: 'o'.repeat(32) }
+
+  it('answers either link and the owner', () => {
+    expect(protectionDecision(owned, owned.editor)).toEqual({ ok: true })
+    expect(protectionDecision(owned, owned.viewer)).toEqual({ ok: true })
+    expect(protectionDecision(owned, 'o'.repeat(32))).toEqual({ ok: true })
+  })
+
+  it('refuses a wrong key and a missing one alike', () => {
+    expect(protectionDecision(owned, 'x'.repeat(32))).toMatchObject({ ok: false, status: 403 })
+    expect(protectionDecision(owned, null)).toMatchObject({ ok: false, status: 403 })
+  })
+
+  it('answers for a board shared before links had roles, which lets anybody in', () => {
+    expect(protectionDecision(undefined, null)).toEqual({ ok: true })
   })
 })

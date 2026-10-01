@@ -136,7 +136,6 @@ REVISED 2026-09-27 (C3 #9 re-critique, 21/40). What drifted, and what it is now:
 - THE WORLD is chosen here too, by the board bar's own toggle, last in the
   head: at the far edge when signed out, after the account and mentions when
   signed in.
-
-Still owed: nothing on this surface says whether a board has a password (the
-room knows and does not tell).
+- A PASSWORD is said in the row's tag ("yours · password") once the room has
+  said so to a key the row holds; not knowing says nothing, never "open".
 

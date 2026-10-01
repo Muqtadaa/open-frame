@@ -247,3 +247,19 @@ export function unlockDecision(
   }
   return { ok: true }
 }
+
+/**
+ * Whether this caller may be told if the board has a password.
+ *
+ * Anybody with a way in — either link, or the owner's key — because the
+ * front door lists the board for them and should say what opening it will
+ * ask. Nobody else: the answer for a wrong key is the answer for no key, so a
+ * stranger probing ids cannot even learn which boards are protected.
+ */
+export function protectionDecision(
+  keys: AccessKeys | undefined,
+  key: string | null,
+): PasswordDecision {
+  if (roleForKey(keys, key) !== null || isOwnerKey(keys, key)) return { ok: true }
+  return { ok: false, status: 403, error: 'That link does not open this board' }
+}

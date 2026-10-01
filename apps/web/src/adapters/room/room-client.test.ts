@@ -142,3 +142,23 @@ describe('destroying a room', () => {
     expect(await offline.destroy(BOARD, 'edit')).toBe('unreachable')
   })
 })
+
+describe('asking whether a board has a password', () => {
+  it('sends the key in the body and reads the answer', async () => {
+    const { client, calls } = answering(200, { password: true })
+    expect(await client.hasPassword(BOARD, 'k')).toBe(true)
+    expect(calls[0]).toEqual({ url: `${BASE}/room/${BOARD}/protection`, body: { key: 'k' } })
+    expect(await answering(200, { password: false }).client.hasPassword(BOARD, 'k')).toBe(false)
+  })
+
+  /*
+   * Not knowing is not "no". A row that said "no password" because the
+   * network blinked would be telling somebody their board is open when it is
+   * not, so every failure answers `null` and the row says nothing.
+   */
+  it('answers null, not false, when it cannot tell', async () => {
+    expect(await offline.hasPassword(BOARD, 'k')).toBeNull()
+    expect(await answering(403).client.hasPassword(BOARD, 'k')).toBeNull()
+    expect(await answering(200, {}).client.hasPassword(BOARD, 'k')).toBeNull()
+  })
+})

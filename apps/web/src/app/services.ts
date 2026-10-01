@@ -38,6 +38,8 @@ const NO_ROOM_SERVER: RoomService = {
   unlock: () => Promise.resolve({ ok: false, reason: 'unreachable' }),
   setPassword: () => Promise.resolve({ ok: false, reason: 'unreachable' }),
   destroy: () => Promise.resolve('unreachable'),
+  // No room, no password: nothing to say.
+  hasPassword: () => Promise.resolve(null),
 }
 
 /**

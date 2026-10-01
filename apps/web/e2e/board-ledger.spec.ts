@@ -261,3 +261,43 @@ test('a row action’s tip stays on its own row', async ({ page }) => {
     above.y + above.height,
   )
 })
+
+/*
+ * A board with a password said nothing about it on the front door, so the
+ * first anybody learned of it was the gate — including its owner, who had set
+ * it and forgotten. The room says, to whoever holds a way in.
+ */
+test('says which boards ask for a password, and nothing when it cannot tell', async ({ page }) => {
+  await signedIn(page, [
+    { id: 'brd_locked0000000001', title: 'Locked', role: 'owner' },
+    { id: 'brd_opened0000000001', title: 'Open', role: 'editor' },
+    { id: 'brd_unknown000000001', title: 'Unknown', role: 'viewer' },
+  ])
+  const asked: string[] = []
+  await page.route(/\/room\/[^/]+\/protection/, async (route) => {
+    const board = /\/room\/([^/]+)\//.exec(route.request().url())?.[1] ?? ''
+    asked.push(board)
+    const body = route.request().postDataJSON() as { key?: string }
+    // Asked with a key the row holds, in the body.
+    expect(typeof body.key).toBe('string')
+    if (board === 'brd_unknown000000001') return route.abort()
+    return route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify({ password: board === 'brd_locked0000000001' }),
+    })
+  })
+  await page.goto(HOME_URL)
+
+  const row = (title: string) =>
+    page
+      .getByRole('listitem')
+      .filter({ has: page.getByTestId('board-title-text').getByText(title, { exact: true }) })
+  await expect(row('Locked').getByTestId('board-tag')).toHaveText('yours · password')
+  await expect(row('Open').getByTestId('board-tag')).toHaveText('shared with you')
+  await expect(row('Unknown').getByTestId('board-tag')).toHaveText('view only')
+  // Which boards were asked, not how often: development mode runs effects twice.
+  expect([...new Set(asked)].sort()).toEqual(
+    ['brd_locked0000000001', 'brd_opened0000000001', 'brd_unknown000000001'].sort(),
+  )
+})

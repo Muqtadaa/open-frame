@@ -1062,6 +1062,22 @@ It is offered for any type with a crop window (`cropWindowOf`), the same
 question the double-click asks, so no type is named. The e2e reaches it by
 keyboard and was seen failing first.
 
+**Password state on the front door.** A board with a password said nothing
+about it on the front door, so the first anybody learned of it was the gate.
+That included its owner, who had set it and forgotten. The rooms worker gains
+`POST /room/:id/protection`. It answers `{ password }` to either link or the
+owner's key, sent in the body, and a stranger gets the 403 a wrong key gets,
+learning nothing. Each shared row asks with the key it holds and adds
+"· password" to its tag. When the room cannot be asked, the row says nothing:
+"open" would be the worse mistake. Tested at four levels, each seen failing
+first:
+
+- the decision and the route, in Node;
+- the web client, against a fake network;
+- the tag, against a stubbed room;
+- a real Durable Object: set, read by all three keys, refused to a stranger,
+  cleared.
+
 Still to come, in order:
 
 - board clarity: where hidden objects went, presence for assistive tech, a

@@ -33,6 +33,7 @@ export function fakeRooms() {
     unlock: vi.fn<RoomService['unlock']>(() => Promise.resolve({ ok: true, token: 'token' })),
     setPassword: vi.fn<RoomService['setPassword']>(() => Promise.resolve({ ok: true })),
     destroy: vi.fn<RoomService['destroy']>(() => Promise.resolve('destroyed')),
+    hasPassword: vi.fn<RoomService['hasPassword']>(() => Promise.resolve(false)),
   } satisfies RoomService
 }
 
