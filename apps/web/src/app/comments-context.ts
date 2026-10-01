@@ -31,6 +31,8 @@ export interface Discussion {
   readonly refresh: () => void
   readonly post: (comment: NewComment) => Promise<boolean>
   readonly resolve: (id: string, resolved: boolean) => Promise<boolean>
+  readonly edit: (id: string, body: string) => Promise<boolean>
+  readonly remove: (id: string) => Promise<boolean>
   /**
    * Opens a remark's thread and puts its pin in the middle of the board.
    *
@@ -51,6 +53,8 @@ const NOTHING: Discussion = {
   refresh: () => undefined,
   post: () => Promise.resolve(false),
   resolve: () => Promise.resolve(false),
+  edit: () => Promise.resolve(false),
+  remove: () => Promise.resolve(false),
   focusComment: () => false,
   enabled: false,
 }

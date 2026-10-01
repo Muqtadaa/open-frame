@@ -52,6 +52,7 @@ function readComment(row: unknown): BoardComment | null {
     created_at: createdAt,
     fx,
     fy,
+    edited_at: editedAt,
   } = row as {
     id?: unknown
     parent_id?: unknown
@@ -66,6 +67,7 @@ function readComment(row: unknown): BoardComment | null {
     created_at?: unknown
     fx?: unknown
     fy?: unknown
+    edited_at?: unknown
   }
 
   if (typeof id !== 'string' || typeof body !== 'string' || typeof authorId !== 'string') {
@@ -91,6 +93,7 @@ function readComment(row: unknown): BoardComment | null {
     // that has ever been wrong.
     fx: fraction(fx),
     fy: fraction(fy),
+    editedAt: when(editedAt),
   }
 }
 
@@ -183,6 +186,33 @@ export async function resolveComment(id: string, resolved: boolean): Promise<boo
     p_resolved: resolved,
   })) as { data: unknown; error: unknown }
 
+  return response.error === null && response.data === true
+}
+
+/** Rewrites a remark's words. Its author's alone; the server refuses anyone else. */
+export async function editComment(id: string, body: string): Promise<boolean> {
+  const client = await supabaseClient()
+  if (client === null) return false
+
+  const response = (await client.rpc('edit_comment', { p_id: id, p_body: body })) as {
+    data: unknown
+    error: unknown
+  }
+  return response.error === null && response.data === true
+}
+
+/**
+ * Deletes a remark, and a thread's replies with it. Its author's alone, and
+ * refused for a thread somebody else has replied to.
+ */
+export async function deleteComment(id: string): Promise<boolean> {
+  const client = await supabaseClient()
+  if (client === null) return false
+
+  const response = (await client.rpc('delete_comment', { p_id: id })) as {
+    data: unknown
+    error: unknown
+  }
   return response.error === null && response.data === true
 }
 

@@ -1004,6 +1004,24 @@ chooses After Hours at the door and opens a board in it, and checks the toggle
 clears the account at 1280 and 390px. The two front-door goldens gained the
 button and nothing else.
 
+**Comments: your own are yours to change, and threads can be walked.** A remark
+was final once posted, so a typo stayed and a comment on the wrong element
+could only be resolved. Now:
+
+- **Edit and Delete.** Your own remarks offer both, in place, under the words.
+  An edited remark says "edited". Delete asks first, in place.
+- **A thread somebody else has replied to can be edited but not deleted.**
+  Deleting it would take their words with it. The control stays reachable and
+  says why, rather than vanishing on one thread and not the next.
+- **Previous and Next** walk the open threads in the list's order, bringing each
+  pin into view. "All comments" became a back arrow, because as three words it
+  pushed Close off the 300px panel.
+
+The server side is a migration: `edit_comment` and `delete_comment`, both the
+author's alone, and `edited_at` kept apart from `updated_at`, which resolving
+also bumps. Every test was seen failing first. Breaking ownership, the refusal
+and the walk's ends each failed its test.
+
 Still to come, in order:
 
 - board clarity: where hidden objects went, presence for assistive tech, a

@@ -2,7 +2,7 @@ import { expect, test, type Page } from '@playwright/test'
 import { boxOf, viewportOf, useClipboard } from './fixtures.js'
 
 import { HOME_URL } from './routes.js'
-import { signedIn } from './signed-in.js'
+import { BOB, signedIn, type StubbedServer } from './signed-in.js'
 
 const BOARD = 'brd_abcdefgh12345678'
 const KEY = 'e'.repeat(32)
@@ -1325,4 +1325,196 @@ test.describe('the small things', () => {
     await page.locator('[data-testid^="comment-pin-cmt_"]').first().click()
     await expect(page.getByTestId('comment-who').first()).toHaveAttribute('aria-hidden', 'true')
   })
+})
+
+/*
+ * A remark was final the moment it was posted: a typo stayed for good, and a
+ * comment on the wrong element could only be resolved, which says "agreed"
+ * about something nobody agreed to. Yours are yours to change.
+ */
+test.describe('changing what you said', () => {
+  async function postThread(page: Page, text: string, at = { x: 320, y: 260 }): Promise<string> {
+    await page.getByTestId('tool-comment').click()
+    await page.locator('[data-testid="canvas"]').click({ position: at })
+    await page.getByTestId('comment-input').fill(text)
+    await page.getByTestId('comment-post').click()
+    const pins = page.locator('[data-testid^="comment-pin-cmt_"]')
+    const pin = pins.last()
+    await expect(pin).toBeVisible()
+    return ((await pin.getAttribute('data-testid')) ?? '').replace('comment-pin-', '')
+  }
+
+  function remark(server: StubbedServer, id: string, body: string, parent: string | null) {
+    server.comments.push({
+      id,
+      parent_id: parent,
+      author_id: BOB,
+      author_name: 'Rowan',
+      author_hue: 1,
+      body,
+      x: parent === null ? 500 : null,
+      y: parent === null ? 300 : null,
+      object_id: null,
+      resolved_at: null,
+      created_at: new Date().toISOString(),
+      fx: null,
+      fy: null,
+    })
+  }
+
+  test('edits your own remark, and says it was edited', async ({ page }) => {
+    await signedIn(page, [{ id: BOARD, title: 'Shared', role: 'owner' }])
+    await openBoard(page)
+    const id = await postThread(page, 'Is this the rihgt framing?')
+    await page.getByTestId(`comment-pin-${id}`).click()
+
+    await page.getByRole('button', { name: 'Edit your comment' }).click()
+    const field = page.getByRole('textbox', { name: 'Edit your comment' })
+    await expect(field).toBeFocused()
+    await expect(field).toHaveValue('Is this the rihgt framing?')
+    await field.fill('Is this the right framing?')
+    await page.getByRole('button', { name: 'Save' }).click()
+
+    await expect(page.getByTestId('comment-text')).toHaveText('Is this the right framing?')
+    await expect(page.getByTestId('comment-edited')).toHaveText('edited')
+  })
+
+  test('Escape puts the remark back without closing the thread', async ({ page }) => {
+    await signedIn(page, [{ id: BOARD, title: 'Shared', role: 'owner' }])
+    await openBoard(page)
+    const id = await postThread(page, 'first thought')
+    await page.getByTestId(`comment-pin-${id}`).click()
+
+    await page.getByRole('button', { name: 'Edit your comment' }).click()
+    await page.getByRole('textbox', { name: 'Edit your comment' }).fill('second thought')
+    await page.keyboard.press('Escape')
+
+    await expect(page.getByTestId('comment-panel')).toBeVisible()
+    await expect(page.getByTestId('comment-text')).toHaveText('first thought')
+    await expect(page.getByRole('button', { name: 'Edit your comment' })).toBeFocused()
+  })
+
+  test('deletes your own thread, after asking, and takes its pin off', async ({ page }) => {
+    await signedIn(page, [{ id: BOARD, title: 'Shared', role: 'owner' }])
+    await openBoard(page)
+    const id = await postThread(page, 'never mind')
+    await page.getByTestId(`comment-pin-${id}`).click()
+
+    await page.getByRole('button', { name: 'Delete your comment' }).click()
+    // Asked, in place: deleting is the one thing here that cannot be undone.
+    await page.getByRole('button', { name: 'Keep it' }).click()
+    await expect(page.getByTestId(`comment-pin-${id}`)).toBeVisible()
+
+    await page.getByRole('button', { name: 'Delete your comment' }).click()
+    await page.getByRole('button', { name: 'Delete', exact: true }).click()
+
+    await expect(page.getByTestId(`comment-pin-${id}`)).toHaveCount(0)
+    await expect(page.getByTestId('comment-list')).toBeVisible()
+  })
+
+  test('deletes your own reply and leaves the thread', async ({ page }) => {
+    await signedIn(page, [{ id: BOARD, title: 'Shared', role: 'owner' }])
+    await openBoard(page)
+    const id = await postThread(page, 'the thread')
+    await page.getByTestId(`comment-pin-${id}`).click()
+    await page.getByTestId('comment-input').fill('a reply I regret')
+    await page.getByTestId('comment-post').click()
+    await expect(page.getByTestId('comment-text')).toHaveCount(2)
+
+    await page.getByRole('button', { name: 'Delete your reply' }).click()
+    await page.getByRole('button', { name: 'Delete', exact: true }).click()
+
+    await expect(page.getByTestId('comment-text')).toHaveText(['the thread'])
+  })
+
+  test('offers nothing on somebody else’s remark', async ({ page }) => {
+    const account = await signedIn(page, [{ id: BOARD, title: 'Shared', role: 'owner' }])
+    remark(account.server, 'cmt_rowan', 'from Rowan', null)
+    await openBoard(page)
+    await page.getByTestId('comment-pin-cmt_rowan').click()
+
+    await expect(page.getByTestId('comment-text')).toHaveText('from Rowan')
+    await expect(page.getByRole('button', { name: /your comment/ })).toHaveCount(0)
+  })
+
+  /*
+   * Deleting a thread takes its replies with it, and those are somebody
+   * else's words. So a thread with a reply from anyone else can be edited and
+   * not deleted, and the panel says why rather than hiding the control.
+   */
+  test('will not delete a thread somebody else has replied to', async ({ page }) => {
+    const account = await signedIn(page, [{ id: BOARD, title: 'Shared', role: 'owner' }])
+    await openBoard(page)
+    const id = await postThread(page, 'mine')
+    remark(account.server, 'cmt_reply', 'Rowan replies', id)
+    await page.reload()
+    await page.waitForSelector('[data-testid="status-bar"]')
+    await page.getByTestId(`comment-pin-${id}`).click()
+
+    const remove = page.getByRole('button', { name: 'Delete your comment' })
+    await expect(remove).toHaveAttribute('aria-disabled', 'true')
+    await expect(remove).toHaveAccessibleDescription('Others have replied to it')
+    // Reachable, and pressing it asks nothing.
+    await remove.focus()
+    await page.keyboard.press('Enter')
+    await expect(page.getByRole('button', { name: 'Delete', exact: true })).toHaveCount(0)
+  })
+})
+
+/*
+ * Reading a board's discussion meant going back to the list between every
+ * thread. Previous and Next walk the open threads in the list's order.
+ */
+test.describe('walking the threads', () => {
+  test('goes to the next and previous thread, and stops at the ends', async ({ page }) => {
+    await signedIn(page, [{ id: BOARD, title: 'Shared', role: 'owner' }])
+    await openBoard(page)
+    for (const [text, x] of [
+      ['first', 200],
+      ['second', 400],
+      ['third', 600],
+    ] as const) {
+      await page.getByTestId('tool-comment').click()
+      await page.locator('[data-testid="canvas"]').click({ position: { x, y: 300 } })
+      await page.getByTestId('comment-input').fill(text)
+      await page.getByTestId('comment-post').click()
+      await expect(page.locator('[data-testid^="comment-pin-cmt_"]')).toHaveCount(
+        text === 'first' ? 1 : text === 'second' ? 2 : 3,
+      )
+    }
+
+    await page.getByTestId('comment-pin-cmt_1').click()
+    const previous = page.getByRole('button', { name: 'Previous comment' })
+    const next = page.getByRole('button', { name: 'Next comment' })
+    await expect(previous).toBeDisabled()
+
+    await next.click()
+    await expect(page.getByTestId('comment-text')).toHaveText('second')
+    await next.click()
+    await expect(page.getByTestId('comment-text')).toHaveText('third')
+    await expect(next).toBeDisabled()
+    await previous.click()
+    await expect(page.getByTestId('comment-text')).toHaveText('second')
+  })
+})
+
+test('a thread’s header keeps Close on the panel, beside the way back and the way along', async ({
+  page,
+}) => {
+  await signedIn(page, [{ id: BOARD, title: 'Shared', role: 'owner' }])
+  await openBoard(page)
+  for (const x of [300, 500]) {
+    await page.getByTestId('tool-comment').click()
+    await page.locator('[data-testid="canvas"]').click({ position: { x, y: 300 } })
+    await page.getByTestId('comment-input').fill(`at ${String(x)}`)
+    await page.getByTestId('comment-post').click()
+  }
+  await page.getByTestId('comment-pin-cmt_1').click()
+
+  const panel = await boxOf(page.getByTestId('comment-panel'))
+  for (const name of ['All comments', 'Previous comment', 'Next comment']) {
+    await expect(page.getByRole('button', { name })).toBeVisible()
+  }
+  const close = await boxOf(page.getByTestId('comment-close'))
+  expect(close.x + close.width).toBeLessThanOrEqual(panel.x + panel.width)
 })

@@ -39,6 +39,8 @@ export interface LoadedComments {
   /** Writes a comment and its mentions, then re-reads. */
   readonly post: (comment: NewComment) => Promise<boolean>
   readonly resolve: (id: string, resolved: boolean) => Promise<boolean>
+  readonly edit: (id: string, body: string) => Promise<boolean>
+  readonly remove: (id: string) => Promise<boolean>
 }
 
 export function useComments(boardId: BoardId, enabled: boolean): LoadedComments {
@@ -110,7 +112,33 @@ export function useComments(boardId: BoardId, enabled: boolean): LoadedComments 
     [refresh, noteSaid, discussion],
   )
 
-  return { comments, people, refresh, post, resolve }
+  /*
+   * Editing and deleting nudge the room too: somebody reading the thread
+   * should see the words that are there now, not the ones that were.
+   */
+  const edit = useCallback(
+    async (id: string, body: string): Promise<boolean> => {
+      const ok = await discussion.edit(id, body)
+      if (!ok) return false
+      refresh()
+      noteSaid()
+      return true
+    },
+    [refresh, noteSaid, discussion],
+  )
+
+  const remove = useCallback(
+    async (id: string): Promise<boolean> => {
+      const ok = await discussion.remove(id)
+      if (!ok) return false
+      refresh()
+      noteSaid()
+      return true
+    },
+    [refresh, noteSaid, discussion],
+  )
+
+  return { comments, people, refresh, post, resolve, edit, remove }
 }
 
 /** Threads only — the ones with a pin — newest last, resolved ones excluded. */

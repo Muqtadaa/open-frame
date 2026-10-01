@@ -49,10 +49,15 @@ NOT: a key or click that discards words; a remark without a time; a thread
 you can only leave by closing everything; a solid accent bell; overlapped
 faces under the target size; a pin pointing below its spot.
 
-KNOWN: a remark cannot be edited or deleted; no next/previous thread; the
-"Shared" chip copies the link you arrived on rather than opening the chooser;
-a ghost face was seen once after a reload and not reproduced; the presence
-layer on the canvas is not exposed to assistive tech.
+CHANGING A REMARK: your own offer Edit and Delete in place, under the words;
+an edited one says "edited"; Delete asks in place; Escape in the edit puts the
+words back and keeps the thread. A thread somebody else replied to can be
+edited, not deleted — its Delete stays reachable and says why. Previous and
+Next walk the open threads in the list's order; the way back is an arrow, so
+Close stays on a 300px panel.
+
+KNOWN: the "Shared" chip copies the link you arrived on rather than opening the
+chooser; a ghost face was seen once after a reload and not reproduced.
 
 FINISH: `comments.spec.ts` (drafts, keyboard, when/how many/where, reading a
 thread, the marks, the small things), `e2e-rooms/live-comments.spec.ts`
