@@ -4574,6 +4574,8 @@ body {
   position: absolute;
   top: 0;
   left: 0;
+  /* Scaled about the line's middle, where the editor centres itself. */
+  transform-origin: 0 0;
 }
 
 .of-connector__editor {

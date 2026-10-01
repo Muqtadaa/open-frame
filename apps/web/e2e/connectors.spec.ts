@@ -1,4 +1,5 @@
 import type { Page } from '@playwright/test'
+import { richFromPlain } from '@openframe/core'
 
 import {
   CANVAS,
@@ -1246,4 +1247,44 @@ test('offers its line one colour, and marks the one it is drawn in', async ({ pa
   const panel = await boxOf(page.getByTestId('inspector'))
   const targets = await boxOf(page.getByRole('group', { name: 'What to colour' }))
   expect(targets.x + targets.width).toBeLessThanOrEqual(panel.x + panel.width)
+})
+
+test('edits a label at the size it is drawn, zoomed out', async ({ page }) => {
+  await seedBoard(
+    page,
+    buildBoard((board) => {
+      const a = board.note('A', A_AT)
+      const b = board.note('B', B_AT)
+      board.connect(a, b, { text: richFromPlain('depends on') })
+    }),
+  )
+  // Below 50% a label stops shrinking with the board (`labelScale`), so the
+  // label and an editor drawn at the world's scale come apart.
+  for (let i = 0; i < 4; i++) await page.keyboard.press('ControlOrMeta+Minus')
+  await expect(page.getByTestId('zoom-percent')).toHaveText(/^(\d|[1-3]\d)%$/)
+
+  /** How much bigger or smaller an element is drawn than it is laid out. */
+  const drawnAt = (testId: string) =>
+    page
+      .getByTestId(testId)
+      .evaluate(
+        (element: HTMLElement) => element.getBoundingClientRect().height / element.offsetHeight,
+      )
+  const label = await drawnAt('connector-label')
+
+  const box = await boxOf(page.getByTestId('connector-label'))
+  const middle = { x: box.x + box.width / 2, y: box.y + box.height / 2 }
+  await page.mouse.click(middle.x, middle.y)
+  await page.mouse.dblclick(middle.x, middle.y)
+  await expect(page.locator(EDITOR)).toBeFocused()
+  const editor = await page
+    .locator(EDITOR)
+    .evaluate(
+      (element: HTMLElement) => element.getBoundingClientRect().height / element.offsetHeight,
+    )
+
+  // To a tenth: offsetHeight rounds to whole pixels and the drawn box does
+  // not, so the label reads 0.49 at a scale of 0.5. Unfixed, the editor was
+  // drawn at 0.05 here — a tenth of the label's size.
+  expect(editor).toBeCloseTo(label, 1)
 })
