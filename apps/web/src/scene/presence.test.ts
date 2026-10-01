@@ -1,7 +1,9 @@
-import { asObjectId, MAX_ZOOM, MIN_ZOOM } from '@openframe/core'
+import { asObjectId, MAX_ZOOM, MIN_ZOOM, richFromPlain } from '@openframe/core'
+import { createTestHarness } from '@openframe/core/testing'
 import { describe, expect, it } from 'vitest'
 
 import {
+  presenceSentences,
   canFollow,
   discussionSignature,
   dragsByObject,
@@ -320,5 +322,63 @@ describe('knowing there is something new to read', () => {
     expect(discussionSignature([said(1, 1), said(2, 1)])).not.toBe(
       discussionSignature([said(1, 2)]),
     )
+  })
+})
+
+/**
+ * What somebody else is doing, in words — the presence layer draws it, and is
+ * hidden from assistive tech because cursors and outlines are pictures. A
+ * screen reader was never told that a note was open in somebody else's hands.
+ */
+describe('what the others are doing, said aloud', () => {
+  const someone = (name: string, editing: string | null): Peer => ({
+    clientId: name.length,
+    name,
+    hue: 0,
+    cursor: null,
+    said: 0,
+    drag: null,
+    viewport: null,
+    following: null,
+    selection: [],
+    editing: editing === null ? null : asObjectId(editing),
+  })
+
+  function board() {
+    const h = createTestHarness()
+    const made = h.dispatcher.dispatch({
+      kind: 'CreateObjects',
+      objects: [
+        {
+          id: asObjectId('obj_note'),
+          type: 'sticky',
+          x: 0,
+          y: 0,
+          data: { text: richFromPlain('Pricing') },
+        },
+      ],
+    })
+    if (!made.ok) throw made.error
+    return h
+  }
+
+  it('names who is editing what', () => {
+    const h = board()
+    expect(
+      presenceSentences([someone('Sam', 'obj_note')], h.store.getDocument(), h.registry),
+    ).toEqual([
+      `Sam is editing ${h.registry.describeObject(h.store.getObject(asObjectId('obj_note'))!).summary}`,
+    ])
+  })
+
+  it('says nothing of somebody who is only looking, or editing something gone', () => {
+    const h = board()
+    expect(
+      presenceSentences(
+        [someone('Ana', null), someone('Bo', 'obj_gone')],
+        h.store.getDocument(),
+        h.registry,
+      ),
+    ).toEqual([])
   })
 })

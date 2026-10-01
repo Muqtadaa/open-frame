@@ -334,6 +334,9 @@ test.describe('other people', () => {
     const held = bob.locator('.of-presence__outline--editing')
     await expect(held).toHaveCount(1, { timeout: 15_000 })
     await expect(held).toContainText('is editing')
+    // And it is SAID, not only drawn: the outline is a picture, hidden from
+    // assistive tech, so a screen reader heard nothing of it before.
+    await expect(bob.getByTestId('presence-status')).toContainText('is editing contested')
 
     // Bob cannot take it, and it STAYS not taken.
     await bob.locator(NOTE).nth(contested).dblclick()
