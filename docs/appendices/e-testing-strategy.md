@@ -20,6 +20,7 @@ percentage is not a goal and is not measured.
 | `web/adapters`    | Vitest + fake-indexeddb     | Save→load round-trip, patches, **quarantine never writes back**                            | Browser quirks       |
 | `web/canvas`      | Vitest                      | Culling, hit testing, marquee containment, paint order                                     | Pixel output         |
 | `web/gestures`    | Vitest, `gesture-bench.ts`  | Every pointer mode: modifiers, snapping, **one command on release, none before it**        | The hook's wiring    |
+| `web/ui`          | Vitest, `test-render.tsx`   | What a control DOES: keys, focus going in and coming back, what it asks of the services    | Layout and paint     |
 | `web/interaction` | Vitest                      | Pointer decisions as pure functions                                                        | Synthetic DOM events |
 | **E2E**           | Playwright                  | create → edit → move → reload → undo → restyle → delete                                    | Everything else      |
 
