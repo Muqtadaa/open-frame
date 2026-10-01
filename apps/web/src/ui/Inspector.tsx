@@ -153,6 +153,8 @@ export function Inspector() {
   const canvasSize = useInteractionStore((state) => state.canvasSize)
   const dragKind = useInteractionStore((state) => state.drag.kind)
   const editingId = useInteractionStore((state) => state.editingId)
+  const croppingId = useInteractionStore((state) => state.croppingId)
+  const setCropping = useInteractionStore((state) => state.setCropping)
   const commands = useCommands()
   /*
    * A style being aimed at: a colour dragged across the picker, an opacity
@@ -345,6 +347,13 @@ export function Inspector() {
     () => (only === undefined ? [] : runtime.registry.relationsTo(document, only.id)),
     [only, document, runtime.registry],
   )
+  /*
+   * Whether this object shows a WINDOW onto what it holds, and so can be
+   * cropped — asked of the registry, as the double-click that crops asks it,
+   * so no type is named here. Double-click was the only way in, which nothing
+   * on screen said and no keyboard could do.
+   */
+  const croppable = only !== undefined && runtime.registry.cropWindowOf(only) !== null
 
   /** Only properties EVERY selected object honours — see the note above. */
   /*
@@ -399,6 +408,7 @@ export function Inspector() {
     props.size === 0 &&
     fields.length === 0 &&
     actions.length === 0 &&
+    !croppable &&
     cites.length === 0 &&
     citedBy.length === 0 &&
     cannotEdit === undefined
@@ -590,8 +600,22 @@ export function Inspector() {
           />
         )}
 
-        {actions.length > 0 && only !== undefined && (
+        {(actions.length > 0 || croppable) && only !== undefined && (
           <div className="of-inspector__actions">
+            {croppable && (
+              <button
+                type="button"
+                className="of-button"
+                // A mode you are in, so it says whether you are in it.
+                aria-pressed={croppingId === only.id}
+                data-testid="inspector-crop"
+                onClick={() => {
+                  setCropping(croppingId === only.id ? null : only.id)
+                }}
+              >
+                Crop
+              </button>
+            )}
             {actions.map((action) => (
               <button
                 key={action.id}

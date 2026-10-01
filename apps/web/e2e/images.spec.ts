@@ -215,6 +215,30 @@ test.describe('cropping', () => {
     }
   })
 
+  /*
+   * Cropping was reachable only by double-clicking the picture, which nothing
+   * on screen said and no keyboard could do. The record panel offers it, as a
+   * pressed-or-not control, because a crop is a mode you are in.
+   */
+  test('is offered in the record panel, and the same control leaves it', async ({ page }) => {
+    await page.locator('[data-object-type="image"]').click()
+    const crop = page.getByRole('button', { name: 'Crop' })
+    await expect(crop).toHaveAttribute('aria-pressed', 'false')
+
+    // Arrived at by the keyboard, as somebody who cannot double-click would.
+    await crop.focus()
+    await page.keyboard.press('Shift+Tab')
+    await page.keyboard.press('Tab')
+    await expect(crop).toBeFocused()
+    await page.keyboard.press('Enter')
+    await expect(page.getByTestId('crop-overlay')).toBeVisible()
+    await expect(crop).toHaveAttribute('aria-pressed', 'true')
+
+    await crop.click()
+    await expect(page.getByTestId('crop-overlay')).toHaveCount(0)
+    await expect(page.getByTestId('selection-overlay')).toBeVisible()
+  })
+
   // One step back at a time: out of the crop, and the picture still selected.
   test('Escape leaves the crop and keeps the picture selected', async ({ page }) => {
     await page.locator('[data-object-type="image"]').dblclick()
