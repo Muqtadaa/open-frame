@@ -20,6 +20,7 @@ import {
   clearCells,
   listOf,
   markCovers,
+  markTouches,
   plainTextOf,
   setList,
   deleteTracks,
@@ -869,6 +870,8 @@ function TableEditor({
     rangeCells().every(
       (cell) => whole(cell.text) === 0 || markCovers(cell.text, 0, whole(cell.text), mark),
     )
+  const touches = (mark: Mark): boolean =>
+    rangeCells().some((cell) => markTouches(cell.text, 0, whole(cell.text), mark))
   const hasText = rangeCells().some((cell) => whole(cell.text) > 0)
   const listed = (): ListKind | undefined => {
     const kinds = rangeCells().map((cell) => listOf(cell.text, 0, whole(cell.text)))
@@ -882,6 +885,7 @@ function TableEditor({
   }
   const rangeFormat: FormatState = {
     marks: hasText ? MARKS.filter((mark) => covers(mark)) : [],
+    mixed: hasText ? MARKS.filter((mark) => !covers(mark) && touches(mark)) : [],
     list: listed(),
     size: sized(),
   }

@@ -5,6 +5,7 @@ import {
   applySize,
   isEmptyText,
   markCovers,
+  markTouches,
   normaliseText,
   plainTextOf,
   richFromPlain,
@@ -152,6 +153,20 @@ describe('rich text', () => {
 
     it('reports nothing for an empty range', () => {
       expect(markCovers(plain, 4, 4, 'bold')).toBe(false)
+    })
+
+    /**
+     * And "some of this is bold" must not read as NOT bold either: a button
+     * that showed plain off over a half-bold selection said the selection had
+     * no bold in it at all. Covered is on, touched-but-not-covered is mixed.
+     */
+    it('says when a mark reaches part of the range', () => {
+      const partly = applyMark(plain, 0, 9, 'bold', true)
+      expect(markTouches(partly, 0, 12, 'bold')).toBe(true)
+      expect(markTouches(partly, 5, 12, 'bold')).toBe(true)
+      expect(markTouches(partly, 9, 12, 'bold')).toBe(false)
+      expect(markTouches(partly, 0, 12, 'italic')).toBe(false)
+      expect(markTouches(partly, 4, 4, 'bold')).toBe(false)
     })
   })
 

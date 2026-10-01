@@ -138,3 +138,17 @@ test('says a selection of two sizes is mixed, not the default', async ({ page })
   await expect(page.getByTestId('format-size')).toHaveText('—')
   await expect(page.getByTestId('format-size')).toHaveAttribute('aria-label', 'Text size mixed')
 })
+
+test('says a selection only partly bold is mixed, neither bold nor plain', async ({ page }) => {
+  await editingNote(page, 'ab')
+  const bold = page.getByTestId('format-bold')
+  await page.keyboard.press('Home')
+  await page.keyboard.press('Shift+ArrowRight')
+  await page.keyboard.press(`${MOD}+b`)
+  await expect(bold).toHaveAttribute('aria-pressed', 'true')
+  await page.keyboard.press(`${MOD}+a`)
+  await expect(bold).toHaveAttribute('aria-pressed', 'mixed')
+  // Pressing it then makes ALL of it bold, as "mixed" promises.
+  await bold.click()
+  await expect(bold).toHaveAttribute('aria-pressed', 'true')
+})
