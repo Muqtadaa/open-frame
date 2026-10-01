@@ -1093,6 +1093,14 @@ of its L, hanging from empty space. Every pair found by either pass is now
 drawn whole (the owner's choice, over measuring only what is in line). The
 cost is more lines on a scattered selection.
 
+**Connect points on a turned object.** The connector type has always measured
+from a turned object's own edges, but the overlay drew the four points on the
+upright box around it. So on a turned note they floated off the edges, and a
+line started from one left from somewhere else. `connectPointAt` now takes the
+rotation and turns each point about the centre, from the object's own frame.
+The unit test and the e2e were seen failing first; at 45° the old points sat at
+0°.
+
 Still to come, in order:
 
 - board clarity: where hidden objects went, presence for assistive tech, a

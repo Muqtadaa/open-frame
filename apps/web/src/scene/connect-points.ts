@@ -1,4 +1,4 @@
-import type { Point, Rect } from '@openframe/core'
+import { rotatePoint, type Point, type Rect } from '@openframe/core'
 
 /**
  * Where an object's connection points sit.
@@ -92,11 +92,22 @@ export function edgeMidpoint(bounds: Rect, side: Side): Point {
 /**
  * Where to DRAW the handle: the edge midpoint, pushed out of the object.
  *
- * `outset` is in world units — the caller divides the screen distance by the
- * zoom, so the gap stays constant on screen however far out the board is.
+ * `outset` is in the same units as `bounds`. The overlay works in screen
+ * pixels, so the gap stays constant on screen however far out the board is.
+ *
+ * `rotation` turns the point about the rectangle's centre, for an object that
+ * is TURNED — in which case `bounds` must be its own unturned frame, not the
+ * box around it. Its points sat on that box and floated off the edges, while
+ * the connector type, which has always measured from the turned edges,
+ * attached a line dropped on one somewhere else.
  */
-export function connectPointAt(bounds: Rect, side: Side, outset: number): Point {
+export function connectPointAt(bounds: Rect, side: Side, outset: number, rotation = 0): Point {
   const at = edgeMidpoint(bounds, side)
   const away = outward(side)
-  return { x: at.x + away.x * outset, y: at.y + away.y * outset }
+  const point = { x: at.x + away.x * outset, y: at.y + away.y * outset }
+  return rotatePoint(
+    point,
+    { x: bounds.x + bounds.width / 2, y: bounds.y + bounds.height / 2 },
+    rotation,
+  )
 }

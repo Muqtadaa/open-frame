@@ -524,3 +524,50 @@ test.describe('the apparatus under the pointer', () => {
     expect(await page.evaluate(() => window.getSelection()?.toString() ?? '')).toBe('')
   })
 })
+
+/*
+ * A TURNED object's connection points sat on the upright box around it, so
+ * they floated off its edges, and a line started from one left from the turned
+ * edge somewhere else. They sit off the turned edges now, pushed out along
+ * each edge's own direction.
+ */
+test('connection points sit off a turned object’s own edges', async ({ page }) => {
+  await selectedShape(page, { x: 440, y: 290 })
+  for (let press = 0; press < 3; press += 1) await page.keyboard.press('.')
+  await expect(page.getByTestId('board-announcer')).toHaveText('Rotated to 45 degrees')
+
+  const shape = await boxOf(page.locator('[data-object-type="shape"]'))
+  const centre = { x: shape.x + shape.width / 2, y: shape.y + shape.height / 2 }
+  const frame = await page.evaluate(() => {
+    const doc = (
+      window as unknown as {
+        __openframe: {
+          runtime: {
+            store: {
+              getDocument: () => {
+                objects: Map<string, { frame: { width: number; height: number } }>
+              }
+            }
+          }
+        }
+      }
+    ).__openframe.runtime.store.getDocument()
+    const [only] = [...doc.objects.values()]
+    return only?.frame ?? { width: 0, height: 0 }
+  })
+
+  for (const [side, angle, half] of [
+    ['right', 45, frame.width / 2],
+    ['bottom', 135, frame.height / 2],
+    ['left', 225, frame.width / 2],
+    ['top', 315, frame.height / 2],
+  ] as const) {
+    const dot = await boxOf(page.getByTestId(`connect-${side}`))
+    const at = { x: dot.x + dot.width / 2, y: dot.y + dot.height / 2 }
+    const turned = (Math.atan2(at.y - centre.y, at.x - centre.x) * 180) / Math.PI
+    // Off the edge's middle along its own normal: the side's turned direction,
+    // and as far out as the edge plus the fixed gap.
+    expect(((turned % 360) + 360) % 360, side).toBeCloseTo(angle, 0)
+    expect(Math.hypot(at.x - centre.x, at.y - centre.y), side).toBeCloseTo(half + 26, 0)
+  }
+})
