@@ -18,6 +18,7 @@ import {
 } from '../runtime/services.js'
 import { canFollow, hueVar, initialOf } from '../scene/presence.js'
 import { Gate, GateActions, GateBody } from './Gate.js'
+import { handOver, takeHandedOver } from './share-handover.js'
 
 /**
  * The state of the room, and the way into one.
@@ -598,33 +599,6 @@ function roomLabel(status: string): string {
       return 'Reconnecting…'
     default:
       return 'Offline'
-  }
-}
-
-/** Where a move leaves its links for the board it lands on. */
-const HANDOVER = 'openframe:shared-links'
-
-function handOver(shared: SharedBoard): void {
-  try {
-    sessionStorage.setItem(HANDOVER, JSON.stringify(shared))
-  } catch {
-    // Storage refused: the board still moved, and the links are on its row.
-  }
-}
-
-/** The links a move left for THIS board, taken once so a reload does not reopen them. */
-function takeHandedOver(boardId: SharedBoard['boardId']): SharedBoard | null {
-  try {
-    const raw = sessionStorage.getItem(HANDOVER)
-    if (raw === null) return null
-    const shared = JSON.parse(raw) as Partial<SharedBoard>
-    if (shared.boardId !== boardId) return null
-    sessionStorage.removeItem(HANDOVER)
-    return typeof shared.editLink === 'string' && typeof shared.viewLink === 'string'
-      ? { boardId, editLink: shared.editLink, viewLink: shared.viewLink }
-      : null
-  } catch {
-    return null
   }
 }
 

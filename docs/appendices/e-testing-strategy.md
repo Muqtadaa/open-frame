@@ -19,6 +19,7 @@ percentage is not a goal and is not measured.
 | **Architecture**  | Vitest + dependency-cruiser | Forbidden imports, platform neutrality, declared deps, no `switch(object.type)`, no cycles | —                    |
 | `web/adapters`    | Vitest + fake-indexeddb     | Save→load round-trip, patches, **quarantine never writes back**                            | Browser quirks       |
 | `web/canvas`      | Vitest                      | Culling, hit testing, marquee containment, paint order                                     | Pixel output         |
+| `web/gestures`    | Vitest, `gesture-bench.ts`  | Every pointer mode: modifiers, snapping, **one command on release, none before it**        | The hook's wiring    |
 | `web/interaction` | Vitest                      | Pointer decisions as pure functions                                                        | Synthetic DOM events |
 | **E2E**           | Playwright                  | create → edit → move → reload → undo → restyle → delete                                    | Everything else      |
 
