@@ -997,6 +997,13 @@ pictures are then re-pointed at the bytes held here (`idb:`), so sharing the cop
 later publishes them. The e2e places a picture far off screen, deletes the
 board, keeps a copy and zooms to it; without the holding it does not load.
 
+**A world toggle on the front door.** The world was chosen only on a board, so
+the front door was always the Notebook. The bar's toggle is now one component
+(`ThemeToggle`) used in both places, last in the front door's head. The e2e
+chooses After Hours at the door and opens a board in it, and checks the toggle
+clears the account at 1280 and 390px. The two front-door goldens gained the
+button and nothing else.
+
 Still to come, in order:
 
 - board clarity: where hidden objects went, presence for assistive tech, a

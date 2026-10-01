@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, useSyncExternalStore } from 'react'
+import { useEffect, useRef, useSyncExternalStore } from 'react'
 
 import { useBoardDocument } from '../hooks/use-document-object.js'
 import { useCommands } from '../hooks/use-commands.js'
@@ -8,7 +8,6 @@ import { useOpenFrame } from '../runtime/context.js'
 import type { SaveState } from '../runtime/context.js'
 import { BENCH_TOOLS_ENABLED } from '../app/bench-flag.js'
 import { SOURCE_URL } from '../app/source-link.js'
-import { applyTheme, readTheme, type Theme } from '../app/theme.js'
 import { AccountControl } from './AccountControl.js'
 import { BoardExit } from './BoardExit.js'
 import { BoardTitle } from './BoardTitle.js'
@@ -16,7 +15,8 @@ import { AgentChanges } from './AgentChanges.js'
 import { Mentions } from './Mentions.js'
 import { DevPanel } from './DevPanel.js'
 import { ShareControl } from './ShareControl.js'
-import { AfterHoursIcon, RedoIcon, UndoIcon } from '../controls/icons.js'
+import { ThemeToggle } from './ThemeToggle.js'
+import { RedoIcon, UndoIcon } from '../controls/icons.js'
 import { MOD_KEY } from '../interaction/keymap.js'
 
 const mod = MOD_KEY
@@ -68,8 +68,6 @@ export function StatusBar() {
    * a source: the document element already holds the truth, and localStorage
    * holds it across reloads. This exists so React re-renders the pressed state.
    */
-  const [theme, setTheme] = useState<Theme>(readTheme)
-  const afterHours = theme === 'after-hours'
   const editingId = useInteractionStore((state) => state.editingId)
   const title = document.meta.title
 
@@ -240,22 +238,7 @@ export function StatusBar() {
        * source offer established that, and a theme is the same kind of thing:
        * not a record of the page, but something about the page you are reading.
        */}
-      <button
-        type="button"
-        className="of-icon-button"
-        aria-pressed={afterHours}
-        aria-label="After Hours theme"
-        data-tip={afterHours ? 'After Hours — on' : 'After Hours — off'}
-        aria-description={afterHours ? 'After Hours — on' : 'After Hours — off'}
-        data-testid="theme-toggle"
-        onClick={() => {
-          const next: Theme = afterHours ? 'notebook' : 'after-hours'
-          setTheme(next)
-          applyTheme(next)
-        }}
-      >
-        <AfterHoursIcon />
-      </button>
+      <ThemeToggle />
 
       {/*
        * The AGPL section 13 offer of source. A hosted, modified version has to

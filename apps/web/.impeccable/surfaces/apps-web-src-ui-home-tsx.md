@@ -133,7 +133,10 @@ REVISED 2026-09-27 (C3 #9 re-critique, 21/40). What drifted, and what it is now:
   in the accent, the chosen workspace and Keep in the control border, Delete
   in the one red); an unpinned pin is drawn in the control boundary's colour.
 - AN EMPTY LIST says what to do next.
+- THE WORLD is chosen here too, by the board bar's own toggle, last in the
+  head: at the far edge when signed out, after the account and mentions when
+  signed in.
 
 Still owed: nothing on this surface says whether a board has a password (the
-room knows and does not tell); the front door has no world toggle.
+room knows and does not tell).
 

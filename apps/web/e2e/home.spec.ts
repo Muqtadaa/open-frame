@@ -1,8 +1,9 @@
 import { expect, test } from '@playwright/test'
 
-import { CANVAS } from './fixtures.js'
+import { boxOf, CANVAS, overlaps } from './fixtures.js'
 import { BOARD_URL, HOME_URL } from './routes.js'
 import { seedLocalBoard } from './seed.js'
+import { signedIn } from './signed-in.js'
 
 /**
  * The front door.
@@ -116,5 +117,42 @@ test.describe('links that already exist', () => {
     await page.goto('/?board=not%20a%20board%20id')
 
     await expect(page.locator(HOME)).toBeVisible()
+  })
+})
+
+/*
+ * The world was chosen only on a board, so the front door — the first thing
+ * anybody sees — was always the Notebook, and somebody who works at night met
+ * a white page every time they went home.
+ */
+test.describe('the world, from the front door', () => {
+  test('is chosen here, and the board opens in it', async ({ page }) => {
+    await page.goto(HOME_URL)
+    const toggle = page.getByRole('button', { name: 'After Hours theme' })
+    await expect(toggle).toHaveAttribute('aria-pressed', 'false')
+
+    await toggle.click()
+    await expect(toggle).toHaveAttribute('aria-pressed', 'true')
+    await expect(page.locator('html')).toHaveAttribute('data-theme', 'after-hours')
+
+    await page.goto(BOARD_URL)
+    await expect(page.locator('html')).toHaveAttribute('data-theme', 'after-hours')
+    await expect(page.getByTestId('theme-toggle')).toHaveAttribute('aria-pressed', 'true')
+  })
+
+  test('sits at the end of the head, clear of the account, at phone width too', async ({
+    page,
+  }) => {
+    await signedIn(page, [])
+    for (const width of [1280, 390]) {
+      await page.setViewportSize({ width, height: 800 })
+      await page.goto(HOME_URL)
+      const toggle = await boxOf(page.getByRole('button', { name: 'After Hours theme' }))
+      const account = await boxOf(page.getByTestId('home-account'))
+      expect(overlaps(toggle, account)).toBe(false)
+      expect(toggle.x + toggle.width).toBeLessThanOrEqual(width)
+      // A control you press to change what you see, so a full target.
+      expect(toggle.width).toBeGreaterThanOrEqual(24)
+    }
   })
 })

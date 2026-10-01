@@ -5869,6 +5869,14 @@ textarea.of-input {
   transform: none;
 }
 
+/*
+ * The world sits at the far edge on its own when nobody is signed in; with an
+ * account, the account takes that edge and the world follows it.
+ */
+.of-home__title + .of-home__world {
+  margin-left: auto;
+}
+
 .of-home__lockup {
   display: flex;
   /*
