@@ -169,6 +169,30 @@ test.describe('the label', () => {
     expect(label!.y).toBeGreaterThan(pictureBottom)
     expect(label!.y - pictureBottom).toBeLessThan(40)
   })
+
+  test('clears the wordmark’s reflection on a phone held sideways', async ({ page }) => {
+    await page.setViewportSize({ width: 844, height: 390 })
+    await page.goto(BOARD_URL, { waitUntil: 'commit' })
+    await expect(page.locator('#of-splash img[data-loaded="true"]')).toBeVisible()
+    /*
+     * Where the reflection ends, worked out from how the 4:3 artwork is
+     * actually placed: its width fills the window, and `object-position` says
+     * how much of the overflow is cut from the top. The reflection of the
+     * lettering fades out 78% of the way down the artwork.
+     */
+    const reflectionEnds = await page
+      .locator('#of-splash img')
+      .evaluate((image: HTMLImageElement) => {
+        const shown = image.getBoundingClientRect()
+        const height = (shown.width * 3) / 4
+        const [, y = '50%'] = getComputedStyle(image).objectPosition.split(' ')
+        const cut = ((height - shown.height) * parseFloat(y)) / 100
+        return height * 0.78 - cut
+      })
+    const label = await page.locator('#of-splash p').boundingBox()
+    expect(label).not.toBeNull()
+    expect(label!.y, 'the label lies on the reflection').toBeGreaterThan(reflectionEnds)
+  })
 })
 
 /**
