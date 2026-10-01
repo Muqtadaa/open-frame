@@ -5833,6 +5833,24 @@ textarea.of-input {
  * The account sits at the column's right edge, so its tip hangs from its
  * right-hand side, like the zoom cluster's, and stays on screen.
  */
+/*
+ * A row's own actions say what they do BESIDE themselves, on their own row.
+ * Above, the default, a focused rename's tip lay over the board in the row
+ * above — the one thing on screen it was not about.
+ */
+.of-home__row-actions [data-tip]::after {
+  top: 50%;
+  right: calc(100% + var(--of-space-6));
+  bottom: auto;
+  left: auto;
+  transform: translate(var(--of-space-2), -50%);
+}
+
+.of-home__row-actions [data-tip]:hover::after,
+.of-home__row-actions [data-tip]:focus-visible::after {
+  transform: translate(0, -50%);
+}
+
 .of-home__lockup .of-home__account[data-tip]::after {
   right: 0;
   left: auto;
