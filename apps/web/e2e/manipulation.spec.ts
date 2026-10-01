@@ -1,6 +1,18 @@
 import type { Page } from '@playwright/test'
 
-import { CANVAS, drag, EDITOR, expect, place, test, undo, boxOf, viewOf } from './fixtures.js'
+import {
+  CANVAS,
+  drag,
+  EDITOR,
+  expect,
+  place,
+  test,
+  undo,
+  boxOf,
+  viewOf,
+  seedBoard,
+} from './fixtures.js'
+import { buildBoard, type BoardBuilder } from './boards.js'
 
 /**
  * Direct manipulation: resize, rotate, z-order, clipboard, lock.
@@ -14,13 +26,26 @@ const MOD = process.platform === 'darwin' ? 'Meta' : 'Control'
 
 test.use({ board: 'fresh' })
 
+/** Made with a tool's key, for the tests whose subject is making it. */
 async function create(page: Page, tool: string, x: number, y: number, text = ''): Promise<void> {
   await place(page, tool, { x, y }, text)
 }
 
+/**
+ * Already on the board, and nothing selected — as `create` left it — for the
+ * tests about what happens to an object rather than how it got there.
+ */
+async function seed(page: Page, make: (board: BoardBuilder) => void): Promise<void> {
+  await seedBoard(page, buildBoard(make))
+}
+
+const SHAPE = { shape: 'rectangle' }
+
 test.describe('resize', () => {
   test('shows handles for a selected object and hides them otherwise', async ({ page }) => {
-    await create(page, 's', 400, 300, 'Resize me')
+    await seed(page, (board) => {
+      board.note('Resize me', { x: 400, y: 300 })
+    })
     await expect(page.getByTestId('selection-overlay')).toHaveCount(0)
 
     await page.locator('[data-object-type="sticky"]').click()
@@ -30,7 +55,9 @@ test.describe('resize', () => {
   })
 
   test('resizes from the south-east corner', { tag: '@smoke' }, async ({ page }) => {
-    await create(page, 's', 400, 300, 'Resize me')
+    await seed(page, (board) => {
+      board.note('Resize me', { x: 400, y: 300 })
+    })
     await page.locator('[data-object-type="sticky"]').click()
 
     const before = await boxOf(page.locator('[data-object-type="sticky"]'))
@@ -48,7 +75,9 @@ test.describe('resize', () => {
 
   /** A resize drag must be ONE undo entry, like every other gesture. */
   test('a resize is a single undoable action', async ({ page }) => {
-    await create(page, 's', 400, 300, 'Resize me')
+    await seed(page, (board) => {
+      board.note('Resize me', { x: 400, y: 300 })
+    })
     await page.locator('[data-object-type="sticky"]').click()
 
     const before = await boxOf(page.locator('[data-object-type="sticky"]'))
@@ -67,18 +96,22 @@ test.describe('resize', () => {
 
   /** The registry decides: a sticky declares itself non-rotatable. */
   test('offers a rotate grip only for rotatable types', async ({ page }) => {
-    await create(page, 's', 400, 300, 'Sticky')
+    await seed(page, (board) => {
+      board.note('Sticky', { x: 400, y: 300 })
+      board.add('shape', { x: 800, y: 400 }, SHAPE)
+    })
     await page.locator('[data-object-type="sticky"]').click()
     await expect(page.getByTestId('handle-rotate')).toHaveCount(0)
 
     await page.keyboard.press('Escape')
-    await create(page, 'u', 800, 400)
     await page.locator('[data-object-type="shape"]').click()
     await expect(page.getByTestId('handle-rotate')).toBeVisible()
   })
 
   test('rotates a shape', async ({ page }) => {
-    await create(page, 'u', 600, 400)
+    await seed(page, (board) => {
+      board.add('shape', { x: 600, y: 400 }, SHAPE)
+    })
     await page.locator('[data-object-type="shape"]').click()
 
     const grip = await boxOf(page.getByTestId('handle-rotate'))
@@ -102,7 +135,9 @@ test.describe('resize', () => {
 
 test.describe('clipboard and ordering', () => {
   test('copies and pastes', { tag: '@smoke' }, async ({ page }) => {
-    await create(page, 's', 400, 300, 'Original')
+    await seed(page, (board) => {
+      board.note('Original', { x: 400, y: 300 })
+    })
     await page.locator('[data-object-type="sticky"]').click()
 
     await page.keyboard.press(`${MOD}+c`)
@@ -113,7 +148,9 @@ test.describe('clipboard and ordering', () => {
   })
 
   test('cuts', async ({ page }) => {
-    await create(page, 's', 400, 300, 'Cut me')
+    await seed(page, (board) => {
+      board.note('Cut me', { x: 400, y: 300 })
+    })
     await page.locator('[data-object-type="sticky"]').click()
 
     await page.keyboard.press(`${MOD}+x`)
@@ -126,8 +163,10 @@ test.describe('clipboard and ordering', () => {
   test('reorders with bracket keys', async ({ page }) => {
     // Placed apart: overlapping notes make `.first()` ambiguous to click,
     // and paint order is what this test is about, not geometry.
-    await create(page, 's', 320, 300, 'First')
-    await create(page, 's', 760, 300, 'Second')
+    await seed(page, (board) => {
+      board.note('First', { x: 320, y: 300 })
+      board.note('Second', { x: 760, y: 300 })
+    })
 
     const ids = async () =>
       page
@@ -146,7 +185,9 @@ test.describe('clipboard and ordering', () => {
 
 test.describe('context menu', () => {
   test('opens on right click and acts on the object under the pointer', async ({ page }) => {
-    await create(page, 's', 400, 300, 'Target')
+    await seed(page, (board) => {
+      board.note('Target', { x: 400, y: 300 })
+    })
 
     await page.locator('[data-object-type="sticky"]').click({ button: 'right' })
     await expect(page.getByTestId('context-menu')).toBeVisible()
@@ -157,7 +198,9 @@ test.describe('context menu', () => {
   })
 
   test('locks, which blocks further edits until unlocked', async ({ page }) => {
-    await create(page, 's', 400, 300, 'Locked')
+    await seed(page, (board) => {
+      board.note('Locked', { x: 400, y: 300 })
+    })
 
     await page.locator('[data-object-type="sticky"]').click({ button: 'right' })
     await page.getByTestId('menu-lock').click()
@@ -172,7 +215,9 @@ test.describe('context menu', () => {
   })
 
   test('dismisses on outside press', async ({ page }) => {
-    await create(page, 's', 400, 300, 'Target')
+    await seed(page, (board) => {
+      board.note('Target', { x: 400, y: 300 })
+    })
     await page.locator('[data-object-type="sticky"]').click({ button: 'right' })
     await expect(page.getByTestId('context-menu')).toBeVisible()
     await page.locator(CANVAS).click({ position: { x: 1000, y: 600 } })
@@ -199,12 +244,10 @@ test.describe('frames', () => {
    * geometry alone.
    */
   test('a note dropped on a frame moves with it afterwards', async ({ page }) => {
-    await page.keyboard.press('f')
-    await page.locator(CANVAS).click({ position: { x: 700, y: 400 } })
-    await page.locator(CANVAS).click({ position: { x: 1150, y: 130 } })
-    await page.keyboard.press('v')
-
-    await create(page, 's', 200, 200, 'Inside')
+    await seed(page, (board) => {
+      board.add('frame', { x: 700, y: 400 })
+      board.note('Inside', { x: 200, y: 200 })
+    })
 
     const note = page.locator('[data-object-type="sticky"]')
     const before = await boxOf(note)
@@ -223,12 +266,10 @@ test.describe('frames', () => {
   })
 
   test('undo returns a nested note to the board', async ({ page }) => {
-    await page.keyboard.press('f')
-    await page.locator(CANVAS).click({ position: { x: 700, y: 400 } })
-    await page.locator(CANVAS).click({ position: { x: 1150, y: 130 } })
-    await page.keyboard.press('v')
-
-    await create(page, 's', 200, 200, 'Note')
+    await seed(page, (board) => {
+      board.add('frame', { x: 700, y: 400 })
+      board.note('Note', { x: 200, y: 200 })
+    })
     const note = page.locator('[data-object-type="sticky"]')
     const start = await boxOf(note)
 
@@ -240,12 +281,10 @@ test.describe('frames', () => {
   })
 
   test('deleting a frame removes its contents, and undo restores both', async ({ page }) => {
-    await page.keyboard.press('f')
-    await page.locator(CANVAS).click({ position: { x: 700, y: 400 } })
-    await page.locator(CANVAS).click({ position: { x: 1150, y: 130 } })
-    await page.keyboard.press('v')
-
-    await create(page, 's', 200, 200, 'Doomed')
+    await seed(page, (board) => {
+      board.add('frame', { x: 700, y: 400 })
+      board.note('Doomed', { x: 200, y: 200 })
+    })
     const note = page.locator('[data-object-type="sticky"]')
     const start = await boxOf(note)
     await drag(page, { x: start.x + 40, y: start.y + 40 }, { x: 700, y: 400 })
@@ -264,7 +303,9 @@ test.describe('frames', () => {
 test.describe('snap to grid', () => {
   test('is on by default and lands a drag on the grid', async ({ page }) => {
     await expect(page.getByTestId('snap-toggle')).toHaveAttribute('data-snap', 'on')
-    await create(page, 's', 405, 307, 'Snappy')
+    await seed(page, (board) => {
+      board.note('Snappy', { x: 405, y: 307 })
+    })
 
     const note = page.locator('[data-object-type="sticky"]')
     const before = await boxOf(note)
@@ -295,7 +336,9 @@ test.describe('snap to grid', () => {
   test('is suspended while the modifier is held, without changing the setting', async ({
     page,
   }) => {
-    await create(page, 's', 405, 307, 'Free')
+    await seed(page, (board) => {
+      board.note('Free', { x: 405, y: 307 })
+    })
 
     const note = page.locator('[data-object-type="sticky"]')
     const before = await boxOf(note)
@@ -320,7 +363,9 @@ test.describe('snap to grid', () => {
     await page.getByTestId('snap-toggle').click()
     await expect(page.getByTestId('snap-toggle')).toHaveAttribute('data-snap', 'off')
 
-    await create(page, 's', 405, 307, 'Loose')
+    await seed(page, (board) => {
+      board.note('Loose', { x: 405, y: 307 })
+    })
     const note = page.locator('[data-object-type="sticky"]')
     const before = await boxOf(note)
 
@@ -338,7 +383,9 @@ test.describe('snap to grid', () => {
   })
 
   test('snaps a resize to the grid', async ({ page }) => {
-    await create(page, 's', 405, 307, 'Resize')
+    await seed(page, (board) => {
+      board.note('Resize', { x: 405, y: 307 })
+    })
     await page.locator('[data-object-type="sticky"]').click()
 
     const handle = await boxOf(page.getByTestId('handle-se'))
@@ -369,11 +416,9 @@ test.describe('reported regressions', () => {
    * to align within and every label stayed centred whatever the panel said.
    */
   test('a shape label honours the alignment that was picked', async ({ page }) => {
-    await page.keyboard.press('u')
-    await page.locator(CANVAS).click({ position: AT })
-    await page.locator(EDITOR).fill('align me')
-    await page.locator(CANVAS).click({ position: CLEAR })
-    await page.keyboard.press('v')
+    await seed(page, (board) => {
+      board.add('shape', AT, { ...SHAPE, text: [{ text: 'align me' }] })
+    })
 
     await page.locator(CANVAS).click({ position: AT })
     const text = page.getByTestId('shape-label-text')
@@ -397,12 +442,12 @@ test.describe('reported regressions', () => {
    * then hid everything inside it for as long as it was selected.
    */
   test('selecting a frame does not hide what is inside it', async ({ page }) => {
-    await page.keyboard.press('s')
-    await page.locator(CANVAS).click({ position: AT })
-    await page.locator(EDITOR).fill('inside')
-    await page.locator(CANVAS).click({ position: CLEAR })
-    await page.keyboard.press('v')
+    await seed(page, (board) => {
+      board.note('inside', AT)
+    })
 
+    // The frame is still PLACED: adopting what it lands on is how the note
+    // gets inside it, and a seeded frame adopts nothing.
     await page.keyboard.press('f')
     await page.locator(CANVAS).click({ position: AT })
     await page.locator(EDITOR).fill('Findings')

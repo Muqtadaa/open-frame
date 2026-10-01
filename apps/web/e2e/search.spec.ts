@@ -1,6 +1,7 @@
 import type { Page } from '@playwright/test'
 
-import { CANVAS, expect, test } from './fixtures.js'
+import { CANVAS, expect, test, seedBoard } from './fixtures.js'
+import { buildBoard, type BoardBuilder } from './boards.js'
 
 /**
  * Finding things by what they MEAN, walked in a browser.
@@ -11,18 +12,33 @@ import { CANVAS, expect, test } from './fixtures.js'
  * declarations falsifiable at last (rule 21).
  */
 
-const EDITOR = '[data-testid="rich-text-editor"]'
 const AT = { x: 340, y: 280 }
 const CLEAR = { x: 1120, y: 620 }
 
 test.use({ board: 'fresh' })
 
-async function note(page: Page, at: { x: number; y: number }, text: string): Promise<void> {
-  await page.keyboard.press('s')
-  await page.locator(CANVAS).click({ position: at })
-  await page.locator(EDITOR).fill(text)
-  await page.locator(CANVAS).click({ position: CLEAR })
-  await page.keyboard.press('v')
+/**
+ * The board to search, already there. Search reads what is in the document;
+ * how it got there — placed, typed into, promoted, filled in — is other
+ * specs' subject, and cost these several seconds each.
+ */
+async function seed(page: Page, make: (board: BoardBuilder) => void): Promise<void> {
+  await seedBoard(page, buildBoard(make))
+}
+
+/** A piece of evidence, as promoting a note and filling in its record leaves it. */
+function evidence(
+  board: BoardBuilder,
+  at: { x: number; y: number },
+  text: string,
+  record: { source?: string; tags?: string[] },
+): void {
+  board.add('evidence', at, {
+    text: [{ text }],
+    source: record.source ?? '',
+    participant: '',
+    tags: record.tags ?? [],
+  })
 }
 
 async function openSearch(page: Page): Promise<void> {
@@ -63,7 +79,9 @@ test.describe('finding things on a board', () => {
   })
 
   test('finds a note by its text', { tag: '@smoke' }, async ({ page }) => {
-    await note(page, AT, 'Customers do not understand pricing')
+    await seed(page, (board) => {
+      board.note('Customers do not understand pricing', AT)
+    })
     await openSearch(page)
     await page.getByTestId('search-input').fill('understand')
     await expect(page.getByTestId('search-count')).toHaveText('1 found')
@@ -75,16 +93,12 @@ test.describe('finding things on a board', () => {
    * same words; only one of them has a source, and only one is found by it.
    */
   test('finds evidence by a field that is not its text', async ({ page }) => {
-    await note(page, AT, 'Could not find the price')
-    await page.locator(CANVAS).click({ position: AT })
-    await page.locator(CANVAS).click({ position: AT, button: 'right' })
-    await page.getByTestId('menu-promote-to').click()
-    await page.getByTestId('menu-evidence').click()
-    await page.locator(CANVAS).click({ position: AT })
-    await page.getByTestId('field-source').fill('September usability study')
-    await page.getByTestId('field-tags').fill('pricing, comprehension')
-    await page.getByTestId('field-source').click()
-    await page.locator(CANVAS).click({ position: CLEAR })
+    await seed(page, (board) => {
+      evidence(board, AT, 'Could not find the price', {
+        source: 'September usability study',
+        tags: ['pricing', 'comprehension'],
+      })
+    })
 
     await openSearch(page)
     await page.getByTestId('search-input').fill('September')
@@ -93,15 +107,10 @@ test.describe('finding things on a board', () => {
   })
 
   test('filters by type and by tag', async ({ page }) => {
-    await note(page, AT, 'A plain note about pricing')
-    await note(page, { x: 340, y: 500 }, 'Another note about pricing')
-    await page.locator(CANVAS).click({ position: AT })
-    await page.locator(CANVAS).click({ position: AT, button: 'right' })
-    await page.getByTestId('menu-promote-to').click()
-    await page.getByTestId('menu-evidence').click()
-    await page.locator(CANVAS).click({ position: AT })
-    await page.getByTestId('field-tags').fill('pricing')
-    await page.locator(CANVAS).click({ position: CLEAR })
+    await seed(page, (board) => {
+      evidence(board, AT, 'A plain note about pricing', { tags: ['pricing'] })
+      board.note('Another note about pricing', { x: 340, y: 500 })
+    })
 
     await openSearch(page)
     await page.getByTestId('search-input').fill('pricing')
@@ -116,7 +125,9 @@ test.describe('finding things on a board', () => {
   })
 
   test('says so when nothing matches', async ({ page }) => {
-    await note(page, AT, 'Something')
+    await seed(page, (board) => {
+      board.note('Something', AT)
+    })
     await openSearch(page)
     await page.getByTestId('search-input').fill('xyzzy')
     // With a way forward, not only a dead end.
@@ -129,7 +140,9 @@ test.describe('finding things on a board', () => {
    * anywhere, so choosing one selects it AND pans the minimum needed to see it.
    */
   test('taking a result selects it and brings it into view', async ({ page }) => {
-    await note(page, AT, 'Far away note')
+    await seed(page, (board) => {
+      board.note('Far away note', AT)
+    })
     // Scroll the board so the note is off screen.
     await page.mouse.move(700, 400)
     await page.mouse.wheel(0, -4000)
@@ -145,8 +158,10 @@ test.describe('finding things on a board', () => {
   })
 
   test('the arrow keys move through the results', async ({ page }) => {
-    await note(page, AT, 'Alpha pricing')
-    await note(page, { x: 340, y: 500 }, 'Beta pricing')
+    await seed(page, (board) => {
+      board.note('Alpha pricing', AT)
+      board.note('Beta pricing', { x: 340, y: 500 })
+    })
     await openSearch(page)
     await page.getByTestId('search-input').fill('pricing')
     await expect(
@@ -163,8 +178,10 @@ test.describe('finding things on a board', () => {
    * it is on. The highlight used to be a class only a sighted user could see.
    */
   test('tells assistive technology which result the arrows are on', async ({ page }) => {
-    await note(page, AT, 'Alpha pricing')
-    await note(page, { x: 340, y: 500 }, 'Beta pricing')
+    await seed(page, (board) => {
+      board.note('Alpha pricing', AT)
+      board.note('Beta pricing', { x: 340, y: 500 })
+    })
     await openSearch(page)
     const input = page.getByTestId('search-input')
     await input.fill('pricing')
@@ -203,10 +220,9 @@ test.describe('finding things on a board', () => {
 
   // The type column already names the kind; the line beside it is the content.
   test("does not name a result's type twice", async ({ page }) => {
-    await page.keyboard.press('u')
-    await page.locator(CANVAS).click({ position: AT })
-    await page.locator(EDITOR).fill('Checkout box')
-    await page.locator(CANVAS).click({ position: CLEAR })
+    await seed(page, (board) => {
+      board.add('shape', AT, { shape: 'rectangle', text: [{ text: 'Checkout box' }] })
+    })
     await openSearch(page)
     await page.getByTestId('search-input').fill('checkout')
     await expect(page.getByTestId('search-summary')).toHaveText('Checkout box')
@@ -217,7 +233,9 @@ test.describe('finding things on a board', () => {
    * in "discovery" must stay a 'v', and Delete must not destroy the selection.
    */
   test('typing a query does not drive the canvas', async ({ page }) => {
-    await note(page, AT, 'Conversion review')
+    await seed(page, (board) => {
+      board.note('Conversion review', AT)
+    })
     await page.locator(CANVAS).click({ position: AT })
     await openSearch(page)
     await page.getByTestId('search-input').fill('conversion')

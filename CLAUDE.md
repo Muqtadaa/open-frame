@@ -579,6 +579,11 @@ while checking nothing. `eslint-plugin-playwright` holds the rest: no sleeps
 (wait for the state the sleep stood for), no branches in a test body, no
 forced clicks. `e2e-rooms/rooms.ts` is the same for the rooms suite.
 
+A spec whose subject is not making objects seeds its board — `buildBoard` in
+`e2e/boards.ts`, then `seedBoard` — rather than clicking it into existence.
+Clicks are seconds a test in three engines, and they make every spec fail
+whenever creation breaks.
+
 A test of the core loop — placing, editing, moving, saving — carries
 `{ tag: '@smoke' }`, and so runs in Firefox and WebKit on every PR. A spec
 that can only run in Chromium by construction (CDP) is excluded in

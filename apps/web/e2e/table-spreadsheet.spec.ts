@@ -1,6 +1,7 @@
 import type { Locator, Page } from '@playwright/test'
 
-import { CANVAS, expect, test, undo, boxOf } from './fixtures.js'
+import { CANVAS, expect, test, undo, boxOf, seedBoard } from './fixtures.js'
+import { buildBoard } from './boards.js'
 
 /**
  * A table edited as a spreadsheet (ADR 0015): a selection the keyboard moves,
@@ -11,14 +12,34 @@ const AWAY = { x: 1100, y: 640 }
 
 test.use({ board: 'open' })
 
-/** A new table, left open in its editor, navigating from A1. */
-async function newTable(page: Page, size?: string): Promise<void> {
-  await page.getByTestId('tool-table').click()
-  if (size !== undefined) {
-    await page.getByTestId('table-menu').click()
-    await page.getByTestId(`table-size-${size}`).click()
-  }
-  await page.locator(CANVAS).click({ position: { x: 340, y: 300 } })
+/**
+ * A table on the board, left open in its editor, navigating from A1.
+ *
+ * Seeded rather than placed with the tool: every test here is about editing a
+ * table, and placing one is `table-and-code.spec.ts`'s subject. Placing it
+ * also selected it and opened its editor, so this does the same the way a
+ * person would come back to one — select it, press Enter. The seed is not an
+ * undo step, but neither did placing it count against the edits these tests
+ * undo: each undoes its own one edit and no more.
+ */
+async function newTable(page: Page, size?: { columns: number; rows: number }): Promise<void> {
+  await seedBoard(
+    page,
+    buildBoard((board) => {
+      board.add(
+        'table',
+        { x: 340, y: 300 },
+        size === undefined
+          ? undefined
+          : {
+              columns: Array.from({ length: size.columns }, () => 1),
+              rows: Array.from({ length: size.rows }, () => 1),
+            },
+      )
+    }),
+  )
+  await page.locator('[data-object-type="table"]').click()
+  await page.keyboard.press('Enter')
   await expect(page.getByTestId('table-editor')).toHaveAttribute('data-mode', 'navigate')
 }
 
@@ -190,7 +211,7 @@ test.describe('the pointer', () => {
   })
 
   test('lines the letters up with the columns they name', async ({ page }) => {
-    await newTable(page, '4x2')
+    await newTable(page, { columns: 4, rows: 2 })
     for (const [letter, index] of [
       ['A', 0],
       ['D', 3],

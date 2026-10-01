@@ -1,6 +1,7 @@
 import type { Page } from '@playwright/test'
 
-import { boxOf, CANVAS, EDITOR, expect, place, test, undo, saved } from './fixtures.js'
+import { boxOf, CANVAS, EDITOR, expect, test, undo, saved, seedBoard } from './fixtures.js'
+import { buildBoard } from './boards.js'
 
 /**
  * Grouping: one container, built from ordinary commands.
@@ -15,16 +16,22 @@ const MOD = process.platform === 'darwin' ? 'Meta' : 'Control'
 
 test.use({ board: 'fresh' })
 
-async function sticky(page: Page, x: number, y: number, text: string): Promise<void> {
-  await place(page, 's', { x, y }, text, { x: 1120, y: 140 })
-}
-
 const A = { x: 320, y: 300 }
 const B = { x: 620, y: 300 }
 
+/**
+ * Notes A and B, loose and unselected. Seeded: what these tests group is two
+ * ordinary notes, and placing them is nobody's subject here. A is made first,
+ * so it is first in the DOM, as it was when it was placed first.
+ */
 async function twoNotes(page: Page): Promise<void> {
-  await sticky(page, A.x, A.y, 'A')
-  await sticky(page, B.x, B.y, 'B')
+  await seedBoard(
+    page,
+    buildBoard((board) => {
+      board.note('A', A)
+      board.note('B', B)
+    }),
+  )
 }
 
 async function groupBoth(page: Page): Promise<void> {

@@ -6,6 +6,7 @@ import {
   type Page,
 } from '@playwright/test'
 
+import type { BuiltBoard } from './boards.js'
 import { BOARD_URL } from './routes.js'
 
 /**
@@ -69,20 +70,52 @@ export async function openBoard(page: Page): Promise<void> {
   await waitForBoard(page)
 }
 
-/** Opens the local board with nothing stored. */
+/**
+ * Opens the local board with nothing stored.
+ *
+ * Every test gets a new browser context, and a new context has no storage at
+ * all, so there is nothing to delete. This used to delete the database and
+ * reload anyway: a second page load in each of 232 tests, about 0.65s apiece
+ * in Chromium and more in the other engines. What it promised — no test sees
+ * another's work — is now ASSERTED instead of arranged, so a spec that ever
+ * shares a context fails here rather than reading somebody else's board.
+ */
 export async function openFreshBoard(page: Page): Promise<void> {
-  await page.goto(BOARD_URL)
-  await page.evaluate(
-    async () =>
-      new Promise<void>((resolve) => {
-        const request = indexedDB.deleteDatabase('openframe')
-        request.onsuccess = () => resolve()
-        request.onerror = () => resolve()
-        request.onblocked = () => resolve()
-      }),
-  )
-  await page.reload()
-  await waitForBoard(page)
+  await openBoard(page)
+  await expect(page.locator('[data-object-id]')).toHaveCount(0)
+}
+
+/**
+ * Opens the local board holding exactly `built` (see `boards.ts`).
+ *
+ * Handed to the dev server's `runtime.devTools.loadBoard`, which reads it
+ * through the same `deserializeBoard` a stored board goes through and swaps it
+ * in with no reload. Writing it into IndexedDB instead cost a second page
+ * load, about a second — more than the clicks it replaced, which is why the
+ * measurement came before the conversion. `devTools` is compiled out of
+ * production builds (rule 12), and the suite always runs against `pnpm vite`.
+ *
+ * Nothing is dispatched: the seed is not in the undo history, and autosave —
+ * which listens to commands — writes it with the spec's first real edit. A
+ * spec that reloads without having edited anything will find an empty board.
+ */
+export async function seedBoard(page: Page, built: BuiltBoard): Promise<void> {
+  // A spec that already asked for a fresh board has one open: a second page
+  // load is the very cost this exists to remove.
+  if (!(await page.locator(CANVAS).isVisible())) await openFreshBoard(page)
+  const loaded = await page.evaluate((payload) => {
+    const tools = (
+      window as unknown as {
+        __openframe?: {
+          runtime: { devTools?: { loadBoard: (raw: unknown) => { ok: boolean } } }
+        }
+      }
+    ).__openframe?.runtime.devTools
+    if (tools === undefined) return 'no devTools: the suite must run against the dev server'
+    return tools.loadBoard(payload).ok ? 'ok' : 'the seeded board did not load'
+  }, built.payload)
+  expect(loaded).toBe('ok')
+  await expect(page.locator('[data-object-id]')).toHaveCount(built.objects)
 }
 
 export const test = base.extend<{ board: BoardState; openedBoard: undefined }>({

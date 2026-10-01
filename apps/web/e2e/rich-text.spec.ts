@@ -1,6 +1,7 @@
 import type { Page } from '@playwright/test'
 
-import { CANVAS, expect, test, undo, saved, viewOf } from './fixtures.js'
+import { CANVAS, expect, test, undo, saved, viewOf, seedBoard } from './fixtures.js'
+import { buildBoard } from './boards.js'
 
 /**
  * Formatting selected text (ADR 0012), walked in a browser.
@@ -16,11 +17,27 @@ const CLEAR = { x: 1120, y: 140 }
 
 test.use({ board: 'fresh' })
 
+/**
+ * A note saying `text`, open in its editor — the state placing one and typing
+ * left behind. Seeded, because what these tests are about is formatting;
+ * placing a note is tools-and-navigation's. Opened the way a person comes back
+ * to a note: select it, press Enter.
+ */
 async function noteSaying(page: Page, text: string): Promise<void> {
-  await page.keyboard.press('s')
-  await page.locator(CANVAS).click({ position: AT })
+  await seedBoard(
+    page,
+    buildBoard((board) => {
+      board.note(text, AT)
+    }),
+  )
+  await openEditor(page, 'sticky')
+}
+
+/** Selects the only object of `type` and opens its editor with Enter. */
+async function openEditor(page: Page, type: string): Promise<void> {
+  await page.locator(`[data-object-type="${type}"]`).click()
+  await page.keyboard.press('Enter')
   await expect(page.locator(EDITOR)).toBeFocused()
-  await page.locator(EDITOR).fill(text)
 }
 
 /** Selects the first `count` characters, as a user dragging across them would. */
@@ -133,9 +150,17 @@ test.describe('formatting selected text', () => {
    * the thing worth asserting, not just its ends.
    */
   test('reaches a size that suits a large shape', async ({ page }) => {
-    await page.keyboard.press('u')
-    await page.locator(CANVAS).click({ position: { x: 300, y: 200 } })
-    await page.locator(EDITOR).fill('Discovery')
+    await seedBoard(
+      page,
+      buildBoard((board) => {
+        board.add(
+          'shape',
+          { x: 300, y: 200 },
+          { shape: 'rectangle', text: [{ text: 'Discovery' }] },
+        )
+      }),
+    )
+    await openEditor(page, 'shape')
     await page.locator(EDITOR).click()
 
     const measure = async (): Promise<number> =>
@@ -283,9 +308,7 @@ test.describe('formatting selected text', () => {
  */
 test.describe('lists', () => {
   test.beforeEach(async ({ page }) => {
-    await page.keyboard.press('s')
-    await page.locator(CANVAS).click({ position: AT })
-    await expect(page.locator(EDITOR)).toBeFocused()
+    await noteSaying(page, '')
     await page.keyboard.press('Delete')
   })
 
@@ -380,10 +403,13 @@ test.describe('lists', () => {
 })
 
 test('a frame title takes formatting and a list', async ({ page }) => {
-  await page.keyboard.press('f')
-  await page.locator(CANVAS).click({ position: AT })
-  await expect(page.locator(EDITOR)).toBeFocused()
-  await page.keyboard.type('Findings')
+  await seedBoard(
+    page,
+    buildBoard((board) => {
+      board.add('frame', AT, { name: [{ text: 'Findings' }] })
+    }),
+  )
+  await openEditor(page, 'frame')
   await page.keyboard.press('ControlOrMeta+a')
   await page.getByTestId('format-bold').click()
   await page.locator(CANVAS).click({ position: CLEAR })
@@ -402,9 +428,7 @@ test('pasting markup with images fetches none of them', async ({ page }) => {
     fetched.push(route.request().url())
     await route.fulfill({ status: 200, body: '' })
   })
-  await page.keyboard.press('s')
-  await page.locator(CANVAS).click({ position: AT })
-  await expect(page.locator(EDITOR)).toBeFocused()
+  await noteSaying(page, '')
   await page.locator(EDITOR).evaluate((element) => {
     const data = new DataTransfer()
     data.setData(

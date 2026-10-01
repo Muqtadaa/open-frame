@@ -125,6 +125,19 @@ The file also holds the gestures every spec needs — `drag`, `place`,
 `clickLine` — and the waits: `saved(page)` before a reload, never a sleep
 guessing at the autosave debounce.
 
+A spec whose subject is not MAKING objects starts from a seeded board:
+`buildBoard` (`e2e/boards.ts`) runs core's dispatcher in Node, and
+`seedBoard(page, built)` hands the result to the open page's dev-only
+`loadBoard` — no reload, nothing in the undo history. The builder places an
+object where a click at the same point would, which `boards.spec.ts` holds it
+to, so a spec keeps its click coordinates. Opening a board and making three
+notes through the rail measured 1.6s; opening it seeded, 0.85s. (Writing the
+board into IndexedDB and reloading was tried first and cost 2.2s: the reload
+was dearer than the clicks.) On the eleven
+setup-heavy files the suite went from 562s to 370s in Chromium. Specs about
+creation — the rail, placement, drawing, a frame adopting what it is dropped
+on — keep driving the UI.
+
 A missing element fails the test. Read a box with `boxOf`, an index with
 `defined`; a test that returned on `null` passed while checking nothing, as
 47 places once did. The lint (`eslint-plugin-playwright`) refuses sleeps,

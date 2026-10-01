@@ -1,6 +1,7 @@
 import { expect, test, type Page } from '@playwright/test'
 
-import { CANVAS, openBoard, boxOf } from './fixtures.js'
+import { CANVAS, boxOf, seedBoard } from './fixtures.js'
+import { buildBoard } from './boards.js'
 
 /**
  * The context menu is a menu a keyboard can drive (the ARIA menu pattern).
@@ -12,16 +13,18 @@ import { CANVAS, openBoard, boxOf } from './fixtures.js'
  */
 const NOTE = { x: 340, y: 260 }
 
-// Local rather than the shared `place`: it types rather than fills, and checks the tool is armed.
+/**
+ * A board holding one note, nothing selected. Seeded: every test here is about
+ * the menu that opens on it, and placing a note is not what any of them is
+ * checking.
+ */
 async function boardWithNote(page: Page): Promise<void> {
-  await openBoard(page)
-  await page.keyboard.press('s')
-  await expect(page.getByTestId('tool-sticky')).toHaveAttribute('aria-pressed', 'true')
-  await page.locator(CANVAS).click({ position: NOTE })
-  await expect(page.locator('[contenteditable="true"]')).toBeFocused()
-  await page.keyboard.type('Pricing page confuses')
-  await page.locator(CANVAS).click({ position: { x: 1100, y: 640 } })
-  await page.keyboard.press('v')
+  await seedBoard(
+    page,
+    buildBoard((board) => {
+      board.note('Pricing page confuses', NOTE)
+    }),
+  )
   await expect(page.locator('[data-object-type="sticky"]')).toContainText('Pricing page')
 }
 
