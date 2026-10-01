@@ -55,3 +55,4 @@ tools/bench/fixtures/
 **/.impeccable/live/server.json
 **/.impeccable/live/sessions/
 **/.impeccable/live/annotations/
+bench-results/

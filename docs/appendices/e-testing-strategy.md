@@ -107,6 +107,15 @@ fixtures and **report** measurements rather than asserting thresholds — with o
 exception, which is asserted because the architecture depends on it: DOM node
 count must not grow with board size.
 
+Every night the benchmarks run in CI (`nightly.yml`, "Performance budgets"):
+`bench:cull`, `bench:mcp` and the renderer probe write their numbers as JSON,
+`pnpm bench:check` holds them to `tools/bench/budgets.ts` and prints the table
+into the job summary, and the results are kept for 90 days as the trend. The
+budgets are the product's own limits rather than one machine's readings, map
+copies are held exactly, and a budget that nothing measured fails. Breaking
+the transaction's copy-once back to a copy per command was caught as 202
+copies against a budget of 3.
+
 ### Writing a browser test
 
 Start from `e2e/fixtures.ts`, not `@playwright/test`. `test.use({ board:

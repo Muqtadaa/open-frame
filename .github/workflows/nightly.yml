@@ -54,3 +54,52 @@ jobs:
           path: apps/web/test-results/
           retention-days: 14
           if-no-files-found: ignore
+
+  performance:
+    name: Performance budgets
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - run: pnpm install --frozen-lockfile
+
+      - name: Install Playwright browsers
+        uses: ./.github/actions/playwright
+
+      - name: Generate the benchmark boards
+        run: pnpm bench:fixtures
+
+      # The cost of one pass, measured directly: frame time is capped at the
+      # refresh rate and only moves once the budget is already blown (rule 10).
+      - name: Cull and relation lookups
+        run: pnpm bench:cull --json bench-results/cull.json
+
+      - name: An agent peer's reads and writes
+        run: pnpm bench:mcp --json bench-results/mcp.json
+
+      # Asserts that DOM nodes track what is on screen; its load and pan
+      # times are recorded as the trend, not budgeted.
+      - name: Renderer scaling probe
+        run: pnpm test:bench
+        env:
+          OPENFRAME_BENCH_JSON: ${{ github.workspace }}/bench-results/renderer.json
+
+      - name: Hold the numbers to their budgets
+        if: ${{ !cancelled() }}
+        run: pnpm bench:check bench-results/*.json
+
+      # Each night's numbers, kept: the trend is the series of these.
+      - uses: actions/upload-artifact@v4
+        if: ${{ !cancelled() }}
+        with:
+          name: bench-results
+          path: bench-results/
+          retention-days: 90
+          if-no-files-found: ignore

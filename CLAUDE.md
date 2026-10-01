@@ -18,6 +18,7 @@ pnpm test:e2e:all     # the whole suite in all three engines (nightly)
 pnpm bench:fixtures   # generate 100/1k/5k/10k boards into apps/web/public/bench/
 pnpm test:bench       # renderer scaling probe (needs the fixtures above)
 pnpm build:bench      # deployable build WITH the bench panel and fixtures
+pnpm bench:check <results.json…>   # hold bench results to tools/bench/budgets.ts (nightly)
 ```
 
 ## Layout
@@ -160,6 +161,13 @@ fixtures were sticky notes only — the cheapest possible bounds, four numbers o
 a frame — so a flat frame time on them said nothing about connectors, which
 resolve endpoints through the document, or groups, which union their children's.
 `board-mixed-*` exists for that reason.
+
+**The nightly holds these numbers to budgets** (`tools/bench/budgets.ts`), and
+keeps each night's results as the trend. A budget is a limit the PRODUCT has —
+a frame for a cull, the P2 thresholds for an agent peer — never today's reading
+plus a margin: the same commit culls in 3ms on one machine and 7ms on another.
+Map copies do not vary with the machine, so they are held exactly. A budget
+nothing measured fails, so a renamed metric cannot pass for ever.
 
 ### 12. Nothing goes in `apps/web/public/`
 
