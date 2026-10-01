@@ -38,6 +38,11 @@ export function isLocalOnly(ref: Pick<AssetRef, 'locator'>): boolean {
   return ref.locator.startsWith(LOCAL_PREFIX)
 }
 
+/** The browser's own store, which can say whether it holds something without painting it. */
+export interface LocalAssetStore extends AssetStore {
+  readonly has: (id: AssetId) => Promise<boolean>
+}
+
 export interface RoomAssetStoreOptions {
   readonly url: (assetId: AssetId) => string
   readonly credentials: () => RoomCredentials
@@ -46,10 +51,10 @@ export interface RoomAssetStoreOptions {
 }
 
 export class RoomAssetStore implements AssetStore {
-  readonly #local: AssetStore
+  readonly #local: LocalAssetStore
   readonly #options: RoomAssetStoreOptions
 
-  constructor(local: AssetStore, options: RoomAssetStoreOptions) {
+  constructor(local: LocalAssetStore, options: RoomAssetStoreOptions) {
     this.#local = local
     this.#options = options
   }
@@ -99,6 +104,26 @@ export class RoomAssetStore implements AssetStore {
 
   async delete(id: AssetId): Promise<void> {
     await this.#local.delete(id)
+  }
+
+  /**
+   * Brings the room's bytes into this browser, without painting them.
+   *
+   * What makes this browser's copy of a shared board a copy of its pictures as
+   * well. The board only resolves what is on screen, and a deleted room
+   * refuses every request — so a picture nobody had scrolled to was lost to
+   * whoever kept what was left. Reports whether the bytes are now here.
+   */
+  async hold(ref: AssetRef): Promise<boolean> {
+    if (await this.#local.has(ref.id)) return true
+    try {
+      const response = await this.#fetch(this.#options.url(ref.id), { method: 'GET' })
+      if (!response.ok) return false
+      await this.#local.put(ref.id, await response.blob())
+      return true
+    } catch {
+      return false
+    }
   }
 
   /**

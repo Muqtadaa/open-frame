@@ -987,6 +987,16 @@ e2e test seen failing on the code before it:
   - At exactly 760px wide there is no room: 280px between the rail and the panel
     for a 286px bar. That case is recorded, not fixed.
 
+**A kept copy keeps its pictures.** A deleted room refuses its pictures along
+with everything else, and the board fetches only what is on screen, so a copy
+kept of a board deleted under somebody had a hole wherever nobody had scrolled.
+The owner chose to fetch quietly on open: a shared board now holds every picture
+in this browser in the background (`holdAssets`), one at a time, rescanning only
+when objects appear or disappear. Holding never mints an object URL. The copy's
+pictures are then re-pointed at the bytes held here (`idb:`), so sharing the copy
+later publishes them. The e2e places a picture far off screen, deletes the
+board, keeps a copy and zooms to it; without the holding it does not load.
+
 Still to come, in order:
 
 - board clarity: where hidden objects went, presence for assistive tech, a

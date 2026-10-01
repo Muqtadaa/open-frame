@@ -58,13 +58,21 @@ export class AssetService {
   readonly #store: AssetStore
   readonly #ids: IdGenerator
   readonly #measure: ImageMeasurer
+  readonly #hold: ((ref: AssetRef) => Promise<boolean>) | undefined
   readonly #urls = new Map<AssetId, string>()
   readonly #failed = new Set<AssetId>()
   readonly #pending = new Set<AssetId>()
   readonly #listeners = new Set<() => void>()
   #version = 0
 
-  constructor(store: AssetStore, ids: IdGenerator, measure: ImageMeasurer = measureImage) {
+  constructor(
+    store: AssetStore,
+    ids: IdGenerator,
+    measure: ImageMeasurer = measureImage,
+    /** Fetches bytes held elsewhere into this browser; absent where there is no elsewhere. */
+    hold?: (ref: AssetRef) => Promise<boolean>,
+  ) {
+    this.#hold = hold
     this.#store = store
     this.#ids = ids
     this.#measure = measure
@@ -150,6 +158,16 @@ export class AssetService {
    */
   replace(id: AssetId, blob: AssetBlob): Promise<AssetRef> {
     return this.#store.put(id, blob)
+  }
+
+  /**
+   * Makes sure this browser holds the bytes, without painting them.
+   *
+   * True when they are here. A store with nowhere else to fetch from has
+   * nothing to add, so it answers that they are as held as they will get.
+   */
+  hold(ref: AssetRef): Promise<boolean> {
+    return this.#hold === undefined ? Promise.resolve(true) : this.#hold(ref)
   }
 
   isMissing(ref: AssetRef): boolean {

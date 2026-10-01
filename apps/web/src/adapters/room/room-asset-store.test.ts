@@ -1,13 +1,7 @@
 import { describe, expect, it, vi } from 'vitest'
-import {
-  asAssetId,
-  type AssetBlob,
-  type AssetId,
-  type AssetRef,
-  type AssetStore,
-} from '@openframe/core'
+import { asAssetId, type AssetBlob, type AssetId, type AssetRef } from '@openframe/core'
 
-import { isLocalOnly, RoomAssetStore } from './room-asset-store.js'
+import { isLocalOnly, RoomAssetStore, type LocalAssetStore } from './room-asset-store.js'
 
 const ID = asAssetId('ast_1')
 
@@ -20,8 +14,14 @@ function blobOf(bytes: number, type = 'image/png'): AssetBlob {
 }
 
 /** A local store that can be told to have nothing, like anyone else's browser. */
-class FakeLocal implements AssetStore {
+class FakeLocal implements LocalAssetStore {
   readonly held = new Map<AssetId, AssetBlob>()
+  /** How many times a URL was minted: holding must never mint one. */
+  resolved = 0
+
+  has(id: AssetId): Promise<boolean> {
+    return Promise.resolve(this.held.has(id))
+  }
 
   put(id: AssetId, blob: AssetBlob): Promise<AssetRef> {
     this.held.set(id, blob)
@@ -29,6 +29,7 @@ class FakeLocal implements AssetStore {
   }
 
   resolve(ref: AssetRef): Promise<string> {
+    this.resolved += 1
     if (!this.held.has(ref.id)) return Promise.reject(new Error('not here'))
     return Promise.resolve(`blob:${ref.id}`)
   }
@@ -163,6 +164,50 @@ describe('resolving an image', () => {
       fetch: () => Promise.resolve(new Response('gone', { status: 404 })),
     })
     await expect(store.resolve(remote)).rejects.toThrow(/not available/)
+  })
+})
+
+describe('holding a picture ahead of time', () => {
+  const remote: AssetRef = { id: ID, mimeType: 'image/png', byteSize: 4, locator: 'room:ast_1' }
+
+  it('brings the bytes into this browser without painting them', async () => {
+    const local = new FakeLocal()
+    const fetched = vi.fn(() => Promise.resolve(bytesResponse(4)))
+    const store = new RoomAssetStore(local, { url, credentials, fetch: fetched })
+
+    expect(await store.hold(remote)).toBe(true)
+    expect(local.held.has(ID)).toBe(true)
+    expect(local.resolved).toBe(0)
+  })
+
+  it('does not fetch what this browser already holds', async () => {
+    const local = new FakeLocal()
+    await local.put(ID, blobOf(4))
+    const fetched = vi.fn(() => Promise.resolve(bytesResponse(4)))
+    const store = new RoomAssetStore(local, { url, credentials, fetch: fetched })
+
+    expect(await store.hold(remote)).toBe(true)
+    expect(fetched).not.toHaveBeenCalled()
+  })
+
+  it('reports a picture the room will not give, and keeps nothing', async () => {
+    const local = new FakeLocal()
+    const store = new RoomAssetStore(local, {
+      url,
+      credentials,
+      fetch: () => Promise.resolve(new Response('gone', { status: 410 })),
+    })
+    expect(await store.hold(remote)).toBe(false)
+    expect(local.held.size).toBe(0)
+  })
+
+  it('reports a network failure rather than throwing', async () => {
+    const store = new RoomAssetStore(new FakeLocal(), {
+      url,
+      credentials,
+      fetch: () => Promise.reject(new Error('offline')),
+    })
+    expect(await store.hold(remote)).toBe(false)
   })
 })
 

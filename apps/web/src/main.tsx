@@ -8,6 +8,7 @@ import { createBoardCapabilities } from './app/board-capabilities.js'
 import type { BoardConnection } from '@openframe/collab'
 import { COLLAB_ENABLED } from './app/collab-config.js'
 import { healAssets, publishRewrite } from './app/heal-assets.js'
+import { holdAssets } from './app/hold-assets.js'
 import { createRuntime } from './app/composition-root.js'
 import { markLocalOpened } from './app/board-prefs.js'
 import { readRoute } from './app/route.js'
@@ -136,6 +137,17 @@ if (route.kind === 'home') {
   }
 
   /*
+   * EVERY PICTURE, HELD HERE TOO.
+   *
+   * The board fetches only what is on screen, and a room that is deleted
+   * refuses its pictures along with everything else — so a copy kept of a
+   * board deleted under somebody lost every picture they had not scrolled to.
+   * Stopped when the room goes, since there is nothing left to fetch from.
+   */
+  const releaseAssets =
+    collaboration === null ? null : holdAssets(runtime.store, (ref) => runtime.assets.hold(ref))
+
+  /*
    * The board was deleted by whoever owns it, while this browser had it open.
    *
    * Two things have to happen here, and neither belongs in a component.
@@ -159,6 +171,7 @@ if (route.kind === 'home') {
    */
   collaboration?.onStatus((status) => {
     if (status !== 'gone') return
+    releaseAssets?.()
     runtime.dispose()
     void services.boards.forgetDeleted(route.boardId)
   })
