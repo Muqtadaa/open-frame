@@ -104,6 +104,18 @@ test.describe('an object this version cannot read', () => {
     )
   })
 
+  test('selected, says in its record panel what can be done with it', async ({ page }) => {
+    // It used to show no panel at all, having nothing to edit — so selecting it
+    // offered neither the reason nor the delete the reason promises.
+    await page.locator('[data-object-type="unknown"]').click()
+    const panel = page.getByTestId('inspector')
+    await expect(panel).toBeVisible()
+    await expect(panel.getByTestId('inspector-note')).toContainText(
+      'made in a newer version of OpenFrame',
+    )
+    await expect(panel.getByTestId('inspector-delete')).toBeVisible()
+  })
+
   test('explains itself when somebody tries to open it', async ({ page }) => {
     await page.locator('[data-object-type="unknown"]').dblclick()
     await expect(page.getByTestId('toast')).toContainText('newer version of OpenFrame')
