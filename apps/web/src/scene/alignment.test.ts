@@ -160,3 +160,50 @@ describe('guides on fractional coordinates', () => {
     expect(result.guides.some((g) => g.axis === 'x')).toBe(true)
   })
 })
+
+/*
+ * A guide said THAT two things lined up and nothing about how far apart they
+ * were, so spacing a column evenly meant dropping each one by eye.
+ */
+describe('the distance a guide measures', () => {
+  it('measures the gap to the aligned neighbour, along the guide', () => {
+    // Neighbour spans y 0–50; the mover lands at y 90 with its left edge on 200.
+    const result = alignToNeighbours(rect(0, 0), { x: 197, y: 90 }, [rect(200, 0)], TOL)
+    const gaps = result.guides.filter((g) => g.axis === 'x').flatMap((g) => g.gaps)
+    expect(gaps).toEqual([{ from: 50, to: 90 }])
+  })
+
+  it('measures to the nearest aligned neighbour on each side, and no further', () => {
+    const above = rect(200, 0)
+    const further = rect(200, -200)
+    const below = rect(200, 300)
+    const result = alignToNeighbours(rect(0, 0), { x: 202, y: 140 }, [further, above, below], TOL)
+    const gaps = result.guides.filter((g) => g.axis === 'x').flatMap((g) => g.gaps)
+    expect(gaps).toEqual([
+      { from: 50, to: 140 },
+      { from: 190, to: 300 },
+    ])
+  })
+
+  /*
+   * Equal widths line up on all three stops, so one neighbour draws three
+   * guides — and three copies of one measurement would be noise.
+   */
+  it('says each gap once however many stops line up', () => {
+    const result = alignToNeighbours(rect(0, 0), { x: 200, y: 90 }, [rect(200, 0)], TOL)
+    expect(result.guides.filter((g) => g.axis === 'x')).toHaveLength(3)
+    expect(result.guides.flatMap((g) => g.gaps)).toHaveLength(1)
+  })
+
+  it('measures nothing between boxes that overlap along the guide', () => {
+    const result = alignToNeighbours(rect(0, 0), { x: 200, y: 20 }, [rect(200, 0)], TOL)
+    expect(result.guides.flatMap((g) => g.gaps)).toEqual([])
+  })
+
+  it('measures across a horizontal guide too', () => {
+    // Neighbour spans x 0–100; the mover lands at x 160 with its top on 300.
+    const result = alignToNeighbours(rect(0, 0), { x: 160, y: 296 }, [rect(0, 300)], TOL)
+    const gaps = result.guides.filter((g) => g.axis === 'y').flatMap((g) => g.gaps)
+    expect(gaps).toEqual([{ from: 100, to: 160 }])
+  })
+})

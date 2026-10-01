@@ -44,10 +44,13 @@ bury a small object; a line that vanishes on a black note or a coloured
 connector; a border that thickens with the zoom; a gesture only a pointer can
 make; a selection that changes in silence.
 
+GUIDES say how far apart: each empty stretch between the dragged selection and
+the nearest lined-up neighbour on either side is labelled at its middle, on the
+guide, in board units — page colour on guide magenta, the mono readout face,
+drawn over the line. Once per gap, however many stops line up.
+
 KNOWN: connect points and an attached line's end sit on a rotated object's
-upright bounds, not its turned edges; guides carry no distances; crop has no
-entry in the record panel; the record panel can sit over the object a line is
-being aimed at.
+upright bounds, not its turned edges; crop has no entry in the record panel.
 
 FINISH: `selection-apparatus.spec.ts` (move truth, lone line, targets, compact,
 keyboard, Escape, what a selection says, under the pointer), `apparatus.spec.ts`
