@@ -51,7 +51,7 @@ export function StartFailed({ heading, error }: Props) {
   }, [])
 
   return (
-    <div className="of-gone">
+    <div className="of-gone of-gone--alone">
       <div
         className="of-gone__panel"
         role="alertdialog"

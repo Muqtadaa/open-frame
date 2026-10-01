@@ -2999,6 +2999,15 @@ body {
   background: var(--of-scrim);
 }
 
+/*
+ * A gate with no board behind it — start-up failed before there was one. A
+ * scrim there dims an empty page into grey, which reads as something greyed
+ * out that is not there; it stands on the page's own ground instead.
+ */
+.of-gone--alone {
+  background: var(--of-bg);
+}
+
 .of-gone__panel {
   max-width: 360px;
   padding: var(--of-gutter);
