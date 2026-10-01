@@ -25,6 +25,7 @@ import { PresenceLayer } from './PresenceLayer.js'
 import { usePresence } from './use-presence.js'
 import { useFollow } from './use-follow.js'
 import { HoverOverlay } from './HoverOverlay.js'
+import { RelationOverlay } from './RelationOverlay.js'
 import { SelectionOverlay } from './SelectionOverlay.js'
 import { useCanvasGestures } from './use-canvas-gestures.js'
 import { useImageDrop } from './use-image-drop.js'
@@ -219,6 +220,8 @@ const Apparatus = memo(function Apparatus() {
   return (
     <div className="of-apparatus" data-apparatus-layer>
       <HoverOverlay />
+      {/* Under the selection's own box and grips, which it must never cover. */}
+      <RelationOverlay />
       <SelectionOverlay />
       <ConnectPoints />
       <DrawPreview />

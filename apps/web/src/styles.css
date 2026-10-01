@@ -4757,6 +4757,52 @@ body {
   border-top-width: 1px;
 }
 
+/*
+ * A selected object's relations: dashed, thin and muted, so a statement about
+ * two things is never mistaken for a connector, which is a thing on the board.
+ * The page-coloured halo under the dashes keeps them legible over anything.
+ */
+.of-relations {
+  position: absolute;
+  inset: 0;
+  overflow: visible;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+}
+
+.of-relation {
+  stroke: var(--of-ink-muted);
+  stroke-width: 1.5;
+  stroke-dasharray: 5 4;
+  fill: none;
+}
+
+.of-relation__halo {
+  stroke: var(--of-page);
+  stroke-width: 4;
+  fill: none;
+}
+
+.of-relation__head {
+  fill: var(--of-ink-muted);
+}
+
+.of-relation__label {
+  position: absolute;
+  top: 0;
+  left: 0;
+  padding: 0 var(--of-space-4);
+  font-family: var(--of-mono);
+  font-size: var(--of-type-record);
+  line-height: 1.5;
+  color: var(--of-ink-muted);
+  white-space: nowrap;
+  background: var(--of-page);
+  border-radius: var(--of-radius-apparatus);
+  pointer-events: none;
+}
+
 /* Connector endpoint handles ------------------------------------------------ */
 
 .of-endpoint {

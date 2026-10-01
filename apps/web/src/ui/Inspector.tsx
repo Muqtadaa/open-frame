@@ -294,8 +294,25 @@ export function Inspector() {
         end.attachedTo === undefined ? undefined : document.objects.get(end.attachedTo),
       )
       .filter((object) => object !== undefined)
+    /*
+     * And, for a single selection, what its relations join it to: those are
+     * drawn as lines to it now, and a panel over them hid both the lines and
+     * the evidence they point at. O(1) per lookup off the relation index.
+     */
+    const only = objects.length === 1 ? objects[0] : undefined
+    const related =
+      only === undefined
+        ? []
+        : [
+            ...runtime.registry.relationsFrom(document, only.id).map((link) => link.edge.to),
+            ...runtime.registry.relationsTo(document, only.id).map((link) => link.edge.from),
+          ]
+            .map((id) => document.objects.get(id))
+            .filter((object) => object !== undefined)
     return unionAll(
-      [...objects, ...joined].map((object) => runtime.registry.boundsOf(object, document)),
+      [...objects, ...joined, ...related].map((object) =>
+        runtime.registry.boundsOf(object, document),
+      ),
     )
   }, [objects, runtime.registry, document])
 

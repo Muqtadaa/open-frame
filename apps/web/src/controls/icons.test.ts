@@ -20,6 +20,7 @@ const DRAWINGS: Record<string, string> = {
   'canvas/ConnectorPreview.tsx': 'the line being drawn',
   'canvas/DrawPreview.tsx': 'the shape being drawn',
   'canvas/PresenceLayer.tsx': "a peer's pointer, in their colour",
+  'canvas/RelationOverlay.tsx': "the selection's relations, as dashed lines",
   'controls/Swatches.tsx': 'specimens: a rule at outline weight, and the colour wheel itself',
   'views/ConnectorView.tsx': 'a connector',
   'views/ShapeView.tsx': 'a shape',
