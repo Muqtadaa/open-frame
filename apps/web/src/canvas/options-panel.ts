@@ -1,3 +1,7 @@
+import { useEffect, useState } from 'react'
+
+import { CHROME_MOVED } from '../controls/AnchoredSurface.js'
+
 /**
  * Where the options panel is, in screen pixels, or `null` when it is closed.
  *
@@ -23,4 +27,34 @@ export function optionsPanelRect(): DOMRect | null {
       .querySelector<HTMLElement>('[data-testid="inspector"]')
       ?.getBoundingClientRect() ?? null
   )
+}
+
+/**
+ * The same, kept current: read again whenever a floating surface lands
+ * somewhere new. Read once while rendering, it was the panel's PREVIOUS place
+ * — the panel settles only after measuring itself, a render later.
+ */
+export function useOptionsPanelRect(): DOMRect | null {
+  const [rect, setRect] = useState(optionsPanelRect)
+  useEffect(() => {
+    const read = (): void => {
+      const next = optionsPanelRect()
+      setRect((previous) =>
+        previous !== null &&
+        next !== null &&
+        previous.x === next.x &&
+        previous.y === next.y &&
+        previous.width === next.width &&
+        previous.height === next.height
+          ? previous
+          : next,
+      )
+    }
+    read()
+    window.addEventListener(CHROME_MOVED, read)
+    return () => {
+      window.removeEventListener(CHROME_MOVED, read)
+    }
+  }, [])
+  return rect
 }

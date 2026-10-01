@@ -5,6 +5,16 @@ import { placeAnchored, type Rect, type Side, type Size } from '../scene/anchori
 import { furnitureBands, watchFurnitureBands } from './screen-furniture.js'
 
 /**
+ * Fired on the window when a floating surface lands somewhere new, or goes.
+ *
+ * Something that keeps clear of another surface reads where it is from the
+ * DOM, and a surface settles only after it has measured itself — a render
+ * later than whatever read it. The arrange bar read the record panel's old
+ * place and, in a short window, sat on the panel's new one.
+ */
+export const CHROME_MOVED = 'openframe:chrome-moved'
+
+/**
  * Anything that floats beside something else, placed once and placed the same.
  *
  * THE one surface. A table's colour bar, a code block's language menu, the
@@ -92,6 +102,20 @@ export function AnchoredSurface({
         ? old
         : { width: box.width, height: box.height },
     )
+  })
+
+  // Says so when this surface has landed somewhere new (see CHROME_MOVED).
+  // No dependency list for the reason the measuring above has none.
+  const landed = useRef<string | null>(null)
+  useLayoutEffect(() => {
+    const box = element.current?.getBoundingClientRect()
+    const where =
+      box === undefined
+        ? null
+        : `${String(box.x)},${String(box.y)},${String(box.width)},${String(box.height)}`
+    if (where === landed.current) return
+    landed.current = where
+    window.dispatchEvent(new Event(CHROME_MOVED))
   })
 
   const target =
