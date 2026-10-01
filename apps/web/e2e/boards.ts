@@ -24,9 +24,9 @@ import { snapPoint } from '../src/scene/snapping.js'
  * about. That is several seconds a test, in three engines, and it made every
  * one of those tests fail whenever creation broke. The board is built here
  * with core's own dispatcher instead (rule 3 holds: every object is a
- * command), serialized exactly as the adapter serializes it, and written into
- * the browser's storage before the page loads it (`seedBoard` in
- * fixtures.ts). Specs about CREATING things keep driving the UI.
+ * command), serialized exactly as the adapter serializes it, and handed to the
+ * open page's dev-only `loadBoard` (`seedBoard` in fixtures.ts). Specs about
+ * CREATING things keep driving the UI.
  */
 
 export interface Point {
