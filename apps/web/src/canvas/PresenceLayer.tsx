@@ -26,20 +26,26 @@ function shifted(rect: Rect, by: DragDelta): Rect {
 
 export function PresenceLayer() {
   const peers = usePeers()
+  const { collaboration } = useOpenFrame()
+  // A board nobody else can be on has nobody to describe.
+  const inRoom = collaboration !== null && collaboration !== undefined
   return (
     <>
       {/*
        * The pictures are hidden from assistive tech; this is what they say.
        * Polite, so somebody starting to type elsewhere never interrupts.
        *
-       * ALWAYS on the page, even with nobody here: a live region announces
-       * what changes in it after it exists, so one inserted with its words
-       * already in it — joining a room where somebody is already editing —
-       * said nothing at all.
+       * On the page as soon as the board is in a room, before anybody is
+       * there: a live region announces what changes in it after it exists,
+       * so one inserted with its words already in it — joining a room where
+       * somebody is already editing — said nothing at all. Not on a board
+       * nobody else can join, where it would be a second status for nothing.
        */}
-      <p className="of-visually-hidden" role="status" data-testid="presence-status">
-        {peers.length > 0 && <PresenceSentences peers={peers} />}
-      </p>
+      {inRoom && (
+        <p className="of-visually-hidden" role="status" data-testid="presence-status">
+          {peers.length > 0 && <PresenceSentences peers={peers} />}
+        </p>
+      )}
       {peers.length > 0 && <PresentPeers peers={peers} />}
     </>
   )

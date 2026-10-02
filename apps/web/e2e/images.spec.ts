@@ -108,7 +108,7 @@ test.describe('images', () => {
     const svg = Buffer.from('<svg xmlns="http://www.w3.org/2000/svg"><script/></svg>')
     await upload(page, 'not-really.png', 'image/png', svg)
 
-    await expect(page.getByRole('status')).toContainText('contents are')
+    await expect(page.getByTestId('toast')).toContainText('contents are')
     await expect(page.locator('[data-object-type="image"]')).toHaveCount(0)
   })
 

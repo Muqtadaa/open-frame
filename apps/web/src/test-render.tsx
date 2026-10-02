@@ -4,6 +4,8 @@ import { createRoot } from 'react-dom/client'
 import { IndexedDbBoardRepository } from './adapters/indexeddb/indexeddb-board-repository.js'
 import { createRuntime } from './app/composition-root.js'
 import { createServices } from './app/services.js'
+import type { BoardConnection } from '@openframe/collab'
+
 import { OpenFrameContext, type OpenFrameRuntime } from './runtime/context.js'
 import { ServicesContext, type Services } from './runtime/services.js'
 import { createDefaultViewRegistry } from './views/index.js'
@@ -42,6 +44,8 @@ export async function mountOnBoard(
   options: {
     /** Changes what the built services do — to record a call, or to make one fail. */
     readonly services?: (built: Services) => Services
+    /** A room for the component to be in; a local board has none. */
+    readonly collaboration?: BoardConnection
   } = {},
 ): Promise<Mounted> {
   const repository = new IndexedDbBoardRepository()
@@ -65,7 +69,11 @@ export async function mountOnBoard(
     root.render(
       <ServicesContext.Provider value={services}>
         <OpenFrameContext.Provider
-          value={{ runtime, views: createDefaultViewRegistry(), collaboration: null }}
+          value={{
+            runtime,
+            views: createDefaultViewRegistry(),
+            collaboration: options.collaboration ?? null,
+          }}
         >
           {ui}
         </OpenFrameContext.Provider>
