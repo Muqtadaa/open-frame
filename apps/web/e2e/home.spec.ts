@@ -155,4 +155,34 @@ test.describe('the world, from the front door', () => {
       expect(toggle.width).toBeGreaterThanOrEqual(24)
     }
   })
+
+  test('says what it is on screen, at the edge of a phone too', async ({ page }) => {
+    await page.setViewportSize({ width: 390, height: 800 })
+    await page.goto(HOME_URL)
+    const toggle = page.getByRole('button', { name: 'After Hours theme' })
+    // Reached from the keyboard, which shows the tip at once.
+    await toggle.focus()
+    await page.keyboard.press('Shift+Tab')
+    await page.keyboard.press('Tab')
+    await expect(toggle).toBeFocused()
+
+    // A pseudo-element has no box of its own to ask for, so it is rebuilt from
+    // its control's box, the offsets the stylesheet gave it and its transform.
+    const tip = await toggle.evaluate((button) => {
+      const box = button.getBoundingClientRect()
+      const after = getComputedStyle(button, '::after')
+      const width = parseFloat(after.width)
+      const shift = new DOMMatrixReadOnly(after.transform).m41
+      const start =
+        after.left === 'auto'
+          ? box.right - parseFloat(after.right) - width + shift
+          : box.left + parseFloat(after.left) + shift
+      return { start, end: start + width }
+    })
+    const home = await boxOf(page.locator(HOME))
+    expect(tip.start, 'the tip ran off the left of the page').toBeGreaterThanOrEqual(home.x)
+    expect(tip.end, 'the tip ran off the right of the page').toBeLessThanOrEqual(
+      home.x + home.width,
+    )
+  })
 })

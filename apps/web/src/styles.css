@@ -5877,6 +5877,22 @@ textarea.of-input {
   margin-left: auto;
 }
 
+/*
+ * Last in the head either way, so the world is always at the column's right
+ * edge: its tip hangs from its right-hand side like the account's. Centred, it
+ * ran off a phone and `.of-home` clipped the words.
+ */
+.of-home__lockup .of-home__world[data-tip]::after {
+  right: 0;
+  left: auto;
+  transform: translateY(var(--of-space-2));
+}
+
+.of-home__lockup .of-home__world[data-tip]:hover::after,
+.of-home__lockup .of-home__world[data-tip]:focus-visible::after {
+  transform: none;
+}
+
 .of-home__lockup {
   display: flex;
   /*
