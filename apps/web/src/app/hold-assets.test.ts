@@ -111,6 +111,46 @@ describe('holding a shared board’s pictures', () => {
     expect(asked).toEqual(['ast_a', 'ast_a'])
   })
 
+  it('asks again when a picture the room would not give is published to it', async () => {
+    // Placed while its upload failed, the picture reaches this browser with a
+    // locator only its uploader can read. Publishing it later rewrites that one
+    // field — an edit, not an arrival — and the copy kept after a deletion must
+    // still have it.
+    const { store, writer } = createDocumentStore(
+      boardWith(note('obj_n'), {
+        ...picture('obj_a', 'ast_a'),
+        data: { asset: { ...ref('ast_a'), locator: 'idb:ast_a' }, alt: '' },
+      }),
+    )
+    const asked: string[] = []
+    holdAssets(store, (asset) => {
+      asked.push(asset.locator)
+      return Promise.resolve(asset.locator.startsWith('room:'))
+    })
+    await settle()
+    expect(asked).toEqual(['idb:ast_a'])
+
+    writer.applyPatches([{ op: 'set', id: asObjectId('obj_n'), path: ['data', 'text'], value: [] }])
+    await settle()
+    expect(asked).toEqual(['idb:ast_a'])
+
+    writer.applyPatches([
+      {
+        op: 'set',
+        id: asObjectId('obj_a'),
+        path: ['data', 'asset', 'locator'],
+        value: 'room:ast_a',
+      },
+    ])
+    await settle()
+    expect(asked).toEqual(['idb:ast_a', 'room:ast_a'])
+
+    // Held now, so another edit to it asks for nothing.
+    writer.applyPatches([{ op: 'set', id: asObjectId('obj_a'), path: ['data', 'alt'], value: 'x' }])
+    await settle()
+    expect(asked).toEqual(['idb:ast_a', 'room:ast_a'])
+  })
+
   it('carries on past a picture whose fetch throws', async () => {
     const { store } = createDocumentStore(
       boardWith(picture('obj_a', 'ast_a'), picture('obj_b', 'ast_b')),
