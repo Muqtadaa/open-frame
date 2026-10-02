@@ -139,7 +139,10 @@ function guidesFor(
   const movedFrom = moved[cross]
   const movedTo = moved[cross] + moved[crossSize]
 
-  for (const mine of stops(moved, axis)) {
+  // Each place once: a selection with no width has all three stops at one
+  // coordinate, and a second pass over the same guide replaced it with one
+  // whose gap had already been said — so it said none.
+  for (const mine of new Set(stops(moved, axis))) {
     const matched = others.filter((other) =>
       stops(other, axis).some((theirs) => Math.abs(theirs - mine) <= EPSILON),
     )

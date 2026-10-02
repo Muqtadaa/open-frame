@@ -206,4 +206,17 @@ describe('the distance a guide measures', () => {
     const gaps = result.guides.filter((g) => g.axis === 'y').flatMap((g) => g.gaps)
     expect(gaps).toEqual([{ from: 100, to: 160 }])
   })
+
+  /*
+   * A selection with no width — a group holding one straight vertical line —
+   * has its three stops at one coordinate. The later passes over that same
+   * guide used to replace it with one that had already said its gap, and so
+   * said nothing.
+   */
+  it('still measures for a selection with no width', () => {
+    const line = rect(0, 0, 0, 50)
+    const result = alignToNeighbours(line, { x: 200, y: 90 }, [rect(200, 0)], TOL)
+    const gaps = result.guides.filter((g) => g.axis === 'x').flatMap((g) => g.gaps)
+    expect(gaps).toEqual([{ from: 50, to: 90 }])
+  })
 })
