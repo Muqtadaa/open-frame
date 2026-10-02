@@ -1,7 +1,13 @@
 import type { Rect } from '@openframe/core'
 import { describe, expect, it } from 'vitest'
 
-import { distancesBetween, gapsWithin, matchesBetween, nearestDistances } from './measure.js'
+import {
+  distancesBetween,
+  gapsWithin,
+  matchesBetween,
+  nearestDistances,
+  type MeasureSegment,
+} from './measure.js'
 
 /**
  * Measuring on purpose: hold Alt with something selected and point at
@@ -9,6 +15,10 @@ import { distancesBetween, gapsWithin, matchesBetween, nearestDistances } from '
  * were only while one was being dragged into line with the other.
  */
 const rect = (x: number, y: number, width = 100, height = 50): Rect => ({ x, y, width, height })
+
+/** An across leg and a down leg that end where each other runs. */
+const meetAtACorner = (a: MeasureSegment, b: MeasureSegment): boolean =>
+  a.axis !== b.axis && (b.at === a.from || b.at === a.to) && (a.at === b.from || a.at === b.to)
 
 describe('the distance between two things', () => {
   it('is one line across the gap when they sit side by side', () => {
@@ -24,10 +34,24 @@ describe('the distance between two things', () => {
     ])
   })
 
-  it('is a line on each axis when they are apart on both, drawn from the selection', () => {
+  /*
+   * Apart on both axes, the two lines are one L from corner to corner: across
+   * along the selection's near edge, then down the target's. Drawn from each
+   * one's middle they were two spokes in empty space that met nowhere.
+   */
+  it('is an L from corner to corner when they are apart on both', () => {
+    // Selection's bottom-right corner (100, 50); target's top-left (200, 120).
     expect(distancesBetween(rect(0, 0), rect(200, 120))).toEqual([
-      { axis: 'x', from: 100, to: 200, at: 25 },
-      { axis: 'y', from: 50, to: 120, at: 50 },
+      { axis: 'x', from: 100, to: 200, at: 50 },
+      { axis: 'y', from: 50, to: 120, at: 200 },
+    ])
+  })
+
+  it('turns the L the other way when the target is above and to the left', () => {
+    // Selection's top-left corner (300, 200); target's bottom-right (100, 50).
+    expect(distancesBetween(rect(300, 200), rect(0, 0))).toEqual([
+      { axis: 'x', from: 100, to: 300, at: 200 },
+      { axis: 'y', from: 50, to: 200, at: 100 },
     ])
   })
 
@@ -99,6 +123,43 @@ describe('the gaps inside a selection', () => {
     ])
   })
 
+  /*
+   * Neighbours on a diagonal were measured midway between their middles: two
+   * short lines crossing in the empty space between them, touching neither.
+   */
+  it('measures neighbours on a diagonal as the same L as pointing at one', () => {
+    const a = rect(0, 0)
+    const b = rect(200, 120)
+    expect(gapsWithin([b, a])).toEqual(distancesBetween(a, b))
+  })
+
+  /*
+   * The across pass and the down pass pick their neighbours separately, so a
+   * pair found by only one of them drew only that one's leg: half an L hanging
+   * in the air. Every pair found is drawn whole.
+   */
+  it('draws every diagonal pair as a whole L, whichever pass found it', () => {
+    const table = rect(0, 200, 260, 166)
+    const top = rect(470, 0, 156, 117)
+    const right = rect(940, 180, 157, 118)
+    const gaps = gapsWithin([table, top, right])
+    const expected = [...distancesBetween(table, top), ...distancesBetween(top, right)]
+    expect(gaps).toHaveLength(expected.length)
+    expect(gaps).toEqual(expect.arrayContaining(expected))
+  })
+
+  it('gives a pair found only going down its leg across as well', () => {
+    // Going down, `right` is `low`'s neighbour; across, `top` sits between them.
+    const low = rect(0, 400, 260, 166)
+    const top = rect(470, 0, 156, 117)
+    const right = rect(940, 180, 157, 118)
+    const gaps = gapsWithin([low, top, right])
+    expect(gaps).toEqual(expect.arrayContaining([...distancesBetween(right, low)]))
+    // All three sit on diagonals, so no leg may be left without the one it
+    // meets at a corner.
+    expect(gaps.filter((leg) => !gaps.some((other) => meetAtACorner(leg, other)))).toEqual([])
+  })
+
   it('measures nothing between things that overlap', () => {
     expect(gapsWithin([rect(0, 0), rect(50, 20)])).toEqual([])
   })
@@ -127,5 +188,13 @@ describe('the distances around a nudged selection', () => {
 
   it('measures nothing on a side with nobody in line', () => {
     expect(nearestDistances(rect(0, 0), [rect(500, 500)])).toEqual([])
+  })
+})
+
+describe('the gaps inside a selection, with one thing holding another', () => {
+  it('measures no gap between a thing and what it holds', () => {
+    // Same left edge, with the one inside listed first, so it is the reach
+    // when its holder comes next: the room inside is not a gap between them.
+    expect(gapsWithin([rect(0, 100, 100, 50), rect(0, 0, 300, 300)])).toEqual([])
   })
 })

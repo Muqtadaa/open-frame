@@ -81,8 +81,8 @@ function gapAlong(a: Rect, b: Rect, axis: 'x' | 'y', fallback: number): MeasureS
 /**
  * How far apart two boxes are, as the lines a design tool draws.
  *
- * Side by side, one line across the gap; apart on both axes, one on each, from
- * the selection; one inside the other, a line from each edge of the inner one
+ * Side by side, one line across the gap; apart on both axes, an L from corner
+ * to corner; one inside the other, a line from each edge of the inner one
  * to the outer one's. Overlapping without one holding the other says nothing,
  * because there is no gap to measure.
  */
@@ -110,12 +110,23 @@ export function distancesBetween(selection: Rect, target: Rect): readonly Measur
     return segments
   }
 
-  const segments: MeasureSegment[] = []
-  for (const axis of ['x', 'y'] as const) {
-    const gap = gapAlong(selection, target, axis, centre(selection, other(axis)))
-    if (gap !== null) segments.push(gap)
+  const across = gapAlong(selection, target, 'x', centre(selection, 'y'))
+  const down = gapAlong(selection, target, 'y', centre(selection, 'x'))
+  if (across !== null && down !== null) {
+    /*
+     * Apart on both: one L from the selection's near corner to the target's —
+     * across along the selection's near edge, then down the target's. Each leg
+     * is still exactly its gap, and the two meet at the corner rather than
+     * standing apart as spokes from each one's middle.
+     */
+    const below = target.y > selection.y
+    const right = target.x > selection.x
+    return [
+      { ...across, at: below ? selection.y + selection.height : selection.y },
+      { ...down, at: right ? target.x : target.x + target.width },
+    ]
   }
-  return segments
+  return [across, down].filter((gap): gap is MeasureSegment => gap !== null)
 }
 
 function stops(rect: Rect, axis: 'x' | 'y'): readonly number[] {
@@ -150,11 +161,19 @@ export function matchesBetween(a: Rect, b: Rect): readonly MeasureMatch[] {
  * measured across, a column measured down. Neighbours only — the first and the
  * third of a row are not measured past the second — and nothing between
  * things that overlap.
+ *
+ * Each pair is drawn WHOLE, exactly as pointing at one from the other would
+ * draw it: one line for things that face each other, an L for things on a
+ * diagonal. The across pass and the down pass find their neighbours
+ * separately, so a pair one of them found used to get only that pass's leg —
+ * half an L hanging in the air.
  */
 export function gapsWithin(rects: readonly Rect[]): readonly MeasureSegment[] {
-  const segments: MeasureSegment[] = []
+  const pairs = new Map<string, readonly [Rect, Rect]>()
   for (const axis of ['x', 'y'] as const) {
-    const ordered = [...rects].sort((a, b) => span(a, axis).from - span(b, axis).from)
+    const ordered = rects
+      .map((rect, index) => ({ rect, index }))
+      .sort((a, b) => span(a.rect, axis).from - span(b.rect, axis).from)
     /*
      * Measured from the FURTHEST reach so far, not from whichever started
      * last: a narrow thing inside a wide one's stretch would otherwise have
@@ -163,13 +182,16 @@ export function gapsWithin(rects: readonly Rect[]): readonly MeasureSegment[] {
     let reach = ordered[0]
     for (const next of ordered.slice(1)) {
       if (reach === undefined) break
-      const midway = (centre(reach, other(axis)) + centre(next, other(axis))) / 2
-      const gap = gapAlong(reach, next, axis, midway)
-      if (gap !== null && gap.from === span(reach, axis).to) segments.push(gap)
-      if (span(next, axis).to > span(reach, axis).to) reach = next
+      // A gap on this axis, so neither holds the other: one inside another has
+      // edge-to-edge lines of its own, and they are not gaps between neighbours.
+      if (gapAlong(reach.rect, next.rect, axis, 0) !== null) {
+        const key = `${String(Math.min(reach.index, next.index))}:${String(Math.max(reach.index, next.index))}`
+        if (!pairs.has(key)) pairs.set(key, [reach.rect, next.rect])
+      }
+      if (span(next.rect, axis).to > span(reach.rect, axis).to) reach = next
     }
   }
-  return segments
+  return [...pairs.values()].flatMap(([from, to]) => distancesBetween(from, to))
 }
 
 /**

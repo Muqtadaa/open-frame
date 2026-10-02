@@ -55,6 +55,42 @@ test('says how far the selection is from what Alt points at, and goes when Alt i
   await expect(page.getByTestId('measure-match-y')).toHaveCount(0)
 })
 
+/*
+ * Apart on both axes, the two measurements stood out from each one's middle
+ * as spokes that met nowhere. They are one L, corner to corner.
+ */
+test('measures something off on a diagonal as one L from corner to corner', async ({ page }) => {
+  const D = { x: 620, y: 560 }
+  await notes(page, A, D)
+  const a = await boxOf(note(page, 0))
+  const d = await boxOf(note(page, 1))
+  await page.locator(CANVAS).click({ position: A })
+
+  await page.mouse.move(D.x, D.y)
+  await page.keyboard.down('Alt')
+  await page.mouse.move(D.x + 4, D.y + 4)
+
+  const across = await boxOf(page.getByTestId('measure-line-x'))
+  const down = await boxOf(page.getByTestId('measure-line-y'))
+  // Across along the selection's bottom edge, from its corner to the target's
+  // left edge…
+  expect(across.y).toBeCloseTo(a.y + a.height, 0)
+  expect(across.x).toBeCloseTo(a.x + a.width, 0)
+  expect(across.x + across.width).toBeCloseTo(d.x, 0)
+  // …then down the target's left edge to its corner.
+  expect(down.x).toBeCloseTo(d.x, 0)
+  expect(down.y).toBeCloseTo(a.y + a.height, 0)
+  expect(down.y + down.height).toBeCloseTo(d.y, 0)
+
+  await expect(page.getByTestId('measure-gap-x')).toHaveText(
+    String(Math.round(d.x - (a.x + a.width))),
+  )
+  await expect(page.getByTestId('measure-gap-y')).toHaveText(
+    String(Math.round(d.y - (a.y + a.height))),
+  )
+  await page.keyboard.up('Alt')
+})
+
 test('says nothing with nothing selected', async ({ page }) => {
   await notes(page, A, B)
   await page.mouse.move(B.x, B.y)
@@ -78,6 +114,61 @@ test('says the gaps between the things selected when nothing else is pointed at'
   const a = await boxOf(note(page, 0))
   const b = await boxOf(note(page, 1))
   await expect(gaps.first()).toHaveText(String(Math.round(b.x - (a.x + a.width))))
+  await page.keyboard.up('Alt')
+})
+
+/*
+ * Selected neighbours on a diagonal were measured midway between them: two
+ * short lines crossing in the empty space, touching neither note.
+ */
+test('measures selected neighbours on a diagonal as one L too', async ({ page }) => {
+  const D = { x: 620, y: 560 }
+  await notes(page, A, D)
+  await page.keyboard.press(`${MOD}+a`)
+  await page.mouse.move(1000, 150)
+  await page.keyboard.down('Alt')
+  await page.mouse.move(1004, 154)
+
+  const a = await boxOf(note(page, 0))
+  const d = await boxOf(note(page, 1))
+  const across = await boxOf(page.getByTestId('measure-line-x'))
+  const down = await boxOf(page.getByTestId('measure-line-y'))
+  expect(across.y).toBeCloseTo(a.y + a.height, 0)
+  expect(across.x + across.width).toBeCloseTo(d.x, 0)
+  expect(down.x).toBeCloseTo(d.x, 0)
+  expect(down.y).toBeCloseTo(a.y + a.height, 0)
+  await page.keyboard.up('Alt')
+})
+
+/*
+ * Three things selected, each on a diagonal from the others. The across and
+ * down passes paired them differently, so some pairs got one leg of their L
+ * and nothing else: a line hanging from empty space.
+ */
+test('draws every selected pair on a diagonal as a whole L', async ({ page }) => {
+  await notes(page, { x: 430, y: 600 }, { x: 880, y: 200 }, { x: 1150, y: 400 })
+  await page.keyboard.press(`${MOD}+a`)
+  await page.mouse.move(150, 680)
+  await page.keyboard.down('Alt')
+  await page.mouse.move(154, 684)
+
+  const across = page.getByTestId('measure-line-x')
+  const down = page.getByTestId('measure-line-y')
+  await expect(across).toHaveCount(3)
+  await expect(down).toHaveCount(3)
+  const xs = await Promise.all((await across.all()).map((line) => boxOf(line)))
+  const ys = await Promise.all((await down.all()).map((line) => boxOf(line)))
+  const near = (a: number, b: number) => Math.abs(a - b) <= 1
+  for (const leg of xs) {
+    const meets = ys.some(
+      (other) =>
+        (near(other.x, leg.x) || near(other.x, leg.x + leg.width)) &&
+        (near(leg.y, other.y) || near(leg.y, other.y + other.height)),
+    )
+    expect(meets, `the leg across at ${String(leg.x)},${String(leg.y)} meets one going down`).toBe(
+      true,
+    )
+  }
   await page.keyboard.up('Alt')
 })
 

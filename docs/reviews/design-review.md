@@ -1078,6 +1078,21 @@ first:
 - a real Durable Object: set, read by all three keys, refused to a stranger,
   cleared.
 
+Measuring on a diagonal (owner's note, 2026-10-02): two things apart on both
+axes were measured from each one's middle, so the two lines stood out as
+spokes that met nowhere. They are now one L from the selection's near corner
+to the target's, each leg still exactly its gap. The unit tests and an e2e
+checking that the legs meet on the edges were seen failing first.
+The same went for neighbours on a diagonal inside a multiple selection with
+nothing pointed at: they were measured midway between their middles, two short
+lines crossing in empty space. They get the same L now. A test seen failing
+first holds that a thing and what it holds still show no gap between them.
+On the preview that was still not right: the across and down passes pick
+their neighbours separately, so a pair found by only one of them got one leg
+of its L, hanging from empty space. Every pair found by either pass is now
+drawn whole (the owner's choice, over measuring only what is in line). The
+cost is more lines on a scattered selection.
+
 Still to come, in order:
 
 - board clarity: where hidden objects went, presence for assistive tech, a
