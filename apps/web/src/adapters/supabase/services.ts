@@ -22,6 +22,8 @@ import {
   myMentions,
   postComment,
   resolveComment,
+  editComment,
+  deleteComment,
   watchMyMentions,
 } from './comments.js'
 import { ACCOUNTS_ENABLED } from './config.js'
@@ -63,6 +65,8 @@ export const supabaseDiscussion = (): DiscussionService => ({
   people: boardPeople,
   post: postComment,
   resolve: resolveComment,
+  edit: editComment,
+  remove: deleteComment,
   mentions: myMentions,
   markRead: markMentionsRead,
   watchMentions: watchMyMentions,

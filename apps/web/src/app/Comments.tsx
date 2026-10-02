@@ -23,7 +23,10 @@ export function CommentsProvider({ children }: { readonly children: ReactNode })
   const identity = useIdentity()
   const enabled = collaboration !== null && collaboration !== undefined && identity !== null
 
-  const { comments, people, refresh, post, resolve } = useComments(runtime.boardId, enabled)
+  const { comments, people, refresh, post, resolve, edit, remove } = useComments(
+    runtime.boardId,
+    enabled,
+  )
 
   // And again whenever somebody else in the room says something, so the
   // discussion is live rather than something you find on your way back.
@@ -61,10 +64,12 @@ export function CommentsProvider({ children }: { readonly children: ReactNode })
       refresh,
       post,
       resolve,
+      edit,
+      remove,
       focusComment,
       enabled,
     }
-  }, [runtime, comments, people, refresh, post, resolve, focusComment, enabled])
+  }, [runtime, comments, people, refresh, post, resolve, edit, remove, focusComment, enabled])
 
   return <CommentsContext.Provider value={value}>{children}</CommentsContext.Provider>
 }

@@ -317,6 +317,15 @@ export function DisclosureIcon({ className }: IconProps) {
   )
 }
 
+/** One step along a sequence: the previous thing, or the next. */
+export function StepIcon({ className, direction }: IconProps & { direction: 'back' | 'on' }) {
+  return (
+    <svg {...base} className={className}>
+      <path d={direction === 'back' ? 'M14 7l-5 5 5 5' : 'M10 7l5 5-5 5'} />
+    </svg>
+  )
+}
+
 /** The eyedropper: pick a colour from anywhere on the screen. */
 export function DropperIcon({ className }: IconProps) {
   return (

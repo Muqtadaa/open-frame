@@ -92,6 +92,42 @@ function withoutTokens(text: string): string {
   return text.replace(TOKEN, ' ')
 }
 
+/**
+ * An edited remark, with the mentions it was written with put back.
+ *
+ * The edit box shows names, as the composer does (`plainMentionText`), so the
+ * tokens have to be rebuilt on the way out. They are taken from the remark
+ * being edited, not from the people on the board: whoever it mentioned is
+ * still the person it mentioned, even after they have left, and an edit is
+ * not a way to re-point a mention at somebody new who shares the name.
+ *
+ * Longest name first, ending on a boundary, for the reasons `mentionsIn`
+ * gives: "@Samira" is not a mention of Sam.
+ */
+export function restoreMentions(edited: string, original: string): string {
+  const mentioned = new Map<string, MentionSegment>()
+  for (const segment of mentionSegments(original)) {
+    if (segment.kind === 'mention' && !mentioned.has(segment.displayName)) {
+      mentioned.set(segment.displayName, segment)
+    }
+  }
+  const byLongest = [...mentioned.values()].sort(
+    (a, b) => b.displayName.length - a.displayName.length,
+  )
+  let written = edited
+  for (const mention of byLongest) {
+    const pattern = new RegExp(
+      `@${escapeForPattern(mention.displayName)}(?![\\p{L}\\p{N}'-])`,
+      'gu',
+    )
+    written = written.replace(
+      pattern,
+      mentionToken({ userId: mention.userId, displayName: mention.displayName, hue: 0 }),
+    )
+  }
+  return written
+}
+
 /** A name goes into a pattern verbatim; people are allowed punctuation. */
 function escapeForPattern(value: string): string {
   return value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')

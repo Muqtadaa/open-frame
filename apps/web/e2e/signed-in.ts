@@ -83,7 +83,7 @@ interface BoardRow {
   workspace_name: string
 }
 
-interface CommentRow {
+export interface CommentRow {
   id: string
   parent_id: string | null
   author_id: string
@@ -103,6 +103,8 @@ interface CommentRow {
    */
   fx: number | null
   fy: number | null
+  /** When its author last changed it; absent on one never edited. */
+  edited_at?: string | null
 }
 
 /** Who each stubbed person is. The second exists so two pages can differ. */
@@ -283,6 +285,34 @@ export async function signedIn(
       for (const comment of comments) {
         if (comment.id === body.p_id) {
           comment.resolved_at = body.p_resolved === true ? new Date().toISOString() : null
+        }
+      }
+      return json(true)
+    }
+
+    /*
+     * The server's own rules, kept by the double: a remark is its author's to
+     * change, and a thread with somebody else's reply under it is not its
+     * author's to delete, since that would take their words with it.
+     */
+    if (url.includes('rpc/edit_comment')) {
+      const body = route.request().postDataJSON() as { p_id?: string; p_body?: string }
+      const comment = comments.find((c) => c.id === body.p_id && c.author_id === me)
+      if (comment === undefined) return json(false)
+      comment.body = body.p_body ?? comment.body
+      comment.edited_at = new Date().toISOString()
+      return json(true)
+    }
+
+    if (url.includes('rpc/delete_comment')) {
+      const body = route.request().postDataJSON() as { p_id?: string }
+      const comment = comments.find((c) => c.id === body.p_id && c.author_id === me)
+      if (comment === undefined) return json(false)
+      if (comments.some((c) => c.parent_id === comment.id && c.author_id !== me)) return json(false)
+      for (let i = comments.length - 1; i >= 0; i--) {
+        const c = comments[i]
+        if (c !== undefined && (c.id === comment.id || c.parent_id === comment.id)) {
+          comments.splice(i, 1)
         }
       }
       return json(true)

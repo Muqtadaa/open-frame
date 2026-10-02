@@ -122,6 +122,8 @@ export interface BoardComment {
   readonly fy: number | null
   readonly resolvedAt: number | null
   readonly createdAt: number
+  /** When its author last changed its words; `null` on one never edited. */
+  readonly editedAt: number | null
 }
 
 export interface BoardPerson {
@@ -301,6 +303,10 @@ export interface DiscussionService {
   readonly people: (boardId: BoardId) => Promise<readonly BoardPerson[]>
   readonly post: (comment: NewComment) => Promise<string | null>
   readonly resolve: (id: string, resolved: boolean) => Promise<boolean>
+  /** Rewrites a remark's words; its author's alone. */
+  readonly edit: (id: string, body: string) => Promise<boolean>
+  /** Deletes a remark; its author's alone, and never a thread others replied to. */
+  readonly remove: (id: string) => Promise<boolean>
   readonly mentions: () => Promise<readonly Mention[]>
   readonly markRead: (commentIds: readonly string[]) => Promise<boolean>
   readonly watchMentions: (userId: string, onChange: () => void) => () => void

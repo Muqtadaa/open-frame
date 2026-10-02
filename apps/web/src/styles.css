@@ -2960,6 +2960,31 @@ body {
   white-space: nowrap;
 }
 
+.of-comment__edited {
+  color: var(--of-ink-muted);
+  font-size: var(--of-type-ui-small);
+}
+
+/* A remark's own controls: quiet, under its words, and only on your own. */
+.of-comment__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--of-space-6);
+  margin-top: var(--of-space-4);
+}
+
+.of-comment__edit {
+  display: flex;
+  flex-direction: column;
+  gap: var(--of-space-4);
+}
+
+/* Previous and Next sit together, between "All comments" and Close. */
+.of-comment-panel__walk {
+  display: flex;
+  gap: var(--of-space-2);
+}
+
 .of-comment__byline,
 .of-comment-panel__byline {
   display: flex;
@@ -6169,6 +6194,18 @@ textarea.of-input {
   color: var(--of-danger);
   background: var(--of-danger-wash);
   border: 1px solid var(--of-danger);
+}
+
+/* Deleting a remark is the same answer, said the same way. */
+.of-comment__confirm-yes {
+  color: var(--of-danger);
+  background: var(--of-danger-wash);
+  border: 1px solid var(--of-danger);
+}
+
+.of-comment__confirm-yes:hover {
+  background: var(--of-page);
+  border-color: var(--of-danger);
 }
 
 .of-home__confirm-yes:hover {

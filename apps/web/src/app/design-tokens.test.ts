@@ -1157,6 +1157,7 @@ describe.each(THEMES)('the front door’s controls are seen — $name', ({ token
   it.each([
     '.of-status__share',
     '.of-home__confirm-yes',
+    '.of-comment__confirm-yes',
     '.of-home__confirm-no',
     '.of-mentions__bell',
     '.of-spaces__tab--on',

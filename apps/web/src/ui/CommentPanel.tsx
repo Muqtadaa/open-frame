@@ -11,6 +11,7 @@ import {
   mentionsIn,
   peopleMatching,
   plainMentionText,
+  restoreMentions,
   tokeniseMentions,
   repliesTo,
   unknownMentionIn,
@@ -22,6 +23,7 @@ import { draftKey, useCommentDrafts } from '../interaction/comment-drafts.js'
 import { useInteractionStore } from '../interaction/interaction-store.js'
 import { useOpenFrame } from '../runtime/context.js'
 import { hueVar } from '../scene/presence.js'
+import { BackIcon, StepIcon } from '../controls/icons.js'
 import { Ago } from './Ago.js'
 import { MentionPicker } from './MentionPicker.js'
 import { MentionText } from './MentionText.js'
@@ -35,7 +37,8 @@ import { MentionText } from './MentionText.js'
  * about; the words are in the margin because that is where words are legible.
  */
 export function CommentPanel({ author }: { readonly author: string | null }) {
-  const { comments, people, replyCounts, post, resolve, focusComment } = useDiscussion()
+  const { comments, people, replyCounts, post, resolve, edit, remove, focusComment } =
+    useDiscussion()
   const { runtime } = useOpenFrame()
   const me = useIdentity()
   const composing = useInteractionStore((state) => state.composing)
@@ -255,6 +258,20 @@ export function CommentPanel({ author }: { readonly author: string | null }) {
   const threads = showResolved ? allThreads(comments) : live
   const resolvedCount = allThreads(comments).length - live.length
 
+  /*
+   * The threads a reader walks with Previous and Next: the open ones, in the
+   * list's order — or every one, when the thread being read is itself
+   * resolved and so is not among the open.
+   */
+  const walk = thread === null ? [] : thread.resolvedAt === null ? live : allThreads(comments)
+  const at = thread === null ? -1 : walk.findIndex((each) => each.id === thread.id)
+  const before = at > 0 ? walk[at - 1] : undefined
+  const after = at >= 0 ? walk[at + 1] : undefined
+  const goTo = (target: BoardComment): void => {
+    // As the list does: brought into view as it opens.
+    if (!focusComment(target.id)) openThread(target.id)
+  }
+
   /**
    * Writes the comment, or the reply, and says so if it could not be written.
    *
@@ -349,15 +366,49 @@ export function CommentPanel({ author }: { readonly author: string | null }) {
         {thread !== null && (
           <button
             type="button"
-            className="of-button of-button--ghost"
+            className="of-icon-button"
+            /*
+             * Drawn rather than written, now Previous and Next sit beside it:
+             * as three words it pushed Close off a 300px panel.
+             */
+            aria-label="All comments"
+            data-tip="All comments"
             data-testid="comment-back"
             onClick={() => {
               openThread(null)
               setCommentsOpen(true)
             }}
           >
-            All comments
+            <BackIcon />
           </button>
+        )}
+        {thread !== null && walk.length > 1 && (
+          <span className="of-comment-panel__walk">
+            <button
+              type="button"
+              className="of-icon-button"
+              aria-label="Previous comment"
+              data-tip="Previous comment"
+              disabled={before === undefined}
+              onClick={() => {
+                if (before !== undefined) goTo(before)
+              }}
+            >
+              <StepIcon direction="back" />
+            </button>
+            <button
+              type="button"
+              className="of-icon-button"
+              aria-label="Next comment"
+              data-tip="Next comment"
+              disabled={after === undefined}
+              onClick={() => {
+                if (after !== undefined) goTo(after)
+              }}
+            >
+              <StepIcon direction="on" />
+            </button>
+          </span>
         )}
         <button
           type="button"
@@ -457,9 +508,40 @@ export function CommentPanel({ author }: { readonly author: string | null }) {
 
       {thread !== null && (
         <div className="of-comment-panel__thread">
-          <Remark comment={thread} whoIsMe={me?.userId ?? null} />
+          <Remark
+            comment={thread}
+            whoIsMe={me?.userId ?? null}
+            kind="comment"
+            /*
+             * Deleting a thread takes its replies with it, and those may be
+             * somebody else's words — so the server refuses, and the panel
+             * says why rather than offering what will not happen.
+             */
+            refusal={
+              replies.some((reply) => reply.authorId !== thread.authorId)
+                ? 'Others have replied to it'
+                : null
+            }
+            edit={edit}
+            remove={async (id) => {
+              const ok = await remove(id)
+              if (ok) {
+                openThread(null)
+                setCommentsOpen(true)
+              }
+              return ok
+            }}
+          />
           {replies.map((reply) => (
-            <Remark key={reply.id} comment={reply} whoIsMe={me?.userId ?? null} />
+            <Remark
+              key={reply.id}
+              comment={reply}
+              whoIsMe={me?.userId ?? null}
+              kind="reply"
+              refusal={null}
+              edit={edit}
+              remove={remove}
+            />
           ))}
         </div>
       )}
@@ -696,13 +778,88 @@ export function CommentPanel({ author }: { readonly author: string | null }) {
   )
 }
 
+/**
+ * One remark, and — when it is yours — the means to change it.
+ *
+ * In place rather than in a menu: there are two things to do to a remark, and
+ * a menu for two is a click spent finding them. Deleting asks first, in the
+ * same place, because it is the one thing in the panel that cannot be undone.
+ */
 function Remark({
   comment,
   whoIsMe,
+  kind,
+  refusal,
+  edit,
+  remove,
 }: {
   readonly comment: BoardComment
   readonly whoIsMe: string | null
+  /** What it is called in the controls: a thread's first remark, or a reply. */
+  readonly kind: 'comment' | 'reply'
+  /** Why it may not be deleted, if it may not. */
+  readonly refusal: string | null
+  readonly edit: (id: string, body: string) => Promise<boolean>
+  readonly remove: (id: string) => Promise<boolean>
 }) {
+  const mine = whoIsMe !== null && comment.authorId === whoIsMe
+  const [mode, setMode] = useState<'reading' | 'editing' | 'confirming'>('reading')
+  /*
+   * The box holds names, as the composer does: a stored mention is
+   * `@[Name](id)`, and showing that would hand somebody an id to read and a
+   * token to break. The mentions go back in on save (`restoreMentions`).
+   */
+  const shown = plainMentionText(comment.body)
+  const [draft, setDraft] = useState(shown)
+  const [busy, setBusy] = useState(false)
+  const [problem, setProblem] = useState<string | null>(null)
+  const editButton = useRef<HTMLButtonElement>(null)
+  const deleteButton = useRef<HTMLButtonElement>(null)
+  const field = useRef<HTMLTextAreaElement>(null)
+  const confirm = useRef<HTMLButtonElement>(null)
+  /*
+   * Where the keyboard goes once a mode closes: back to what opened it. Named
+   * rather than held, because that button was not mounted while the mode was
+   * open, and a ref to it then is a ref to nothing.
+   */
+  const returnTo = useRef<'edit' | 'delete' | null>(null)
+
+  useEffect(() => {
+    if (mode === 'editing') {
+      field.current?.focus()
+      field.current?.select()
+    } else if (mode === 'confirming') {
+      confirm.current?.focus()
+    } else if (returnTo.current !== null) {
+      ;(returnTo.current === 'edit' ? editButton : deleteButton).current?.focus()
+      returnTo.current = null
+    }
+  }, [mode])
+
+  const leave = (back: 'edit' | 'delete'): void => {
+    returnTo.current = back
+    setProblem(null)
+    setMode('reading')
+  }
+
+  const save = (): void => {
+    const body = restoreMentions(draft, comment.body).trim()
+    if (body === '' || busy) return
+    if (body === comment.body) {
+      leave('edit')
+      return
+    }
+    setBusy(true)
+    void edit(comment.id, body).then((ok) => {
+      setBusy(false)
+      if (!ok) {
+        setProblem('That could not be saved. Your words are kept here — try again.')
+        return
+      }
+      leave('edit')
+    })
+  }
+
   return (
     <article className="of-comment">
       {/* The initial is the name again, in a circle: shown, not read out. */}
@@ -718,10 +875,141 @@ function Remark({
         <span className="of-comment__byline">
           <span className="of-comment__name">{comment.authorName}</span>
           <Ago at={comment.createdAt} />
+          {comment.editedAt !== null && (
+            <span className="of-comment__edited" data-testid="comment-edited">
+              edited
+            </span>
+          )}
         </span>
-        <p className="of-comment__text" data-testid="comment-text">
-          <MentionText body={comment.body} whoIsMe={whoIsMe} />
-        </p>
+
+        {mode === 'editing' ? (
+          <form
+            className="of-comment__edit"
+            onSubmit={(event) => {
+              event.preventDefault()
+              save()
+            }}
+          >
+            <textarea
+              ref={field}
+              className="of-input"
+              rows={3}
+              maxLength={4000}
+              value={draft}
+              disabled={busy}
+              aria-label={`Edit your ${kind}`}
+              onChange={(event) => {
+                setDraft(event.target.value)
+              }}
+              onKeyDown={(event) => {
+                // Escape puts the words back and keeps the thread open: the
+                // panel's own Escape would close the whole discussion.
+                if (event.key === 'Escape') {
+                  event.preventDefault()
+                  event.stopPropagation()
+                  setDraft(shown)
+                  leave('edit')
+                } else if (event.key === 'Enter' && (event.metaKey || event.ctrlKey)) {
+                  event.preventDefault()
+                  save()
+                }
+              }}
+            />
+            <span className="of-comment__actions">
+              <button
+                type="submit"
+                className="of-button of-button--primary"
+                disabled={busy || draft.trim() === ''}
+              >
+                Save
+              </button>
+              <button
+                type="button"
+                className="of-button of-button--ghost"
+                onClick={() => {
+                  setDraft(shown)
+                  leave('edit')
+                }}
+              >
+                Cancel
+              </button>
+            </span>
+          </form>
+        ) : (
+          <p className="of-comment__text" data-testid="comment-text">
+            <MentionText body={comment.body} whoIsMe={whoIsMe} />
+          </p>
+        )}
+
+        {mode === 'confirming' && (
+          <span className="of-comment__actions" role="group" aria-label={`Delete your ${kind}?`}>
+            <button
+              ref={confirm}
+              type="button"
+              className="of-button of-comment__confirm-yes"
+              disabled={busy}
+              onClick={() => {
+                setBusy(true)
+                void remove(comment.id).then((ok) => {
+                  setBusy(false)
+                  if (!ok) setProblem('That could not be deleted. Try again in a moment.')
+                })
+              }}
+            >
+              Delete
+            </button>
+            <button
+              type="button"
+              className="of-button of-button--ghost"
+              onClick={() => {
+                leave('delete')
+              }}
+            >
+              Keep it
+            </button>
+          </span>
+        )}
+
+        {mine && mode === 'reading' && (
+          <span className="of-comment__actions">
+            <button
+              ref={editButton}
+              type="button"
+              className="of-button of-button--ghost"
+              aria-label={`Edit your ${kind}`}
+              onClick={() => {
+                setDraft(shown)
+                setMode('editing')
+              }}
+            >
+              Edit
+            </button>
+            <button
+              ref={deleteButton}
+              type="button"
+              className="of-button of-button--ghost"
+              aria-label={`Delete your ${kind}`}
+              /*
+               * Reachable and SAID rather than disabled or hidden: a control
+               * that vanishes on one thread and not the next reads as a bug.
+               */
+              aria-disabled={refusal !== null}
+              aria-description={refusal ?? undefined}
+              data-tip={refusal ?? undefined}
+              onClick={() => {
+                if (refusal === null) setMode('confirming')
+              }}
+            >
+              Delete
+            </button>
+          </span>
+        )}
+
+        {problem !== null && (
+          <p className="of-comment-panel__problem" role="alert">
+            {problem}
+          </p>
+        )}
       </div>
     </article>
   )
