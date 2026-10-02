@@ -365,19 +365,34 @@ describe('transforming the selection without a pointer', () => {
     ['ArrowLeft', { dw: -10, dh: 0 }],
     ['ArrowDown', { dw: 0, dh: 10 }],
     ['ArrowUp', { dw: 0, dh: -10 }],
-  ])('Alt+%s resizes by the grid step', (pressed, by) => {
-    expect(resolveKeyAction(key(pressed, { altKey: true }), TOOLS)).toEqual({
+  ])('Mod+%s resizes by the grid step', (pressed, by) => {
+    expect(resolveKeyAction(key(pressed, { ctrlKey: true }), TOOLS)).toEqual({
+      kind: 'resize-by',
+      ...by,
+    })
+    expect(resolveKeyAction(key(pressed, { metaKey: true }), TOOLS)).toEqual({
       kind: 'resize-by',
       ...by,
     })
   })
 
-  it('Alt+Shift+arrow resizes by a single unit', () => {
-    expect(resolveKeyAction(key('ArrowRight', { altKey: true, shiftKey: true }), TOOLS)).toEqual({
+  it('Mod+Shift+arrow resizes by a single unit', () => {
+    expect(resolveKeyAction(key('ArrowRight', { ctrlKey: true, shiftKey: true }), TOOLS)).toEqual({
       kind: 'resize-by',
       dw: 1,
       dh: 0,
     })
+  })
+
+  /*
+   * Alt is the measuring key: held, it shows distances to what the pointer is
+   * over. Resizing on Alt+arrow meant nudging while measuring changed the size
+   * instead, so Alt+arrow moves, exactly as the arrow alone does.
+   */
+  it('Alt+arrow nudges, so the selection can be moved while measuring', () => {
+    expect(resolveKeyAction(key('ArrowRight', { altKey: true }), TOOLS)).toEqual(
+      resolveKeyAction(key('ArrowRight'), TOOLS),
+    )
   })
 
   it.each([

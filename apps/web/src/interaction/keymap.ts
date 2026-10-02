@@ -150,23 +150,27 @@ export function resolveKeyAction(
       case 'l':
       case 'L':
         return ctx.shiftKey ? { kind: 'toggle-lock' } : null
-      default:
-        return null
+      default: {
+        /*
+         * RESIZE BY KEYBOARD: Mod with an arrow, by the grid step, or by a
+         * single unit with Shift as well. The arrow says which way the far
+         * edge goes — right and down grow, left and up shrink — so the near
+         * corner stays put, the way a drag on the far corner would leave it.
+         *
+         * It was Alt+arrow, until Alt became the key that measures: nudging
+         * while measuring then changed the size instead of moving it.
+         */
+        const by = NUDGE_KEYS[key]
+        if (by === undefined) return null
+        const step = ctx.shiftKey ? 1 : GRID_SIZE
+        return { kind: 'resize-by', dw: by.dx * step, dh: by.dy * step }
+      }
     }
   }
 
-  /*
-   * RESIZE BY KEYBOARD: Alt with an arrow, by the grid step, or by a single
-   * unit with Shift as well. The arrow says which way the far edge goes —
-   * right and down grow, left and up shrink — so the near corner stays put,
-   * the way a drag on the far corner would leave it.
-   */
-  if (ctx.altKey) {
-    const by = NUDGE_KEYS[key]
-    if (by === undefined) return null
-    const step = ctx.shiftKey ? 1 : GRID_SIZE
-    return { kind: 'resize-by', dw: by.dx * step, dh: by.dy * step }
-  }
+  // Alt is the measuring key, and with an arrow it moves like the arrow alone.
+  // With anything else it is not a tool key: Alt+T is not the text tool.
+  if (ctx.altKey && NUDGE_KEYS[key] === undefined) return null
 
   const nudge = NUDGE_KEYS[key]
   if (nudge !== undefined) {

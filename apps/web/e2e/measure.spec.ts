@@ -121,10 +121,11 @@ test('stops measuring when the window loses the key', async ({ page }) => {
   await page.keyboard.up('Alt')
 })
 
-test('still resizes with Alt and an arrow', async ({ page }) => {
+test('moves with Alt and an arrow, so it can be nudged while measuring', async ({ page }) => {
   await notes(page, A)
   await page.locator(CANVAS).click({ position: A })
   const before = await boxOf(note(page, 0))
   await page.keyboard.press('Alt+ArrowRight')
-  await expect.poll(async () => (await boxOf(note(page, 0))).width).toBeGreaterThan(before.width)
+  await expect.poll(async () => (await boxOf(note(page, 0))).x).toBeGreaterThan(before.x)
+  expect((await boxOf(note(page, 0))).width).toBe(before.width)
 })

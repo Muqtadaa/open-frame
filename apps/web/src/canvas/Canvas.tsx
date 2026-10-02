@@ -6,6 +6,7 @@ import { cursorFor, markFor } from '../interaction/tool-cursor.js'
 import { useCursorInk } from '../hooks/use-cursor-ink.js'
 import { useKeyboardShortcuts } from '../interaction/use-keyboard-shortcuts.js'
 import { gridStyle } from '../scene/grid.js'
+import { IS_MAC } from '../scene/platform.js'
 import { formatKeys } from '../scene/shortcuts.js'
 import { BoardAnnouncer } from './BoardAnnouncer.js'
 import { AlignmentOverlay } from './AlignmentOverlay.js'
@@ -64,7 +65,7 @@ import { useMoving } from './use-moving.js'
 const BOARD_KEYS = [
   'Tab moves between objects.',
   'Arrow keys move the selection;',
-  `${formatKeys('Alt')} with an arrow resizes it;`,
+  `${IS_MAC ? '⌘' : 'Ctrl'} with an arrow resizes it;`,
   `holding ${formatKeys('Alt')} measures from it to whatever is under the pointer;`,
   'comma and period rotate it;',
   `${formatKeys('Mod+Shift+L')} locks it;`,
