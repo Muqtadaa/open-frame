@@ -24,10 +24,24 @@ describe('the distance between two things', () => {
     ])
   })
 
-  it('is a line on each axis when they are apart on both, drawn from the selection', () => {
+  /*
+   * Apart on both axes, the two lines are one L from corner to corner: across
+   * along the selection's near edge, then down the target's. Drawn from each
+   * one's middle they were two spokes in empty space that met nowhere.
+   */
+  it('is an L from corner to corner when they are apart on both', () => {
+    // Selection's bottom-right corner (100, 50); target's top-left (200, 120).
     expect(distancesBetween(rect(0, 0), rect(200, 120))).toEqual([
-      { axis: 'x', from: 100, to: 200, at: 25 },
-      { axis: 'y', from: 50, to: 120, at: 50 },
+      { axis: 'x', from: 100, to: 200, at: 50 },
+      { axis: 'y', from: 50, to: 120, at: 200 },
+    ])
+  })
+
+  it('turns the L the other way when the target is above and to the left', () => {
+    // Selection's top-left corner (300, 200); target's bottom-right (100, 50).
+    expect(distancesBetween(rect(300, 200), rect(0, 0))).toEqual([
+      { axis: 'x', from: 100, to: 300, at: 200 },
+      { axis: 'y', from: 50, to: 200, at: 100 },
     ])
   })
 

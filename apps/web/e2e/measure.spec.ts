@@ -55,6 +55,42 @@ test('says how far the selection is from what Alt points at, and goes when Alt i
   await expect(page.getByTestId('measure-match-y')).toHaveCount(0)
 })
 
+/*
+ * Apart on both axes, the two measurements stood out from each one's middle
+ * as spokes that met nowhere. They are one L, corner to corner.
+ */
+test('measures something off on a diagonal as one L from corner to corner', async ({ page }) => {
+  const D = { x: 620, y: 560 }
+  await notes(page, A, D)
+  const a = await boxOf(note(page, 0))
+  const d = await boxOf(note(page, 1))
+  await page.locator(CANVAS).click({ position: A })
+
+  await page.mouse.move(D.x, D.y)
+  await page.keyboard.down('Alt')
+  await page.mouse.move(D.x + 4, D.y + 4)
+
+  const across = await boxOf(page.getByTestId('measure-line-x'))
+  const down = await boxOf(page.getByTestId('measure-line-y'))
+  // Across along the selection's bottom edge, from its corner to the target's
+  // left edge…
+  expect(across.y).toBeCloseTo(a.y + a.height, 0)
+  expect(across.x).toBeCloseTo(a.x + a.width, 0)
+  expect(across.x + across.width).toBeCloseTo(d.x, 0)
+  // …then down the target's left edge to its corner.
+  expect(down.x).toBeCloseTo(d.x, 0)
+  expect(down.y).toBeCloseTo(a.y + a.height, 0)
+  expect(down.y + down.height).toBeCloseTo(d.y, 0)
+
+  await expect(page.getByTestId('measure-gap-x')).toHaveText(
+    String(Math.round(d.x - (a.x + a.width))),
+  )
+  await expect(page.getByTestId('measure-gap-y')).toHaveText(
+    String(Math.round(d.y - (a.y + a.height))),
+  )
+  await page.keyboard.up('Alt')
+})
+
 test('says nothing with nothing selected', async ({ page }) => {
   await notes(page, A, B)
   await page.mouse.move(B.x, B.y)

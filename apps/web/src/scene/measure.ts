@@ -81,8 +81,8 @@ function gapAlong(a: Rect, b: Rect, axis: 'x' | 'y', fallback: number): MeasureS
 /**
  * How far apart two boxes are, as the lines a design tool draws.
  *
- * Side by side, one line across the gap; apart on both axes, one on each, from
- * the selection; one inside the other, a line from each edge of the inner one
+ * Side by side, one line across the gap; apart on both axes, an L from corner
+ * to corner; one inside the other, a line from each edge of the inner one
  * to the outer one's. Overlapping without one holding the other says nothing,
  * because there is no gap to measure.
  */
@@ -110,12 +110,23 @@ export function distancesBetween(selection: Rect, target: Rect): readonly Measur
     return segments
   }
 
-  const segments: MeasureSegment[] = []
-  for (const axis of ['x', 'y'] as const) {
-    const gap = gapAlong(selection, target, axis, centre(selection, other(axis)))
-    if (gap !== null) segments.push(gap)
+  const across = gapAlong(selection, target, 'x', centre(selection, 'y'))
+  const down = gapAlong(selection, target, 'y', centre(selection, 'x'))
+  if (across !== null && down !== null) {
+    /*
+     * Apart on both: one L from the selection's near corner to the target's —
+     * across along the selection's near edge, then down the target's. Each leg
+     * is still exactly its gap, and the two meet at the corner rather than
+     * standing apart as spokes from each one's middle.
+     */
+    const below = target.y > selection.y
+    const right = target.x > selection.x
+    return [
+      { ...across, at: below ? selection.y + selection.height : selection.y },
+      { ...down, at: right ? target.x : target.x + target.width },
+    ]
   }
-  return segments
+  return [across, down].filter((gap): gap is MeasureSegment => gap !== null)
 }
 
 function stops(rect: Rect, axis: 'x' | 'y'): readonly number[] {

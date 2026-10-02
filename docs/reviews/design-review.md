@@ -1078,6 +1078,12 @@ first:
 - a real Durable Object: set, read by all three keys, refused to a stranger,
   cleared.
 
+Measuring on a diagonal (owner's note, 2026-10-02): two things apart on both
+axes were measured from each one's middle, so the two lines stood out as
+spokes that met nowhere. They are now one L from the selection's near corner
+to the target's, each leg still exactly its gap. The unit tests and an e2e
+checking that the legs meet on the edges were seen failing first.
+
 Still to come, in order:
 
 - board clarity: where hidden objects went, presence for assistive tech, a

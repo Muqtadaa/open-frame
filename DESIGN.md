@@ -395,7 +395,10 @@ the only insistent hues in the whole system belong to the user's material.
 - **Guide Magenta** (`guide`): alignment guides while a gesture is running, and
   measurements while Alt is held. It is transient feedback, never a target and
   never chrome. A measured stretch is a solid hairline with its length in board
-  units on it; a shared edge or centre is a dashed hairline. While Alt is held
+  units on it; a shared edge or centre is a dashed hairline. Two things apart
+  on both axes are measured as one L from corner to corner — across along the
+  selection's near edge, then along the target's — never as two spokes from
+  their middles that meet nowhere. While Alt is held
   the record panel fades and lets the pointer through, because what you measure
   to is usually beside the selection, under the panel. Nudging with the arrows
   shows the same lines on every press — the distance to the nearest neighbour
