@@ -199,6 +199,25 @@ function guidesFor(
  * one neighbour while staying free vertically, which is what makes nudging
  * something into a row feel like it is being helped rather than fought.
  */
+/**
+ * The guides for a selection that has already been placed: one per axis it
+ * was lined up on, measured from where it actually is.
+ *
+ * Asked again once the grid has had its say on the other axis, so the gap a
+ * guide states is the gap letting go leaves — measured from the pointer, it
+ * slid smoothly ahead of an element moving in grid steps.
+ */
+export function guidesAround(
+  placed: Rect,
+  others: readonly Rect[],
+  aligned: { readonly x: boolean; readonly y: boolean },
+): readonly AlignmentGuide[] {
+  return [
+    ...(aligned.x ? guidesFor(placed, others, 'x') : []),
+    ...(aligned.y ? guidesFor(placed, others, 'y') : []),
+  ]
+}
+
 export function alignToNeighbours(
   bounds: Rect,
   delta: Point,
