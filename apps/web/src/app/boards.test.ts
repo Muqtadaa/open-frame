@@ -1,8 +1,10 @@
 import {
   asBoardId,
+  asObjectId,
   createEmptyDocument,
   type BoardDocument,
   type BoardId,
+  type AnyOpenFrameObject,
   type BoardRepository,
   type BoardSummary,
 } from '@openframe/core'
@@ -388,5 +390,51 @@ describe('keeping a copy of a board', () => {
     expect(saved[0]?.id).toBe(id)
     expect(saved[0]?.meta.title).toBe('Pricing research (copy)')
     expect(saved[0]?.objects).toBe(original.objects)
+  })
+  /*
+   * The copy's pictures named a room that no longer exists. They painted —
+   * the bytes are asked of this browser first — but sharing the copy later
+   * published none of them, because what is lifted into a new room is what
+   * says it is only here.
+   */
+  it('points every picture at the bytes this browser holds', async () => {
+    const saved: BoardDocument[] = []
+    const repository = {
+      saveBoard: (document: BoardDocument) => {
+        saved.push(document)
+        return Promise.resolve()
+      },
+    } as unknown as BoardRepository
+    const empty = createEmptyDocument(asBoardId('brd_gone'), 'Pricing research', 1)
+    const picture = {
+      id: asObjectId('obj_picture'),
+      type: 'image',
+      data: {
+        asset: { id: 'ast_1', mimeType: 'image/png', byteSize: 4, locator: 'room:ast_1' },
+        alt: '',
+      },
+    } as unknown as AnyOpenFrameObject
+    const note = {
+      id: asObjectId('obj_note'),
+      type: 'sticky',
+      data: {},
+    } as unknown as AnyOpenFrameObject
+    const original = {
+      ...empty,
+      objects: new Map([
+        [picture.id, picture],
+        [note.id, note],
+      ]),
+    }
+
+    await keepCopy(repository, original)
+
+    const kept = saved[0]?.objects
+    expect((kept?.get(picture.id)?.data as { asset: { locator: string } }).asset.locator).toBe(
+      'idb:ast_1',
+    )
+    expect(kept?.get(note.id)).toBe(note)
+    // The board on screen is not touched by keeping a copy of it.
+    expect((picture.data as { asset: { locator: string } }).asset.locator).toBe('room:ast_1')
   })
 })

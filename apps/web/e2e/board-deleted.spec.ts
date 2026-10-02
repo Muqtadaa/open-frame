@@ -1,9 +1,15 @@
 import { expect, test, type Page, type WebSocketRoute } from '@playwright/test'
 
+import { buildBoard } from './boards.js'
 import { signedIn } from './signed-in.js'
 
 const KEY = 'e'.repeat(32)
 const BOARD = 'brd_abcdefgh12345678'
+const PNG = Buffer.from(
+  'iVBORw0KGgoAAAANSUhEUgAAAAIAAAADCAIAAAA2iEnWAAAAEElEQVR42mP4zwAE/xlQKAA+' +
+    '1gX7ttb52gAAAABJRU5ErkJggg==',
+  'base64',
+)
 
 /**
  * Holds the room's end of the socket so the test can decide WHEN the board is
@@ -152,6 +158,67 @@ test('keeps a copy of what was on screen as a board of your own', async ({ page 
   // A board of its own, not the deleted one come back.
   expect(page.url()).not.toContain(BOARD)
   await expect.poll(() => storedBoards(page)).not.toContain(BOARD)
+})
+
+/*
+ * A copy is only as complete as what this browser holds when the room goes,
+ * and a deleted room refuses its pictures along with everything else. The
+ * board only fetches what is on screen, so a picture nobody had scrolled to
+ * was lost to the copy. A shared board now fetches every picture on it in the
+ * background, so the one placed far off screen here is already held.
+ */
+test('keeps the pictures, including one nobody had scrolled to', async ({ page }) => {
+  await signedIn(page, [])
+  const deleteTheBoard = await roomThatCanBeDeleted(page)
+  let roomServes = true
+  let fetched = 0
+  await page.route(/\/asset\/ast_far/, (route) => {
+    if (!roomServes) return route.fulfill({ status: 410 })
+    fetched += 1
+    return route.fulfill({ status: 200, contentType: 'image/png', body: PNG })
+  })
+  await page.goto(`/?room=${BOARD}&k=${KEY}`)
+  await page.waitForSelector('[data-testid="status-bar"]')
+
+  const board = buildBoard((b) => {
+    b.add(
+      'image',
+      { x: 6000, y: 6000 },
+      {
+        asset: {
+          id: 'ast_far',
+          mimeType: 'image/png',
+          byteSize: PNG.length,
+          locator: 'room:ast_far',
+        },
+        naturalWidth: 2,
+        naturalHeight: 3,
+        alt: 'The far picture',
+      },
+    )
+  })
+  const loaded = await page.evaluate((payload) => {
+    const tools = (
+      window as unknown as {
+        __openframe: { runtime: { devTools: { loadBoard: (raw: unknown) => { ok: boolean } } } }
+      }
+    ).__openframe.runtime.devTools
+    return tools.loadBoard(payload).ok
+  }, board.payload)
+  expect(loaded).toBe(true)
+  // Off screen, so nothing but the background fetch would ask for it.
+  await expect(page.locator('[data-object-type="image"]')).toHaveCount(0)
+  await expect.poll(() => fetched).toBe(1)
+
+  roomServes = false
+  await deleteTheBoard()
+  await page.getByRole('button', { name: 'Keep a copy' }).click()
+  await expect(page).toHaveURL(/[?&]board=/)
+
+  await page.getByRole('button', { name: 'Zoom to fit' }).click()
+  const picture = page.getByRole('img', { name: 'The far picture' })
+  await expect(picture).toBeVisible()
+  await expect.poll(() => picture.evaluate((img) => (img as HTMLImageElement).naturalWidth)).toBe(2)
 })
 
 /** The board ids this browser is holding documents for. */

@@ -80,6 +80,19 @@ export class IndexedDbAssetStore implements AssetStore {
     return url
   }
 
+  /**
+   * Whether the bytes are here, without minting a URL for them.
+   *
+   * `resolve` would answer the same question, but it keeps an object URL —
+   * and the decoded-blob reference behind it — for every image it is asked
+   * about. Holding a whole board's pictures ahead of time must not pin every
+   * one of them in memory as well.
+   */
+  async has(id: AssetId): Promise<boolean> {
+    const count = await transact(STORES.assets, 'readonly', (store) => promisify(store.count(id)))
+    return count > 0
+  }
+
   async delete(id: AssetId): Promise<void> {
     const url = this.#urls.get(id)
     if (url !== undefined) {

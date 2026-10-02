@@ -15,6 +15,7 @@ import {
   type Capabilities,
   type AssetStore,
   type DocumentStore,
+  type IdGenerator,
 } from '@openframe/core'
 
 import { IndexedDbAssetStore } from '../adapters/indexeddb/indexeddb-asset-store.js'
@@ -22,7 +23,7 @@ import { RoomAssetStore } from '../adapters/room/room-asset-store.js'
 import { accessKey, assetUrl, COLLAB_ENABLED } from './collab-config.js'
 import { heldOwnerKey, heldToken } from './board-password.js'
 import { IndexedDbBoardRepository } from '../adapters/indexeddb/indexeddb-board-repository.js'
-import { AssetService } from '../runtime/asset-service.js'
+import { AssetService, measureImage } from '../runtime/asset-service.js'
 import { BENCH_TOOLS_ENABLED } from './bench-flag.js'
 import type { OpenFrameRuntime, Quarantine, SaveState, SaveStatus } from '../runtime/context.js'
 
@@ -69,11 +70,11 @@ const DEFAULT_AUTOSAVE_DELAY_MS = 500
  * first thing asked on every resolve, so an image this browser holds paints
  * without a round trip and keeps painting offline.
  */
-function defaultAssetStore(boardId: BoardId): AssetStore {
+function defaultAssets(boardId: BoardId, ids: IdGenerator): AssetService {
   const local = new IndexedDbAssetStore()
-  if (!COLLAB_ENABLED) return local
+  if (!COLLAB_ENABLED) return new AssetService(local, ids)
 
-  return new RoomAssetStore(local, {
+  const room = new RoomAssetStore(local, {
     url: (assetId) => assetUrl(boardId, assetId),
     // Read at call time, not captured: a board can be unlocked, or adopt an
     // owner key, after the runtime is built.
@@ -83,6 +84,8 @@ function defaultAssetStore(boardId: BoardId): AssetStore {
       token: heldToken(boardId),
     }),
   })
+  // Holding is what lets a kept copy of a deleted board keep its pictures.
+  return new AssetService(room, ids, measureImage, (ref) => room.hold(ref))
 }
 
 export async function createRuntime(options: CreateRuntimeOptions = {}): Promise<OpenFrameRuntime> {
@@ -90,7 +93,10 @@ export async function createRuntime(options: CreateRuntimeOptions = {}): Promise
   const repository = options.repository ?? new IndexedDbBoardRepository()
   const registry = createDefaultRegistry()
   const ids = createIdGenerator()
-  const assets = new AssetService(options.assetStore ?? defaultAssetStore(boardId), ids)
+  const assets =
+    options.assetStore === undefined
+      ? defaultAssets(boardId, ids)
+      : new AssetService(options.assetStore, ids)
 
   const notices: string[] = []
   let readOnly = false

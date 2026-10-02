@@ -1,12 +1,16 @@
 import {
   createEmptyDocument,
   systemClock,
+  type AssetRef,
   type BoardDocument,
+  type AnyOpenFrameObject,
+  type ObjectId,
   type BoardId,
   type BoardRepository,
   type BoardSummary,
 } from '@openframe/core'
 
+import { assetLocator } from '../adapters/indexeddb/indexeddb-asset-store.js'
 import { localOpenedAt, localPins } from './board-prefs.js'
 import { isSharedBoardId } from './collab-config.js'
 import type { ListedBoard, RemoteBoardService } from '../runtime/services.js'
@@ -62,8 +66,32 @@ export async function keepCopy(
     ...document,
     id: boardId,
     meta: { ...document.meta, title: `${document.meta.title} (copy)` },
+    objects: heldHere(document.objects),
   })
   return boardId
+}
+
+/**
+ * Every picture pointed at this browser's own bytes.
+ *
+ * The copy's pictures still said `room:`, naming a room that no longer
+ * exists. They painted, because the local store is asked first — but sharing
+ * the copy later published nothing, since the pass that lifts pictures into a
+ * new room looks for the ones that are still only here (rule 20: a locator
+ * says where the bytes really are).
+ */
+function heldHere(objects: BoardDocument['objects']): BoardDocument['objects'] {
+  let next: Map<ObjectId, AnyOpenFrameObject> | null = null
+  for (const [id, object] of objects) {
+    const data = object.data as Readonly<Record<string, unknown>> & { readonly asset?: AssetRef }
+    const ref = data.asset
+    if (ref === undefined || typeof ref.locator !== 'string') continue
+    const locator = assetLocator(ref.id)
+    if (ref.locator === locator) continue
+    next ??= new Map(objects)
+    next.set(id, { ...object, data: { ...data, asset: { ...ref, locator } } })
+  }
+  return next ?? objects
 }
 
 /**
