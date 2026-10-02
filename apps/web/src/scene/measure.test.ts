@@ -1,7 +1,13 @@
 import type { Rect } from '@openframe/core'
 import { describe, expect, it } from 'vitest'
 
-import { distancesBetween, gapsWithin, matchesBetween, nearestDistances } from './measure.js'
+import {
+  distancesBetween,
+  gapsWithin,
+  matchesBetween,
+  nearestDistances,
+  type MeasureSegment,
+} from './measure.js'
 
 /**
  * Measuring on purpose: hold Alt with something selected and point at
@@ -9,6 +15,10 @@ import { distancesBetween, gapsWithin, matchesBetween, nearestDistances } from '
  * were only while one was being dragged into line with the other.
  */
 const rect = (x: number, y: number, width = 100, height = 50): Rect => ({ x, y, width, height })
+
+/** An across leg and a down leg that end where each other runs. */
+const meetAtACorner = (a: MeasureSegment, b: MeasureSegment): boolean =>
+  a.axis !== b.axis && (b.at === a.from || b.at === a.to) && (a.at === b.from || a.at === b.to)
 
 describe('the distance between two things', () => {
   it('is one line across the gap when they sit side by side', () => {
@@ -121,6 +131,33 @@ describe('the gaps inside a selection', () => {
     const a = rect(0, 0)
     const b = rect(200, 120)
     expect(gapsWithin([b, a])).toEqual(distancesBetween(a, b))
+  })
+
+  /*
+   * The across pass and the down pass pick their neighbours separately, so a
+   * pair found by only one of them drew only that one's leg: half an L hanging
+   * in the air. Every pair found is drawn whole.
+   */
+  it('draws every diagonal pair as a whole L, whichever pass found it', () => {
+    const table = rect(0, 200, 260, 166)
+    const top = rect(470, 0, 156, 117)
+    const right = rect(940, 180, 157, 118)
+    const gaps = gapsWithin([table, top, right])
+    const expected = [...distancesBetween(table, top), ...distancesBetween(top, right)]
+    expect(gaps).toHaveLength(expected.length)
+    expect(gaps).toEqual(expect.arrayContaining(expected))
+  })
+
+  it('gives a pair found only going down its leg across as well', () => {
+    // Going down, `right` is `low`'s neighbour; across, `top` sits between them.
+    const low = rect(0, 400, 260, 166)
+    const top = rect(470, 0, 156, 117)
+    const right = rect(940, 180, 157, 118)
+    const gaps = gapsWithin([low, top, right])
+    expect(gaps).toEqual(expect.arrayContaining([...distancesBetween(right, low)]))
+    // All three sit on diagonals, so no leg may be left without the one it
+    // meets at a corner.
+    expect(gaps.filter((leg) => !gaps.some((other) => meetAtACorner(leg, other)))).toEqual([])
   })
 
   it('measures nothing between things that overlap', () => {

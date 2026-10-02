@@ -1087,6 +1087,11 @@ The same went for neighbours on a diagonal inside a multiple selection with
 nothing pointed at: they were measured midway between their middles, two short
 lines crossing in empty space. They get the same L now. A test seen failing
 first holds that a thing and what it holds still show no gap between them.
+On the preview that was still not right: the across and down passes pick
+their neighbours separately, so a pair found by only one of them got one leg
+of its L, hanging from empty space. Every pair found by either pass is now
+drawn whole (the owner's choice, over measuring only what is in line). The
+cost is more lines on a scattered selection.
 
 Still to come, in order:
 

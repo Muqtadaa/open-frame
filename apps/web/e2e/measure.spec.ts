@@ -141,6 +141,38 @@ test('measures selected neighbours on a diagonal as one L too', async ({ page })
 })
 
 /*
+ * Three things selected, each on a diagonal from the others. The across and
+ * down passes paired them differently, so some pairs got one leg of their L
+ * and nothing else: a line hanging from empty space.
+ */
+test('draws every selected pair on a diagonal as a whole L', async ({ page }) => {
+  await notes(page, { x: 430, y: 600 }, { x: 880, y: 200 }, { x: 1150, y: 400 })
+  await page.keyboard.press(`${MOD}+a`)
+  await page.mouse.move(150, 680)
+  await page.keyboard.down('Alt')
+  await page.mouse.move(154, 684)
+
+  const across = page.getByTestId('measure-line-x')
+  const down = page.getByTestId('measure-line-y')
+  await expect(across).toHaveCount(3)
+  await expect(down).toHaveCount(3)
+  const xs = await Promise.all((await across.all()).map((line) => boxOf(line)))
+  const ys = await Promise.all((await down.all()).map((line) => boxOf(line)))
+  const near = (a: number, b: number) => Math.abs(a - b) <= 1
+  for (const leg of xs) {
+    const meets = ys.some(
+      (other) =>
+        (near(other.x, leg.x) || near(other.x, leg.x + leg.width)) &&
+        (near(leg.y, other.y) || near(leg.y, other.y + other.height)),
+    )
+    expect(meets, `the leg across at ${String(leg.x)},${String(leg.y)} meets one going down`).toBe(
+      true,
+    )
+  }
+  await page.keyboard.up('Alt')
+})
+
+/*
  * Pointing at a note and then leaving the board — for the bar, say — left that
  * note recorded as under the pointer, and Alt went on measuring to it.
  */
