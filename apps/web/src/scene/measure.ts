@@ -171,3 +171,45 @@ export function gapsWithin(rects: readonly Rect[]): readonly MeasureSegment[] {
   }
   return segments
 }
+
+/**
+ * How far the selection is from the nearest thing on each side of it: left
+ * and right among what shares its row, above and below among what shares its
+ * column. What nudging with the arrows shows on every press, so a selection
+ * can be walked into place a unit at a time.
+ *
+ * Only things in line with it count. The nearest thing to the left that is
+ * also far below is not "to the left" in any sense anybody arranging a row
+ * means.
+ */
+export function nearestDistances(
+  selection: Rect,
+  others: readonly Rect[],
+): readonly MeasureSegment[] {
+  const segments: MeasureSegment[] = []
+  for (const axis of ['x', 'y'] as const) {
+    const across = other(axis)
+    const mine = span(selection, axis)
+    const myAcross = span(selection, across)
+    let before: Rect | null = null
+    let after: Rect | null = null
+    for (const candidate of others) {
+      const theirAcross = span(candidate, across)
+      const shared =
+        Math.min(myAcross.to, theirAcross.to) - Math.max(myAcross.from, theirAcross.from)
+      if (shared <= EPSILON) continue
+      const theirs = span(candidate, axis)
+      if (theirs.to <= mine.from + EPSILON) {
+        if (before === null || theirs.to > span(before, axis).to) before = candidate
+      } else if (theirs.from >= mine.to - EPSILON) {
+        if (after === null || theirs.from < span(after, axis).from) after = candidate
+      }
+    }
+    for (const neighbour of [before, after]) {
+      if (neighbour === null) continue
+      const gap = gapAlong(selection, neighbour, axis, centre(selection, across))
+      if (gap !== null) segments.push(gap)
+    }
+  }
+  return segments
+}

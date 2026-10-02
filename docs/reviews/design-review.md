@@ -1044,6 +1044,17 @@ resizes. Twelve unit tests and five e2e; removing the overlay failed three of
 them, and removing the blur handler failed the one that lets go in another
 window.
 
+**Measuring, second pass (owner, 10-02).** Three more. Cmd/Ctrl mid-drag took the
+guides away with the snapping: it now stops the help and not the information,
+so a guide and its gap still show where the selection lands exactly in line by
+hand. Nudging said nothing: each arrow press now shows the distance to the
+nearest neighbour in line on each side, and a dashed line the moment an edge or
+centre lines up, until the pointer moves, another key goes down, or 1.5s pass.
+And Alt with an arrow resized, which made nudging while measuring change the
+size: keyboard resize is Cmd/Ctrl with an arrow now, and Alt with an arrow moves.
+Each was seen failing first: the drag-delta unit test, two nudge e2e, the keymap
+tests and an e2e that Alt+arrow moves without resizing.
+
 Still to come, in order:
 
 - board clarity: where hidden objects went, presence for assistive tech, a

@@ -1,12 +1,15 @@
-import { worldToScreen, type Rect } from '@openframe/core'
+import { visibleWorldRect, worldToScreen, type Rect } from '@openframe/core'
 
 import { useBoardDocument } from '../hooks/use-document-object.js'
 import { useInteractionStore } from '../interaction/interaction-store.js'
 import { useOpenFrame } from '../runtime/context.js'
+import { alignmentTargets, exactlyAligned, guidesAround } from '../scene/alignment.js'
+import { cullToViewport } from '../scene/culling.js'
 import {
   distancesBetween,
   gapsWithin,
   matchesBetween,
+  nearestDistances,
   type MeasureMatch,
   type MeasureSegment,
 } from '../scene/measure.js'
@@ -25,13 +28,14 @@ import {
  */
 export function MeasureOverlay() {
   const measuring = useInteractionStore((state) => state.measuring)
+  const nudging = useInteractionStore((state) => state.nudging)
   const anything = useInteractionStore((state) => state.selection.size > 0)
   const idle = useInteractionStore((state) => state.drag.kind === 'idle')
   const selecting = useInteractionStore((state) => state.tool === 'select')
   const editing = useInteractionStore((state) => state.editingId !== null)
 
-  if (!measuring || !anything || !idle || !selecting || editing) return null
-  return <Measurements />
+  if (!(measuring || nudging) || !anything || !idle || !selecting || editing) return null
+  return <Measurements measuring={measuring} nudging={nudging} />
 }
 
 function union(rects: readonly Rect[]): Rect | null {
@@ -49,11 +53,18 @@ function union(rects: readonly Rect[]): Rect | null {
   return { x: left, y: top, width: right - left, height: bottom - top }
 }
 
-function Measurements() {
+function Measurements({
+  measuring,
+  nudging,
+}: {
+  readonly measuring: boolean
+  readonly nudging: boolean
+}) {
   const { runtime } = useOpenFrame()
   const selection = useInteractionStore((state) => state.selection)
   const hoveredId = useInteractionStore((state) => state.hoveredId)
   const viewport = useInteractionStore((state) => state.viewport)
+  const canvasSize = useInteractionStore((state) => state.canvasSize)
   const document = useBoardDocument()
 
   // Bounds, never `.frame` (rule 16): a group's frame is nothing, and a
@@ -68,14 +79,47 @@ function Measurements() {
   if (selected === null) return null
 
   const hovered =
-    hoveredId === null || selection.has(hoveredId) ? undefined : document.objects.get(hoveredId)
+    !measuring || hoveredId === null || selection.has(hoveredId)
+      ? undefined
+      : document.objects.get(hoveredId)
   const target = hovered === undefined ? null : runtime.registry.boundsOf(hovered, document)
 
-  // One box against what is pointed at; with nothing pointed at, the spacing
-  // inside the selection — which is how an even row is checked.
-  const segments: readonly MeasureSegment[] =
-    target !== null ? distancesBetween(selected, target) : gapsWithin(members)
-  const matches: readonly MeasureMatch[] = target !== null ? matchesBetween(selected, target) : []
+  let segments: readonly MeasureSegment[]
+  let matches: readonly MeasureMatch[]
+  if (target !== null) {
+    // One box against what is pointed at.
+    segments = distancesBetween(selected, target)
+    matches = matchesBetween(selected, target)
+  } else if (nudging) {
+    /*
+     * Walked by the arrows: how far it is from what is in line with it on each
+     * side, and a line wherever an edge or centre now lines up exactly. Only
+     * what is on screen counts, as for a drag (rule 10), and only on a press —
+     * never per frame.
+     */
+    const others = alignmentTargets(
+      document,
+      runtime.registry,
+      cullToViewport(
+        document,
+        runtime.registry,
+        visibleWorldRect(viewport, canvasSize.width, canvasSize.height),
+      ),
+      selection,
+    )
+    segments = nearestDistances(selected, others)
+    matches = guidesAround(selected, others, exactlyAligned(selected, others)).map((guide) => ({
+      axis: guide.axis,
+      position: guide.position,
+      start: guide.start,
+      end: guide.end,
+    }))
+  } else {
+    // Nothing pointed at: the spacing inside the selection — which is how an
+    // even row is checked.
+    segments = gapsWithin(members)
+    matches = []
+  }
 
   return (
     <>

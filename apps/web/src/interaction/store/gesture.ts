@@ -17,9 +17,11 @@ export const gestureSlice: Slice<GestureSlice> = (set) => ({
   drag: { kind: 'idle' },
   stylePreview: null,
   measuring: false,
+  nudging: false,
 
   // Written only when it changes: the key repeats while it is held.
   setMeasuring: (measuring) => set((state) => (state.measuring === measuring ? {} : { measuring })),
+  setNudging: (nudging) => set((state) => (state.nudging === nudging ? {} : { nudging })),
   setGuides: (guides) => set({ guides: guides.length === 0 ? NO_GUIDES : guides }),
   beginDivider: (objectId, dividerId) =>
     set({

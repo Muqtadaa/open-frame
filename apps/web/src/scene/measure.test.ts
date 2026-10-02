@@ -1,7 +1,7 @@
 import type { Rect } from '@openframe/core'
 import { describe, expect, it } from 'vitest'
 
-import { distancesBetween, gapsWithin, matchesBetween } from './measure.js'
+import { distancesBetween, gapsWithin, matchesBetween, nearestDistances } from './measure.js'
 
 /**
  * Measuring on purpose: hold Alt with something selected and point at
@@ -101,5 +101,31 @@ describe('the gaps inside a selection', () => {
 
   it('measures nothing between things that overlap', () => {
     expect(gapsWithin([rect(0, 0), rect(50, 20)])).toEqual([])
+  })
+})
+
+/*
+ * Nudging with the arrows says how far the selection is from what is around
+ * it, every press — so it can be walked into place a unit at a time.
+ */
+describe('the distances around a nudged selection', () => {
+  it('measures to the nearest neighbour on each side that shares its row or column', () => {
+    const selection = rect(200, 200, 100, 50)
+    const others = [
+      rect(0, 210, 100, 30), // left, in the row
+      rect(50, 200, 40, 50), // further left, in the row: not the nearest
+      rect(420, 190, 100, 50), // right, in the row
+      rect(220, 0, 60, 60), // above, in the column
+      rect(600, 600, 50, 50), // off to the side of everything: ignored
+    ]
+    expect(nearestDistances(selection, others)).toEqual([
+      { axis: 'x', from: 100, to: 200, at: 225 },
+      { axis: 'x', from: 300, to: 420, at: 220 },
+      { axis: 'y', from: 60, to: 200, at: 250 },
+    ])
+  })
+
+  it('measures nothing on a side with nobody in line', () => {
+    expect(nearestDistances(rect(0, 0), [rect(500, 500)])).toEqual([])
   })
 })

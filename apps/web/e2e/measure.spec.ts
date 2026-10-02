@@ -129,3 +129,43 @@ test('moves with Alt and an arrow, so it can be nudged while measuring', async (
   await expect.poll(async () => (await boxOf(note(page, 0))).x).toBeGreaterThan(before.x)
   expect((await boxOf(note(page, 0))).width).toBe(before.width)
 })
+
+/*
+ * Nudging with the arrows said nothing: whether a note had reached the edge it
+ * was being walked towards was a matter of squinting.
+ */
+test.describe('nudging with the arrows', () => {
+  test('says how far it is from its neighbours on every press', async ({ page }) => {
+    await notes(page, A, B)
+    await page.locator(CANVAS).click({ position: A })
+    // Out of the way, so nothing is pointed at.
+    await page.mouse.move(640, 700)
+    await page.keyboard.press('ArrowRight')
+
+    const gap = page.getByTestId('measure-gap-x')
+    await expect(gap).toHaveCount(1)
+    const a = await boxOf(note(page, 0))
+    const b = await boxOf(note(page, 1))
+    await expect(gap).toHaveText(String(Math.round(b.x - (a.x + a.width))))
+
+    // A pointer move is the hand coming back to the mouse.
+    await page.mouse.move(650, 700)
+    await expect(gap).toHaveCount(0)
+  })
+
+  test('shows the line the moment an edge lines up', async ({ page }) => {
+    // Ten units apart on x, one below the other.
+    await notes(page, A, { x: B.x - 290, y: 600 })
+    await page.locator(CANVAS).click({ position: A })
+    await page.mouse.move(640, 700)
+    const a = await boxOf(note(page, 0))
+    const c = await boxOf(note(page, 1))
+    const presses = Math.round(c.x - a.x)
+    expect(presses).toBe(10)
+
+    for (let i = 1; i < presses; i++) await page.keyboard.press('ArrowRight')
+    await expect(page.getByTestId('measure-match-x')).toHaveCount(0)
+    await page.keyboard.press('ArrowRight')
+    await expect(page.getByTestId('measure-match-x').first()).toBeVisible()
+  })
+})
