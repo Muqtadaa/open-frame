@@ -11,6 +11,7 @@ import {
   mentionsIn,
   peopleMatching,
   plainMentionText,
+  restoreMentions,
   tokeniseMentions,
   repliesTo,
   unknownMentionIn,
@@ -803,7 +804,13 @@ function Remark({
 }) {
   const mine = whoIsMe !== null && comment.authorId === whoIsMe
   const [mode, setMode] = useState<'reading' | 'editing' | 'confirming'>('reading')
-  const [draft, setDraft] = useState(comment.body)
+  /*
+   * The box holds names, as the composer does: a stored mention is
+   * `@[Name](id)`, and showing that would hand somebody an id to read and a
+   * token to break. The mentions go back in on save (`restoreMentions`).
+   */
+  const shown = plainMentionText(comment.body)
+  const [draft, setDraft] = useState(shown)
   const [busy, setBusy] = useState(false)
   const [problem, setProblem] = useState<string | null>(null)
   const editButton = useRef<HTMLButtonElement>(null)
@@ -836,7 +843,7 @@ function Remark({
   }
 
   const save = (): void => {
-    const body = draft.trim()
+    const body = restoreMentions(draft, comment.body).trim()
     if (body === '' || busy) return
     if (body === comment.body) {
       leave('edit')
@@ -900,7 +907,7 @@ function Remark({
                 if (event.key === 'Escape') {
                   event.preventDefault()
                   event.stopPropagation()
-                  setDraft(comment.body)
+                  setDraft(shown)
                   leave('edit')
                 } else if (event.key === 'Enter' && (event.metaKey || event.ctrlKey)) {
                   event.preventDefault()
@@ -920,7 +927,7 @@ function Remark({
                 type="button"
                 className="of-button of-button--ghost"
                 onClick={() => {
-                  setDraft(comment.body)
+                  setDraft(shown)
                   leave('edit')
                 }}
               >
@@ -971,7 +978,7 @@ function Remark({
               className="of-button of-button--ghost"
               aria-label={`Edit your ${kind}`}
               onClick={() => {
-                setDraft(comment.body)
+                setDraft(shown)
                 setMode('editing')
               }}
             >

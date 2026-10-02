@@ -1379,6 +1379,34 @@ test.describe('changing what you said', () => {
     await expect(page.getByTestId('comment-edited')).toHaveText('edited')
   })
 
+  test('edits a remark that mentions somebody as the names it shows, and keeps the mention', async ({
+    page,
+  }) => {
+    await signedIn(page, [{ id: BOARD, title: 'Shared', role: 'owner' }])
+    await openBoard(page)
+    await page.getByTestId('tool-comment').click()
+    await page.locator('[data-testid="canvas"]').click({ position: { x: 320, y: 260 } })
+    const input = page.getByTestId('comment-input')
+    await input.pressSequentially('@Ro')
+    await page.getByTestId(`mention-option-${ROWAN}`).click()
+    await input.pressSequentially('have a lok')
+    await page.getByTestId('comment-post').click()
+    await page.locator('[data-testid^="comment-pin-cmt_"]').first().click()
+
+    await page.getByRole('button', { name: 'Edit your comment' }).click()
+    const field = page.getByRole('textbox', { name: 'Edit your comment' })
+    // What the composer showed, not the token it was stored as.
+    await expect(field).toHaveValue('@Rowan have a lok')
+    await field.fill('@Rowan have a look')
+    await page.getByRole('button', { name: 'Save' }).click()
+
+    const said = page.getByTestId('comment-text').first()
+    await expect(said).toContainText('have a look')
+    // Still a mention of the same person, drawn as one.
+    await expect(page.getByTestId('mention-chip').first()).toBeVisible()
+    await expect(said).not.toContainText('](')
+  })
+
   test('Escape puts the remark back without closing the thread', async ({ page }) => {
     await signedIn(page, [{ id: BOARD, title: 'Shared', role: 'owner' }])
     await openBoard(page)

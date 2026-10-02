@@ -115,6 +115,12 @@ grant execute on function public.edit_comment(uuid, text) to authenticated;
  * somebody else's words — so a thread with a reply from anyone else is
  * refused. Its author can still edit it; what other people said under it
  * stays theirs.
+ *
+ * The remark is LOCKED before its replies are counted. Checked first and
+ * deleted after, a reply committed in between was counted by nobody and then
+ * taken down by the cascade — somebody else's words, gone. A reply's foreign
+ * key takes a share lock on its parent, which this row lock blocks: a reply
+ * that arrives now waits, then finds no thread to belong to.
  */
 create or replace function public.delete_comment(p_id uuid)
 returns boolean
@@ -126,6 +132,14 @@ declare
   v_me uuid := (select auth.uid());
 begin
   if v_me is null then
+    return false;
+  end if;
+  perform 1 from public.board_comments
+  where id = p_id
+    and author_id = v_me
+    and (private.is_board_owner(board_id) or private.is_board_member(board_id))
+  for update;
+  if not found then
     return false;
   end if;
   if exists (

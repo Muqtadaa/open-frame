@@ -172,6 +172,7 @@ export {
   mentionsIn,
   peopleMatching,
   plainMentionText,
+  restoreMentions,
   tokeniseMentions,
   unknownMentionIn,
   type BodySegment,

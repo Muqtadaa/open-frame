@@ -8,6 +8,7 @@ import {
   mentionsIn,
   peopleMatching,
   plainMentionText,
+  restoreMentions,
   tokeniseMentions,
   unknownMentionIn,
 } from './use-comments.js'
@@ -340,5 +341,33 @@ describe('choosing somebody from the menu', () => {
     const sent = tokeniseMentions(text, [awkward], board)
     expect(mentionsIn(sent, board)).toEqual(['u-odd'])
     expect(plainMentionText(sent).trim()).toBe('@Ali Ops')
+  })
+})
+
+describe('editing a remark that already mentions somebody', () => {
+  const stored = `${mentionToken(person('u-rowan', 'Rowan'))} and ${mentionToken(person('u-samira', 'Samira'))} have a lok`
+
+  it('puts back every mention the words still name, as the same person', () => {
+    const edited = plainMentionText(stored).replace('lok', 'look')
+    const saved = restoreMentions(edited, stored)
+    expect(saved).toBe(
+      `${mentionToken(person('u-rowan', 'Rowan'))} and ${mentionToken(person('u-samira', 'Samira'))} have a look`,
+    )
+  })
+
+  it('drops a mention whose name was taken out, and adds none', () => {
+    const saved = restoreMentions('@Rowan have a look', stored)
+    expect(mentionsIn(saved, BOARD)).toEqual(['u-rowan'])
+    expect(saved).not.toContain('u-samira')
+  })
+
+  it('needs nobody on the board: a person who has since left is still the same person', () => {
+    const gone = mentionToken(person('u-gone', 'Ada'))
+    expect(restoreMentions('@Ada, again', `${gone} hi`)).toBe(`${gone}, again`)
+  })
+
+  it('does not find a name inside a longer one', () => {
+    const sam = mentionToken(person('u-sam', 'Sam'))
+    expect(restoreMentions('@Samira, not you', `${sam} hi`)).toBe('@Samira, not you')
   })
 })
