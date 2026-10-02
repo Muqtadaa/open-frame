@@ -6,7 +6,7 @@ import { useBoardDocument } from '../hooks/use-document-object.js'
 import { useInteractionStore } from '../interaction/interaction-store.js'
 import { useOpenFrame } from '../runtime/context.js'
 import { ChromeSurface } from './EditorChrome.js'
-import { optionsPanelRect } from './options-panel.js'
+import { useOptionsPanelRect } from './options-panel.js'
 import {
   AlignBottomIcon,
   AlignCenterXIcon,
@@ -85,6 +85,10 @@ export function ArrangeBar() {
     }
   }, [selection, document, runtime.registry])
 
+  // The other thing that floats beside a selection, and the one this layer
+  // cannot place — so it is told where it is, and told again when it moves.
+  const panel = useOptionsPanelRect()
+
   // Hidden while the selection is being made or moved, and while typing: a bar
   // over the thing you are dragging is a bar under your pointer.
   if (dragKind !== 'idle' || editingId !== null) return null
@@ -92,10 +96,6 @@ export function ArrangeBar() {
 
   const bounds: Rect | null = arrangeable.bounds
   const canDistribute = arrangeable.count >= 3
-
-  // The other thing that floats beside a selection, and the one this layer
-  // cannot place — so it is told where it is.
-  const panel = optionsPanelRect()
 
   return (
     <ChromeSurface

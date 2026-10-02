@@ -84,6 +84,7 @@ export function FormatBar({
   readonly onLeave?: ((to: Element | null) => void) | undefined
 }) {
   const active = state.marks
+  const mixed = state.mixed ?? []
   const list = state.list
   const at = state.size === undefined ? -1 : SIZE_TOKENS.indexOf(state.size)
   const smallest = at === 0
@@ -149,7 +150,8 @@ export function FormatBar({
           type="button"
           className={`of-icon-button of-format-bar__button of-format-bar__button--${mark}`}
           aria-label={label}
-          aria-pressed={active.includes(mark)}
+          // Mixed, not off, over a selection only part of which has the mark.
+          aria-pressed={active.includes(mark) ? true : mixed.includes(mark) ? 'mixed' : false}
           aria-keyshortcuts={ariaKeys(keys)}
           data-tip={tip(label, keys)}
           data-testid={`format-${mark}`}

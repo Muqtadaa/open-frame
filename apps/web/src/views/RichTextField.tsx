@@ -4,6 +4,7 @@ import {
   indentBy,
   listOf,
   markCovers,
+  markTouches,
   paragraphsOf,
   DEFAULT_SIZE,
   plainTextOf,
@@ -38,6 +39,11 @@ import {
 /** What the formatting controls should show for where the caret is. */
 export interface FormatState {
   readonly marks: readonly Mark[]
+  /**
+   * Marks on SOME of the selection but not all of it — shown as mixed, so a
+   * half-bold selection reads neither as bold nor as plain.
+   */
+  readonly mixed?: readonly Mark[]
   readonly list: ListKind | undefined
   /** The size the next step starts from; undefined when the text disagrees. */
   readonly size: SizeToken | undefined
@@ -162,6 +168,9 @@ export function RichTextField({
     const sized = to > from ? { from, to } : { from: 0, to: plainTextOf(text).length }
     reportRef.current?.({
       marks: MARK_LIST.filter((mark) => markCovers(text, from, to, mark)),
+      mixed: MARK_LIST.filter(
+        (mark) => !markCovers(text, from, to, mark) && markTouches(text, from, to, mark),
+      ),
       list: listOf(text, from, to),
       size: sizeReadout(text, sized.from, sized.to),
     })

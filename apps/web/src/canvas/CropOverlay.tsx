@@ -13,7 +13,7 @@ import { useBoardDocument } from '../hooks/use-document-object.js'
 import { useInteractionStore } from '../interaction/interaction-store.js'
 import { useOpenFrame } from '../runtime/context.js'
 import { ChromeSurface } from './EditorChrome.js'
-import { optionsPanelRect } from './options-panel.js'
+import { useOptionsPanelRect } from './options-panel.js'
 import { HANDLES, HANDLE_CURSORS, HANDLE_HIT_PX, handleAnchor } from '../scene/resize.js'
 
 /**
@@ -65,6 +65,7 @@ export function CropOverlay() {
     state.drag.kind === 'crop' ? (state.drag.frame?.height ?? null) : null,
   )
 
+  const panel = useOptionsPanelRect()
   if (croppingId === null) return null
   const object = document.objects.get(croppingId)
   if (object === undefined || object.locked) return null
@@ -115,7 +116,7 @@ export function CropOverlay() {
         <ChromeSurface
           bounds={frame}
           prefer={['below', 'above']}
-          avoid={optionsPanelRect()}
+          avoid={panel}
           testId="crop-apparatus"
         >
           <button

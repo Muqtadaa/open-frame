@@ -960,3 +960,44 @@ pressed at night, changes the frame. Guarded by `design-tokens.test`:
 `default-colour-coverage` and `typed-notes` hold the view to the same;
 `frame-paper.spec.ts` fails on the previous code in exactly its two After
 Hours cases. Two goldens (`*-frame`) are new, and none of the other 40 moved.
+
+### The leftovers (2026-10-01)
+
+Every "left for later" above was checked against the code. Nine had since been
+fixed, two could not be settled by reading, and seventeen were still open. The
+owner chose which to do, in ten PRs. The first is the small fixes, each with an
+e2e test seen failing on the code before it:
+
+- **Mixed marks.** A partly bold selection shows Bold as `aria-pressed="mixed"`
+  (the pressed foot bar without its wash) instead of off. Core gains
+  `markTouches` beside `markCovers`.
+- **Start-up failure on the page.** `of-gone--alone`: no scrim dimming an empty
+  page into grey.
+- **Connector label editor** drawn at `labelScale`, like the label it edits.
+  At 5% zoom it was a tenth of the label's size.
+- **Front-door row tips** sit beside their control, not over the row above.
+- **Splash, held sideways.** The artwork is cropped from the sky, so the
+  reflection clears the label.
+- **The two unclear items, measured.**
+  - **The record panel over a line's notes.** It now keeps clear of whatever a
+    selection's ends attach to (`endpointsOf`).
+  - **The arrange bar over the panel in a short window.** Placement slides along
+    its side to clear an obstacle, and the bar re-reads the panel when a surface
+    lands (`CHROME_MOVED`). Both changes were needed.
+  - At exactly 760px wide there is no room: 280px between the rail and the panel
+    for a 286px bar. That case is recorded, not fixed.
+
+Still to come, in order:
+
+- board clarity: where hidden objects went, presence for assistive tech, a
+  placeholder's record panel;
+- a kept copy keeps its images;
+- a world toggle on the front door;
+- editing and deleting a comment, and next/previous thread;
+- distances on alignment guides;
+- crop in the record panel;
+- password state on the front door;
+- connect points on a turned object's edges;
+- relations drawn on the board.
+
+Not chosen: structured types on the rail, and a fixed type mark.

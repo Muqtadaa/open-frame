@@ -243,5 +243,40 @@ export function placeAnchored(request: AnchorRequest): Placement {
   const side = clear ?? fitting[0] ?? leastCovering()
 
   const placed = settle(side)
-  return { x: placed.x, y: placed.y, side }
+  if (avoid === null || clear !== undefined || !overlaps(placed, avoid)) {
+    return { x: placed.x, y: placed.y, side }
+  }
+
+  /*
+   * No side is clear where it naturally sits — in a short window the panel
+   * takes the right of both bands at once. Slide ALONG the side instead, to
+   * end just before the obstacle or start just after it: still beside what
+   * it belongs to, and off the panel, where the fallback simply landed on it.
+   * The nearer of the two that stays inside the window wins.
+   */
+  const across = side === 'left' || side === 'right'
+  const options = across
+    ? [avoid.y - surface.height - request.gap, avoid.y + avoid.height + request.gap].map((y) => ({
+        ...placed,
+        y,
+      }))
+    : [avoid.x - surface.width - request.gap, avoid.x + avoid.width + request.gap].map((x) => ({
+        ...placed,
+        x,
+      }))
+  const slid = options
+    .filter((option) =>
+      across
+        ? option.y >= topBound && option.y <= bottomBound
+        : option.x >= leftBound && option.x <= rightBound,
+    )
+    .filter((option) => !overlaps(option, avoid))
+    .sort(
+      (a, b) =>
+        Math.abs(a.x - placed.x) +
+        Math.abs(a.y - placed.y) -
+        (Math.abs(b.x - placed.x) + Math.abs(b.y - placed.y)),
+    )[0]
+  const final = slid ?? placed
+  return { x: final.x, y: final.y, side }
 }

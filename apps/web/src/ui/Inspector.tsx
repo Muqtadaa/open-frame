@@ -273,10 +273,23 @@ export function Inspector() {
     [selection, document],
   )
 
-  const bounds = useMemo<Rect | null>(
-    () => unionAll(objects.map((object) => runtime.registry.boundsOf(object, document))),
-    [objects, runtime.registry, document],
-  )
+  /*
+   * What the panel keeps clear of: the selection, and whatever a selected
+   * object's ends are attached to. A line's own box stops where the notes it
+   * joins begin, so a panel placed beside the line alone landed on the very
+   * thing it pointed at. Asked of the registry, not of a type (rule 5).
+   */
+  const bounds = useMemo<Rect | null>(() => {
+    const joined = objects
+      .flatMap((object) => runtime.registry.endpointsOf(object, document))
+      .map((end) =>
+        end.attachedTo === undefined ? undefined : document.objects.get(end.attachedTo),
+      )
+      .filter((object) => object !== undefined)
+    return unionAll(
+      [...objects, ...joined].map((object) => runtime.registry.boundsOf(object, document)),
+    )
+  }, [objects, runtime.registry, document])
 
   /**
    * A type's own semantic fields, shown only for a single selection.

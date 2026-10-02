@@ -1,6 +1,7 @@
-import { expect, test, type Page } from '@playwright/test'
+import type { Page } from '@playwright/test'
 
-import { CANVAS, boxOf, overlaps } from './fixtures.js'
+import { buildBoard } from './boards.js'
+import { CANVAS, boxOf, clickLine, expect, overlaps, seedBoard, test } from './fixtures.js'
 import { BOARD_URL } from './routes.js'
 
 /**
@@ -72,5 +73,47 @@ test.describe('on a short window', () => {
     await opacity.scrollIntoViewIfNeeded()
     const slider = await boxOf(opacity)
     expect(slider.y + slider.height).toBeLessThanOrEqual(panel.y + panel.height + 1)
+  })
+})
+
+test.describe('beside the rest of what floats over the board', () => {
+  test.use({ board: 'fresh' })
+
+  test('a line’s panel keeps clear of the notes it joins', async ({ page }) => {
+    await seedBoard(
+      page,
+      buildBoard((board) => {
+        const a = board.note('A', { x: 300, y: 300 })
+        const b = board.note('B', { x: 700, y: 300 })
+        board.connect(a, b)
+      }),
+    )
+    await clickLine(page)
+    const panel = await boxOf(page.getByTestId('inspector'))
+    // The line's own box ends where the notes begin; a panel placed beside
+    // it alone landed on the note it points at, with room to spare past it.
+    // (Where the notes span the window there is no such room, and the panel
+    // covers as little as it can — that is the placement's own fallback.)
+    for (const note of await page.locator('[data-object-type="sticky"]').all()) {
+      expect(overlaps(panel, await boxOf(note)), 'the panel covers a joined note').toBe(false)
+    }
+  })
+
+  test('the arrange bar keeps off the panel in a short window', async ({ page }) => {
+    // Short enough that the panel takes the right of the bands above AND
+    // below the selection. (At 760 wide the gap between the rail's band and
+    // the panel is 280px for a 286px bar: there, no placement can clear it.)
+    await page.setViewportSize({ width: 800, height: 560 })
+    await seedBoard(
+      page,
+      buildBoard((board) => {
+        board.note('A', { x: 300, y: 300 })
+        board.note('B', { x: 520, y: 320 })
+      }),
+    )
+    await page.keyboard.press('ControlOrMeta+a')
+    const bar = await boxOf(page.getByTestId('arrange-bar'))
+    const panel = await boxOf(page.getByTestId('inspector'))
+    expect(overlaps(bar, panel), 'the arrange bar lies on the record panel').toBe(false)
   })
 })

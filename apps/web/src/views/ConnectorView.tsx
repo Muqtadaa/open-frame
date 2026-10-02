@@ -194,6 +194,7 @@ function ConnectorRenderer({
 
 function ConnectorEditor({
   object,
+  zoom,
   document: doc,
   boundsOf,
   Chrome,
@@ -215,7 +216,15 @@ function ConnectorEditor({
   return (
     <div
       className="of-connector__editor-wrap"
-      style={{ transform: `translate(${String(mid.x)}px, ${String(mid.y)}px)` }}
+      /*
+       * At the label's own scale (`labelScale`), so the words being edited are
+       * the size of the words drawn. Without it the editor followed the board
+       * all the way down: at 5% it was a tenth the size of the label it opened
+       * on.
+       */
+      style={{
+        transform: `translate(${String(mid.x)}px, ${String(mid.y)}px) scale(${String(labelScale(zoom))})`,
+      }}
     >
       <RichTextEditor
         initialText={object.data.text}

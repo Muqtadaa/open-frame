@@ -1,5 +1,5 @@
 import { expect, test } from '@playwright/test'
-import { useClipboard } from './fixtures.js'
+import { boxOf, useClipboard } from './fixtures.js'
 
 import { HOME_URL } from './routes.js'
 import { seedLocalBoard } from './seed.js'
@@ -227,4 +227,37 @@ test('keeps a row’s actions inside the space reserved for them', async ({ page
   })
 
   expect(overflow).toBeNull()
+})
+
+test('a row action’s tip stays on its own row', async ({ page }) => {
+  await signedIn(page, [
+    { id: 'brd_aaaaaaaa11111111', title: 'Pricing research', role: 'owner' },
+    { id: 'brd_bbbbbbbb22222222', title: 'Onboarding drop-off', role: 'owner' },
+  ])
+  await page.goto(HOME_URL)
+  const rows = page.getByTestId('home-boards').locator('li')
+  await expect(rows).toHaveCount(2)
+
+  // Reached from the keyboard, which shows the tip at once.
+  const rename = rows.nth(1).getByTestId('rename-board')
+  await rename.focus()
+  await page.keyboard.press('Shift+Tab')
+  await page.keyboard.press('Tab')
+  await expect(rename).toBeFocused()
+
+  // A pseudo-element has no box of its own to ask for, so it is rebuilt from
+  // its control's box and the offsets the stylesheet gave it.
+  const tip = await rename.evaluate((button) => {
+    const box = button.getBoundingClientRect()
+    const after = getComputedStyle(button, '::after')
+    const top = after.top === 'auto' ? null : parseFloat(after.top)
+    const bottom = after.bottom === 'auto' ? null : parseFloat(after.bottom)
+    const height = parseFloat(after.height)
+    const start = top !== null ? box.top + top : box.bottom - (bottom ?? 0) - height
+    return { top: start, bottom: start + height }
+  })
+  const above = await boxOf(rows.nth(0))
+  expect(tip.top, 'the tip reached into the row above').toBeGreaterThanOrEqual(
+    above.y + above.height,
+  )
 })

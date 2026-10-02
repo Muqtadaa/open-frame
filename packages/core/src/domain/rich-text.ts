@@ -288,6 +288,23 @@ export function markCovers(rich: RichText, from: number, to: number, mark: Mark)
 }
 
 /**
+ * Whether a mark reaches ANY of the range — which, where `markCovers` says no,
+ * is the "mixed" a toggle button shows over a half-bold selection.
+ */
+export function markTouches(rich: RichText, from: number, to: number, mark: Mark): boolean {
+  if (to <= from) return false
+  let seen = 0
+  for (const span of rich) {
+    const start = seen
+    const end = seen + span.text.length
+    seen = end
+    if (end <= from || start >= to) continue
+    if ((span.marks ?? []).includes(mark)) return true
+  }
+  return false
+}
+
+/**
  * One paragraph: its runs (without the newline that ends it), what kind of
  * paragraph it is, and where its characters sit in the plain text.
  */

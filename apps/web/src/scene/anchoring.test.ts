@@ -167,6 +167,38 @@ describe('avoiding another surface', () => {
     expect(placeAnchored({ ...request, avoid: everywhere }).side).toBe('above')
   })
 
+  /*
+   * The short-window case: the panel takes the right of BOTH bands, above and
+   * below, so neither side is clear where it naturally sits. Sliding along the
+   * edge it is on keeps it beside the selection and off the panel — better
+   * than the fallback, which simply landed on the panel.
+   */
+  it('slides along its side to clear the panel when no side is clear', () => {
+    const narrow = {
+      ...request,
+      anchor: { x: 210, y: 210, width: 400, height: 200 },
+      surface: { width: 286, height: 40 },
+      within: { width: 760, height: 560 },
+    }
+    const panel = { x: 388, y: 136, width: 360, height: 348 }
+    const placed = placeAnchored({ ...narrow, avoid: panel })
+    expect(placed.side).toBe('above')
+    expect(placed.x + 286).toBeLessThanOrEqual(panel.x)
+  })
+
+  it('does not slide off the window to clear the panel', () => {
+    const narrow = {
+      ...request,
+      anchor: { x: 20, y: 210, width: 400, height: 200 },
+      surface: { width: 286, height: 40 },
+      within: { width: 760, height: 560 },
+    }
+    // No room left of the panel inside the margin: the fallback stands.
+    const panel = { x: 100, y: 136, width: 648, height: 348 }
+    const placed = placeAnchored({ ...narrow, avoid: panel })
+    expect(placed.x).toBeGreaterThanOrEqual(12)
+  })
+
   it('is unchanged by a null obstacle', () => {
     expect(placeAnchored({ ...request, avoid: null })).toEqual(placeAnchored(request))
   })

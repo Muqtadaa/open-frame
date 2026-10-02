@@ -80,6 +80,17 @@
         opacity: 1;
       }
       /*
+       * A phone held sideways crops the 4:3 artwork top and bottom, and an even
+       * crop left the wordmark's reflection running down to the foot, under
+       * the label. Cropped from the sky instead, the reflection rises clear of
+       * it and the wordmark keeps its whole height.
+       */
+      @media (min-aspect-ratio: 2 / 1) {
+        #of-splash img {
+          object-position: 50% 75%;
+        }
+      }
+      /*
        * The artwork is 4:3 and its lettering runs from 7% to 93% of the width,
        * so `cover` starts slicing the wordmark off below roughly 8/7 — which is
        * every phone held upright. Letterbox instead of decapitating the logo;

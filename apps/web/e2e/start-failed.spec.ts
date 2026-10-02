@@ -38,6 +38,13 @@ test('a board that cannot open says why, that nothing was lost, and what to do',
   await expect(gate.getByRole('link', { name: 'All boards' })).toHaveAttribute('href', '/')
   // Not over the artwork: the splash has gone.
   await expect(page.locator('#of-splash')).toHaveCount(0)
+  // And not behind a scrim: there is no board under it to dim, and a dimmed
+  // empty page reads as something greyed out that is not there.
+  const ground = await gate
+    .locator('..')
+    .evaluate((element) => getComputedStyle(element).backgroundColor)
+  const body = await page.evaluate(() => getComputedStyle(document.body).backgroundColor)
+  expect(ground).toBe(body)
 })
 
 test('the front door says it could not list the boards, instead of looking forever', async ({
