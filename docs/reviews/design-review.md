@@ -1083,6 +1083,10 @@ axes were measured from each one's middle, so the two lines stood out as
 spokes that met nowhere. They are now one L from the selection's near corner
 to the target's, each leg still exactly its gap. The unit tests and an e2e
 checking that the legs meet on the edges were seen failing first.
+The same went for neighbours on a diagonal inside a multiple selection with
+nothing pointed at: they were measured midway between their middles, two short
+lines crossing in empty space. They get the same L now. A test seen failing
+first holds that a thing and what it holds still show no gap between them.
 
 Still to come, in order:
 

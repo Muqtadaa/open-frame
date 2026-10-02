@@ -118,6 +118,29 @@ test('says the gaps between the things selected when nothing else is pointed at'
 })
 
 /*
+ * Selected neighbours on a diagonal were measured midway between them: two
+ * short lines crossing in the empty space, touching neither note.
+ */
+test('measures selected neighbours on a diagonal as one L too', async ({ page }) => {
+  const D = { x: 620, y: 560 }
+  await notes(page, A, D)
+  await page.keyboard.press(`${MOD}+a`)
+  await page.mouse.move(1000, 150)
+  await page.keyboard.down('Alt')
+  await page.mouse.move(1004, 154)
+
+  const a = await boxOf(note(page, 0))
+  const d = await boxOf(note(page, 1))
+  const across = await boxOf(page.getByTestId('measure-line-x'))
+  const down = await boxOf(page.getByTestId('measure-line-y'))
+  expect(across.y).toBeCloseTo(a.y + a.height, 0)
+  expect(across.x + across.width).toBeCloseTo(d.x, 0)
+  expect(down.x).toBeCloseTo(d.x, 0)
+  expect(down.y).toBeCloseTo(a.y + a.height, 0)
+  await page.keyboard.up('Alt')
+})
+
+/*
  * Pointing at a note and then leaving the board — for the bar, say — left that
  * note recorded as under the pointer, and Alt went on measuring to it.
  */

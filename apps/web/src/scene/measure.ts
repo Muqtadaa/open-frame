@@ -174,8 +174,14 @@ export function gapsWithin(rects: readonly Rect[]): readonly MeasureSegment[] {
     let reach = ordered[0]
     for (const next of ordered.slice(1)) {
       if (reach === undefined) break
-      const midway = (centre(reach, other(axis)) + centre(next, other(axis))) / 2
-      const gap = gapAlong(reach, next, axis, midway)
+      // Neighbours on a diagonal get the same L as pointing at one would, so
+      // the two legs meet at a corner instead of floating midway between them.
+      // Only for a pair with a gap on this axis: one holding the other has
+      // edge-to-edge lines of its own, and they are not gaps between neighbours.
+      const gap =
+        gapAlong(reach, next, axis, 0) === null
+          ? null
+          : (distancesBetween(reach, next).find((segment) => segment.axis === axis) ?? null)
       if (gap !== null && gap.from === span(reach, axis).to) segments.push(gap)
       if (span(next, axis).to > span(reach, axis).to) reach = next
     }

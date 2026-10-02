@@ -113,6 +113,16 @@ describe('the gaps inside a selection', () => {
     ])
   })
 
+  /*
+   * Neighbours on a diagonal were measured midway between their middles: two
+   * short lines crossing in the empty space between them, touching neither.
+   */
+  it('measures neighbours on a diagonal as the same L as pointing at one', () => {
+    const a = rect(0, 0)
+    const b = rect(200, 120)
+    expect(gapsWithin([b, a])).toEqual(distancesBetween(a, b))
+  })
+
   it('measures nothing between things that overlap', () => {
     expect(gapsWithin([rect(0, 0), rect(50, 20)])).toEqual([])
   })
@@ -141,5 +151,13 @@ describe('the distances around a nudged selection', () => {
 
   it('measures nothing on a side with nobody in line', () => {
     expect(nearestDistances(rect(0, 0), [rect(500, 500)])).toEqual([])
+  })
+})
+
+describe('the gaps inside a selection, with one thing holding another', () => {
+  it('measures no gap between a thing and what it holds', () => {
+    // Same left edge, with the one inside listed first, so it is the reach
+    // when its holder comes next: the room inside is not a gap between them.
+    expect(gapsWithin([rect(0, 100, 100, 50), rect(0, 0, 300, 300)])).toEqual([])
   })
 })
