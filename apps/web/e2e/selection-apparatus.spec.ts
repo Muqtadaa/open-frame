@@ -305,16 +305,16 @@ test.describe('the board from the keyboard', () => {
     await expect(announcer).toContainText('Inside')
   })
 
-  test('Alt with an arrow resizes, and says the new size', async ({ page }) => {
+  test('Ctrl or Cmd with an arrow resizes, and says the new size', async ({ page }) => {
     await seed(page, (board) => {
       board.note('Grow', { x: 340, y: 260 })
     })
     const object = page.locator('[data-object-type="sticky"]')
     await object.click()
     const before = await boxOf(object)
-    await page.keyboard.press('Alt+ArrowRight')
-    await page.keyboard.press('Alt+ArrowDown')
-    await page.keyboard.press('Alt+ArrowDown')
+    await page.keyboard.press('ControlOrMeta+ArrowRight')
+    await page.keyboard.press('ControlOrMeta+ArrowDown')
+    await page.keyboard.press('ControlOrMeta+ArrowDown')
     const after = await boxOf(object)
     expect(Math.round(after.width - before.width)).toBe(10)
     expect(Math.round(after.height - before.height)).toBe(20)

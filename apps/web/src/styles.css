@@ -4736,6 +4736,27 @@ body {
   pointer-events: none;
 }
 
+/*
+ * Where the selection and what Alt points at line up exactly: dashed, so it
+ * reads as a relation between two things rather than as a measured stretch.
+ */
+.of-measure__match {
+  position: absolute;
+  top: 0;
+  left: 0;
+  z-index: var(--of-z-guide);
+  border: 0 dashed var(--of-guide);
+  pointer-events: none;
+}
+
+.of-measure__match--x {
+  border-left-width: 1px;
+}
+
+.of-measure__match--y {
+  border-top-width: 1px;
+}
+
 /* Connector endpoint handles ------------------------------------------------ */
 
 .of-endpoint {

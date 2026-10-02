@@ -26,9 +26,32 @@ describe('where a dragged selection lands', () => {
     expect(landed.y).toBe(60)
   })
 
+  /*
+   * The distance a guide states is where the selection LANDS. Measured from
+   * the raw pointer it ran smoothly ahead of an element that was jumping in
+   * grid steps, and the number never matched what letting go left behind.
+   */
+  it('measures the gap from where the grid puts it, not from the pointer', () => {
+    const landed = resolveDragDelta(START, [NEIGHBOUR], { x: 201, y: 57 }, true, 1)
+    // Lands at y 60, so its bottom is 160 and the neighbour's top is 500.
+    const gaps = landed.guides.filter((g) => g.axis === 'x').flatMap((g) => g.gaps)
+    expect(gaps).toEqual([{ from: 160, to: 500 }])
+  })
+
   it('snaps to the grid when no neighbour is close', () => {
     const landed = resolveDragDelta(START, [NEIGHBOUR], { x: 123, y: 57 }, true, 1)
     expect({ x: landed.x, y: landed.y }).toEqual({ x: 120, y: 60 })
+  })
+
+  /*
+   * Cmd/Ctrl stops the HELP, not the information: placing something by hand
+   * to the exact pixel is when a guide confirming it matters most.
+   */
+  it('still shows a guide, and its gap, where the selection lines up exactly while snapping is suspended', () => {
+    const landed = resolveDragDelta(START, [NEIGHBOUR], { x: 203, y: 57 }, false, 1)
+    expect({ x: landed.x, y: landed.y }).toEqual({ x: 203, y: 57 })
+    const gaps = landed.guides.filter((g) => g.axis === 'x').flatMap((g) => g.gaps)
+    expect(gaps).toEqual([{ from: 157, to: 500 }])
   })
 
   it('does neither while snapping is suspended', () => {

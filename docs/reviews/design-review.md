@@ -1030,6 +1030,31 @@ board units, over the line (page on guide magenta, measured at 4.5:1 in both
 worlds). Five unit tests and an e2e were seen failing first. The e2e's
 mid-drag number is the gap the drop leaves.
 
+**Measuring, after trying 4f (owner, 10-02).** Two gaps. With the grid on, the
+number on a guide ran ahead of the element: it was measured from the pointer
+while the element moved in steps of ten. It is now measured from where the
+selection lands (`guidesAround`), and the e2e that drags seven pixels past a grid
+line failed on 187 against a drawn 190. And there was no way to measure on
+purpose. Holding Alt now does what a design tool does: the selection, as one
+box, against what the pointer is over (distances, and dashed lines where edges
+or centres match exactly); with nothing else pointed at, the gaps between the
+selected things. The record panel steps aside while Alt is held, as it does for
+Shift, because it was over the very neighbour being measured to. Alt+arrow still
+resizes. Twelve unit tests and five e2e; removing the overlay failed three of
+them, and removing the blur handler failed the one that lets go in another
+window.
+
+**Measuring, second pass (owner, 10-02).** Three more. Cmd/Ctrl mid-drag took the
+guides away with the snapping: it now stops the help and not the information,
+so a guide and its gap still show where the selection lands exactly in line by
+hand. Nudging said nothing: each arrow press now shows the distance to the
+nearest neighbour in line on each side, and a dashed line the moment an edge or
+centre lines up, until the pointer moves, another key goes down, or 1.5s pass.
+And Alt with an arrow resized, which made nudging while measuring change the
+size: keyboard resize is Cmd/Ctrl with an arrow now, and Alt with an arrow moves.
+Each was seen failing first: the drag-delta unit test, two nudge e2e, the keymap
+tests and an e2e that Alt+arrow moves without resizing.
+
 Still to come, in order:
 
 - board clarity: where hidden objects went, presence for assistive tech, a

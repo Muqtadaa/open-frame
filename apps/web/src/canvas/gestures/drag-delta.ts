@@ -1,6 +1,11 @@
 import type { Point, Rect } from '@openframe/core'
 
-import { alignToNeighbours, type AlignmentGuide } from '../../scene/alignment.js'
+import {
+  alignToNeighbours,
+  exactlyAligned,
+  guidesAround,
+  type AlignmentGuide,
+} from '../../scene/alignment.js'
 import { snapDelta } from '../../scene/snapping.js'
 
 /**
@@ -30,14 +35,21 @@ export function resolveDragDelta(
   snapping: boolean,
   zoom: number,
 ): { x: number; y: number; guides: readonly AlignmentGuide[] } {
-  if (!snapping || startBounds === null) return { ...raw, guides: [] }
+  if (startBounds === null) return { ...raw, guides: [] }
+  if (!snapping) {
+    // Cmd/Ctrl stops the help, not the information: nothing is pulled into
+    // line, but where it lands in line by hand the guide and its gap show.
+    const placed = { ...startBounds, x: startBounds.x + raw.x, y: startBounds.y + raw.y }
+    return { ...raw, guides: guidesAround(placed, targets, exactlyAligned(placed, targets)) }
+  }
 
   const aligned = alignToNeighbours(startBounds, raw, targets, ALIGN_TOLERANCE_PX / zoom)
   const grid = snapDelta(startBounds, aligned.delta)
+  const x = aligned.snapped.x ? aligned.delta.x : grid.x
+  const y = aligned.snapped.y ? aligned.delta.y : grid.y
 
-  return {
-    x: aligned.snapped.x ? aligned.delta.x : grid.x,
-    y: aligned.snapped.y ? aligned.delta.y : grid.y,
-    guides: aligned.guides,
-  }
+  // The guides describe where it LANDS, so a gap along the axis the grid
+  // decided moves in grid steps with the element rather than with the pointer.
+  const placed = { ...startBounds, x: startBounds.x + x, y: startBounds.y + y }
+  return { x, y, guides: guidesAround(placed, targets, aligned.snapped) }
 }

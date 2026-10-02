@@ -476,6 +476,11 @@ export function useCanvasGestures(containerRef: RefObject<HTMLElement | null>) {
       if (active === null) {
         const worldPoint = toWorld(event.clientX, event.clientY)
         store.setHovered(hitTest(runtime.store.getDocument(), runtime.registry, worldPoint))
+        // The pointer says whether Alt is down, so a key-up lost to another
+        // window cannot leave the board measuring.
+        if (store.measuring !== event.altKey) store.setMeasuring(event.altKey)
+        // And it is the hand back on the mouse: a nudge has had its say.
+        if (store.nudging) store.setNudging(false)
         // For chrome that only appears when you reach for it — a connector's
         // midpoint handles. Only between gestures: during one, what matters is
         // where the drag is, and that is the drag's own business.
@@ -722,7 +727,11 @@ export function useCanvasGestures(containerRef: RefObject<HTMLElement | null>) {
   )
 
   const onPointerLeave = useCallback((): void => {
-    useInteractionStore.getState().setPointer(null)
+    const store = useInteractionStore.getState()
+    store.setPointer(null)
+    // Nothing is under a pointer that has gone: left recorded, Alt went on
+    // measuring to whatever it last passed over.
+    store.setHovered(null)
   }, [])
 
   return {

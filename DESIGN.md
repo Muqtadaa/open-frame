@@ -392,8 +392,17 @@ the only insistent hues in the whole system belong to the user's material.
 
 - **Correction Red** (`danger`): destructive and corrective meaning only —
   delete affordances, render errors, missing assets, failure toasts.
-- **Guide Magenta** (`guide`): alignment guides while a gesture is running. It is
-  transient feedback, never a target and never chrome.
+- **Guide Magenta** (`guide`): alignment guides while a gesture is running, and
+  measurements while Alt is held. It is transient feedback, never a target and
+  never chrome. A measured stretch is a solid hairline with its length in board
+  units on it; a shared edge or centre is a dashed hairline. While Alt is held
+  the record panel fades and lets the pointer through, because what you measure
+  to is usually beside the selection, under the panel. Nudging with the arrows
+  shows the same lines on every press — the distance to the nearest neighbour
+  in line on each side, dashed where an edge or centre lines up — until the
+  pointer moves, another key is pressed, or a moment and a half passes. Resize
+  by keyboard is Cmd/Ctrl with an arrow, so Alt with an arrow nudges while
+  measuring.
 
 ### Neutral
 

@@ -164,6 +164,37 @@ test.describe('the distance on a guide', () => {
     await create(page, 's', 700, 520, 'Mover')
   })
 
+  /*
+   * With the grid on, the element moves in steps of ten while the pointer
+   * moves smoothly. The number has to follow the element: measured from the
+   * pointer it ran ahead of what was drawn, and only matched on letting go.
+   */
+  test('says the gap the note is drawn at, in grid steps, while it is dragged', async ({
+    page,
+  }) => {
+    const anchor = await box(page, 0)
+    const mover = await box(page, 1)
+    let said = ''
+    let drawn = 0
+
+    // Seven pixels past a grid line, so the pointer and the grid disagree.
+    await drag(
+      page,
+      { x: mover.x + 20, y: mover.y + 20 },
+      { x: anchor.x + 2 + 20, y: anchor.y + anchor.height * 2 + 27 },
+      async () => {
+        const gap = page.getByTestId('guide-gap-x')
+        await expect(gap).toHaveCount(1)
+        said = (await gap.textContent()) ?? ''
+        const now = await box(page, 1)
+        drawn = now.y - (anchor.y + anchor.height)
+      },
+    )
+
+    expect(Number(said)).toBe(Math.round(drawn))
+    expect(Number(said) % 10).toBe(0)
+  })
+
   test('says how far the dragged note is from the one it lines up with', async ({ page }) => {
     const anchor = await box(page, 0)
     const mover = await box(page, 1)

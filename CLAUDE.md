@@ -264,7 +264,10 @@ object is individually aligned.
 next to it is what the user is looking at; the grid is the fallback for an axis
 nothing is near. Applying both would fight — the grid drags a selection back off
 an alignment it has just captured. Cmd/Ctrl suspends both, because it is the
-"stop helping" key rather than the "grid off" key.
+"stop helping" key rather than the "grid off" key. It stops the help, not the
+information: where a selection lands EXACTLY in line by hand, the guide and its
+gap still show. And the gap a guide states is measured from where the selection
+lands, after the grid, never from the pointer.
 
 Anything a gesture compares against is snapshotted at gesture START. Alignment
 candidates are the visible objects minus the selection; recomputing them per

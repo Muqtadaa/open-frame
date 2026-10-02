@@ -49,6 +49,12 @@ const OPERABLE =
  * board's. `:focus-visible` cannot tell the two apart, because the browser
  * turns it on for the clicked button the moment any key goes down.
  */
+/** How long a nudge's distances stay up with nothing else pressed. */
+const NUDGE_FEEDBACK_MS = 1500
+
+/** Keys that change the next key rather than doing anything themselves. */
+const MODIFIERS: ReadonlySet<string> = new Set(['Shift', 'Alt', 'Control', 'Meta'])
+
 function isOperable(target: EventTarget | null): boolean {
   return target instanceof HTMLElement && target.matches(OPERABLE)
 }
@@ -86,6 +92,8 @@ export function useKeyboardShortcuts(setSpaceHeld: (held: boolean) => void): voi
      */
     let pointerLed = false
     let lastInput: 'pointer' | 'keyboard' = 'keyboard'
+    // The timer that puts a nudge's distances away once nothing more happens.
+    let nudgeShown: number | undefined
     const onPointerDown = (): void => {
       pointerLed = true
       lastInput = 'pointer'
@@ -101,6 +109,11 @@ export function useKeyboardShortcuts(setSpaceHeld: (held: boolean) => void): voi
 
     const onKeyDown = (event: KeyboardEvent): void => {
       const store = useInteractionStore.getState()
+      // Any other key ends what a nudge was showing. Modifiers do not: they
+      // are how the next nudge is made coarse, or the measuring key.
+      if (store.nudging && !event.key.startsWith('Arrow') && !MODIFIERS.has(event.key)) {
+        store.setNudging(false)
+      }
 
       if (event.key === 'Tab') pointerLed = false
       if (
@@ -109,6 +122,19 @@ export function useKeyboardShortcuts(setSpaceHeld: (held: boolean) => void): voi
         isOperable(event.target)
       )
         return
+
+      /*
+       * Alt held MEASURES: from the selection to whatever is under the
+       * pointer, as in a design tool. A hold, like Space, so it sits outside
+       * the keymap — and Alt with an arrow still resizes, because the arrow is
+       * its own keydown. Prevented, or Windows and Firefox put the keyboard in
+       * the browser's menu bar when it is let go.
+       */
+      if (event.key === 'Alt' && !isTextEntry(event.target)) {
+        store.setMeasuring(true)
+        event.preventDefault()
+        return
+      }
 
       // Space-drag panning is a hold, not a shortcut, so it sits outside the keymap.
       if (event.code === 'Space' && !isTextEntry(event.target)) {
@@ -328,6 +354,13 @@ export function useKeyboardShortcuts(setSpaceHeld: (held: boolean) => void): voi
               dy: action.dy * scale,
             })),
           )
+          // Say where it got to, until the next thing happens or a moment
+          // passes: a press with no feedback was walked into place by squinting.
+          store.setNudging(true)
+          window.clearTimeout(nudgeShown)
+          nudgeShown = window.setTimeout(() => {
+            useInteractionStore.getState().setNudging(false)
+          }, NUDGE_FEEDBACK_MS)
           return
         }
         case 'zoom-in':
@@ -413,6 +446,14 @@ export function useKeyboardShortcuts(setSpaceHeld: (held: boolean) => void): voi
 
     const onKeyUp = (event: KeyboardEvent): void => {
       if (event.code === 'Space') setSpaceHeld(false)
+      if (event.key === 'Alt') useInteractionStore.getState().setMeasuring(false)
+    }
+
+    // Alt-Tab takes the key-up with it, and a hold that outlived its key
+    // would leave the measurements up with nothing to put them away.
+    const onBlur = (): void => {
+      useInteractionStore.getState().setMeasuring(false)
+      useInteractionStore.getState().setNudging(false)
     }
 
     window.addEventListener('pointerdown', onPointerDown, true)
@@ -420,7 +461,10 @@ export function useKeyboardShortcuts(setSpaceHeld: (held: boolean) => void): voi
     window.addEventListener('focusin', onFocusIn)
     window.addEventListener('keydown', onKeyDown)
     window.addEventListener('keyup', onKeyUp)
+    window.addEventListener('blur', onBlur)
     return () => {
+      window.removeEventListener('blur', onBlur)
+      window.clearTimeout(nudgeShown)
       window.removeEventListener('pointerdown', onPointerDown, true)
       window.removeEventListener('keydown', onAnyKey, true)
       window.removeEventListener('focusin', onFocusIn)
