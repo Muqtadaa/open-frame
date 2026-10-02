@@ -203,11 +203,15 @@ export function useCommands(): BoardCommands {
      */
     /** Hidden objects back on the board, selected: the ones named, or every one. */
     const showHidden = (only?: readonly ObjectId[]): void => {
-      const ids =
-        only ??
-        [...runtime.store.getDocument().objects.values()]
-          .filter((object) => object.hidden)
-          .map((object) => object.id)
+      const doc = runtime.store.getDocument()
+      /*
+       * Asked of the board as it is NOW. The ids a toast holds are the ones
+       * hidden when it appeared; one deleted since, by anybody, would have the
+       * whole command refused and leave the rest hidden.
+       */
+      const ids = (only ?? [...doc.objects.keys()]).filter(
+        (id) => doc.objects.get(id)?.hidden === true,
+      )
       if (ids.length === 0) return
       const result = dispatcher.dispatch({ kind: 'SetHidden', ids: [...ids], hidden: false })
       report(result)

@@ -26,8 +26,30 @@ function shifted(rect: Rect, by: DragDelta): Rect {
 
 export function PresenceLayer() {
   const peers = usePeers()
-  if (peers.length === 0) return null
-  return <PresentPeers peers={peers} />
+  return (
+    <>
+      {/*
+       * The pictures are hidden from assistive tech; this is what they say.
+       * Polite, so somebody starting to type elsewhere never interrupts.
+       *
+       * ALWAYS on the page, even with nobody here: a live region announces
+       * what changes in it after it exists, so one inserted with its words
+       * already in it — joining a room where somebody is already editing —
+       * said nothing at all.
+       */}
+      <p className="of-visually-hidden" role="status" data-testid="presence-status">
+        {peers.length > 0 && <PresenceSentences peers={peers} />}
+      </p>
+      {peers.length > 0 && <PresentPeers peers={peers} />}
+    </>
+  )
+}
+
+/** Who is editing what, in words, from the board as it is. */
+function PresenceSentences({ peers }: { readonly peers: readonly Peer[] }) {
+  const { runtime } = useOpenFrame()
+  const document = useBoardDocument()
+  return presenceSentences(peers, document, runtime.registry).join('. ')
 }
 
 function PresentPeers({ peers }: { readonly peers: readonly Peer[] }) {
@@ -81,20 +103,8 @@ function PresentPeers({ peers }: { readonly peers: readonly Peer[] }) {
     return drawn
   }, [peers, document, runtime.registry])
 
-  const said = useMemo(
-    () => presenceSentences(peers, document, runtime.registry).join('. '),
-    [peers, document, runtime.registry],
-  )
-
   return (
     <>
-      {/*
-       * The pictures below are hidden from assistive tech; this is what they
-       * say. Polite, so somebody starting to type elsewhere never interrupts.
-       */}
-      <p className="of-visually-hidden" role="status" data-testid="presence-status">
-        {said}
-      </p>
       <div className="of-presence" aria-hidden="true">
         {outlines.map(({ key, rect, peer, editing }) => {
           const screenRect = worldRectToScreen(viewport, rect)

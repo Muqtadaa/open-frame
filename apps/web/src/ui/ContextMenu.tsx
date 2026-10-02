@@ -1,4 +1,12 @@
-import { useEffect, useRef, useState, type KeyboardEvent, type RefObject } from 'react'
+import {
+  useCallback,
+  useEffect,
+  useRef,
+  useState,
+  useSyncExternalStore,
+  type KeyboardEvent,
+  type RefObject,
+} from 'react'
 
 import { AnchoredSurface } from '../controls/AnchoredSurface.js'
 import { DisclosureIcon } from '../controls/icons.js'
@@ -54,11 +62,22 @@ export function ContextMenu() {
   const clipboardSize = useInteractionStore((state) => state.clipboard.length)
   const commands = useCommands()
   const { runtime } = useOpenFrame()
-  // Read when the menu opens, which is the only time it is asked.
-  const hiddenCount =
-    at === null
-      ? 0
-      : [...runtime.store.getDocument().objects.values()].filter((object) => object.hidden).length
+  /*
+   * Followed while the menu is open, since another person can hide or show
+   * something under it. Counted only then: closed, the answer is a constant
+   * and the count costs nothing per edit.
+   */
+  const menuOpen = at !== null
+  const hiddenCount = useSyncExternalStore(
+    useCallback(
+      (onChange: () => void) => runtime.store.subscribeToDocument(onChange),
+      [runtime.store],
+    ),
+    () =>
+      menuOpen
+        ? [...runtime.store.getDocument().objects.values()].filter((object) => object.hidden).length
+        : 0,
+  )
   const ref = useRef<HTMLDivElement>(null)
   const subRef = useRef<HTMLDivElement>(null)
   const surface = useViewportSize()
