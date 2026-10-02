@@ -143,11 +143,16 @@ test('two comments in a row from the same person are both announced', async ({ b
   const room = newRoomId()
   const alice = await join(browser, room, 'Muqtadaa Miandara')
   const bob = await join(browser, room, 'Rowan', alice.server)
+  // The region has to EXIST before anything listens to it. Read once without
+  // waiting, a page that had not mounted it yet attached no observer at all,
+  // and the count below stayed at 0 — a race that looked like the feature
+  // failing (seen once in a full rooms run).
+  await expect(bob.page.getByTestId('comment-arrivals')).toBeAttached()
   await bob.page.evaluate(() => {
     const said: string[] = []
     ;(window as unknown as { said: string[] }).said = said
     const region = document.querySelector('[data-testid="comment-arrivals"]')
-    if (region === null) return
+    if (region === null) throw new Error('no arrivals region to listen to')
     new MutationObserver(() => {
       const text = region.textContent ?? ''
       if (text !== '') said.push(text)

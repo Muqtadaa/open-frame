@@ -1,4 +1,12 @@
-import { asObjectId, clampZoom, type ObjectId, type Point, type Viewport } from '@openframe/core'
+import {
+  asObjectId,
+  clampZoom,
+  type BoardDocument,
+  type ObjectId,
+  type ObjectTypeRegistry,
+  type Point,
+  type Viewport,
+} from '@openframe/core'
 
 /**
  * What one person's presence says, and how much of it to believe.
@@ -278,4 +286,26 @@ export function editorsByObject(peers: readonly Peer[]): ReadonlyMap<ObjectId, P
 /** The initial shown on a chip. One character, so six of them fit on a line. */
 export function initialOf(name: string): string {
   return (name.trim()[0] ?? '?').toUpperCase()
+}
+
+/**
+ * What the others are doing, in words: "Sam is editing Sticky note: Pricing".
+ *
+ * The presence layer draws it as cursors and outlines, which are pictures and
+ * so hidden from assistive tech — and a screen reader was then never told that
+ * a note was open in somebody else's hands, which is exactly when it refuses
+ * to open in yours. Only editing is said; a selection or a cursor moving is
+ * not news worth interrupting anyone for.
+ */
+export function presenceSentences(
+  peers: readonly Peer[],
+  doc: BoardDocument,
+  registry: ObjectTypeRegistry,
+): string[] {
+  return peers.flatMap((peer) => {
+    const object = peer.editing === null ? undefined : doc.objects.get(peer.editing)
+    return object === undefined
+      ? []
+      : [`${peer.name} is editing ${registry.describeObject(object).summary}`]
+  })
 }

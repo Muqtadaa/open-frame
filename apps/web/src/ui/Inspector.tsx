@@ -374,6 +374,14 @@ export function Inspector() {
     return new Set(first.filter((prop) => rest.every((list) => list.includes(prop))))
   }, [objects, runtime.registry])
 
+  /*
+   * Why this object cannot be edited here, when it cannot — an object from a
+   * newer version. It used to have no panel at all, having nothing to edit,
+   * so selecting it offered neither the reason nor the delete it promises.
+   */
+  const cannotEdit =
+    only === undefined ? undefined : runtime.registry.describeObject(only).cannotEdit
+
   // Hidden mid-gesture and while editing: a panel that jumps around under the
   // pointer is worse than no panel.
   if (objects.length === 0 || bounds === null) return null
@@ -386,7 +394,8 @@ export function Inspector() {
     fields.length === 0 &&
     actions.length === 0 &&
     cites.length === 0 &&
-    citedBy.length === 0
+    citedBy.length === 0 &&
+    cannotEdit === undefined
   ) {
     return null
   }
@@ -541,6 +550,12 @@ export function Inspector() {
             )}
           </div>
         </div>
+
+        {cannotEdit !== undefined && (
+          <p className="of-inspector__note" data-testid="inspector-note">
+            {cannotEdit}
+          </p>
+        )}
 
         {/*
          * The record band says how much of the record is still to fill, so a

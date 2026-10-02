@@ -238,6 +238,26 @@ test.describe('frames', () => {
     await expect(page.getByTestId('frame-title')).toContainText('Discovery')
   })
 
+  /*
+   * Renaming a frame that already exists, from its title. The double-click
+   * targets the nearest common ancestor of its two clicks, and the first click
+   * selects the frame and re-renders the title — so the pair arrived addressed
+   * to the canvas, the title was not found, and nothing opened.
+   */
+  test('renames an existing frame by double-clicking its title', async ({ page }) => {
+    await seed(page, (board) => {
+      board.add('frame', { x: 600, y: 400 })
+    })
+    const title = page.getByTestId('frame-title')
+    await title.dblclick()
+    await expect(page.locator(EDITOR)).toBeFocused()
+    await page.keyboard.press('ControlOrMeta+a')
+    await page.keyboard.type('Renamed')
+    await page.locator(CANVAS).click({ position: { x: 1150, y: 130 } })
+
+    await expect(title).toHaveText('Renamed')
+  })
+
   /**
    * The behaviour frames exist for: dropping a note onto one makes it a member,
    * and the frame then carries it. Membership is set by the drop, not by

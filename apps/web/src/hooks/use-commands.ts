@@ -88,6 +88,11 @@ export interface BoardCommands {
   distribute(axis: DistributeAxis): void
   setLocked(locked: boolean): void
   setHidden(hidden: boolean): void
+  /**
+   * Brings hidden objects back and selects them: the ones named, or every
+   * hidden object on the board.
+   */
+  showHidden(ids?: readonly ObjectId[]): void
   deleteSelection(): void
   /**
    * A divider's new data AND the size the object needs to hold it, as ONE
@@ -196,6 +201,23 @@ export function useCommands(): BoardCommands {
      * returned object, because a method calling a sibling through `this` breaks
      * the moment anyone destructures the hook's result.
      */
+    /** Hidden objects back on the board, selected: the ones named, or every one. */
+    const showHidden = (only?: readonly ObjectId[]): void => {
+      const doc = runtime.store.getDocument()
+      /*
+       * Asked of the board as it is NOW. The ids a toast holds are the ones
+       * hidden when it appeared; one deleted since, by anybody, would have the
+       * whole command refused and leave the rest hidden.
+       */
+      const ids = (only ?? [...doc.objects.keys()]).filter(
+        (id) => doc.objects.get(id)?.hidden === true,
+      )
+      if (ids.length === 0) return
+      const result = dispatcher.dispatch({ kind: 'SetHidden', ids: [...ids], hidden: false })
+      report(result)
+      if (result.ok) useInteractionStore.getState().setSelection(ids)
+    }
+
     const revealObject = (id: ObjectId): void => {
       const store = useInteractionStore.getState()
       const doc = runtime.store.getDocument()
@@ -563,11 +585,27 @@ export function useCommands(): BoardCommands {
       setHidden(hidden) {
         const ids = [...useInteractionStore.getState().selection]
         if (ids.length === 0) return
-        report(dispatcher.dispatch({ kind: 'SetHidden', ids, hidden }))
+        const result = dispatcher.dispatch({ kind: 'SetHidden', ids, hidden })
+        report(result)
+        if (!hidden || !result.ok) return
+        const store = useInteractionStore.getState()
         // A hidden object cannot be clicked, so leaving it selected strands the
         // selection on something invisible.
-        if (hidden) useInteractionStore.getState().clearSelection()
+        store.clearSelection()
+        /*
+         * And say where they went. Hiding used to leave nothing behind — the
+         * objects vanished, nothing said so, and nothing showed them again but
+         * undo. The board's own menu shows them later, too.
+         */
+        store.showToast(`${String(ids.length)} ${ids.length === 1 ? 'object' : 'objects'} hidden`, {
+          label: 'Show',
+          run: () => {
+            showHidden(ids)
+          },
+        })
       },
+
+      showHidden,
 
       deleteSelection() {
         const ids = [...useInteractionStore.getState().selection]

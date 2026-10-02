@@ -1,4 +1,12 @@
-import { useEffect, useRef, useState, type KeyboardEvent, type RefObject } from 'react'
+import {
+  useCallback,
+  useEffect,
+  useRef,
+  useState,
+  useSyncExternalStore,
+  type KeyboardEvent,
+  type RefObject,
+} from 'react'
 
 import { AnchoredSurface } from '../controls/AnchoredSurface.js'
 import { DisclosureIcon } from '../controls/icons.js'
@@ -54,6 +62,22 @@ export function ContextMenu() {
   const clipboardSize = useInteractionStore((state) => state.clipboard.length)
   const commands = useCommands()
   const { runtime } = useOpenFrame()
+  /*
+   * Followed while the menu is open, since another person can hide or show
+   * something under it. Counted only then: closed, the answer is a constant
+   * and the count costs nothing per edit.
+   */
+  const menuOpen = at !== null
+  const hiddenCount = useSyncExternalStore(
+    useCallback(
+      (onChange: () => void) => runtime.store.subscribeToDocument(onChange),
+      [runtime.store],
+    ),
+    () =>
+      menuOpen
+        ? [...runtime.store.getDocument().objects.values()].filter((object) => object.hidden).length
+        : 0,
+  )
   const ref = useRef<HTMLDivElement>(null)
   const subRef = useRef<HTMLDivElement>(null)
   const surface = useViewportSize()
@@ -225,6 +249,20 @@ export function ContextMenu() {
     ],
     [
       { label: 'Select all', shortcut: 'Mod+A', run: () => commands.selectAll() },
+      /*
+       * Where hidden objects can be found again. Hiding had no way back but
+       * undo, so an object hidden an hour ago was simply lost.
+       */
+      ...(hiddenCount === 0
+        ? []
+        : [
+            {
+              label: `Show ${String(hiddenCount)} hidden ${hiddenCount === 1 ? 'object' : 'objects'}`,
+              run: () => {
+                commands.showHidden()
+              },
+            },
+          ]),
       {
         label: 'Zoom to fit',
         shortcut: 'Mod+1',

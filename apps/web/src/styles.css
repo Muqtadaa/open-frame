@@ -4824,6 +4824,13 @@ body {
   color: var(--of-ink);
 }
 
+.of-inspector__note {
+  margin: 0;
+  font-size: var(--of-type-record);
+  line-height: 1.4;
+  color: var(--of-ink-muted);
+}
+
 .of-inspector__summary {
   overflow: hidden;
   margin: 0;

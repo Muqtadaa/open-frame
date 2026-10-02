@@ -556,9 +556,18 @@ export function useCanvasGestures(containerRef: RefObject<HTMLElement | null>) {
        * inside a group could never be edited again, because every click would
        * resolve to a container that has no text.
        */
+      /*
+       * Chrome outside the object's bounds (a frame's title) is found through
+       * the DOM — and asked of what is UNDER THE POINTER, not only of the
+       * event's target. A double-click targets the nearest common ancestor of
+       * its two clicks, and the first click selects the frame and re-renders
+       * its title, so the pair arrived addressed to the canvas and renaming a
+       * frame from its title opened nothing.
+       */
       const hitId =
         hitTestRaw(runtime.store.getDocument(), runtime.registry, worldPoint) ??
-        objectChromeUnderPointer(event.target)
+        objectChromeUnderPointer(event.target) ??
+        objectChromeUnderPointer(document.elementFromPoint(event.clientX, event.clientY))
 
       /*
        * A type that shows LESS than it holds is cropped by this gesture rather

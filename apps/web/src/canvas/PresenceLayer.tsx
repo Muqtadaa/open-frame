@@ -6,7 +6,7 @@ import { usePeers } from '../hooks/use-peers.js'
 import { useBoardDocument } from '../hooks/use-document-object.js'
 import { useInteractionStore } from '../interaction/interaction-store.js'
 import { useOpenFrame } from '../runtime/context.js'
-import { hueVar, type DragDelta, type Peer } from '../scene/presence.js'
+import { hueVar, presenceSentences, type DragDelta, type Peer } from '../scene/presence.js'
 
 /**
  * Other people: where they are pointing, what they have hold of.
@@ -26,8 +26,36 @@ function shifted(rect: Rect, by: DragDelta): Rect {
 
 export function PresenceLayer() {
   const peers = usePeers()
-  if (peers.length === 0) return null
-  return <PresentPeers peers={peers} />
+  const { collaboration } = useOpenFrame()
+  // A board nobody else can be on has nobody to describe.
+  const inRoom = collaboration !== null && collaboration !== undefined
+  return (
+    <>
+      {/*
+       * The pictures are hidden from assistive tech; this is what they say.
+       * Polite, so somebody starting to type elsewhere never interrupts.
+       *
+       * On the page as soon as the board is in a room, before anybody is
+       * there: a live region announces what changes in it after it exists,
+       * so one inserted with its words already in it — joining a room where
+       * somebody is already editing — said nothing at all. Not on a board
+       * nobody else can join, where it would be a second status for nothing.
+       */}
+      {inRoom && (
+        <p className="of-visually-hidden" role="status" data-testid="presence-status">
+          {peers.length > 0 && <PresenceSentences peers={peers} />}
+        </p>
+      )}
+      {peers.length > 0 && <PresentPeers peers={peers} />}
+    </>
+  )
+}
+
+/** Who is editing what, in words, from the board as it is. */
+function PresenceSentences({ peers }: { readonly peers: readonly Peer[] }) {
+  const { runtime } = useOpenFrame()
+  const document = useBoardDocument()
+  return presenceSentences(peers, document, runtime.registry).join('. ')
 }
 
 function PresentPeers({ peers }: { readonly peers: readonly Peer[] }) {
@@ -82,77 +110,79 @@ function PresentPeers({ peers }: { readonly peers: readonly Peer[] }) {
   }, [peers, document, runtime.registry])
 
   return (
-    <div className="of-presence" aria-hidden="true">
-      {outlines.map(({ key, rect, peer, editing }) => {
-        const screenRect = worldRectToScreen(viewport, rect)
-        return (
-          <div
-            key={key}
-            className={`of-presence__outline${editing ? ' of-presence__outline--editing' : ''}`}
-            data-testid="presence-outline"
-            style={{
-              left: screenRect.x,
-              top: screenRect.y,
-              width: screenRect.width,
-              height: screenRect.height,
-              // Both, and they are not the same thing: `color` drives the border
-              // through `currentcolor`, while the label needs a value that
-              // survives setting its own `color`. See the note in styles.css.
-              color: hueVar(peer.hue),
-              ['--of-presence-hue' as string]: hueVar(peer.hue),
-            }}
-          >
-            {/*
-             * WHO, always — not only once they start typing.
-             *
-             * A selection used to be an unlabelled dashed outline in somebody's
-             * colour, so you could see that an object was spoken for and had to
-             * match the colour against the row of faces in the status bar to
-             * find out whose. The colour is a hint; the name is the answer.
-             *
-             * The wording still separates the two states, because they mean
-             * different things: having something selected is a claim on your
-             * attention, and having it OPEN is a claim you cannot type into it.
-             */}
-            <span className="of-presence__tag">
-              {editing ? `${peer.name} is editing` : peer.name}
-            </span>
-          </div>
-        )
-      })}
-
-      {peers.map((peer) => {
-        if (peer.cursor === null) return null
-        const at = worldToScreen(viewport, peer.cursor)
-        return (
-          <div
-            key={peer.clientId}
-            className="of-presence__cursor"
-            data-testid="presence-cursor"
-            style={{
-              transform: `translate(${String(at.x)}px, ${String(at.y)}px)`,
-              color: hueVar(peer.hue),
-              ['--of-presence-hue' as string]: hueVar(peer.hue),
-            }}
-          >
-            <svg viewBox="0 0 16 16" width="16" height="16" aria-hidden="true">
+    <>
+      <div className="of-presence" aria-hidden="true">
+        {outlines.map(({ key, rect, peer, editing }) => {
+          const screenRect = worldRectToScreen(viewport, rect)
+          return (
+            <div
+              key={key}
+              className={`of-presence__outline${editing ? ' of-presence__outline--editing' : ''}`}
+              data-testid="presence-outline"
+              style={{
+                left: screenRect.x,
+                top: screenRect.y,
+                width: screenRect.width,
+                height: screenRect.height,
+                // Both, and they are not the same thing: `color` drives the border
+                // through `currentcolor`, while the label needs a value that
+                // survives setting its own `color`. See the note in styles.css.
+                color: hueVar(peer.hue),
+                ['--of-presence-hue' as string]: hueVar(peer.hue),
+              }}
+            >
               {/*
+               * WHO, always — not only once they start typing.
+               *
+               * A selection used to be an unlabelled dashed outline in somebody's
+               * colour, so you could see that an object was spoken for and had to
+               * match the colour against the row of faces in the status bar to
+               * find out whose. The colour is a hint; the name is the answer.
+               *
+               * The wording still separates the two states, because they mean
+               * different things: having something selected is a claim on your
+               * attention, and having it OPEN is a claim you cannot type into it.
+               */}
+              <span className="of-presence__tag">
+                {editing ? `${peer.name} is editing` : peer.name}
+              </span>
+            </div>
+          )
+        })}
+
+        {peers.map((peer) => {
+          if (peer.cursor === null) return null
+          const at = worldToScreen(viewport, peer.cursor)
+          return (
+            <div
+              key={peer.clientId}
+              className="of-presence__cursor"
+              data-testid="presence-cursor"
+              style={{
+                transform: `translate(${String(at.x)}px, ${String(at.y)}px)`,
+                color: hueVar(peer.hue),
+                ['--of-presence-hue' as string]: hueVar(peer.hue),
+              }}
+            >
+              <svg viewBox="0 0 16 16" width="16" height="16" aria-hidden="true">
+                {/*
                 Filled with the peer's colour and outlined in the page's, so the
                 pointer stays readable over a dark slip as well as over the
                 ruled ground.
               */}
-              <path
-                d="M2 1.5l10.5 5.2-4.6 1.4-1.6 4.6L2 1.5z"
-                fill="currentColor"
-                stroke="var(--of-page)"
-                strokeWidth="1.2"
-                strokeLinejoin="round"
-              />
-            </svg>
-            <span className="of-presence__name">{peer.name}</span>
-          </div>
-        )
-      })}
-    </div>
+                <path
+                  d="M2 1.5l10.5 5.2-4.6 1.4-1.6 4.6L2 1.5z"
+                  fill="currentColor"
+                  stroke="var(--of-page)"
+                  strokeWidth="1.2"
+                  strokeLinejoin="round"
+                />
+              </svg>
+              <span className="of-presence__name">{peer.name}</span>
+            </div>
+          )
+        })}
+      </div>
+    </>
   )
 }
