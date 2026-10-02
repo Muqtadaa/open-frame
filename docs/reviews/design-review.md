@@ -1030,6 +1030,20 @@ board units, over the line (page on guide magenta, measured at 4.5:1 in both
 worlds). Five unit tests and an e2e were seen failing first. The e2e's
 mid-drag number is the gap the drop leaves.
 
+**Measuring, after trying 4f (owner, 10-02).** Two gaps. With the grid on, the
+number on a guide ran ahead of the element: it was measured from the pointer
+while the element moved in steps of ten. It is now measured from where the
+selection lands (`guidesAround`), and the e2e that drags seven pixels past a grid
+line failed on 187 against a drawn 190. And there was no way to measure on
+purpose. Holding Alt now does what a design tool does: the selection, as one
+box, against what the pointer is over (distances, and dashed lines where edges
+or centres match exactly); with nothing else pointed at, the gaps between the
+selected things. The record panel steps aside while Alt is held, as it does for
+Shift, because it was over the very neighbour being measured to. Alt+arrow still
+resizes. Twelve unit tests and five e2e; removing the overlay failed three of
+them, and removing the blur handler failed the one that lets go in another
+window.
+
 Still to come, in order:
 
 - board clarity: where hidden objects went, presence for assistive tech, a

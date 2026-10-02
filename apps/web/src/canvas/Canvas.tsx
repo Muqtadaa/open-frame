@@ -17,6 +17,7 @@ import { ArrangeBar } from './ArrangeBar.js'
 import { CropOverlay } from './CropOverlay.js'
 import { DividerOverlay } from './DividerOverlay.js'
 import { MarqueeOverlay } from './MarqueeOverlay.js'
+import { MeasureOverlay } from './MeasureOverlay.js'
 import { ObjectLayer } from './ObjectLayer.js'
 import { CommentLayer } from './CommentLayer.js'
 import { PresenceLayer } from './PresenceLayer.js'
@@ -64,6 +65,7 @@ const BOARD_KEYS = [
   'Tab moves between objects.',
   'Arrow keys move the selection;',
   `${formatKeys('Alt')} with an arrow resizes it;`,
+  `holding ${formatKeys('Alt')} measures from it to whatever is under the pointer;`,
   'comma and period rotate it;',
   `${formatKeys('Mod+Shift+L')} locks it;`,
   'Enter edits it, and Escape lets it go.',
@@ -221,6 +223,7 @@ const Apparatus = memo(function Apparatus() {
       <DrawPreview />
       <MarqueeOverlay />
       <AlignmentOverlay />
+      <MeasureOverlay />
       <EndpointOverlay />
       <DividerOverlay />
       <CropOverlay />

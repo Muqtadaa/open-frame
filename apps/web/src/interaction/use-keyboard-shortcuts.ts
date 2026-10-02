@@ -110,6 +110,19 @@ export function useKeyboardShortcuts(setSpaceHeld: (held: boolean) => void): voi
       )
         return
 
+      /*
+       * Alt held MEASURES: from the selection to whatever is under the
+       * pointer, as in a design tool. A hold, like Space, so it sits outside
+       * the keymap — and Alt with an arrow still resizes, because the arrow is
+       * its own keydown. Prevented, or Windows and Firefox put the keyboard in
+       * the browser's menu bar when it is let go.
+       */
+      if (event.key === 'Alt' && !isTextEntry(event.target)) {
+        store.setMeasuring(true)
+        event.preventDefault()
+        return
+      }
+
       // Space-drag panning is a hold, not a shortcut, so it sits outside the keymap.
       if (event.code === 'Space' && !isTextEntry(event.target)) {
         setSpaceHeld(true)
@@ -413,6 +426,13 @@ export function useKeyboardShortcuts(setSpaceHeld: (held: boolean) => void): voi
 
     const onKeyUp = (event: KeyboardEvent): void => {
       if (event.code === 'Space') setSpaceHeld(false)
+      if (event.key === 'Alt') useInteractionStore.getState().setMeasuring(false)
+    }
+
+    // Alt-Tab takes the key-up with it, and a hold that outlived its key
+    // would leave the measurements up with nothing to put them away.
+    const onBlur = (): void => {
+      useInteractionStore.getState().setMeasuring(false)
     }
 
     window.addEventListener('pointerdown', onPointerDown, true)
@@ -420,7 +440,9 @@ export function useKeyboardShortcuts(setSpaceHeld: (held: boolean) => void): voi
     window.addEventListener('focusin', onFocusIn)
     window.addEventListener('keydown', onKeyDown)
     window.addEventListener('keyup', onKeyUp)
+    window.addEventListener('blur', onBlur)
     return () => {
+      window.removeEventListener('blur', onBlur)
       window.removeEventListener('pointerdown', onPointerDown, true)
       window.removeEventListener('keydown', onAnyKey, true)
       window.removeEventListener('focusin', onFocusIn)

@@ -229,6 +229,12 @@ export function Inspector() {
    * (Shift is a capital letter there), nor in any other editor.
    */
   const [yielding, setYielding] = useState(false)
+  /*
+   * Alt held is measuring, and what you point at to measure to is, as often as
+   * not, under this panel — it sits beside the selection, which is where the
+   * neighbours are. It steps aside for that too.
+   */
+  const measuring = useInteractionStore((state) => state.measuring)
   useEffect(() => {
     /*
      * Busy means TYPING — where Shift is a capital letter. Focus resting on a
@@ -522,7 +528,7 @@ export function Inspector() {
     >
       <div
         ref={placePanel}
-        className={`of-inspector of-surface${yielding ? ' of-inspector--yielding' : ''}${
+        className={`of-inspector of-surface${yielding || measuring ? ' of-inspector--yielding' : ''}${
           docked ? ' of-inspector--docked' : ''
         }${scrolls ? ' of-inspector--scrolls' : ''}`}
         data-testid="inspector"

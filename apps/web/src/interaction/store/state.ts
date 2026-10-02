@@ -327,6 +327,12 @@ export interface GestureSlice {
   readonly guides: readonly AlignmentGuide[]
   readonly drag: DragState
   /**
+   * Alt is held: the board measures from the selection to whatever is under
+   * the pointer, and between the selected things themselves. A hold rather
+   * than a tool, so it is never left on by accident.
+   */
+  readonly measuring: boolean
+  /**
    * A style being aimed at in the record panel — a colour dragged across the
    * picker, an opacity slid — drawn on the selection and written NOWHERE.
    *
@@ -345,6 +351,7 @@ export interface GestureSlice {
     readonly style: ObjectStyle
   } | null
   setGuides(guides: readonly AlignmentGuide[]): void
+  setMeasuring(measuring: boolean): void
   beginCrop(objectId: ObjectId, handle: string): void
   previewCrop(frame: ObjectFrame, crop: ImageCrop): void
   previewStyle(ids: ReadonlySet<ObjectId>, style: ObjectStyle): void
