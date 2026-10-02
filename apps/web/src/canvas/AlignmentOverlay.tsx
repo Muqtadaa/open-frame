@@ -40,6 +40,31 @@ export function AlignmentOverlay() {
           />
         )
       })}
+      {/* After the lines, so a measurement is never struck through by its own guide. */}
+      {guides.flatMap((guide) =>
+        guide.gaps.map((gap) => {
+          const vertical = guide.axis === 'x'
+          const middle = (gap.from + gap.to) / 2
+          const at = worldToScreen(
+            viewport,
+            vertical ? { x: guide.position, y: middle } : { x: middle, y: guide.position },
+          )
+          return (
+            <span
+              key={`gap:${guide.axis}:${String(gap.from)}:${String(gap.to)}`}
+              className="of-guide__gap"
+              data-testid={`guide-gap-${guide.axis}`}
+              // Centred on the line, at the middle of the stretch it measures.
+              style={{
+                transform: `translate(${String(at.x)}px, ${String(at.y)}px) translate(-50%, -50%)`,
+              }}
+            >
+              {/* World units, which is what the record panel's sizes are in. */}
+              {String(Math.round(gap.to - gap.from))}
+            </span>
+          )
+        }),
+      )}
     </>
   )
 }

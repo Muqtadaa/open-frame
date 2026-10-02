@@ -4715,6 +4715,27 @@ body {
   pointer-events: none;
 }
 
+/*
+ * How far apart two lined-up things are, sat on the guide at the middle of the
+ * gap: the guide's own colour, so it reads as the guide talking. Set in the
+ * mono face of every other readout, at the functional floor.
+ */
+.of-guide__gap {
+  position: absolute;
+  top: 0;
+  left: 0;
+  z-index: var(--of-z-guide);
+  padding: 0 var(--of-space-4);
+  font-family: var(--of-mono);
+  font-size: var(--of-type-record);
+  line-height: 1.5;
+  color: var(--of-page);
+  white-space: nowrap;
+  background: var(--of-guide);
+  border-radius: var(--of-radius-apparatus);
+  pointer-events: none;
+}
+
 /* Connector endpoint handles ------------------------------------------------ */
 
 .of-endpoint {

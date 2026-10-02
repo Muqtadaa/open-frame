@@ -164,6 +164,11 @@ const TEXT: readonly (readonly [string, string])[] = [
    */
   ['ink', 's-gray'],
   ['ink-muted', 's-gray'],
+  /*
+   * A guide's distance: the measurement is read, mid-drag, in the page's
+   * colour on the guide's own.
+   */
+  ['page', 'guide'],
 ]
 
 /** 1.4.11 Non-text Contrast: boundaries you must perceive to operate a control. */

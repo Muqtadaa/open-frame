@@ -52,6 +52,19 @@ export interface AlignmentGuide {
   /** Extent along the other axis, covering every rectangle that lines up. */
   readonly start: number
   readonly end: number
+  /**
+   * The empty stretches along this guide between the dragged selection and the
+   * nearest neighbour lined up with it on either side — what spacing a column
+   * evenly is done by. Each is said once per axis, however many of the
+   * selection's stops line up with the same neighbour.
+   */
+  readonly gaps: readonly AlignmentGap[]
+}
+
+/** An empty stretch along a guide, from one box's edge to the next's. */
+export interface AlignmentGap {
+  readonly from: number
+  readonly to: number
 }
 
 export interface AlignmentResult {
@@ -122,8 +135,14 @@ function guidesFor(
   const cross = axis === 'x' ? 'y' : 'x'
   const crossSize = axis === 'x' ? 'height' : 'width'
   const guides = new Map<number, AlignmentGuide>()
+  const measured = new Set<string>()
+  const movedFrom = moved[cross]
+  const movedTo = moved[cross] + moved[crossSize]
 
-  for (const mine of stops(moved, axis)) {
+  // Each place once: a selection with no width has all three stops at one
+  // coordinate, and a second pass over the same guide replaced it with one
+  // whose gap had already been said — so it said none.
+  for (const mine of new Set(stops(moved, axis))) {
     const matched = others.filter((other) =>
       stops(other, axis).some((theirs) => Math.abs(theirs - mine) <= EPSILON),
     )
@@ -133,11 +152,36 @@ function guidesFor(
       from: rect[cross],
       to: rect[cross] + rect[crossSize],
     }))
+
+    /*
+     * The nearest lined-up neighbour wholly before the selection along the
+     * guide, and the nearest wholly after it. One that overlaps it along the
+     * guide has no gap to measure.
+     */
+    let before: number | null = null
+    let after: number | null = null
+    for (const span of spans.slice(1)) {
+      if (span.to <= movedFrom && (before === null || span.to > before)) before = span.to
+      if (span.from >= movedTo && (after === null || span.from < after)) after = span.from
+    }
+    const gaps: AlignmentGap[] = []
+    for (const gap of [
+      before === null ? null : { from: before, to: movedFrom },
+      after === null ? null : { from: movedTo, to: after },
+    ]) {
+      if (gap === null || gap.to - gap.from <= EPSILON) continue
+      const key = `${String(gap.from)}:${String(gap.to)}`
+      if (measured.has(key)) continue
+      measured.add(key)
+      gaps.push(gap)
+    }
+
     guides.set(mine, {
       axis,
       position: mine,
       start: Math.min(...spans.map((s) => s.from)),
       end: Math.max(...spans.map((s) => s.to)),
+      gaps,
     })
   }
   return [...guides.values()]

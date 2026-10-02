@@ -153,3 +153,37 @@ test.describe('alignment guides', () => {
     expect(Math.abs(settled.x - anchorX)).toBeGreaterThan(1)
   })
 })
+
+/*
+ * A guide said that two things lined up and nothing about how far apart they
+ * were, so spacing a column evenly meant dropping each one by eye.
+ */
+test.describe('the distance on a guide', () => {
+  test.beforeEach(async ({ page }) => {
+    await create(page, 's', 350, 250, 'Anchor')
+    await create(page, 's', 700, 520, 'Mover')
+  })
+
+  test('says how far the dragged note is from the one it lines up with', async ({ page }) => {
+    const anchor = await box(page, 0)
+    const mover = await box(page, 1)
+    let said = ''
+
+    // Lined up on the anchor's left edge, the mover's own height below it.
+    await drag(
+      page,
+      { x: mover.x + 20, y: mover.y + 20 },
+      { x: anchor.x + 2 + 20, y: anchor.y + anchor.height * 2 + 20 },
+      async () => {
+        const gap = page.getByTestId('guide-gap-x')
+        await expect(gap).toHaveCount(1)
+        said = (await gap.textContent()) ?? ''
+      },
+    )
+
+    const settled = await box(page, 1)
+    // What it said mid-drag is the gap it then left, in board units at 100%.
+    expect(Number(said)).toBeCloseTo(settled.y - (anchor.y + anchor.height), -1)
+    await expect(page.getByTestId('guide-gap-x')).toHaveCount(0)
+  })
+})

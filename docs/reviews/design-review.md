@@ -1022,6 +1022,14 @@ author's alone, and `edited_at` kept apart from `updated_at`, which resolving
 also bumps. Every test was seen failing first. Breaking ownership, the refusal
 and the walk's ends each failed its test.
 
+**Distances on guides.** A guide said that two things lined up and nothing
+about how far apart they were, so a column was spaced by eye. Each guide now
+carries the empty stretch to the nearest lined-up neighbour on either side,
+said once however many stops line up. The overlay labels it at its middle, in
+board units, over the line (page on guide magenta, measured at 4.5:1 in both
+worlds). Five unit tests and an e2e were seen failing first. The e2e's
+mid-drag number is the gap the drop leaves.
+
 Still to come, in order:
 
 - board clarity: where hidden objects went, presence for assistive tech, a
