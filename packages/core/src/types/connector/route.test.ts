@@ -275,3 +275,125 @@ describe('the bend handle still sits on the line it bends', () => {
     expect(nearest).toBeLessThan(1e-6)
   })
 })
+
+/*
+ * An end whose side FACES AWAY from the other end — attached to the far side
+ * of its object, or to a side a turn has swung round. Each end leaves straight
+ * out of its edge, so a curve laid all four of its points on one line and ran
+ * straight THROUGH the object, past it and back; a squared route did the same,
+ * because only the run leaving the start was ever checked. Both now go round
+ * the nearer side of the shape and come into the edge from outside.
+ */
+describe('reaching a side that faces away', () => {
+  const table = { x: 400, y: 370, width: 260, height: 168 }
+  const box = { x: 1207, y: 397, width: 200, height: 116 }
+  const right = { x: 1, y: 0 }
+  const left = { x: -1, y: 0 }
+  const down = { x: 0, y: 1 }
+
+  /** Every point of the route as drawn, its straight runs sampled too. */
+  function drawn(route: ReturnType<typeof connectorRoute>): Point[] {
+    const path = flattenRoute(route, 48)
+    const dense: Point[] = []
+    for (let at = 0; at + 1 < path.length; at += 1) {
+      const from = path[at]
+      const to = path[at + 1]
+      if (from === undefined || to === undefined) continue
+      for (let step = 0; step < 24; step += 1) {
+        dense.push({
+          x: from.x + ((to.x - from.x) * step) / 24,
+          y: from.y + ((to.y - from.y) * step) / 24,
+        })
+      }
+    }
+    return dense
+  }
+
+  const inside = (point: Point, rect: typeof box): boolean =>
+    point.x > rect.x + 0.5 &&
+    point.x < rect.x + rect.width - 0.5 &&
+    point.y > rect.y + 0.5 &&
+    point.y < rect.y + rect.height - 0.5
+
+  /** The direction the route arrives in at its end. */
+  function arriving(route: ReturnType<typeof connectorRoute>): Point {
+    const path = flattenRoute(route, 48)
+    const last = path[path.length - 1] ?? { x: 0, y: 0 }
+    const before = path[path.length - 2] ?? last
+    return { x: last.x - before.x, y: last.y - before.y }
+  }
+
+  const cases = [
+    {
+      name: 'the end faces away',
+      start: { x: 660, y: 455 },
+      end: { x: 1407, y: 455 },
+      normals: { start: right, end: right },
+      boxes: [table, box],
+    },
+    {
+      name: 'the start faces away',
+      start: { x: 400, y: 455 },
+      end: { x: 1207, y: 455 },
+      normals: { start: left, end: left },
+      boxes: [table, box],
+    },
+    {
+      name: 'both face away',
+      start: { x: 400, y: 455 },
+      end: { x: 1407, y: 455 },
+      normals: { start: left, end: right },
+      boxes: [table, box],
+    },
+    {
+      name: 'the end faces away, one above the other',
+      start: { x: 530, y: 538 },
+      end: { x: 580, y: 913 },
+      normals: { start: down, end: down },
+      boxes: [table, { x: 480, y: 797, width: 200, height: 116 }],
+    },
+  ]
+
+  // Ends that face each other — nearly every line there is — are untouched.
+  it('leaves a pair that faces each other exactly as it was', () => {
+    const normals = { start: right, end: left }
+    expect(
+      connectorRoute({ x: 660, y: 455 }, { x: 1207, y: 455 }, 'curved', [], normals, [table, box]),
+    ).toEqual({
+      kind: 'spline',
+      points: [
+        { x: 660, y: 455 },
+        { x: 820, y: 455 },
+        { x: 1047, y: 455 },
+        { x: 1207, y: 455 },
+      ],
+    })
+    expect(
+      connectorRoute({ x: 660, y: 455 }, { x: 1207, y: 455 }, 'orthogonal', [], normals, [
+        table,
+        box,
+      ]),
+    ).toEqual({
+      kind: 'polyline',
+      points: [
+        { x: 660, y: 455 },
+        { x: 676, y: 455 },
+        { x: 1191, y: 455 },
+        { x: 1207, y: 455 },
+      ],
+    })
+  })
+
+  for (const routing of ['curved', 'orthogonal'] as const) {
+    for (const { name, start: from, end: to, normals, boxes } of cases) {
+      it(`goes round, ${routing}, when ${name}`, () => {
+        const route = connectorRoute(from, to, routing, [], normals, boxes)
+        const through = drawn(route).filter((point) => boxes.some((rect) => inside(point, rect)))
+        expect(through).toEqual([])
+        // And comes INTO the edge, so the arrowhead points at the object.
+        const way = arriving(route)
+        expect(way.x * normals.end.x + way.y * normals.end.y).toBeLessThan(0)
+      })
+    }
+  }
+})

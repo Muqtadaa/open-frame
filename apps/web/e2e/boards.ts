@@ -50,7 +50,10 @@ export interface BoardBuilder {
   ) => ObjectId
   /** A sticky note saying `text`. */
   readonly note: (text: string, at: Point, style?: ObjectStyle) => ObjectId
-  /** A connector from one object to another, attached to both. */
+  /**
+   * A connector from one object to another, attached to both. `data` can
+   * override either end, to pin it to a side.
+   */
   readonly connect: (from: ObjectId, to: ObjectId, data?: Record<string, unknown>) => ObjectId
 }
 
@@ -118,11 +121,12 @@ export function buildBoard(make: (board: BoardBuilder) => void, title = 'Untitle
             type: 'connector',
             x: 0,
             y: 0,
-            // Attached to the bodies, as a line dropped on an object is.
+            // Attached to the bodies, as a line dropped on an object is,
+            // unless the spec pins an end to a side.
             data: {
-              ...data,
               from: { kind: 'object', objectId: from, anchor: { kind: 'auto' } },
               to: { kind: 'object', objectId: to, anchor: { kind: 'auto' } },
+              ...data,
             },
           },
         ],

@@ -1101,6 +1101,16 @@ rotation and turns each point about the centre, from the object's own frame.
 The unit test and the e2e were seen failing first; at 45° the old points sat at
 0°.
 
+**A line to a side that faces away** (owner's note on the 4i preview). Joined
+to a turned rectangle, a curved line ran straight through it, past it and back
+into its far edge. Each end leaves straight out of its edge, so with the
+attached side facing away the curve's four points fell on one line; the
+squared route went through too, which nobody had noticed because only the run
+leaving the start was ever checked. Both now go round the nearer side of that
+shape and come into the edge from outside (the owner's choice, over switching
+to whichever side faces the other end). The route tests and an e2e walking the
+drawn path were seen failing first.
+
 Still to come, in order:
 
 - board clarity: where hidden objects went, presence for assistive tech, a
