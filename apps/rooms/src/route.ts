@@ -23,6 +23,7 @@ const DESTROY_PATH = /^\/room\/([^/]+)\/destroy\/?$/
 const PASSWORD_PATH = /^\/room\/([^/]+)\/password\/?$/
 const UNLOCK_PATH = /^\/room\/([^/]+)\/unlock\/?$/
 const OWNER_PATH = /^\/room\/([^/]+)\/owner\/?$/
+const PROTECTION_PATH = /^\/room\/([^/]+)\/protection\/?$/
 /**
  * One image on a board.
  *
@@ -70,6 +71,8 @@ export type Route =
   | { readonly kind: 'unlock'; readonly boardId: string }
   /** Mint this board's owner key, once, for a board claimed before they existed. */
   | { readonly kind: 'owner'; readonly boardId: string }
+  /** Whether the board has a password, for somebody holding a way in. */
+  | { readonly kind: 'protection'; readonly boardId: string }
   /**
    * Reading or writing one image.
    *
@@ -90,6 +93,7 @@ const POSTS = [
   [PASSWORD_PATH, 'password', 'Setting a password'],
   [UNLOCK_PATH, 'unlock', 'Unlocking'],
   [OWNER_PATH, 'owner', 'Adopting an owner key'],
+  [PROTECTION_PATH, 'protection', 'Asking about a password'],
 ] as const satisfies readonly (readonly [RegExp, Route['kind'], string])[]
 
 export function routeRequest(url: URL, upgradeHeader: string | null, method = 'GET'): Route {

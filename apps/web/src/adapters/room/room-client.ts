@@ -87,6 +87,13 @@ export function createRoomClient(options: RoomClientOptions): RoomService {
       return { ok: false, reason: 'refused', message: typeof error === 'string' ? error : null }
     },
 
+    async hasPassword(boardId, key) {
+      const response = await post(url(boardId, 'protection'), { key })
+      if (!response?.ok) return null
+      const password = (await json(response))?.password
+      return typeof password === 'boolean' ? password : null
+    },
+
     async destroy(boardId, editorKey) {
       const response = await post(url(boardId, 'destroy'), { key: editorKey })
       if (response === null) return 'unreachable'

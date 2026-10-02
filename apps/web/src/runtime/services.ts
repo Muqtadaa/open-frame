@@ -242,6 +242,11 @@ export interface RoomKeys {
 export type RoomFailure = 'unreachable' | 'refused' | 'unreadable'
 
 export interface RoomService {
+  /**
+   * Whether the board asks for a password, for somebody holding a way in.
+   * `null` when that cannot be told — never read as "no".
+   */
+  readonly hasPassword: (boardId: BoardId, key: string) => Promise<boolean | null>
   readonly claim: (
     boardId: BoardId,
   ) => Promise<{ ok: true; keys: RoomKeys } | { ok: false; reason: RoomFailure }>

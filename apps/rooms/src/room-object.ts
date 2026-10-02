@@ -14,6 +14,7 @@ import {
   isOwnerKey,
   setPasswordDecision,
   unlockDecision,
+  protectionDecision,
   mintKey,
   mintKeys,
   roleForKey,
@@ -138,6 +139,7 @@ export class BoardRoomObject extends DurableObject<Env> {
     if (url.pathname.endsWith('/password')) return this.#setPassword(request)
     if (url.pathname.endsWith('/unlock')) return this.#unlock(request)
     if (url.pathname.endsWith('/owner')) return this.#adoptOwner(request)
+    if (url.pathname.endsWith('/protection')) return this.#protection(request)
 
     if (request.headers.get('Upgrade') !== 'websocket') {
       return new Response('This endpoint speaks WebSocket', { status: 426 })
@@ -469,6 +471,23 @@ export class BoardRoomObject extends DurableObject<Env> {
     const owner = mintKey()
     await this.ctx.storage.put(KEYS, { ...keys, owner })
     return Response.json({ owner }, { headers: CORS })
+  }
+
+  /**
+   * Whether this board has a password, for the front door's list.
+   *
+   * The key is read from the body, like every other key this room is handed
+   * outside a socket: a credential in a URL is a credential in an access log.
+   */
+  async #protection(request: Request): Promise<Response> {
+    const keys = await this.ctx.storage.get<AccessKeys>(KEYS)
+    const body = await readBody(request)
+    const decision = protectionDecision(keys, body.key)
+    if (!decision.ok) {
+      return Response.json({ error: decision.error }, { status: decision.status, headers: CORS })
+    }
+    const verifier = await this.ctx.storage.get<PasswordVerifier>(PASSWORD)
+    return Response.json({ password: verifier !== undefined }, { headers: CORS })
   }
 
   /** Trades the password for the token that opens the board. */

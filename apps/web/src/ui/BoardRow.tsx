@@ -48,6 +48,24 @@ export function BoardRow({
   // to the control that asked rather than falling to the page.
   const returnFocus = useRef(false)
 
+  /*
+   * Whether opening this board will ask for a password, asked of its room with
+   * whichever key this row holds. `null` until the room answers, and for good
+   * if it cannot — a board this row has no key for is never asked about.
+   */
+  const [protectedByPassword, setProtectedByPassword] = useState<boolean | null>(null)
+  const roomKey = board.shared ? (board.ownerKey ?? board.accessKey ?? board.viewKey) : null
+  useEffect(() => {
+    if (roomKey === null) return
+    let current = true
+    void services.rooms.hasPassword(board.boardId, roomKey).then((answer) => {
+      if (current) setProtectedByPassword(answer)
+    })
+    return () => {
+      current = false
+    }
+  }, [services.rooms, board.boardId, roomKey])
+
   // The copied note clears itself. A bare `setTimeout` in the handler outlives
   // the row when the list re-renders under it.
   useEffect(() => {
@@ -196,6 +214,12 @@ export function BoardRow({
                       // now, so "shared" was on every row and said nothing.
                       'yours'
                     : 'shared with you'}
+              {/*
+               * Said only when the room has said so. Not knowing is not
+               * "no", and a row claiming a board was open because the network
+               * blinked would be the more harmful mistake.
+               */}
+              {protectedByPassword === true && ' · password'}
             </span>
             <span className="of-home__board-when" data-testid="board-when">
               {describeWhen(board.updatedAt, readAt)}

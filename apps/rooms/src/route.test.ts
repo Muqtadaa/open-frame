@@ -226,3 +226,21 @@ describe('one image on a board', () => {
     })
   })
 })
+
+describe('asking whether a board has a password', () => {
+  it('is a POST to the board’s protection path', () => {
+    expect(routeRequest(new URL('https://r.dev/room/brd_one/protection'), null, 'POST')).toEqual({
+      kind: 'protection',
+      boardId: 'brd_one',
+    })
+  })
+
+  it('refuses any other method, and a malformed board id', () => {
+    expect(
+      routeRequest(new URL('https://r.dev/room/brd_one/protection'), null, 'GET'),
+    ).toMatchObject({ kind: 'refuse', status: 405 })
+    expect(
+      routeRequest(new URL('https://r.dev/room/..%2Fx/protection'), null, 'POST'),
+    ).toMatchObject({ kind: 'refuse', status: 400 })
+  })
+})
