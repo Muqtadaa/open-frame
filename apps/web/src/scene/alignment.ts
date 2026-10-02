@@ -218,6 +218,22 @@ export function guidesAround(
   ]
 }
 
+/**
+ * Which axes a placed selection lines up on EXACTLY — no pull, no tolerance
+ * beyond the floating-point one. For when snapping is suspended, or the
+ * selection was put somewhere by a key: the guides say it lines up only when
+ * it truly does.
+ */
+export function exactlyAligned(
+  placed: Rect,
+  others: readonly Rect[],
+): { readonly x: boolean; readonly y: boolean } {
+  return {
+    x: bestOffset(placed, others, 'x', EPSILON) !== null,
+    y: bestOffset(placed, others, 'y', EPSILON) !== null,
+  }
+}
+
 export function alignToNeighbours(
   bounds: Rect,
   delta: Point,

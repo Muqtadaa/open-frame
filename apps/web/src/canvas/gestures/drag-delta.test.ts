@@ -43,6 +43,17 @@ describe('where a dragged selection lands', () => {
     expect({ x: landed.x, y: landed.y }).toEqual({ x: 120, y: 60 })
   })
 
+  /*
+   * Cmd/Ctrl stops the HELP, not the information: placing something by hand
+   * to the exact pixel is when a guide confirming it matters most.
+   */
+  it('still shows a guide, and its gap, where the selection lines up exactly while snapping is suspended', () => {
+    const landed = resolveDragDelta(START, [NEIGHBOUR], { x: 203, y: 57 }, false, 1)
+    expect({ x: landed.x, y: landed.y }).toEqual({ x: 203, y: 57 })
+    const gaps = landed.guides.filter((g) => g.axis === 'x').flatMap((g) => g.gaps)
+    expect(gaps).toEqual([{ from: 157, to: 500 }])
+  })
+
   it('does neither while snapping is suspended', () => {
     expect(resolveDragDelta(START, [NEIGHBOUR], { x: 201, y: 57 }, false, 1)).toEqual({
       x: 201,
