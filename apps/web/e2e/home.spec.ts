@@ -1,8 +1,9 @@
 import { expect, test } from '@playwright/test'
 
-import { CANVAS } from './fixtures.js'
+import { boxOf, CANVAS, overlaps } from './fixtures.js'
 import { BOARD_URL, HOME_URL } from './routes.js'
 import { seedLocalBoard } from './seed.js'
+import { signedIn } from './signed-in.js'
 
 /**
  * The front door.
@@ -116,5 +117,72 @@ test.describe('links that already exist', () => {
     await page.goto('/?board=not%20a%20board%20id')
 
     await expect(page.locator(HOME)).toBeVisible()
+  })
+})
+
+/*
+ * The world was chosen only on a board, so the front door — the first thing
+ * anybody sees — was always the Notebook, and somebody who works at night met
+ * a white page every time they went home.
+ */
+test.describe('the world, from the front door', () => {
+  test('is chosen here, and the board opens in it', async ({ page }) => {
+    await page.goto(HOME_URL)
+    const toggle = page.getByRole('button', { name: 'After Hours theme' })
+    await expect(toggle).toHaveAttribute('aria-pressed', 'false')
+
+    await toggle.click()
+    await expect(toggle).toHaveAttribute('aria-pressed', 'true')
+    await expect(page.locator('html')).toHaveAttribute('data-theme', 'after-hours')
+
+    await page.goto(BOARD_URL)
+    await expect(page.locator('html')).toHaveAttribute('data-theme', 'after-hours')
+    await expect(page.getByTestId('theme-toggle')).toHaveAttribute('aria-pressed', 'true')
+  })
+
+  test('sits at the end of the head, clear of the account, at phone width too', async ({
+    page,
+  }) => {
+    await signedIn(page, [])
+    for (const width of [1280, 390]) {
+      await page.setViewportSize({ width, height: 800 })
+      await page.goto(HOME_URL)
+      const toggle = await boxOf(page.getByRole('button', { name: 'After Hours theme' }))
+      const account = await boxOf(page.getByTestId('home-account'))
+      expect(overlaps(toggle, account)).toBe(false)
+      expect(toggle.x + toggle.width).toBeLessThanOrEqual(width)
+      // A control you press to change what you see, so a full target.
+      expect(toggle.width).toBeGreaterThanOrEqual(24)
+    }
+  })
+
+  test('says what it is on screen, at the edge of a phone too', async ({ page }) => {
+    await page.setViewportSize({ width: 390, height: 800 })
+    await page.goto(HOME_URL)
+    const toggle = page.getByRole('button', { name: 'After Hours theme' })
+    // Reached from the keyboard, which shows the tip at once.
+    await toggle.focus()
+    await page.keyboard.press('Shift+Tab')
+    await page.keyboard.press('Tab')
+    await expect(toggle).toBeFocused()
+
+    // A pseudo-element has no box of its own to ask for, so it is rebuilt from
+    // its control's box, the offsets the stylesheet gave it and its transform.
+    const tip = await toggle.evaluate((button) => {
+      const box = button.getBoundingClientRect()
+      const after = getComputedStyle(button, '::after')
+      const width = parseFloat(after.width)
+      const shift = new DOMMatrixReadOnly(after.transform).m41
+      const start =
+        after.left === 'auto'
+          ? box.right - parseFloat(after.right) - width + shift
+          : box.left + parseFloat(after.left) + shift
+      return { start, end: start + width }
+    })
+    const home = await boxOf(page.locator(HOME))
+    expect(tip.start, 'the tip ran off the left of the page').toBeGreaterThanOrEqual(home.x)
+    expect(tip.end, 'the tip ran off the right of the page').toBeLessThanOrEqual(
+      home.x + home.width,
+    )
   })
 })

@@ -6,6 +6,7 @@ import { boardHref } from '../app/route.js'
 import { ShareFailed, useServices } from '../runtime/services.js'
 import { useIdentity } from '../hooks/use-identity.js'
 import { Mentions } from './Mentions.js'
+import { ThemeToggle } from './ThemeToggle.js'
 import { WorkspaceBar } from './WorkspaceBar.js'
 import { useWorkspaces } from '../hooks/use-workspaces.js'
 import { workspaceInvite } from '../app/collab-config.js'
@@ -246,6 +247,9 @@ export function Home() {
 
             {/* Only worth showing to somebody who has an account to be told. */}
             {identity !== null && <Mentions />}
+
+            {/* Last, as on the board's bar: something about the page, not on it. */}
+            <ThemeToggle className="of-icon-button of-home__world" />
           </div>
         </header>
 
