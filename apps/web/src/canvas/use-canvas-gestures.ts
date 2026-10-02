@@ -725,7 +725,11 @@ export function useCanvasGestures(containerRef: RefObject<HTMLElement | null>) {
   )
 
   const onPointerLeave = useCallback((): void => {
-    useInteractionStore.getState().setPointer(null)
+    const store = useInteractionStore.getState()
+    store.setPointer(null)
+    // Nothing is under a pointer that has gone: left recorded, Alt went on
+    // measuring to whatever it last passed over.
+    store.setHovered(null)
   }, [])
 
   return {

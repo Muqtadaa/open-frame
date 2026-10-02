@@ -155,13 +155,18 @@ export function gapsWithin(rects: readonly Rect[]): readonly MeasureSegment[] {
   const segments: MeasureSegment[] = []
   for (const axis of ['x', 'y'] as const) {
     const ordered = [...rects].sort((a, b) => span(a, axis).from - span(b, axis).from)
-    for (let i = 1; i < ordered.length; i++) {
-      const before = ordered[i - 1]
-      const after = ordered[i]
-      if (before === undefined || after === undefined) continue
-      const midway = (centre(before, other(axis)) + centre(after, other(axis))) / 2
-      const gap = gapAlong(before, after, axis, midway)
-      if (gap !== null) segments.push(gap)
+    /*
+     * Measured from the FURTHEST reach so far, not from whichever started
+     * last: a narrow thing inside a wide one's stretch would otherwise have
+     * the next gap drawn straight through the wide one.
+     */
+    let reach = ordered[0]
+    for (const next of ordered.slice(1)) {
+      if (reach === undefined) break
+      const midway = (centre(reach, other(axis)) + centre(next, other(axis))) / 2
+      const gap = gapAlong(reach, next, axis, midway)
+      if (gap !== null && gap.from === span(reach, axis).to) segments.push(gap)
+      if (span(next, axis).to > span(reach, axis).to) reach = next
     }
   }
   return segments

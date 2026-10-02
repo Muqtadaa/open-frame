@@ -88,6 +88,17 @@ describe('the gaps inside a selection', () => {
     expect(gapsWithin([rect(0, 0), rect(0, 80)])).toEqual([{ axis: 'y', from: 50, to: 80, at: 50 }])
   })
 
+  /*
+   * A wide thing and a narrow one inside its stretch: the next neighbour's gap
+   * is from the WIDE one's end, or the line is drawn straight through it.
+   */
+  it('measures from the furthest reach so far, not from the last one to start', () => {
+    const spans = [rect(0, 0, 300, 50), rect(100, 0, 10, 50), rect(400, 0, 100, 50)]
+    expect(gapsWithin(spans).filter((gap) => gap.axis === 'x')).toEqual([
+      { axis: 'x', from: 300, to: 400, at: 25 },
+    ])
+  })
+
   it('measures nothing between things that overlap', () => {
     expect(gapsWithin([rect(0, 0), rect(50, 20)])).toEqual([])
   })

@@ -81,6 +81,32 @@ test('says the gaps between the things selected when nothing else is pointed at'
   await page.keyboard.up('Alt')
 })
 
+/*
+ * Pointing at a note and then leaving the board — for the bar, say — left that
+ * note recorded as under the pointer, and Alt went on measuring to it.
+ */
+test('measures to nothing once the pointer has left the board', async ({ page }) => {
+  await notes(page, A, B)
+  await page.locator(CANVAS).click({ position: A })
+  await page.mouse.move(B.x, B.y)
+  await page.keyboard.down('Alt')
+  await page.mouse.move(B.x + 4, B.y + 4)
+  await expect(page.getByTestId('measure-gap-x')).toHaveCount(1)
+  await page.keyboard.up('Alt')
+
+  // Out of the window, which is the only way off this board: the browser says
+  // so with a pointerout that has nowhere to go to.
+  await page.locator(CANVAS).dispatchEvent('pointerout', {
+    bubbles: true,
+    relatedTarget: null,
+    pointerType: 'mouse',
+  })
+  await page.keyboard.down('Alt')
+  await expect(page.getByTestId('measure-match-y')).toHaveCount(0)
+  await expect(page.getByTestId('measure-gap-x')).toHaveCount(0)
+  await page.keyboard.up('Alt')
+})
+
 test('stops measuring when the window loses the key', async ({ page }) => {
   await notes(page, A, B)
   await page.locator(CANVAS).click({ position: A })
