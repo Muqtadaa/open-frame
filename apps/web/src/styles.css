@@ -5472,6 +5472,9 @@ textarea.of-input {
 .of-connect-point__target {
   position: absolute;
   background: transparent;
+  /* Round, not square: the rotate grip turns with the object and this does
+     not, and on a turned object a square's corner reaches past the grip's
+     inner edge along the normal (selection-apparatus.spec.ts). */
   border-radius: var(--of-radius-round);
 }
 

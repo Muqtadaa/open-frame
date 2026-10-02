@@ -571,3 +571,35 @@ test('connection points sit off a turned object’s own edges', async ({ page })
     expect(Math.hypot(at.x - centre.x, at.y - centre.y), side).toBeCloseTo(half + 26, 0)
   }
 })
+
+/*
+ * The rotate grip turns with the object; a connection point does not. Its 24px
+ * target is ROUND, which is what keeps the two apart on a turned object: a
+ * square one would point a corner along the edge's normal at 45°, past the
+ * grip's inner edge, and the point is drawn after the grip — so a press just
+ * inside the grip would start a line instead of turning.
+ */
+test('a turned object’s top connection point stays clear of its rotate grip', async ({ page }) => {
+  await selectedShape(page, { x: 440, y: 290 })
+  for (let press = 0; press < 3; press += 1) await page.keyboard.press('.')
+  await expect(page.getByTestId('board-announcer')).toHaveText('Rotated to 45 degrees')
+
+  const shape = await boxOf(page.locator('[data-object-type="shape"]'))
+  const centre = { x: shape.x + shape.width / 2, y: shape.y + shape.height / 2 }
+  const top = await boxOf(page.getByTestId('connect-top'))
+  const point = { x: top.x + top.width / 2, y: top.y + top.height / 2 }
+  // Along the top edge's normal, 16px beyond the point: inside the grip's
+  // target, and where a square target's corner would reach.
+  const length = Math.hypot(point.x - centre.x, point.y - centre.y)
+  const at = {
+    x: point.x + ((point.x - centre.x) / length) * 16,
+    y: point.y + ((point.y - centre.y) / length) * 16,
+  }
+  const under = await page.evaluate(
+    ({ x, y }) =>
+      document.elementFromPoint(x, y)?.closest('[data-testid]')?.getAttribute('data-testid') ??
+      null,
+    at,
+  )
+  expect(under).toBe('handle-rotate')
+})
