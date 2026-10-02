@@ -1055,6 +1055,13 @@ size: keyboard resize is Cmd/Ctrl with an arrow now, and Alt with an arrow moves
 Each was seen failing first: the drag-delta unit test, two nudge e2e, the keymap
 tests and an e2e that Alt+arrow moves without resizing.
 
+**Crop in the record panel.** Double-clicking the picture was the only way into
+cropping, which nothing on screen said and no keyboard could do. The record
+panel now offers Crop, a pressed-or-not control that enters and leaves the mode.
+It is offered for any type with a crop window (`cropWindowOf`), the same
+question the double-click asks, so no type is named. The e2e reaches it by
+keyboard and was seen failing first.
+
 Still to come, in order:
 
 - board clarity: where hidden objects went, presence for assistive tech, a

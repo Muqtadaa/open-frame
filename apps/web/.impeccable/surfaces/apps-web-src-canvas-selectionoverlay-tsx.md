@@ -49,8 +49,12 @@ the nearest lined-up neighbour on either side is labelled at its middle, on the
 guide, in board units — page colour on guide magenta, the mono readout face,
 drawn over the line. Once per gap, however many stops line up.
 
+CROP is offered in the record panel too, as a pressed-or-not Crop that enters
+and leaves the mode, for any type that shows a window onto what it holds
+(`cropWindowOf`) — double-click was the only way in.
+
 KNOWN: connect points and an attached line's end sit on a rotated object's
-upright bounds, not its turned edges; crop has no entry in the record panel.
+upright bounds, not its turned edges.
 
 FINISH: `selection-apparatus.spec.ts` (move truth, lone line, targets, compact,
 keyboard, Escape, what a selection says, under the pointer), `apparatus.spec.ts`
