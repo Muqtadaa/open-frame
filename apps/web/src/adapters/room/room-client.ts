@@ -107,6 +107,11 @@ export function createRoomClient(options: RoomClientOptions): RoomService {
         // Shared before links had roles: the room keeps no key it could trust.
         return 'legacy'
       }
+      // The board's images could not all be swept, so the room kept the board
+      // and its keys. Asking again is what finishes it.
+      if (response.status === 503 && (await json(response))?.retriable === true) {
+        return 'unfinished'
+      }
       return response.ok ? 'destroyed' : 'refused'
     },
   }

@@ -1,3 +1,7 @@
+import { execFile } from 'node:child_process'
+import { fileURLToPath } from 'node:url'
+import { promisify } from 'node:util'
+
 import { expect, test } from '@playwright/test'
 
 import { BOARD_URL } from '../e2e/routes.js'
@@ -54,4 +58,94 @@ test('only the owner key destroys a room', async ({ page }) => {
   expect(answers.afterwards[0]).toBe(410)
   // Twice is not an error, and not permission returning either.
   expect(answers.again[0]).toBe(410)
+})
+
+const ROOMS_DIR = fileURLToPath(new URL('../../rooms', import.meta.url))
+
+/**
+ * Whether the local R2 bucket the room server writes to still holds a key.
+ *
+ * Asked of the bucket itself, through wrangler, because asking the ROOM proves
+ * nothing: a destroyed room answers 410 before it ever looks in R2, so a sweep
+ * that deleted nothing would read exactly like one that deleted everything.
+ * That is not hypothetical — this test passed with the sweep removed until it
+ * looked here.
+ */
+async function inBucket(key: string): Promise<boolean> {
+  try {
+    await promisify(execFile)(
+      'pnpm',
+      ['exec', 'wrangler', 'r2', 'object', 'get', `openframe-assets/${key}`, '--local', '--pipe'],
+      { cwd: ROOMS_DIR, encoding: 'buffer' },
+    )
+    return true
+  } catch {
+    return false
+  }
+}
+
+/**
+ * Destroying a board with an image on it, against a real room and a local R2.
+ *
+ * The sweep itself — pages, failures, retries, other boards untouched — is
+ * unit-tested in `apps/rooms/src/assets.test.ts` against a bucket in memory.
+ * This is the Durable Object calling it with the real binding: a board that
+ * holds an image is destroyed, and the image goes with it.
+ */
+test('destroying a board takes its images with it', async ({ page }) => {
+  const room = newRoomId()
+  await page.goto(BOARD_URL)
+  const base = `http://127.0.0.1:8787/room/${room}`
+
+  const keys = await page.evaluate(async (url) => {
+    const claimed = await fetch(`${url}/claim`, { method: 'POST' })
+    return (await claimed.json()) as { editor: string; viewer: string; owner: string }
+  }, base)
+
+  // `no-store`: the room serves an image as immutable, so without it a second
+  // read is answered by this browser's cache and never asks the room.
+  const read = () =>
+    page.evaluate(
+      async ({ url, key }) =>
+        (
+          await fetch(`${url}/asset/img_one`, {
+            headers: { 'x-openframe-key': key },
+            cache: 'no-store',
+          })
+        ).status,
+      { url: base, key: keys.viewer },
+    )
+
+  const put = await page.evaluate(
+    async ({ url, key }) => {
+      // The eight bytes every PNG starts with.
+      const png = new Uint8Array([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a, 0, 0, 0, 0])
+      const response = await fetch(`${url}/asset/img_one`, {
+        method: 'PUT',
+        headers: { 'content-type': 'image/png', 'x-openframe-key': key },
+        body: png,
+      })
+      return response.status
+    },
+    { url: base, key: keys.editor },
+  )
+  expect(put).toBe(204)
+  expect(await read()).toBe(200)
+  // Seen in the bucket first, or the check below could never fail.
+  expect(await inBucket(`${room}/img_one`)).toBe(true)
+
+  const destroyed = await page.evaluate(
+    async ({ url, key }) => {
+      const response = await fetch(`${url}/destroy`, {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ key }),
+      })
+      return [response.status, await response.json()] as const
+    },
+    { url: base, key: keys.owner },
+  )
+  expect(destroyed).toEqual([200, { destroyed: true }])
+  expect(await read()).toBe(410)
+  expect(await inBucket(`${room}/img_one`)).toBe(false)
 })
