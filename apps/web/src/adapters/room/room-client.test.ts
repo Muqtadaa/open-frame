@@ -128,37 +128,28 @@ describe('setting a password', () => {
 describe('destroying a room', () => {
   it('names each answer the worker gives', async () => {
     const { client, calls } = answering(200)
-    expect(await client.destroy(BOARD, 'edit')).toBe('destroyed')
-    expect(calls[0]).toEqual({ url: `${BASE}/room/${BOARD}/destroy`, body: { key: 'edit' } })
+    expect(await client.destroy(BOARD, 'owner')).toBe('destroyed')
+    expect(calls[0]).toEqual({ url: `${BASE}/room/${BOARD}/destroy`, body: { key: 'owner' } })
     // The key travels in the BODY. A credential in a query string is a
     // credential in an access log, and this is the destructive endpoint.
-    expect(calls[0]?.url).not.toContain('edit')
+    expect(calls[0]?.url).not.toContain('owner')
 
     // Already gone is not a failure: a second delete must not strand the row.
-    expect(await answering(410).client.destroy(BOARD, 'edit')).toBe('gone')
+    expect(await answering(410).client.destroy(BOARD, 'owner')).toBe('gone')
     // Shared before links had roles, so nobody can be trusted to destroy it.
-    expect(await answering(409).client.destroy(BOARD, 'edit')).toBe('legacy')
-    expect(await answering(403).client.destroy(BOARD, 'edit')).toBe('refused')
-    expect(await offline.destroy(BOARD, 'edit')).toBe('unreachable')
-  })
-})
-
-describe('asking whether a board has a password', () => {
-  it('sends the key in the body and reads the answer', async () => {
-    const { client, calls } = answering(200, { password: true })
-    expect(await client.hasPassword(BOARD, 'k')).toBe(true)
-    expect(calls[0]).toEqual({ url: `${BASE}/room/${BOARD}/protection`, body: { key: 'k' } })
-    expect(await answering(200, { password: false }).client.hasPassword(BOARD, 'k')).toBe(false)
+    expect(await answering(409).client.destroy(BOARD, 'owner')).toBe('legacy')
+    expect(await answering(403).client.destroy(BOARD, 'owner')).toBe('refused')
+    expect(await offline.destroy(BOARD, 'owner')).toBe('unreachable')
   })
 
-  /*
-   * Not knowing is not "no". A row that said "no password" because the
-   * network blinked would be telling somebody their board is open when it is
-   * not, so every failure answers `null` and the row says nothing.
+  /**
+   * Also a 409, and NOT the legacy one: the board predates owner keys and was
+   * asked on its edit link. Read as `legacy`, the person would be told the
+   * board can never be deleted when all it needs is an owner key.
    */
-  it('answers null, not false, when it cannot tell', async () => {
-    expect(await offline.hasPassword(BOARD, 'k')).toBeNull()
-    expect(await answering(403).client.hasPassword(BOARD, 'k')).toBeNull()
-    expect(await answering(200, {}).client.hasPassword(BOARD, 'k')).toBeNull()
+  it('tells a board that needs an owner key from one that can never be deleted', async () => {
+    expect(await answering(409, { needsOwner: true }).client.destroy(BOARD, 'edit')).toBe(
+      'needs-owner',
+    )
   })
 })

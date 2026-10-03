@@ -126,7 +126,13 @@ describe('setting a password', () => {
     expect(heldOwnerKey(BOARD)).toBe('minted')
   })
 
-  it('refuses, and keeps nothing, when the owner key cannot be recorded', async () => {
+  /**
+   * The room mints an owner key ONCE, and from then on refuses to hand it to
+   * the edit link. So a key it has minted is kept in this browser before the
+   * database is asked to record it: drop it because that write failed and the
+   * board has an owner key nobody holds, for ever.
+   */
+  it('refuses, but keeps the key, when the owner key cannot be recorded', async () => {
     rooms.adoptOwnerKey.mockResolvedValue('minted')
     remote.recordOwnerKey.mockResolvedValue(false)
     expect(await setBoardPassword(deps(), BOARD, { owner: null, editor: 'edit' }, 'pw')).toEqual({
@@ -134,7 +140,7 @@ describe('setting a password', () => {
       reason: 'This board could not be given an owner key.',
     })
     expect(rooms.setPassword).not.toHaveBeenCalled()
-    expect(heldOwnerKey(BOARD)).toBeNull()
+    expect(heldOwnerKey(BOARD)).toBe('minted')
   })
 })
 

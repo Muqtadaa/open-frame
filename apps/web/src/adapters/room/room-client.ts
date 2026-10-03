@@ -94,14 +94,19 @@ export function createRoomClient(options: RoomClientOptions): RoomService {
       return typeof password === 'boolean' ? password : null
     },
 
-    async destroy(boardId, editorKey) {
-      const response = await post(url(boardId, 'destroy'), { key: editorKey })
+    async destroy(boardId, ownerKey) {
+      const response = await post(url(boardId, 'destroy'), { key: ownerKey })
       if (response === null) return 'unreachable'
       // Already gone. Deleting twice is not an error, and refusing here would
       // strand a row whose room a previous attempt already destroyed.
       if (response.status === 410) return 'gone'
-      // Shared before links had roles: the room keeps no key it could trust.
-      if (response.status === 409) return 'legacy'
+      if (response.status === 409) {
+        // Claimed before owner keys existed, and asked without one. Not the
+        // same as legacy: this board CAN be deleted, once it adopts a key.
+        if ((await json(response))?.needsOwner === true) return 'needs-owner'
+        // Shared before links had roles: the room keeps no key it could trust.
+        return 'legacy'
+      }
       return response.ok ? 'destroyed' : 'refused'
     },
   }

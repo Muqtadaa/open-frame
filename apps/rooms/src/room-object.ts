@@ -329,7 +329,10 @@ export class BoardRoomObject extends DurableObject<Env> {
     const keys = await this.ctx.storage.get<AccessKeys>(KEYS)
     const decision = destroyDecision(keys, await readKey(request), destroyed)
     if (!decision.ok) {
-      return Response.json({ error: decision.error }, { status: decision.status, headers: CORS })
+      return Response.json(
+        { error: decision.error, ...(decision.needsOwner ? { needsOwner: true } : {}) },
+        { status: decision.status, headers: CORS },
+      )
     }
 
     /*
@@ -426,10 +429,11 @@ export class BoardRoomObject extends DurableObject<Env> {
    * Gives a board claimed before owner keys existed one, once.
    *
    * Authorized by the EDIT key, which is the strongest thing such a board has
-   * — there is no owner key yet for anyone to hold, and that key can already
-   * destroy the board outright, so this grants no authority that was not
-   * already there. It is also self-closing: the moment a key exists this stops
-   * minting, and only the holder of that key can read it back.
+   * — there is no owner key yet for anyone to hold. It is self-closing: the
+   * moment a key exists this stops minting, and only the holder of that key
+   * can read it back. Whoever adopts first is therefore the owner as far as
+   * this room is concerned, which is why the owner's own client adopts as soon
+   * as it needs owner authority (a password, a delete) rather than waiting.
    *
    * Idempotent for the owner, so a client that lost its copy can ask again
    * rather than being told the board is broken.

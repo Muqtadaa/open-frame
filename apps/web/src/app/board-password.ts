@@ -85,13 +85,17 @@ export async function recoverOwnerKey(
 /**
  * Gives a board claimed before owner keys existed one, and writes it down.
  *
- * Both halves or neither: a key the room minted and Supabase never recorded is
- * lost the moment this tab closes, and the board would adopt again next time —
- * except it cannot, because the room only mints once. So the room is asked
- * only after there is somewhere to put the answer, and a failure to record it
- * is reported rather than swallowed.
+ * The room mints an owner key ONCE and from then on gives it back only to
+ * whoever already holds it — never to the edit link. So the key is kept in
+ * this browser the moment it arrives, BEFORE the database is asked to record
+ * it. Kept only after, a failed write would drop the board's one owner key on
+ * the floor: nobody would hold it, the room would never mint another, and the
+ * board could never again be deleted or given a password.
+ *
+ * A failed write is still reported, so the caller stops. The next attempt
+ * finds the key held here and uses it instead of asking the room again.
  */
-async function adoptOwnerKey(
+export async function adoptOwnerKey(
   deps: PasswordDeps,
   boardId: BoardId,
   editorKey: string,
@@ -99,8 +103,8 @@ async function adoptOwnerKey(
   const owner = await deps.rooms.adoptOwnerKey(boardId, editorKey)
   if (owner === null) return null
 
-  if (!(await deps.remoteBoards.recordOwnerKey(boardId, owner))) return null
   rememberOwnerKey(boardId, owner)
+  if (!(await deps.remoteBoards.recordOwnerKey(boardId, owner))) return null
   return owner
 }
 

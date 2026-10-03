@@ -141,10 +141,19 @@ describe('the role on a socket that outlived its room', () => {
  * to do, so each refusal is tested by name.
  */
 describe('destroying a board', () => {
-  const keys = { editor: 'e'.repeat(32), viewer: 'v'.repeat(32) }
+  const keys = { editor: 'e'.repeat(32), viewer: 'v'.repeat(32), owner: 'o'.repeat(32) }
 
-  it('accepts the editor key', () => {
-    expect(destroyDecision(keys, keys.editor)).toEqual({ ok: true })
+  it('accepts the owner key', () => {
+    expect(destroyDecision(keys, keys.owner)).toEqual({ ok: true })
+  })
+
+  /**
+   * THE EDIT LINK IS A BEARER CREDENTIAL handed to everybody invited to change
+   * the board. Changing what is on it is not the same authority as ending it
+   * for everyone — the same distinction the password already draws.
+   */
+  it('refuses the editor key', () => {
+    expect(destroyDecision(keys, keys.editor)).toMatchObject({ ok: false, status: 403 })
   })
 
   /**
@@ -155,14 +164,46 @@ describe('destroying a board', () => {
     expect(destroyDecision(keys, keys.viewer)).toMatchObject({ ok: false, status: 403 })
   })
 
-  it('refuses a wrong key and a missing one identically', () => {
+  it('refuses a wrong key, a missing one and both links identically', () => {
     const wrong = destroyDecision(keys, 'x'.repeat(32))
     const missing = destroyDecision(keys, null)
 
     // Same status AND same words: a different message for "you had no key"
     // tells somebody probing which half of the guess to keep.
     expect(wrong).toEqual(missing)
+    expect(destroyDecision(keys, keys.editor)).toEqual(missing)
+    expect(destroyDecision(keys, keys.viewer)).toEqual(missing)
     expect(wrong).toMatchObject({ ok: false, status: 403 })
+  })
+
+  /**
+   * A board claimed before owner keys existed has none to present. It is not
+   * left deletable by its edit link: it is told to adopt one first, which the
+   * room mints once and hands back only to whoever holds it from then on.
+   */
+  describe('claimed before owner keys existed', () => {
+    const old = { editor: 'e'.repeat(32), viewer: 'v'.repeat(32) }
+
+    it('refuses the edit key, and says an owner key is needed', () => {
+      expect(destroyDecision(old, old.editor)).toMatchObject({
+        ok: false,
+        status: 409,
+        needsOwner: true,
+      })
+    })
+
+    it('tells nobody without a link that much', () => {
+      expect(destroyDecision(old, null)).toMatchObject({ ok: false, status: 403 })
+      expect(destroyDecision(old, old.viewer)).toMatchObject({ ok: false, status: 403 })
+      expect(destroyDecision(old, null)).not.toHaveProperty('needsOwner')
+    })
+
+    it('is deletable by its owner once it has adopted a key', () => {
+      const adopted = { ...old, owner: 'o'.repeat(32) }
+
+      expect(destroyDecision(adopted, adopted.owner)).toEqual({ ok: true })
+      expect(destroyDecision(adopted, adopted.editor)).toMatchObject({ ok: false, status: 403 })
+    })
   })
 
   /**
@@ -177,10 +218,12 @@ describe('destroying a board', () => {
     expect(destroyDecision(undefined, null)).toMatchObject({ ok: false, status: 409 })
     expect(destroyDecision(undefined, 'e'.repeat(32))).toMatchObject({ ok: false, status: 409 })
     expect(destroyDecision(undefined, '')).toMatchObject({ ok: false, status: 409 })
+    expect(destroyDecision(undefined, null)).not.toHaveProperty('needsOwner')
   })
 
   /** Running it twice is not an error, but it must not read as permission returning. */
   it('answers gone for a room that is already destroyed', () => {
+    expect(destroyDecision(keys, keys.owner, true)).toMatchObject({ ok: false, status: 410 })
     expect(destroyDecision(keys, keys.editor, true)).toMatchObject({ ok: false, status: 410 })
   })
 
@@ -274,8 +317,7 @@ describe('the owner key', () => {
 
   /**
    * A board claimed before owner keys existed has none, so the edit key stands
-   * in — otherwise its password could never be set by anybody. The edit key
-   * can already destroy such a board outright.
+   * in — otherwise its password could never be set by anybody.
    */
   it('falls back to the edit key on a board claimed before it existed', () => {
     const old = { editor: 'a'.repeat(32), viewer: 'b'.repeat(32) }
