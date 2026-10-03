@@ -26,6 +26,27 @@ import {
  * the transport decision permanent the day it shipped.
  */
 
+/**
+ * The largest message a room will read: 2 MiB.
+ *
+ * The platform would hand the room a frame of up to 32 MiB, and every byte of
+ * it is decoded and applied while every other peer on the board waits. A
+ * frame that size is not an edit anybody made: a whole 60-object board is
+ * about 24KB of JSON, so 2 MiB is thousands of objects in a single change.
+ * What it bounds is how much one connection can make the room chew on, and
+ * how large a single update the room then has to store and relay.
+ */
+export const MAX_MESSAGE_BYTES = 2 * 1024 * 1024
+
+/**
+ * What became of a message.
+ *
+ * `too-large` and `malformed` are the sender's problem and nobody else's: the
+ * room is unchanged and every other peer carries on. The caller decides what
+ * to do with the connection; the room only says why.
+ */
+export type Received = 'accepted' | 'too-large' | 'malformed'
+
 /** One connected client, as far as the room is concerned. */
 export interface RoomPeer {
   /** Stable for the life of the connection, and unique within the room. */
@@ -133,17 +154,32 @@ export class BoardRoom {
     if (presence !== null) peer.send(presence)
   }
 
-  /** Applies a message from a peer and sends whatever it obliges the room to send. */
-  receive(peer: RoomPeer, message: Uint8Array): void {
-    const { reply, broadcast } = readMessage(
-      this.#doc,
-      this.#awareness,
-      message,
-      peer.id,
-      peer.role === 'editor',
-    )
-    if (reply !== null) peer.send(reply)
-    if (broadcast !== null) this.#broadcast(broadcast, peer.id)
+  /**
+   * Applies a message from a peer and sends whatever it obliges the room to send.
+   *
+   * Never throws for anything a peer sent. A message is bytes off a socket,
+   * and one that failed to decode used to throw out of the Durable Object's
+   * handler — one client's bad frame costing everyone in the room, rather than
+   * that client (ADR 0016, hardening).
+   */
+  receive(peer: RoomPeer, message: Uint8Array): Received {
+    // Before decoding, which is the expensive part and the part being guarded.
+    if (message.byteLength > MAX_MESSAGE_BYTES) return 'too-large'
+
+    let handled: ReturnType<typeof readMessage>
+    try {
+      handled = readMessage(this.#doc, this.#awareness, message, peer.id, peer.role === 'editor')
+    } catch {
+      return 'malformed'
+    }
+    // The update inside failed to apply. y-protocols swallowed the error, so
+    // there is nothing to catch, but it is the same bad frame.
+    if (handled.unreadable) return 'malformed'
+    // Outside the try: a peer whose socket fails on send is a transport
+    // problem, and calling it a malformed message would close the wrong one.
+    if (handled.reply !== null) peer.send(handled.reply)
+    if (handled.broadcast !== null) this.#broadcast(handled.broadcast, peer.id)
+    return 'accepted'
   }
 
   /**

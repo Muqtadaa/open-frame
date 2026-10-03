@@ -239,7 +239,18 @@ export class BoardRoomObject extends DurableObject<Env> {
     // Text frames are not part of this protocol. Ignored rather than fatal:
     // a proxy or a stray client should not be able to close a room.
     if (typeof message === 'string') return
-    this.#room.receive(this.#peer(socket), new Uint8Array(message))
+    const peer = this.#peer(socket)
+    const received = this.#room.receive(peer, new Uint8Array(message))
+    if (received === 'accepted') return
+    /*
+     * The sender's connection goes, and nobody else's. The standard codes, so
+     * the client's ordinary reconnect handles it: a bad frame from a buggy
+     * build is not a reason to stop retrying, and a deliberate one is not
+     * worth a code of its own.
+     */
+    this.#room.leave(peer)
+    if (received === 'too-large') socket.close(1009, 'Message too large')
+    else socket.close(1007, 'Message could not be read')
   }
 
   override webSocketClose(socket: WebSocket): void {

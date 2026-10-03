@@ -104,6 +104,11 @@ The rules are pure functions in `apps/rooms/src/access.ts`, tested in Node.
   1. Key check, with the same 403 for a missing or wrong key.
   2. The password, as a second factor. The owner key (`?o=`) or a valid token (`?t=`) passes. Otherwise the socket is accepted and closed with 4003, so the client can tell "needs a password" from a dropped network.
   3. The role is fixed on the socket for its lifetime, and survives hibernation (`roleFromAttachment` reads anything unknown as viewer).
+- **Messages:** a frame over 2 MiB is refused before it is read
+  (`MAX_MESSAGE_BYTES`, `collab/src/room.ts`). A frame that fails to decode,
+  or carries an update that fails to apply, is refused too. Either way the
+  room is unchanged, nothing is relayed, and only that socket is closed (1009
+  or 1007). Text frames are ignored.
 - **Passwords** are PBKDF2-SHA-256 at 100,000 iterations, salted and compared
   in constant time (`password.ts:43,57-83`).
   - **Token:** one token per board, rotated on every change.
@@ -250,7 +255,6 @@ with it and said why.
 | Gap                                                                                                                                             | Where                                 | Decision                                                                                                             |
 | ----------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------- | -------------------------------------------------------------------------------------------------------------------- |
 | Room relays and persists any decodable editor update; invalid objects are dropped by clients but stay in storage and every browser's CRDT cache | `room.ts:137-147`, `remote-object.ts` | **Accepted.** [ADR 0016](../adr/0016-room-trust-boundary.md)                                                         |
-| No size limit and no try/catch on a socket message                                                                                              | `room-object.ts:238-243`              | **Fix.** Bounded message size and isolated decode failure (ADR 0016, hardening)                                      |
 | Viewers' awareness is relayed, and any peer may publish state for any client id                                                                 | `protocol.ts:225-230`, `room.ts`      | **Accepted for now.** It is ephemeral and never persisted; revisit with ADR 0016's triggers                          |
 | `meta` patches pass remote validation unchecked                                                                                                 | `apply-remote-patches.ts:133-135`     | **Fix.** Validate known meta keys on merge                                                                           |
 | Unclaimed (legacy) rooms admit anyone as an editor                                                                                              | `access.ts:61`                        | **Accepted.** Old links must keep working; such rooms refuse destroy and password                                    |
