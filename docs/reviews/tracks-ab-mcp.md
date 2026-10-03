@@ -1,5 +1,7 @@
 # Tracks A and B, revised for the MCP build (2026-09-28)
 
+> **Historical record, frozen 2026-10-03.** This describes the repository as it was when written. For the current state see [audit-2026-10-02.md](audit-2026-10-02.md) and [docs/architecture](../architecture/).
+
 `review-plan.md` held Tracks A (architecture) and B (QA) until the MCP server
 landed. It has now landed: stages 1–4 of `docs/phases/phase-5a-mcp-server.md`
 are done (headless peer, sign-in, read tools, write tools), and stage 5, the

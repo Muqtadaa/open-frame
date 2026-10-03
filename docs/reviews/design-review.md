@@ -1,5 +1,7 @@
 # Design review — surfaces and design language
 
+> **Historical record, frozen 2026-10-03.** This describes the repository as it was when written. For the current state see [audit-2026-10-02.md](audit-2026-10-02.md) and [docs/architecture](../architecture/).
+
 ← [Review plan](review-plan.md) · Driven by the vendored `impeccable` skill ·
 Scope: **refine, with bolder chrome allowed** (the Notebook and After Hours
 worlds, the palette and the ruled ground are kept)
@@ -1123,17 +1125,19 @@ panel's clearance.
 
 Every leftover the owner chose is now done.
 
-Still to come, in order:
+Closed since (2026-10-03), in the order they were chosen:
 
-- board clarity: where hidden objects went, presence for assistive tech, a
-  placeholder's record panel;
-- a kept copy keeps its images;
-- a world toggle on the front door;
-- editing and deleting a comment, and next/previous thread;
-- distances on alignment guides;
-- crop in the record panel;
-- password state on the front door;
-- connect points on a turned object's edges;
-- relations drawn on the board.
+- board clarity: `171cbb2` says where hidden objects went and gives them back,
+  `5bf2cfb` follows up; `8d8917e` says who is editing what, for assistive tech;
+  `0921dbe` gives a newer version's placeholder a record panel;
+- a kept copy keeps its images: `843826d`;
+- a world toggle on the front door: `ab7beaa` (`d21b42a` later fixed its e2e);
+- editing and deleting a comment, and next/previous thread: `3b9120e`, with
+  `83881ca` locking a thread before deleting it;
+- distances on alignment guides: `b865c98`;
+- crop in the record panel: `4d61753`;
+- password state on the front door: `78e250f`;
+- connect points on a turned object's edges: `4f9f5da`;
+- relations drawn on the board: `6105633`.
 
 Not chosen: structured types on the rail, and a fixed type mark.

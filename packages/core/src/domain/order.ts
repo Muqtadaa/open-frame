@@ -51,7 +51,8 @@ export function compareOrder(a: OrderKey, b: OrderKey): number {
  *
  * We do not prevent the growth; we detect it, so a rebalance can be scheduled.
  * Rebalancing rewrites every sibling, which conflicts badly under concurrent
- * editing — once collaboration exists it must be server-coordinated.
+ * editing, and the room only relays writes, so nothing could coordinate one
+ * today. Nothing calls this outside its test yet.
  * See docs/appendices/c-risks.md (R5).
  */
 export const ORDER_KEY_REBALANCE_THRESHOLD = 40

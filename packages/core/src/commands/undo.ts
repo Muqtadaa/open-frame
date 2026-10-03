@@ -29,14 +29,12 @@ export const DEFAULT_UNDO_LIMIT = 200
 /**
  * A local, linear undo history over inverse patches.
  *
- * This is deliberately the SIMPLE version. It is correct for a single editor,
- * and it is not what multiplayer undo will use: once collaboration lands, Yjs's
- * UndoManager takes over and scopes history by transaction origin, so that
- * undo reverts your own changes rather than whatever happened most recently.
- *
- * The reason that swap is an adapter change rather than a redesign is that
- * `origin` is already recorded on every entry, and every command already
- * produces patches rather than mutating the document in place.
+ * This is deliberately the SIMPLE version, and collaboration did not replace
+ * it. Undo stays local: a change merged from somebody else is dispatched with
+ * `skipUndo`, so this stack only ever holds your own changes, and undo reverts
+ * those rather than whatever happened most recently. What an agent does is
+ * taken back through the board's shared change log instead
+ * (`@openframe/collab` `change-log.ts`, `CommandDispatcher.revert`).
  */
 export class UndoStack {
   readonly #undo: UndoEntry[] = []

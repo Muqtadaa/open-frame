@@ -21,8 +21,8 @@ things Phase 1–3 deliberately avoid so that development stays `pnpm dev`.
 | ----------------------------- | --------------------------------------------------------------- |
 | Flat object map               | CRDTs merge trees badly                                         |
 | Fractional ordering           | A reorder is a one-object write that merges cleanly             |
-| Nothing written during a drag | In-flight gestures are presence, not history                    |
-| `origin` on every command     | Yjs `UndoManager` scopes undo by origin                         |
+| Nothing written during a drag | A gesture is one change, sent when it ends                      |
+| `origin` on every command     | Tells a remote edit and an agent's change from your own         |
 | `skipUndo` on dispatch        | Remote changes never enter local history                        |
 | Deterministic cycle repair    | Concurrent reparenting is the one corruption LWW cannot prevent |
 | Patches as our own format     | The adapter translates; CRDT types never reach the domain       |

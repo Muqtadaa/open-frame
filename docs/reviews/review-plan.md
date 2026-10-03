@@ -1,5 +1,7 @@
 # OpenFrame — Review Programme Plan (Architecture · E2E/QA · Design)
 
+> **Historical record, frozen 2026-10-03.** This describes the repository as it was when written. For the current state see [audit-2026-10-02.md](audit-2026-10-02.md) and [docs/architecture](../architecture/).
+
 ## Context
 
 OpenFrame has finished Phases 1–4 (canvas, structured objects, collaboration). Phase 5 (AI/MCP) comes next and adds two more writers to the document. Before that, the user wants three coordinated reviews:

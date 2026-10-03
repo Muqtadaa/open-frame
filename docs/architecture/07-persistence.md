@@ -42,9 +42,13 @@ not a contended field inside shared board state. See
 | `MemoryBoardRepository`    | tests, E2E clean slate | a `Map`            |
 | `IndexedDbBoardRepository` | the browser app        | IndexedDB, raw API |
 
+A shared board is still saved through this port, in each browser that opens it:
+the room is where it is shared, not where the interface reads it from. See
+[Where a board lives](#where-a-board-lives) below.
+
 Both are exercised by **the same test suite**
 ([`adapters.test.ts`](../../apps/web/src/adapters/adapters.test.ts)) via
-`describe.each`. That is the point of the port: a future Postgres adapter gets an
+`describe.each`. That is the point of the port: another adapter gets an
 executable specification to satisfy rather than a prose description to interpret.
 
 `MemoryBoardRepository` serializes and deserializes exactly as the real adapter
@@ -71,26 +75,42 @@ dispatcher.subscribe(() => {
 })
 ```
 
-Saves are coalesced, so a burst of commands produces one write. Because the port
-is already patch-aware, a future server adapter can stream patches here instead
-of rewriting the whole board — without this call site changing.
+Saves are coalesced, so a burst of commands produces one write. Sharing did not
+change this call site: changes reach other people through the collaboration
+session, which subscribes to the same command stream (see
+[Collaboration](09-collaboration.md)), not through the repository.
 
 **Autosave is never attached to a quarantined board.**
 
 ---
 
-## Phase 1 scope, and what comes next
+## Where a board lives
 
-Today: one board, in the user's own browser, no server and no account. That is
-enough to prove every seam and requires no infrastructure to run locally —
-`pnpm dev` and nothing else.
+A local board lives in one place; a shared board lives in four, and each holds
+something different.
 
-The next step is _not_ decided yet, and deliberately so. Whether boards move to
-Postgres, Supabase, or SQLite-at-the-edge depends on the collaboration topology,
-which depends on decisions listed in
-[Deferred decisions](../appendices/d-deferred-decisions.md).
+| Where                             | What it holds                                                                                                          | Source                                                   |
+| --------------------------------- | ---------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------- |
+| This browser: `boards` store      | The board document, as the interface reads it. Every board, shared or not.                                             | `adapters/indexeddb/indexeddb-board-repository.ts`       |
+| This browser: `crdt` store        | A shared board's whole `Y.Doc`, one row per board, so a session starts from what it last saw rather than from empty.   | `adapters/indexeddb/crdt-store.ts`                       |
+| The room (Durable Object storage) | The shared `Y.Doc`: a compacted snapshot plus up to 64 loose updates.                                                  | `apps/rooms/src/room-object.ts` (`#persist`, `#compact`) |
+| Supabase                          | Who owns and may open a board, its title and links, workspaces, comments and mentions. **Never the board's contents.** | `supabase/migrations/`                                   |
 
-What is decided is that the domain will not notice.
+The room is the copy everyone agrees on. The browser's two stores are what make
+a shared board open instantly and keep working offline; the CRDT cache in
+particular is not an optimisation, because a session that started from an empty
+`Y.Doc` dropped every edit to an object the doc did not yet hold.
+
+Keeping board contents out of the database is deliberate (see
+[`supabase/README.md`](../../supabase/README.md)): a free project pausing after a
+week idle blocks sign-in and the board list, never anybody's work.
+
+A build with no `VITE_COLLAB_URL` and no `VITE_SUPABASE_URL` is still a whole
+application: no room server and no accounts, every board in this browser. (The
+committed `apps/web/.env` sets both, so `pnpm dev` talks to the deployed room
+server; the E2E suite overrides that.)
+
+What has not changed is that the domain does not notice any of this.
 
 ---
 
@@ -119,15 +139,22 @@ A browser `Blob` satisfies it as-is, and so does a Node buffer wrapper, without
 general rule: **the domain names what it needs, and adapters supply something
 that fits.**
 
-Implemented by `IndexedDbAssetStore` ([Phase 2](../phases/phase-2-core-canvas.md)).
+Implemented by `IndexedDbAssetStore` in the browser. On a shared board it is
+wrapped by `RoomAssetStore` (`adapters/room/room-asset-store.ts`), which also
+uploads the bytes to the room, where they are kept in R2 for everyone who can
+open the board. The local store is still written first and asked first, so a
+picture appears the moment it is dropped and keeps painting offline. What the
+room accepts is the same upload policy the browser checks
+(`@openframe/core/uploads`), and destroying a board deletes its images.
 
 Two things about it are worth knowing before writing a second adapter:
 
 **The stored locator is `idb:<id>`, never an object URL.** An object URL is
 minted per page load and dies with the tab, so persisting one would leave every
 image on a reloaded board pointing at nothing. Turning a locator into something
-the browser can paint is the adapter's job — which is exactly the seam that lets
-a server adapter hand back a CDN or signed URL without the document changing.
+the browser can paint is the adapter's job — which is exactly the seam the room
+store uses: its locators are `room:<id>`, resolved to the room's image URL
+without the document changing.
 
 **Object URLs are cached per asset and revoked on delete.** `resolve` is called
 from the render path, so minting a fresh URL each time would pin one decoded
@@ -148,4 +175,4 @@ existing user unable to open their own boards.
 ## Next
 
 - [09 · Collaboration](09-collaboration.md) — the other consumer of the patch stream
-- [11 · Security](11-security.md) — what changes when a server appears
+- [11 · Security](11-security.md) — who may read and write each of these

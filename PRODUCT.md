@@ -73,7 +73,13 @@ architecture here spent its first phase on, ahead of anything visible.
 shape kinds, frames, connectors, images, groups; selection, resize, rotation,
 z-order, clipboard, undo/redo; snap-to-grid and alignment guides; local
 persistence with schema versioning and migrations; image upload validated by
-content; inline rich text.
+content; inline rich text; tables and code blocks.
+
+**The shared half:** a board is shared by link and edited live by several
+people at once, with presence, comments and mentions. Creating and sharing a
+board takes an account; boards sit in workspaces. An agent can read and edit a
+board over MCP through the same command layer, and every change it makes is
+recorded and can be reverted.
 
 **The structured half:** eight semantic types — evidence, insight, hypothesis,
 experiment, decision, task, journey stage, requirement — each editable through a
@@ -85,16 +91,19 @@ their text.
 
 **Technical constraints that are settled and load-bearing:**
 
-- Every persistent change goes through one command layer, so undo, and later
-  multiplayer, AI and an API, all share one path.
+- Every persistent change goes through one command layer, so undo,
+  collaborators' edits and agents all share one path, as an API and AI will.
 - Object behaviour lives in a registry, so a new semantic type is added without
   editing the renderer, the command layer or persistence.
 - A document that cannot be fully read is never written back.
 
 **Explicitly undecided — do not invent answers:**
 
-- Collaboration transport and presence topology.
 - Export formats.
+
+Collaboration transport and presence were on this list until they were decided:
+one room per board, held by a Durable Object
+([ADR 0013](docs/adr/0013-collaboration-transport-durable-objects.md)).
 
 ## Brand Commitments
 

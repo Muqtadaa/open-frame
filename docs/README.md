@@ -46,8 +46,8 @@ If you remember nothing else:
    CRDT. It depends on `zod` and `fractional-indexing` and nothing else. This is
    enforced in CI, not merely intended.
 2. **One mutation path.** Every persistent change goes through
-   `CommandDispatcher.dispatch`. The UI, and later AI, the API and MCP, are all
-   callers of the same door.
+   `CommandDispatcher.dispatch`. The UI, a collaborator's merged edit and an
+   agent over MCP are all callers of the same door.
 3. **Nothing is written during a drag.** A drag is transient interaction state
    until pointer-up. This single rule delivers correct undo granularity,
    correct multiplayer semantics and most of the performance budget.
@@ -70,22 +70,23 @@ If you remember nothing else:
 | [04 · Object type registry](architecture/04-object-type-registry.md)     | Extensibility: adding `evidence` without touching the app |
 | [05 · Commands and undo](architecture/05-commands-and-undo.md)           | The mutation path, patches, transactions, history         |
 | [06 · Schema and migrations](architecture/06-schema-and-migrations.md)   | Versioning, migration rules, forward compatibility        |
-| [07 · Persistence](architecture/07-persistence.md)                       | The repository port, IndexedDB today, a server later      |
+| [07 · Persistence](architecture/07-persistence.md)                       | Where a board lives: this browser, the room, the database |
 | [08 · Canvas renderer](architecture/08-canvas-renderer.md)               | DOM/SVG rendering, culling, hit testing, the escape hatch |
-| [09 · Collaboration](architecture/09-collaboration.md)                   | Design only — how multiplayer will attach                 |
+| [09 · Collaboration](architecture/09-collaboration.md)                   | Rooms, the shared document, presence, agents' changes     |
 | [10 · Errors and degradation](architecture/10-errors-and-degradation.md) | What breaks, and how it fails safely                      |
-| [11 · Security](architecture/11-security.md)                             | Authorization, untrusted content, future exposure         |
+| [11 · Security](architecture/11-security.md)                             | The threat model as built, and the known gaps             |
 | [12 · Performance](architecture/12-performance.md)                       | Culling, subscriptions, measurement, benchmark boards     |
 
 ### Phases — what gets built, in what order
 
-| Phase                                                                | Status                          |
-| -------------------------------------------------------------------- | ------------------------------- |
-| [Phase 1 · Foundation](phases/phase-1-foundation.md)                 | **Done** — the current scaffold |
-| [Phase 2 · Core canvas](phases/phase-2-core-canvas.md)               | Next                            |
-| [Phase 3 · Structured objects](phases/phase-3-structured-objects.md) | Planned                         |
-| [Phase 4 · Collaboration](phases/phase-4-collaboration.md)           | Planned                         |
-| [Phase 5 · AI and MCP](phases/phase-5-ai-and-mcp.md)                 | Planned                         |
+| Phase                                                                | Status                        |
+| -------------------------------------------------------------------- | ----------------------------- |
+| [Phase 1 · Foundation](phases/phase-1-foundation.md)                 | **Done**                      |
+| [Phase 2 · Core canvas](phases/phase-2-core-canvas.md)               | **Done**                      |
+| [Phase 3 · Structured objects](phases/phase-3-structured-objects.md) | **Done**                      |
+| [Phase 4 · Collaboration](phases/phase-4-collaboration.md)           | **Done**                      |
+| [Phase 5 · AI and MCP](phases/phase-5-ai-and-mcp.md)                 | Next                          |
+| [Phase 5a · MCP server](phases/phase-5a-mcp-server.md)               | Stages 1–4 done; stage 5 next |
 
 ### Decision records — why things are the way they are
 
@@ -98,7 +99,7 @@ If you remember nothing else:
 | [A · Technology decisions](appendices/a-technology-decisions.md) | Every dependency, why it is here, what replaces it  |
 | [B · Canvas engine matrix](appendices/b-canvas-engine-matrix.md) | The comparison behind building our own renderer     |
 | [C · Risks](appendices/c-risks.md)                               | Known architectural risks and their triggers        |
-| [D · Deferred decisions](appendices/d-deferred-decisions.md)     | What we deliberately have not decided yet           |
+| [D · Deferred decisions](appendices/d-deferred-decisions.md)     | What was decided late, and what is still open       |
 | [E · Testing strategy](appendices/e-testing-strategy.md)         | What is tested where, and what is not tested at all |
 | [F · Glossary](appendices/f-glossary.md)                         | Terms used precisely throughout these documents     |
 
@@ -112,4 +113,6 @@ pnpm dev        # http://localhost:5173
 pnpm verify     # typecheck + lint + boundaries + tests + build
 ```
 
-See [Phase 1](phases/phase-1-foundation.md) for what currently exists.
+See the [roadmap](phases/README.md) for what is built and what is next, and
+[the current audit](reviews/audit-2026-10-02.md) for what was most recently
+checked and fixed.

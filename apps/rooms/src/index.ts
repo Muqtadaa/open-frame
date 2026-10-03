@@ -6,10 +6,12 @@ export { BoardRoomObject } from './room-object.js'
 /**
  * The Worker in front of the rooms.
  *
- * It does as little as possible on purpose: find the board, hand the socket to
- * that board's Durable Object. Everything that matters happens inside the room,
- * and everything that DECIDES anything happens in `@openframe/collab`, which
- * has no idea Cloudflare exists.
+ * It does as little as possible on purpose: find the board, and hand the socket
+ * or the request (claim, images, password, unlock, destroy, owner, protection)
+ * to that board's Durable Object. Health checks, CORS preflights and unknown
+ * paths it answers itself. Everything that matters happens inside the room,
+ * and everything about the shared document happens in `@openframe/collab`,
+ * which has no idea Cloudflare exists.
  *
  * It authorizes nothing. Every decision about who may do what is made inside
  * the board's own object, by the pure rules in `access.ts` — ADR 0013's
