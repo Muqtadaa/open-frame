@@ -474,12 +474,15 @@ export class BoardRoomObject extends DurableObject<Env> {
       return Response.json({ error: decision.error }, { status: decision.status, headers: CORS })
     }
 
-    // A new password, or none, is a fresh start: guesses at the old one are
-    // not held against anybody trying the new one.
-    await this.ctx.storage.delete(UNLOCK_THROTTLE)
-
+    /*
+     * A new password, or none, is a fresh start: guesses at the old one are
+     * not held against anybody trying the new one. Only once it has actually
+     * changed — a refused change leaves the old password in force, and
+     * forgiving the guesses at it would hand out a fresh set of free tries.
+     */
     if (body.password === null) {
       await this.ctx.storage.delete(PASSWORD)
+      await this.ctx.storage.delete(UNLOCK_THROTTLE)
       return Response.json({ password: false }, { headers: CORS })
     }
 
@@ -498,6 +501,7 @@ export class BoardRoomObject extends DurableObject<Env> {
 
     const verifier = await newVerifier(body.password)
     await this.ctx.storage.put(PASSWORD, verifier)
+    await this.ctx.storage.delete(UNLOCK_THROTTLE)
     // The token is NOT returned here. Setting a password is not unlocking one:
     // the browser that set it redeems it like everybody else, which is also
     // the only way that path is ever exercised by the person who chose it.

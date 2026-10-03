@@ -97,3 +97,45 @@ test('a room rations guesses at its password', async ({ page }) => {
   // Once the wait is over, the right password opens it.
   await expect.poll(async () => (await attempt('correct horse'))[0]).toBe(200)
 })
+
+/**
+ * A password change that is refused changes nothing — including the wait.
+ *
+ * Clearing the ration belongs to a password actually changing. A rejected
+ * attempt (too short) leaves the old password in force, so wiping the count
+ * would hand whoever is guessing at it a fresh set of free tries.
+ */
+test('only a password change that is made forgives earlier guesses', async ({ page }) => {
+  const room = newRoomId()
+  await page.goto(BOARD_URL)
+
+  const answers = await page.evaluate(async (id) => {
+    const base = `http://127.0.0.1:8787/room/${id}`
+    const post = (path: string, body: unknown) =>
+      fetch(`${base}/${path}`, {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify(body),
+      })
+    const claimed = await post('claim', {})
+    const keys = (await claimed.json()) as { editor: string; viewer: string; owner: string }
+    await post('password', { key: keys.owner, password: 'correct horse' })
+    for (let i = 0; i < 6; i++)
+      await post('unlock', { key: keys.viewer, password: `no ${String(i)}` })
+
+    const refusedChange = (await post('password', { key: keys.owner, password: 'abc' })).status
+    const afterwards = (await post('unlock', { key: keys.viewer, password: 'correct horse' }))
+      .status
+
+    // A change that IS made is a fresh start: the new password opens at once.
+    const madeChange = (await post('password', { key: keys.owner, password: 'battery staple' }))
+      .status
+    const fresh = (await post('unlock', { key: keys.viewer, password: 'battery staple' })).status
+    return { refusedChange, afterwards, madeChange, fresh }
+  }, room)
+
+  expect(answers.refusedChange).toBe(400)
+  expect(answers.afterwards).toBe(429)
+  expect(answers.madeChange).toBe(200)
+  expect(answers.fresh).toBe(200)
+})
