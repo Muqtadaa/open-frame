@@ -204,10 +204,21 @@ consequences.
   is `CodeView.tsx:87`. It holds highlight.js output for a language from a
   fixed list, and anything else falls back to a plain child. That relies on
   highlight.js escaping its input.
-- **Headers:** `vercel.json` sets **no security headers**: no CSP, no
-  `Referrer-Policy`, no `frame-ancestors`, no `Permissions-Policy`.
-  `index.html` has inline scripts and an inline `onload`, so a CSP will need
-  hashes.
+- **Headers:** every response refuses framing (`frame-ancestors 'none'` and
+  `X-Frame-Options: DENY`; boards are not embeddable, decided 2026-10-03). It
+  also sends `Referrer-Policy: no-referrer`, because a share link carries its
+  key in `?k=`, and sets `nosniff`, a `Permissions-Policy` and
+  `Cross-Origin-Opener-Policy` (`vercel.json`).
+- **Content Security Policy:** written into the built `index.html` by a Vite
+  plugin (`apps/web/src/app/content-security-policy.ts`). It is built rather
+  than declared, because its origins are the build's own Supabase and room
+  server.
+  - The inline splash scripts and `onload` are allowed by hashes of the
+    shipped HTML; any other inline script and `eval` are refused.
+  - Styles allow `'unsafe-inline'`, because React writes a `style` attribute
+    for every object on the board.
+  - `e2e-rooms/content-security.spec.ts` runs a shared board against a
+    production build served with these headers.
 - **Links in URLs:** the page URL carries the link (`?k=`). The socket URL
   carries the link, the token and the owner key (`collab/src/room-url.ts:62-76`).
   HTTP endpoints take credentials in the body or headers instead.
@@ -246,10 +257,10 @@ with it and said why.
 | A pre-owner-key board's owner key goes to whoever adopts first                                                                                  | `#adoptOwner`                         | **Accepted.** The owner's client adopts at first need                                                                |
 | `claim` is unauthenticated (first come, empty rooms only)                                                                                       | `claimDecision` `access.ts:108-120`   | **Accepted.** Board ids are minted client-side and unguessable; a claimed room cannot be re-claimed                  |
 | Password rationing is per board, so a guesser makes other link holders wait (≤5 min)                                                            | `password.ts:121-126`                 | **Accepted.** The room cannot tell link holders apart; the owner is never affected                                   |
-| No deployment security headers                                                                                                                  | `vercel.json`                         | **Fix.** Decide embedding first, then `Referrer-Policy`, `nosniff`, `Permissions-Policy`, CSP                        |
 | Owner key and token travel in the WebSocket URL                                                                                                 | `room-url.ts:62-76`                   | **Revisit.** Browsers cannot set headers on a WebSocket; move to a first-message handshake if logs ever capture them |
 | `post_comment` does not check that a reply's parent is on the same board                                                                        | `…20260919250000…:68-110`             | **Fix.** One `where` clause                                                                                          |
 | MCP cannot open password-protected boards                                                                                                       | `tools/context.ts:47`                 | **Accepted.** It fails closed; supporting it means the agent holding the token or owner key                          |
+| The page's policy allows inline styles                                                                                                          | `content-security-policy.ts`          | **Accepted.** React positions every object with a `style` attribute; scripts stay hash-only                          |
 | `CodeView` trusts highlight.js to escape                                                                                                        | `CodeView.tsx:87`                     | **Accepted.** Pin the version, and add a test with markup in a code block before upgrading                           |
 
 ---

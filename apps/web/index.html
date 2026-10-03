@@ -24,6 +24,21 @@
       user's expense.
     -->
     <!--
+      Schemas are interpreted, never compiled. Zod compiles an object schema
+      with `new Function` when it may, and finds out by trying once, as each
+      schema is DEFINED. The page's policy refuses eval, so the answer is
+      always no, but the attempt is still reported as a violation on every
+      load, burying any real one. No module can say so in time, because zod
+      and the board's schemas share a chunk that runs before any of our code,
+      so this does, before any module. Zod reads its config from this global
+      (`content-security-policy.test.ts` pins the name against the installed
+      zod).
+    -->
+    <script>
+      var zodConfig = (window.__zod_globalConfig = window.__zod_globalConfig || {})
+      zodConfig.jitless = true
+    </script>
+    <!--
       Once per session. The artwork is the one full-bleed brand moment and it
       holds for two seconds, which on a warm load IS the loading time — paid
       again for every board opened from the front door, because each is a full

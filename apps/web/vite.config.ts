@@ -1,9 +1,12 @@
+import { createHash } from 'node:crypto'
 import { createReadStream, existsSync, readFileSync, readdirSync } from 'node:fs'
 import { join, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
 
 import react from '@vitejs/plugin-react'
 import { defineConfig, type Plugin } from 'vite'
+
+import { contentSecurityPolicy, withPolicy } from './src/app/content-security-policy.js'
 
 const FIXTURE_DIR = fileURLToPath(new URL('../../tools/bench/fixtures', import.meta.url))
 
@@ -78,10 +81,61 @@ function benchFixtures(enabled: boolean): Plugin {
  */
 const DEDUPE = ['tslib']
 
+/**
+ * The Content Security Policy, written into the built page.
+ *
+ * Build only: the dev server injects its own inline scripts for hot reload,
+ * and a policy that blocked those would be switched off by the first person
+ * it got in the way of. What it permits is explained beside the policy.
+ */
+function securityPolicy(): Plugin {
+  let env: Record<string, string> = {}
+  return {
+    name: 'openframe-content-security-policy',
+    apply: 'build',
+    configResolved(config) {
+      env = config.env as Record<string, string>
+    },
+    transformIndexHtml: {
+      // After Vite has finished with the page, so the hashes are of what ships.
+      order: 'post',
+      handler(html) {
+        const configured = (name: string) => {
+          const value = env[name]
+          return typeof value === 'string' && value.length > 0 ? value : null
+        }
+        const policy = contentSecurityPolicy({
+          html,
+          supabaseUrl: configured('VITE_SUPABASE_URL'),
+          collabUrl: configured('VITE_COLLAB_URL'),
+          sha256: (text) => createHash('sha256').update(text, 'utf8').digest('base64'),
+        })
+        return withPolicy(html, policy)
+      },
+    },
+  }
+}
+
+/**
+ * The deployment's response headers, read from `vercel.json` so that
+ * `vite preview` serves the page exactly as the host does — which is what lets
+ * the rooms suite test a production build under its real headers rather than
+ * a second copy of them.
+ */
+const VERCEL = JSON.parse(
+  readFileSync(fileURLToPath(new URL('../../vercel.json', import.meta.url)), 'utf8'),
+) as { headers?: { source: string; headers: { key: string; value: string }[] }[] }
+
+const DEPLOYED_HEADERS: Record<string, string> = Object.fromEntries(
+  (VERCEL.headers ?? [])
+    .filter((rule) => rule.source === '/(.*)')
+    .flatMap((rule) => rule.headers.map(({ key, value }) => [key, value])),
+)
+
 const benchEnabled = process.env['OPENFRAME_BENCH'] === '1'
 
 export default defineConfig({
-  plugins: [react(), benchFixtures(benchEnabled)],
+  plugins: [react(), benchFixtures(benchEnabled), securityPolicy()],
   resolve: { dedupe: DEDUPE },
   /*
    * A literal, not an env lookup. `define` is textual replacement, so the guard
@@ -91,5 +145,6 @@ export default defineConfig({
    */
   define: { __OPENFRAME_BENCH__: JSON.stringify(benchEnabled) },
   server: { port: 5173 },
+  preview: { headers: DEPLOYED_HEADERS },
   build: { sourcemap: true },
 })

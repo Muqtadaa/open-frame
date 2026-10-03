@@ -20,6 +20,7 @@ const CONFIG = JSON.parse(readFileSync(resolve(process.cwd(), '../../vercel.json
   installCommand?: string
   buildCommand?: string
   outputDirectory?: string
+  headers?: { source: string; headers: { key: string; value: string }[] }[]
 }
 
 const install = CONFIG.installCommand ?? ''
@@ -51,6 +52,48 @@ describe('the deployment config', () => {
 
   it('publishes the web app’s output', () => {
     expect(CONFIG.outputDirectory).toBe('apps/web/dist')
+  })
+})
+
+/**
+ * What every response carries.
+ *
+ * The page's script and connection policy is built into `index.html` at build
+ * time (`content-security-policy.ts`); these are the ones a `<meta>` cannot
+ * say, or that belong to the response rather than the document.
+ */
+describe('the response headers', () => {
+  const all = CONFIG.headers?.find((rule) => rule.source === '/(.*)')?.headers ?? []
+  const header = (key: string) => all.find((entry) => entry.key === key)?.value
+
+  it('refuses to be framed, for every browser', () => {
+    // Boards are not embeddable (decided 2026-10-03). Framing is how a page is
+    // dressed up as something else and clicked through, and frame-ancestors
+    // is ignored in a <meta> policy — so it lives here, with the older header
+    // beside it for browsers that predate it.
+    expect(header('Content-Security-Policy')).toBe("frame-ancestors 'none'")
+    expect(header('X-Frame-Options')).toBe('DENY')
+  })
+
+  it('sends no referrer, because a share link carries its key', () => {
+    // `?k=` is the editor or viewer link itself. Any request the page makes,
+    // or any link somebody follows from it, would otherwise hand it on.
+    expect(header('Referrer-Policy')).toBe('no-referrer')
+  })
+
+  it('does not let a response be read as another type', () => {
+    expect(header('X-Content-Type-Options')).toBe('nosniff')
+  })
+
+  it('asks for no device it has no use for', () => {
+    const policy = header('Permissions-Policy') ?? ''
+    for (const feature of ['camera', 'microphone', 'geolocation']) {
+      expect(policy).toContain(`${feature}=()`)
+    }
+  })
+
+  it('applies them to every path, not only the page', () => {
+    expect(CONFIG.headers?.map((rule) => rule.source)).toEqual(['/(.*)'])
   })
 })
 
