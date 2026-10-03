@@ -23,6 +23,7 @@ import {
 } from './access.js'
 import { isPassword, newVerifier, tokenAdmits, type PasswordVerifier } from './password.js'
 import { assetDecision, assetKey, purgeBoardAssets } from './assets.js'
+import { InFlight } from './in-flight.js'
 import type { Env } from './env.js'
 
 /**
@@ -99,6 +100,8 @@ const CORS = {
 export class BoardRoomObject extends DurableObject<Env> {
   #room!: BoardRoom
   #sequence = 0
+  /** Uploads admitted and not yet in R2, which a destroy waits for. */
+  readonly #uploads = new InFlight()
 
   constructor(ctx: DurableObjectState, env: Env) {
     super(ctx, env)
@@ -278,9 +281,21 @@ export class BoardRoomObject extends DurableObject<Env> {
     const key = assetKey(this.#boardId(url), assetId)
 
     if (decision.write) {
-      await this.env.ASSETS.put(key, request.body, {
-        httpMetadata: { contentType: decision.contentType },
-      })
+      await this.#uploads.track(
+        this.env.ASSETS.put(key, request.body, {
+          httpMetadata: { contentType: decision.contentType },
+        }),
+      )
+      /*
+       * R2 lets other requests run while this one waits on it, so the board
+       * may have started going in the meantime. A destroy drains uploads it
+       * can see before sweeping; this covers the one it could not, by taking
+       * the image back out rather than leaving it to outlive the board.
+       */
+      if (await this.#going()) {
+        await this.env.ASSETS.delete(key)
+        return new Response('This board no longer exists', { status: 410, headers: CORS })
+      }
       return new Response(null, { status: 204, headers: CORS })
     }
 
@@ -301,6 +316,15 @@ export class BoardRoomObject extends DurableObject<Env> {
         'x-content-type-options': 'nosniff',
       },
     })
+  }
+
+  /** Whether the board is being deleted or already has been. */
+  async #going(): Promise<boolean> {
+    const [deleting, destroyed] = await Promise.all([
+      this.ctx.storage.get<boolean>(DELETING),
+      this.ctx.storage.get<boolean>(DESTROYED),
+    ])
+    return deleting === true || destroyed === true
   }
 
   /** The board this room is, taken from the path it was reached by. */
@@ -371,6 +395,10 @@ export class BoardRoomObject extends DurableObject<Env> {
     for (const socket of this.ctx.getWebSockets()) {
       socket.close(CLOSE_BOARD_DELETED, 'This board was deleted')
     }
+
+    // Uploads admitted before the marker may still be on their way to R2,
+    // and one that lands after the sweep would outlive the board.
+    await this.#uploads.drain()
 
     const purged = await purgeBoardAssets(this.env.ASSETS, this.#boardId(new URL(request.url)))
     if (!purged.ok) {
