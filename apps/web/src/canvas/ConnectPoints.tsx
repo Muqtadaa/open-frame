@@ -96,6 +96,21 @@ export function ConnectPoints() {
    */
   if (over === null && isCompact(bounds)) return null
   /*
+   * A TURNED object's points go on its turned edges: its own frame, unturned,
+   * with the turn applied to each point. Bounds are the upright box AROUND it,
+   * which is where its points used to float, away from every edge.
+   */
+  const rotation = object.frame.rotation
+  const edges =
+    rotation === 0
+      ? bounds
+      : worldRectToScreen(viewport, {
+          x: object.frame.x,
+          y: object.frame.y,
+          width: object.frame.width,
+          height: object.frame.height,
+        })
+  /*
    * WHICH ONE the drop would take, asked of the type rather than worked out
    * here. `auto` means no anchor is being aimed at and nothing is marked.
    */
@@ -122,7 +137,7 @@ export function ConnectPoints() {
   return (
     <>
       {SIDES.map((side) => {
-        const at = connectPointAt(bounds, side, outset)
+        const at = connectPointAt(edges, side, outset, rotation)
         const size = POINT_PX
         return (
           <div

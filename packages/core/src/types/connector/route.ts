@@ -484,6 +484,68 @@ function clearOf(value: number, low: number, high: number): number {
   return value - low <= high - value ? low : high
 }
 
+/**
+ * An end whose side FACES AWAY from where the route is going, and the box it
+ * sits on.
+ *
+ * Each end leaves straight out of its edge, which is right for nearly every
+ * line — and exactly wrong for one attached to the far side of its object, or
+ * to a side a turn has swung round. Left alone, a curve then lays all four of
+ * its points on one line and runs straight through the object, past it and
+ * back; a squared route runs through it too, since only the run LEAVING the
+ * start was ever checked. Both now go round the nearer side of that shape.
+ */
+interface FacingAway {
+  /** The axis the end leaves along, and the one across it. */
+  readonly along: 'x' | 'y'
+  readonly across: 'x' | 'y'
+  /** Its box, grown by the clearance: what the route keeps outside. */
+  readonly box: Rect
+}
+
+function facingAway(
+  at: Point,
+  normal: Point | null,
+  other: Point,
+  avoiding: Obstacles,
+): FacingAway | null {
+  if (normal === null) return null
+  // Behind its edge means the other end is on the far side of the normal.
+  if (normal.x * (other.x - at.x) + normal.y * (other.y - at.y) >= 0) return null
+  const box = avoiding
+    .map((rect) => grown(rect, CLEARANCE))
+    .find(
+      (rect) =>
+        at.x >= rect.x &&
+        at.x <= rect.x + rect.width &&
+        at.y >= rect.y &&
+        at.y <= rect.y + rect.height,
+    )
+  if (box === undefined) return null
+  const along = Math.abs(normal.x) >= Math.abs(normal.y) ? 'x' : 'y'
+  return { along, across: along === 'x' ? 'y' : 'x', box }
+}
+
+/** A box's low and high edge on one axis. */
+function edges(box: Rect, axis: 'x' | 'y'): [number, number] {
+  return axis === 'x' ? [box.x, box.x + box.width] : [box.y, box.y + box.height]
+}
+
+/**
+ * Which side of its box a facing-away end is reached round: the one nearer
+ * the other end, across the way it leaves. A tie takes the low side, so the
+ * same board always draws the same line.
+ */
+function sideOf(away: FacingAway, other: Point): number {
+  const [low, high] = edges(away.box, away.across)
+  return clearOf(other[away.across], low, high)
+}
+
+/** A point given by its coordinate along one axis and across it. */
+function placed(axis: 'x' | 'y', along: number, across: number): Point {
+  return axis === 'x' ? { x: along, y: across } : { x: across, y: along }
+}
+
 export function orthogonalNodes(
   start: Point,
   end: Point,
@@ -510,7 +572,46 @@ export function orthogonalNodes(
     ? { x: lerp(s.x, e.x, 0.5), y: s.y }
     : { x: s.x, y: lerp(s.y, e.y, 0.5) }
 
-  return [s, roundObstacles(s, middle, e, horizontal, avoiding), e]
+  const plain = [s, roundObstacles(s, middle, e, horizontal, avoiding), e]
+  if (!runsThrough(plain, horizontal, avoiding)) return plain
+
+  /*
+   * Still through a shape, which only an end facing AWAY can cause: round the
+   * nearer side of its box instead of the middle. The start's wrap clears its
+   * own box before turning towards the end; the end's comes in along the far
+   * side and turns into the edge from outside.
+   */
+  const leaving = facingAway(start, normals?.start ?? null, end, avoiding)
+  const arriving = facingAway(end, normals?.end ?? null, start, avoiding)
+  if (leaving === null && arriving === null) return plain
+  const wraps: Point[] = []
+  if (leaving !== null) {
+    const [low, high] = edges(leaving.box, leaving.along)
+    const beyond = e[leaving.along] >= s[leaving.along] ? high : low
+    wraps.push(placed(leaving.along, beyond, sideOf(leaving, end)))
+  }
+  if (arriving !== null) {
+    wraps.push(placed(arriving.along, e[arriving.along], sideOf(arriving, start)))
+  }
+  const wrapped = [s, ...wraps, e]
+  // Only if it is actually better: a wrap that still crosses is not drawn.
+  return runsThrough(wrapped, horizontal, avoiding) ? plain : wrapped
+}
+
+/**
+ * Whether the squared route through these nodes runs through any shape — the
+ * runs BETWEEN them, cornered exactly as `orthogonalLegs` corners them.
+ */
+function runsThrough(nodes: readonly Point[], horizontal: boolean, avoiding: Obstacles): boolean {
+  const boxes = avoiding.map((rect) => grown(rect, CLEARANCE))
+  for (let at = 0; at + 1 < nodes.length; at += 1) {
+    const from = nodes[at]
+    const to = nodes[at + 1]
+    if (from === undefined || to === undefined) continue
+    const corner = horizontal ? { x: from.x, y: to.y } : { x: to.x, y: from.y }
+    if (boxes.some((box) => crosses(from, corner, box) || crosses(corner, to, box))) return true
+  }
+  return false
 }
 
 /**
@@ -646,7 +747,7 @@ function clearingCubic(
   end: Point,
   normals: RouteNormals | null,
   avoiding: Obstacles,
-): [Point, Point, Point, Point] {
+): { readonly cubic: [Point, Point, Point, Point]; readonly clear: boolean } {
   const boxes = avoiding.map((rect) => grown(rect, CLEARANCE))
   const plain = defaultCubic(start, end, normals)
   /*
@@ -666,23 +767,71 @@ function clearingCubic(
       crosses({ x: hull.x, y: hull.y }, { x: hull.x + hull.width, y: hull.y + hull.height }, box),
     )
   ) {
-    return plain
+    return { cubic: plain, clear: true }
   }
 
   let widest = plain
   for (const stretch of STRETCHES) {
     const cubic = defaultCubic(start, end, normals, stretch)
     widest = cubic
-    /*
-     * Sampled at the ends EXCLUDED: a curve attached to a box starts on its
-     * edge, so the first and last samples are inside the inflated box by
-     * definition and would condemn every curve there is.
-     */
-    const path = routeSegments({ kind: 'spline', points: cubic }, 24)[0]?.path ?? []
-    const inside = path
-      .slice(2, -2)
-      .some((point) => boxes.some((box) => crosses(point, point, box)))
-    if (!inside) return cubic
+    if (!splineEnters(cubic, boxes)) return { cubic, clear: true }
+  }
+  return { cubic: widest, clear: false }
+}
+
+/**
+ * Whether a spline passes through any of these boxes.
+ *
+ * Sampled at the ends EXCLUDED: a curve attached to a box starts on its edge,
+ * so the first and last samples are inside the inflated box by definition and
+ * would condemn every curve there is.
+ */
+function splineEnters(points: readonly Point[], boxes: readonly Rect[]): boolean {
+  const segments = routeSegments({ kind: 'spline', points }, 24)
+  const path = segments.flatMap((segment, index) =>
+    index === 0 ? segment.path : segment.path.slice(1),
+  )
+  return path.slice(2, -2).some((point) => boxes.some((box) => crosses(point, point, box)))
+}
+
+/** How many clearances further out a wrap is tried, before the widest is drawn. */
+const WRAP_PUSHES = [0, 1, 2, 4]
+
+/**
+ * A curve that cannot clear by leaving further, because an end faces AWAY:
+ * a smooth chain through a point beside that end's box, on the side nearer
+ * the other end, at the middle of the box along the way the end leaves. Each
+ * end still leaves and arrives along its own normal, so the arrowhead points
+ * into the edge it is attached to.
+ */
+function wrappingChain(
+  start: Point,
+  end: Point,
+  normals: RouteNormals | null,
+  avoiding: Obstacles,
+): Point[] | null {
+  const leaving = facingAway(start, normals?.start ?? null, end, avoiding)
+  const arriving = facingAway(end, normals?.end ?? null, start, avoiding)
+  if (leaving === null && arriving === null) return null
+  const boxes = avoiding.map((rect) => grown(rect, CLEARANCE))
+
+  const beside = (away: FacingAway, other: Point, push: number): Point => {
+    const [low, high] = edges(away.box, away.along)
+    const [acrossLow] = edges(away.box, away.across)
+    const side = sideOf(away, other)
+    const out = side === acrossLow ? side - push : side + push
+    return placed(away.along, (low + high) / 2, out)
+  }
+
+  let widest: Point[] | null = null
+  for (const push of WRAP_PUSHES) {
+    const nodes = [start]
+    if (leaving !== null) nodes.push(beside(leaving, end, push * CLEARANCE))
+    if (arriving !== null) nodes.push(beside(arriving, start, push * CLEARANCE))
+    nodes.push(end)
+    const chain = chainThrough(nodes, normals)
+    widest = chain
+    if (!splineEnters(chain, boxes)) return chain
   }
   return widest
 }
@@ -754,7 +903,9 @@ export function connectorRoute(
        * chain passes through the stops it was given and nothing moves them.
        */
       if (nodes.length <= 2) {
-        return { kind: 'spline', points: clearingCubic(start, end, normals, avoiding) }
+        const { cubic, clear } = clearingCubic(start, end, normals, avoiding)
+        if (clear) return { kind: 'spline', points: cubic }
+        return { kind: 'spline', points: wrappingChain(start, end, normals, avoiding) ?? cubic }
       }
       return { kind: 'spline', points: chainThrough(nodes, normals) }
     }

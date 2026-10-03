@@ -485,6 +485,15 @@ FURTHER before it turns, and is honest about the geometries no amount of bow
 clears. A route you have SHAPED is never moved by any of it: every node is
 then one you put there.
 
+**An end whose side faces AWAY is reached round its own shape.** Each end
+leaves straight out of its edge, which is exactly wrong for a line pinned to
+the far side of its object, or to a side a turn has swung round: the curve's
+four points fell on one line and it ran straight through the object and back,
+and the squared route did the same because only the run LEAVING the start was
+ever checked. Both now go round the nearer side of that shape and into the
+edge from outside, and only when the plain route would cross it, so every
+line that was fine is drawn exactly as before.
+
 **A test that samples a polyline's POINTS cannot see what its segments do.** A
 run slicing through the middle of a box has both of its ends outside it, so
 every avoidance test passed with the avoidance deleted — and so did the one

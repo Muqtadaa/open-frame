@@ -834,9 +834,10 @@ test.describe('aiming at an anchor', () => {
 
     const d = defined(await page.getByTestId('connector-line').getAttribute('d'), 'the line')
     const numbers = [...d.matchAll(/-?\d+(\.\d+)?/g)].map((m) => Number(m[0]))
-    // M x y C c1x c1y, c2x c2y, ex ey
-    const [c2x, c2y, ex, ey] = [4, 5, 6, 7].map((at) =>
-      defined(numbers[at], 'a cubic has eight numbers in it'),
+    // M x y C c1x c1y, c2x c2y, ex ey — and, where the line goes round
+    // something on its way, more cubics after it. The ARRIVAL is the last.
+    const [c2x, c2y, ex, ey] = [4, 3, 2, 1].map((back) =>
+      defined(numbers[numbers.length - back], 'a cubic has eight numbers in it'),
     ) as [number, number, number, number]
     // The last control point sits directly BELOW the end, so the line arrives
     // travelling upward into the bottom edge it is attached to.
@@ -1288,3 +1289,51 @@ test('edits a label at the size it is drawn, zoomed out', async ({ page }) => {
   // drawn at 0.05 here — a tenth of the label's size.
   expect(editor).toBeCloseTo(label, 1)
 })
+
+/*
+ * A line pinned to the FAR side of what it joins — or to a side a turn has
+ * swung round. Each end leaves straight out of its edge, so the line ran
+ * straight through the object, past it and back into that edge from outside.
+ * It goes round the nearer side instead.
+ */
+for (const [routing, name] of [
+  ['curved', 'curved'],
+  ['orthogonal', 'squared'],
+] as const) {
+  test(`a ${name} line to a side that faces away goes round the object, not through it`, async ({
+    page,
+  }) => {
+    await seedBoard(
+      page,
+      buildBoard((board) => {
+        const a = board.note('A', { x: 300, y: 400 })
+        const b = board.note('B', { x: 800, y: 400 })
+        board.connect(a, b, {
+          routing,
+          to: { kind: 'object', objectId: b, anchor: { kind: 'side', side: 'right' } },
+        })
+      }),
+    )
+    const target = await boxOf(page.locator('[data-object-type="sticky"]').nth(1))
+    const inside = await page.getByTestId('connector-line').evaluate((line, box) => {
+      const path = line as SVGPathElement
+      const matrix = path.getScreenCTM()
+      if (matrix === null) return ['no transform']
+      const length = path.getTotalLength()
+      const found: string[] = []
+      for (let step = 0; step <= 200; step += 1) {
+        const at = path.getPointAtLength((length * step) / 200).matrixTransform(matrix)
+        if (
+          at.x > box.x + 1 &&
+          at.x < box.x + box.width - 1 &&
+          at.y > box.y + 1 &&
+          at.y < box.y + box.height - 1
+        ) {
+          found.push(`${String(Math.round(at.x))},${String(Math.round(at.y))}`)
+        }
+      }
+      return found
+    }, target)
+    expect(inside).toEqual([])
+  })
+}

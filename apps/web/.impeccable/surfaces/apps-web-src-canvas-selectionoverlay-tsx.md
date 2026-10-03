@@ -53,8 +53,10 @@ CROP is offered in the record panel too, as a pressed-or-not Crop that enters
 and leaves the mode, for any type that shows a window onto what it holds
 (`cropWindowOf`) — double-click was the only way in.
 
-KNOWN: connect points and an attached line's end sit on a rotated object's
-upright bounds, not its turned edges.
+A TURNED object's connection points sit off its own turned edges, pushed out
+along each edge's direction — where the connector type attaches.
+
+KNOWN: nothing open on this surface.
 
 FINISH: `selection-apparatus.spec.ts` (move truth, lone line, targets, compact,
 keyboard, Escape, what a selection says, under the pointer), `apparatus.spec.ts`

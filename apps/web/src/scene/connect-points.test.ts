@@ -92,3 +92,31 @@ describe('a floating panel clears the chrome', () => {
     expect(PANEL_CLEARANCE_PX).toBeGreaterThan(CONNECT_REACH_PX)
   })
 })
+
+/*
+ * A TURNED object's points sat on its upright bounding box, so they floated
+ * off its edges — and a line dropped on one attached to the turned edge it
+ * was nowhere near, because the connector type has always measured from the
+ * edges themselves.
+ */
+describe('on a turned object', () => {
+  const box = { x: 0, y: 0, width: 100, height: 50 }
+
+  it('sits off the turned edge, pushed out along the turned normal', () => {
+    // A quarter turn: the right edge's midpoint ends up under the centre.
+    const at = connectPointAt(box, 'right', 10, Math.PI / 2)
+    expect(at.x).toBeCloseTo(50, 6)
+    expect(at.y).toBeCloseTo(25 + 60, 6)
+  })
+
+  it('stays where it was on an object that is not turned', () => {
+    expect(connectPointAt(box, 'top', 10, 0)).toEqual(connectPointAt(box, 'top', 10))
+  })
+
+  it('keeps every point the same distance out from the centre at any angle', () => {
+    for (const angle of [0.3, 1, 2.5]) {
+      const at = connectPointAt(box, 'top', 10, angle)
+      expect(Math.hypot(at.x - 50, at.y - 25)).toBeCloseTo(25 + 10, 6)
+    }
+  })
+})
