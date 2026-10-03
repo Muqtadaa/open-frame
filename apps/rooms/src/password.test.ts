@@ -1,6 +1,17 @@
 import { describe, expect, it } from 'vitest'
 
-import { isPassword, newVerifier, tokenAdmits, PASSWORD_ITERATIONS } from './password.js'
+import {
+  isPassword,
+  newVerifier,
+  tokenAdmits,
+  PASSWORD_ITERATIONS,
+  afterFailedUnlock,
+  FREE_UNLOCK_ATTEMPTS,
+  MAX_UNLOCK_COOLDOWN_MS,
+  UNLOCK_FAILURES_FORGOTTEN_AFTER_MS,
+  unlockAllowed,
+  type UnlockThrottle,
+} from './password.js'
 
 /** Deterministic bytes, so a salt and a token are predictable in a test. */
 function counting(): (into: Uint8Array) => void {
@@ -79,5 +90,66 @@ describe('the token that redeems it', () => {
 
     expect(tokenAdmits(after, before.token)).toBe(false)
     expect(tokenAdmits(after, after.token)).toBe(true)
+  })
+})
+
+/**
+ * Attempts at a board's password, rationed.
+ *
+ * The password exists for the moment a link has already gone somewhere it
+ * should not have — so whoever is guessing already holds the link, and the
+ * only thing between them and the board is how many guesses they get. PBKDF2
+ * makes each one cost the ROOM about 60ms; this makes them cost the GUESSER
+ * time, which is the cost that matters.
+ */
+describe('rationing password attempts', () => {
+  const T = 1_000_000
+
+  function failTimes(times: number, at = T) {
+    let state: UnlockThrottle | undefined
+    for (let i = 0; i < times; i++) state = afterFailedUnlock(state, at)
+    return state
+  }
+
+  it('lets anybody try when nobody has failed', () => {
+    expect(unlockAllowed(undefined, T)).toEqual({ ok: true })
+  })
+
+  /** A typo, or three, is ordinary and must stay free. */
+  it('costs nothing for the first few wrong guesses', () => {
+    const state = failTimes(FREE_UNLOCK_ATTEMPTS)
+    expect(unlockAllowed(state, T)).toEqual({ ok: true })
+  })
+
+  it('makes the guesser wait once the free ones are spent', () => {
+    const state = failTimes(FREE_UNLOCK_ATTEMPTS + 1)
+    expect(unlockAllowed(state, T)).toEqual({ ok: false, retryAfterSeconds: 1 })
+    expect(unlockAllowed(state, T + 1000)).toEqual({ ok: true })
+  })
+
+  it('doubles the wait with every further failure', () => {
+    const waits = [1, 2, 3, 4].map((extra) => {
+      const decision = unlockAllowed(failTimes(FREE_UNLOCK_ATTEMPTS + extra), T)
+      return decision.ok ? 0 : decision.retryAfterSeconds
+    })
+    expect(waits).toEqual([1, 2, 4, 8])
+  })
+
+  /** Never a permanent lockout: that would let anybody with the URL shut out everyone else. */
+  it('never makes anybody wait more than the ceiling', () => {
+    const decision = unlockAllowed(failTimes(FREE_UNLOCK_ATTEMPTS + 60), T)
+    expect(decision).toEqual({ ok: false, retryAfterSeconds: MAX_UNLOCK_COOLDOWN_MS / 1000 })
+  })
+
+  it('forgets old failures after a quiet spell', () => {
+    const tired = failTimes(FREE_UNLOCK_ATTEMPTS + 10)
+    const later = T + UNLOCK_FAILURES_FORGOTTEN_AFTER_MS
+    // A failure after the quiet spell starts the count again, free.
+    expect(unlockAllowed(afterFailedUnlock(tired, later), later)).toEqual({ ok: true })
+  })
+
+  it('rounds a part second up, so Retry-After never says 0 while it means wait', () => {
+    const state = failTimes(FREE_UNLOCK_ATTEMPTS + 1)
+    expect(unlockAllowed(state, T + 1)).toEqual({ ok: false, retryAfterSeconds: 1 })
   })
 })

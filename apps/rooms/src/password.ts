@@ -113,3 +113,57 @@ export function tokenAdmits(verifier: PasswordVerifier | undefined, token: strin
   if (token === null) return false
   return sameSecret(token, verifier.token)
 }
+
+/**
+ * How many wrong passwords this board has seen lately, and until when it
+ * refuses to look at another.
+ *
+ * ONE per board, not per person: the room cannot tell the people holding a
+ * link apart, and anybody who can guess can also change their address. The
+ * cost is that somebody hammering a board makes everyone else wait too — for
+ * at most `MAX_UNLOCK_COOLDOWN_MS`, never for good, and never its owner, whose
+ * key skips the password altogether.
+ */
+export interface UnlockThrottle {
+  readonly failures: number
+  readonly lastFailureAt: number
+  readonly blockedUntil: number
+}
+
+/** Wrong guesses that cost nothing. A typo, or three, is ordinary. */
+export const FREE_UNLOCK_ATTEMPTS = 5
+/** The first wait once those are spent; it doubles from there. */
+export const FIRST_UNLOCK_COOLDOWN_MS = 1_000
+/**
+ * The longest anybody is ever made to wait. A permanent lockout would hand
+ * anybody holding the URL a way to shut everyone else out of the board.
+ */
+export const MAX_UNLOCK_COOLDOWN_MS = 5 * 60_000
+/** A quiet spell this long and the failures before it are forgotten. */
+export const UNLOCK_FAILURES_FORGOTTEN_AFTER_MS = 15 * 60_000
+
+export type UnlockAllowed =
+  { readonly ok: true } | { readonly ok: false; readonly retryAfterSeconds: number }
+
+/**
+ * Whether a password may be checked at all right now.
+ *
+ * Asked BEFORE the hash is derived, so a refused attempt costs the room
+ * nothing either. The wait is rounded UP, so `Retry-After` never says 0 while
+ * the answer is still no.
+ */
+export function unlockAllowed(state: UnlockThrottle | undefined, now: number): UnlockAllowed {
+  if (state === undefined || now >= state.blockedUntil) return { ok: true }
+  return { ok: false, retryAfterSeconds: Math.ceil((state.blockedUntil - now) / 1000) }
+}
+
+/** The throttle after one more wrong password. A right one clears it instead. */
+export function afterFailedUnlock(state: UnlockThrottle | undefined, now: number): UnlockThrottle {
+  const forgotten =
+    state === undefined || now - state.lastFailureAt >= UNLOCK_FAILURES_FORGOTTEN_AFTER_MS
+  const failures = (forgotten ? 0 : state.failures) + 1
+  const over = failures - FREE_UNLOCK_ATTEMPTS
+  const cooldown =
+    over <= 0 ? 0 : Math.min(FIRST_UNLOCK_COOLDOWN_MS * 2 ** (over - 1), MAX_UNLOCK_COOLDOWN_MS)
+  return { failures, lastFailureAt: now, blockedUntil: now + cooldown }
+}

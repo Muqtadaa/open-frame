@@ -97,6 +97,19 @@ describe('unlocking', () => {
       reason: 'unreadable',
     })
   })
+
+  /**
+   * Too many wrong guesses: the room has not looked at this one, so it is not
+   * a refusal — and "that is not the password" would be a lie that sends the
+   * person off to type it differently.
+   */
+  it('says how long to wait when the room is rationing attempts', async () => {
+    expect(await answering(429, { retryAfter: 8 }).client.unlock(BOARD, 'k', 'pw')).toEqual({
+      ok: false,
+      reason: 'throttled',
+      retryAfterSeconds: 8,
+    })
+  })
 })
 
 describe('setting a password', () => {

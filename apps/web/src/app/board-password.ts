@@ -171,6 +171,13 @@ export async function unlockBoard(
       reason: 'OpenFrame could not be reached. Check the connection and try again.',
     }
   }
+  if (unlocked.reason === 'throttled') {
+    const seconds = unlocked.retryAfterSeconds
+    return {
+      ok: false,
+      reason: `Too many attempts. Try again in ${String(seconds)} ${seconds === 1 ? 'second' : 'seconds'}.`,
+    }
+  }
   if (unlocked.reason === 'refused') {
     // One message for every way of being refused. Saying "that link is wrong"
     // rather than "that password is wrong" tells somebody probing which half

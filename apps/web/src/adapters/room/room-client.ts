@@ -74,6 +74,13 @@ export function createRoomClient(options: RoomClientOptions): RoomService {
     async unlock(boardId, key, password) {
       const response = await post(url(boardId, 'unlock'), { key, password })
       if (response === null) return { ok: false, reason: 'unreachable' satisfies RoomFailure }
+      if (response.status === 429) {
+        // Too many wrong guesses lately. The room says how long; a missing or
+        // garbled answer still means wait, so it never reads as zero.
+        const wait = (await json(response))?.retryAfter
+        const retryAfterSeconds = typeof wait === 'number' && wait > 0 ? Math.ceil(wait) : 1
+        return { ok: false, reason: 'throttled', retryAfterSeconds }
+      }
       if (!response.ok) return { ok: false, reason: 'refused' }
       const token = (await json(response))?.token
       return typeof token === 'string' ? { ok: true, token } : { ok: false, reason: 'unreadable' }
