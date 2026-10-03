@@ -55,7 +55,8 @@ reasons:
 1. **An editor with a modified client can persist anything that decodes as a
    Yjs update.** This includes objects no current client accepts and values in
    the board's `meta` map. It also includes very large documents: one message
-   is capped at 2 MiB (see Hardening), but nothing caps how many arrive.
+   is capped at the platform's 32 MiB (see Hardening), but nothing caps how
+   many arrive.
 2. **Compliant clients drop what they cannot read, and do not quarantine it.**
    - The bad object stays in the shared `Y.Doc`, in room storage and in every
      participating browser's CRDT cache, so it is served to every peer and
@@ -111,8 +112,9 @@ change:
 
 - **Bound a socket message's size, and isolate decode failures.** _Done
   2026-10-03._ `BoardRoom.receive` refuses a message over `MAX_MESSAGE_BYTES`
-  (2 MiB, far above any real edit and well below the platform's 32 MiB)
-  before decoding it. It catches a frame that fails to decode, and it also refuses an update
+  (32 MiB, the platform's own limit) before decoding it. The cap cannot be lower:
+  publishing a board and resyncing after offline work each send the whole state
+  in one frame. It catches a frame that fails to decode, and it also refuses an update
   whose application failed, which y-protocols reports but does not throw. In
   every case the room is unchanged and nothing is relayed. The Durable Object
   closes that socket alone, with 1009 or 1007.

@@ -104,7 +104,7 @@ The rules are pure functions in `apps/rooms/src/access.ts`, tested in Node.
   1. Key check, with the same 403 for a missing or wrong key.
   2. The password, as a second factor. The owner key (`?o=`) or a valid token (`?t=`) passes. Otherwise the socket is accepted and closed with 4003, so the client can tell "needs a password" from a dropped network.
   3. The role is fixed on the socket for its lifetime, and survives hibernation (`roleFromAttachment` reads anything unknown as viewer).
-- **Messages:** a frame over 2 MiB is refused before it is read
+- **Messages:** a frame over 32 MiB, the platform's own limit, is refused before it is read
   (`MAX_MESSAGE_BYTES`, `collab/src/room.ts`). A frame that fails to decode,
   or carries an update that fails to apply, is refused too. Either way the
   room is unchanged, nothing is relayed, and only that socket is closed (1009
@@ -257,6 +257,7 @@ with it and said why.
 | Room relays and persists any decodable editor update; invalid objects are dropped by clients but stay in storage and every browser's CRDT cache | `room.ts:137-147`, `remote-object.ts` | **Accepted.** [ADR 0016](../adr/0016-room-trust-boundary.md)                                                         |
 | Viewers' awareness is relayed, and any peer may publish state for any client id                                                                 | `protocol.ts:225-230`, `room.ts`      | **Accepted for now.** It is ephemeral and never persisted; revisit with ADR 0016's triggers                          |
 | `meta` patches pass remote validation unchecked                                                                                                 | `apply-remote-patches.ts:133-135`     | **Fix.** Validate known meta keys on merge                                                                           |
+| A board's whole state must fit in one message to publish or resync (`seedDoc`, sync step 2)                                                     | `document-map.ts`, `provider.ts`      | **Revisit.** Chunk the handshake if a board nears 32 MiB; 10,000 objects is a few MB                                 |
 | Unclaimed (legacy) rooms admit anyone as an editor                                                                                              | `access.ts:61`                        | **Accepted.** Old links must keep working; such rooms refuse destroy and password                                    |
 | A pre-owner-key board's owner key goes to whoever adopts first                                                                                  | `#adoptOwner`                         | **Accepted.** The owner's client adopts at first need                                                                |
 | `claim` is unauthenticated (first come, empty rooms only)                                                                                       | `claimDecision` `access.ts:108-120`   | **Accepted.** Board ids are minted client-side and unguessable; a claimed room cannot be re-claimed                  |

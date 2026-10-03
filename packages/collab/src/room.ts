@@ -27,16 +27,21 @@ import {
  */
 
 /**
- * The largest message a room will read: 2 MiB.
+ * The largest message a room will read: 32 MiB, the platform's own limit.
  *
- * The platform would hand the room a frame of up to 32 MiB, and every byte of
- * it is decoded and applied while every other peer on the board waits. A
- * frame that size is not an edit anybody made: a whole 60-object board is
- * about 24KB of JSON, so 2 MiB is thousands of objects in a single change.
- * What it bounds is how much one connection can make the room chew on, and
- * how large a single update the room then has to store and relay.
+ * Not lower, because not every message is an edit. Publishing a local board
+ * seeds the whole board in one transaction, and a client coming back from
+ * offline answers the room's step 1 with everything the room lacks, both in a
+ * single frame. A cap sized for one person's change refused exactly those and
+ * the client resent them on every reconnect, so a large board could never be
+ * shared at all.
+ *
+ * Stated here rather than left to the platform so the refusal is the room's:
+ * the same answer (1009, to that socket alone) wherever the room runs, and a
+ * test that can see it. A board whose whole state passes this needs the
+ * handshake chunked; see the security model's known gaps.
  */
-export const MAX_MESSAGE_BYTES = 2 * 1024 * 1024
+export const MAX_MESSAGE_BYTES = 32 * 1024 * 1024
 
 /**
  * What became of a message.

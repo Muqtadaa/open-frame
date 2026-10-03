@@ -7,6 +7,7 @@ import {
   createAwareness,
   encodeAwareness,
   encodeSyncStep1,
+  encodeSyncStep2,
   encodeUpdate,
   readMessage,
   type RoomRole,
@@ -334,6 +335,26 @@ describe('a message the room will not read', () => {
     expect(room.receive(a, update)).toBe('too-large')
     expect(room.doc.getMap('board').has('huge')).toBe(false)
     expect(b.received.length).toBe(heardByB)
+  })
+
+  /**
+   * Publishing a board, or coming back from offline, is the whole state in one
+   * frame (`seedDoc`, a sync step 2). A cap sized for a single edit refused
+   * those, and the client resent them on every reconnect, so a large board
+   * could never be shared.
+   */
+  it('reads a whole board arriving in one handshake, far larger than any edit', () => {
+    const room = new BoardRoom()
+    const a = new Client('a')
+    a.connect(room)
+
+    // About the size of a ten-thousand-object board.
+    const board = new Y.Doc()
+    board.getMap('board').set('seeded', 'x'.repeat(5 * 1024 * 1024))
+    const step2 = encodeSyncStep2(board, Y.encodeStateVector(room.doc))
+
+    expect(room.receive(a, step2)).toBe('accepted')
+    expect(room.doc.getMap('board').get('seeded')).toHaveLength(5 * 1024 * 1024)
   })
 
   it('still reads a large message that fits', () => {

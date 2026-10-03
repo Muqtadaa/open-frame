@@ -44,12 +44,9 @@ test('a bad frame closes its own socket and leaves the room working', async ({ p
     const garbledClosed = closeCode(garbled)
     garbled.send(new Uint8Array([1, 9, 1]))
 
-    // A frame over the 2 MiB the room could keep, refused unread.
-    const huge = await open()
-    const hugeClosed = closeCode(huge)
-    huge.send(new Uint8Array(2 * 1024 * 1024 + 1))
-
-    const codes = { garbled: await garbledClosed, huge: await hugeClosed }
+    // The size cap is the platform's own 32 MiB, so a frame over it would
+    // tell us about workerd rather than the room; `room.test.ts` holds it.
+    const codes = { garbled: await garbledClosed }
 
     // The bystander's socket is still there, and the room still answers it:
     // a sync step 1 for an empty document is answered with the board.
@@ -62,6 +59,5 @@ test('a bad frame closes its own socket and leaves the room working', async ({ p
   }, room)
 
   expect(outcome.garbled).toBe(1007)
-  expect(outcome.huge).toBe(1009)
   expect(outcome.stillOpen).toBe(true)
 })
