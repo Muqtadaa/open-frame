@@ -46,10 +46,17 @@ export function deleteObjects(
    * pass over an empty set when it is not, and silently leaks dangling objects
    * if it is ever added without one.
    */
+  /*
+   * Marks — reactions, votes — die with what they are on, for the same reason
+   * and in the same loop: one command, so undo brings a note back WITH its
+   * reactions rather than without them.
+   */
   for (;;) {
-    const orphaned = ctx.registry
-      .relationsOrphanedBy(doc, [...doomed])
-      .filter((id) => !doomed.has(id))
+    const gone = [...doomed]
+    const orphaned = [
+      ...ctx.registry.relationsOrphanedBy(doc, gone),
+      ...ctx.registry.marksOrphanedBy(doc, gone),
+    ].filter((id) => !doomed.has(id))
     if (orphaned.length === 0) break
     for (const id of orphaned) doomed.add(id)
   }

@@ -28,6 +28,7 @@ export const taskType = defineObjectType<typeof TASK_TYPE, TaskData>({
     canHaveChildren: false,
     selectsAsUnit: false,
     connectable: true,
+    markable: true,
     styleProps: ['color', 'textColor', 'font', 'align', 'verticalAlign', 'opacity'],
   },
 

@@ -1,6 +1,7 @@
 import type {
   ColorToken,
   DispatchResult,
+  MarkAuthor,
   ObjectStyle,
   ConnectorEndpoint,
   EndpointTarget,
@@ -137,6 +138,8 @@ export interface BoardCommands {
   /** Moves one draggable end of an object. The TYPE decides what that means. */
   retargetEndpoint(id: ObjectId, endpointId: string, target: EndpointTarget): void
   setColor(ids: readonly ObjectId[], color: ColorToken): void
+  /** This person's reaction of this kind, on or off, on each of `targets`. */
+  toggleReaction(targets: readonly ObjectId[], glyph: string, by: MarkAuthor): void
   /**
    * Sets any style properties at once. `setColor` is the one-property case kept
    * for its call sites; this is what the inspector uses, because a type's
@@ -706,6 +709,22 @@ export function useCommands(): BoardCommands {
       setColor(ids, color) {
         if (ids.length === 0) return
         report(dispatcher.dispatch({ kind: 'UpdateStyle', ids: [...ids], style: { color } }))
+      },
+
+      toggleReaction(targets, glyph, by) {
+        if (targets.length === 0) return
+        /*
+         * One transaction for a selection, so reacting to five notes is one
+         * undo step. Each note is its own toggle: a note you had already
+         * reacted to loses your reaction, the rest gain it — which is what the
+         * press means for each of them.
+         */
+        report(
+          dispatcher.transact(
+            targets.length === 1 ? 'React' : `React to ${String(targets.length)} notes`,
+            targets.map((target) => ({ kind: 'ToggleReaction' as const, target, glyph, by })),
+          ),
+        )
       },
 
       setStyle(ids, style) {

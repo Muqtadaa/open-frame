@@ -13,6 +13,7 @@ import { taskType } from './task/definition.js'
 import { journeystageType } from './journey-stage/definition.js'
 import { requirementType } from './requirement/definition.js'
 import { relationType } from './relation/definition.js'
+import { reactionType } from './reaction/definition.js'
 import { shapeType } from './shape/definition.js'
 import { stickyType } from './sticky/definition.js'
 import { tableType } from './table/definition.js'
@@ -117,6 +118,14 @@ export { FRAME_TYPE, frameType } from './frame/definition.js'
 export { GROUP_TYPE, groupType } from './group/definition.js'
 export { RELATION_TYPE, relationType } from './relation/definition.js'
 export { RelationDataSchema, type RelationData } from './relation/schema.js'
+export { REACTION_MARK, REACTION_TYPE, reactionId, reactionType } from './reaction/definition.js'
+export {
+  GLYPH_PATTERN,
+  MarkAuthorSchema,
+  ReactionDataSchema,
+  type MarkAuthor,
+  type ReactionData,
+} from './reaction/schema.js'
 export { GroupDataSchema, type GroupData } from './group/schema.js'
 export { IMAGE_TYPE, imageType, placedSize } from './image/definition.js'
 export { INSIGHT_TYPE, insightType } from './insight/definition.js'
@@ -185,6 +194,7 @@ export function createDefaultRegistry(): ObjectTypeRegistry {
     journeystageType,
     requirementType,
     relationType,
+    reactionType,
     unknownType,
   ])
 }

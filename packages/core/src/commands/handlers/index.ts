@@ -15,6 +15,7 @@ import { repairParentage } from './repair-parentage.js'
 import { reparentObjects } from './reparent-objects.js'
 import { rotateObjects } from './rotate-objects.js'
 import { setHidden, setLocked } from './set-flags.js'
+import { toggleReaction } from './toggle-reaction.js'
 import { deleteObjects } from './delete-objects.js'
 import { moveObjects } from './move-objects.js'
 import { resizeObjects } from './resize-objects.js'
@@ -75,6 +76,8 @@ export function handleCommand(
       return deriveObject(doc, command, ctx)
     case 'ApplyRemotePatches':
       return applyRemotePatches(doc, command, ctx)
+    case 'ToggleReaction':
+      return toggleReaction(doc, command, ctx)
     case 'RepairParentage':
       return repairParentage(doc, command)
   }

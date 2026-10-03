@@ -32,6 +32,7 @@ export const requirementType = defineObjectType<typeof REQUIREMENT_TYPE, Require
     canHaveChildren: false,
     selectsAsUnit: false,
     connectable: true,
+    markable: true,
     styleProps: ['color', 'textColor', 'font', 'align', 'verticalAlign', 'opacity'],
   },
 

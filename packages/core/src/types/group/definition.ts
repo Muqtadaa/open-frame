@@ -36,6 +36,7 @@ export const groupType = defineObjectType<typeof GROUP_TYPE, GroupData>({
     /** The whole point: clicking a member selects the group. */
     selectsAsUnit: true,
     connectable: true,
+    markable: false,
     styleProps: [],
   },
 

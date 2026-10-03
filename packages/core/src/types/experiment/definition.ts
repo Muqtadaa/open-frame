@@ -33,6 +33,7 @@ export const experimentType = defineObjectType<typeof EXPERIMENT_TYPE, Experimen
     canHaveChildren: false,
     selectsAsUnit: false,
     connectable: true,
+    markable: true,
     styleProps: ['color', 'textColor', 'font', 'align', 'verticalAlign', 'opacity'],
   },
 

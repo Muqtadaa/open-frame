@@ -1141,3 +1141,15 @@ Closed since (2026-10-03), in the order they were chosen:
 - relations drawn on the board: `6105633`.
 
 Not chosen: structured types on the rail, and a fixed type mark.
+
+## Facilitation A: reactions on notes (2026-10-03)
+
+The first of the owner's five facilitation features. Anyone with an edit link
+can leave 👍 ❤️ 🎉 💡 🔥 👀 ❓ ✅ on a sticky, a typed slip or an image, from a
+bar beside the selection or from the context menu, and take it back by pressing
+the chip. Each reaction is its own object per person, so two people reacting at
+once are both counted (the rooms suite holds this); deleting a note takes its
+reactions with it and undo brings them back (seen failing with the cascade
+removed). Found on the way: a double-click on a chip opened the note beneath
+for typing, because the board hit-tested the point; a press on a chrome button
+now ends the double-click there, seen failing first.

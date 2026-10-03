@@ -1,5 +1,7 @@
 import { expect, test, type Page, type WebSocketRoute } from '@playwright/test'
 
+import { buildBoard } from './boards.js'
+import { seedBoard } from './fixtures.js'
 import { seedLocalBoard } from './seed.js'
 import { BOARD_URL, HOME_URL } from './routes.js'
 import { signedIn } from './signed-in.js'
@@ -143,6 +145,23 @@ for (const world of WORLDS) {
       await page.locator('[data-object-type="sticky"]').click()
       await expect(page.getByTestId('inspector')).toBeVisible()
       await snap(page, `${world}-selection-inspector`)
+    })
+
+    // Two people's reactions on a note, one of them yours, and the bar to add more.
+    test('reactions on a note', async ({ page }) => {
+      await seedBoard(
+        page,
+        buildBoard((board) => {
+          const note = board.note('Customers do not understand pricing', { x: 520, y: 300 })
+          board.react(note, 'plus-one', { key: 'g_0123456789abcdef', name: 'Heron', hue: 200 })
+          board.react(note, 'idea', { key: 'g_0123456789abcdef', name: 'Heron', hue: 200 })
+          board.react(note, 'plus-one', { key: 'g_fedcba9876543210', name: 'Otter', hue: 30 })
+        }),
+      )
+      await page.locator('[data-testid="canvas"]').click({ position: { x: 520, y: 280 } })
+      await page.getByTestId('reaction-bar').getByRole('button', { name: 'Agree' }).click()
+      await expect(page.getByTestId('reaction-plus-one')).toHaveText(/3/)
+      await snap(page, `${world}-reactions`)
     })
 
     // An uncoloured frame on the world's paper, with a note laid on it.

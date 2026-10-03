@@ -177,6 +177,14 @@ the price of whole-object values, accepted because the command layer makes the
 collision rare; per-field or per-character merging would be the fix if it stops
 being rare.
 
+Where a collision is the NORMAL case it is designed out instead. A reaction is
+an object of its own per person, kind and note (`rx_<note>_<glyph>_<person>`),
+never a counter inside the note, so ten people pressing 👍 at once write ten
+different objects and all ten are kept. The deterministic id is what makes one
+person on two devices converge on one reaction rather than two. Each is a mark
+(`ObjectTypeDefinition.mark`), indexed by the registry once per document, and
+goes with its note on delete — and comes back with it on undo.
+
 ### Reparent cycles
 
 A→B and B→A applied concurrently make a cycle no last-writer-wins value can

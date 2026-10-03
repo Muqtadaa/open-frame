@@ -30,6 +30,7 @@ export const stickyType = defineObjectType<typeof STICKY_TYPE, StickyData>({
     canHaveChildren: false,
     selectsAsUnit: false,
     connectable: true,
+    markable: true,
     /*
      * No `fill`. It was declared here and never implemented by the view, which
      * went unnoticed while `color` was the only property anything could set —

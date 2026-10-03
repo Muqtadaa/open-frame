@@ -6988,6 +6988,69 @@ textarea.of-input {
   padding: var(--of-space-4);
 }
 
+/*
+ * Reactions, drawn on the note they are on.
+ *
+ * In world units (rule 24): part of how the note looks, so they scale with it.
+ * Inside its bottom edge, so hit testing by bounds still finds the note, and on
+ * the panel stock with a hairline edge so they read on every note colour.
+ */
+.of-reactions {
+  position: absolute;
+  right: var(--of-space-8);
+  bottom: var(--of-space-8);
+  left: var(--of-space-8);
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--of-space-4);
+  pointer-events: none;
+}
+
+.of-reaction {
+  display: inline-flex;
+  gap: var(--of-space-4);
+  align-items: center;
+  padding: var(--of-space-2) var(--of-space-6);
+  font-size: var(--of-type-record);
+  line-height: 1.4;
+  color: var(--of-ink);
+  cursor: pointer;
+  background: var(--of-panel);
+  border: 1px solid var(--of-control-border);
+  border-radius: var(--of-radius-capsule);
+  pointer-events: auto;
+}
+
+.of-reaction[aria-pressed='true'] {
+  background: var(--of-accent-soft);
+  border-color: var(--of-accent);
+}
+
+.of-reaction:disabled {
+  cursor: default;
+}
+
+.of-reaction__count {
+  font-family: var(--of-mono);
+  font-variant-numeric: tabular-nums;
+}
+
+/* The eight on offer, beside one selected note: on the chrome layer, like the arrange bar. */
+.of-reaction-bar {
+  display: flex;
+  gap: var(--of-space-2);
+  align-items: center;
+  padding: var(--of-space-4);
+}
+
+.of-reaction-bar__button {
+  font-size: var(--of-type-ui);
+}
+
+.of-reaction-bar__button[aria-pressed='true'] {
+  background: var(--of-accent-soft);
+}
+
 .of-arrange__glyph {
   width: 17px;
   height: 17px;

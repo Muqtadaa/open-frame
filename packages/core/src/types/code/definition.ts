@@ -31,6 +31,7 @@ export const codeType = defineObjectType<typeof CODE_TYPE, CodeData>({
     canHaveChildren: false,
     selectsAsUnit: false,
     connectable: true,
+    markable: false,
     /*
      * No `color`, `align` or `font`. A code block's typeface is monospace by
      * definition, its alignment is left by definition, and its colours come

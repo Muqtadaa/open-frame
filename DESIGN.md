@@ -1270,6 +1270,26 @@ surfaces placed by separate arithmetic will eventually want the same space, and
 on a selection too wide for the panel to sit beside, the panel takes the whole
 band above — which is where a bar anchored to that selection wants to be.
 
+### Reactions
+
+A note that people can react to (`capabilities.markable`: sticky, the typed
+slips, images) carries its reactions as chips along its bottom edge, inside it:
+the emoji and a count, grouped by kind in the palette's order. A chip you have
+reacted with is pressed (the accent wash), and pressing it takes yours back;
+its tip names who reacted, in words — "Agree, 3: Otter, Heron and you". A
+viewer sees the chips, disabled, and no way to add one.
+
+Selecting one such object raises the reaction bar beside it on the apparatus
+layer: eight glyphs, each a pressed toggle, placed clear of the connect points
+(`ChromeSurface` `clearance`, in screen pixels) and off the record panel. The
+keyboard reaches the same eight through the context menu's React submenu, which
+also reacts to every note in a selection at once.
+
+The palette is fixed and stored by KEY (`plus-one`, `idea`…), never as the
+emoji, so a key a later version adds reads as "?" here rather than breaking the
+board. A chip is a button in the board's own chrome: a double-click on it is
+two presses, never an edit of the note beneath.
+
 ### Connector Bends
 
 An orthogonal or curved connector carries a third draggable point at the middle

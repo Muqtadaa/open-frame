@@ -209,6 +209,7 @@ export const connectorType = defineObjectType<typeof CONNECTOR_TYPE, ConnectorDa
     canHaveChildren: false,
     selectsAsUnit: false,
     connectable: false,
+    markable: false,
     /*
      * The line's, then the LABEL's colour and plate. Its bold, italic,
      * underline and size are the label's own spans now (ADR 0014), set in the

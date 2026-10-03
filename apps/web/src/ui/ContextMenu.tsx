@@ -11,11 +11,14 @@ import {
 import { AnchoredSurface } from '../controls/AnchoredSurface.js'
 import { DisclosureIcon } from '../controls/icons.js'
 import { useViewportSize } from '../controls/use-viewport-size.js'
+import { useCanEdit } from '../hooks/use-can-edit.js'
 import { useCommands } from '../hooks/use-commands.js'
+import { useMe } from '../hooks/use-me.js'
 import { useOpenFrame } from '../runtime/context.js'
 import { useInteractionStore, type ContextMenuAt } from '../interaction/interaction-store.js'
 import { ariaKeys, formatKeys } from '../interaction/keymap.js'
 import type { Rect } from '../scene/anchoring.js'
+import { REACTION_GLYPHS } from '../scene/reaction-glyphs.js'
 import { fitToDocument } from '../scene/zoom.js'
 
 interface Item {
@@ -61,6 +64,8 @@ export function ContextMenu() {
   const selectionSize = useInteractionStore((state) => state.selection.size)
   const clipboardSize = useInteractionStore((state) => state.clipboard.length)
   const commands = useCommands()
+  const me = useMe()
+  const canEdit = useCanEdit()
   const { runtime } = useOpenFrame()
   /*
    * Followed while the menu is open, since another person can hide or show
@@ -212,6 +217,16 @@ export function ContextMenu() {
       [],
     )
 
+  // Every selected object, asked of the registry: a reaction offered to a
+  // selection that includes a frame would be a partial action (rule 21).
+  const reactable =
+    canEdit &&
+    selected.length > 0 &&
+    selected.every((id) => {
+      const type = runtime.store.getObject(id)?.type
+      return type !== undefined && runtime.registry.get(type)?.capabilities.markable === true
+    })
+
   const promotions = selected
     .map((id) => {
       const type = runtime.store.getObject(id)?.type
@@ -314,6 +329,23 @@ export function ContextMenu() {
                 label: capitalised(nounOf(target)),
                 run: () => {
                   commands.promoteSelection(target)
+                },
+              })),
+            },
+          ]),
+      /*
+       * Reacting from the keyboard: the bar above a note is reached by
+       * pointer, and this is the same eight, toggling the same way.
+       */
+      ...(!reactable
+        ? []
+        : [
+            {
+              label: 'React',
+              submenu: REACTION_GLYPHS.map((glyph) => ({
+                label: `${glyph.emoji} ${glyph.label}`,
+                run: () => {
+                  commands.toggleReaction(selected, glyph.key, me)
                 },
               })),
             },
