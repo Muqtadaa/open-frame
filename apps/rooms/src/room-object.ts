@@ -22,7 +22,7 @@ import {
   type AccessKeys,
 } from './access.js'
 import { isPassword, newVerifier, tokenAdmits, type PasswordVerifier } from './password.js'
-import { assetDecision, assetKey } from './assets.js'
+import { assetDecision, assetKey, purgeBoardAssets } from './assets.js'
 import type { Env } from './env.js'
 
 /**
@@ -70,6 +70,17 @@ const KEYS = 'keys'
  * It survives `deleteAll()` by being written after it.
  */
 const DESTROYED = 'destroyed'
+/**
+ * Set when the owner has asked for the board to be deleted and its images are
+ * still being removed from R2. Cleared with everything else once they are.
+ *
+ * From this moment the board is going: no new socket, no new upload, no read.
+ * An upload let in now could land AFTER the bucket was swept and outlive the
+ * board. But the keys are kept until the sweep has finished, because a sweep
+ * that fails part-way has to be retried by the owner — and a room that has
+ * already forgotten who its owner is cannot tell who is asking.
+ */
+const DELETING = 'deleting'
 /**
  * The board's password verifier, or absent for a board without one.
  *
@@ -129,7 +140,7 @@ export class BoardRoomObject extends DurableObject<Env> {
      * this file — which is the legacy rule, and the last thing that should
      * apply to a board somebody deleted.
      */
-    if (destroyed) {
+    if (destroyed || (await this.ctx.storage.get<boolean>(DELETING)) === true) {
       return new Response('This board no longer exists', { status: 410, headers: CORS })
     }
 
@@ -324,6 +335,19 @@ export class BoardRoomObject extends DurableObject<Env> {
    * no key at all rather than as an error — the answer for a bad key and a
    * missing one is already the same, and adding a third shape of failure only
    * tells somebody probing which part they got wrong.
+   *
+   * THE ORDER is what makes a failure recoverable rather than a lie:
+   *
+   * 1. Mark the board as going, so nothing new reaches it — above all no
+   *    upload that could land in the bucket after it was swept.
+   * 2. Put everyone out.
+   * 3. Sweep its images out of R2.
+   * 4. Only then forget the document and the keys.
+   *
+   * If the sweep fails the answer is 503 and the keys are still here, so the
+   * owner's retry is authorized exactly as the first attempt was and finishes
+   * the job. Forgetting the keys first would leave bytes nobody could ever be
+   * trusted to delete.
    */
   async #destroy(request: Request, destroyed: boolean): Promise<Response> {
     const keys = await this.ctx.storage.get<AccessKeys>(KEYS)
@@ -335,6 +359,8 @@ export class BoardRoomObject extends DurableObject<Env> {
       )
     }
 
+    await this.ctx.storage.put(DELETING, true)
+
     /*
      * Everyone is put out before the room is emptied, not after. A socket left
      * attached would go on talking to a `BoardRoom` whose document is about to
@@ -344,6 +370,14 @@ export class BoardRoomObject extends DurableObject<Env> {
      */
     for (const socket of this.ctx.getWebSockets()) {
       socket.close(CLOSE_BOARD_DELETED, 'This board was deleted')
+    }
+
+    const purged = await purgeBoardAssets(this.env.ASSETS, this.#boardId(new URL(request.url)))
+    if (!purged.ok) {
+      return Response.json(
+        { error: 'The board’s images could not all be deleted. Try again.', retriable: true },
+        { status: 503, headers: CORS },
+      )
     }
 
     await this.ctx.storage.deleteAll()

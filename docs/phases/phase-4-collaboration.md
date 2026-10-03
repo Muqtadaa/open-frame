@@ -434,6 +434,13 @@ Each step is shippable, and the order is by how broken the thing is.
    `needsOwner` and adopts one first, through the same `/owner` path setting a
    password uses.
 
+   _Changed 2026-10-03:_ destroying a room also deletes its images from R2
+   (`purgeBoardAssets`, `apps/rooms/src/assets.ts`). Before, the bytes were
+   left in the bucket: unreachable, but not gone. The room marks itself as
+   going (no new sockets, uploads or reads), sweeps the `boardId/` prefix, and
+   only then forgets the document and the keys. A sweep that fails answers 503
+   `retriable` and keeps the keys, so the owner's retry finishes it.
+
 6. **Pins and recency.** DONE. `board_prefs` holds two facts per person per
    board. Every guard was probed against the real database in a rolled-back
    transaction: a stranger sees nothing and cannot pin, delete or leave; a

@@ -147,6 +147,17 @@ describe('destroying a room', () => {
    * asked on its edit link. Read as `legacy`, the person would be told the
    * board can never be deleted when all it needs is an owner key.
    */
+  /**
+   * The room could not sweep the board's images, so it kept the board — and
+   * its keys — rather than claim a deletion it had not finished. Not
+   * `refused`: asking again is exactly what will work.
+   */
+  it('says when a delete did not finish and can be asked again', async () => {
+    expect(await answering(503, { retriable: true }).client.destroy(BOARD, 'owner')).toBe(
+      'unfinished',
+    )
+  })
+
   it('tells a board that needs an owner key from one that can never be deleted', async () => {
     expect(await answering(409, { needsOwner: true }).client.destroy(BOARD, 'edit')).toBe(
       'needs-owner',
