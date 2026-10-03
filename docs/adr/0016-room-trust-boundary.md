@@ -119,7 +119,7 @@ change:
   every case the room is unchanged and nothing is relayed. The Durable Object
   closes that socket alone, with 1009 or 1007.
 - **Check `meta` patches on merge.** _Done 2026-10-03._ A remote `meta` patch
-  is applied only if it is a title `SetBoardTitle` would accept: text, not
+  is applied only if it is a title `SetBoardTitle` would accept: trimmed text, not
   blank, at most 200 characters. A change to `createdAt`, a cleared title and
   any unknown key are dropped (`isAcceptableRemoteMeta`, `remote-meta.ts`).
 - **Awareness.** Viewers' awareness is relayed, and a peer can publish state

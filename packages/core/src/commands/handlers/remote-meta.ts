@@ -22,5 +22,12 @@ export function isAcceptableRemoteMeta(patch: Extract<Patch, { op: 'meta' }>): b
   const [key] = patch.path
   if (key !== 'title') return false
   const title = patch.value
-  return typeof title === 'string' && title.trim().length > 0 && title.length <= MAX_TITLE
+  // Equal to its own trim, because `SetBoardTitle` trims before it writes:
+  // a title with a line break at either end is one no rename produced.
+  return (
+    typeof title === 'string' &&
+    title.length > 0 &&
+    title === title.trim() &&
+    title.length <= MAX_TITLE
+  )
 }

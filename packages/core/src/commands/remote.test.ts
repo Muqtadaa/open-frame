@@ -423,6 +423,10 @@ describe('ApplyRemotePatches, against a peer that sends nonsense', () => {
       const h = createTestHarness()
       const before = title(h)
       remote(h, [{ op: 'meta', path: ['title'], value: '   ' }])
+      // `SetBoardTitle` trims, so space or a line break at either end is a
+      // title that only a direct write to the shared map could produce.
+      remote(h, [{ op: 'meta', path: ['title'], value: '\nPricing research\n' }])
+      remote(h, [{ op: 'meta', path: ['title'], value: ' Pricing research' }])
       remote(h, [{ op: 'meta', path: ['title'], value: 'x'.repeat(201) }])
       // Clearing it: a delete in the shared map arrives as `undefined`.
       remote(h, [{ op: 'meta', path: ['title'], value: undefined }])
