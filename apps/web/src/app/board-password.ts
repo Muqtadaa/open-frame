@@ -91,7 +91,7 @@ export async function recoverOwnerKey(
  * only after there is somewhere to put the answer, and a failure to record it
  * is reported rather than swallowed.
  */
-async function adoptOwnerKey(
+export async function adoptOwnerKey(
   deps: PasswordDeps,
   boardId: BoardId,
   editorKey: string,

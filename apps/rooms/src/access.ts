@@ -120,17 +120,36 @@ export function claimDecision(keys: AccessKeys | undefined, hasContent: boolean)
 }
 
 export type DestroyDecision =
-  { readonly ok: true } | { readonly ok: false; readonly status: number; readonly error: string }
+  | { readonly ok: true }
+  | {
+      readonly ok: false
+      readonly status: number
+      readonly error: string
+      /**
+       * The board predates owner keys and the caller holds its edit link: it
+       * must adopt an owner key (`/owner`) and ask again with that. Told only
+       * to somebody who already holds the edit link, so it reveals nothing.
+       */
+      readonly needsOwner?: true
+    }
 
 /**
  * Whether this board's room may be destroyed now.
  *
- * The first destructive thing the room can be asked to do, so the rules are
+ * The one irreversible thing the room can be asked to do, so the rules are
  * stated rather than implied:
  *
- * - **The editor key, and only it.** A viewer was given the weaker link
- *   precisely so they could not change the board; destroying it is the largest
- *   change there is.
+ * - **The owner key, and only it.** The edit link is a bearer credential
+ *   handed to everybody invited to change the board, and it travels wherever
+ *   they paste it. Changing what is on a board is not the authority to end it
+ *   for everyone — the distinction the password already draws. The viewer
+ *   link, a wrong key and no key are all refused with the same words as the
+ *   edit link, so a refusal says nothing about which link was presented.
+ * - **A board claimed before owner keys existed adopts one first.** It has no
+ *   owner key for anyone to present. Holding its edit link earns one answer
+ *   more than a stranger gets — `needsOwner` — and the client then adopts a
+ *   key through `/owner`, which mints once and from then on hands it back only
+ *   to its holder. The edit link is never quietly treated as the owner's.
  * - **A legacy room refuses.** An unclaimed room has no keys, and `roleForKey`
  *   deliberately lets anyone in — which is right for reading a board shared
  *   before roles existed and catastrophic for deleting one. There is no key to
@@ -156,9 +175,17 @@ export function destroyDecision(
       error: 'This board was shared before links had roles, and cannot be deleted from here',
     }
   }
-  // The same answer for a wrong key, a missing one, and the view link. Saying
+  if (keys.owner === undefined && key !== null && key === keys.editor) {
+    return {
+      ok: false,
+      status: 409,
+      error: 'Only the board’s owner can delete it',
+      needsOwner: true,
+    }
+  }
+  // The same answer for a wrong key, a missing one, and both links. Saying
   // "that is the viewer key" tells somebody which half of the guess to keep.
-  if (key === null || key !== keys.editor) {
+  if (key === null || !isOwnerKey(keys, key)) {
     return { ok: false, status: 403, error: 'That link does not open this board' }
   }
   return { ok: true }
@@ -188,9 +215,9 @@ export type PasswordDecision =
  *
  * A board claimed BEFORE owner keys existed has none, and for those the edit
  * key stands in. That is not a loophole left open: such a board has no owner
- * key for anyone to hold, the alternative is that its password can never be
- * set by anybody, and the edit key can already destroy the board outright. It
- * closes the moment the board adopts one, which is once and permanent.
+ * key for anyone to hold, and the alternative is that its password can never
+ * be set by anybody. It closes the moment the board adopts one, which is once
+ * and permanent.
  *
  * A LEGACY UNCLAIMED room still refuses. There are no keys at all, so there is
  * nobody to trust — the same reasoning `destroyDecision` gives.

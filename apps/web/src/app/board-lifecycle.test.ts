@@ -5,6 +5,7 @@ import { forgetCrdt } from '../adapters/indexeddb/crdt-store.js'
 import { MemoryBoardRepository } from '../adapters/memory/memory-board-repository.js'
 import * as lifecycle from './board-lifecycle.js'
 import { createRuntime } from './composition-root.js'
+import { rememberOwnerKey } from './board-password.js'
 import { fakeRemoteBoards, fakeRooms } from './services.fake.js'
 
 /**
@@ -26,6 +27,7 @@ let remote = fakeRemoteBoards()
 const roomRename = vi.fn<lifecycle.LifecycleDeps['renameInRoom']>()
 
 beforeEach(() => {
+  localStorage.clear()
   rooms = fakeRooms()
   remote = fakeRemoteBoards()
   roomRename.mockReset()
@@ -56,6 +58,7 @@ const renameBoard = (
 const SHARED = asBoardId('brd_abcdefgh12345678')
 const LOCAL = asBoardId('board_alone')
 const KEY = 'e'.repeat(32)
+const OWNER = 'd'.repeat(32)
 
 async function boardOnDisk(id = SHARED) {
   const repository = new MemoryBoardRepository()
@@ -77,12 +80,13 @@ describe('deleting a board', () => {
       boardId: SHARED,
       shared: true,
       accessKey: KEY,
+      ownerKey: OWNER,
     })
 
     expect(outcome).toEqual({ ok: true })
-    // With the key the row holds. That it travels in the request BODY rather
-    // than the URL is the room client's to keep (room-client.test.ts).
-    expect(rooms.destroy).toHaveBeenCalledWith(SHARED, KEY)
+    // With the OWNER key, never the edit link the row also holds. That it
+    // travels in the request BODY is the room client's to keep.
+    expect(rooms.destroy).toHaveBeenCalledWith(SHARED, OWNER)
     expect(remote.remove).toHaveBeenCalledWith(SHARED)
     expect(await repository.getBoard(SHARED)).toMatchObject({ status: 'not-found' })
   })
@@ -100,6 +104,7 @@ describe('deleting a board', () => {
       boardId: SHARED,
       shared: true,
       accessKey: KEY,
+      ownerKey: OWNER,
     })
 
     expect(outcome.ok).toBe(false)
@@ -116,6 +121,7 @@ describe('deleting a board', () => {
       boardId: SHARED,
       shared: true,
       accessKey: KEY,
+      ownerKey: OWNER,
     })
 
     expect(outcome).toMatchObject({ ok: false })
@@ -128,7 +134,12 @@ describe('deleting a board', () => {
     const repository = await boardOnDisk()
 
     await expect(
-      deleteBoardEverywhere(repository, { boardId: SHARED, shared: true, accessKey: KEY }),
+      deleteBoardEverywhere(repository, {
+        boardId: SHARED,
+        shared: true,
+        accessKey: KEY,
+        ownerKey: OWNER,
+      }),
     ).resolves.toEqual({ ok: true })
     expect(remote.remove).toHaveBeenCalled()
   })
@@ -147,6 +158,76 @@ describe('deleting a board', () => {
     expect(rooms.destroy).not.toHaveBeenCalled()
     expect(remote.remove).not.toHaveBeenCalled()
     expect(await repository.getBoard(LOCAL)).toMatchObject({ status: 'not-found' })
+  })
+})
+
+/**
+ * Destroying a room takes the OWNER key. The edit link is handed to everybody
+ * invited to change the board, and is not the authority to end it.
+ */
+describe('the key a delete is made with', () => {
+  it('is the owner key this browser already holds when the row has none', async () => {
+    rememberOwnerKey(SHARED, OWNER)
+    const repository = await boardOnDisk()
+
+    await deleteBoardEverywhere(repository, { boardId: SHARED, shared: true, accessKey: KEY })
+
+    expect(rooms.destroy).toHaveBeenCalledWith(SHARED, OWNER)
+    expect(rooms.adoptOwnerKey).not.toHaveBeenCalled()
+  })
+
+  /**
+   * A board claimed before owner keys existed. It adopts one on its edit link
+   * — once, and recorded before it is used, because the room never mints a
+   * second and a key nobody wrote down is a board nobody can delete.
+   */
+  it('is adopted, and recorded, for a board that predates owner keys', async () => {
+    const repository = await boardOnDisk()
+
+    const outcome = await deleteBoardEverywhere(repository, {
+      boardId: SHARED,
+      shared: true,
+      accessKey: KEY,
+      ownerKey: null,
+    })
+
+    expect(outcome).toEqual({ ok: true })
+    expect(rooms.adoptOwnerKey).toHaveBeenCalledWith(SHARED, KEY)
+    expect(remote.recordOwnerKey).toHaveBeenCalledWith(SHARED, 'o'.repeat(32))
+    expect(rooms.destroy).toHaveBeenCalledWith(SHARED, 'o'.repeat(32))
+  })
+
+  it('is never the edit link, even when no owner key can be had', async () => {
+    rooms.adoptOwnerKey.mockResolvedValue(null)
+    const repository = await boardOnDisk()
+
+    const outcome = await deleteBoardEverywhere(repository, {
+      boardId: SHARED,
+      shared: true,
+      accessKey: KEY,
+      ownerKey: null,
+    })
+
+    expect(outcome).toMatchObject({ ok: false })
+    expect(rooms.destroy).not.toHaveBeenCalled()
+    expect(remote.remove).not.toHaveBeenCalled()
+    expect((await repository.getBoard(SHARED)).status).toBe('ok')
+  })
+
+  it('stops, and keeps everything, when the room still wants an owner', async () => {
+    rooms.destroy.mockResolvedValue('needs-owner')
+    const repository = await boardOnDisk()
+
+    const outcome = await deleteBoardEverywhere(repository, {
+      boardId: SHARED,
+      shared: true,
+      accessKey: KEY,
+      ownerKey: OWNER,
+    })
+
+    expect(outcome).toMatchObject({ ok: false })
+    expect(remote.remove).not.toHaveBeenCalled()
+    expect((await repository.getBoard(SHARED)).status).toBe('ok')
   })
 })
 

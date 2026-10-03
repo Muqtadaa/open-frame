@@ -427,6 +427,13 @@ Each step is shippable, and the order is by how broken the thing is.
    to sharing: furthest thing first, so a failure leaves the board listed and
    openable rather than orphaned.
 
+   _Changed 2026-10-03:_ destroy now takes the **owner** key, not the editor
+   key. The edit link is a bearer credential handed to everybody invited to
+   change the board, and was enough to end it for everyone with one request
+   straight to the room. A board claimed before owner keys existed is told
+   `needsOwner` and adopts one first, through the same `/owner` path setting a
+   password uses.
+
 6. **Pins and recency.** DONE. `board_prefs` holds two facts per person per
    board. Every guard was probed against the real database in a rolled-back
    transaction: a stranger sees nothing and cannot pin, delete or leave; a

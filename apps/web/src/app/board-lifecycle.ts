@@ -1,6 +1,7 @@
 import type { BoardId, BoardRepository } from '@openframe/core'
 
 import type { Outcome, RemoteBoardService, RoomService } from '../runtime/services.js'
+import { adoptOwnerKey, heldOwnerKey } from './board-password.js'
 import { forgetLocalPrefs } from './board-prefs.js'
 import { COLLAB_ENABLED } from './collab-config.js'
 
@@ -33,6 +34,32 @@ export interface LifecycleDeps {
 
 export type DeleteOutcome = Outcome
 
+/** What deleting a shared board needs to know about it. */
+interface Deletable {
+  readonly boardId: BoardId
+  readonly shared: boolean
+  /** The edit link: only ever used to ADOPT an owner key, never to destroy. */
+  readonly accessKey: string | null
+  readonly ownerKey?: string | null
+}
+
+const NOT_OWNER = 'Only this board’s owner can delete it.'
+
+/**
+ * The key a room is destroyed with: the OWNER's, and never the edit link.
+ *
+ * The edit link is handed to everybody invited to change the board, and the
+ * room refuses it. A board claimed before owner keys existed has none, so it
+ * adopts one here on its edit link — the same path setting a password takes —
+ * and the key is recorded before it is used, because the room mints only once.
+ */
+async function ownerKeyFor(deps: LifecycleDeps, board: Deletable): Promise<string | null> {
+  const known = board.ownerKey ?? heldOwnerKey(board.boardId)
+  if (known !== null) return known
+  if (board.accessKey === null) return null
+  return adoptOwnerKey(deps, board.boardId, board.accessKey)
+}
+
 /**
  * Destroys the room, or says why it could not.
  *
@@ -40,14 +67,13 @@ export type DeleteOutcome = Outcome
  * was never shared has no room, and a build with no room server cannot have
  * given it one.
  */
-async function destroyRoom(
-  rooms: RoomService,
-  boardId: BoardId,
-  editorKey: string | null,
-): Promise<string | null> {
-  if (!COLLAB_ENABLED || editorKey === null) return null
+async function destroyRoom(deps: LifecycleDeps, board: Deletable): Promise<string | null> {
+  if (!COLLAB_ENABLED || !board.shared || board.accessKey === null) return null
 
-  switch (await rooms.destroy(boardId, editorKey)) {
+  const ownerKey = await ownerKeyFor(deps, board)
+  if (ownerKey === null) return NOT_OWNER
+
+  switch (await deps.rooms.destroy(board.boardId, ownerKey)) {
     case 'unreachable':
       return 'OpenFrame could not reach the server, so nothing was deleted.'
     // Already gone. Deleting a board twice is not an error, and refusing here
@@ -63,26 +89,27 @@ async function destroyRoom(
      */
     case 'legacy':
       return 'This board was shared before view-only links existed, so it cannot be deleted here.'
+    // Only reachable without an owner key, which `ownerKeyFor` never allows.
+    // Answered rather than retried: a loop against the destructive endpoint
+    // is the last thing to discover in production.
+    case 'needs-owner':
+      return NOT_OWNER
     case 'refused':
       return 'This board could not be deleted.'
   }
 }
 
 /**
- * Deletes a board everywhere it exists. Only its owner should reach this.
+ * Deletes a board everywhere it exists. Only its owner can.
  *
- * `role` is checked by the database too — this is an affordance, not the
- * control. What matters here is the ORDER, which the database cannot enforce.
+ * The room enforces that, by refusing anything but the owner key, and the
+ * database does too for the row — this is an affordance, not the control. What matters here is the ORDER, which the database cannot enforce.
  */
 export async function deleteBoardEverywhere(
   deps: LifecycleDeps,
-  board: { readonly boardId: BoardId; readonly shared: boolean; readonly accessKey: string | null },
+  board: Deletable,
 ): Promise<DeleteOutcome> {
-  const roomFailure = await destroyRoom(
-    deps.rooms,
-    board.boardId,
-    board.shared ? board.accessKey : null,
-  )
+  const roomFailure = await destroyRoom(deps, board)
   if (roomFailure !== null) return { ok: false, reason: roomFailure }
 
   if (board.shared && !(await deps.remoteBoards.remove(board.boardId))) {

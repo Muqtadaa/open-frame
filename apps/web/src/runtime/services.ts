@@ -266,10 +266,16 @@ export interface RoomService {
     | { ok: false; reason: 'unreachable' }
     | { ok: false; reason: 'refused'; message: string | null }
   >
+  /**
+   * Destroys the room. Takes the OWNER key: the edit link is handed to
+   * everybody invited to change the board, and is not the authority to end it.
+   * `needs-owner` is a board claimed before owner keys existed, asked without
+   * one — it must adopt a key first.
+   */
   readonly destroy: (
     boardId: BoardId,
-    editorKey: string,
-  ) => Promise<'destroyed' | 'gone' | 'legacy' | 'refused' | 'unreachable'>
+    ownerKey: string,
+  ) => Promise<'destroyed' | 'gone' | 'legacy' | 'needs-owner' | 'refused' | 'unreachable'>
 }
 
 // ── Accounts and what they hold ──────────────────────────────────────────
@@ -357,6 +363,8 @@ export interface BoardService {
     readonly boardId: BoardId
     readonly shared: boolean
     readonly accessKey: string | null
+    /** What the room checks before destroying. Adopted when a board has none. */
+    readonly ownerKey?: string | null
   }) => Promise<Outcome>
   readonly leave: (boardId: BoardId) => Promise<Outcome>
   readonly forgetDeleted: (boardId: BoardId) => Promise<void>
