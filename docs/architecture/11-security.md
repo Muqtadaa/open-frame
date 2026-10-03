@@ -201,8 +201,10 @@ consequences.
 - **Tool input:** every tool's input is a `z.strictObject`, enforced by
   `tools/definition.ts:20-30`. Unknown fields are refused, not stripped.
 - **Writes and revert:** writes are ordinary commands through the same
-  dispatcher. Each agent change is recorded and revertible by people and by
-  agents (`list_changes`, `revert_change`).
+  dispatcher. Each agent edit to the board is recorded and revertible by people
+  and by agents (`list_changes`, `revert_change`). `add_comment` writes a
+  comment through the account instead, outside the board document and its
+  change log.
 - **Remote MCP (Phase 5a stage 5)** would replace "a process the user started"
   with a network service. It reopens this section and ADR 0016.
 
@@ -259,7 +261,7 @@ with it and said why.
 | ----------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------- | -------------------------------------------------------------------------------------------------------------------- |
 | Room relays and persists any decodable editor update; invalid objects are dropped by clients but stay in storage and every browser's CRDT cache | `room.ts:137-147`, `remote-object.ts` | **Accepted.** [ADR 0016](../adr/0016-room-trust-boundary.md)                                                         |
 | Viewers' awareness is relayed, and any peer may publish state for any client id                                                                 | `protocol.ts:225-230`, `room.ts`      | **Accepted for now.** It is ephemeral and never persisted; revisit with ADR 0016's triggers                          |
-| A board's whole state must fit in one message to publish or resync (`seedDoc`, sync step 2)                                                     | `document-map.ts`, `provider.ts`      | **Revisit.** Chunk the handshake if a board nears 32 MiB; 10,000 objects is a few MB                                 |
+| A board's whole state must fit in one message to publish it, and what changed offline in one to resync (`seedDoc`, sync step 2)                 | `document-map.ts`, `provider.ts`      | **Revisit.** Chunk the handshake if a board nears 32 MiB; 10,000 objects is a few MB                                 |
 | Unclaimed (legacy) rooms admit anyone as an editor                                                                                              | `access.ts:61`                        | **Accepted.** Old links must keep working; such rooms refuse destroy and password                                    |
 | A pre-owner-key board's owner key goes to whoever adopts first                                                                                  | `#adoptOwner`                         | **Accepted.** The owner's client adopts at first need                                                                |
 | `claim` is unauthenticated (first come, empty rooms only)                                                                                       | `claimDecision` `access.ts:108-120`   | **Accepted.** Board ids are minted client-side and unguessable; a claimed room cannot be re-claimed                  |

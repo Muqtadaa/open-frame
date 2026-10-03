@@ -133,6 +133,10 @@ can revert an entry; the revert goes through `CommandDispatcher.revert`, which
 checks what it would put back the way it checks a merge, because any editor can
 write to that map. The MCP tools are `list_changes` and `revert_change`.
 
+Only edits to the board are logged. A comment an agent leaves (`add_comment`)
+is written through its account to Supabase, like anyone's, and is neither in
+the document nor in this log.
+
 A person's own changes are not logged, because their undo already covers them.
 
 ---
@@ -182,10 +186,14 @@ client (the lowest `ObjectId` detaches to the root).
 
 ### A board must fit in one message
 
-Publishing and catching up after time offline each send the whole state in one
-frame, and the room accepts frames up to the platform's 32 MiB. A board whose
-state approaches that cannot be published until the handshake is chunked. A
-ten-thousand-object board is a few megabytes.
+Publishing a board sends its whole state in one frame, and the room accepts
+frames up to the platform's 32 MiB. A board whose state approaches that cannot
+be published until the handshake is chunked. A ten-thousand-object board is a
+few megabytes.
+
+Reconnecting is cheaper. Each side sends only a state vector, and the answer
+holds only what the other lacks, so what has to fit is what changed while
+offline, not the board.
 
 ### No version gate between clients
 

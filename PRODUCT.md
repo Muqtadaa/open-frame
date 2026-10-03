@@ -78,8 +78,9 @@ content; inline rich text; tables and code blocks.
 **The shared half:** a board is shared by link and edited live by several
 people at once, with presence, comments and mentions. Creating and sharing a
 board takes an account; boards sit in workspaces. An agent can read and edit a
-board over MCP through the same command layer, and every change it makes is
-recorded and can be reverted.
+board over MCP through the same command layer, and every edit it makes to the
+board is recorded and can be reverted. Comments it leaves sit beside the board,
+as anyone's do, and are not part of that record.
 
 **The structured half:** eight semantic types — evidence, insight, hypothesis,
 experiment, decision, task, journey stage, requirement — each editable through a

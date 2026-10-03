@@ -33,7 +33,8 @@ filtered, linked and reasoned about.
 - **Collaboration.** Boards shared by link, edited live by several people in one
   room, with presence, comments and mentions, accounts and workspaces.
 - **Agents.** An MCP server lets an agent read and edit a board through the same
-  command layer people use, with every change it makes recorded and revertible.
+  command layer people use. Every edit it makes to the board is recorded and
+  can be reverted; a comment it leaves is a comment, like anyone's.
 
 [ADR 0002](docs/adr/0002-canvas-engine-custom-dom-svg.md) asked whether a custom
 DOM/SVG renderer could carry this. It can: DOM node count stays flat from 100 to

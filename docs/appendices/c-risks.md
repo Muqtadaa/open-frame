@@ -213,9 +213,11 @@ first time a board is found holding content its clients drop.
 
 **Impact: Medium.** The room reads at most 32 MiB per message
 (`MAX_MESSAGE_BYTES`, `packages/collab/src/room.ts`), the platform's own limit.
-Publishing a local board and resyncing after offline work each send the whole
-state in one frame, so a board past that size could not be shared, and a client
-coming back from offline would be refused on every reconnect.
+Publishing a local board sends its whole state in one frame (`seedDoc`), so a
+board past that size could not be shared. Reconnecting is cheaper: each side
+sends only a state vector, and the answer holds only what the other lacks, so
+what has to fit is what changed while offline, not the whole board. A client
+whose offline changes exceed the limit would be refused on every reconnect.
 
 **Mitigation.** None yet; it is a **Revisit** row in the security model's known
 gaps ([11 · Security](../architecture/11-security.md)). 10,000 objects is a few
