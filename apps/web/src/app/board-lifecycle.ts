@@ -94,6 +94,14 @@ async function destroyRoom(deps: LifecycleDeps, board: Deletable): Promise<strin
     // is the last thing to discover in production.
     case 'needs-owner':
       return NOT_OWNER
+    /*
+     * The room could not delete every image. It is already closed to everyone,
+     * and some images may be gone, so this is not "nothing happened" — but it
+     * kept its keys, and the row stays here, so the same request made again
+     * carries on where this one stopped.
+     */
+    case 'unfinished':
+      return 'The board could not be fully deleted. Try again to finish deleting it.'
     case 'refused':
       return 'This board could not be deleted.'
   }

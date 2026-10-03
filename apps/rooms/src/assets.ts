@@ -124,3 +124,67 @@ export function assetDecision(request: AssetRequest): AssetDecision {
 export function assetKey(boardId: string, assetId: string): string {
   return `${boardId}/${assetId}`
 }
+
+/**
+ * The two things a board's cleanup needs from R2, and nothing else.
+ *
+ * A structural subset of `R2Bucket`, so the real binding is passed straight
+ * in and the loop below runs in Node against a bucket in memory.
+ */
+export interface AssetBucket {
+  readonly list: (options: {
+    readonly prefix: string
+    readonly cursor?: string
+    readonly limit?: number
+  }) => Promise<
+    | {
+        readonly objects: readonly { readonly key: string }[]
+        readonly truncated: true
+        readonly cursor: string
+      }
+    | { readonly objects: readonly { readonly key: string }[]; readonly truncated: false }
+  >
+  readonly delete: (keys: string[]) => Promise<void>
+}
+
+export type PurgeOutcome = { readonly ok: true; readonly deleted: number } | { readonly ok: false }
+
+/**
+ * Deletes every image a board has, a page at a time.
+ *
+ * Answers `ok: false` for ANY failure rather than throwing or carrying on: the
+ * caller is about to throw away the board's keys, and a cleanup that half
+ * worked must leave them in place so the owner can ask again. A retry starts
+ * over from the prefix, so whatever a failed run did delete is simply not
+ * found the second time.
+ *
+ * The prefix ends in a slash on purpose — `brd_a` must not match `brd_ab`.
+ * 1000 is R2's own ceiling for one page of a listing and one bulk delete.
+ */
+export async function purgeBoardAssets(
+  bucket: AssetBucket,
+  boardId: string,
+  pageSize = 1000,
+): Promise<PurgeOutcome> {
+  const prefix = assetKey(boardId, '')
+  let deleted = 0
+  let cursor: string | undefined
+  try {
+    for (;;) {
+      const page = await bucket.list({
+        prefix,
+        limit: pageSize,
+        ...(cursor === undefined ? {} : { cursor }),
+      })
+      const keys = page.objects.map((object) => object.key)
+      if (keys.length > 0) {
+        await bucket.delete(keys)
+        deleted += keys.length
+      }
+      if (!page.truncated) return { ok: true, deleted }
+      cursor = page.cursor
+    }
+  } catch {
+    return { ok: false }
+  }
+}

@@ -128,6 +128,27 @@ describe('deleting a board', () => {
     expect((await repository.getBoard(SHARED)).status).toBe('ok')
   })
 
+  /**
+   * The room kept the board because its images could not all be deleted. The
+   * row and the local copy stay too, so the person can see the board and try
+   * again — which the room will authorize, because it kept the keys as well.
+   */
+  it('keeps the row and says to try again when the room could not finish', async () => {
+    rooms.destroy.mockResolvedValue('unfinished')
+    const repository = await boardOnDisk()
+
+    const outcome = await deleteBoardEverywhere(repository, {
+      boardId: SHARED,
+      shared: true,
+      accessKey: KEY,
+      ownerKey: OWNER,
+    })
+
+    expect(outcome).toMatchObject({ ok: false, reason: expect.stringMatching(/try again/i) })
+    expect(remote.remove).not.toHaveBeenCalled()
+    expect((await repository.getBoard(SHARED)).status).toBe('ok')
+  })
+
   /** Already destroyed is not a failure: a second attempt must finish the job. */
   it('carries on when the room is already gone', async () => {
     rooms.destroy.mockResolvedValue('gone')

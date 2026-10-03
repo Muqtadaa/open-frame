@@ -270,12 +270,16 @@ export interface RoomService {
    * Destroys the room. Takes the OWNER key: the edit link is handed to
    * everybody invited to change the board, and is not the authority to end it.
    * `needs-owner` is a board claimed before owner keys existed, asked without
-   * one — it must adopt a key first.
+   * one — it must adopt a key first. `unfinished` is a room that could not
+   * delete all of the board's images and so kept the board, keys and all, for
+   * the same request to be made again.
    */
   readonly destroy: (
     boardId: BoardId,
     ownerKey: string,
-  ) => Promise<'destroyed' | 'gone' | 'legacy' | 'needs-owner' | 'refused' | 'unreachable'>
+  ) => Promise<
+    'destroyed' | 'gone' | 'legacy' | 'needs-owner' | 'unfinished' | 'refused' | 'unreachable'
+  >
 }
 
 // ── Accounts and what they hold ──────────────────────────────────────────
