@@ -197,6 +197,25 @@ describe('the key a delete is made with', () => {
     expect(rooms.destroy).toHaveBeenCalledWith(SHARED, 'o'.repeat(32))
   })
 
+  /**
+   * The room mints an owner key once. If the database cannot record it, the
+   * delete stops — but the key stays in this browser, so asking again uses it
+   * rather than asking the room for one it will no longer give.
+   */
+  it('keeps an adopted key the database could not record, and the retry uses it', async () => {
+    remote.recordOwnerKey.mockResolvedValue(false)
+    const repository = await boardOnDisk()
+    const board = { boardId: SHARED, shared: true, accessKey: KEY, ownerKey: null }
+
+    expect(await deleteBoardEverywhere(repository, board)).toMatchObject({ ok: false })
+    expect(rooms.destroy).not.toHaveBeenCalled()
+
+    rooms.adoptOwnerKey.mockClear()
+    expect(await deleteBoardEverywhere(repository, board)).toEqual({ ok: true })
+    expect(rooms.adoptOwnerKey).not.toHaveBeenCalled()
+    expect(rooms.destroy).toHaveBeenCalledWith(SHARED, 'o'.repeat(32))
+  })
+
   it('is never the edit link, even when no owner key can be had', async () => {
     rooms.adoptOwnerKey.mockResolvedValue(null)
     const repository = await boardOnDisk()
