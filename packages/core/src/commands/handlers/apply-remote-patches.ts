@@ -1,6 +1,7 @@
 import type { BoardDocument } from '../../domain/document.js'
 import { setIn, type Patch } from '../../domain/patch.js'
 import { CommandError } from '../errors.js'
+import { isAcceptableRemoteMeta } from './remote-meta.js'
 import { readRemoteObject } from './remote-object.js'
 import type { ObjectTypeRegistry } from '../../domain/registry.js'
 import type { Command, CommandContext } from '../types.js'
@@ -127,10 +128,12 @@ export function acceptablePatches(
         break
       }
       /*
-       * The document's own fields, which no object can be missing. There is
-       * nothing to filter: a rename applies whatever happened to the objects.
+       * The document's own fields, which no object can be missing, so a rename
+       * applies whatever happened to the objects. What it carries is still a
+       * peer's word, and is held to what `SetBoardTitle` would accept.
        */
       case 'meta':
+        if (!isAcceptableRemoteMeta(patch)) break
         patches.push(patch)
         break
       default:

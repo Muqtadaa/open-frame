@@ -12,7 +12,7 @@ type SetBoardTitle = Extract<Command, { kind: 'SetBoardTitle' }>
  * title can also arrive at from an import, the API or a rename made by
  * somebody else — and a handler is the one place all of those meet.
  */
-const MAX_TITLE = 200
+export const MAX_TITLE = 200
 
 export function setBoardTitle(doc: BoardDocument, command: SetBoardTitle): Patch[] {
   const title = command.title.trim()

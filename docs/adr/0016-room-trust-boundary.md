@@ -62,9 +62,9 @@ reasons:
      participating browser's CRDT cache, so it is served to every peer and
      every cold start, and reloaded from each browser on its next session.
    - Every peer drops it again, so nobody sees it and nobody can edit it away.
-   - A `meta` patch is the exception: it currently passes remote validation
-     unchecked (`apply-remote-patches.ts:133-135`). That is a gap, not part of
-     this decision. See Hardening.
+   - A `meta` patch is held to the same rule: since 2026-10-03 only a title
+     that `SetBoardTitle` would accept is applied (`remote-meta.ts`). See
+     Hardening.
 3. **Persistence may hold data no current client accepts.** It has always been
    possible after a schema change: an object written by a newer client is
    dropped by an older one. This decision does not make it worse, and
@@ -118,8 +118,10 @@ change:
   whose application failed, which y-protocols reports but does not throw. In
   every case the room is unchanged and nothing is relayed. The Durable Object
   closes that socket alone, with 1009 or 1007.
-- **Check `meta` patches on merge.** Accept only known meta keys with values of
-  the expected shape.
+- **Check `meta` patches on merge.** _Done 2026-10-03._ A remote `meta` patch
+  is applied only if it is a title `SetBoardTitle` would accept: text, not
+  blank, at most 200 characters. A change to `createdAt`, a cleared title and
+  any unknown key are dropped (`isAcceptableRemoteMeta`, `remote-meta.ts`).
 - **Awareness.** Viewers' awareness is relayed, and a peer can publish state
   for a client id that is not its own. Both are ephemeral and never persisted,
   so they are accepted for now.
