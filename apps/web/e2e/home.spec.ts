@@ -160,10 +160,14 @@ test.describe('the world, from the front door', () => {
     await page.setViewportSize({ width: 390, height: 800 })
     await page.goto(HOME_URL)
     const toggle = page.getByRole('button', { name: 'After Hours theme' })
-    // Reached from the keyboard, which shows the tip at once.
+    // Reached from the keyboard, which shows the tip at once. Forward and then
+    // BACK, never the other way round: signed out, the toggle is the first
+    // thing on the page that takes focus, so Shift+Tab from it leaves the page
+    // for the browser's own chrome. Chromium hands the next Tab straight back;
+    // Firefox and WebKit do not, and the toggle is never focused again.
     await toggle.focus()
-    await page.keyboard.press('Shift+Tab')
     await page.keyboard.press('Tab')
+    await page.keyboard.press('Shift+Tab')
     await expect(toggle).toBeFocused()
 
     // A pseudo-element has no box of its own to ask for, so it is rebuilt from
