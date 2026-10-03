@@ -153,3 +153,23 @@ document and invalidates the index.
   eight types exist and their real pairings are known.
 - **Visual expression.** Whether a relation ever draws itself, and how a
   connector and a relation are offered together, belongs to the surface work.
+
+## Addendum · 2026-10-01: how a relation is seen
+
+The surface work this left open settled on **drawing a selected object's
+relations, and nothing else's**. One object is selected, and each relation it
+takes part in is drawn: a dashed, muted line running edge to edge across the
+gap, with an arrowhead at the end it points to and the predicate at the middle.
+It is apparatus (`RelationOverlay`), drawn outside the world transform and
+hidden mid-gesture. Nothing changes in the model: relations are still objects
+with no geometry, and the line is derived from the relation index at render
+time (O(1) per lookup).
+
+All of them at once was rejected. On a real synthesis the relation count
+outgrows the object count (see Consequences), and a board that drew every
+citation would be a hairball; the question asked is always about one thing.
+
+Dashed rather than a connector's solid line, because a connector is a thing on
+the board and a relation is a statement about two things on it. The record
+panel keeps clear of whatever the selection's relations join it to, as it does
+for a line's ends.

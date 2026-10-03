@@ -1111,6 +1111,18 @@ shape and come into the edge from outside (the owner's choice, over switching
 to whichever side faces the other end). The route tests and an e2e walking the
 drawn path were seen failing first.
 
+**Relations on the board.** Provenance was panel-only: "stands on" was a list
+of names with nothing pointing at where those things sit. A selected object's
+relations are now drawn, and nothing else's (ADR 0011 addendum): a dashed,
+muted line edge to edge, with an arrowhead at the end it points to and the
+predicate at the middle. They are hidden mid-gesture and gone with the
+selection. The record panel now keeps clear of the related objects too; before,
+it opened over the lines and the evidence. The unit tests and the e2e were seen
+failing first, and the e2e fails both without the overlay and without the
+panel's clearance.
+
+Every leftover the owner chose is now done.
+
 Still to come, in order:
 
 - board clarity: where hidden objects went, presence for assistive tech, a
