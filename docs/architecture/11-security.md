@@ -63,6 +63,7 @@ mind when reading the rest.
 - **Comments.** Comments are Supabase only, under RLS
   (`…20260919200000_comments_and_mentions.sql:59-131`):
   - **Posting** goes through `post_comment`, which requires a signed-in board member and stamps the author (`…20260919250000…:68-110`).
+  - **Replies** stay on their board. A trigger refuses a reply whose parent thread is on another board, and any later change to a comment's board or parent, however the row is written: through `post_comment`, by direct insert, or by update (`…20261003210000_a_reply_stays_on_its_board.sql`).
   - **Mentions** reach only the board's audience (`private.board_audience`, `:23-38`).
   - **Editing and deleting** belong to the author. `delete_comment` locks the parent row before checking for others' replies (`…20261001170000_a_remark_is_its_authors_to_change.sql:125-162`).
 
@@ -263,7 +264,6 @@ with it and said why.
 | `claim` is unauthenticated (first come, empty rooms only)                                                                                       | `claimDecision` `access.ts:108-120`   | **Accepted.** Board ids are minted client-side and unguessable; a claimed room cannot be re-claimed                  |
 | Password rationing is per board, so a guesser makes other link holders wait (≤5 min)                                                            | `password.ts:121-126`                 | **Accepted.** The room cannot tell link holders apart; the owner is never affected                                   |
 | Owner key and token travel in the WebSocket URL                                                                                                 | `room-url.ts:62-76`                   | **Revisit.** Browsers cannot set headers on a WebSocket; move to a first-message handshake if logs ever capture them |
-| `post_comment` does not check that a reply's parent is on the same board                                                                        | `…20260919250000…:68-110`             | **Fix.** One `where` clause                                                                                          |
 | MCP cannot open password-protected boards                                                                                                       | `tools/context.ts:47`                 | **Accepted.** It fails closed; supporting it means the agent holding the token or owner key                          |
 | The page's policy allows inline styles                                                                                                          | `content-security-policy.ts`          | **Accepted.** React positions every object with a `style` attribute; scripts stay hash-only                          |
 | `CodeView` trusts highlight.js to escape                                                                                                        | `CodeView.tsx:87`                     | **Accepted.** Pin the version, and add a test with markup in a code block before upgrading                           |
