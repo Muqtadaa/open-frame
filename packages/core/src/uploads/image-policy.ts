@@ -36,12 +36,6 @@ export type AllowedImageType = (typeof ALLOWED_IMAGE_TYPES)[number]
  */
 export const MAX_IMAGE_BYTES = 12 * 1024 * 1024
 
-/**
- * How many leading bytes `sniffImageType` needs. A caller holding a stream can
- * read this much and no more.
- */
-export const SNIFF_BYTES = 16
-
 export type ValidationFailure =
   | { readonly reason: 'too-large'; readonly byteSize: number }
   | { readonly reason: 'unsupported-type'; readonly declared: string }
@@ -88,13 +82,34 @@ export function sniffImageType(bytes: Uint8Array): AllowedImageType | null {
   if (startsWith(bytes, ascii('RIFF')) && startsWith(bytes.subarray(8), ascii('WEBP'))) {
     return 'image/webp'
   }
-  // AVIF is an ISO-BMFF file: a box size, then "ftyp", then its brand. The
-  // brand is what separates it from MP4 and HEIC, which share the box.
-  if (startsWith(bytes.subarray(4), ascii('ftyp'))) {
-    const brand = bytes.subarray(8)
-    if (startsWith(brand, ascii('avif')) || startsWith(brand, ascii('avis'))) return 'image/avif'
-  }
+  if (isAvif(bytes)) return 'image/avif'
   return null
+}
+
+const AVIF_BRANDS = [ascii('avif'), ascii('avis')]
+
+/**
+ * Whether this is an AVIF: an ISO-BMFF file whose leading file-type box names
+ * an AVIF brand.
+ *
+ * The brand is what separates it from MP4 and HEIC, which share the box — and
+ * it may be the MAJOR brand or any of the COMPATIBLE ones. The spec only asks
+ * for it somewhere in the box, and real encoders lead with the generic `mif1`
+ * or `msf1` and list `avif` after it. Brands are read no further than the box
+ * says it runs, nor past the end of what was given.
+ */
+function isAvif(bytes: Uint8Array): boolean {
+  if (!startsWith(bytes.subarray(4), ascii('ftyp'))) return false
+  const declared = (bytes[0]! << 24) | (bytes[1]! << 16) | (bytes[2]! << 8) | bytes[3]!
+  const end = Math.min(declared >>> 0, bytes.length)
+  // The major brand at 8, then a minor version at 12 that is NOT a brand, then
+  // the compatible brands from 16, four bytes each.
+  const offsets = [8]
+  for (let at = 16; at + 4 <= end; at += 4) offsets.push(at)
+  return offsets.some(
+    (at) =>
+      at + 4 <= end && AVIF_BRANDS.some((brand) => startsWith(bytes.subarray(at, at + 4), brand)),
+  )
 }
 
 export function isAllowedImageType(type: string): type is AllowedImageType {

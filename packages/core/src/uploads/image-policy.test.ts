@@ -3,7 +3,6 @@ import { describe, expect, it } from 'vitest'
 import {
   ALLOWED_IMAGE_TYPES,
   MAX_IMAGE_BYTES,
-  SNIFF_BYTES,
   sniffImageType,
   validateImage,
 } from './image-policy.js'
@@ -15,6 +14,12 @@ const WEBP = new Uint8Array([0x52, 0x49, 0x46, 0x46, 1, 2, 3, 4, 0x57, 0x45, 0x4
 const WAV = new Uint8Array([0x52, 0x49, 0x46, 0x46, 1, 2, 3, 4, 0x57, 0x41, 0x56, 0x45])
 const box = (brand: string) =>
   new Uint8Array([0, 0, 0, 0x1c, ...new TextEncoder().encode(`ftyp${brand}`), 0, 0, 0, 0])
+/** A file-type box: size, "ftyp", major brand, minor version, compatible brands. */
+function ftyp(major: string, compatible: readonly string[]): Uint8Array {
+  const text = new TextEncoder().encode(`ftyp${major}\0\0\0\0${compatible.join('')}`)
+  const size = 4 + text.length
+  return new Uint8Array([0, 0, 0, size, ...text])
+}
 const AVIF = box('avif')
 const AVIF_SEQUENCE = box('avis')
 const MP4 = box('isom')
@@ -47,12 +52,32 @@ describe('sniffImageType', () => {
     expect(sniffImageType(new Uint8Array())).toBeNull()
   })
 
-  it('needs no more than SNIFF_BYTES to decide', () => {
-    for (const image of [PNG, JPEG, GIF, WEBP, AVIF]) {
-      const padded = new Uint8Array(64)
-      padded.set(image)
-      expect(sniffImageType(padded.subarray(0, SNIFF_BYTES))).toBe(sniffImageType(image))
-    }
+  /**
+   * The spec asks for the AVIF brand somewhere in the file-type box, not as its
+   * major brand: a file may lead with the generic `mif1` and list `avif` among
+   * its compatible brands. Such a file is a real AVIF and must be let in.
+   */
+  it('recognises AVIF named among the compatible brands, not only as the major one', () => {
+    expect(sniffImageType(ftyp('mif1', ['mif1', 'avif', 'miaf']))).toBe('image/avif')
+    expect(sniffImageType(ftyp('msf1', ['msf1', 'avis']))).toBe('image/avif')
+  })
+
+  it('does not take a HEIC that lists only generic brands for an AVIF', () => {
+    expect(sniffImageType(ftyp('mif1', ['mif1', 'heic', 'miaf']))).toBeNull()
+  })
+
+  /** A brand is only a brand inside the box: bytes after it are something else. */
+  it('reads brands no further than the box says it runs', () => {
+    const box = ftyp('mif1', ['mif1'])
+    const trailing = new Uint8Array([...box, ...new TextEncoder().encode('avif')])
+    expect(sniffImageType(trailing)).toBeNull()
+  })
+
+  it('survives a box that claims to run past the end of the file', () => {
+    const box = ftyp('mif1', ['avif'])
+    box[3] = 0xff
+    expect(sniffImageType(box)).toBe('image/avif')
+    expect(sniffImageType(box.subarray(0, 18))).toBeNull()
   })
 })
 
