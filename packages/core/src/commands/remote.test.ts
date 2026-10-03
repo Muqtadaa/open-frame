@@ -396,4 +396,68 @@ describe('ApplyRemotePatches, against a peer that sends nonsense', () => {
     expect(h.store.getObject(id('two'))?.frame.width).toBe(180)
     expect(h.store.getObject(id('two'))?.frame.y).toBe(22)
   })
+
+  /**
+   * The board's own fields are a flat map anyone with the edit link can write
+   * any key into. What a peer may change is what a command may: the title,
+   * under `SetBoardTitle`'s rules.
+   */
+  describe('the board itself', () => {
+    const title = (h: ReturnType<typeof createTestHarness>) => h.store.getDocument().meta.title
+
+    it('applies a rename', () => {
+      const h = createTestHarness()
+      remote(h, [{ op: 'meta', path: ['title'], value: 'Pricing research' }])
+      expect(title(h)).toBe('Pricing research')
+    })
+
+    it('drops a title that is not text', () => {
+      const h = createTestHarness()
+      const before = title(h)
+      remote(h, [{ op: 'meta', path: ['title'], value: { toString: 'not a name' } }])
+      remote(h, [{ op: 'meta', path: ['title'], value: 42 }])
+      expect(title(h)).toBe(before)
+    })
+
+    it('drops a title no rename could have produced', () => {
+      const h = createTestHarness()
+      const before = title(h)
+      remote(h, [{ op: 'meta', path: ['title'], value: '   ' }])
+      // `SetBoardTitle` trims, so space or a line break at either end is a
+      // title that only a direct write to the shared map could produce.
+      remote(h, [{ op: 'meta', path: ['title'], value: '\nPricing research\n' }])
+      remote(h, [{ op: 'meta', path: ['title'], value: ' Pricing research' }])
+      remote(h, [{ op: 'meta', path: ['title'], value: 'x'.repeat(201) }])
+      // Clearing it: a delete in the shared map arrives as `undefined`.
+      remote(h, [{ op: 'meta', path: ['title'], value: undefined }])
+      expect(title(h)).toBe(before)
+    })
+
+    it('accepts the longest title a rename allows', () => {
+      const h = createTestHarness()
+      remote(h, [{ op: 'meta', path: ['title'], value: 'x'.repeat(200) }])
+      expect(title(h)).toHaveLength(200)
+    })
+
+    it('drops a field nothing changes, and one it has never heard of', () => {
+      const h = createTestHarness()
+      const before = h.store.getDocument().meta
+      remote(h, [
+        { op: 'meta', path: ['createdAt'], value: 0 },
+        { op: 'meta', path: ['owner'], value: 'mallory' },
+      ])
+      expect(h.store.getDocument().meta).toEqual(before)
+    })
+
+    it('keeps the object edits in a batch whose rename it drops', () => {
+      const h = harnessWith('one')
+      const before = title(h)
+      remote(h, [
+        { op: 'meta', path: ['title'], value: ['not', 'a', 'name'] },
+        { op: 'set', id: id('one'), path: ['frame', 'x'], value: 11 },
+      ])
+      expect(title(h)).toBe(before)
+      expect(h.store.getObject(id('one'))?.frame.x).toBe(11)
+    })
+  })
 })

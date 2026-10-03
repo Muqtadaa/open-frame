@@ -175,7 +175,7 @@ describe('a rename arriving at a live session', () => {
         throw error
       },
     })
-    return { a, b, sessionA, sessionB }
+    return { a, b, docA, docB, sessionA, sessionB }
   }
 
   it('changes the title the other person is looking at', () => {
@@ -211,5 +211,29 @@ describe('a rename arriving at a live session', () => {
     // One merge on A, and nothing bouncing back to B and round again.
     expect(changes).toBe(1)
     expect(a.store.getDocument().meta.title).toBe('Pricing research')
+  })
+
+  /**
+   * A peer that writes the shared map directly instead of through a command,
+   * which is all a modified client needs to do. The rename channel is held to
+   * what `SetBoardTitle` would accept (ADR 0016, hardening).
+   */
+  it('ignores a title, or a field, that no rename could have written', () => {
+    const { b, docA } = pair()
+    const before = b.store.getDocument().meta
+
+    metaOf(docA).set('title', { name: 'not a name' })
+    metaOf(docA).set('owner', 'mallory')
+
+    expect(b.store.getDocument().meta).toEqual(before)
+  })
+
+  it('still takes a proper rename after ignoring a bad one', () => {
+    const { a, b, docA } = pair()
+
+    metaOf(docA).set('title', 42)
+    a.dispatcher.dispatch({ kind: 'SetBoardTitle', title: 'Pricing research' })
+
+    expect(b.store.getDocument().meta.title).toBe('Pricing research')
   })
 })
