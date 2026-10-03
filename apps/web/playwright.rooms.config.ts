@@ -8,6 +8,18 @@ const launchOverrides =
 const ROOM_SERVER = 'http://127.0.0.1:8787'
 
 /**
+ * A production build, served as the host serves it.
+ *
+ * Every other spec here runs against the dev server, which carries no Content
+ * Security Policy — the policy is written into the page at build time, from
+ * the build's own configuration. So a policy that blocked the room's socket
+ * or the splash's scripts would pass this whole suite and break the live site.
+ * `content-security.spec.ts` is the one spec that opens this origin instead.
+ */
+const PRODUCTION_BUILD = 'http://127.0.0.1:5198'
+const BUILD_DIR = 'node_modules/.openframe-csp-build'
+
+/**
  * The collaboration suite, kept separate because it needs a server.
  *
  * `pnpm test:e2e` must stay a thing anybody can run from a clean checkout with
@@ -50,6 +62,10 @@ export default defineConfig({
           origin: 'http://127.0.0.1:5199',
           localStorage: [{ name: 'openframe:splash-hold', value: 'off' }],
         },
+        {
+          origin: PRODUCTION_BUILD,
+          localStorage: [{ name: 'openframe:splash-hold', value: 'off' }],
+        },
       ],
     },
     ...devices['Desktop Chrome'],
@@ -69,6 +85,13 @@ export default defineConfig({
       url: 'http://127.0.0.1:5199',
       reuseExistingServer: !isCI,
       timeout: 60_000,
+      env: { VITE_COLLAB_URL: 'ws://127.0.0.1:8787' },
+    },
+    {
+      command: `pnpm vite build --outDir ${BUILD_DIR} --emptyOutDir && pnpm vite preview --outDir ${BUILD_DIR} --port 5198 --strictPort --host 127.0.0.1`,
+      url: PRODUCTION_BUILD,
+      reuseExistingServer: !isCI,
+      timeout: 120_000,
       env: { VITE_COLLAB_URL: 'ws://127.0.0.1:8787' },
     },
   ],
