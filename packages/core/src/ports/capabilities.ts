@@ -8,10 +8,10 @@ import type { BoardId } from '../domain/ids.js'
  * something else decides how that is determined. Changing the permission model
  * later then touches one implementation instead of every call site.
  *
- * PHASE 1 IS NOT SECURE, AND IS NOT MEANT TO BE. `allowAll` exists so the
- * dispatcher has a real call site from day one. Once a server exists, every
- * command must be re-authorized SERVER-SIDE through this same interface —
- * a client-side check is a UX affordance, never a security control.
+ * THIS IS A CLIENT-SIDE CHECK, and a client-side check is a UX affordance,
+ * never a security control. The control is the room's: it refuses a viewer's
+ * writes and gates destroying and the password on the owner key, by key, and
+ * never consults this interface (ADR 0016, docs/architecture/11-security.md).
  */
 export type BoardAction = 'view' | 'comment' | 'edit' | 'manage' | 'own'
 

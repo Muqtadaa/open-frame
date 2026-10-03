@@ -1,6 +1,7 @@
 # ADR 0013 · Cloudflare Durable Objects for the collaboration transport
 
-**Status:** Accepted · 2026-09-18
+**Status:** Accepted · 2026-09-18 · amended 2026-10-03 (see the addendum at the
+end)
 
 ## Context
 
@@ -142,3 +143,22 @@ event with a cause, not a surprise.
   has complained about latency because nobody has used it.
 - **Collaborative undo semantics.** Still a product question, and still waiting
   for users, exactly as ADR 0007 left it.
+
+---
+
+## Addendum · 2026-10-03
+
+Two of the predictions above did not come true. The rest stand.
+
+- **Authorization lives in the Durable Object, not the Worker.**
+  - The Worker only routes (`apps/rooms/src/index.ts`).
+  - The room decides who is let in, by key, using the pure rules in
+    `apps/rooms/src/access.ts`.
+  - The `Capabilities` interface is not re-applied in the room. The room's gate
+    is the editor/viewer split on sync messages, and the owner key for
+    destroying a board and setting its password.
+  - [ADR 0016](0016-room-trust-boundary.md) records what the room does and
+    does not check.
+- **The auth provider is Supabase Auth.** It decides which keys an account is
+  given; the room itself knows only keys
+  ([11 · Security](../architecture/11-security.md)).
