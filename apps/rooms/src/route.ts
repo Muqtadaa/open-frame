@@ -53,7 +53,7 @@ export type Route =
       /** `null` means the link carried no key, which only a legacy room accepts. */
       readonly key: string | null
     }
-  /** Minting the two links for a board that does not have them yet. */
+  /** Minting a board's keys — its two links and its owner key — once. */
   | { readonly kind: 'claim'; readonly boardId: string }
   /**
    * Destroying a room and everything in it.
@@ -65,7 +65,7 @@ export type Route =
    * query because a link is a thing people paste; nothing here is.
    */
   | { readonly kind: 'destroy'; readonly boardId: string }
-  /** Set, change or clear this board's password. The editor key only. */
+  /** Set, change or clear this board's password. The owner key only. */
   | { readonly kind: 'password'; readonly boardId: string }
   /** Redeem the password for the token that opens the board. Either key. */
   | { readonly kind: 'unlock'; readonly boardId: string }

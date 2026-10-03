@@ -89,7 +89,7 @@ export interface CommandDispatcherDeps {
  * mean a change that skips authorization, validation, history and persistence.
  *
  * Lifecycle, in order:
- *   1. authorize    capability check (server-side once a server exists)
+ *   1. authorize    capability check (client-side; the room is the control)
  *   2. validate     handlers reject before producing any patch
  *   3. mutate       pure handler turns a command into patches
  *   4. invert       inverse patches derived generically, for undo

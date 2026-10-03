@@ -108,6 +108,8 @@ Record it as a decision (an ADR) rather than leave it implicit. When the remote
 transport (stage 5) lets agents run beyond the person's own machine, re-check
 whether the room should reject malformed objects.
 
+_Closed 2026-10-03 by [ADR 0016](../adr/0016-room-trust-boundary.md)._
+
 **A-6. Carried over, verified still present:**
 
 - the dependency snapshot sums `x + y + width` (`use-document-object.ts:~100`),

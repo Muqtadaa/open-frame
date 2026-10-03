@@ -11,9 +11,9 @@ export { BoardRoomObject } from './room-object.js'
  * and everything that DECIDES anything happens in `@openframe/collab`, which
  * has no idea Cloudflare exists.
  *
- * This is also where authorization goes when Stage 3 brings identity — the
- * Worker checks before the room accepts, so a refused connection never reaches
- * the object at all.
+ * It authorizes nothing. Every decision about who may do what is made inside
+ * the board's own object, by the pure rules in `access.ts` — ADR 0013's
+ * addendum and ADR 0016 say why it ended up there rather than here.
  */
 export default {
   fetch(request: Request, env: Env): Response | Promise<Response> {

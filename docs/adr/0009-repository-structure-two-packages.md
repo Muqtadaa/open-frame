@@ -2,6 +2,12 @@
 
 **Status:** Accepted · 2026-09-17
 
+> **2026-10-03:** Its triggers have fired. The repository now has
+> `packages/core` and `packages/collab`, plus `apps/web`, `apps/rooms` and
+> `apps/mcp`, and the boundaries between them are enforced in
+> `.dependency-cruiser.cjs`. The reasoning below still decides when another one
+> is added.
+
 ## Context
 
 The architecture depends on a claim: the domain does not know about React, the

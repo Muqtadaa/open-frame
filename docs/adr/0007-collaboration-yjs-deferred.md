@@ -2,6 +2,10 @@
 
 **Status:** Accepted (deferred) · 2026-09-17
 
+> **2026-10-03:** Built. Yjs lives in `packages/collab`, and the transport is
+> decided by [ADR 0013](0013-collaboration-transport-durable-objects.md).
+> What follows is the decision as it was made.
+
 ## Context
 
 Multiplayer editing is a core long-term requirement. It is also the single
