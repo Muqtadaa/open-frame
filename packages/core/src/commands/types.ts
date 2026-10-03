@@ -164,9 +164,11 @@ export type CommandKind = Command['kind']
  * A command plus who issued it and why.
  *
  * `origin` earns its place three times over: it is the audit trail, it lets AI
- * changes be previewed and rolled back as a group, and — when collaboration
- * arrives — it is what Yjs's UndoManager scopes on, so that remote edits never
- * land in your undo stack. Adding it later would mean revisiting every call site.
+ * changes be previewed and rolled back as a group, and it is how a change from
+ * another client (`remote`) or an agent (`mcp`) is told apart: the first never
+ * lands in your undo stack, and the second is written to the board's change log
+ * where anyone can take it back. Adding it later would have meant revisiting
+ * every call site.
  */
 export interface CommandEnvelope {
   readonly command: Command

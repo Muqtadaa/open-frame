@@ -23,19 +23,26 @@ filtered, linked and reasoned about.
 
 ## Status
 
-**Phase 2 — core canvas. Complete.**
+**Phases 1–4 are done.** OpenFrame is a working, shared canvas:
 
-A canvas you can actually work on: sticky notes, text, eight shape kinds, frames,
-connectors, images and groups; selection, resize, rotation, z-order, clipboard
-and undo; snap-to-grid and alignment guides; local persistence with schema
-versioning and migrations.
+- **The canvas.** Sticky notes, text, eight shape kinds, frames, connectors,
+  tables, code blocks, images and groups; selection, resize, rotation, z-order,
+  clipboard and undo; snap-to-grid and alignment guides.
+- **Structured objects.** Evidence, insights, hypotheses, decisions, requirements,
+  experiments, tasks and journey stages, with typed relations between them.
+- **Collaboration.** Boards shared by link, edited live by several people in one
+  room, with presence, comments and mentions, accounts and workspaces.
+- **Agents.** An MCP server lets an agent read and edit a board through the same
+  command layer people use. Every edit it makes to the board is recorded and
+  can be reverted; a comment it leaves is a comment, like anyone's.
 
 [ADR 0002](docs/adr/0002-canvas-engine-custom-dom-svg.md) asked whether a custom
 DOM/SVG renderer could carry this. It can: DOM node count stays flat from 100 to
 10,000 objects, and a cull pass on a 10,000-object mixed board costs about 3ms.
 
-Next is [Phase 3 · Structured objects](docs/phases/phase-3-structured-objects.md)
-— the reason OpenFrame exists.
+Next is [Phase 5 · AI and MCP](docs/phases/phase-5-ai-and-mcp.md). The MCP server
+([Phase 5a](docs/phases/phase-5a-mcp-server.md)) has finished stages 1–4; stage 5,
+a remote transport, is next.
 
 ---
 
@@ -54,12 +61,24 @@ Requires Node 22+ and pnpm 10+.
 ## Structure
 
 ```
-packages/core   Domain, commands, schema, ports. Pure TypeScript —
-                no React, no DOM, no database, no CRDT. Two dependencies.
+packages/core     Domain, commands, schema, ports. Pure TypeScript —
+                  no React, no DOM, no database, no CRDT. Two dependencies.
 
-apps/web        Canvas renderer, interaction layer, UI, storage adapters.
+packages/collab   The shared document: how a board maps onto Yjs, the room
+                  protocol, and the change log agents write to.
 
-docs/           Architecture, decision records, roadmap, appendices.
+apps/web          Canvas renderer, interaction layer, UI, storage adapters.
+
+apps/rooms        The room server: a Cloudflare Worker routing to one Durable
+                  Object per board, with images in R2.
+
+apps/mcp          The MCP server, a separate process an agent talks to over
+                  stdio.
+
+supabase/         Database migrations: accounts, the board list, membership,
+                  workspaces and comments. Never a board's contents.
+
+docs/             Architecture, decision records, roadmap, appendices.
 ```
 
 ---
@@ -67,8 +86,8 @@ docs/           Architecture, decision records, roadmap, appendices.
 ## The five ideas
 
 1. **The domain is pure.** Enforced in CI, not merely intended.
-2. **One mutation path.** Everything persistent goes through the command layer —
-   later including AI, the API and MCP.
+2. **One mutation path.** Everything persistent goes through the command layer,
+   whether it comes from a person, a collaborator's edit or an agent over MCP.
 3. **Nothing is written during a drag.** One rule that fixes undo granularity,
    multiplayer semantics and performance at once.
 4. **Object behaviour lives in a registry.** Adding a semantic type is two

@@ -113,8 +113,8 @@ change:
 - **Bound a socket message's size, and isolate decode failures.** _Done
   2026-10-03._ `BoardRoom.receive` refuses a message over `MAX_MESSAGE_BYTES`
   (32 MiB, the platform's own limit) before decoding it. The cap cannot be lower:
-  publishing a board and resyncing after offline work each send the whole state
-  in one frame. It catches a frame that fails to decode, and it also refuses an update
+  publishing a board sends its whole state in one frame, and resyncing after
+  offline work sends everything the room lacks in one. It catches a frame that fails to decode, and it also refuses an update
   whose application failed, which y-protocols reports but does not throw. In
   every case the room is unchanged and nothing is relayed. The Durable Object
   closes that socket alone, with 1009 or 1007.

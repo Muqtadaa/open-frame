@@ -9,20 +9,26 @@ percentage is not a goal and is not measured.
 
 ## Where tests live
 
-| Layer             | Tool                        | What is tested                                                                             | What is not          |
-| ----------------- | --------------------------- | ------------------------------------------------------------------------------------------ | -------------------- |
-| `core/geometry`   | Vitest                      | Intersection, containment, union, screen↔world round-trips                                 | Rendering            |
-| `core/domain`     | Vitest                      | Invariants, cycle repair determinism, **patch/inverse symmetry**                           | Type internals       |
-| `core/schema`     | Vitest + frozen fixtures    | Every migration, unknown-type round-trip, every quarantine path                            | Zod itself           |
-| `core/commands`   | Vitest                      | Per command: happy path, rejection, locking, authorization, transaction atomicity          | Dispatch plumbing    |
-| `core/types`      | Vitest, table-driven        | The registry contract, for **every** registered type                                       | Visual output        |
-| **Architecture**  | Vitest + dependency-cruiser | Forbidden imports, platform neutrality, declared deps, no `switch(object.type)`, no cycles | —                    |
-| `web/adapters`    | Vitest + fake-indexeddb     | Save→load round-trip, patches, **quarantine never writes back**                            | Browser quirks       |
-| `web/canvas`      | Vitest                      | Culling, hit testing, marquee containment, paint order                                     | Pixel output         |
-| `web/gestures`    | Vitest, `gesture-bench.ts`  | Every pointer mode: modifiers, snapping, **one command on release, none before it**        | The hook's wiring    |
-| `web/ui`          | Vitest, `test-render.tsx`   | What a control DOES: keys, focus going in and coming back, what it asks of the services    | Layout and paint     |
-| `web/interaction` | Vitest                      | Pointer decisions as pure functions                                                        | Synthetic DOM events |
-| **E2E**           | Playwright                  | create → edit → move → reload → undo → restyle → delete                                    | Everything else      |
+| Layer             | Tool                        | What is tested                                                                                | What is not          |
+| ----------------- | --------------------------- | --------------------------------------------------------------------------------------------- | -------------------- |
+| `core/geometry`   | Vitest                      | Intersection, containment, union, screen↔world round-trips                                    | Rendering            |
+| `core/domain`     | Vitest                      | Invariants, cycle repair determinism, **patch/inverse symmetry**                              | Type internals       |
+| `core/schema`     | Vitest + frozen fixtures    | Every migration, unknown-type round-trip, every quarantine path                               | Zod itself           |
+| `core/commands`   | Vitest                      | Per command: happy path, rejection, locking, authorization, transaction atomicity             | Dispatch plumbing    |
+| `core/types`      | Vitest, table-driven        | The registry contract, for **every** registered type                                          | Visual output        |
+| `core/uploads`    | Vitest                      | The one image policy: size, declared type, sniffed bytes                                      | Storage              |
+| `packages/collab` | Vitest, in-process rooms    | Patch↔Yjs mapping, the room protocol and roles, offline resync, the change log                | A real socket        |
+| `apps/rooms`      | Vitest                      | Access, asset authorization, passwords, routing, in-flight requests — values in, decision out | The Durable Object   |
+| `apps/mcp`        | Vitest + a real MCP client  | Every tool against a real `BoardRoom`; the stdio protocol (`server.stdio.test.ts`)            | A signed-in session  |
+| **Architecture**  | Vitest + dependency-cruiser | Forbidden imports, platform neutrality, declared deps, no `switch(object.type)`, no cycles    | —                    |
+| `web/adapters`    | Vitest + fake-indexeddb     | Save→load round-trip, patches, **quarantine never writes back**                               | Browser quirks       |
+| `web/canvas`      | Vitest                      | Culling, hit testing, marquee containment, paint order                                        | Pixel output         |
+| `web/gestures`    | Vitest, `gesture-bench.ts`  | Every pointer mode: modifiers, snapping, **one command on release, none before it**           | The hook's wiring    |
+| `web/ui`          | Vitest, `test-render.tsx`   | What a control DOES: keys, focus going in and coming back, what it asks of the services       | Layout and paint     |
+| `web/interaction` | Vitest                      | Pointer decisions as pure functions                                                           | Synthetic DOM events |
+| **E2E**           | Playwright, `apps/web/e2e`  | Seams in a real browser: the core loop, gestures, editing, keyboard, touch, layout            | A real room          |
+| **Rooms E2E**     | Playwright, `e2e-rooms`     | Two browsers on one board against a real Durable Object; an MCP peer; the production CSP      | Deployed Cloudflare  |
+| `tools/`          | `node --test`               | The bench budget judge: a budget nothing measured fails                                       | The measurements     |
 
 ---
 
@@ -72,8 +78,8 @@ and the rule only matched resolved `node_modules` paths.
 
 ## What E2E is for
 
-Not UI coverage — seam verification. Five tests, and they found four real bugs
-unit tests structurally could not:
+Not UI coverage — seam verification. The first handful of specs found four
+real bugs unit tests structurally could not:
 
 | Bug                                                | Why unit tests missed it                       |
 | -------------------------------------------------- | ---------------------------------------------- |
@@ -97,12 +103,28 @@ React component trees, rendering internals, library behaviour, styling, and any
 ## Running them
 
 ```bash
-pnpm test            # unit + integration, both packages (~1s)
-pnpm test:e2e        # Playwright functional suite
-pnpm bench:fixtures  # generate benchmark boards
-pnpm test:bench      # renderer scaling probe (needs the fixtures)
-pnpm verify          # typecheck + lint + boundaries + tests + build
+pnpm test             # Vitest in every workspace: core, collab, rooms, mcp, web
+pnpm test:e2e         # Playwright functional suite, Chromium
+pnpm test:e2e:smoke   # the @smoke specs in Firefox and WebKit
+pnpm test:e2e:all     # the functional suite in all three engines
+pnpm test:rooms       # two browsers against a real Durable Object (wrangler --local)
+pnpm test:tools       # the bench tooling's own tests
+pnpm bench:fixtures   # generate benchmark boards
+pnpm test:bench       # renderer scaling probe (needs the fixtures)
+pnpm bench:cull       # the cull pass, timed directly
+pnpm bench:mcp        # an agent peer's reads and writes, with map copies
+pnpm --filter @openframe/web test:visual   # goldens, Chromium; not run by CI
+pnpm verify           # format + typecheck + lint + boundaries + tests
+                      #   + bench and MCP-bench smoke + tool tests + build
 ```
+
+On every push, `.github/workflows/ci.yml` runs what `pnpm verify` runs, in the
+same order, and three browser jobs beside it: `pnpm test:e2e`,
+`pnpm test:e2e:smoke` and `pnpm test:rooms`. The rooms suite boots a real
+workerd with a SQLite-backed Durable Object, so it lives apart from
+`pnpm test:e2e`, which must run from a clean checkout with no account. One of
+its specs, `content-security.spec.ts`, opens a production build rather than the
+dev server, because the dev server carries no Content Security Policy.
 
 Benchmarks are a separate Playwright project because they need generated
 fixtures and **report** measurements rather than asserting thresholds — with one
@@ -151,7 +173,13 @@ The functional suite runs in Chromium on every push. The 21 tests tagged
 `@smoke` — the core loop of placing, editing, moving and saving — also run in
 Firefox and WebKit on every push (`pnpm test:e2e:smoke`), and the whole suite
 runs in all three every night (`.github/workflows/nightly.yml`, which can also
-be started by hand). Goldens and benchmarks stay in Chromium. `touch.spec.ts`
+be started by hand). Goldens and benchmarks stay in Chromium.
+
+**The visual goldens are not a CI gate.** `surfaces.visual.spec.ts` has its own
+`visual` project and runs under `pnpm --filter @openframe/web test:visual`; no workflow runs it.
+The snapshots are platform-specific and were taken in the development
+container; they are a net to run by hand around a stylesheet-wide change, and
+a change that breaks one still merges. `touch.spec.ts`
 drives touch through CDP, which only Chromium has, and is excluded from the
 other two in the config; the two specs that emulate a phone (`isMobile`) are
 excluded from Firefox, which cannot. A spec that needs the clipboard calls

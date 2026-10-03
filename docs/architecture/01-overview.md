@@ -6,60 +6,79 @@
 
 ## The shape of the system
 
-OpenFrame is a **modular monolith with a pure core and replaceable adapters**.
+OpenFrame is a **modular monolith with a pure core and replaceable adapters**,
+spread over five workspaces and three outside services.
 
 ```
                        DEPENDENCY DIRECTION: always downward
-  ┌──────────────────────────────────────────────────────────────────────┐
-  │ apps/web                                                             │
-  │                                                                      │
-  │   ui/          Toolbar, banners, status bar                          │
-  │     │          React. May READ the document. Never mutates it.       │
-  │     ▼                                                                │
-  │   interaction/ Tools, pointer decisions, selection, drag deltas       │
-  │     │          Owns transient state. Dispatches commands on commit.  │
-  │     ▼                                                                │
-  │   canvas/      Viewport, culling, hit testing, object views          │
-  │     │          Renders from the store. Owns no persistent state.     │
-  │     │                                                                │
-  │   adapters/    IndexedDbBoardRepository, MemoryBoardRepository       │
-  │     │          [later] collaboration, presence, assets               │
-  │     │          Implement ports declared in core.                     │
-  └─────┼────────────────────────────────────────────────────────────────┘
-        │  depends on ▼        (core NEVER depends on anything above)
-  ┌─────▼────────────────────────────────────────────────────────────────┐
-  │ packages/core   — pure TypeScript; deps: zod, fractional-indexing     │
-  │                                                                      │
-  │   commands/   Command types, dispatcher, handlers, undo              │
-  │     │                                                                │
-  │     ▼                                                                │
-  │   domain/     BoardDocument, objects, registry, patches, invariants  │
-  │     │                                                                │
-  │     ├──► schema/    Envelope, versioning, migrations, validation     │
-  │     └──► geometry/  Point, Rect, Viewport  (depends on NOTHING)      │
-  │                                                                      │
-  │   ports/      BoardRepository, AssetStore, Capabilities, Clock,      │
-  │               IdGenerator, SpatialIndex  — interfaces only           │
-  │   store/      DocumentStore (read) + DocumentWriter (write)          │
-  └──────────────────────────────────────────────────────────────────────┘
 
-  FUTURE CALLERS — siblings of apps/web, never of each other:
-  apps/api  ──┐
-  apps/mcp  ──┼──► core/commands ──► domain ──► ports
-  ai/        ─┘        (same dispatcher, different origin tag)
+  apps/web (browser)              apps/mcp (stdio process)      apps/rooms (Worker)
+  ┌───────────────────────────┐   ┌──────────────────────┐   ┌──────────────────────┐
+  │ ui/  interaction/  canvas/│   │ tools/  read, write   │   │ Worker: routes only  │
+  │ app/ (composition root)   │   │ supabase/  sign-in    │   │ BoardRoomObject:     │
+  │ adapters/ indexeddb,      │   │ board.ts  one room    │   │  one per board, holds│
+  │   memory, room, supabase  │   │                       │   │  the Y.Doc, decides  │
+  └─────────────┬─────────────┘   └──────────┬───────────┘   │  who may write       │
+                │                            │               └──────────┬───────────┘
+                └──────────────┬─────────────┴───────────────────────────┘
+                               ▼
+              packages/collab — the board on Yjs: document mapping,
+              room protocol (BoardRoom), session, change log
+                               │
+                               ▼
+              packages/core — pure TypeScript; deps: zod, fractional-indexing
+                commands/ → domain/ → geometry/     schema/     ports/     store/
+
+  Outside services
+    Supabase         accounts, the board list, membership, workspaces, comments
+                     (never a board's contents)        ← apps/web, apps/mcp
+    Durable Object   each board's shared document, as snapshot + updates
+                     storage                           ← apps/rooms
+    R2               images on shared boards           ← apps/rooms
 ```
 
-## Why only two packages
+Inside `apps/web` the layers are the same as they always were:
 
-A package boundary is worth its cost only where it prevents a dependency that
-matters. Exactly one such boundary exists today: **core must not be able to
-import React**. Under pnpm, core's dependency list simply does not contain it,
-so the import fails to resolve — the rule is enforced by the package manager
-rather than by memory.
+```
+  ui/          Toolbar, panels, status bar. May READ the document; never mutates it.
+    ▼
+  interaction/ Tools, pointer decisions, selection, drag deltas.
+               Owns transient state. Dispatches commands on commit.
+    ▼
+  canvas/      Viewport, culling, hit testing, object views. No persistent state.
 
-Everything else is enforced more cheaply by `dependency-cruiser` rules over
-folders. See [ADR 0009](../adr/0009-repository-structure-two-packages.md) for
-the triggers that would justify a third package.
+  adapters/    IndexedDB and memory repositories, the room client, Supabase.
+               Implement ports declared in core. Reached by the interface only
+               through runtime/services.ts.
+```
+
+Every caller of the domain goes through the same dispatcher with a different
+origin: a person (`user`), a collaborator's merged edit (`remote`) and an agent
+over MCP (`mcp`). An HTTP API and in-app AI, when they come, join that list.
+
+## Package boundaries
+
+A package boundary is worth its cost where it stops a dependency that matters.
+Each of the four libraries and services below is one, and the web app is what
+is left:
+
+| Workspace         | Exists so that…                                                    | May depend on                           |
+| ----------------- | ------------------------------------------------------------------ | --------------------------------------- |
+| `packages/core`   | the domain cannot import React, a database or a CRDT               | `zod`, `fractional-indexing`            |
+| `packages/collab` | Yjs is in exactly one place, shared by the browser, room and agent | `core`, `yjs`, `y-protocols`, `lib0`    |
+| `apps/rooms`      | the Cloudflare runtime stays out of everything else                | `core`, `collab`                        |
+| `apps/mcp`        | an agent's process never loads the web app                         | `core`, `collab`, the MCP SDK, Supabase |
+| `apps/web`        | (the application)                                                  | `core`, `collab`, React, Supabase       |
+
+Under pnpm a package can only import what it declares, so the first line is
+enforced by the package manager. The rest are rules in
+`.dependency-cruiser.cjs`, among them `core-is-pure`, `yjs-lives-only-in-collab`,
+`cloudflare-lives-only-in-rooms`, `supabase-lives-only-in-adapters`,
+`mcp-does-not-depend-on-the-web-app` and `collab-does-not-depend-on-apps`.
+
+[ADR 0009](../adr/0009-repository-structure-two-packages.md) started with two
+packages and named the triggers for a third; collaboration, the room server and
+the agent were those triggers.
 
 ## Module contracts
 
@@ -71,7 +90,7 @@ the triggers that would justify a third package.
 | `core/commands`   | Command types, dispatch, handlers, undo       | `domain`, `ports`, `store`       | React, direct IO, canvas types                  |
 | `core/ports`      | Interfaces to the outside world               | domain types                     | Any implementation                              |
 | `core/store`      | Document state and subscriptions              | `domain`                         | Business rules, IO                              |
-| `web/adapters`    | IndexedDB, memory, later collaboration        | `core/ports`, `core/domain`      | Business rules, UI                              |
+| `web/adapters`    | IndexedDB, memory, the room, Supabase         | `core/ports`, `core/domain`      | Business rules, UI                              |
 | `web/canvas`      | Render, cull, hit-test                        | `core`, `web/interaction`        | Persistent state, business rules                |
 | `web/interaction` | Tools, transient state, dispatch              | `core/commands`, `core/geometry` | Direct document mutation, persistence           |
 | `web/ui`          | Chrome                                        | `core` (read), `web/interaction` | Geometry, persistence, direct mutation          |
@@ -107,7 +126,7 @@ pointer events ─► interaction/  (transient delta, no document write)
                     invert    ────────┤  generic inverse for undo
                     apply     ────────┤  DocumentWriter, one transaction
                     record    ────────┤  one undo entry
-                    emit      ────────┘  subscribers persist / later sync
+                    emit      ────────┘  subscribers persist and sync
                                       │
                       ┌───────────────┴───────────────┐
                       ▼                               ▼

@@ -15,7 +15,8 @@ pnpm test         # unit + integration (~1s)
 pnpm test:e2e     # Playwright; set OPENFRAME_CHROMIUM_PATH if the sandbox ships its own Chromium
 pnpm test:e2e:smoke   # the @smoke core loop in Firefox and WebKit (every PR)
 pnpm test:e2e:all     # the whole suite in all three engines (nightly)
-pnpm bench:fixtures   # generate 100/1k/5k/10k boards into apps/web/public/bench/
+pnpm test:rooms       # shared boards against a real Durable Object (wrangler --local)
+pnpm bench:fixtures   # generate 100/1k/5k/10k boards into tools/bench/fixtures/
 pnpm test:bench       # renderer scaling probe (needs the fixtures above)
 pnpm build:bench      # deployable build WITH the bench panel and fixtures
 pnpm bench:check <results.json…>   # hold bench results to tools/bench/budgets.ts (nightly)
@@ -24,8 +25,12 @@ pnpm bench:check <results.json…>   # hold bench results to tools/bench/budgets
 ## Layout
 
 ```
-packages/core   Pure TypeScript domain. Deps: zod, fractional-indexing. Nothing else.
-apps/web        React app: canvas, interaction, UI, adapters.
+packages/core     Pure TypeScript domain. Deps: zod, fractional-indexing. Nothing else.
+packages/collab   The board on Yjs: document mapping, room protocol, change log. Core + yjs.
+apps/web          React app: canvas, interaction, UI, adapters.
+apps/rooms        Cloudflare Worker + one Durable Object per board, images in R2.
+apps/mcp          The MCP server, a separate stdio process. Core + collab + Supabase.
+supabase/         Migrations: accounts, board list, membership, workspaces, comments.
 ```
 
 ---

@@ -1,6 +1,6 @@
 # Phase 5a · The MCP server
 
-**Status: In progress — stages 1 to 4 done** · ← [Roadmap](README.md) · Design: [Phase 5](phase-5-ai-and-mcp.md)
+**Status: In progress — stages 1 to 4 done; stage 5 (remote transport) next** · ← [Roadmap](README.md) · Design: [Phase 5](phase-5-ai-and-mcp.md)
 
 The execution plan for the MCP half of Phase 5. The _why_ is in the phase
 document; this is the order, the decisions taken, and what each stage has to
@@ -202,7 +202,8 @@ One seam, one delimiter, done at the start rather than retrofitted.
 
 **Proves:** an agent can answer a question about a real board.
 
-**Done.** `tools/read.ts` holds the four, `tools/respond.ts` holds the
+**Done.** `tools/read.ts` holds the five — the four above and `list_changes`,
+which stage 4's change log added — `tools/respond.ts` holds the
 delimiting, `tools/context.ts` is what they are handed, and `server.ts` is the
 stdio transport and nothing else — the tools name no transport at all, which is
 what stage 5 rests on.
@@ -271,7 +272,8 @@ step, and a viewer-level session is refused. **Guards:** a test that no tool
 reaches the document except through `dispatch`; a test that a read-only session
 cannot write.
 
-**Done.** `tools/write.ts` holds the seven; `tools/definition.ts` holds the one
+**Done.** `tools/write.ts` holds fourteen: the seven above, the six composite
+tools and `revert_change`. `tools/definition.ts` holds the one
 place a call is validated, a board resolved and a refusal decided, so "is this
 board mine" is answered once rather than fourteen times.
 
@@ -310,6 +312,8 @@ top bar. Both go through the same guarded replay as undo. See
 `docs/reviews/tracks-ab-mcp.md`.
 
 ### 5 · Remote transport
+
+**Not built. Next.**
 
 The same tool layer behind an HTTP MCP endpoint on Workers, with OAuth so
 claude.ai can connect. Transport and authorization only — if this stage touches

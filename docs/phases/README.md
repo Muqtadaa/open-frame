@@ -5,14 +5,14 @@
 Each phase is scoped so that it can be built, tested and shipped without the next
 one existing. Nothing here is a commitment to a date.
 
-| Phase                                                   | What it delivers                                                 | Status      |
-| ------------------------------------------------------- | ---------------------------------------------------------------- | ----------- |
-| [1 · Foundation](phase-1-foundation.md)                 | The architectural skeleton, proved end to end by one object type | ✅ **Done** |
-| [2 · Core canvas](phase-2-core-canvas.md)               | The canvas a person would actually use                           | ✅ **Done** |
-| [3 · Structured objects](phase-3-structured-objects.md) | The reason OpenFrame exists                                      | ✅ **Done** |
-| [4 · Collaboration](phase-4-collaboration.md)           | Multiplayer, presence, comments                                  | ✅ **Done** |
-| [5 · AI and MCP](phase-5-ai-and-mcp.md)                 | Agents as first-class board participants                         | ▶ Next      |
-| [5a · MCP server](phase-5a-mcp-server.md)               | The execution plan for the MCP half, which goes first            | ▶ Stage 4   |
+| Phase                                                   | What it delivers                                                 | Status                        |
+| ------------------------------------------------------- | ---------------------------------------------------------------- | ----------------------------- |
+| [1 · Foundation](phase-1-foundation.md)                 | The architectural skeleton, proved end to end by one object type | ✅ **Done**                   |
+| [2 · Core canvas](phase-2-core-canvas.md)               | The canvas a person would actually use                           | ✅ **Done**                   |
+| [3 · Structured objects](phase-3-structured-objects.md) | The reason OpenFrame exists                                      | ✅ **Done**                   |
+| [4 · Collaboration](phase-4-collaboration.md)           | Multiplayer, presence, comments                                  | ✅ **Done**                   |
+| [5 · AI and MCP](phase-5-ai-and-mcp.md)                 | Agents as first-class board participants                         | ▶ Next                        |
+| [5a · MCP server](phase-5a-mcp-server.md)               | The execution plan for the MCP half, which goes first            | Stages 1–4 done; stage 5 next |
 
 ---
 
