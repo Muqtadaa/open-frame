@@ -15,15 +15,13 @@ test.use({ board: 'fresh' })
  * panel goes first — and, before it kept clear of related things, covered the
  * lines and the evidence they point at.
  */
-const built = buildBoard((b) => {
+const board = buildBoard((b) => {
   const evidence = b.add('evidence', { x: 300, y: 200 })
   const more = b.add('evidence', { x: 300, y: 520 })
   const insight = b.add('insight', { x: 760, y: 360 })
   b.add('relation', { x: 0, y: 0 }, { from: insight, to: evidence, predicate: 'cites' })
   b.add('relation', { x: 0, y: 0 }, { from: insight, to: more, predicate: 'cites' })
 })
-// The relations are in the document and, being no place on the board, not drawn.
-const board = { ...built, objects: built.objects - 2 }
 
 test('draws what the selection stands on, edge to edge, while it is selected', async ({ page }) => {
   await seedBoard(page, board)
