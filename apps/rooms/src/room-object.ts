@@ -30,7 +30,7 @@ import {
   type PasswordVerifier,
   type UnlockThrottle,
 } from './password.js'
-import { assetDecision, assetKey, purgeBoardAssets } from './assets.js'
+import { assetDecision, assetKey, checkUpload, purgeBoardAssets } from './assets.js'
 import { InFlight } from './in-flight.js'
 import type { Env } from './env.js'
 
@@ -294,11 +294,26 @@ export class BoardRoomObject extends DurableObject<Env> {
     const key = assetKey(this.#boardId(url), assetId)
 
     if (decision.write) {
-      await this.#uploads.track(
-        this.env.ASSETS.put(key, request.body, {
-          httpMetadata: { contentType: decision.contentType },
-        }),
+      /*
+       * The bytes are read and checked BEFORE anything reaches the bucket: the
+       * declared type and length are claims, and the browser's own check binds
+       * nobody who skips the browser. Read and write are tracked as one, since
+       * reading the body is not storage I/O either and a destroy can begin
+       * while it is under way.
+       */
+      const contentType = decision.contentType
+      const declared = Number(request.headers.get('content-length'))
+      const stored = await this.#uploads.track(
+        (async () => {
+          const upload = await checkUpload(contentType, declared, request.body)
+          if (!upload.ok) return upload
+          await this.env.ASSETS.put(key, upload.bytes, { httpMetadata: { contentType } })
+          return upload
+        })(),
       )
+      if (!stored.ok) {
+        return new Response(stored.reason, { status: stored.status, headers: CORS })
+      }
       /*
        * R2 lets other requests run while this one waits on it, so the board
        * may have started going in the meantime. A destroy drains uploads it
