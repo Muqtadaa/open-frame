@@ -154,9 +154,20 @@ export interface Handled {
    * finished opening.
    */
   readonly content: boolean
+  /**
+   * Whether a document update in this message failed to apply.
+   *
+   * y-protocols catches that failure and only logs it, so without this a
+   * corrupt update read exactly like a good one, and the room relayed it to
+   * every other peer. A room refuses the sender instead (`BoardRoom.receive`).
+   * A client goes on as before: the same flag is set when one of ITS document
+   * observers throws, and stalling a client's sync over its own bug would be
+   * worse than the log line it gets now.
+   */
+  readonly unreadable: boolean
 }
 
-const NOTHING: Handled = { reply: null, broadcast: null, content: false }
+const NOTHING: Handled = { reply: null, broadcast: null, content: false, unreadable: false }
 
 /**
  * Applies one incoming message, reporting what to send where.
@@ -202,7 +213,10 @@ export function readMessage(
 
       const encoder = encoding.createEncoder()
       encoding.writeVarUint(encoder, MESSAGE_SYNC)
-      const messageType = syncProtocol.readSyncMessage(decoder, encoder, doc, origin)
+      let unreadable = false
+      const messageType = syncProtocol.readSyncMessage(decoder, encoder, doc, origin, () => {
+        unreadable = true
+      })
 
       /*
        * Length 1 means the encoder holds only the type byte we just wrote — a
@@ -219,14 +233,19 @@ export function readMessage(
       const carriesContent =
         messageType === syncProtocol.messageYjsSyncStep2 ||
         messageType === syncProtocol.messageYjsUpdate
-      return { reply, broadcast: carriesContent ? message : null, content: carriesContent }
+      return {
+        reply,
+        broadcast: carriesContent ? message : null,
+        content: carriesContent,
+        unreadable,
+      }
     }
 
     case MESSAGE_AWARENESS: {
       awarenessProtocol.applyAwarenessUpdate(awareness, decoding.readVarUint8Array(decoder), origin)
       // Presence is relayed as it arrived: the room holds no opinion about who
       // is where, it only makes sure everyone hears about it.
-      return { reply: null, broadcast: message, content: false }
+      return { reply: null, broadcast: message, content: false, unreadable: false }
     }
 
     default:

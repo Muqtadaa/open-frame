@@ -43,7 +43,14 @@ export {
   type Handled,
   type RoomRole,
 } from './protocol.js'
-export { BoardRoom, documentFromSnapshot, type BoardRoomOptions, type RoomPeer } from './room.js'
+export {
+  BoardRoom,
+  documentFromSnapshot,
+  MAX_MESSAGE_BYTES,
+  type BoardRoomOptions,
+  type Received,
+  type RoomPeer,
+} from './room.js'
 export {
   CLOSE_BOARD_DELETED,
   CLOSE_PASSWORD_REQUIRED,

@@ -7,11 +7,12 @@ import {
   createAwareness,
   encodeAwareness,
   encodeSyncStep1,
+  encodeSyncStep2,
   encodeUpdate,
   readMessage,
   type RoomRole,
 } from './protocol.js'
-import { BoardRoom, documentFromSnapshot, type RoomPeer } from './room.js'
+import { BoardRoom, documentFromSnapshot, MAX_MESSAGE_BYTES, type RoomPeer } from './room.js'
 
 /**
  * A whole board room, with no server in it.
@@ -277,5 +278,104 @@ describe('a peer speaking a language the room does not know', () => {
 
     sticky(a.doc, 'obj_after', 'still working')
     expect([...objectsFromDoc(room.doc).keys()]).toEqual(['obj_after'])
+  })
+})
+
+/**
+ * One peer's bad message costs that peer, never the room (ADR 0016, hardening).
+ *
+ * The room runs inside a Durable Object, and an exception out of its message
+ * handler is an exception out of the object every peer is connected to. These
+ * are bytes off a socket, so a modified or broken client can send anything.
+ */
+describe('a message the room will not read', () => {
+  it('reports a frame that does not decode instead of throwing it', () => {
+    const room = new BoardRoom()
+    const a = new Client('a')
+    a.connect(room)
+
+    // A sync message that promises an update and stops: a truncated frame.
+    expect(room.receive(a, new Uint8Array([0, 2, 50, 1]))).toBe('malformed')
+    // A sync message with nothing after its type.
+    expect(room.receive(a, new Uint8Array([0]))).toBe('malformed')
+    // Presence whose payload runs off the end.
+    expect(room.receive(a, new Uint8Array([1, 9, 1]))).toBe('malformed')
+  })
+
+  it('carries on for everybody else after one', () => {
+    const room = new BoardRoom()
+    const a = new Client('a')
+    const b = new Client('b')
+    a.connect(room)
+    b.connect(room)
+    const heardByB = b.received.length
+
+    room.receive(a, new Uint8Array([0, 2, 50, 1]))
+    expect(b.received.length).toBe(heardByB)
+
+    sticky(b.doc, 'obj_after', 'still working')
+    expect([...objectsFromDoc(room.doc).keys()]).toEqual(['obj_after'])
+    expect([...objectsFromDoc(a.doc).keys()]).toEqual(['obj_after'])
+  })
+
+  it('refuses a message over the size it could keep, before reading it', () => {
+    const room = new BoardRoom()
+    const a = new Client('a')
+    const b = new Client('b')
+    a.connect(room)
+    b.connect(room)
+    const heardByB = b.received.length
+
+    // A real, well-formed update, just too big: refused for its size alone.
+    const big = new Y.Doc()
+    big.getMap('board').set('huge', 'x'.repeat(MAX_MESSAGE_BYTES))
+    const update = encodeUpdate(Y.encodeStateAsUpdate(big))
+    expect(update.byteLength).toBeGreaterThan(MAX_MESSAGE_BYTES)
+
+    expect(room.receive(a, update)).toBe('too-large')
+    expect(room.doc.getMap('board').has('huge')).toBe(false)
+    expect(b.received.length).toBe(heardByB)
+  })
+
+  /**
+   * Publishing a board, or coming back from offline, is the whole state in one
+   * frame (`seedDoc`, a sync step 2). A cap sized for a single edit refused
+   * those, and the client resent them on every reconnect, so a large board
+   * could never be shared.
+   */
+  it('reads a whole board arriving in one handshake, far larger than any edit', () => {
+    const room = new BoardRoom()
+    const a = new Client('a')
+    a.connect(room)
+
+    // About the size of a ten-thousand-object board.
+    const board = new Y.Doc()
+    board.getMap('board').set('seeded', 'x'.repeat(5 * 1024 * 1024))
+    const step2 = encodeSyncStep2(board, Y.encodeStateVector(room.doc))
+
+    expect(room.receive(a, step2)).toBe('accepted')
+    expect(room.doc.getMap('board').get('seeded')).toHaveLength(5 * 1024 * 1024)
+  })
+
+  it('still reads a large message that fits', () => {
+    const room = new BoardRoom()
+    const a = new Client('a')
+    a.connect(room)
+
+    const large = new Y.Doc()
+    large.getMap('board').set('large', 'x'.repeat(MAX_MESSAGE_BYTES - 1024))
+    const update = encodeUpdate(Y.encodeStateAsUpdate(large))
+    expect(update.byteLength).toBeLessThanOrEqual(MAX_MESSAGE_BYTES)
+
+    expect(room.receive(a, update)).toBe('accepted')
+    expect(room.doc.getMap('board').get('large')).toHaveLength(MAX_MESSAGE_BYTES - 1024)
+  })
+
+  it('accepts what it reads, including a type it ignores', () => {
+    const room = new BoardRoom()
+    const a = new Client('a')
+    a.connect(room)
+    expect(room.receive(a, encodeSyncStep1(a.doc))).toBe('accepted')
+    expect(room.receive(a, new Uint8Array([99, 1, 2, 3]))).toBe('accepted')
   })
 })
