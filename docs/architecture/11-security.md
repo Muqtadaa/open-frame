@@ -22,7 +22,8 @@ Last reconciled with the code on 2026-10-03.
  MCP agent (stdio, on the user's machine) ── joins the same room as a peer
 ```
 
-Four kinds of credential exist, and only two of them identify a person:
+Four kinds of credential exist, and only one of them identifies a person. The
+other three are bearer secrets: whoever holds one has what it grants.
 
 | Credential               | What it is                                 | Where it lives                                                                   |
 | ------------------------ | ------------------------------------------ | -------------------------------------------------------------------------------- |
@@ -73,7 +74,7 @@ The rules are pure functions in `apps/rooms/src/access.ts`, tested in Node.
 | ------------------------- | -------------- | ------------------------ | ---------------------------- | ---------------------------- |
 | Open the board            | yes, read-only | yes                      | not on its own: never a link | `roleForKey` `:60-79`        |
 | Change content, upload    | no             | yes                      | rides beside the editor link | `protocol.ts:196-201`        |
-| Read images               | yes            | yes                      | yes                          | `assetDecision` `assets.ts`  |
+| Read images               | yes            | yes                      | rides beside either link     | `assetDecision` `assets.ts`  |
 | Skip the password         | no             | no                       | **yes**                      | `room-object.ts:205-217`     |
 | Set or clear the password | no             | only before an owner key | **yes**                      | `setPasswordDecision` `:225` |
 | **Destroy the board**     | no             | **no**                   | **yes**                      | `destroyDecision` `:163-192` |
@@ -168,8 +169,11 @@ consequences.
   - the type's own `validate`;
   - `sanitizeStyle`.
 - **What happens to an object that fails:** it is **dropped**, not quarantined.
-  It stays in the shared document and in the room's storage. Quarantine is a
-  load-path behaviour (`schema/deserialize.ts`).
+  It stays in the shared document, in the room's storage, and in every
+  participating browser's local copy of that document: the raw CRDT cache,
+  which `connectBoard` saves whole (`collab/src/connect.ts:156`). Only the
+  domain document that autosave writes is filtered. Quarantine is a load-path
+  behaviour (`schema/deserialize.ts`).
 - **Commands and capabilities:** all mutation, local, remote and from agents,
   goes through `CommandDispatcher.dispatch`, which checks `Capabilities`. That
   check is a **client-side** affordance. Only the room's editor/viewer gate
@@ -232,21 +236,21 @@ prevent it.
 Each row is a decision, not a to-do. "Accepted" means somebody chose to live
 with it and said why.
 
-| Gap                                                                                                              | Where                                 | Decision                                                                                                             |
-| ---------------------------------------------------------------------------------------------------------------- | ------------------------------------- | -------------------------------------------------------------------------------------------------------------------- |
-| Room relays and persists any decodable editor update; invalid objects are dropped by clients but stay in storage | `room.ts:137-147`, `remote-object.ts` | **Accepted.** [ADR 0016](../adr/0016-room-trust-boundary.md)                                                         |
-| No size limit and no try/catch on a socket message                                                               | `room-object.ts:238-243`              | **Fix.** Bounded message size and isolated decode failure (ADR 0016, hardening)                                      |
-| Viewers' awareness is relayed, and any peer may publish state for any client id                                  | `protocol.ts:225-230`, `room.ts`      | **Accepted for now.** It is ephemeral and never persisted; revisit with ADR 0016's triggers                          |
-| `meta` patches pass remote validation unchecked                                                                  | `apply-remote-patches.ts:133-135`     | **Fix.** Validate known meta keys on merge                                                                           |
-| Unclaimed (legacy) rooms admit anyone as an editor                                                               | `access.ts:61`                        | **Accepted.** Old links must keep working; such rooms refuse destroy and password                                    |
-| A pre-owner-key board's owner key goes to whoever adopts first                                                   | `#adoptOwner`                         | **Accepted.** The owner's client adopts at first need                                                                |
-| `claim` is unauthenticated (first come, empty rooms only)                                                        | `claimDecision` `access.ts:108-120`   | **Accepted.** Board ids are minted client-side and unguessable; a claimed room cannot be re-claimed                  |
-| Password rationing is per board, so a guesser makes other link holders wait (≤5 min)                             | `password.ts:121-126`                 | **Accepted.** The room cannot tell link holders apart; the owner is never affected                                   |
-| No deployment security headers                                                                                   | `vercel.json`                         | **Fix.** Decide embedding first, then `Referrer-Policy`, `nosniff`, `Permissions-Policy`, CSP                        |
-| Owner key and token travel in the WebSocket URL                                                                  | `room-url.ts:62-76`                   | **Revisit.** Browsers cannot set headers on a WebSocket; move to a first-message handshake if logs ever capture them |
-| `post_comment` does not check that a reply's parent is on the same board                                         | `…20260919250000…:68-110`             | **Fix.** One `where` clause                                                                                          |
-| MCP cannot open password-protected boards                                                                        | `tools/context.ts:47`                 | **Accepted.** It fails closed; supporting it means the agent holding the token or owner key                          |
-| `CodeView` trusts highlight.js to escape                                                                         | `CodeView.tsx:87`                     | **Accepted.** Pin the version, and add a test with markup in a code block before upgrading                           |
+| Gap                                                                                                                                             | Where                                 | Decision                                                                                                             |
+| ----------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------- | -------------------------------------------------------------------------------------------------------------------- |
+| Room relays and persists any decodable editor update; invalid objects are dropped by clients but stay in storage and every browser's CRDT cache | `room.ts:137-147`, `remote-object.ts` | **Accepted.** [ADR 0016](../adr/0016-room-trust-boundary.md)                                                         |
+| No size limit and no try/catch on a socket message                                                                                              | `room-object.ts:238-243`              | **Fix.** Bounded message size and isolated decode failure (ADR 0016, hardening)                                      |
+| Viewers' awareness is relayed, and any peer may publish state for any client id                                                                 | `protocol.ts:225-230`, `room.ts`      | **Accepted for now.** It is ephemeral and never persisted; revisit with ADR 0016's triggers                          |
+| `meta` patches pass remote validation unchecked                                                                                                 | `apply-remote-patches.ts:133-135`     | **Fix.** Validate known meta keys on merge                                                                           |
+| Unclaimed (legacy) rooms admit anyone as an editor                                                                                              | `access.ts:61`                        | **Accepted.** Old links must keep working; such rooms refuse destroy and password                                    |
+| A pre-owner-key board's owner key goes to whoever adopts first                                                                                  | `#adoptOwner`                         | **Accepted.** The owner's client adopts at first need                                                                |
+| `claim` is unauthenticated (first come, empty rooms only)                                                                                       | `claimDecision` `access.ts:108-120`   | **Accepted.** Board ids are minted client-side and unguessable; a claimed room cannot be re-claimed                  |
+| Password rationing is per board, so a guesser makes other link holders wait (≤5 min)                                                            | `password.ts:121-126`                 | **Accepted.** The room cannot tell link holders apart; the owner is never affected                                   |
+| No deployment security headers                                                                                                                  | `vercel.json`                         | **Fix.** Decide embedding first, then `Referrer-Policy`, `nosniff`, `Permissions-Policy`, CSP                        |
+| Owner key and token travel in the WebSocket URL                                                                                                 | `room-url.ts:62-76`                   | **Revisit.** Browsers cannot set headers on a WebSocket; move to a first-message handshake if logs ever capture them |
+| `post_comment` does not check that a reply's parent is on the same board                                                                        | `…20260919250000…:68-110`             | **Fix.** One `where` clause                                                                                          |
+| MCP cannot open password-protected boards                                                                                                       | `tools/context.ts:47`                 | **Accepted.** It fails closed; supporting it means the agent holding the token or owner key                          |
+| `CodeView` trusts highlight.js to escape                                                                                                        | `CodeView.tsx:87`                     | **Accepted.** Pin the version, and add a test with markup in a code block before upgrading                           |
 
 ---
 

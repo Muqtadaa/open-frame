@@ -25,7 +25,10 @@ Compliant clients defend themselves. Every remote object goes through
 - `sanitizeStyle`.
 
 An object that fails is **dropped**: it never reaches the domain, the
-renderer, the undo stack or local persistence.
+renderer, the undo stack or the domain document that autosave writes. It does
+reach the browser's raw CRDT cache, because `connectBoard` saves the whole
+`Y.Doc` (`packages/collab/src/connect.ts:156`) before the command layer filters
+anything.
 
 This was a choice, but nobody had written it down, so the review asked for it
 to be (item A-5). It matters more now than when the room was built, for two
@@ -54,8 +57,9 @@ reasons:
    the board's `meta` map. It also includes very large documents, because
    nothing bounds an update's size today (see Hardening).
 2. **Compliant clients drop what they cannot read, and do not quarantine it.**
-   - The bad object stays in the shared `Y.Doc` and in room storage, so it is
-     served to every peer and every cold start.
+   - The bad object stays in the shared `Y.Doc`, in room storage and in every
+     participating browser's CRDT cache, so it is served to every peer and
+     every cold start, and reloaded from each browser on its next session.
    - Every peer drops it again, so nobody sees it and nobody can edit it away.
    - A `meta` patch is the exception: it currently passes remote validation
      unchecked (`apply-remote-patches.ts:133-135`). That is a gap, not part of
