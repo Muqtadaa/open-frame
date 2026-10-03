@@ -47,3 +47,53 @@ test('a room tells its key holders whether it asks for a password', async ({ pag
   expect(JSON.stringify(answers.stranger[1])).not.toContain('password":')
   expect(answers.cleared).toEqual([200, { password: false }])
 })
+
+/**
+ * Guessing at a board's password, against a real room.
+ *
+ * The arithmetic is unit-tested in `apps/rooms/src/password.test.ts`. This is
+ * the room honouring it: a handful of wrong guesses are free, then it stops
+ * looking — at the right password too, or the wait would tell a guesser
+ * nothing — and it lets the right one in once the wait is over.
+ */
+test('a room rations guesses at its password', async ({ page }) => {
+  const room = newRoomId()
+  await page.goto(BOARD_URL)
+  const base = `http://127.0.0.1:8787/room/${room}`
+
+  const keys = await page.evaluate(async (url) => {
+    const claimed = await fetch(`${url}/claim`, { method: 'POST' })
+    const minted = (await claimed.json()) as { editor: string; viewer: string; owner: string }
+    await fetch(`${url}/password`, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ key: minted.owner, password: 'correct horse' }),
+    })
+    return minted
+  }, base)
+
+  const attempt = (password: string) =>
+    page.evaluate(
+      async ({ url, key, guess }) => {
+        const response = await fetch(`${url}/unlock`, {
+          method: 'POST',
+          headers: { 'content-type': 'application/json' },
+          body: JSON.stringify({ key, password: guess }),
+        })
+        return [response.status, response.headers.get('retry-after')] as const
+      },
+      { url: base, key: keys.viewer, guess: password },
+    )
+
+  // Five free, and the sixth earns the first wait.
+  const guesses = []
+  for (let i = 0; i < 6; i++) guesses.push(await attempt(`wrong ${String(i)}`))
+  expect(guesses.map(([status]) => status)).toEqual([403, 403, 403, 403, 403, 403])
+
+  const [status, retryAfter] = await attempt('correct horse')
+  expect(status).toBe(429)
+  expect(Number(retryAfter)).toBeGreaterThanOrEqual(1)
+
+  // Once the wait is over, the right password opens it.
+  await expect.poll(async () => (await attempt('correct horse'))[0]).toBe(200)
+})

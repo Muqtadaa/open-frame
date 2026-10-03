@@ -21,7 +21,15 @@ import {
   roleFromAttachment,
   type AccessKeys,
 } from './access.js'
-import { isPassword, newVerifier, tokenAdmits, type PasswordVerifier } from './password.js'
+import {
+  afterFailedUnlock,
+  isPassword,
+  newVerifier,
+  tokenAdmits,
+  unlockAllowed,
+  type PasswordVerifier,
+  type UnlockThrottle,
+} from './password.js'
 import { assetDecision, assetKey, purgeBoardAssets } from './assets.js'
 import { InFlight } from './in-flight.js'
 import type { Env } from './env.js'
@@ -90,6 +98,11 @@ const DELETING = 'deleting'
  * unless somebody asks otherwise.
  */
 const PASSWORD = 'password'
+/**
+ * Recent wrong passwords and the wait they have earned (`password.ts`). Absent
+ * when nobody has failed lately, which is almost always.
+ */
+const UNLOCK_THROTTLE = 'unlock-throttle'
 
 const CORS = {
   'access-control-allow-origin': '*',
@@ -461,6 +474,10 @@ export class BoardRoomObject extends DurableObject<Env> {
       return Response.json({ error: decision.error }, { status: decision.status, headers: CORS })
     }
 
+    // A new password, or none, is a fresh start: guesses at the old one are
+    // not held against anybody trying the new one.
+    await this.ctx.storage.delete(UNLOCK_THROTTLE)
+
     if (body.password === null) {
       await this.ctx.storage.delete(PASSWORD)
       return Response.json({ password: false }, { headers: CORS })
@@ -567,12 +584,47 @@ export class BoardRoomObject extends DurableObject<Env> {
     if (!decision.ok) {
       return Response.json({ error: decision.error }, { status: decision.status, headers: CORS })
     }
+
+    /*
+     * Rationed only AFTER the link is checked, so somebody without one cannot
+     * make a board's real holders wait — they are refused above, as before.
+     */
+    const now = Date.now()
+    const throttle = await this.ctx.storage.get<UnlockThrottle>(UNLOCK_THROTTLE)
+    const allowed = unlockAllowed(throttle, now)
+    if (!allowed.ok) {
+      return Response.json(
+        { error: 'Too many attempts', retryAfter: allowed.retryAfterSeconds },
+        {
+          status: 429,
+          headers: {
+            ...CORS,
+            'retry-after': String(allowed.retryAfterSeconds),
+            // Cross-origin, a browser hides every header not named here.
+            'access-control-expose-headers': 'retry-after',
+          },
+        },
+      )
+    }
+
+    /*
+     * Counted as a failure BEFORE the password is checked, and forgiven after.
+     * Deriving the hash is not storage I/O, and the runtime only promises to
+     * hold other requests back while this object awaits its OWN storage. So
+     * counted afterwards, a burst of guesses could all pass the check above
+     * before any of them was recorded. Local workerd did not interleave them
+     * when tried, which is why no test pins this — the order costs nothing
+     * and does not rely on that staying true.
+     */
+    await this.ctx.storage.put(UNLOCK_THROTTLE, afterFailedUnlock(throttle, now))
+
     if (verifier === undefined || body.password === null) {
       return Response.json({ error: 'That is not the password' }, { status: 403, headers: CORS })
     }
     if (!(await isPassword(verifier, body.password))) {
       return Response.json({ error: 'That is not the password' }, { status: 403, headers: CORS })
     }
+    await this.ctx.storage.delete(UNLOCK_THROTTLE)
     return Response.json({ token: verifier.token }, { headers: CORS })
   }
 

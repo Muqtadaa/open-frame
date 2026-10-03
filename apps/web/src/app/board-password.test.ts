@@ -69,6 +69,14 @@ describe('unlocking a board', () => {
     expect(heldToken(BOARD)).toBeNull()
   })
 
+  it('says how long to wait, and not that the password was wrong, when rationed', async () => {
+    rooms.unlock.mockResolvedValue({ ok: false, reason: 'throttled', retryAfterSeconds: 8 })
+    expect(await unlockBoard(deps(), BOARD, 'k', 'pw')).toEqual({
+      ok: false,
+      reason: 'Too many attempts. Try again in 8 seconds.',
+    })
+  })
+
   it('tells an unreachable server and a garbled answer apart from a refusal', async () => {
     rooms.unlock.mockResolvedValue({ ok: false, reason: 'unreachable' })
     expect(await unlockBoard(deps(), BOARD, 'k', 'pw')).toMatchObject({

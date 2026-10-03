@@ -252,11 +252,19 @@ export interface RoomService {
   ) => Promise<{ ok: true; keys: RoomKeys } | { ok: false; reason: RoomFailure }>
   /** Mints an owner key for a board claimed before owner keys existed. */
   readonly adoptOwnerKey: (boardId: BoardId, editorKey: string) => Promise<string | null>
+  /**
+   * `throttled` is a board rationing attempts after too many wrong guesses:
+   * the password was not looked at, so it is not a refusal.
+   */
   readonly unlock: (
     boardId: BoardId,
     key: string | null,
     password: string,
-  ) => Promise<{ ok: true; token: string } | { ok: false; reason: RoomFailure }>
+  ) => Promise<
+    | { ok: true; token: string }
+    | { ok: false; reason: RoomFailure }
+    | { ok: false; reason: 'throttled'; retryAfterSeconds: number }
+  >
   readonly setPassword: (
     boardId: BoardId,
     ownerKey: string,
