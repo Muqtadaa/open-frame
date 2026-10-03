@@ -13,7 +13,8 @@
     "deploy": "wrangler deploy"
   },
   "dependencies": {
-    "@openframe/collab": "workspace:*"
+    "@openframe/collab": "workspace:*",
+    "@openframe/core": "workspace:*"
   },
   "devDependencies": {
     "@cloudflare/workers-types": "^5.20260918.1",

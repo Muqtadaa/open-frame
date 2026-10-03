@@ -14,6 +14,7 @@
     "./ports": "./src/ports/index.ts",
     "./store": "./src/store/index.ts",
     "./types": "./src/types/index.ts",
+    "./uploads": "./src/uploads/index.ts",
     "./testing": "./src/testing.ts"
   },
   "scripts": {

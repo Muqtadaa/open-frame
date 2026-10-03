@@ -43,7 +43,7 @@ builds is the one the server validates and authorizes.
 | ------------------------------------------ | ------------------------ | --------------------------------------------------------------------------------------- |
 | **XSS via object text**                    | Now, nominally           | All text renders as React children — never `dangerouslySetInnerHTML`. Keep it that way. |
 | **SVG sanitization**                       | SVG import (not shipped) | ✅ SVG is refused outright — see below                                                  |
-| **Asset upload validation**                | Images — **done**        | ✅ Size, declared type and sniffed content, in `runtime/asset-validation.ts`            |
+| **Asset upload validation**                | Images — **done**        | ✅ Size, declared type and sniffed content — one policy, browser and room alike         |
 | **SSRF via URL preview**                   | Link/bookmark objects    | Not built; fetching must be server-side with an allowlist                               |
 | **Server-side authorization**              | First multi-user feature | `Capabilities` port + commands as data                                                  |
 | **Public board links**                     | Sharing                  | `view`/`comment` capabilities already distinguished                                     |
@@ -54,13 +54,17 @@ builds is the one the server validates and authorizes.
 
 ## Image uploads
 
-Three checks, in this order, before any bytes reach the asset store
-(`apps/web/src/runtime/asset-validation.ts`):
+Three checks, in this order, before any bytes reach the asset store. They are
+ONE policy (`packages/core/src/uploads/image-policy.ts`), applied by the
+browser before an upload starts and again by the room before anything is
+written to R2:
 
-1. **Size** — 20MB. Checked first so a pathological file is rejected without
-   being read.
+1. **Size** — 12MB. Checked first so a pathological file is rejected without
+   being read. The room also reads the body with a hard cap, so a body longer
+   than its `Content-Length` stops being read at the ceiling.
 2. **Declared type** — an allowlist of `image/png`, `image/jpeg`, `image/gif`,
-   `image/webp`. This is the check that produces a good error message.
+   `image/webp`, `image/avif`. This is the check that produces a good error
+   message.
 3. **Sniffed content** — the leading bytes must match the declared type.
 
 The third exists because the first two can be lied to. A `File`'s MIME type is
@@ -74,10 +78,13 @@ means sanitising it, and a half-sanitised SVG is more dangerous than a rejected
 one because it looks handled. It can be added when there is a sanitiser to add
 with it.
 
-Validation is **policy and lives next to the runtime, not in an adapter** —
-replacing IndexedDB with a server must not change what a user may upload. A
-server will of course have to repeat all three checks: this one is a UX
-affordance, never a control.
+Validation is **policy, not an adapter** — replacing IndexedDB with a server
+must not change what a user may upload. The browser's check is a UX
+affordance, never a control; the room's is the control, which is why it reads
+the same policy rather than a copy. The two used to disagree (20MB against
+12MB, AVIF on one side only, bytes sniffed on one side only), and
+`apps/rooms/src/assets.test.ts` and `apps/web/src/runtime/asset-validation.test.ts`
+now fail if either side stops reading the shared one.
 
 ---
 

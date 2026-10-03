@@ -1,3 +1,7 @@
+import { execFile } from 'node:child_process'
+import { fileURLToPath } from 'node:url'
+import { promisify } from 'node:util'
+
 import { expect, type Browser, type Page } from '@playwright/test'
 
 /**
@@ -68,4 +72,28 @@ export async function keptLocally(page: Page, room: string, since: number): Prom
 /** The page's clock, for `keptLocally`. */
 export function pageNow(page: Page): Promise<number> {
   return page.evaluate(() => Date.now())
+}
+
+const ROOMS_DIR = fileURLToPath(new URL('../../rooms', import.meta.url))
+
+/**
+ * Whether the local R2 bucket the room server writes to still holds a key.
+ *
+ * Asked of the bucket itself, through wrangler, because asking the ROOM proves
+ * nothing: a destroyed room answers 410 before it ever looks in R2, so a sweep
+ * that deleted nothing would read exactly like one that deleted everything.
+ * That is not hypothetical — this test passed with the sweep removed until it
+ * looked here.
+ */
+export async function inBucket(key: string): Promise<boolean> {
+  try {
+    await promisify(execFile)(
+      'pnpm',
+      ['exec', 'wrangler', 'r2', 'object', 'get', `openframe-assets/${key}`, '--local', '--pipe'],
+      { cwd: ROOMS_DIR, encoding: 'buffer' },
+    )
+    return true
+  } catch {
+    return false
+  }
 }

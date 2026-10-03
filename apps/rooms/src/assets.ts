@@ -1,4 +1,5 @@
 import type { RoomRole } from '@openframe/collab'
+import { isAllowedImageType, MAX_IMAGE_BYTES, validateImage } from '@openframe/core/uploads'
 
 /**
  * Who may read and write a board's images, decided without touching storage,
@@ -14,33 +15,17 @@ import type { RoomRole } from '@openframe/collab'
  */
 
 /**
- * What an image may be, checked AGAIN on the server.
+ * What an image may be, checked AGAIN on the server — by the SAME policy the
+ * browser applies (`@openframe/core/uploads`), not a copy of it.
  *
- * The web app already checks size, declared type and sniffed bytes before an
- * upload starts (rule 19), and none of that binds anybody who skips the web
- * app. A client-side check is a courtesy to the user; this is the one that
- * decides what ends up in the bucket.
- *
- * SVG is absent for the same reason it is absent there: it is a document that
- * can carry scripts and external references, and a half-sanitised one is worse
- * than a rejected one because it looks handled.
+ * The web app checks size, declared type and sniffed bytes before an upload
+ * starts (rule 19), and none of that binds anybody who skips the web app. A
+ * client-side check is a courtesy to the user; this is the one that decides
+ * what ends up in the bucket. It used to be a second list, and the two had
+ * drifted — 20MB against 12MB, AVIF on one side only, bytes sniffed on one
+ * side only. Reading one policy is what stops that happening again.
  */
-const ALLOWED_TYPES: readonly string[] = [
-  'image/png',
-  'image/jpeg',
-  'image/gif',
-  'image/webp',
-  'image/avif',
-]
-
-/**
- * The ceiling, in bytes.
- *
- * Generous enough for a photograph and small enough that a board cannot be
- * used as free file hosting. The web app's own limit is lower; this is the
- * one that holds when the web app is not involved.
- */
-export const MAX_ASSET_BYTES = 12 * 1024 * 1024
+export const MAX_ASSET_BYTES = MAX_IMAGE_BYTES
 
 export interface AssetRequest {
   readonly method: string
@@ -99,7 +84,7 @@ export function assetDecision(request: AssetRequest): AssetDecision {
   }
 
   const declared = (request.contentType ?? '').split(';')[0]?.trim().toLowerCase() ?? ''
-  if (!ALLOWED_TYPES.includes(declared)) {
+  if (!isAllowedImageType(declared)) {
     return { ok: false, status: 415, reason: 'That is not an image this board accepts' }
   }
 
@@ -187,4 +172,59 @@ export async function purgeBoardAssets(
   } catch {
     return { ok: false }
   }
+}
+
+export type UploadCheck =
+  | { readonly ok: true; readonly bytes: Uint8Array }
+  | { readonly ok: false; readonly status: number; readonly reason: string }
+
+/**
+ * Reads an upload's body — never more than the ceiling — and holds its bytes
+ * to the shared image policy before anything is written.
+ *
+ * `assetDecision` has already checked the declared type and the declared
+ * length, but both are claims. This is where the room stops taking them on
+ * trust: the body is read with a hard cap (a body longer than it said stops
+ * being read the moment it passes the ceiling), its length must be what was
+ * declared, and its leading bytes must be the format it claims to be. What
+ * comes back is the bytes to store, so nothing reads the body twice.
+ */
+export async function checkUpload(
+  contentType: string,
+  declaredLength: number,
+  body: ReadableStream<Uint8Array> | null,
+): Promise<UploadCheck> {
+  if (body === null) return { ok: false, status: 400, reason: 'An upload needs a body' }
+
+  const chunks: Uint8Array[] = []
+  let received = 0
+  const reader = body.getReader()
+  for (;;) {
+    const { done, value } = await reader.read()
+    if (done) break
+    received += value.byteLength
+    if (received > MAX_ASSET_BYTES || received > declaredLength) {
+      await reader.cancel()
+      return { ok: false, status: 413, reason: 'That image is too large' }
+    }
+    chunks.push(value)
+  }
+  if (received !== declaredLength) {
+    return { ok: false, status: 400, reason: 'The upload was not the size it said it was' }
+  }
+
+  const bytes = new Uint8Array(received)
+  let offset = 0
+  for (const chunk of chunks) {
+    bytes.set(chunk, offset)
+    offset += chunk.byteLength
+  }
+
+  const verdict = validateImage(contentType, bytes, received)
+  if (!verdict.ok) {
+    return verdict.failure.reason === 'too-large'
+      ? { ok: false, status: 413, reason: 'That image is too large' }
+      : { ok: false, status: 415, reason: 'That is not an image this board accepts' }
+  }
+  return { ok: true, bytes }
 }
