@@ -1,5 +1,7 @@
 import { useMemo } from 'react'
 
+import { MoreReactionsIcon } from '../controls/icons.js'
+
 import { useCanEdit } from '../hooks/use-can-edit.js'
 import { useCommands } from '../hooks/use-commands.js'
 import { useBoardDocument } from '../hooks/use-document-object.js'
@@ -63,6 +65,8 @@ function Bar({ id }: { readonly id: Parameters<typeof useReactions>[0] }) {
   const commands = useCommands()
   const me = useMe()
   const groups = useReactions(id)
+  const openPicker = useInteractionStore((state) => state.openReactionPicker)
+  const pickerOpen = useInteractionStore((state) => state.reactionPicker !== null)
   // Nothing to offer until it is known whose reactions these would be.
   if (me === null) return null
   return (
@@ -89,6 +93,33 @@ function Bar({ id }: { readonly id: Parameters<typeof useReactions>[0] }) {
           </button>
         )
       })}
+      <button
+        type="button"
+        className="of-icon-button of-reaction-bar__button"
+        aria-label="More reactions"
+        aria-haspopup="dialog"
+        aria-expanded={pickerOpen}
+        data-tip="More reactions"
+        data-testid="react-more"
+        onClick={(event) => {
+          // In the chrome layer's coordinates, which is where the picker hangs.
+          const layer = event.currentTarget
+            .closest('[data-chrome-layer]')
+            ?.getBoundingClientRect() ?? { x: 0, y: 0 }
+          const box = event.currentTarget.getBoundingClientRect()
+          openPicker({
+            targets: [id],
+            anchor: {
+              x: box.x - layer.x,
+              y: box.y - layer.y,
+              width: box.width,
+              height: box.height,
+            },
+          })
+        }}
+      >
+        <MoreReactionsIcon />
+      </button>
     </div>
   )
 }

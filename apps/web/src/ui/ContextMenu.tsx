@@ -343,12 +343,32 @@ export function ContextMenu() {
         : [
             {
               label: 'React',
-              submenu: REACTION_GLYPHS.map((glyph) => ({
-                label: `${glyph.emoji} ${glyph.label}`,
-                run: () => {
-                  if (me !== null) commands.toggleReaction(selected, glyph.key, me)
+              submenu: [
+                ...REACTION_GLYPHS.map((glyph) => ({
+                  label: `${glyph.emoji} ${glyph.label}`,
+                  run: () => {
+                    if (me !== null) commands.toggleReaction(selected, glyph.key, me)
+                  },
+                })),
+                // The rest of the library, hung where this menu was.
+                {
+                  label: 'More…',
+                  run: () => {
+                    const layer = window.document
+                      .querySelector('[data-chrome-layer]')
+                      ?.getBoundingClientRect() ?? { x: 0, y: 0 }
+                    useInteractionStore.getState().openReactionPicker({
+                      targets: selected,
+                      anchor: {
+                        x: at.x - layer.x,
+                        y: at.y - layer.y,
+                        width: at.width,
+                        height: at.height,
+                      },
+                    })
+                  },
                 },
-              })),
+              ],
             },
           ]),
     ],

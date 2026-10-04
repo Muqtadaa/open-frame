@@ -1285,9 +1285,18 @@ layer: eight glyphs, each a pressed toggle, placed clear of the connect points
 keyboard reaches the same eight through the context menu's React submenu, which
 also reacts to every note in a selection at once.
 
-The palette is fixed and stored by KEY (`plus-one`, `idea`…), never as the
-emoji, so a key a later version adds reads as "?" here rather than breaking the
-board. A chip is a button in the board's own chrome: a double-click on it is
+Beyond the eight, the bar's last button — a face with a plus — opens the whole
+emoji library, as does "More…" at the foot of the context menu's React submenu:
+a search field over the Unicode list in its usual groups, eight across. Typing
+filters by name; Down goes from the field into the grid and the arrows walk
+it; Escape closes it and hands focus back. The library is loaded only when
+first opened, so nobody pays for it who reacts with the eight.
+
+The eight are stored by KEY (`plus-one`, `idea`…), never as the emoji, so a key
+a later version adds reads as "?" here rather than breaking the board. An emoji
+from the library is stored as its code points (`u-1f680`), and one that is
+also on the bar keeps the bar's key — 👍 picked from the library is the same
+reaction as 👍 on the bar, counted together. A chip is a button in the board's own chrome: a double-click on it is
 two presses, never an edit of the note beneath.
 
 ### Connector Bends

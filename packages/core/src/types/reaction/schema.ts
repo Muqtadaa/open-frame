@@ -59,8 +59,13 @@ export interface ReactionData {
 
 export const REACTION_VERSION = 1
 
-/** What a glyph key may look like: short, lower-case, and never markup. */
-export const GLYPH_PATTERN = /^[a-z0-9-]{1,24}$/
+/**
+ * What a glyph key may look like, and never markup: a short palette key
+ * (`plus-one`), or any emoji as its code points in hex (`u-1f468-200d-1f469`).
+ * Code points rather than the emoji itself so a key stays plain ASCII in an
+ * id; up to twelve of them, which covers the longest ZWJ sequences.
+ */
+export const GLYPH_PATTERN = /^(?:[a-z][a-z0-9-]{0,23}|u(?:-[0-9a-f]{1,6}){1,12})$/
 
 export const ReactionDataSchema: ZodType<ReactionData> = z
   .object({

@@ -104,6 +104,39 @@ export function AnchoredSurface({
     )
   })
 
+  /*
+   * And when its contents change size WITHOUT this component rendering. The
+   * effect above runs only when the surface itself re-renders, and a child
+   * that renders on its own — the reaction bar, which mounts empty until it
+   * knows who is reacting — grew to full width while the surface went on
+   * placing it as nothing at all, straight over the record panel.
+   */
+  const observed = useRef<{ node: HTMLDivElement; observer: ResizeObserver } | null>(null)
+
+  useLayoutEffect(() => {
+    const node = element.current
+    if (observed.current?.node === node) return
+    observed.current?.observer.disconnect()
+    observed.current = null
+    if (node === null || typeof ResizeObserver === 'undefined') return
+    const observer = new ResizeObserver(() => {
+      setSize((old) =>
+        Math.abs(old.width - node.offsetWidth) < 1 && Math.abs(old.height - node.offsetHeight) < 1
+          ? old
+          : { width: node.offsetWidth, height: node.offsetHeight },
+      )
+    })
+    observer.observe(node)
+    observed.current = { node, observer }
+  })
+  useEffect(
+    () => () => {
+      observed.current?.observer.disconnect()
+      observed.current = null
+    },
+    [],
+  )
+
   // Says so when this surface has landed somewhere new (see CHROME_MOVED).
   // No dependency list for the reason the measuring above has none.
   const landed = useRef<string | null>(null)

@@ -1153,3 +1153,13 @@ reactions with it and undo brings them back (seen failing with the cascade
 removed). Found on the way: a double-click on a chip opened the note beneath
 for typing, because the board hit-tested the point; a press on a chrome button
 now ends the double-click there, seen failing first.
+
+The owner, trying it on the preview: the bar was drawn under the record panel,
+and the eight should not be the only choice. The bar mounted empty while it
+learned who was reacting and was placed at that size — nothing — and a
+floating surface only measured itself when it re-rendered, not when its
+contents changed; it now watches its own size, which every anchored surface
+gets. And the bar's last button, or "More…" in the context menu's React
+submenu, opens the whole Unicode emoji library: searched by name, walked with
+the arrows, loaded only when first opened. An emoji from it is stored as its
+code points, and one also on the bar is the bar's reaction.

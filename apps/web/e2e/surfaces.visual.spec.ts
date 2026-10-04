@@ -164,6 +164,20 @@ for (const world of WORLDS) {
       await snap(page, `${world}-reactions`)
     })
 
+    test('the emoji library, searched', async ({ page }) => {
+      await seedBoard(
+        page,
+        buildBoard((board) => {
+          board.note('Customers do not understand pricing', { x: 520, y: 300 })
+        }),
+      )
+      await page.locator('[data-testid="canvas"]').click({ position: { x: 520, y: 280 } })
+      await page.getByTestId('react-more').click()
+      await page.keyboard.type('heart')
+      await expect(page.getByRole('button', { name: 'red heart', exact: true })).toBeVisible()
+      await snap(page, `${world}-emoji-picker`)
+    })
+
     // An uncoloured frame on the world's paper, with a note laid on it.
     test('a frame holding a note', async ({ page }) => {
       await openLocalBoard(page)

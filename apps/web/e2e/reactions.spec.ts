@@ -1,6 +1,6 @@
 import type { Page } from '@playwright/test'
 
-import { CANVAS, expect, saved, seedBoard, test, undo } from './fixtures.js'
+import { boxOf, CANVAS, expect, overlaps, saved, seedBoard, test, undo } from './fixtures.js'
 import { buildBoard } from './boards.js'
 
 test.use({ board: 'fresh' })
@@ -103,4 +103,76 @@ test('double-clicking a reaction does not open the note', async ({ page }) => {
   // Two presses: ours on, then off again.
   await expect(chip(page, 'plus-one')).toHaveText(/1/)
   expect(await page.locator('[data-object-type="sticky"]').boundingBox()).toEqual(before)
+})
+
+/*
+ * The bar mounts empty while it learns who is reacting, and was placed at
+ * that size — nothing — so it never moved off the record panel once its
+ * buttons arrived.
+ */
+test('the bar never sits on the record panel', async ({ page }) => {
+  await oneNote(page)
+  await page.locator(CANVAS).click({ position: NOTE })
+  const bar = page.getByTestId('reaction-bar')
+  await expect(bar.getByRole('button', { name: 'Agree' })).toBeVisible()
+  await expect(page.getByTestId('inspector')).toBeVisible()
+  await expect
+    .poll(async () => overlaps(await boxOf(bar), await boxOf(page.getByTestId('inspector'))))
+    .toBe(false)
+})
+
+test.describe('the whole emoji library', () => {
+  test('is a search away from the bar, and reacts with what is picked', async ({ page }) => {
+    await oneNote(page)
+    await page.locator(CANVAS).click({ position: NOTE })
+    await page.getByTestId('react-more').click()
+
+    const picker = page.getByRole('dialog', { name: 'Pick a reaction' })
+    await expect(picker.getByRole('searchbox', { name: 'Search emoji' })).toBeFocused()
+    await page.keyboard.type('rocket')
+    await picker.getByRole('button', { name: 'rocket', exact: true }).click()
+
+    await expect(picker).toHaveCount(0)
+    await expect(chip(page, 'u-1f680')).toHaveText(/🚀\s*1/)
+    await expect(chip(page, 'u-1f680')).toHaveAttribute('aria-pressed', 'true')
+  })
+
+  test('is reached from the keyboard, through the context menu', async ({ page }) => {
+    await oneNote(page)
+    await page.locator(CANVAS).click({ position: NOTE })
+    await page.keyboard.press('Shift+F10')
+    await page.getByRole('menuitem', { name: 'React' }).press('ArrowRight')
+    await page.getByRole('menuitem', { name: 'More…' }).press('Enter')
+
+    await expect(page.getByRole('searchbox', { name: 'Search emoji' })).toBeFocused()
+    await page.keyboard.type('thinking')
+    // The library arrives on demand; the arrows walk what has been found.
+    await expect(page.getByRole('button', { name: 'thinking face', exact: true })).toBeVisible()
+    await page.keyboard.press('ArrowDown')
+    await page.keyboard.press('Enter')
+    await expect(chip(page, 'u-1f914')).toHaveText(/1/)
+  })
+
+  test('counts an emoji that is on the bar as the bar’s', async ({ page }) => {
+    await oneNote(page)
+    await page.locator(CANVAS).click({ position: NOTE })
+    await page.getByTestId('reaction-bar').getByRole('button', { name: 'Agree' }).click()
+    await page.getByTestId('react-more').click()
+    await page.keyboard.type('thumbs up')
+    await page
+      .getByRole('dialog', { name: 'Pick a reaction' })
+      .getByRole('button', { name: 'thumbs up', exact: true })
+      .click()
+    // The same reaction, so picking it again took it back rather than adding one.
+    await expect(page.getByTestId('reactions')).toHaveCount(0)
+  })
+
+  test('goes on Escape, and gives focus back', async ({ page }) => {
+    await oneNote(page)
+    await page.locator(CANVAS).click({ position: NOTE })
+    await page.getByTestId('react-more').click()
+    await page.keyboard.press('Escape')
+    await expect(page.getByRole('dialog', { name: 'Pick a reaction' })).toHaveCount(0)
+    await expect(page.getByTestId('react-more')).toBeFocused()
+  })
 })

@@ -7051,6 +7051,60 @@ textarea.of-input {
   background: var(--of-accent-soft);
 }
 
+/*
+ * The rest of the emoji library: a search field over a scrolling grid. A menu
+ * in kind (it paints over everything and goes on Escape), sized to show eight
+ * across and a few rows, so finding one is typing a word rather than scrolling.
+ */
+.of-emoji-picker {
+  display: flex;
+  flex-direction: column;
+  gap: var(--of-space-6);
+  width: calc(8 * 36px + 2 * var(--of-space-6));
+  padding: var(--of-space-6);
+}
+
+.of-emoji-picker__list {
+  max-height: min(300px, calc(100dvh - 12 * var(--of-space-12)));
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+
+.of-emoji-picker__heading {
+  margin: var(--of-space-6) 0 var(--of-space-2);
+  font-family: var(--of-mono);
+  font-size: var(--of-type-record);
+  font-weight: var(--of-weight-regular);
+  color: var(--of-ink-muted);
+}
+
+.of-emoji-picker__grid {
+  display: grid;
+  grid-template-columns: repeat(8, 36px);
+}
+
+.of-emoji-picker__cell {
+  width: 36px;
+  height: 36px;
+  font-size: 1.25rem;
+  line-height: 1;
+  background: transparent;
+  border: none;
+  border-radius: var(--of-radius);
+  cursor: pointer;
+}
+
+.of-emoji-picker__cell:hover,
+.of-emoji-picker__cell:focus-visible {
+  background: var(--of-hover);
+}
+
+.of-emoji-picker__note {
+  margin: var(--of-space-8) 0;
+  font-size: var(--of-type-ui-small);
+  color: var(--of-ink-muted);
+}
+
 .of-arrange__glyph {
   width: 17px;
   height: 17px;

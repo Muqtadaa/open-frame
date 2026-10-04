@@ -198,4 +198,14 @@ describe('reactions', () => {
     expect(react(h, note, 'plus-one', { ...otter, name: 'Ot\nter' }).ok).toBe(false)
     expect(react(h, note, 'plus-one', { ...otter, name: 'Ot\tter' }).ok).toBe(false)
   })
+
+  // Any emoji, not only the eight on the bar: stored as its code points.
+  it('holds any emoji, by its code points', () => {
+    const note = create(h, 'sticky', 'Ship it')
+    expect(react(h, note, 'u-1f468-200d-1f469-200d-1f467-200d-1f466', otter).ok).toBe(true)
+    expect(on(h, note)).toEqual(['u-1f468-200d-1f469-200d-1f467-200d-1f466:g_otter'])
+    // Not a key and not code points: refused at the boundary.
+    expect(react(h, note, 'u-' + '1f600-'.repeat(20) + '1f600', otter).ok).toBe(false)
+    expect(react(h, note, '😀', otter).ok).toBe(false)
+  })
 })
