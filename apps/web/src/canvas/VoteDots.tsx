@@ -20,7 +20,7 @@ function Dots({ voters }: { readonly voters: string }) {
   const round = useVotingContext()
   const me = useMe()
   if (round === null) return null
-  const { total, mine } = tallyVoters(voters, me?.key ?? null)
+  const { total, mine } = tallyVoters(voters, round.id, me?.key ?? null)
   const shown = countsShown(round.data)
   const count = shown ? total : mine
   if (count === 0) return null

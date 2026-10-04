@@ -19,6 +19,7 @@ export const voteRoundType = defineObjectType<typeof VOTE_ROUND_TYPE, VoteRoundD
       perPerson: init?.perPerson ?? 5,
       hidden: init?.hidden ?? false,
       status: init?.status ?? 'open',
+      run: init?.run ?? 1,
       by: init?.by ?? { key: 'nobody', name: 'Nobody', hue: 0 },
     },
     frame: { width: 0, height: 0 },
@@ -56,17 +57,35 @@ export type VoteRoundObject = AnyOpenFrameObject & { readonly data: VoteRoundDat
  * The board's round of dot voting, if it has one.
  *
  * A scan of the objects, so it is asked once per change to the board's
- * structure — never once per note (rule 10). The first found wins if a merge
- * ever leaves two, which is the same answer on every device.
+ * structure — never once per note (rule 10).
  */
 export function currentVoteRound(doc: BoardDocument): VoteRoundObject | null {
   let found: VoteRoundObject | null = null
   for (const object of doc.objects.values()) {
     if (object.type !== VOTE_ROUND_TYPE) continue
     const round = object as VoteRoundObject
-    if (found === null || round.id < found.id) found = round
+    // The latest run, should a merge ever leave two: the same answer everywhere.
+    if (
+      found === null ||
+      round.data.run > found.data.run ||
+      (round.data.run === found.data.run && round.id < found.id)
+    ) {
+      found = round
+    }
   }
   return found
+}
+
+/**
+ * The id the `run`th round on a board has.
+ *
+ * Deterministic, so two people starting a round from the same board before
+ * either hears of the other write ONE round rather than two: the later write
+ * wins its settings, and every dot either of them casts is in it. A minted id
+ * gave two rounds, one of them — with its votes — never shown (Codex, on #65).
+ */
+export function voteRoundId(run: number): string {
+  return `vr_${String(run)}`
 }
 
 /**

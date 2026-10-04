@@ -35,6 +35,8 @@ export interface VoteRoundData {
    */
   readonly hidden: boolean
   readonly status: VoteRoundStatus
+  /** Which round of the board's this is, counting from 1; it is what names it. */
+  readonly run: number
   readonly by: MarkAuthor
 }
 
@@ -62,5 +64,6 @@ export const VoteRoundDataSchema: ZodType<VoteRoundData> = z.strictObject({
   perPerson: z.number().int().min(1).max(MAX_VOTES_PER_PERSON),
   hidden: z.boolean(),
   status: z.enum(['open', 'closed']),
+  run: z.number().int().min(1),
   by: MarkAuthorSchema,
 }) as unknown as ZodType<VoteRoundData>

@@ -164,10 +164,10 @@ export type Command =
       /**
        * Starts the board's round of dot voting. A round that has ENDED is
        * replaced in the same command, so one undo brings it and its votes back;
-       * one still open is never silently thrown away.
+       * one still open is never silently thrown away. Its id is not the
+       * caller's: see `voteRoundId`.
        */
       readonly kind: 'StartVoteRound'
-      readonly id?: ObjectId
       readonly title: string
       readonly scope: VoteScope
       readonly perPerson: number

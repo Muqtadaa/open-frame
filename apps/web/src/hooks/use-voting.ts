@@ -57,8 +57,8 @@ export const VotingContext = createContext<VotingRound | null>(null)
 export const useVotingContext = (): VotingRound | null => useContext(VotingContext)
 
 /**
- * Who has put dots on one note, as a sorted list of their keys — one entry per
- * dot, so a person with two on it appears twice.
+ * Who has put dots on one note, and in which round, as sorted `round\tkey`
+ * lines — one per dot, so a person with two on it appears twice.
  *
  * From the registry's mark index, O(1) per note (rule 10), and a string so it
  * compares by value (rule 9). Votes only arrive and leave, so structure is all
@@ -73,7 +73,7 @@ export function useVoters(id: ObjectId): string {
   const getSnapshot = useCallback(() => {
     const keys: string[] = []
     for (const link of runtime.registry.marksOn(runtime.store.getDocument(), id)) {
-      if (link.edge.kind === VOTE_MARK) keys.push(link.edge.by)
+      if (link.edge.kind === VOTE_MARK) keys.push(`${link.edge.value}\t${link.edge.by}`)
     }
     return keys.sort().join('\n')
   }, [runtime, id])
@@ -85,10 +85,18 @@ export interface Tally {
   readonly mine: number
 }
 
-/** How many dots a note has, and how many of them are this person's. */
-export function tallyVoters(voters: string, myKey: string | null): Tally {
+/**
+ * How many dots a note has in `round`, and how many of them are this person's.
+ * Only that round's: a dot cast in a round that has since been replaced, or in
+ * one a merge left behind, is not part of the vote anybody is looking at.
+ */
+export function tallyVoters(voters: string, round: string, myKey: string | null): Tally {
   if (voters === '') return { total: 0, mine: 0 }
-  const keys = voters.split('\n')
+  const keys = voters
+    .split('\n')
+    .map((line) => line.split('\t'))
+    .filter(([inRound]) => inRound === round)
+    .map(([, key]) => key)
   return { total: keys.length, mine: keys.filter((key) => key === myKey).length }
 }
 

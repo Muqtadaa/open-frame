@@ -97,3 +97,23 @@ test('a viewer sees the round and the dots, and cannot vote', async ({ browser }
   await expect(viewer.getByTestId('voting-vote')).toHaveCount(0)
   await expect(viewer.getByTestId('voting-end')).toHaveCount(0)
 })
+
+test('a round somebody else starts puts away the one being set up here', async ({ browser }) => {
+  const room = newRoomId()
+  const alice = await join(browser, room)
+  const bob = await join(browser, room)
+  await addNote(alice)
+  await expect(bob.locator('[data-object-type="sticky"]')).toHaveCount(1)
+
+  await bob.locator(CANVAS).click({ button: 'right', position: { x: 900, y: 600 } })
+  await bob.getByRole('menuitem', { name: 'Start dot voting…' }).click()
+  await expect(bob.getByTestId('voting-setup')).toBeVisible()
+
+  await startRound(alice)
+  await expect(bob.getByTestId('voting')).toBeVisible()
+
+  // When Alice's round ends, Bob sees it ended — not his old form back in its place.
+  await alice.getByTestId('voting-end').click()
+  await expect(bob.getByTestId('voting-status')).toHaveText('Voting ended')
+  await expect(bob.getByTestId('voting-setup')).toHaveCount(0)
+})

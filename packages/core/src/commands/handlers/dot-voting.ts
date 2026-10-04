@@ -8,6 +8,7 @@ import {
   VOTE_ROUND_TYPE,
   currentVoteRound,
   inVoteScope,
+  voteRoundId,
   type VoteRoundObject,
 } from '../../types/vote-round/definition.js'
 import { VoteRoundDataSchema, type VoteRoundData } from '../../types/vote-round/schema.js'
@@ -36,17 +37,19 @@ export function startVoteRound(
   command: StartVoteRound,
   ctx: CommandContext,
 ): Patch[] {
+  const existing = currentVoteRound(doc)
+  const run = (existing?.data.run ?? 0) + 1
   const data = VoteRoundDataSchema.safeParse({
     title: command.title,
     scope: command.scope,
     perPerson: command.perPerson,
     hidden: command.hidden,
     status: 'open',
+    run,
     by: command.by,
   })
   if (!data.success) throw new CommandError('invalid-input', 'That is not a round of voting')
 
-  const existing = currentVoteRound(doc)
   if (existing?.data.status === 'open') {
     throw new CommandError('invalid-input', 'A round of voting is already open')
   }
@@ -71,7 +74,7 @@ export function startVoteRound(
         objects: [
           {
             type: VOTE_ROUND_TYPE,
-            ...(command.id === undefined ? {} : { id: command.id }),
+            id: asObjectId(voteRoundId(run)),
             x: 0,
             y: 0,
             data: { ...data.data },

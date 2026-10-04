@@ -1,4 +1,10 @@
-import { MAX_VOTES_PER_PERSON, VOTE_MARK, type ObjectId, type VoteScope } from '@openframe/core'
+import {
+  MAX_VOTES_PER_PERSON,
+  VOTE_MARK,
+  objectsInPaintOrder,
+  type ObjectId,
+  type VoteScope,
+} from '@openframe/core'
 import {
   useCallback,
   useEffect,
@@ -37,8 +43,18 @@ const DEFAULT_PER_PERSON = 5
  */
 export function VotingBanner() {
   const setup = useInteractionStore((state) => state.votingSetup)
+  const closeSetup = useInteractionStore((state) => state.closeVotingSetup)
   const round = useVoteRound()
-  if (setup !== null && round?.data.status !== 'open') return <VotingSetup scope={setup} />
+  const roundOpen = round?.data.status === 'open'
+  /*
+   * A round somebody else started puts away the one being set up here. Merely
+   * hidden behind it, the form came back the moment their round ended, in
+   * place of its results, ready to replace it (Codex, on #65).
+   */
+  useEffect(() => {
+    if (roundOpen && setup !== null) closeSetup()
+  }, [roundOpen, setup, closeSetup])
+  if (setup !== null && !roundOpen) return <VotingSetup scope={setup} />
   if (round === null) return null
   return <VotingRoundBar round={round} />
 }
@@ -311,9 +327,16 @@ function Results({
   const ranked = useMemo(() => {
     const counts = new Map<ObjectId, number>()
     for (const vote of votes) counts.set(vote.target, (counts.get(vote.target) ?? 0) + 1)
-    // Board order for ties: the order the notes were made in.
-    return rankVotes(counts, [...counts.keys()].sort())
-  }, [votes])
+    /*
+     * Ties in BOARD order — the order the notes are drawn in. Not the ids',
+     * which end in random characters and say nothing about the board (Codex,
+     * on #65). One pass over the board, when the votes change, never per note.
+     */
+    const order = objectsInPaintOrder(runtime.store.getDocument())
+      .filter((object) => counts.has(object.id))
+      .map((object) => object.id)
+    return rankVotes(counts, order)
+  }, [votes, runtime.store])
 
   if (ranked.length === 0) {
     return <p className="of-voting__empty">No votes yet</p>

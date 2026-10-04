@@ -189,7 +189,9 @@ object, through the dispatcher (rule 3). It is not drawn on it — both types ar
   what one frame holds, or the notes selected when it started), how many dots
   each person gets, whether counts are hidden, and whether it is open. There is
   one per board: starting a round replaces one that has ended, in the same
-  command, and is refused while one is open.
+  command, and is refused while one is open. A round is named by its run on
+  the board (`vr_<n>`), so two people starting one at the same moment write
+  ONE round, and every dot either casts is in it.
 - A **`vote`** is one dot, marked on its note and `within` its round, so the
   registry's mark index counts them and deleting the note or clearing the round
   takes them with it. Nothing keeps a tally.

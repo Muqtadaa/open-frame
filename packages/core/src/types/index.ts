@@ -134,6 +134,7 @@ export {
   VOTE_ROUND_TYPE,
   currentVoteRound,
   inVoteScope,
+  voteRoundId,
   voteRoundType,
   type VoteRoundObject,
 } from './vote-round/definition.js'

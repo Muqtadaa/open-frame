@@ -214,6 +214,17 @@ describe('dot voting', () => {
     expect(badAuthor.ok).toBe(false)
   })
 
+  it('names a round by its place in the board’s run, so two people starting at once start one', () => {
+    // Two devices, each starting from the same board before hearing of the other.
+    const other = createTestHarness()
+    expect(start(h)).toBe(start(other))
+
+    // The next round is a new one, not the last one under the same name.
+    const first = currentVoteRound(h.store.getDocument())?.id
+    h.dispatcher.dispatch({ kind: 'SetVoteRound', round: first!, status: 'closed' })
+    expect(start(h)).not.toBe(first)
+  })
+
   it('is one undo step per dot', () => {
     const round = start(h)
     cast(h, round, note)

@@ -118,6 +118,27 @@ test('hides other people’s dots until revealed, then ranks the notes', async (
   await expect(page.locator('[data-object-type="sticky"][data-selected="true"]')).toHaveCount(2)
 })
 
+test('ranks tied notes in the order they sit on the board', async ({ page }) => {
+  await seedBoard(
+    page,
+    buildBoard((board) => {
+      const first = board.note('Show the price early', FIRST)
+      const second = board.note('Free returns', SECOND)
+      const round = board.voting({})
+      board.vote(round, first, heron)
+      board.vote(round, second, heron)
+    }),
+  )
+  // Send the later note to the back: it is now first in board order, and
+  // still last by id.
+  await page.locator(CANVAS).click({ position: SECOND })
+  await page.keyboard.press('Shift+[')
+  await page.getByTestId('voting-results').click()
+  const list = page.getByTestId('voting-list').getByRole('listitem')
+  await expect(list.first()).toContainText('Free returns')
+  await expect(list.last()).toContainText('Show the price early')
+})
+
 test('ends a round, keeps the counts, and clears it with one undo to bring it back', async ({
   page,
 }) => {
