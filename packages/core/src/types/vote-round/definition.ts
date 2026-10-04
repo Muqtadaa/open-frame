@@ -1,0 +1,70 @@
+import type { BoardDocument } from '../../domain/document.js'
+import { defineObjectType } from '../../domain/registry.js'
+import type { AnyOpenFrameObject } from '../../domain/object.js'
+import { VOTE_ROUND_VERSION, VoteRoundDataSchema, type VoteRoundData } from './schema.js'
+
+export const VOTE_ROUND_TYPE = 'vote-round'
+
+export const voteRoundType = defineObjectType<typeof VOTE_ROUND_TYPE, VoteRoundData>({
+  type: VOTE_ROUND_TYPE,
+
+  schema: VoteRoundDataSchema,
+  currentVersion: VOTE_ROUND_VERSION,
+  migrations: {},
+
+  create: (init) => ({
+    data: {
+      title: init?.title ?? '',
+      scope: init?.scope ?? { kind: 'board' },
+      perPerson: init?.perPerson ?? 5,
+      hidden: init?.hidden ?? false,
+      status: init?.status ?? 'open',
+      by: init?.by ?? { key: 'nobody', name: 'Nobody', hue: 0 },
+    },
+    frame: { width: 0, height: 0 },
+  }),
+
+  capabilities: {
+    resizable: false,
+    rotatable: false,
+    textEditable: false,
+    spatial: false,
+    canHaveChildren: false,
+    selectsAsUnit: false,
+    connectable: false,
+    markable: false,
+    styleProps: [],
+  },
+
+  describe: (object) => ({
+    searchText: '',
+    summary: `Dot voting${object.data.title === '' ? '' : `: ${object.data.title}`} (${object.data.status})`,
+    gist: object.data.title,
+    fields: {
+      title: object.data.title,
+      perPerson: String(object.data.perPerson),
+      hidden: String(object.data.hidden),
+      status: object.data.status,
+      by: object.data.by.name,
+    },
+  }),
+})
+
+export type VoteRoundObject = AnyOpenFrameObject & { readonly data: VoteRoundData }
+
+/**
+ * The board's round of dot voting, if it has one.
+ *
+ * A scan of the objects, so it is asked once per change to the board's
+ * structure — never once per note (rule 10). The first found wins if a merge
+ * ever leaves two, which is the same answer on every device.
+ */
+export function currentVoteRound(doc: BoardDocument): VoteRoundObject | null {
+  let found: VoteRoundObject | null = null
+  for (const object of doc.objects.values()) {
+    if (object.type !== VOTE_ROUND_TYPE) continue
+    const round = object as VoteRoundObject
+    if (found === null || round.id < found.id) found = round
+  }
+  return found
+}

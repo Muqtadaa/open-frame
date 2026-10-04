@@ -16,6 +16,7 @@ import { reparentObjects } from './reparent-objects.js'
 import { rotateObjects } from './rotate-objects.js'
 import { setHidden, setLocked } from './set-flags.js'
 import { toggleReaction } from './toggle-reaction.js'
+import { castDotVote, removeDotVote, setVoteRound, startVoteRound } from './dot-voting.js'
 import { deleteObjects } from './delete-objects.js'
 import { moveObjects } from './move-objects.js'
 import { resizeObjects } from './resize-objects.js'
@@ -78,6 +79,14 @@ export function handleCommand(
       return applyRemotePatches(doc, command, ctx)
     case 'ToggleReaction':
       return toggleReaction(doc, command, ctx)
+    case 'StartVoteRound':
+      return startVoteRound(doc, command, ctx)
+    case 'CastDotVote':
+      return castDotVote(doc, command, ctx)
+    case 'RemoveDotVote':
+      return removeDotVote(doc, command, ctx)
+    case 'SetVoteRound':
+      return setVoteRound(doc, command, ctx)
     case 'RepairParentage':
       return repairParentage(doc, command)
   }
