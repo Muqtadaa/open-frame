@@ -47,7 +47,7 @@ function Chips({
         const glyph = glyphFor(group.glyph)
         // Until it is known who "me" is, nothing is mine and nothing is pressable.
         const mine = me !== null && group.people.some((person) => person.key === me.key)
-        const tip = describe(group, glyph.label, me?.key ?? null, canEdit && me !== null)
+        const who = whoReacted(group, me?.key ?? null)
         return (
           <button
             key={group.glyph}
@@ -55,8 +55,10 @@ function Chips({
             className="of-reaction"
             data-testid={`reaction-${group.glyph}`}
             aria-pressed={mine}
-            aria-label={tip}
-            data-tip={tip}
+            // Named for the reaction; the tip, who left it, is its description.
+            aria-label={glyph.label}
+            aria-description={who}
+            data-tip={who}
             disabled={!canEdit || me === null}
             onClick={() => {
               if (me !== null) commands.toggleReaction([id], group.glyph, me)
@@ -71,20 +73,15 @@ function Chips({
   )
 }
 
-/** "Agree, 3: Otter, Heron and you. Press to take yours back." */
-function describe(
-  group: ReactionGroup,
-  label: string,
-  myKey: string | null,
-  canEdit: boolean,
-): string {
+/**
+ * Who reacted — "Otter, Heron and you" — and nothing else. The chip is plainly
+ * a button; telling people what pressing it does is copy they have to read
+ * past every time.
+ */
+function whoReacted(group: ReactionGroup, myKey: string | null): string {
   const others = group.people.filter((person) => person.key !== myKey).map((p) => p.name)
-  const mine = others.length < group.people.length
-  const names = mine ? [...others, 'you'] : others
-  const who =
-    names.length <= 1
-      ? (names[0] ?? '')
-      : `${names.slice(0, -1).join(', ')} and ${names[names.length - 1] ?? ''}`
-  const action = !canEdit ? '' : mine ? ' Press to take yours back.' : ' Press to add yours.'
-  return `${label}, ${String(group.people.length)}: ${who}.${action}`
+  const names = others.length < group.people.length ? [...others, 'you'] : others
+  return names.length <= 1
+    ? (names[0] ?? '')
+    : `${names.slice(0, -1).join(', ')} and ${names[names.length - 1] ?? ''}`
 }

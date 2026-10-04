@@ -182,7 +182,7 @@ function Picker({
             setQuery(event.target.value)
           }}
         />
-        <div className="of-emoji-picker__list">
+        <div className="of-emoji-picker__list" data-scroll="">
           {failed ? (
             <p className="of-emoji-picker__note">The emoji could not be loaded.</p>
           ) : library === null ? (

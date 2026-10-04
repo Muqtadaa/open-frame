@@ -43,6 +43,26 @@ function deltaScale(event: WheelEvent): number {
  * what a trackpad pinch reports as, and it is also the browser's zoom
  * shortcut — so it must be intercepted or the two compound.
  */
+/**
+ * Whether something between the pointer and the board can still scroll the
+ * way the wheel is turning. At its end it cannot, and the board has it.
+ */
+function scrollsUnder(target: EventTarget | null, board: HTMLElement, deltaY: number): boolean {
+  for (
+    let node = target instanceof Element ? target : null;
+    node !== null && node !== board;
+    node = node.parentElement
+  ) {
+    if (!(node instanceof HTMLElement) || node.scrollHeight <= node.clientHeight) continue
+    const overflow = getComputedStyle(node).overflowY
+    if (overflow !== 'auto' && overflow !== 'scroll') continue
+    if (deltaY < 0 ? node.scrollTop > 0 : node.scrollTop + node.clientHeight < node.scrollHeight) {
+      return true
+    }
+  }
+  return false
+}
+
 export function useWheelGesture(containerRef: RefObject<HTMLElement | null>): void {
   useEffect(() => {
     const element = containerRef.current
@@ -53,6 +73,11 @@ export function useWheelGesture(containerRef: RefObject<HTMLElement | null>): vo
       const rect = element.getBoundingClientRect()
       const anchor = { x: event.clientX - rect.left, y: event.clientY - rect.top }
       const pinching = event.ctrlKey || event.metaKey
+
+      // A list in the chrome — the emoji library, a long menu — scrolls under
+      // the wheel. The board taking every wheel event left them unscrollable
+      // by anything but their scrollbar.
+      if (!pinching && scrollsUnder(event.target, element, event.deltaY)) return
 
       if (pinching || store.wheelMode === 'zoom') {
         event.preventDefault()

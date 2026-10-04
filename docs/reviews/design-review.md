@@ -1163,3 +1163,10 @@ gets. And the bar's last button, or "More…" in the context menu's React
 submenu, opens the whole Unicode emoji library: searched by name, walked with
 the arrows, loaded only when first opened. An emoji from it is stored as its
 code points, and one also on the bar is the bar's reaction.
+
+After #60, from the owner on Windows: the library's classic scrollbar cut off
+its last column (which then scrolled sideways), the wheel did nothing over it
+because the board claimed every wheel event, and the chip's tip carried an
+instruction ("Press to take yours back") nobody needs. The columns now share
+the width beside the scrollbar; a wheel over anything in the chrome that can
+still scroll scrolls it; and the tip is who reacted, nothing more.
