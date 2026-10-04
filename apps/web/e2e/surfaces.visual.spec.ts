@@ -212,6 +212,37 @@ for (const world of WORLDS) {
       await snap(page, `${world}-session-music`)
     })
 
+    // A poll with its results showing: one option picked here, one by someone else.
+    test('a poll', async ({ page }) => {
+      await page.addInitScript(() => {
+        localStorage.setItem(
+          'openframe:guest',
+          JSON.stringify({ name: 'Heron', hue: 2, key: 'g_0123456789abcdef' }),
+        )
+      })
+      await seedBoard(
+        page,
+        buildBoard((board) => {
+          const poll = board.add(
+            'poll',
+            { x: 520, y: 300 },
+            {
+              text: [{ text: 'Which first?' }],
+              options: [
+                { id: 'o1', label: 'Show the price early' },
+                { id: 'o2', label: 'Free returns' },
+                { id: 'o3', label: 'Live chat' },
+              ],
+            },
+          )
+          board.answer(poll, 'o2', { key: 'g_otter', name: 'Otter', hue: 30 })
+        }),
+      )
+      await page.getByTestId('poll-option-o2').click()
+      await expect(page.getByTestId('poll-state')).toHaveText('2 people')
+      await snap(page, `${world}-poll`)
+    })
+
     // A round of dot voting, revealed, with its results open and a dot on the note.
     test('dot voting', async ({ page }) => {
       await page.addInitScript(() => {

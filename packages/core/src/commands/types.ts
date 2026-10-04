@@ -197,6 +197,16 @@ export type Command =
     }
   | {
       /**
+       * This person's pick of an option on a poll, made — or taken back if
+       * they had already made it. One command either way.
+       */
+      readonly kind: 'AnswerPoll'
+      readonly poll: ObjectId
+      readonly option: string
+      readonly by: MarkAuthor
+    }
+  | {
+      /**
        * Restore parentage for these objects after a merge. An id that no longer
        * exists is read as a former parent and its orphans checked instead.
        */

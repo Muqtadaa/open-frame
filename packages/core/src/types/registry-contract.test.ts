@@ -33,6 +33,8 @@ describe('object type registry contract', () => {
       'image',
       'insight',
       'journey-stage',
+      'poll',
+      'poll-answer',
       'reaction',
       'relation',
       'requirement',
@@ -203,6 +205,11 @@ describe('object type registry contract', () => {
           longText: 'sample',
           tags: ['sample'],
           select: undefined,
+          boolean: true,
+          choices: [
+            { id: 'o1', label: 'Sample' },
+            { id: 'o2', label: 'Other' },
+          ],
         }
         for (const field of definition.fields ?? []) {
           const { data } = definition.create()

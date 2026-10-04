@@ -203,6 +203,17 @@ export function CodeIcon({ className }: IconProps) {
   )
 }
 
+/** A poll: three answers, as bars of different lengths. */
+export function PollIcon({ className }: IconProps) {
+  return (
+    <svg {...base} className={className}>
+      <path d="M5 7h10" />
+      <path d="M5 12h14" />
+      <path d="M5 17h6" />
+    </svg>
+  )
+}
+
 export function ImageIcon({ className }: IconProps) {
   return (
     <svg {...base} className={className}>

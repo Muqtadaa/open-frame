@@ -16,6 +16,7 @@ import { reparentObjects } from './reparent-objects.js'
 import { rotateObjects } from './rotate-objects.js'
 import { setHidden, setLocked } from './set-flags.js'
 import { toggleReaction } from './toggle-reaction.js'
+import { answerPoll } from './answer-poll.js'
 import { castDotVote, removeDotVote, setVoteRound, startVoteRound } from './dot-voting.js'
 import { deleteObjects } from './delete-objects.js'
 import { moveObjects } from './move-objects.js'
@@ -87,6 +88,8 @@ export function handleCommand(
       return removeDotVote(doc, command, ctx)
     case 'SetVoteRound':
       return setVoteRound(doc, command, ctx)
+    case 'AnswerPoll':
+      return answerPoll(doc, command, ctx)
     case 'RepairParentage':
       return repairParentage(doc, command)
   }

@@ -15,6 +15,8 @@ import { requirementType } from './requirement/definition.js'
 import { relationType } from './relation/definition.js'
 import { reactionType } from './reaction/definition.js'
 import { voteRoundType } from './vote-round/definition.js'
+import { pollType } from './poll/definition.js'
+import { pollAnswerType } from './poll-answer/definition.js'
 import { voteType } from './vote/definition.js'
 import { shapeType } from './shape/definition.js'
 import { stickyType } from './sticky/definition.js'
@@ -128,6 +130,23 @@ export {
   type MarkAuthor,
   type ReactionData,
 } from './reaction/schema.js'
+export { POLL_TYPE, pollType } from './poll/definition.js'
+export {
+  MAX_POLL_OPTIONS,
+  MIN_POLL_OPTIONS,
+  POLL_OPTION_ID,
+  PollDataSchema,
+  nextOptionId,
+  type PollData,
+  type PollOption,
+} from './poll/schema.js'
+export {
+  POLL_ANSWER_TYPE,
+  POLL_MARK,
+  pollAnswerId,
+  pollAnswerType,
+} from './poll-answer/definition.js'
+export { PollAnswerDataSchema, type PollAnswerData } from './poll-answer/schema.js'
 export { VOTE_MARK, VOTE_TYPE, voteId, voteType } from './vote/definition.js'
 export { VoteDataSchema, type VoteData } from './vote/schema.js'
 export {
@@ -217,6 +236,8 @@ export function createDefaultRegistry(): ObjectTypeRegistry {
     reactionType,
     voteRoundType,
     voteType,
+    pollType,
+    pollAnswerType,
     unknownType,
   ])
 }

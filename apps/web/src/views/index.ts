@@ -13,6 +13,7 @@ import { journeyStageView } from './JourneyStageView.js'
 import { requirementView } from './RequirementView.js'
 import { shapeView } from './ShapeView.js'
 import { codeView } from './CodeView.js'
+import { pollView } from './PollView.js'
 import { stickyView } from './StickyView.js'
 import { tableView } from './TableView.js'
 import { textView } from './TextView.js'
@@ -32,6 +33,7 @@ export function createDefaultViewRegistry(): ObjectViewRegistry {
     stickyView,
     tableView,
     codeView,
+    pollView,
     textView,
     shapeView,
     frameView,

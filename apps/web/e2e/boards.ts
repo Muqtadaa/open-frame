@@ -67,6 +67,12 @@ export interface BoardBuilder {
     readonly hidden?: boolean
     readonly ids?: readonly ObjectId[]
   }) => ObjectId
+  /** Somebody's answer on a poll. */
+  readonly answer: (
+    poll: ObjectId,
+    option: string,
+    by: { key: string; name: string; hue: number },
+  ) => void
   /** Somebody's dot on a note in the round. */
   readonly vote: (
     round: ObjectId,
@@ -162,6 +168,10 @@ export function buildBoard(make: (board: BoardBuilder) => void, title = 'Untitle
         hidden,
         by: { key: 'g_facilitator', name: 'Facilitator', hue: 120 },
       }),
+    answer: (poll, option, by) => {
+      const result = dispatcher.dispatch({ kind: 'AnswerPoll', poll, option, by })
+      if (!result.ok) throw result.error
+    },
     vote: (round, target, by) => {
       const result = dispatcher.dispatch({ kind: 'CastDotVote', round, target, by })
       if (!result.ok) throw result.error

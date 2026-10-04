@@ -9,6 +9,7 @@ import { useInteractionStore } from '../interaction/interaction-store.js'
 import { useRemoteDrag } from '../interaction/remote-drags.js'
 import { translateOffset } from '../interaction/drag-offset.js'
 import { ObjectErrorBoundary } from './ObjectErrorBoundary.js'
+import { MarkedRenderer } from './MarkedRenderer.js'
 import { VoteDots } from './VoteDots.js'
 import { ReactionChips } from './ReactionChips.js'
 import { EditorChrome, EditorOverlay } from './EditorChrome.js'
@@ -307,6 +308,21 @@ function ObjectViewInner({ id, views }: Props) {
               }
               setEditing(null)
             }}
+          />
+        ) : view?.readsMarks === true ? (
+          <MarkedRenderer
+            Renderer={Renderer}
+            object={previewed(object, frame, {
+              crop: cropPreview,
+              divider: dividerPreview,
+              reshape: reshapePreview,
+              style: stylePreview,
+            })}
+            selected={selected}
+            zoom={zoom}
+            document={runtime.store.getDocument()}
+            assetUrl={assetUrl}
+            boundsOf={boundsOf}
           />
         ) : (
           <Renderer

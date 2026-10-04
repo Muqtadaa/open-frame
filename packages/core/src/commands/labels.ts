@@ -79,6 +79,8 @@ export function describeCommand(command: Command): string {
       return 'Take back a vote'
     case 'SetVoteRound':
       return command.status === 'closed' ? 'End voting' : 'Reveal votes'
+    case 'AnswerPoll':
+      return 'Answer poll'
     case 'RepairParentage':
       return 'Repair board structure'
   }

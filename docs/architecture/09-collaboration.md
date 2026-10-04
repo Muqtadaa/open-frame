@@ -199,6 +199,13 @@ object, through the dispatcher (rule 3). It is not drawn on it — both types ar
   devices casting for one person at the same moment take the same free slot and
   converge on one object, so nobody ever holds more dots than the round gives.
 
+A **poll** works the same way. Each person's pick is a `poll-answer` object
+marked on the poll, with the id `pa_<poll>_<option>_<key>`, so two people
+answering at once are both counted, and one person on two devices is one
+answer. Rewording an option keeps the answers on it, because an answer names
+its option by id. A removed option's answers are left where they are,
+uncounted.
+
 "Hidden" is hidden by the interface only. The votes are objects in the shared
 document, and anybody who reads it can count them.
 
