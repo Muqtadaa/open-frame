@@ -1,6 +1,7 @@
 import { createContext, useContext } from 'react'
 
 import type { BoardDocument, BoardId, BoardRepository, ObjectId } from '@openframe/core'
+import type { Catalogue } from '@openframe/core/facilitation'
 
 import type { OpenFrameRuntime } from './context.js'
 
@@ -410,6 +411,18 @@ export interface PasswordService {
   } | null>
 }
 
+/**
+ * The session music's library (ADR 0017): which tracks there are, and where
+ * each one is. A deployment with no room server has no library, and the music
+ * control is simply absent.
+ */
+export interface MusicService {
+  /** The catalogue, or `null` when there is none to be had. */
+  readonly catalogue: () => Promise<Catalogue | null>
+  /** Where a track can be streamed from, for an `<audio>` element. */
+  readonly trackUrl: (trackId: string) => string
+}
+
 export interface Services {
   /** This browser's boards. The front door has no runtime, so it reads them here. */
   readonly repository: BoardRepository
@@ -420,6 +433,7 @@ export interface Services {
   readonly workspaces: WorkspaceService
   readonly boards: BoardService
   readonly passwords: PasswordService
+  readonly music: MusicService
 }
 
 export const ServicesContext = createContext<Services | null>(null)

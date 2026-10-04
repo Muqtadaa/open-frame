@@ -107,6 +107,15 @@ describe('where the page may connect', () => {
     expect(directive(production, 'img-src')).not.toContain('wss://rooms.example.dev')
   })
 
+  /*
+   * Session music plays from the room server (ADR 0017). With no `media-src`
+   * the browser falls back to `default-src 'self'`, and every track is
+   * blocked before a byte of it is fetched.
+   */
+  it('plays the room server’s music, and media from nowhere else', () => {
+    expect(directive(production, 'media-src')).toEqual(["'self'", 'https://rooms.example.dev'])
+  })
+
   it('reaches Supabase, and its socket for live comments', () => {
     const connect = directive(production, 'connect-src')
     expect(connect).toContain('https://project.supabase.co')
@@ -131,6 +140,7 @@ describe('where the page may connect', () => {
     const alone = contentSecurityPolicy({ html: HTML, supabaseUrl: null, collabUrl: null, sha256 })
     expect(directive(alone, 'connect-src')).toEqual(["'self'"])
     expect(directive(alone, 'img-src')).toEqual(["'self'", 'data:', 'blob:'])
+    expect(directive(alone, 'media-src')).toEqual(["'self'"])
   })
 
   it('shuts the doors nothing here uses', () => {

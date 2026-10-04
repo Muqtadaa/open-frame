@@ -1,10 +1,10 @@
 import type { BoardId } from '@openframe/core'
-import { readTimer, type SessionTimer } from '@openframe/core/facilitation'
+import { readMusic, readTimer } from '@openframe/core/facilitation'
 
 import type { FacilitationChannel } from '../runtime/facilitation.js'
 
 /**
- * A local board's session timer: this device's clock, kept in this browser.
+ * A local board's session timer and music: this device's clock, kept in this browser.
  *
  * Kept, not just held, because a facilitator who refreshes mid-exercise must
  * find the clock where they left it. Read through the same strict reader as a
@@ -20,35 +20,45 @@ export function localFacilitation(
   // replaced — a test's — is believed.
   now: () => number = () => Date.now(),
 ): FacilitationChannel {
-  const key = `openframe:timer:${boardId}`
-  let timer = read(key)
+  const timerKey = `openframe:timer:${boardId}`
+  const musicKey = `openframe:music:${boardId}`
+  let timer = read(timerKey, readTimer)
+  let music = read(musicKey, readMusic)
   const listeners = new Set<() => void>()
+  const keep = (key: string, value: unknown): void => {
+    try {
+      window.localStorage.setItem(key, JSON.stringify(value))
+    } catch {
+      // Held in memory for this page; only a reload forgets it.
+    }
+    for (const listener of [...listeners]) listener()
+  }
 
   return {
     now,
     // This device's clock is the one a local board's timer runs on.
     ready: () => true,
     timer: () => timer,
+    music: () => music,
     subscribe: (listener) => {
       listeners.add(listener)
       return () => listeners.delete(listener)
     },
     writeTimer: (next) => {
       timer = next
-      try {
-        window.localStorage.setItem(key, JSON.stringify(next))
-      } catch {
-        // Held in memory for this page; only a reload forgets it.
-      }
-      for (const listener of [...listeners]) listener()
+      keep(timerKey, next)
+    },
+    writeMusic: (next) => {
+      music = next
+      keep(musicKey, next)
     },
   }
 }
 
-function read(key: string): SessionTimer | null {
+function read<T>(key: string, reader: (value: unknown) => T | null): T | null {
   try {
     const raw = window.localStorage.getItem(key)
-    return raw === null ? null : readTimer(JSON.parse(raw))
+    return raw === null ? null : reader(JSON.parse(raw))
   } catch {
     return null
   }

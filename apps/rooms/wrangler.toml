@@ -38,3 +38,12 @@ storage = "sqlite"
 [[r2_buckets]]
 binding = "ASSETS"
 bucket_name = "openframe-assets"
+
+# The session music: CC0 tracks, the same for every board, served publicly by
+# this Worker at /music (ADR 0017). Its own bucket, so a board's deletion can
+# never reach it and nothing in it is anybody's data. What may be served is
+# `src/library/catalogue.json`, not whatever the bucket holds; tracks are put
+# here by `tools/audio/upload-tracks.mjs`, which checks each against it.
+[[r2_buckets]]
+binding = "LIBRARY"
+bucket_name = "openframe-library"

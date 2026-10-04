@@ -1,4 +1,9 @@
-import { readTimer, type SessionTimer } from '@openframe/core/facilitation'
+import {
+  readMusic,
+  readTimer,
+  type SessionMusic,
+  type SessionTimer,
+} from '@openframe/core/facilitation'
 import type * as Y from 'yjs'
 
 /**
@@ -23,10 +28,13 @@ import type * as Y from 'yjs'
 
 export const FACILITATION = 'facilitation'
 const TIMER = 'timer'
+const MUSIC = 'music'
 
 export interface Facilitation {
   /** The session timer, or `null` when nobody has set one — or what is there is not one. */
   readonly timer: SessionTimer | null
+  /** The session's music, or `null` when nobody has chosen any — or what is there is not music. */
+  readonly music: SessionMusic | null
 }
 
 export function facilitationOf(doc: Y.Doc): Y.Map<unknown> {
@@ -34,7 +42,8 @@ export function facilitationOf(doc: Y.Doc): Y.Map<unknown> {
 }
 
 export function readFacilitation(doc: Y.Doc): Facilitation {
-  return { timer: readTimer(facilitationOf(doc).get(TIMER)) }
+  const map = facilitationOf(doc)
+  return { timer: readTimer(map.get(TIMER)), music: readMusic(map.get(MUSIC)) }
 }
 
 /**
@@ -44,4 +53,9 @@ export function readFacilitation(doc: Y.Doc): Facilitation {
  */
 export function writeTimer(doc: Y.Doc, timer: SessionTimer): void {
   facilitationOf(doc).set(TIMER, structuredClone(timer))
+}
+
+/** Replaces the music whole, for the same reason as the timer. */
+export function writeMusic(doc: Y.Doc, music: SessionMusic): void {
+  facilitationOf(doc).set(MUSIC, structuredClone(music))
 }

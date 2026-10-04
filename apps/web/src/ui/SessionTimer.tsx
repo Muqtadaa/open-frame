@@ -10,7 +10,7 @@ import {
   startTimer,
   type SessionTimer as Timer,
 } from '@openframe/core/facilitation'
-import { useEffect, useRef, useState, useSyncExternalStore, type RefObject } from 'react'
+import { useEffect, useRef, useState, useSyncExternalStore } from 'react'
 
 import { AnchoredSurface } from '../controls/AnchoredSurface.js'
 import { TimerIcon } from '../controls/icons.js'
@@ -22,6 +22,7 @@ import { useOpenFrame } from '../runtime/context.js'
 import type { FacilitationChannel } from '../runtime/facilitation.js'
 import { chime, primeAudio } from './chime.js'
 import { clockText, parseClock } from './clock-text.js'
+import { useSheet } from './use-sheet.js'
 
 /** Minutes, because that is how an exercise is planned. */
 const PRESETS = [1, 3, 5, 10, 15] as const
@@ -106,7 +107,14 @@ function TimerControl({ channel }: { readonly channel: FacilitationChannel }) {
     }
   }, [active])
 
-  useSheet(open, anchor !== null, setOpen, sheet, button)
+  useSheet({
+    open,
+    placed: anchor !== null,
+    setOpen,
+    sheet,
+    button,
+    first: '[data-testid="timer-start"]',
+  })
 
   if (!canEdit && !active) return null
 
@@ -360,45 +368,4 @@ function useClock(now: () => number, ticking: boolean): number {
   }, [ticking])
   // Read on every render: a change to the timer re-renders, and must not show a stale time.
   return now()
-}
-
-/** A sheet like Mentions: the keyboard goes in, Escape or a press elsewhere closes it, focus goes back. */
-function useSheet(
-  open: boolean,
-  placed: boolean,
-  setOpen: (open: boolean) => void,
-  sheet: RefObject<HTMLDivElement | null>,
-  button: RefObject<HTMLButtonElement | null>,
-): void {
-  useEffect(() => {
-    if (!open) return
-    const escape = (event: KeyboardEvent): void => {
-      if (event.key !== 'Escape') return
-      event.preventDefault()
-      event.stopPropagation()
-      setOpen(false)
-      button.current?.focus()
-    }
-    const outside = (event: Event): void => {
-      if (!(event.target instanceof Node)) return
-      if (sheet.current?.contains(event.target) === true) return
-      if (button.current?.contains(event.target) === true) return
-      setOpen(false)
-    }
-    window.addEventListener('keydown', escape, true)
-    window.addEventListener('pointerdown', outside, true)
-    return () => {
-      window.removeEventListener('keydown', escape, true)
-      window.removeEventListener('pointerdown', outside, true)
-    }
-  }, [open, setOpen, sheet, button])
-
-  useEffect(() => {
-    if (!open || !placed) return
-    const first =
-      sheet.current?.querySelector<HTMLElement>('[data-testid="timer-start"]') ??
-      sheet.current?.querySelector<HTMLElement>('button') ??
-      sheet.current
-    first?.focus()
-  }, [open, placed, sheet])
 }

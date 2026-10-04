@@ -1,4 +1,4 @@
-import { idleTimer, startTimer } from '@openframe/core/facilitation'
+import { idleTimer, playMusic, startTimer, stoppedMusic } from '@openframe/core/facilitation'
 import { asBoardId } from '@openframe/core'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 
@@ -22,6 +22,19 @@ describe('a timer on a board that is nobody else’s', () => {
     const timer = startTimer(idleTimer(), 1000, null)
     localFacilitation(board, () => 0).writeTimer(timer)
     expect(localFacilitation(board, () => 0).timer()).toEqual(timer)
+  })
+
+  it('keeps its music through a reload too, beside the timer', () => {
+    const music = playMusic(stoppedMusic('calm'), 1000, null, [
+      { id: 'calm-1', durationMs: 60_000 },
+    ])
+    const timer = startTimer(idleTimer(), 1000, null)
+    const channel = localFacilitation(board, () => 0)
+    channel.writeTimer(timer)
+    channel.writeMusic(music)
+    const reloaded = localFacilitation(board, () => 0)
+    expect(reloaded.music()).toEqual(music)
+    expect(reloaded.timer()).toEqual(timer)
   })
 
   it('is kept per board', () => {

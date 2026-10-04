@@ -1,5 +1,5 @@
 import type { BoardConnection, Facilitation } from '@openframe/collab'
-import { idleTimer, startTimer } from '@openframe/core/facilitation'
+import { idleTimer, playMusic, startTimer, stoppedMusic } from '@openframe/core/facilitation'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 
 import { roomFacilitation } from './facilitation-room.js'
@@ -7,7 +7,7 @@ import { roomFacilitation } from './facilitation-room.js'
 /** A shared board's timer: the room's state, on the room's clock. */
 
 function fakeConnection() {
-  let state: Facilitation = { timer: null }
+  let state: Facilitation = { timer: null, music: null }
   const facilitationListeners = new Set<(state: Facilitation) => void>()
   const clockListeners = new Set<() => void>()
   let asked = 0
@@ -35,7 +35,11 @@ function fakeConnection() {
       return () => facilitationListeners.delete(listener)
     },
     writeTimer: (timer: Facilitation['timer']) => {
-      state = { timer }
+      state = { ...state, timer }
+      for (const listener of facilitationListeners) listener(state)
+    },
+    writeMusic: (music: Facilitation['music']) => {
+      state = { ...state, music }
       for (const listener of facilitationListeners) listener(state)
     },
   }
@@ -58,6 +62,21 @@ function fakeConnection() {
 describe('a timer on a shared board', () => {
   afterEach(() => {
     vi.useRealTimers()
+  })
+
+  it('reads and writes the room’s music beside its timer', () => {
+    const fake = fakeConnection()
+    const channel = roomFacilitation(fake.connection)
+    const music = playMusic(stoppedMusic('jazzy'), 1000, 'Ada', [
+      { id: 'jazzy-1', durationMs: 60_000 },
+    ])
+    let told = 0
+    channel.subscribe(() => (told += 1))
+    channel.writeMusic(music)
+    expect(channel.music()).toEqual(music)
+    expect(channel.timer()).toBeNull()
+    expect(told).toBe(1)
+    channel.dispose()
   })
 
   it('reads and writes the room’s timer, on the room’s clock', () => {

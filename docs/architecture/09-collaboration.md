@@ -44,13 +44,13 @@ board, in a Durable Object) and
 
 ## What goes where
 
-| The shared document: merged and kept | Presence: never stored, gone when the socket closes |
-| ------------------------------------ | --------------------------------------------------- |
-| Every object, whole                  | Display name and colour                             |
-| The board's title (`meta`)           | Cursor position                                     |
-| Room facts (`seeded`)                | Selected object ids                                 |
-| Agents' change log                   |                                                     |
-| The session timer (`facilitation`)   |                                                     |
+| The shared document: merged and kept     | Presence: never stored, gone when the socket closes |
+| ---------------------------------------- | --------------------------------------------------- |
+| Every object, whole                      | Display name and colour                             |
+| The board's title (`meta`)               | Cursor position                                     |
+| Room facts (`seeded`)                    | Selected object ids                                 |
+| Agents' change log                       |                                                     |
+| Session timer and music (`facilitation`) |                                                     |
 
 A drag in progress is not shared at all. Nothing is written to the document
 during a gesture ([the drag rule](05-commands-and-undo.md#the-drag-rule)), so
@@ -68,7 +68,7 @@ Y.Doc
  ├─ Y.Map "meta"      the board's own fields: today, its title
  ├─ Y.Map "room"      facts about the room: `seeded`, once a browser has published
  ├─ Y.Map "changes"   agents' changes, newest 50, for anyone to take back
- └─ Y.Map "facilitation"  the session timer: not content, never undone (ADR 0017)
+ └─ Y.Map "facilitation"  the session timer and music: not content, never undone (ADR 0017)
 ```
 
 Defined in `collab/src/document-map.ts`, `collab/src/change-log.ts` and
@@ -162,6 +162,18 @@ from that clock. The controls that write a time wait for the first answer,
 because a deadline written on a skewed clock cannot be repaired afterwards. An
 older room ignores the question, and after five seconds connected the client
 runs the timer on its own clock.
+
+**Session music** is a second record in the same map, read through `readMusic`:
+a genre, its playlist (track ids and lengths, pinned when it started), and when
+that playlist started on the room's clock. Which track is playing, and how far
+into it, is worked out on each device from that clock and the pinned playlist
+(`positionOf`), so a device that joins late lands where everybody else is, and
+two devices holding different versions of the catalogue still agree; the
+catalogue only supplies titles. The tracks are CC0 files the rooms Worker serves publicly at
+`/music/track/:id` from its own bucket, with byte ranges so a device can seek.
+`/music/catalogue` lists them, and it is the catalogue, kept in git, that
+decides what may be served. A device makes no sound until somebody there
+presses something, and mute and volume are that device's alone.
 
 ---
 

@@ -1,5 +1,5 @@
 import type { CommandDispatcher, CommandError, DocumentStore } from '@openframe/core'
-import type { SessionTimer } from '@openframe/core/facilitation'
+import type { SessionMusic, SessionTimer } from '@openframe/core/facilitation'
 import * as Y from 'yjs'
 
 import {
@@ -10,7 +10,13 @@ import {
   type LoggedChange,
 } from './change-log.js'
 import { holdsBoard, seedDoc } from './document-map.js'
-import { facilitationOf, readFacilitation, writeTimer, type Facilitation } from './facilitation.js'
+import {
+  facilitationOf,
+  readFacilitation,
+  writeMusic,
+  writeTimer,
+  type Facilitation,
+} from './facilitation.js'
 import { createAwareness, type RoomRole } from './protocol.js'
 import { RoomProvider, type ConnectionStatus, type RoomSocket } from './provider.js'
 import { CollabSession } from './session.js'
@@ -91,6 +97,8 @@ export interface BoardConnection {
   onFacilitation(listener: (state: Facilitation) => void): () => void
   /** Replaces the session timer, for everyone. A viewer's write never leaves this device. */
   writeTimer(timer: SessionTimer): void
+  /** Replaces the session music, for everyone. A viewer's write never leaves this device. */
+  writeMusic(music: SessionMusic): void
   destroy(): void
 }
 
@@ -338,6 +346,9 @@ export async function connectBoard(options: ConnectBoardOptions): Promise<BoardC
     },
     writeTimer(timer) {
       writeTimer(doc, timer)
+    },
+    writeMusic(music) {
+      writeMusic(doc, music)
     },
     destroy() {
       facilitationOf(doc).unobserve(onFacilitationChange)

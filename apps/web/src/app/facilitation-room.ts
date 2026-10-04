@@ -61,12 +61,16 @@ export function roomFacilitation(
     now: () => connection.serverNow(),
     ready: () => connection.clockSynced || gaveUp,
     timer: () => connection.facilitation().timer,
+    music: () => connection.facilitation().music,
     subscribe: (listener) => {
       listeners.add(listener)
       return () => listeners.delete(listener)
     },
     writeTimer: (timer) => {
       connection.writeTimer(timer)
+    },
+    writeMusic: (music) => {
+      connection.writeMusic(music)
     },
     dispose: () => {
       clearInterval(resync)

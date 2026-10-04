@@ -244,3 +244,33 @@ describe('asking whether a board has a password', () => {
     ).toMatchObject({ kind: 'refuse', status: 400 })
   })
 })
+
+/*
+ * Session music (ADR 0017): served by the worker itself, to anyone. The tracks
+ * are CC0 and the same for every board, so there is no board and no key in
+ * the path — an `<audio>` element could not send a header anyway.
+ */
+describe('the music library', () => {
+  const music = (path: string, method = 'GET') =>
+    routeRequest(new URL(`https://r.dev${path}`), null, method)
+
+  it('serves its catalogue', () => {
+    expect(music('/music/catalogue')).toEqual({ kind: 'catalogue' })
+  })
+
+  it('serves a track by its id, for a GET or a HEAD', () => {
+    expect(music('/music/track/calm-1')).toEqual({ kind: 'track', trackId: 'calm-1' })
+    expect(music('/music/track/calm-1', 'HEAD')).toEqual({ kind: 'track', trackId: 'calm-1' })
+  })
+
+  it('answers a preflight, and refuses a write', () => {
+    expect(music('/music/track/calm-1', 'OPTIONS')).toEqual({ kind: 'preflight' })
+    expect(music('/music/track/calm-1', 'PUT')).toMatchObject({ kind: 'refuse', status: 405 })
+    expect(music('/music/catalogue', 'POST')).toMatchObject({ kind: 'refuse', status: 405 })
+  })
+
+  it('refuses an id that is not one', () => {
+    expect(music('/music/track/..%2Fsecret')).toMatchObject({ kind: 'refuse', status: 404 })
+    expect(music('/music/track/UPPER')).toMatchObject({ kind: 'refuse', status: 404 })
+  })
+})
