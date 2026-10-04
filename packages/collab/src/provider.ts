@@ -1,9 +1,12 @@
 import type * as Y from 'yjs'
 
+import { ServerClock } from './clock.js'
 import {
   decodeRole,
+  decodeTimeReply,
   encodeAwareness,
   encodeSyncStep1,
+  encodeTimeRequest,
   encodeUpdate,
   readMessage,
   type Awareness,
@@ -87,6 +90,8 @@ export interface RoomProviderOptions {
    * nothing.
    */
   readonly onSynced?: () => void
+  /** This device's clock, which the room's is measured against. Injected so tests choose the time. */
+  readonly now?: () => number
   /** Injected so tests do not wait in real time. */
   readonly setTimer?: (run: () => void, ms: number) => unknown
   readonly clearTimer?: (handle: unknown) => void
@@ -98,6 +103,12 @@ const MAX_RETRY_MS = 30_000
 
 /** Explicit, so an omitted callback reads as a decision rather than an empty block. */
 const noop = (): void => undefined
+
+/**
+ * How many times to ask the room the time on connecting. One trip can sit
+ * behind the board arriving; the quickest of a few is a fair reading.
+ */
+const CLOCK_QUESTIONS_ON_OPEN = 3
 
 /** The origin marking changes that came from the room, so they are not echoed back. */
 const FROM_ROOM = 'room'
@@ -111,6 +122,9 @@ export class RoomProvider {
   readonly #onSynced: () => void
   readonly #setTimer: (run: () => void, ms: number) => unknown
   readonly #clearTimer: (handle: unknown) => void
+  readonly #now: () => number
+  readonly #clock = new ServerClock()
+  readonly #clockListeners = new Set<() => void>()
 
   #socket: RoomSocket | null = null
   #status: ConnectionStatus = 'offline'
@@ -139,6 +153,7 @@ export class RoomProvider {
     this.#onStatus = options.onStatus ?? noop
     this.#onRole = options.onRole ?? noop
     this.#onSynced = options.onSynced ?? noop
+    this.#now = options.now ?? (() => Date.now())
     this.#setTimer = options.setTimer ?? ((run, ms) => setTimeout(run, ms))
     this.#clearTimer =
       options.clearTimer ??
@@ -160,6 +175,30 @@ export class RoomProvider {
 
   get synced(): boolean {
     return this.#synced
+  }
+
+  /** Whether the room has said what time it is. A room too old to answer never does. */
+  get clockSynced(): boolean {
+    return this.#clock.synced
+  }
+
+  /** The room's time: this device's clock, corrected by what the room has said. */
+  serverNow(): number {
+    return this.#now() + this.#clock.offset
+  }
+
+  /**
+   * Asks the room the time again — after the page was hidden, say, when the
+   * device may have slept and its clock been corrected. Ignored while offline.
+   */
+  syncClock(): void {
+    this.#send(encodeTimeRequest(this.#now()))
+  }
+
+  /** Called whenever the room answers a question about the time. */
+  onClock(listener: () => void): () => void {
+    this.#clockListeners.add(listener)
+    return () => this.#clockListeners.delete(listener)
   }
 
   /** Opens the connection, and keeps reopening it until `destroy` is called. */
@@ -186,6 +225,8 @@ export class RoomProvider {
       // And announce ourselves, so the people already here see a cursor.
       const local = this.#awareness.getLocalState()
       if (local !== null) socket.send(encodeAwareness(this.#awareness, [this.#doc.clientID]))
+
+      for (let asked = 0; asked < CLOCK_QUESTIONS_ON_OPEN; asked += 1) this.syncClock()
     })
 
     socket.onMessage((data) => {
@@ -193,6 +234,14 @@ export class RoomProvider {
       if (role !== null) {
         this.#role = role
         this.#onRole(role)
+        return
+      }
+
+      const time = decodeTimeReply(data)
+      if (time !== null) {
+        if (this.#clock.add(time.sentAt, time.roomNow, this.#now())) {
+          for (const listener of [...this.#clockListeners]) listener()
+        }
         return
       }
 
@@ -248,6 +297,7 @@ export class RoomProvider {
   /** Closes the connection and stops reconnecting. The document is left alone. */
   destroy(): void {
     this.#stopped = true
+    this.#clockListeners.clear()
     this.#doc.off('update', this.#onDocUpdate)
     this.#awareness.off('update', this.#onAwarenessUpdate)
     if (this.#retryHandle !== null) this.#clearTimer(this.#retryHandle)

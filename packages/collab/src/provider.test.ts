@@ -75,7 +75,7 @@ class Wire {
 }
 
 /** A client: its own document, its own provider, its own wire into the room. */
-function client(room: BoardRoom, id: string) {
+function client(room: BoardRoom, id: string, now?: () => number) {
   const doc = new Y.Doc()
   const awareness = createAwareness(doc)
   const wires: Wire[] = []
@@ -101,6 +101,7 @@ function client(room: BoardRoom, id: string) {
       return null
     },
     clearTimer: () => undefined,
+    ...(now === undefined ? {} : { now }),
   })
 
   return { doc, awareness, provider, wires, statuses }
@@ -312,5 +313,54 @@ describe('a board that wants its password', () => {
 
     expect(visitor.provider.status).toBe('locked')
     expect(visitor.wires.length).toBe(attempts)
+  })
+})
+
+/**
+ * The room's clock, learned on connecting (ADR 0017).
+ *
+ * A device whose own clock is wrong by a minute must still show the same
+ * time left on the session timer as everybody else.
+ */
+describe('a client learning the room’s time', () => {
+  it('asks on connecting, and runs on the room’s clock from then on', async () => {
+    let local = 1_000_000
+    const room = new BoardRoom({ now: () => local + 60_000 })
+    const a = client(room, 'a', () => local)
+    a.provider.start()
+    await settle()
+
+    expect(a.provider.clockSynced).toBe(true)
+    local += 5000
+    expect(a.provider.serverNow()).toBe(local + 60_000)
+  })
+
+  it('asks again when told to, and keeps the better answer', async () => {
+    const local = 0
+    const room = new BoardRoom({ now: () => local + 10 })
+    const a = client(room, 'a', () => local)
+    let told = 0
+    a.provider.onClock(() => (told += 1))
+    a.provider.start()
+    await settle()
+    const before = told
+    a.provider.syncClock()
+    expect(told).toBe(before + 1)
+  })
+
+  it('stays on its own clock in a room too old to answer', async () => {
+    class OldRoom extends BoardRoom {
+      override receive(peer: RoomPeer, message: Uint8Array) {
+        // An older room drops a message type it has not met.
+        if (message[0] === 3) return 'accepted' as const
+        return super.receive(peer, message)
+      }
+    }
+    const a = client(new OldRoom({ now: () => 99_999 }), 'a', () => 42)
+    a.provider.start()
+    await settle()
+    expect(a.provider.status).toBe('connected')
+    expect(a.provider.clockSynced).toBe(false)
+    expect(a.provider.serverNow()).toBe(42)
   })
 })

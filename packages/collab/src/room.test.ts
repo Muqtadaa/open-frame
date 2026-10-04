@@ -8,6 +8,8 @@ import {
   encodeAwareness,
   encodeSyncStep1,
   encodeSyncStep2,
+  decodeTimeReply,
+  encodeTimeRequest,
   encodeUpdate,
   readMessage,
   type RoomRole,
@@ -377,5 +379,55 @@ describe('a message the room will not read', () => {
     a.connect(room)
     expect(room.receive(a, encodeSyncStep1(a.doc))).toBe('accepted')
     expect(room.receive(a, new Uint8Array([99, 1, 2, 3]))).toBe('accepted')
+  })
+})
+
+/**
+ * The room's clock, for the session timer (ADR 0017).
+ *
+ * Every device runs the timer against the ROOM's time, never its own, so two
+ * laptops a minute apart still agree to the second. The room answers a
+ * question about the time — to the asker, and to nobody else.
+ */
+describe('the time in the room', () => {
+  it('tells only the peer that asked', () => {
+    const room = new BoardRoom({ now: () => 5000 })
+    const a = new Client('a')
+    const b = new Client('b')
+    a.connect(room)
+    b.connect(room)
+    const heardByB = b.received.length
+
+    expect(room.receive(a, encodeTimeRequest(1234))).toBe('accepted')
+
+    expect(decodeTimeReply(a.received.at(-1) ?? new Uint8Array())).toEqual({
+      sentAt: 1234,
+      roomNow: 5000,
+    })
+    expect(b.received.length).toBe(heardByB)
+  })
+
+  it('answers a viewer, because asking the time is not a write', () => {
+    const room = new BoardRoom({ now: () => 7 })
+    const viewer = new Client('v', 'viewer')
+    viewer.connect(room)
+    room.receive(viewer, encodeTimeRequest(1))
+    expect(decodeTimeReply(viewer.received.at(-1) ?? new Uint8Array())?.roomNow).toBe(7)
+  })
+
+  it('changes nothing about the board', () => {
+    let saved = 0
+    const room = new BoardRoom({ onDocumentChanged: () => (saved += 1) })
+    const a = new Client('a')
+    a.connect(room)
+    room.receive(a, encodeTimeRequest(1))
+    expect(saved).toBe(0)
+  })
+
+  it('refuses a question that stops before its time', () => {
+    const room = new BoardRoom()
+    const a = new Client('a')
+    a.connect(room)
+    expect(room.receive(a, new Uint8Array([3, 1, 2]))).toBe('malformed')
   })
 })

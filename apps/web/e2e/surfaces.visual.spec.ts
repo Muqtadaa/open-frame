@@ -178,6 +178,25 @@ for (const world of WORLDS) {
       await snap(page, `${world}-emoji-picker`)
     })
 
+    // The session timer, paused part way, its sheet open on an editor's controls.
+    test('the session timer', async ({ page }) => {
+      await page.addInitScript(() => {
+        localStorage.setItem(
+          'openframe:guest',
+          JSON.stringify({ name: 'Heron', hue: 2, key: 'g_0123456789abcdef' }),
+        )
+      })
+      await page.clock.install()
+      await openLocalBoard(page)
+      await page.getByTestId('timer-button').click()
+      await page.getByRole('button', { name: '3 minutes', exact: true }).click()
+      await page.getByTestId('timer-start').click()
+      await page.clock.runFor(10_000)
+      await page.getByTestId('timer-pause').click()
+      await expect(page.getByTestId('timer-readout')).toHaveText('2:50')
+      await snap(page, `${world}-session-timer`)
+    })
+
     // An uncoloured frame on the world's paper, with a note laid on it.
     test('a frame holding a note', async ({ page }) => {
       await openLocalBoard(page)

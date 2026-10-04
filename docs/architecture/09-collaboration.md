@@ -50,6 +50,7 @@ board, in a Durable Object) and
 | The board's title (`meta`)           | Cursor position                                     |
 | Room facts (`seeded`)                | Selected object ids                                 |
 | Agents' change log                   |                                                     |
+| The session timer (`facilitation`)   |                                                     |
 
 A drag in progress is not shared at all. Nothing is written to the document
 during a gesture ([the drag rule](05-commands-and-undo.md#the-drag-rule)), so
@@ -66,10 +67,12 @@ Y.Doc
  ├─ Y.Map "objects"   ObjectId → the whole object, as a plain JSON value
  ├─ Y.Map "meta"      the board's own fields: today, its title
  ├─ Y.Map "room"      facts about the room: `seeded`, once a browser has published
- └─ Y.Map "changes"   agents' changes, newest 50, for anyone to take back
+ ├─ Y.Map "changes"   agents' changes, newest 50, for anyone to take back
+ └─ Y.Map "facilitation"  the session timer: not content, never undone (ADR 0017)
 ```
 
-Defined in `collab/src/document-map.ts` and `collab/src/change-log.ts`.
+Defined in `collab/src/document-map.ts`, `collab/src/change-log.ts` and
+`collab/src/facilitation.ts`.
 
 **Objects are plain values, not nested `Y.Map`s, and there is no `Y.Text`.** A
 `set` patch addresses a path inside one object, and the edits that
@@ -81,8 +84,8 @@ representation of every object. The consequence is stated plainly under
 
 Each map is its own root so that an older client carries what it does not
 understand. The room relays and stores every root map without reading it, and
-a client that observes only `objects` and `meta` never turns `room` or
-`changes` into an edit.
+a client that observes only `objects` and `meta` never turns `room`,
+`changes` or `facilitation` into an edit.
 
 ---
 
@@ -138,6 +141,25 @@ is written through its account to Supabase, like anyone's, and is neither in
 the document nor in this log.
 
 A person's own changes are not logged, because their undo already covers them.
+
+---
+
+## The session timer, and the room's clock
+
+The timer is the state of a meeting about the board, not part of it
+([ADR 0017](../adr/0017-facilitation-state-outside-the-document.md)). It is one
+record in the `facilitation` map, replaced whole, written through
+`BoardConnection.writeTimer` rather than the dispatcher, and read through the
+strict `readTimer` because any editor can write there. Its rules (start,
+pause, resume, reset, add a minute) are pure, in `@openframe/core/facilitation`,
+and a local board runs the same ones from `localStorage`.
+
+It runs on the **room's** clock. The room answers `MESSAGE_TIME` (3) to the
+asker alone, and `ServerClock` keeps the offset from the quickest of the last
+eight round trips. A client asks three times on connecting, every five minutes
+and when the page becomes visible. "Done" is never stored; it is worked out
+from that clock. An older room ignores the question, and the client stays on
+its own clock.
 
 ---
 

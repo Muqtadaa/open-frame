@@ -8,6 +8,8 @@ import { createBoardCapabilities } from './app/board-capabilities.js'
 import type { BoardConnection } from '@openframe/collab'
 import { COLLAB_ENABLED } from './app/collab-config.js'
 import { healAssets, publishRewrite } from './app/heal-assets.js'
+import { localFacilitation } from './app/facilitation-local.js'
+import { roomFacilitation } from './app/facilitation-room.js'
 import { holdAssets } from './app/hold-assets.js'
 import { createRuntime } from './app/composition-root.js'
 import { markLocalOpened } from './app/board-prefs.js'
@@ -223,6 +225,14 @@ if (route.kind === 'home') {
       })
   }
 
+  /*
+   * The session timer's channel, chosen once here so no component ever asks
+   * which kind of board it is on (ADR 0017): the room's state and clock on a
+   * shared board, this browser's on a local one.
+   */
+  const facilitation =
+    collaboration === null ? localFacilitation(route.boardId) : roomFacilitation(collaboration)
+
   // Exposed for the E2E suite to assert on persisted state without reaching into
   // React internals. Debug surface only — never a mutation path.
   Object.defineProperty(window, '__openframe', { value: { runtime, views }, writable: false })
@@ -231,7 +241,7 @@ if (route.kind === 'home') {
     <StrictMode>
       <AppErrorBoundary>
         <ServicesContext.Provider value={services}>
-          <OpenFrameContext.Provider value={{ runtime, views, collaboration }}>
+          <OpenFrameContext.Provider value={{ runtime, views, collaboration, facilitation }}>
             <App />
           </OpenFrameContext.Provider>
         </ServicesContext.Provider>
