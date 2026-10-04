@@ -59,13 +59,33 @@ function withoutComments(source: string): string {
   return source.replace(/\/\*[\s\S]*?\*\//g, '').replace(/(^|[^:'"`])\/\/.*$/gm, '$1')
 }
 
+/**
+ * Everything the interface could show: quoted literals, and the text written
+ * between JSX tags. The second is read loosely — any run between a `>` and a
+ * `<` with a letter in it — because a false match only has to pass the rule,
+ * while a missed one is coaching nobody checked.
+ */
 function strings(source: string): string[] {
-  return [...withoutComments(source).matchAll(/(['"`])((?:\\.|(?!\1)[^\\])*)\1/g)].map(
+  const code = withoutComments(source)
+  const quoted = [...code.matchAll(/(['"`])((?:\\.|(?!\1)[^\\])*)\1/g)].map(
     (match) => match[2] ?? '',
   )
+  const between = [...code.matchAll(/>([^<>{}]*[A-Za-z][^<>{}]*)</g)].map((match) =>
+    (match[1] ?? '').replace(/\s+/g, ' ').trim(),
+  )
+  return [...quoted, ...between]
 }
 
 describe('interface copy', () => {
+  /*
+   * Text written between tags never reached the rule: it read quoted literals
+   * only, so `<p>Click a result to choose it</p>` passed (Codex, on #62).
+   */
+  it('reads the text between tags, not only quoted strings', () => {
+    const source = 'const empty = <p className="x">Click a result to choose it</p>'
+    expect(strings(source)).toContain('Click a result to choose it')
+  })
+
   it('names and states, and never coaches', () => {
     const coaching = sources(SRC).flatMap((path) =>
       strings(readFileSync(path, 'utf8'))
