@@ -40,6 +40,20 @@ export const MESSAGE_AWARENESS = 1
  */
 export const MESSAGE_ROLE = 2
 
+/**
+ * A question about the time, and the room's answer (ADR 0017).
+ *
+ * Client to room: `[3, sentAt]`. Room to THAT client only: `[3, sentAt,
+ * roomNow]`. The session timer runs on the room's clock, because every device's
+ * own clock is its own — and a countdown two laptops disagree about by a minute
+ * is not one countdown.
+ *
+ * Safe both ways across a rolling deploy: an older room drops a type it has
+ * not met (`readMessage`'s default), so a newer client simply stays on its own
+ * clock; an older client never asks, so it is never answered.
+ */
+export const MESSAGE_TIME = 3
+
 /** What a connection may do. Decided by the room, never by the client. */
 export type RoomRole = 'editor' | 'viewer'
 
@@ -64,6 +78,46 @@ export function decodeRole(message: Uint8Array): RoomRole | null {
   const decoder = decoding.createDecoder(message)
   if (decoding.readVarUint(decoder) !== MESSAGE_ROLE) return null
   return decoding.readVarString(decoder) === 'editor' ? 'editor' : 'viewer'
+}
+
+/** A client asking the room what time it is, sent at `sentAt` on the client's own clock. */
+export function encodeTimeRequest(sentAt: number): Uint8Array {
+  const encoder = encoding.createEncoder()
+  encoding.writeVarUint(encoder, MESSAGE_TIME)
+  encoding.writeFloat64(encoder, sentAt)
+  return encoding.toUint8Array(encoder)
+}
+
+/** The room's answer, echoing when it was asked so the asker can time the trip. */
+export function encodeTimeReply(sentAt: number, roomNow: number): Uint8Array {
+  const encoder = encoding.createEncoder()
+  encoding.writeVarUint(encoder, MESSAGE_TIME)
+  encoding.writeFloat64(encoder, sentAt)
+  encoding.writeFloat64(encoder, roomNow)
+  return encoding.toUint8Array(encoder)
+}
+
+/**
+ * When the question was asked, or `null` if this is not a time message.
+ * Throws on one that stops before its time, like any other truncated frame.
+ */
+export function decodeTimeRequest(message: Uint8Array): number | null {
+  const decoder = decoding.createDecoder(message)
+  if (decoding.readVarUint(decoder) !== MESSAGE_TIME) return null
+  return decoding.readFloat64(decoder)
+}
+
+/** The room's answer, or `null` if this is not one. Never throws: it is the room's to send. */
+export function decodeTimeReply(message: Uint8Array): { sentAt: number; roomNow: number } | null {
+  try {
+    const decoder = decoding.createDecoder(message)
+    if (decoding.readVarUint(decoder) !== MESSAGE_TIME) return null
+    const sentAt = decoding.readFloat64(decoder)
+    const roomNow = decoding.readFloat64(decoder)
+    return { sentAt, roomNow }
+  } catch {
+    return null
+  }
 }
 
 /**

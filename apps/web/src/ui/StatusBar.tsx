@@ -14,6 +14,7 @@ import { BoardTitle } from './BoardTitle.js'
 import { AgentChanges } from './AgentChanges.js'
 import { Mentions } from './Mentions.js'
 import { DevPanel } from './DevPanel.js'
+import { SessionTimer } from './SessionTimer.js'
 import { ShareControl } from './ShareControl.js'
 import { ThemeToggle } from './ThemeToggle.js'
 import { RedoIcon, UndoIcon } from '../controls/icons.js'
@@ -223,6 +224,8 @@ export function StatusBar() {
        * because it is the same kind of thing: not a record of the page, but
        * something about the page you are reading.
        */}
+      {/* The session's clock, beside the session's people. */}
+      <SessionTimer />
       <ShareControl />
       {/*
        * Being named somewhere else has to reach you HERE. The bell was on the

@@ -3,9 +3,11 @@ import * as Y from 'yjs'
 import {
   createAwareness,
   encodeAllAwareness,
+  decodeTimeRequest,
   encodeAwareness,
   encodeRole,
   encodeSyncStep1,
+  encodeTimeReply,
   readMessage,
   removeAwarenessClients,
   type Awareness,
@@ -78,6 +80,8 @@ export interface BoardRoomOptions {
    * something meaningless the moment they close the tab.
    */
   readonly onDocumentChanged?: (update: Uint8Array) => void
+  /** The room's clock, which every session timer on the board runs on. Injected so tests choose the time. */
+  readonly now?: () => number
 }
 
 export class BoardRoom {
@@ -95,9 +99,11 @@ export class BoardRoom {
   readonly #onDocumentChanged: ((update: Uint8Array) => void) | undefined
   readonly #onAwareness: (changes: AwarenessChanges, origin: unknown) => void
   readonly #onUpdate: (update: Uint8Array) => void
+  readonly #now: () => number
 
   constructor(options: BoardRoomOptions = {}) {
     this.#doc = options.doc ?? new Y.Doc()
+    this.#now = options.now ?? (() => Date.now())
     this.#awareness = createAwareness(this.#doc)
     this.#onDocumentChanged = options.onDocumentChanged
 
@@ -170,6 +176,22 @@ export class BoardRoom {
   receive(peer: RoomPeer, message: Uint8Array): Received {
     // Before decoding, which is the expensive part and the part being guarded.
     if (message.byteLength > MAX_MESSAGE_BYTES) return 'too-large'
+
+    /*
+     * A question about the time is answered here, to the asker alone, and
+     * touches nothing else: it is not part of the document's conversation, and
+     * a viewer may ask it as freely as anyone.
+     */
+    let asked: number | null
+    try {
+      asked = decodeTimeRequest(message)
+    } catch {
+      return 'malformed'
+    }
+    if (asked !== null) {
+      peer.send(encodeTimeReply(asked, this.#now()))
+      return 'accepted'
+    }
 
     let handled: ReturnType<typeof readMessage>
     try {

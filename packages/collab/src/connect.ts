@@ -1,4 +1,5 @@
 import type { CommandDispatcher, CommandError, DocumentStore } from '@openframe/core'
+import type { SessionTimer } from '@openframe/core/facilitation'
 import * as Y from 'yjs'
 
 import {
@@ -9,6 +10,7 @@ import {
   type LoggedChange,
 } from './change-log.js'
 import { holdsBoard, seedDoc } from './document-map.js'
+import { facilitationOf, readFacilitation, writeTimer, type Facilitation } from './facilitation.js'
 import { createAwareness, type RoomRole } from './protocol.js'
 import { RoomProvider, type ConnectionStatus, type RoomSocket } from './provider.js'
 import { CollabSession } from './session.js'
@@ -68,6 +70,27 @@ export interface BoardConnection {
   markReverted(id: string, by: string | null): boolean
   /** Says, for every peer, that the revert of `id` was itself undone. False if there is no such entry. */
   clearReverted(id: string): boolean
+  /**
+   * The room's time, which the session timer runs on (ADR 0017): this
+   * device's clock corrected by what the room said. This device's own clock
+   * until the room has answered — and for good, in a room too old to.
+   */
+  serverNow(): number
+  /** Whether the room has said what time it is. */
+  readonly clockSynced: boolean
+  /** Asks the room the time again, as after the page was hidden and the device may have slept. */
+  syncClock(): void
+  /** Called whenever the room answers a question about the time. */
+  onClock(listener: () => void): () => void
+  /**
+   * The session's shared state — its timer — the same object until it
+   * changes, so it can feed a React store directly (rule 9).
+   */
+  facilitation(): Facilitation
+  /** Called with the state whenever it changes, and once immediately. */
+  onFacilitation(listener: (state: Facilitation) => void): () => void
+  /** Replaces the session timer, for everyone. A viewer's write never leaves this device. */
+  writeTimer(timer: SessionTimer): void
   destroy(): void
 }
 
@@ -170,6 +193,14 @@ export async function connectBoard(options: ConnectBoardOptions): Promise<BoardC
     for (const listener of [...changeListeners]) listener(current)
   }
   changesOf(doc).observe(onChangeLog)
+
+  let facilitation = readFacilitation(doc)
+  const facilitationListeners = new Set<(state: Facilitation) => void>()
+  const onFacilitationChange = (): void => {
+    facilitation = readFacilitation(doc)
+    for (const listener of [...facilitationListeners]) listener(facilitation)
+  }
+  facilitationOf(doc).observe(onFacilitationChange)
 
   const statusListeners = new Set<(status: ConnectionStatus) => void>()
   const syncedListeners = new Set<() => void>()
@@ -285,7 +316,32 @@ export async function connectBoard(options: ConnectBoardOptions): Promise<BoardC
     clearReverted(id) {
       return clearReverted(doc, id)
     },
+    serverNow() {
+      return provider.serverNow()
+    },
+    get clockSynced() {
+      return provider.clockSynced
+    },
+    syncClock() {
+      provider.syncClock()
+    },
+    onClock(listener) {
+      return provider.onClock(listener)
+    },
+    facilitation() {
+      return facilitation
+    },
+    onFacilitation(listener) {
+      facilitationListeners.add(listener)
+      listener(facilitation)
+      return () => facilitationListeners.delete(listener)
+    },
+    writeTimer(timer) {
+      writeTimer(doc, timer)
+    },
     destroy() {
+      facilitationOf(doc).unobserve(onFacilitationChange)
+      facilitationListeners.clear()
       changesOf(doc).unobserve(onChangeLog)
       changeListeners.clear()
       awareness.off('change', onAwareness)

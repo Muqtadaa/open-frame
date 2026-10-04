@@ -1,7 +1,6 @@
 import { createContext, useContext } from 'react'
 
 import type { BoardConnection } from '@openframe/collab'
-
 import type {
   BoardId,
   BoardRepository,
@@ -13,6 +12,7 @@ import type {
 } from '@openframe/core'
 
 import type { AssetService } from './asset-service.js'
+import type { FacilitationChannel } from './facilitation.js'
 import type { ObjectViewRegistry } from '../views/registry.js'
 
 /**
@@ -123,6 +123,12 @@ export interface OpenFrameContextValue {
    * it, so the quarantine holds too.
    */
   readonly collaboration?: BoardConnection | null
+  /**
+   * The session timer's channel: the room's on a shared board, this browser's
+   * on a local one. Optional only so a test can mount a component without one;
+   * the app always provides it.
+   */
+  readonly facilitation?: FacilitationChannel
   readonly views: ObjectViewRegistry
 }
 

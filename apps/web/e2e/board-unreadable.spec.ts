@@ -89,6 +89,11 @@ test('says the board is safe, whose it is and why it will not open', async ({ pa
   await expect(sheet).toContainText('“Pricing research”, with 2 objects on it,')
   // No codes: "newer-schema" is the program talking to itself.
   await expect(sheet).not.toContainText('newer-schema')
+  /*
+   * And no promise that reloading fixes it: after a rollback the reload serves
+   * the same older build, and the board is still unreadable (Codex, on #62).
+   */
+  await expect(sheet).not.toContainText(/reload/i)
   await expect(page.getByTestId('notice-banner')).toHaveCount(0)
 })
 

@@ -94,6 +94,14 @@ export function RedoIcon({ className }: IconProps) {
   )
 }
 
+export function TimerIcon({ className }: IconProps) {
+  return (
+    <svg {...base} className={className}>
+      <path d="M10 3h4M12 3v2.5M12 21a7.5 7.5 0 100-15 7.5 7.5 0 000 15zM12 9.5v4l2.5 1.5" />
+    </svg>
+  )
+}
+
 export function TrashIcon({ className }: IconProps) {
   return (
     <svg {...base} className={className}>

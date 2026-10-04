@@ -964,6 +964,26 @@ and a shared board's room label below 640px; then the save state's word and the
 rules below 560px. Signed out, "Sign in" stays a visible word at every width.
 Nothing ever runs out of the bar, on a local board or a shared one.
 
+### Session Timer
+
+One countdown for everybody at the board (ADR 0017), on the navigation bar
+beside the people — it is about the session, not the board. At rest it is an
+icon button like the bar's others; once set running or paused it shows the time
+beside the icon in mono, tabular, so the digits do not jitter, with the control
+edge. At zero it takes the accent's wash and edge, the mentions chip's "look at
+me", and stays so until somebody resets it.
+
+Its sheet holds a large readout, who last touched it ("Started by Ada"), and —
+for an editor — five presets in minutes, a duration field that takes minutes or
+`m:ss`, then Start, or Pause / Resume, +1 min and Reset. A viewer gets the
+readout alone, and no button on the bar until there is a timer to watch.
+
+The readout rounds UP, so it reads 0:00 only once time is up. "1 minute left"
+and "Time's up" are announced through the board's live region, once per run on
+every device. At zero a two-note chime is synthesised (no audio file); where the
+page has not been touched since, so the browser will not sound it, the bar
+pulses in colour instead — colour, not movement, so reduced motion keeps it.
+
 ### Zoom Cluster
 
 Bottom-right, mono throughout. 30px buttons (`--of-hit-sm`) carrying 16px

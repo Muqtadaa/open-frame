@@ -10,11 +10,14 @@ import { Gate, GateActions, GateBody } from './Gate.js'
  * Why a board would not open, as its owner would put it.
  *
  * The codes are the program talking to itself. "newer-schema" told somebody
- * nothing; that a newer OpenFrame saved it tells them what to do.
+ * nothing; that a newer OpenFrame saved it tells them what happened.
  */
 const WHY: Readonly<Record<QuarantineReason, string>> = {
-  'newer-schema':
-    'was saved by a newer version of OpenFrame. Reloading the page brings in that version.',
+  /*
+   * The fact, not a cure. "Reloading brings in that version" was false after
+   * a rollback, when a reload serves the same older build (Codex, on #62).
+   */
+  'newer-schema': 'was saved by a newer version of OpenFrame than this page is running.',
   'migration-failed':
     'was saved by an older version of OpenFrame, and could not be brought up to date.',
   unparseable: 'is stored in a form this version cannot read.',

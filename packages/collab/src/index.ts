@@ -36,9 +36,14 @@ export {
   encodeUpdate,
   readMessage,
   removeAwarenessClients,
+  decodeTimeReply,
+  decodeTimeRequest,
+  encodeTimeReply,
+  encodeTimeRequest,
   MESSAGE_AWARENESS,
   MESSAGE_ROLE,
   MESSAGE_SYNC,
+  MESSAGE_TIME,
   type Awareness,
   type Handled,
   type RoomRole,
@@ -67,6 +72,14 @@ export {
   type PeerPresence,
 } from './connect.js'
 export { CollabSession, type CollabSessionDeps } from './session.js'
+export { CLOCK_SAMPLES, ServerClock } from './clock.js'
+export {
+  facilitationOf,
+  readFacilitation,
+  writeTimer,
+  FACILITATION,
+  type Facilitation,
+} from './facilitation.js'
 export {
   changesOf,
   clearReverted,
