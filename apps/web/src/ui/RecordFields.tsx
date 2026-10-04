@@ -1,7 +1,6 @@
 import {
   MAX_POLL_OPTIONS,
   MIN_POLL_OPTIONS,
-  nextOptionId,
   type AnyOpenFrameObject,
   type FieldDefinition,
   type ObjectId,
@@ -174,7 +173,7 @@ function Choices({
         onClick={() => {
           onCommit([
             ...stored,
-            { id: nextOptionId(stored), label: `Option ${String(stored.length + 1)}` },
+            { id: newOptionId(stored), label: `Option ${String(stored.length + 1)}` },
           ])
         }}
       >
@@ -182,6 +181,19 @@ function Choices({
       </button>
     </div>
   )
+}
+
+/**
+ * An id no option has had: random rather than counted, because a removed
+ * option's answers stay on the board and an id counted from what is there now
+ * would hand them to the next option added.
+ */
+function newOptionId(taken: readonly PollOption[]): string {
+  for (;;) {
+    const bytes = crypto.getRandomValues(new Uint8Array(8))
+    const id = `o${Array.from(bytes, (byte) => (byte % 36).toString(36)).join('')}`
+    if (!taken.some((option) => option.id === id)) return id
+  }
 }
 
 /** One option's label: a draft while typing, written on Enter or leaving it. */

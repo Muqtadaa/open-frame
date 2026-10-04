@@ -54,8 +54,16 @@ export const pollAnswerType = defineObjectType<typeof POLL_ANSWER_TYPE, PollAnsw
 })
 
 /**
- * The one id a person's pick of an option can have, so the same person
- * answering from two devices at once writes one object rather than two.
+ * What stands in for the option in a single-choice answer's id: there, a
+ * person has one answer, whichever option it names.
+ */
+export const SINGLE_CHOICE = 'one'
+
+/**
+ * The one id a person's pick can have, so the same person answering from two
+ * devices at once writes one object rather than two. `option` is the option on
+ * a poll that takes several answers each, and `SINGLE_CHOICE` on one that
+ * takes one.
  */
 export function pollAnswerId(poll: string, option: string, personKey: string): string {
   return `pa_${poll}_${option}_${personKey}`

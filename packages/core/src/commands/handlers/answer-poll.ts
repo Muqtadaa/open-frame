@@ -1,7 +1,12 @@
 import type { BoardDocument } from '../../domain/document.js'
-import { asObjectId } from '../../domain/ids.js'
+import { asObjectId, type ObjectId } from '../../domain/ids.js'
 import type { Patch } from '../../domain/patch.js'
-import { POLL_ANSWER_TYPE, POLL_MARK, pollAnswerId } from '../../types/poll-answer/definition.js'
+import {
+  POLL_ANSWER_TYPE,
+  POLL_MARK,
+  SINGLE_CHOICE,
+  pollAnswerId,
+} from '../../types/poll-answer/definition.js'
 import { POLL_TYPE } from '../../types/poll/definition.js'
 import type { PollData } from '../../types/poll/schema.js'
 import { MarkAuthorSchema } from '../../types/reaction/schema.js'
@@ -43,14 +48,8 @@ export function answerPoll(doc: BoardDocument, command: AnswerPoll, ctx: Command
   const already = mine.filter((link) => link.edge.value === command.option)
   if (already.length > 0) return already.map((link) => ({ op: 'remove', id: link.id }))
 
-  const others: Patch[] = data.multi ? [] : mine.map((link) => ({ op: 'remove', id: link.id }))
-  const id = asObjectId(pollAnswerId(poll.id, command.option, by.key))
-  if (doc.objects.has(id)) {
-    throw new CommandError('invalid-input', 'Something else already has that answer’s id')
-  }
-  return [
-    ...others,
-    ...createObjects(
+  const create = (id: ObjectId): Patch[] =>
+    createObjects(
       doc,
       {
         kind: 'CreateObjects',
@@ -65,6 +64,35 @@ export function answerPoll(doc: BoardDocument, command: AnswerPoll, ctx: Command
         ],
       },
       ctx,
-    ),
+    )
+
+  if (data.multi) {
+    const id = asObjectId(pollAnswerId(poll.id, command.option, by.key))
+    if (doc.objects.has(id)) {
+      throw new CommandError('invalid-input', 'Something else already has that answer’s id')
+    }
+    return create(id)
+  }
+
+  /*
+   * One answer per person, under ONE id per person: the same person picking
+   * different options on two devices before either hears of the other writes
+   * one object twice, and the merge keeps one answer. An id per option kept
+   * both, and showed that person on two choices of a single-choice poll
+   * (Codex, on #66). Changing your mind rewrites that object; any other
+   * answer of yours — from when the poll allowed several — goes.
+   */
+  const id = asObjectId(pollAnswerId(poll.id, SINGLE_CHOICE, by.key))
+  const others: Patch[] = mine
+    .filter((link) => link.id !== id)
+    .map((link) => ({ op: 'remove', id: link.id }))
+  const existing = doc.objects.get(id)
+  if (existing === undefined) return [...others, ...create(id)]
+  if (existing.type !== POLL_ANSWER_TYPE) {
+    throw new CommandError('invalid-input', 'Something else already has that answer’s id')
+  }
+  return [
+    ...others,
+    { op: 'set', id, path: ['data'], value: { poll: poll.id, option: command.option, by } },
   ]
 }

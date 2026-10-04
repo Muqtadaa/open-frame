@@ -63,14 +63,35 @@ export function MarkedRenderer({
 
 /**
  * The marks on one object as a string that compares by value (rule 9), from
- * the registry's mark index — O(1) per object (rule 10). Marks only arrive and
- * leave, so the board's structure is all this needs to hear.
+ * the registry's mark index — O(1) per object (rule 10).
+ *
+ * It hears the board's structure, for marks arriving and leaving, AND each
+ * mark object on this one: an answer rewritten in place — a single-choice
+ * answer changing option, an agent's edit — is not a structural change, and a
+ * card that only heard structure kept its old counts (Codex, on #66).
  */
 function useMarkSignature(id: ObjectId): string {
   const { runtime } = useOpenFrame()
   const subscribe = useCallback(
-    (onChange: () => void) => runtime.store.subscribeToStructure(onChange),
-    [runtime.store],
+    (onChange: () => void) => {
+      let unfollow: (() => void)[] = []
+      const follow = (): void => {
+        for (const stop of unfollow) stop()
+        unfollow = runtime.registry
+          .marksOn(runtime.store.getDocument(), id)
+          .map((link) => runtime.store.subscribeToObject(link.id, onChange))
+      }
+      follow()
+      const unstructure = runtime.store.subscribeToStructure(() => {
+        follow()
+        onChange()
+      })
+      return () => {
+        unstructure()
+        for (const stop of unfollow) stop()
+      }
+    },
+    [runtime, id],
   )
   const getSnapshot = useCallback(() => {
     const rows = runtime.registry

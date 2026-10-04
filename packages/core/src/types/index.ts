@@ -136,13 +136,13 @@ export {
   MIN_POLL_OPTIONS,
   POLL_OPTION_ID,
   PollDataSchema,
-  nextOptionId,
   type PollData,
   type PollOption,
 } from './poll/schema.js'
 export {
   POLL_ANSWER_TYPE,
   POLL_MARK,
+  SINGLE_CHOICE,
   pollAnswerId,
   pollAnswerType,
 } from './poll-answer/definition.js'

@@ -1,4 +1,9 @@
-import { asObjectId, type AnyOpenFrameObject, type FieldDefinition } from '@openframe/core'
+import {
+  POLL_OPTION_ID,
+  asObjectId,
+  type AnyOpenFrameObject,
+  type FieldDefinition,
+} from '@openframe/core'
 import { afterEach, describe, expect, it } from 'vitest'
 
 import { mountOnBoard, type Mounted } from '../test-render.js'
@@ -96,17 +101,27 @@ describe('a choices field', () => {
     ui.act(() => {
       ui.container.querySelector<HTMLButtonElement>('button[aria-label="Remove Dogs"]')?.click()
     })
-    expect(writes).toEqual([
-      {
-        options: [...options, { id: 'o4', label: 'Birds' }, { id: 'o5', label: 'Option 4' }],
-      },
-      {
-        options: [
-          { id: 'o1', label: 'Cats' },
-          { id: 'o4', label: 'Birds' },
-        ],
-      },
-    ])
+    const added = (writes[0]?.options as { id: string; label: string }[]).at(-1)
+    expect(added?.label).toBe('Option 4')
+    expect(['o1', 'o2', 'o4']).not.toContain(added?.id)
+    expect(writes[1]).toEqual({
+      options: [
+        { id: 'o1', label: 'Cats' },
+        { id: 'o4', label: 'Birds' },
+      ],
+    })
+  })
+
+  it('never gives a new option the id of one that was removed', async () => {
+    // o3 was removed; its answers are still on the board, uncounted. A new
+    // option named o3 would pick them all up.
+    const { ui, writes } = await mount(choices, { options })
+    ui.act(() => {
+      ui.container.querySelector<HTMLButtonElement>('[data-testid="field-options-add"]')?.click()
+    })
+    const added = (writes[0]?.options as { id: string }[] | undefined)?.at(-1)?.id
+    expect(added).toMatch(POLL_OPTION_ID)
+    expect(added).not.toBe('o3')
   })
 
   it('will not go below two options', async () => {

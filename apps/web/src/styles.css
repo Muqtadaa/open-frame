@@ -4388,6 +4388,12 @@ body {
   white-space: pre-wrap;
 }
 
+/*
+ * Scrolls when the options outgrow the card: a poll may have ten and a new
+ * card fits about three, and a clipped option is one nobody can answer
+ * (Codex, on #66). The board's wheel hands a scrollable box under the
+ * pointer its own scroll.
+ */
 .of-poll__options {
   display: flex;
   flex: 1;
@@ -4396,8 +4402,13 @@ body {
   min-height: 0;
   padding: 0;
   margin: 0;
-  overflow: hidden;
+  overflow-y: auto;
+  overscroll-behavior: contain;
   list-style: none;
+}
+
+.of-poll__options > li {
+  flex: none;
 }
 
 .of-poll__option {

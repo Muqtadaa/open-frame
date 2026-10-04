@@ -65,9 +65,26 @@ describe('polls', () => {
   })
 
   it('gives a pick one id, so two devices answering at once write one object', () => {
-    const id = poll(h)
+    const id = poll(h, { multi: true })
     const result = answer(h, id, 'o2')
     expect(result.ok && result.affected).toEqual([asObjectId(pollAnswerId(id, 'o2', otter.key))])
+  })
+
+  it('gives a single-choice answer one id per person, whatever it picks', () => {
+    // Two devices for one person, each answering before hearing of the other:
+    // one object, so the merge keeps one answer rather than two.
+    const other = createTestHarness()
+    const here = poll(h)
+    const there = poll(other)
+    expect(here).toBe(there)
+    const a = answer(h, here, 'o1')
+    const b = answer(other, there, 'o2')
+    expect(a.ok && a.affected).toEqual(b.ok && b.affected)
+
+    // Changing your mind changes that one answer.
+    const moved = answer(h, here, 'o2')
+    expect(moved.ok && moved.affected).toEqual(a.ok && a.affected)
+    expect(picks(h, here)).toEqual(['o2:g_otter'])
   })
 
   it('refuses an answer once the poll is closed', () => {

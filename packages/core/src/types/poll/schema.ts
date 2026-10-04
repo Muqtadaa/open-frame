@@ -36,8 +36,13 @@ export interface PollData {
 export const POLL_VERSION = 1
 export const MIN_POLL_OPTIONS = 2
 export const MAX_POLL_OPTIONS = 10
-/** `o1`, `o2` … — part of an answer's id, so kept plain. */
-export const POLL_OPTION_ID = /^o\d{1,3}$/
+/**
+ * `o1`, `o2` for the options a poll starts with, and a random tail for any
+ * added later — never a number counted from the options there now, which
+ * handed a removed option's id, and its uncounted answers, to the next one
+ * added (Codex, on #66). Part of an answer's id, so kept plain.
+ */
+export const POLL_OPTION_ID = /^o[a-z0-9]{1,12}$/
 
 const OptionSchema = z.strictObject({
   id: z.string().regex(POLL_OPTION_ID),
@@ -60,11 +65,3 @@ export const PollDataSchema: ZodType<PollData> = z
   .refine((data) => new Set(data.options.map((o) => o.id)).size === data.options.length, {
     message: 'Two options share an id',
   })
-
-/** The next option id nobody has used on this poll. */
-export function nextOptionId(options: readonly PollOption[]): string {
-  const taken = new Set(options.map((option) => option.id))
-  let n = options.length + 1
-  while (taken.has(`o${String(n)}`)) n += 1
-  return `o${String(n)}`
-}
