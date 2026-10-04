@@ -111,16 +111,16 @@ export async function createRuntime(options: CreateRuntimeOptions = {}): Promise
       const n = loaded.degraded.length
       notices.push(
         n === 1
-          ? '1 object could not be read by this version of OpenFrame, and is shown as a placeholder.'
-          : `${String(n)} objects could not be read by this version of OpenFrame, and are shown as placeholders.`,
+          ? '1 object needs a newer version of OpenFrame and is shown as a placeholder.'
+          : `${String(n)} objects need a newer version of OpenFrame and are shown as placeholders.`,
       )
     }
     if (loaded.repairs.length > 0) {
       const n = loaded.repairs.length
       notices.push(
         n === 1
-          ? 'One problem in how the board was stored was put right while opening it.'
-          : `${String(n)} problems in how the board was stored were put right while opening it.`,
+          ? 'Fixed 1 problem in how this board was stored.'
+          : `Fixed ${String(n)} problems in how this board was stored.`,
       )
     }
   } else if (loaded.status === 'quarantined') {

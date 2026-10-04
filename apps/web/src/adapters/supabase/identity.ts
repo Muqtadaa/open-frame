@@ -125,14 +125,14 @@ export function readableError(message: string): string {
    * blocked corporate proxy would make it wrong.
    */
   if (text.includes('failed to fetch') || text.includes('networkerror') || text.includes('fetch')) {
-    return 'Could not reach the sign-in service. Check your connection and try again.'
+    return 'Could not reach the sign-in service.'
   }
 
   if (text.includes('invalid login')) return 'That email and password do not match an account.'
   if (text.includes('already registered')) return 'There is already an account with that email.'
-  if (text.includes('password')) return 'That password is too short — use at least six characters.'
+  if (text.includes('password')) return 'A password needs at least six characters.'
   if (text.includes('email')) return 'That does not look like an email address.'
-  return 'Something went wrong signing in. Try again in a moment.'
+  return 'Signing in failed.'
 }
 
 export async function signIn(email: string, password: string): Promise<AuthResult> {

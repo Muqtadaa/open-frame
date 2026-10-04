@@ -101,7 +101,7 @@ async function destroyRoom(deps: LifecycleDeps, board: Deletable): Promise<strin
      * carries on where this one stopped.
      */
     case 'unfinished':
-      return 'The board could not be fully deleted. Try again to finish deleting it.'
+      return 'The board was only partly deleted. Delete again to finish.'
     case 'refused':
       return 'This board could not be deleted.'
   }

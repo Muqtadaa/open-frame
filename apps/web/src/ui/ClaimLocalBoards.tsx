@@ -68,7 +68,7 @@ export function ClaimLocalBoards({
 
       {failed.length > 0 && (
         <p className="of-home__claim-problem" role="alert" data-testid="claim-local-failed">
-          Still here: {failed.join(', ')}.
+          Not moved: {failed.join(', ')}.
         </p>
       )}
     </div>

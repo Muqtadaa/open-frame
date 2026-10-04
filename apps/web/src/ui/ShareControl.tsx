@@ -105,9 +105,7 @@ export function ShareControl() {
      */
     if (services.accounts.enabled && identity === null) return null
 
-    const shareHint = runtime.readOnly
-      ? 'This board is read-only and cannot be shared'
-      : 'Give this board a link other people can open'
+    const shareHint = runtime.readOnly ? 'Read-only board' : 'An edit link and a view link'
 
     return (
       <>
@@ -151,7 +149,7 @@ export function ShareControl() {
                   setShareError(
                     error instanceof ShareFailed
                       ? error.message
-                      : 'This board could not be moved. It is still here, exactly as it was.',
+                      : 'This board could not be moved. Nothing changed.',
                   )
                 },
               )
@@ -210,14 +208,9 @@ export function ShareControl() {
    * gets the link they arrived on, named for what it gives.
    */
   const linkKind = role === 'viewer' ? 'view' : 'edit'
-  const action =
-    owned !== null
-      ? 'Click for both links and the password.'
-      : `Click to copy the ${linkKind} link.`
-  const roomHint =
-    here.length === 1
-      ? `You are the only one here. ${action}`
-      : `Here now: ${here.map((person) => person.name).join(', ')}. ${action}`
+  const who = here.length === 1 ? 'Only you' : here.map((person) => person.name).join(', ')
+  const handsOver = owned !== null ? 'Links and password' : `Copy ${linkKind} link`
+  const roomHint = `${who} · ${handsOver}`
   const ownLinks = (): SharedBoard => {
     const origin = window.location.origin
     return {
@@ -293,8 +286,8 @@ export function ShareControl() {
         <span
           className="of-status__watching"
           data-testid="viewing-only"
-          data-tip="You can watch, and others can see you here. Changing the board needs the edit link."
-          aria-description="You can watch, and others can see you here. Changing the board needs the edit link."
+          data-tip="Changing the board needs the edit link"
+          aria-description="Changing the board needs the edit link"
         >
           View only
         </span>
@@ -441,7 +434,7 @@ function ShareLinks({
       aria-label="Share this board"
       data-testid="share-links"
     >
-      <p className="of-share__lead">Shared. Send the link that gives what you mean to give.</p>
+      <p className="of-share__lead">Shared.</p>
 
       <button
         ref={first}
@@ -454,7 +447,7 @@ function ShareLinks({
         <span className="of-share__link-name">Copy edit link</span>
         {/* The name stays: "Copied" in its place did not say which one. */}
         <span className="of-share__link-what">
-          {copied === 'edit' ? 'Copied' : 'They can change the board'}
+          {copied === 'edit' ? 'Copied' : 'Can change the board'}
         </span>
       </button>
 
@@ -467,13 +460,13 @@ function ShareLinks({
       >
         <span className="of-share__link-name">Copy view link</span>
         <span className="of-share__link-what">
-          {copied === 'view' ? 'Copied' : 'They can watch, and be seen watching'}
+          {copied === 'view' ? 'Copied' : 'Can watch, and is seen watching'}
         </span>
       </button>
 
       {copyFailed && (
         <p className="of-share__problem" role="alert">
-          The link could not be copied. Your browser may be blocking the clipboard.
+          The link could not be copied. The browser may be blocking the clipboard.
         </p>
       )}
 
@@ -525,7 +518,7 @@ function SharePassword({
       setSecret('')
       setSaid({
         ok: true,
-        text: next === null ? 'Both links open without a password.' : 'Both links now ask for it.',
+        text: next === null ? 'Password removed' : 'Password set',
       })
     })
   }
@@ -544,7 +537,7 @@ function SharePassword({
           className="of-input"
           type="password"
           autoComplete="off"
-          aria-label="A password for this board"
+          aria-label="Board password"
           aria-describedby="of-share-password-what"
           data-testid="password-input"
           value={secret}
@@ -554,7 +547,7 @@ function SharePassword({
         />
       </label>
       <span className="of-share__link-what" id="of-share-password-what">
-        Both links ask for it. Anyone who already has the board open is signed out of it.
+        Both links ask for it. Anyone with the board open is signed out.
       </span>
       <span className="of-share__password-actions">
         <button
@@ -639,8 +632,8 @@ function ShareConfirm({
   return createPortal(
     <Gate heading="Move this board to share it?" testId="share-dialog" initialFocus={confirm}>
       <GateBody>
-        It moves from this browser into your account, where it gets two links: one that lets people
-        change it, and one that lets them watch. It is the same board; nothing is copied.
+        It moves from this browser to your account and gets an edit link and a view link. Nothing is
+        copied.
       </GateBody>
       {error !== null && (
         <p className="of-gone__body" role="alert" data-testid="share-error">
@@ -659,7 +652,7 @@ function ShareConfirm({
             if (!moving) onMove()
           }}
         >
-          {moving ? 'Moving…' : error === null ? 'Move and share' : 'Try again'}
+          {moving ? 'Moving…' : 'Move and share'}
         </button>
         <button
           type="button"

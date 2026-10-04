@@ -38,6 +38,6 @@ describe('turning a provider error into something a person can act on', () => {
   it('falls back to something plain rather than passing the raw text through', () => {
     const raw = 'AuthApiError: unexpected_failure in gotrue v2.170.0'
     expect(readableError(raw)).not.toContain('gotrue')
-    expect(readableError(raw)).toBe('Something went wrong signing in. Try again in a moment.')
+    expect(readableError(raw)).toBe('Signing in failed.')
   })
 })

@@ -731,6 +731,25 @@ read only the first one, which was the tool tip's.
 
 **Nothing loops.** There is no idle animation anywhere in this product.
 
+## Copy
+
+Interface text names things and states facts. It does not coach. A chip that
+is plainly a button does not say "press to take yours back"; an empty panel
+says it is empty; a failure says what failed — not "try again in a moment",
+which nobody can act on.
+
+An instruction stays when it is the only way to learn something: a held key
+that overrides snapping mid-drag, a double-click that fits a column, typing @
+to mention, how to copy a link by hand when the clipboard refuses, what a
+link gives the person it is sent to. Useful is kept; padding is cut.
+Consequences stay too — a delete that cannot be undone says so, once, where
+it is confirmed.
+
+A tip that is the control's name is not repeated as its description, and a
+keyboard shortcut rides on `aria-keyshortcuts` or the tip, not a sentence.
+`app/copy-rule.test.ts` reads every string the interface can show and fails on
+coaching, apart from the instructions listed there with their reasons.
+
 ## Names
 
 A person's name is arbitrary-length content on a fixed-height control, and this

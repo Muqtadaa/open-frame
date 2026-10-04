@@ -314,8 +314,7 @@ export function SelectionOverlay() {
             className="of-lock"
             data-testid="selection-lock"
             aria-label="Unlock"
-            data-tip="Locked — press to unlock"
-            aria-description="Locked — press to unlock"
+            data-tip="Unlock"
             onPointerDown={(event) => {
               event.stopPropagation()
             }}

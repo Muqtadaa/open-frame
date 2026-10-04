@@ -65,12 +65,12 @@ describe('finding on the board', () => {
     expect(document.activeElement).toBe(box)
   })
 
-  it('counts what it found, and offers a way forward when it found nothing', () => {
+  it('counts what it found, and says when it found nothing', () => {
     openAndType('pricing')
     expect(document.querySelector('[data-testid="search-count"]')?.textContent).toBe('2 found')
     openAndType('zebra')
-    expect(document.querySelector('[data-testid="search-count"]')?.textContent).toContain(
-      'try a kind',
+    expect(document.querySelector('[data-testid="search-count"]')?.textContent).toBe(
+      'nothing found',
     )
   })
 

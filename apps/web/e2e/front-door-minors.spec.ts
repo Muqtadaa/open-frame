@@ -69,7 +69,7 @@ test('an invite link can be copied, and says what it gives', async ({ page, cont
   await page.getByTestId('workspace-create').click()
   await page.getByTestId('workspace-share').click()
   // The link makes people editors, and it used to say nothing of the kind.
-  await expect(page.getByTestId('workspace-share-note')).toContainText('join as editors')
+  await expect(page.getByTestId('workspace-share-note')).toContainText('can edit every board')
   await page.getByTestId('workspace-copy').click()
   expect(await page.evaluate(() => navigator.clipboard.readText())).toContain('workspace=')
 })

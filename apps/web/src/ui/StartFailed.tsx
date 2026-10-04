@@ -22,8 +22,8 @@ export function describeStartFailure(error: unknown): string {
     (error instanceof Error && /indexeddb/i.test(error.message)) ||
     typeof indexedDB === 'undefined'
   return refused
-    ? 'This browser is not letting OpenFrame keep anything on this device. A private window does this, and so does blocking site data.'
-    : 'Something went wrong while opening it, and it is not clear what.'
+    ? 'This browser is not letting OpenFrame store anything on this device, as in a private window or with site data blocked.'
+    : 'The cause is not known.'
 }
 
 /**

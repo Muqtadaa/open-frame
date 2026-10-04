@@ -279,7 +279,7 @@ export function ColorPicker({ current, against, onPick, onPreview, onClose }: Co
           data-testid="picker-contrast"
         >
           {ratio < AA_TEXT
-            ? `Hard to read here — ${ratio.toFixed(1)}:1, below the 4.5:1 this product holds itself to.`
+            ? `Hard to read here — ${ratio.toFixed(1)}:1, below 4.5:1.`
             : `Readable here — ${ratio.toFixed(1)}:1.`}
         </p>
       )}

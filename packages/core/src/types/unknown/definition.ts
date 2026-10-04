@@ -56,7 +56,7 @@ export const unknownType = defineObjectType<typeof UNKNOWN_TYPE, UnknownData>({
       summary: `${name} (from a newer version of OpenFrame)`,
       gist: `${name}, from a newer version of OpenFrame`,
       fields: { originalType: object.data.originalType },
-      cannotEdit: `This ${name.toLowerCase()} was made in a newer version of OpenFrame. It can be moved or deleted here, and opened there.`,
+      cannotEdit: `This ${name.toLowerCase()} was made in a newer version of OpenFrame. Here it can only be moved or deleted.`,
     }
   },
 })

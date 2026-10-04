@@ -1176,3 +1176,16 @@ on boxes, and a turned object's box is the upright one around it. Each end of a
 line is now pulled onto the outline it measures from — where that row or
 column actually crosses the turned shape — so the line touches it and the
 number is what is drawn. Upright objects are unchanged.
+
+## Copy pass (2026-10-04)
+
+The owner's rule: we do not write superfluous instructions or copy — and,
+equally, necessary instructions stay. An inventory of every string the
+interface can show (about 120) was cut to fact: "Press to take yours back",
+"Click to copy the edit link", "Try again in a moment", reassurance after
+failures, intros repeating their headings, and a canvas description written as
+a paragraph went; the instructions that are the only way to learn something
+(Cmd/Ctrl overriding snap, double-click to fit a column, @ to mention, copying
+by hand when the clipboard refuses, the search syntax, what each share link
+gives) stayed. `app/copy-rule.test.ts` reads every interface string and fails
+on coaching outside its listed exceptions — seen failing on the old copy.

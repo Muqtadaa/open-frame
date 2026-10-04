@@ -197,9 +197,7 @@ export function Home() {
          * simply nowhere yet for a new one to live.
          */
         setStartError(
-          error instanceof ShareFailed
-            ? error.message
-            : 'A new board needs a connection. Everything you already have still works offline.',
+          error instanceof ShareFailed ? error.message : 'A new board needs a connection.',
         )
       },
     )
@@ -265,13 +263,13 @@ export function Home() {
            */}
           {invitation !== null && identity === null && (
             <p className="of-home__note" data-testid="workspace-invited-signedout">
-              You have been invited to a workspace. Sign in and it will be added to your list.
+              Invited to a workspace. It joins your list when you sign in.
             </p>
           )}
 
           {invited !== null && (
             <p className="of-home__note" data-testid="workspace-invited">
-              You have been added to a workspace as {invited === 'editor' ? 'an' : 'a'} {invited}.
+              Added to a workspace as {invited === 'editor' ? 'an' : 'a'} {invited}.
             </p>
           )}
 
@@ -306,14 +304,14 @@ export function Home() {
 
               {listProblem !== null ? (
                 <p className="of-home__row-problem" role="alert" data-testid="home-list-problem">
-                  Your boards could not be listed. {listProblem} Nothing on this device was changed.
+                  Your boards could not be listed. {listProblem}
                 </p>
               ) : listing === null ? (
                 <p className="of-home__note">Looking for your boards…</p>
               ) : shown.length === 0 ? (
                 <p className="of-home__note" data-testid="home-empty">
                   {/* An empty list says what to do next, not only that it is empty. */}
-                  {canStart ? 'Nothing here yet. Start a board below.' : 'Nothing here yet.'}
+                  No boards yet.
                 </p>
               ) : (
                 <ul className="of-home__list" data-testid="home-boards">

@@ -317,9 +317,7 @@ export function CommentPanel({ author }: { readonly author: string | null }) {
     void write.then((ok) => {
       setBusy(false)
       if (!ok) {
-        setProblem(
-          'That could not be posted. Your words are kept here — check the connection and try again.',
-        )
+        setProblem('Not posted. Your words are kept here.')
         return
       }
       if (key !== null) dropDraft(key)
@@ -428,7 +426,7 @@ export function CommentPanel({ author }: { readonly author: string | null }) {
        */}
       {attachmentGone && (
         <p className="of-comment-panel__gone" data-testid="comment-orphaned">
-          What this was attached to has been deleted.
+          What this was attached to was deleted.
         </p>
       )}
 
@@ -442,8 +440,8 @@ export function CommentPanel({ author }: { readonly author: string | null }) {
           {threads.length === 0 ? (
             <p className="of-comment-panel__hint" data-testid="comment-list-empty">
               {resolvedCount === 0
-                ? 'Nothing has been said on this board yet. Click anywhere to start.'
-                : 'Everything here has been resolved.'}
+                ? 'No comments yet. Click the board to add one.'
+                : 'All resolved.'}
             </p>
           ) : (
             threads.map((open) => (
@@ -560,7 +558,7 @@ export function CommentPanel({ author }: { readonly author: string | null }) {
             value={body}
             maxLength={4000}
             disabled={busy}
-            placeholder={thread === null ? 'Say something' : 'Reply'}
+            placeholder={thread === null ? 'Comment' : 'Reply'}
             aria-label={thread === null ? 'Your comment' : 'Your reply'}
             data-testid="comment-input"
             /*
@@ -663,7 +661,7 @@ export function CommentPanel({ author }: { readonly author: string | null }) {
            */}
           <p className="of-visually-hidden" role="status" data-testid="mention-status">
             {picking
-              ? `${String(candidates.length)} ${candidates.length === 1 ? 'person matches' : 'people match'}. Up and down to choose, Enter to mention.`
+              ? `${String(candidates.length)} ${candidates.length === 1 ? 'match' : 'matches'}`
               : ''}
           </p>
 
@@ -686,7 +684,7 @@ export function CommentPanel({ author }: { readonly author: string | null }) {
            */}
           {!picking && stranger === null && others.length > 0 && (
             <p className="of-comment-panel__hint" data-testid="comment-people-hint">
-              Type @ and a name to notify someone:{' '}
+              Type @ to mention:{' '}
               {others
                 .slice(0, 4)
                 .map((person) => person.displayName)
@@ -711,7 +709,7 @@ export function CommentPanel({ author }: { readonly author: string | null }) {
            */}
           {!picking && stranger !== null && (
             <p className="of-comment-panel__hint" data-testid="comment-stranger">
-              Nobody here is called {stranger}. Share the board with them and they can be mentioned.{' '}
+              Nobody here is called {stranger}.{' '}
               <button
                 type="button"
                 className="of-button of-button--ghost of-comment-panel__invite"
@@ -722,12 +720,6 @@ export function CommentPanel({ author }: { readonly author: string | null }) {
               >
                 {invited ? 'Link copied' : 'Copy invite link'}
               </button>
-            </p>
-          )}
-
-          {kept?.body === body && (
-            <p className="of-comment-panel__hint" data-testid="comment-draft-kept">
-              Draft kept from before.
             </p>
           )}
 
@@ -758,9 +750,7 @@ export function CommentPanel({ author }: { readonly author: string | null }) {
                     setBusy(false)
                     if (!ok) {
                       setProblem(
-                        thread.resolvedAt === null
-                          ? 'That could not be resolved. Try again in a moment.'
-                          : 'That could not be reopened. Try again in a moment.',
+                        thread.resolvedAt === null ? 'Could not resolve.' : 'Could not reopen.',
                       )
                       return
                     }
@@ -853,7 +843,7 @@ function Remark({
     void edit(comment.id, body).then((ok) => {
       setBusy(false)
       if (!ok) {
-        setProblem('That could not be saved. Your words are kept here — try again.')
+        setProblem('Not saved. Your words are kept here.')
         return
       }
       leave('edit')
@@ -952,7 +942,7 @@ function Remark({
                 setBusy(true)
                 void remove(comment.id).then((ok) => {
                   setBusy(false)
-                  if (!ok) setProblem('That could not be deleted. Try again in a moment.')
+                  if (!ok) setProblem('Could not delete.')
                 })
               }}
             >

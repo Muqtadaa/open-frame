@@ -168,7 +168,7 @@ function Picker({
         ref={root}
         className="of-emoji-picker of-surface"
         role="dialog"
-        aria-label="Pick a reaction"
+        aria-label="Emoji"
         onKeyDown={onKeyDown}
       >
         <input
@@ -190,7 +190,7 @@ function Picker({
           ) : searching ? (
             results.length === 0 ? (
               <p className="of-emoji-picker__note" role="status">
-                No emoji called that.
+                No matches
               </p>
             ) : (
               <div className="of-emoji-picker__grid" role="group" aria-label="Results">

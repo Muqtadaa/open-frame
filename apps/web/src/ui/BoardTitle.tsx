@@ -95,8 +95,8 @@ export function BoardTitle({ title }: { readonly title: string }) {
         // content is otherwise read INTO a name taken from the contents.
         aria-label={title}
         // The whole name when the bar has cut it off; otherwise, what a press does.
-        data-tip={clipped ? title : 'Rename this board'}
-        aria-description="Rename this board"
+        data-tip={clipped ? title : 'Rename'}
+        aria-description="Rename"
         onClick={open}
       >
         {title}

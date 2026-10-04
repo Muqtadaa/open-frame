@@ -94,7 +94,7 @@ test('the sign-up name says who sees it, and keeps saying so', async ({ page }) 
   await page.getByRole('button', { name: 'Create an account' }).click()
   const name = page.getByLabel('Name')
   await name.fill('Sam')
-  await expect(page.getByText('What people see on your cursor')).toBeVisible()
+  await expect(page.getByText('Shown on your cursor')).toBeVisible()
 })
 
 /*

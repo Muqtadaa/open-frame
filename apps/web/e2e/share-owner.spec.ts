@@ -44,7 +44,7 @@ test("the owner's chip offers both links, and the password beside them", async (
   expect(copied).toContain(`k=${VIEW}`)
 
   // The password lives beside the links it protects.
-  await expect(sheet.getByLabel('A password for this board')).toBeVisible()
+  await expect(sheet.getByLabel('Board password')).toBeVisible()
   await expect(sheet.getByTestId('password-save')).toBeVisible()
   await expect(sheet.getByTestId('password-save')).not.toHaveClass(/confirm-yes|danger/)
 })

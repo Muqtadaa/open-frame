@@ -68,8 +68,7 @@ export function BoardGone() {
     // Keeping takes the keyboard: it is the one thing here that saves anything.
     <Gate heading="This board was deleted" testId="board-gone" initialFocus={keep}>
       <GateBody>
-        Whoever owns it removed it while you had it open. Nothing you change here can be saved to
-        it, but you can keep what is on screen as a board of your own.
+        Its owner deleted it while you had it open. Changes here are not saved to it.
       </GateBody>
       {keepFailed && (
         <p className="of-gone__problem" role="alert">

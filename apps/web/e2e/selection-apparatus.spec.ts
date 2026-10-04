@@ -229,10 +229,7 @@ test.describe('the board from the keyboard', () => {
     // into it, and which was never the claim.
     await page.getByTestId('status-bar').locator('a, button, input').first().focus()
     expect(await tabsTo(page, 'canvas', 60)).toBe(true)
-    await expect(page.locator(CANVAS)).toHaveAttribute(
-      'aria-description',
-      /Tab moves between objects/,
-    )
+    await expect(page.locator(CANVAS)).toHaveAttribute('aria-description', /Tab: next object/)
 
     const selected = page.locator('[data-selected="true"]')
     await page.keyboard.press('Tab')
