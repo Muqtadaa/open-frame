@@ -63,26 +63,29 @@ test(
   },
 )
 
-test('votes from the keyboard through the context menu', async ({ page }) => {
-  await twoNotes(page)
+test('votes from the keyboard through the context menu, on the notes the round covers', async ({
+  page,
+}) => {
+  await seedBoard(
+    page,
+    buildBoard((board) => {
+      board.note('Show the price early', FIRST)
+      const second = board.note('Free returns', SECOND)
+      board.voting({ ids: [second] })
+    }),
+  )
   await page.locator(CANVAS).click({ position: SECOND })
   await page.keyboard.press('Shift+F10')
-  await page.getByRole('menuitem', { name: 'Start dot voting…' }).press('Enter')
-  await expect(page.getByTestId('voting-setup').getByRole('heading')).toHaveText(
-    'Dot voting · 1 note',
-  )
-  await page.getByTestId('voting-start').press('Enter')
-
-  await page.locator(CANVAS).focus()
-  await page.keyboard.press('Shift+F10')
+  await page.getByRole('menuitem', { name: 'Dot voting' }).press('ArrowRight')
   await page.getByRole('menuitem', { name: 'Add vote' }).press('Enter')
   await expect(dots(page, 1)).toHaveText('1')
 
   // The round holds the note it was started on, and nothing else.
-  await page.getByTestId('voting-vote').click()
+  await page.keyboard.press('Escape')
   await page.locator(CANVAS).click({ position: FIRST })
   await page.keyboard.press('Shift+F10')
-  await expect(page.getByRole('menuitem', { name: 'Add vote' })).toHaveCount(0)
+  await expect(page.getByRole('menu')).toBeVisible()
+  await expect(page.getByRole('menuitem', { name: 'Dot voting' })).toHaveCount(0)
 })
 
 test('hides other people’s dots until revealed, then ranks the notes', async ({ page }) => {
@@ -139,6 +142,26 @@ test('ends a round, keeps the counts, and clears it with one undo to bring it ba
   await undo(page)
   await expect(page.getByTestId('voting')).toBeVisible()
   await expect(dots(page, 0)).toHaveText('1')
+})
+
+test('starts a round on what one frame holds, and only that', async ({ page }) => {
+  await seedBoard(
+    page,
+    buildBoard((board) => {
+      board.note('Outside', { x: 900, y: 500 })
+      board.add('frame', { x: 400, y: 320 }, { title: [{ text: 'Ideas' }] })
+    }),
+  )
+  await page.locator(CANVAS).click({ button: 'right', position: { x: 400, y: 320 } })
+  await page.getByRole('menuitem', { name: 'Start dot voting…' }).click()
+  await expect(page.getByTestId('voting-setup').getByRole('heading')).toHaveText(
+    'Dot voting · this frame',
+  )
+  await page.getByTestId('voting-start').click()
+
+  // The note outside the frame is not part of it.
+  await page.locator(CANVAS).click({ position: { x: 900, y: 500 } })
+  await expect(page.getByTestId('toast-body')).toHaveText('That note is not part of this vote')
 })
 
 test('cancels a round that was never started, leaving nothing on the board', async ({ page }) => {

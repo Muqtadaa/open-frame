@@ -1002,8 +1002,9 @@ bar until there is music to hear.
 
 ### Dot Voting
 
-Started from the context menu: on the selected notes, on what one frame holds,
-or from empty board on the whole board. Its setup sits at the top of the
+Started from the context menu: from empty board on the whole board, or from a
+frame's menu on what that frame holds. (A note's menu already fills a laptop
+window; it gains a row only while a round is open.) Its setup sits at the top of the
 board, under the navigation bar, in the notice's panel stock: the scope in its
 heading, a title, votes each (5 by default, up to 20), "Hide counts until
 revealed", Start. Escape or Cancel leaves nothing behind.
@@ -1014,8 +1015,8 @@ places a dot, Alt takes one back. It is armed when a round starts and put down
 when it ends. Whoever can edit also gets Reveal (while hidden) and End; once
 ended, Clear. Results lists the notes by dots, most first, each a row that
 selects and shows its note, with "Select top 3" (ties with third come too).
-The keyboard votes from the context menu: Add vote, Remove vote, offered only
-on notes the round covers.
+The keyboard votes from the context menu — "Dot voting", holding Add vote and
+Remove vote — offered only while a round is open and only on notes it covers.
 
 On a note, its dots are a capsule in the top corner — an accent dot and the
 count, in mono — clear of the reactions along its bottom edge. While counts are

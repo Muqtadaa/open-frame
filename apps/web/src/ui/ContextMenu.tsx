@@ -232,9 +232,12 @@ export function ContextMenu() {
     })
 
   /*
-   * Dot voting. A round is started on what is selected — those notes, or what
-   * one container holds — or on the whole board from empty canvas; while one
-   * is open, the keyboard votes from here as the pointer does with the tool.
+   * Dot voting. A round is started on the whole board from empty canvas, or
+   * on what one frame holds from the frame's menu. A note's menu already
+   * fills a laptop window, and one more row hung it up over the note it is
+   * about, so a note's menu gains one row — "Dot voting", holding Add and
+   * Remove — and only while a round is open: that is when the keyboard needs
+   * it, as the pointer needs the tool.
    */
   const roundOpen = round?.data.status === 'open'
   const startable = canEdit && me !== null && !roundOpen
@@ -243,11 +246,9 @@ export function ContextMenu() {
     only !== undefined && runtime.registry.get(only.type)?.capabilities.canHaveChildren === true
   const votingScope: VoteScope | null = !hasSelection
     ? { kind: 'board' }
-    : reactable
-      ? { kind: 'objects', ids: selected }
-      : container && only !== undefined
-        ? { kind: 'frame', frame: only.id }
-        : null
+    : container && only !== undefined
+      ? { kind: 'frame', frame: only.id }
+      : null
   const startVoting =
     startable && votingScope !== null
       ? [
@@ -271,16 +272,21 @@ export function ContextMenu() {
     roundOpen && reactable && votable && me !== null
       ? [
           {
-            label: 'Add vote',
-            run: () => {
-              for (const id of selected) commands.vote(id, me)
-            },
-          },
-          {
-            label: 'Remove vote',
-            run: () => {
-              for (const id of selected) commands.vote(id, me, true)
-            },
+            label: 'Dot voting',
+            submenu: [
+              {
+                label: 'Add vote',
+                run: () => {
+                  for (const id of selected) commands.vote(id, me)
+                },
+              },
+              {
+                label: 'Remove vote',
+                run: () => {
+                  for (const id of selected) commands.vote(id, me, true)
+                },
+              },
+            ],
           },
         ]
       : []
