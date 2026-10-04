@@ -6,7 +6,10 @@ import {
   gapsWithin,
   matchesBetween,
   nearestDistances,
+  outlineOf,
+  toOutlines,
   type MeasureSegment,
+  type MeasuredShape,
 } from './measure.js'
 
 /**
@@ -15,6 +18,22 @@ import {
  * were only while one was being dragged into line with the other.
  */
 const rect = (x: number, y: number, width = 100, height = 50): Rect => ({ x, y, width, height })
+
+const plain = (box: Rect): MeasuredShape => ({ box, corners: null })
+
+/** A frame turned about its centre, measured as the box around it. */
+function turned(frame: Rect, rotation: number): MeasuredShape {
+  const corners = outlineOf(frame, rotation)
+  const xs = corners.map((point) => point.x)
+  const ys = corners.map((point) => point.y)
+  const box = {
+    x: Math.min(...xs),
+    y: Math.min(...ys),
+    width: Math.max(...xs) - Math.min(...xs),
+    height: Math.max(...ys) - Math.min(...ys),
+  }
+  return { box, corners }
+}
 
 /** An across leg and a down leg that end where each other runs. */
 const meetAtACorner = (a: MeasureSegment, b: MeasureSegment): boolean =>
@@ -196,5 +215,53 @@ describe('the gaps inside a selection, with one thing holding another', () => {
     // Same left edge, with the one inside listed first, so it is the reach
     // when its holder comes next: the room inside is not a gap between them.
     expect(gapsWithin([rect(0, 100, 100, 50), rect(0, 0, 300, 300)])).toEqual([])
+  })
+})
+
+/*
+ * A TURNED object was measured as its upright box: the line started in empty
+ * space at the box's corner, short of the shape it was about. Each end is now
+ * pulled to where the line actually meets the outline.
+ */
+describe('measuring from a turned object', () => {
+  // A 100×100 square turned 45° about its centre (50, 50): a diamond from
+  // x ≈ -20.7 to 120.7, its right point at (120.7, 50).
+  const diamond = turned({ x: 0, y: 0, width: 100, height: 100 }, Math.PI / 4)
+  const right = rect(200, 0, 100, 100)
+
+  it('runs from the outline, not from the box around it', () => {
+    const [across] = toOutlines(distancesBetween(diamond.box, right), [diamond, plain(right)])
+    expect(across?.axis).toBe('x')
+    // Through the middle of the overlap, y = 50, which is the diamond's point.
+    expect(across?.from).toBeCloseTo(120.71, 1)
+    expect(across?.to).toBe(200)
+  })
+
+  it('meets the outline wherever the line crosses it, not only at a point', () => {
+    // A row lower down crosses the diamond's lower-right edge, further in.
+    const low = rect(200, 70, 100, 100)
+    const [across] = toOutlines(distancesBetween(diamond.box, low), [diamond, plain(low)])
+    expect(across?.at).toBeCloseTo(95.35, 1)
+    expect(across?.from).toBeLessThan(120)
+    expect(across?.from).toBeGreaterThan(70)
+  })
+
+  it('leaves an upright object exactly as it was', () => {
+    const a = rect(0, 0)
+    const b = rect(200, 20)
+    expect(toOutlines(distancesBetween(a, b), [plain(a), plain(b)])).toEqual(distancesBetween(a, b))
+  })
+
+  it('keeps a diagonal L whole, each leg touching its own shape', () => {
+    const below = rect(300, 300, 100, 100)
+    const legs = toOutlines(distancesBetween(diamond.box, below), [diamond, plain(below)])
+    const across = legs.find((leg) => leg.axis === 'x')
+    const down = legs.find((leg) => leg.axis === 'y')
+    // The across leg leaves the diamond's bottom point (50, 120.7)…
+    expect(across?.from).toBeCloseTo(50, 1)
+    expect(across?.to).toBe(300)
+    // …and the down leg still meets it at the corner.
+    expect(down?.at).toBe(300)
+    expect(down?.from).toBeCloseTo(across?.at ?? NaN, 5)
   })
 })

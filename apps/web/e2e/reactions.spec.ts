@@ -176,3 +176,71 @@ test.describe('the whole emoji library', () => {
     await expect(page.getByTestId('react-more')).toBeFocused()
   })
 })
+
+/*
+ * The tip names who reacted, and nothing else: the chip is plainly a button,
+ * and telling people to press it is noise.
+ */
+test('a chip’s tip says who reacted, and nothing more', async ({ page }) => {
+  await seedBoard(
+    page,
+    buildBoard((board) => {
+      const note = board.note('Hide the price until checkout', NOTE)
+      board.react(note, 'plus-one', { key: 'g_0123456789abcdef', name: 'Heron', hue: 200 })
+    }),
+  )
+  await expect(chip(page, 'plus-one')).toHaveAttribute('data-tip', 'Heron')
+  await chip(page, 'plus-one').click()
+  await expect(chip(page, 'plus-one')).toHaveAttribute('data-tip', 'Heron and you')
+  // A screen reader also hears which reaction it is.
+  await expect(chip(page, 'plus-one')).toHaveAttribute('aria-label', 'Agree')
+  await expect(chip(page, 'plus-one')).toHaveAttribute('aria-description', 'Heron and you')
+})
+
+test.describe('the library’s grid', () => {
+  test('scrolls under the wheel instead of zooming the board', async ({ page }) => {
+    await oneNote(page)
+    await page.locator(CANVAS).click({ position: NOTE })
+    await page.getByTestId('react-more').click()
+    const first = page.getByRole('button', { name: 'grinning face', exact: true })
+    await expect(first).toBeVisible()
+    const zoom = await page.getByTestId('zoom-control').textContent()
+
+    await first.hover()
+    await page.mouse.wheel(0, 400)
+    await expect
+      .poll(() =>
+        page.evaluate(
+          () =>
+            document.querySelector('[role="dialog"][aria-label="Pick a reaction"] [data-scroll]')
+              ?.scrollTop ?? 0,
+        ),
+      )
+      .toBeGreaterThan(0)
+    expect(await page.getByTestId('zoom-control').textContent()).toBe(zoom)
+  })
+
+  test('shows every column whole beside its scrollbar', async ({ page }) => {
+    await oneNote(page)
+    await page.locator(CANVAS).click({ position: NOTE })
+    await page.getByTestId('react-more').click()
+    await expect(page.getByRole('button', { name: 'grinning face', exact: true })).toBeVisible()
+    const fits = await page.evaluate(() => {
+      const list = document.querySelector<HTMLElement>(
+        '[role="dialog"][aria-label="Pick a reaction"] [data-scroll]',
+      )
+      const grid = list?.querySelector<HTMLElement>('[role="group"]')
+      if (!list || !grid) return { list: false, inside: false, sideways: true }
+      const box = list.getBoundingClientRect()
+      const last = grid.children[7]?.getBoundingClientRect()
+      return {
+        list: true,
+        // Everything left of the scrollbar, which clientWidth excludes.
+        inside: last !== undefined && last.right <= box.left + list.clientWidth + 0.5,
+        // A sideways scrollbar takes height off the box's inside.
+        sideways: list.offsetHeight - list.clientHeight > 0,
+      }
+    })
+    expect(fits).toEqual({ list: true, inside: true, sideways: false })
+  })
+})

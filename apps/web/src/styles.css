@@ -7060,12 +7060,19 @@ textarea.of-input {
   display: flex;
   flex-direction: column;
   gap: var(--of-space-6);
-  width: calc(8 * 36px + 2 * var(--of-space-6));
+  /* Eight 36px emoji, and room for a classic scrollbar beside them. */
+  width: calc(8 * 36px + 16px + 2 * var(--of-space-6));
   padding: var(--of-space-6);
 }
 
+/*
+ * The eight columns share what is left beside the scrollbar rather than
+ * assuming a width: a classic scrollbar (Windows) ate the last column, and the
+ * cut-off column then scrolled sideways.
+ */
 .of-emoji-picker__list {
   max-height: min(300px, calc(100dvh - 12 * var(--of-space-12)));
+  overflow-x: hidden;
   overflow-y: auto;
   overscroll-behavior: contain;
 }
@@ -7080,12 +7087,13 @@ textarea.of-input {
 
 .of-emoji-picker__grid {
   display: grid;
-  grid-template-columns: repeat(8, 36px);
+  grid-template-columns: repeat(8, minmax(0, 1fr));
 }
 
 .of-emoji-picker__cell {
-  width: 36px;
-  height: 36px;
+  width: 100%;
+  aspect-ratio: 1;
+  padding: 0;
   font-size: 1.25rem;
   line-height: 1;
   background: transparent;

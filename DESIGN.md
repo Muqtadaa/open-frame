@@ -399,7 +399,10 @@ the only insistent hues in the whole system belong to the user's material.
   on both axes are measured as one L from corner to corner — across along the
   selection's near edge, then along the target's — never as two spokes from
   their middles that meet nowhere — and so is every pair of neighbours on a
-  diagonal inside a selection, each drawn whole. While Alt is held
+  diagonal inside a selection, each drawn whole. A turned object is measured
+  from its own edge — where the line crosses its outline — not from the
+  upright box around it, so a line always starts on what it measures and its
+  number is the length drawn. While Alt is held
   the record panel fades and lets the pointer through, because what you measure
   to is usually beside the selection, under the panel. Nudging with the arrows
   shows the same lines on every press — the distance to the nearest neighbour
@@ -1276,8 +1279,9 @@ A note that people can react to (`capabilities.markable`: sticky, the typed
 slips, images) carries its reactions as chips along its bottom edge, inside it:
 the emoji and a count, grouped by kind in the palette's order. A chip you have
 reacted with is pressed (the accent wash), and pressing it takes yours back;
-its tip names who reacted, in words — "Agree, 3: Otter, Heron and you". A
-viewer sees the chips, disabled, and no way to add one.
+its tip is who reacted and nothing else — "Otter, Heron and you" — never an
+instruction to press it. A viewer sees the chips, disabled, and no way to add
+one.
 
 Selecting one such object raises the reaction bar beside it on the apparatus
 layer: eight glyphs, each a pressed toggle, placed clear of the connect points
@@ -1289,7 +1293,9 @@ Beyond the eight, the bar's last button — a face with a plus — opens the who
 emoji library, as does "More…" at the foot of the context menu's React submenu:
 a search field over the Unicode list in its usual groups, eight across. Typing
 filters by name; Down goes from the field into the grid and the arrows walk
-it; Escape closes it and hands focus back. The library is loaded only when
+it; the wheel scrolls it; Escape closes it and hands focus back. The eight
+columns share what is left beside the scrollbar, so a classic scrollbar never
+cuts one off. The library is loaded only when
 first opened, so nobody pays for it who reacts with the eight.
 
 The eight are stored by KEY (`plus-one`, `idea`…), never as the emoji, so a key
