@@ -32,7 +32,7 @@ export function describeFailure(failure: ValidationFailure): string {
     }
     case 'unsupported-type':
       return failure.declared === 'image/svg+xml'
-        ? 'SVG files are not supported yet. Use PNG, JPEG, GIF, WebP or AVIF.'
+        ? 'SVG files are not supported. PNG, JPEG, GIF, WebP and AVIF are.'
         : `${failure.declared || 'That file'} is not a supported image. Use PNG, JPEG, GIF, WebP or AVIF.`
     case 'content-mismatch':
       return `That file is named like ${failure.declared} but its contents are ${failure.actual ?? 'not a supported image'}.`

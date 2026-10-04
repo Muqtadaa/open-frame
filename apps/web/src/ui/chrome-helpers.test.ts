@@ -19,7 +19,7 @@ describe('what the zoom field refuses', () => {
   })
 
   it('says what it wants for something that is not a number', () => {
-    expect(refusalOf('big')).toBe('Type a number, like 150')
+    expect(refusalOf('big')).toBe('Not a number')
   })
 
   it('names the range rather than quietly clamping to it', () => {

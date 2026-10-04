@@ -133,7 +133,7 @@ describe('deleting a board', () => {
    * row and the local copy stay too, so the person can see the board and try
    * again — which the room will authorize, because it kept the keys as well.
    */
-  it('keeps the row and says to try again when the room could not finish', async () => {
+  it('keeps the row and says to delete again when the room could not finish', async () => {
     rooms.destroy.mockResolvedValue('unfinished')
     const repository = await boardOnDisk()
 
@@ -144,7 +144,7 @@ describe('deleting a board', () => {
       ownerKey: OWNER,
     })
 
-    expect(outcome).toMatchObject({ ok: false, reason: expect.stringMatching(/try again/i) })
+    expect(outcome).toMatchObject({ ok: false, reason: expect.stringMatching(/delete again/i) })
     expect(remote.remove).not.toHaveBeenCalled()
     expect((await repository.getBoard(SHARED)).status).toBe('ok')
   })

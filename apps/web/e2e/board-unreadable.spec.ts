@@ -146,6 +146,6 @@ test.describe('a record JSON cannot spell', () => {
       board: { size: unknown }
     }
     expect(written.board.size).toEqual({ $bigint: '10' })
-    await expect(page.getByTestId('board-unreadable')).toContainText('not exactly as stored')
+    await expect(page.getByTestId('board-unreadable')).toContainText('the differences are marked')
   })
 })

@@ -615,6 +615,11 @@ claim, each listed there with its reason.
 **Ports** — `Clock` and `IdGenerator` are injected, so tests are deterministic
 without fake timers or mocks. Use `createTestHarness()` from `core/src/testing.ts`.
 
+**Copy** — interface text names and states; it never coaches. Keep an
+instruction only when it is the one way to learn something (a held-key
+override, a hidden double-click, a way out of a failure) and add it to
+`NEEDED` in `app/copy-rule.test.ts` with its reason. See DESIGN.md "Copy".
+
 **Comments** — explain _why_, especially where a non-obvious choice prevents a
 specific failure. Do not narrate what the code already says.
 

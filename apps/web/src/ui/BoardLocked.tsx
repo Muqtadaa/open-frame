@@ -97,7 +97,7 @@ export function BoardLocked() {
       onSubmit={submit}
       initialFocus={field}
     >
-      <GateBody>The link is not enough on its own. Ask whoever sent it for the password.</GateBody>
+      <GateBody>Ask whoever sent the link for the password.</GateBody>
 
       <label className="of-visually-hidden" htmlFor="of-board-password">
         Password

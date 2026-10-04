@@ -45,7 +45,6 @@ export class ObjectErrorBoundary extends Component<Props, State> {
           aria-label={`This ${name.toLowerCase()} could not be drawn`}
         >
           <span className="of-render-error__label">{name} could not be drawn</span>
-          <span className="of-render-error__type">Reloading the page may help</span>
         </div>
       )
     }

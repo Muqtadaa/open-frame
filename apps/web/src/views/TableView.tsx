@@ -1427,8 +1427,8 @@ function TableEditor({
                         role="separator"
                         aria-orientation={axis === 'column' ? 'vertical' : 'horizontal'}
                         aria-label={`Edge of ${name}`}
-                        data-tip={`Drag to resize ${name}, double-click to fit`}
-                        aria-description={`Drag to resize ${name}, double-click to fit`}
+                        data-tip={`Resize ${name} · double-click to fit`}
+                        aria-description={`Resize ${name} · double-click to fit`}
                         data-testid={
                           axis === 'column'
                             ? `table-column-edge-${letter(index)}`
@@ -1662,8 +1662,8 @@ function TableEditor({
                 type="button"
                 className="of-button of-button--ghost of-cellbar__clear"
                 aria-label="Reset"
-                data-tip="Use the table's own colours and alignment"
-                aria-description="Use the table's own colours and alignment"
+                data-tip="Back to the table's style"
+                aria-description="Back to the table's style"
                 data-testid="cell-clear"
                 onClick={() => {
                   dress({ fill: null, textColor: null, align: null, verticalAlign: null })

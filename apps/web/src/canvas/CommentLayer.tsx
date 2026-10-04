@@ -167,14 +167,14 @@ export function CommentLayer() {
 
       {pending.map((draft) => {
         const at = worldToScreen(viewport, draft.at)
-        const said = `Unposted: ${draft.body.slice(0, 80)}`
+        const said = `Draft: ${draft.body.slice(0, 80)}`
         return (
           <button
             key={draft.key}
             type="button"
             className="of-comments__pin of-comments__pin--draft"
             style={{ transform: `translate(${String(at.x)}px, ${String(at.y)}px)` }}
-            aria-label="Your unposted comment"
+            aria-label="Draft comment"
             data-tip={said}
             aria-description={said}
             data-testid="comment-pin-draft"

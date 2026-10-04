@@ -168,7 +168,7 @@ export async function unlockBoard(
   if (unlocked.reason === 'unreachable') {
     return {
       ok: false,
-      reason: 'OpenFrame could not be reached. Check the connection and try again.',
+      reason: 'OpenFrame could not be reached.',
     }
   }
   if (unlocked.reason === 'throttled') {
@@ -184,7 +184,7 @@ export async function unlockBoard(
     // of the guess to keep — the same reasoning the room applies.
     return { ok: false, reason: 'That is not the password.' }
   }
-  return { ok: false, reason: 'OpenFrame did not answer as expected. Try again in a moment.' }
+  return { ok: false, reason: 'OpenFrame did not answer as expected.' }
 }
 
 export type PasswordOutcome =
@@ -216,7 +216,7 @@ export async function setBoardPassword(
   if (!changed.ok && changed.reason === 'unreachable') {
     return {
       ok: false,
-      reason: 'OpenFrame could not be reached. Check the connection and try again.',
+      reason: 'OpenFrame could not be reached.',
     }
   }
 

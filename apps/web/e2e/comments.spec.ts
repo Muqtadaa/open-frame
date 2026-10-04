@@ -451,7 +451,7 @@ test('the composer points at the mention list only while it is open, and says so
   const controls = await input.getAttribute('aria-controls')
   expect(controls).not.toBeNull()
   await expect(page.locator(`#${controls ?? ''}`)).toHaveCount(1)
-  await expect(page.getByTestId('mention-status')).toHaveText(/1 person matches/)
+  await expect(page.getByTestId('mention-status')).toHaveText(/1 match/)
 
   await input.press('Escape')
   await expect(input).not.toHaveAttribute('aria-controls', /.*/)
@@ -996,7 +996,6 @@ test.describe('drafts', () => {
     await expect(draft).toHaveCount(1)
     await draft.click()
     await expect(page.getByTestId('comment-input')).toHaveValue('A long considered thought')
-    await expect(page.getByTestId('comment-draft-kept')).toBeVisible()
 
     await page.getByTestId('comment-post').click()
     await expect(page.locator('[data-testid^="comment-pin-cmt_"]')).toHaveCount(1)

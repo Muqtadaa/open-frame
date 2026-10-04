@@ -28,7 +28,7 @@ const PRESETS = [0.5, 1, 2] as const
  */
 export function refusalOf(typed: string): string | null {
   const parsed = Number.parseFloat(typed.replace('%', '').trim())
-  if (!Number.isFinite(parsed)) return 'Type a number, like 150'
+  if (!Number.isFinite(parsed)) return 'Not a number'
   const zoom = parsed / 100
   if (zoom < MIN_ZOOM || zoom > MAX_ZOOM) {
     return `Zoom is ${String(Math.round(MIN_ZOOM * 100))}–${String(Math.round(MAX_ZOOM * 100))}%`
@@ -104,11 +104,9 @@ export function ZoomControl() {
       <button
         type="button"
         className="of-icon-button"
-        // A name, not an instruction: what the wheel does now. The tip says
-        // what a press changes it to.
+        // A name, not an instruction: what the wheel does now.
         aria-label={`Scroll wheel ${wheelMode === 'zoom' ? 'zooms' : 'pans'}`}
-        data-tip={`Scroll wheel: ${wheelMode} — click to ${wheelMode === 'zoom' ? 'pan' : 'zoom'} instead`}
-        aria-description={`Click to ${wheelMode === 'zoom' ? 'pan' : 'zoom'} instead`}
+        data-tip={`Scroll wheel ${wheelMode === 'zoom' ? 'zooms' : 'pans'}`}
         data-testid="wheel-mode"
         data-mode={wheelMode}
         onClick={() => toggleWheelMode()}
@@ -128,7 +126,7 @@ export function ZoomControl() {
         // Named once; `aria-pressed` says whether it is on. The label said
         // "on" as well, so it was announced twice.
         aria-label="Snap to grid"
-        data-tip={`Snap to grid: ${snapToGrid ? 'on' : 'off'} — hold ${mod} while dragging to override`}
+        data-tip={`Snap to grid · hold ${mod} while dragging to override`}
         aria-description={`Hold ${mod} while dragging to override`}
         data-testid="snap-toggle"
         data-snap={snapToGrid ? 'on' : 'off'}
@@ -269,9 +267,9 @@ export function ZoomControl() {
           type="button"
           className="of-zoom__percent"
           aria-label={`Zoom ${String(percent)}%`}
-          // What a press does, and the shortcut for the zoom people most want.
-          data-tip={`Type a zoom level · ${mod}0 for 100%`}
-          aria-description={`Type a zoom level · ${mod}0 for 100%`}
+          // The shortcut for the zoom people most want.
+          data-tip={`Zoom level · ${mod}0 for 100%`}
+          aria-description={`Zoom level · ${mod}0 for 100%`}
           data-testid="zoom-percent"
           onClick={() => {
             setDraft(String(percent))

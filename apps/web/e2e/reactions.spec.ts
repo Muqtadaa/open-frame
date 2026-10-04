@@ -127,7 +127,7 @@ test.describe('the whole emoji library', () => {
     await page.locator(CANVAS).click({ position: NOTE })
     await page.getByTestId('react-more').click()
 
-    const picker = page.getByRole('dialog', { name: 'Pick a reaction' })
+    const picker = page.getByRole('dialog', { name: 'Emoji' })
     await expect(picker.getByRole('searchbox', { name: 'Search emoji' })).toBeFocused()
     await page.keyboard.type('rocket')
     await picker.getByRole('button', { name: 'rocket', exact: true }).click()
@@ -160,7 +160,7 @@ test.describe('the whole emoji library', () => {
     await page.getByTestId('react-more').click()
     await page.keyboard.type('thumbs up')
     await page
-      .getByRole('dialog', { name: 'Pick a reaction' })
+      .getByRole('dialog', { name: 'Emoji' })
       .getByRole('button', { name: 'thumbs up', exact: true })
       .click()
     // The same reaction, so picking it again took it back rather than adding one.
@@ -172,7 +172,7 @@ test.describe('the whole emoji library', () => {
     await page.locator(CANVAS).click({ position: NOTE })
     await page.getByTestId('react-more').click()
     await page.keyboard.press('Escape')
-    await expect(page.getByRole('dialog', { name: 'Pick a reaction' })).toHaveCount(0)
+    await expect(page.getByRole('dialog', { name: 'Emoji' })).toHaveCount(0)
     await expect(page.getByTestId('react-more')).toBeFocused()
   })
 })
@@ -212,7 +212,7 @@ test.describe('the library’s grid', () => {
       .poll(() =>
         page.evaluate(
           () =>
-            document.querySelector('[role="dialog"][aria-label="Pick a reaction"] [data-scroll]')
+            document.querySelector('[role="dialog"][aria-label="Emoji"] [data-scroll]')
               ?.scrollTop ?? 0,
         ),
       )
@@ -227,7 +227,7 @@ test.describe('the library’s grid', () => {
     await expect(page.getByRole('button', { name: 'grinning face', exact: true })).toBeVisible()
     const fits = await page.evaluate(() => {
       const list = document.querySelector<HTMLElement>(
-        '[role="dialog"][aria-label="Pick a reaction"] [data-scroll]',
+        '[role="dialog"][aria-label="Emoji"] [data-scroll]',
       )
       const grid = list?.querySelector<HTMLElement>('[role="group"]')
       if (!list || !grid) return { list: false, inside: false, sideways: true }

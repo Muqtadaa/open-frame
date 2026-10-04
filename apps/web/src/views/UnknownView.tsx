@@ -20,7 +20,7 @@ function UnknownRenderer({ object }: ObjectViewProps<UnknownData>) {
     <div
       className="of-unknown"
       role="group"
-      aria-label={`${name} from a newer version of OpenFrame. It can be moved or deleted here.`}
+      aria-label={`${name} from a newer version of OpenFrame`}
     >
       <span className="of-unknown__badge">{name}</span>
       <span className="of-unknown__hint">From a newer version of OpenFrame</span>

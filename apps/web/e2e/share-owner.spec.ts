@@ -28,7 +28,7 @@ test("the owner's chip offers both links, and the password beside them", async (
   await signedIn(page, [{ id: MINE, title: 'Mine', role: 'owner' }])
   await page.goto(`/?room=${MINE}&k=${EDIT}`)
   // Mine once the account has said so; until then the chip is an editor's.
-  await expect(page.getByTestId('room-status')).toHaveAttribute('aria-description', /both links/)
+  await expect(page.getByTestId('room-status')).toHaveAttribute('aria-description', /Both links/)
   await page.getByTestId('room-status').click()
 
   const sheet = page.getByTestId('share-links')
@@ -44,7 +44,7 @@ test("the owner's chip offers both links, and the password beside them", async (
   expect(copied).toContain(`k=${VIEW}`)
 
   // The password lives beside the links it protects.
-  await expect(sheet.getByLabel('A password for this board')).toBeVisible()
+  await expect(sheet.getByLabel('Board password')).toBeVisible()
   await expect(sheet.getByTestId('password-save')).toBeVisible()
   await expect(sheet.getByTestId('password-save')).not.toHaveClass(/confirm-yes|danger/)
 })
@@ -53,7 +53,7 @@ test("an editor's chip copies the edit link, and says so", async ({ page }) => {
   await signedIn(page, [{ id: THEIRS, title: 'Theirs', role: 'editor' }])
   await page.goto(`/?room=${THEIRS}&k=${EDIT}`)
   const chip = page.getByTestId('room-status')
-  await expect(chip).toHaveAttribute('aria-description', /copy the edit link/)
+  await expect(chip).toHaveAttribute('aria-description', /Copy edit link/)
   await chip.click()
   await expect(page.getByTestId('share-links')).toHaveCount(0)
   await expect(chip).toHaveAccessibleName('Edit link copied')
@@ -64,7 +64,7 @@ test('an owner who arrived on the view link is still handed the edit link', asyn
   await signedIn(page, [{ id: MINE, title: 'Mine', role: 'owner' }])
   // The URL carries the VIEW key; the account knows this person owns the board.
   await page.goto(`/?room=${MINE}&k=${VIEW}`)
-  await expect(page.getByTestId('room-status')).toHaveAttribute('aria-description', /both links/)
+  await expect(page.getByTestId('room-status')).toHaveAttribute('aria-description', /Both links/)
   await page.getByTestId('room-status').click()
 
   await page.getByTestId('share-links').getByTestId('copy-edit').click()
@@ -78,7 +78,7 @@ test('the share sheet scrolls rather than clipping in a short window', async ({ 
   await page.setViewportSize({ width: 740, height: 360 })
   await signedIn(page, [{ id: MINE, title: 'Mine', role: 'owner' }])
   await page.goto(`/?room=${MINE}&k=${EDIT}`)
-  await expect(page.getByTestId('room-status')).toHaveAttribute('aria-description', /both links/)
+  await expect(page.getByTestId('room-status')).toHaveAttribute('aria-description', /Both links/)
   await page.getByTestId('room-status').click()
 
   const sheet = page.getByTestId('share-links')

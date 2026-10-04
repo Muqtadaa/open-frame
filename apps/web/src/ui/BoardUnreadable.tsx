@@ -14,7 +14,7 @@ import { Gate, GateActions, GateBody } from './Gate.js'
  */
 const WHY: Readonly<Record<QuarantineReason, string>> = {
   'newer-schema':
-    'was saved by a newer version of OpenFrame than this one. Reloading the page usually brings in the newer version, and then it opens.',
+    'was saved by a newer version of OpenFrame. Reloading the page brings in that version.',
   'migration-failed':
     'was saved by an older version of OpenFrame, and could not be brought up to date.',
   unparseable: 'is stored in a form this version cannot read.',
@@ -84,8 +84,7 @@ export function BoardUnreadable() {
       <GateBody>{describe(quarantine)} Nothing here will change it.</GateBody>
       {inexact && (
         <p className="of-gone__body" role="status">
-          Some of it could not be written as plain text, so the copy is not exactly as stored. The
-          places it differs are marked.
+          Some of it could not be written as plain text; the differences are marked.
         </p>
       )}
       <GateActions>

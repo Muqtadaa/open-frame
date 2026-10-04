@@ -123,7 +123,6 @@ export function WorkspaceBar({
               className="of-input of-spaces__name"
               value={name}
               maxLength={80}
-              placeholder="What is it for?"
               aria-label="Name for the new workspace"
               data-testid="workspace-name"
               autoFocus
@@ -209,7 +208,7 @@ export function WorkspaceBar({
               <span className="of-spaces__invite-what" role="status">
                 {copied === 'no'
                   ? 'The link could not be copied; select it and copy it yourself.'
-                  : 'People who open it join as editors of every board in it.'}
+                  : 'Anyone who opens it can edit every board in it.'}
               </span>
             </>
           )}

@@ -43,7 +43,7 @@ test('the share sheet closes on a press elsewhere', async ({ page, context }) =>
   await signedIn(page, [{ id: 'brd_aaaaaaaa11111111', title: 'Mine', role: 'owner' }])
   await page.goto(`/?room=brd_aaaaaaaa11111111&k=${'a'.repeat(32)}`)
   // Mine once the account has said so; until then the chip is an editor's.
-  await expect(page.getByTestId('room-status')).toHaveAttribute('aria-description', /both links/)
+  await expect(page.getByTestId('room-status')).toHaveAttribute('aria-description', /Both links/)
   await page.getByTestId('room-status').click()
   await expect(page.getByTestId('share-links')).toBeVisible()
   await page.getByTestId('canvas').click({ position: { x: 600, y: 500 } })
@@ -94,7 +94,7 @@ test('the sign-up name says who sees it, and keeps saying so', async ({ page }) 
   await page.getByRole('button', { name: 'Create an account' }).click()
   const name = page.getByLabel('Name')
   await name.fill('Sam')
-  await expect(page.getByText('What people see on your cursor')).toBeVisible()
+  await expect(page.getByText('Shown on your cursor')).toBeVisible()
 })
 
 /*

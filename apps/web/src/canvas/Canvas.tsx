@@ -66,13 +66,15 @@ import { useMoving } from './use-moving.js'
  * see the handles.
  */
 const BOARD_KEYS = [
-  'Tab moves between objects.',
-  'Arrow keys move the selection;',
-  `${IS_MAC ? '⌘' : 'Ctrl'} with an arrow resizes it;`,
-  `holding ${formatKeys('Alt')} measures from it to whatever is under the pointer;`,
-  'comma and period rotate it;',
-  `${formatKeys('Mod+Shift+L')} locks it;`,
-  'Enter edits it, and Escape lets it go.',
+  'Tab: next object.',
+  'Arrows: move.',
+  `${IS_MAC ? '⌘' : 'Ctrl'} and arrows: resize.`,
+  `${formatKeys('Alt')}: measure.`,
+  `${IS_MAC ? '⌘' : 'Ctrl'} while dragging: no snapping.`,
+  'Comma, period: rotate.',
+  `${formatKeys('Mod+Shift+L')}: lock.`,
+  'Enter: edit.',
+  'Escape: deselect.',
 ].join(' ')
 
 export function Canvas() {
@@ -158,7 +160,7 @@ export function Canvas() {
       }
       data-testid="canvas"
       role="application"
-      aria-label="OpenFrame board canvas"
+      aria-label="Board"
       /*
        * A STOP IN THE PAGE'S ORDER, so the keyboard can reach the board at
        * all; once there, Tab walks its objects (see use-keyboard-shortcuts)

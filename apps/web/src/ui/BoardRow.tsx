@@ -159,8 +159,8 @@ export function BoardRow({
           aria-pressed={pinned}
           aria-label={`${pinned ? 'Unpin' : 'Pin'} ${board.title}`}
           data-testid="pin-board"
-          data-tip={pinned ? 'Unpin this board' : 'Pin this board to the top'}
-          aria-description={pinned ? 'Unpin this board' : 'Pin this board to the top'}
+          data-tip={pinned ? 'Unpin' : 'Pin to top'}
+          aria-description={pinned ? 'Unpin' : 'Pin to top'}
           onClick={togglePin}
         >
           <PinIcon pressed={pinned} />
@@ -245,8 +245,8 @@ export function BoardRow({
                 className="of-icon-button"
                 aria-label={`Copy a view-only link to ${board.title}`}
                 data-testid="copy-view-link"
-                data-tip={`Copy a view-only link to ${board.title}. They can open it, not change it.`}
-                aria-description={`Copy a view-only link to ${board.title}. They can open it, not change it.`}
+                data-tip="Copy view-only link"
+                aria-description="Copy view-only link"
                 onClick={() => {
                   const link = shareLink(board.boardId, window.location.origin, board.viewKey)
                   void navigator.clipboard.writeText(link).then(
@@ -294,8 +294,8 @@ export function BoardRow({
                 className="of-icon-button"
                 aria-label={`Leave ${board.title}`}
                 data-testid="leave-board"
-                data-tip={`Leave ${board.title}. It carries on without you.`}
-                aria-description={`Leave ${board.title}. It carries on without you.`}
+                data-tip="Leave"
+                aria-description="Leave"
                 ref={removeButton}
                 onClick={() => setMode('confirming')}
               >
@@ -308,8 +308,8 @@ export function BoardRow({
                   className="of-icon-button of-icon-button--destructive"
                   aria-label={`Delete ${board.title}`}
                   data-testid="delete-board"
-                  data-tip={`Delete ${board.title}. This cannot be undone.`}
-                  aria-description={`Delete ${board.title}. This cannot be undone.`}
+                  data-tip="Delete for everyone"
+                  aria-description="Delete for everyone"
                   ref={removeButton}
                   onClick={() => setMode('confirming')}
                 >
@@ -342,7 +342,7 @@ export function BoardRow({
         >
           <span className="of-home__confirm-what" data-testid="board-confirm-what">
             {canLeave(board)
-              ? 'Leave this board? It carries on without you.'
+              ? 'Leave this board? Others keep it.'
               : 'Delete this board for everyone? Its links stop working and this cannot be undone.'}
           </span>
           <button

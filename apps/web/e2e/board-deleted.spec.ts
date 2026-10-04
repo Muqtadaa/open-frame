@@ -77,7 +77,7 @@ test('is named, takes the keyboard to Keep a copy, and holds it', async ({ page 
 
   const gate = page.getByRole('alertdialog', { name: 'This board was deleted' })
   await expect(gate).toBeVisible()
-  await expect(gate).toHaveAccessibleDescription(/removed it while you had it open/)
+  await expect(gate).toHaveAccessibleDescription(/deleted it while you had it open/)
   await expect(page.getByTestId('board-gone-keep')).toBeFocused()
 
   for (let i = 0; i < 4; i++) {

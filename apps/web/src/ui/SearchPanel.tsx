@@ -144,7 +144,7 @@ export function SearchPanel() {
         <div className="of-search__count" data-testid="search-count" aria-live="polite">
           {results.length === 0
             ? // A way forward, not a dead end: the one filter that always narrows.
-              'nothing found — try a kind, like type:sticky or type:evidence'
+              'nothing found — try type:sticky or type:evidence'
             : `${String(results.length)} found${results.length > shown.length ? `, showing ${String(shown.length)}` : ''}`}
         </div>
       )}

@@ -169,7 +169,7 @@ test.describe('the keyboard on the bar', () => {
 test.describe('the zoom readout', () => {
   test('says a click is for typing a zoom', async ({ page }) => {
     await openBoard(page)
-    await expect(page.getByTestId('zoom-percent')).toHaveAttribute('data-tip', /Type a zoom/)
+    await expect(page.getByTestId('zoom-percent')).toHaveAttribute('data-tip', /Zoom level/)
   })
 
   test('offers the common zooms to a pointer', async ({ page }) => {

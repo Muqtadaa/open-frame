@@ -88,8 +88,6 @@ export function AccountControl() {
         data-testid="sign-in"
         aria-label="Sign in"
         aria-expanded={open}
-        data-tip="Sign in to keep a list of your boards"
-        aria-description="Sign in to keep a list of your boards"
         onClick={() => setOpen((was) => !was)}
       >
         <span className="of-status__share-label" data-testid="status-label">

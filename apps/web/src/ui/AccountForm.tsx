@@ -34,13 +34,13 @@ export function AccountForm({ onDone }: { readonly onDone: () => void }) {
      */
     if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim())) {
       setWrong('email')
-      setError('Enter an email address, like name@example.com.')
+      setError('That is not an email address.')
       emailField.current?.focus()
       return
     }
     if (password.length < 6) {
       setWrong('password')
-      setError('Use at least six characters for the password.')
+      setError('A password needs at least six characters.')
       passwordField.current?.focus()
       return
     }
@@ -56,7 +56,7 @@ export function AccountForm({ onDone }: { readonly onDone: () => void }) {
       if (result.ok) onDone()
       else {
         setWrong('both')
-        setError(result.message ?? 'That did not work. Check the email and password and try again.')
+        setError(result.message ?? 'That email and password do not match.')
       }
     })
   }
@@ -76,7 +76,7 @@ export function AccountForm({ onDone }: { readonly onDone: () => void }) {
           />
           {/* Beside the field, not inside it: a placeholder went on the first keystroke. */}
           <small className="of-account__hint" id={`${id}-name`}>
-            What people see on your cursor
+            Shown on your cursor
           </small>
         </label>
       )}
@@ -129,7 +129,7 @@ export function AccountForm({ onDone }: { readonly onDone: () => void }) {
           className="of-account__switch"
           onClick={() => setMode(mode === 'in' ? 'up' : 'in')}
         >
-          {mode === 'in' ? 'Create an account' : 'I already have one'}
+          {mode === 'in' ? 'Create an account' : 'Sign in instead'}
         </button>
         <button
           type="submit"
