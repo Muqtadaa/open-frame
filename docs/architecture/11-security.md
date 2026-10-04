@@ -156,6 +156,23 @@ The rules are pure functions in `apps/rooms/src/access.ts`, tested in Node.
   browser that already fetched one keeps its cached copy, which is outside
   what the room can reach.
 
+## Music (R2, public)
+
+- **Anyone may read; nobody may write over HTTP.** `GET`/`HEAD`
+  `/music/catalogue` and `/music/track/:id` need no key: the tracks are CC0
+  and the same for every board, and an `<audio>` element cannot send a header.
+  Any other method is refused (`route.ts`).
+- **The catalogue decides what is reachable, not the bucket.** It is bundled
+  with the Worker from `apps/rooms/src/library/catalogue.json`, read through
+  the shared strict reader, and `catalogue.test.ts` fails the build on an
+  entry that reader would drop. A file in the bucket nobody listed is a 404.
+- **Its own bucket** (`LIBRARY`), so a board's deletion never reaches it and
+  nothing in it is anybody's data. Files are put there by
+  `pnpm music:upload`, which checks size and SHA-256 against the catalogue.
+- **The page may play media only from itself and the room server**
+  (`media-src`), checked against the deployed policy in
+  `e2e-rooms/content-security.spec.ts`.
+
 ## Collaboration: what the room trusts
 
 **The room enforces who may write, not what they write.** See

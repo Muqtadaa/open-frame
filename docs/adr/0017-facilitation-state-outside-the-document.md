@@ -1,7 +1,7 @@
 # ADR 0017 · Facilitation state is outside the document
 
-**Status:** Proposed · 2026-10-04 · awaiting the owner's acceptance; built in
-PR B (the session timer). Cites ADR 0016.
+**Status:** Accepted · 2026-10-04 · built in PR B (the session timer) and
+PR C (session music). Cites ADR 0016.
 
 ## Context
 
@@ -93,7 +93,11 @@ it is on.
 - A modified editor client can write a nonsense timer; every reader shows none.
 - Facilitation state is persisted with the room like any root map, so a timer
   still running is still running for whoever opens the board next.
-- When this ADR is accepted, music (PR C) goes in the same map.
+- Session music (PR C) lives in the same map: one record saying which genre
+  and when its playlist started on the room's clock. Which track, and how far
+  into it, is worked out on every device, like "done". The tracks themselves
+  are CC0 files served publicly by the rooms Worker from their own bucket,
+  listed in a catalogue kept in git.
 
 ## When to revisit
 

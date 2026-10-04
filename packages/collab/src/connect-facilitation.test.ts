@@ -1,4 +1,4 @@
-import { idleTimer, startTimer } from '@openframe/core/facilitation'
+import { idleTimer, playMusic, startTimer, stoppedMusic } from '@openframe/core/facilitation'
 import { createTestHarness } from '@openframe/core/testing'
 import { describe, expect, it } from 'vitest'
 
@@ -77,6 +77,7 @@ describe('the session timer on a connection', () => {
     const heard: unknown[] = []
     participant.onFacilitation((state) => heard.push(state.timer))
     expect(heard).toEqual([null])
+    expect(participant.facilitation().music).toBeNull()
 
     const timer = startTimer(idleTimer(), 1000, 'Ada')
     facilitator.writeTimer(timer)
@@ -85,6 +86,9 @@ describe('the session timer on a connection', () => {
     expect(heard.at(-1)).toEqual(timer)
     // The same object each time it is asked, so a React store does not render forever (rule 9).
     expect(participant.facilitation()).toBe(participant.facilitation())
+    const music = playMusic(stoppedMusic('calm'), 2000, 'Ada')
+    facilitator.writeMusic(music)
+    expect(participant.facilitation().music).toEqual(music)
     facilitator.destroy()
     participant.destroy()
   })

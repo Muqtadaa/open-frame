@@ -6,7 +6,18 @@
  * clock already said it was.
  */
 export function clockText(ms: number): string {
-  const total = Math.max(0, Math.ceil(ms / 1000))
+  return format(Math.max(0, Math.ceil(ms / 1000)))
+}
+
+/**
+ * Time INTO something — a track — rounded the other way: twelve and a half
+ * seconds in is 0:12, and reads 0:13 only once the thirteenth has passed.
+ */
+export function elapsedText(ms: number): string {
+  return format(Math.max(0, Math.floor(ms / 1000)))
+}
+
+function format(total: number): string {
   const hours = Math.floor(total / 3600)
   const minutes = Math.floor((total % 3600) / 60)
   const seconds = String(total % 60).padStart(2, '0')

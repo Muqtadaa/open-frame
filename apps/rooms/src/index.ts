@@ -1,4 +1,8 @@
+import { readCatalogue } from '@openframe/core/facilitation'
+
 import type { Env } from './env.js'
+import shipped from './library/catalogue.json' with { type: 'json' }
+import { serveCatalogue, serveTrack } from './music.js'
 import { routeRequest } from './route.js'
 
 export { BoardRoomObject } from './room-object.js'
@@ -17,6 +21,15 @@ export { BoardRoomObject } from './room-object.js'
  * the board's own object, by the pure rules in `access.ts` — ADR 0013's
  * addendum and ADR 0016 say why it ended up there rather than here.
  */
+/**
+ * The session music's catalogue, bundled with the Worker and read once. Tracks
+ * change only through a reviewed change to `library/catalogue.json`, so what
+ * may be played to everybody at a board is in git with its provenance. Read
+ * through the shared reader, so an entry the browser would refuse is never
+ * served either; `catalogue.test.ts` fails the build on one.
+ */
+const CATALOGUE = readCatalogue(shipped) ?? { v: 1 as const, tracks: [] }
+
 export default {
   fetch(request: Request, env: Env): Response | Promise<Response> {
     const route = routeRequest(new URL(request.url), request.headers.get('Upgrade'), request.method)
@@ -38,17 +51,25 @@ export default {
           status: 204,
           headers: {
             'access-control-allow-origin': '*',
-            'access-control-allow-methods': 'GET, PUT, POST, OPTIONS',
+            'access-control-allow-methods': 'GET, HEAD, PUT, POST, OPTIONS',
             /*
              * The key and the password token travel as headers rather than in
              * the URL, so the preflight has to allow them by name — a browser
              * will not send a header the server has not said it accepts.
+             * `range` is for the music: a seek is a ranged read.
              */
             'access-control-allow-headers':
-              'content-type, x-openframe-key, x-openframe-owner, x-openframe-token',
+              'content-type, range, x-openframe-key, x-openframe-owner, x-openframe-token',
             'access-control-max-age': '86400',
           },
         })
+
+      // The music library names no board, so no room is woken for it.
+      case 'catalogue':
+        return serveCatalogue(CATALOGUE)
+
+      case 'track':
+        return serveTrack(env.LIBRARY, CATALOGUE, route.trackId, request)
 
       case 'asset':
       case 'claim':

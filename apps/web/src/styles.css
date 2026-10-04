@@ -2647,6 +2647,120 @@ body {
 }
 
 /*
+ * Session music (ADR 0017): the timer's quiet icon on the bar, the control
+ * edge once something is playing or paused, and the timer's sheet. The genres
+ * are a row of pressed toggles, the one playing in the accent's wash.
+ */
+.of-music {
+  position: relative;
+}
+
+.of-music__button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: var(--of-hit-sm);
+  min-height: var(--of-hit-sm);
+  color: var(--of-ink-muted);
+  cursor: pointer;
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: var(--of-radius);
+}
+
+.of-music__button svg {
+  width: 18px;
+  height: 18px;
+}
+
+.of-music__button:hover {
+  color: var(--of-ink);
+  background: var(--of-hover);
+}
+
+.of-music__button.is-active {
+  color: var(--of-accent);
+  border-color: var(--of-control-border);
+}
+
+.of-music__sheet {
+  display: grid;
+  gap: var(--of-step);
+  width: 280px;
+  padding: var(--of-step);
+  background: var(--of-panel);
+  border: 1px solid var(--of-panel-border);
+  border-radius: var(--of-radius-surface);
+  box-shadow: var(--of-shadow);
+}
+
+.of-music__genres {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--of-space-4);
+}
+
+.of-music__genre[aria-checked='true'] {
+  color: var(--of-accent);
+  background: var(--of-accent-soft);
+  border-color: var(--of-accent);
+}
+
+.of-music__now {
+  display: grid;
+  gap: 1px;
+  margin: 0;
+}
+
+.of-music__title {
+  font-size: var(--of-type-control);
+  font-weight: var(--of-weight-semibold);
+  color: var(--of-ink);
+}
+
+.of-music__credit,
+.of-music__elapsed {
+  font-size: var(--of-type-record);
+  color: var(--of-ink-muted);
+}
+
+.of-music__elapsed {
+  font-family: var(--of-mono);
+  font-variant-numeric: tabular-nums;
+}
+
+.of-music__actions,
+.of-music__device {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--of-space-6);
+  align-items: center;
+}
+
+.of-music__device [aria-pressed='true'] {
+  color: var(--of-accent);
+}
+
+.of-music__volume {
+  display: flex;
+  flex: 1;
+  gap: var(--of-space-6);
+  align-items: center;
+}
+
+.of-music__volume-label {
+  font-family: var(--of-mono);
+  font-size: var(--of-type-record);
+  color: var(--of-ink-muted);
+}
+
+.of-music__volume input {
+  flex: 1;
+  min-width: 0;
+  accent-color: var(--of-accent);
+}
+
+/*
  * Unread as a quiet chip — the accent's wash and its ink, the count in bold —
  * not a solid accent block. That block was the loudest thing in a bar DESIGN.md
  * keeps quiet, louder than the board's own name. In the UI face at control

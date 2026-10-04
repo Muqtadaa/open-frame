@@ -1,7 +1,7 @@
-import type { SessionTimer } from '@openframe/core/facilitation'
+import type { SessionMusic, SessionTimer } from '@openframe/core/facilitation'
 
 /**
- * The session's shared state — its timer — as the interface sees it, whatever
+ * The session's shared state — its timer and its music — as the interface sees it, whatever
  * board it is on (ADR 0017).
  *
  * Two implementations, chosen once by the composition root: a shared board's
@@ -28,4 +28,8 @@ export interface FacilitationChannel {
   readonly subscribe: (listener: () => void) => () => void
   /** Replaces the timer, for everyone who can see this board. */
   readonly writeTimer: (timer: SessionTimer) => void
+  /** The session music, the same object until it changes. `null` until somebody chooses some. */
+  readonly music: () => SessionMusic | null
+  /** Replaces the music, for everyone who can see this board. */
+  readonly writeMusic: (music: SessionMusic) => void
 }

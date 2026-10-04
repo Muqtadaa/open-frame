@@ -1,8 +1,10 @@
+import type { Catalogue } from '@openframe/core/facilitation'
 import { vi } from 'vitest'
 
 import type {
   AccountService,
   Identity,
+  MusicService,
   RemoteBoardService,
   RoomService,
 } from '../runtime/services.js'
@@ -60,4 +62,12 @@ export function fakeRemoteBoards() {
     leave: vi.fn<RemoteBoardService['leave']>(() => Promise.resolve(true)),
     rename: vi.fn<RemoteBoardService['rename']>(() => Promise.resolve(true)),
   } satisfies RemoteBoardService
+}
+
+/** A music library holding the given catalogue, for a test that needs one. */
+export function fakeMusic(catalogue: Catalogue | null = null): MusicService {
+  return {
+    catalogue: vi.fn(() => Promise.resolve(catalogue)),
+    trackUrl: (trackId: string) => `https://rooms.test/music/track/${trackId}`,
+  }
 }

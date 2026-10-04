@@ -40,6 +40,10 @@ const ASSET_PATH = /^\/room\/([^/]+)\/asset\/([A-Za-z0-9_-]{1,64})\/?$/
  * is keep a malformed one from reaching storage comparison — the LENGTH is
  * what makes it unguessable, and that is decided where keys are minted.
  */
+/** The music library: the same for every board, so no board in the path (ADR 0017). */
+const CATALOGUE_PATH = /^\/music\/catalogue\/?$/
+const TRACK_PATH = /^\/music\/track\/([a-z0-9-]{1,48})\/?$/
+
 const ACCESS_KEY = /^[A-Za-z0-9_-]{16,64}$/
 
 /** `?k=<key>` — which link this connection arrived on. */
@@ -82,6 +86,15 @@ export type Route =
    * a credential in an access log.
    */
   | { readonly kind: 'asset'; readonly boardId: string; readonly assetId: string }
+  /**
+   * The session music's catalogue, and one of its tracks.
+   *
+   * Public, with no key: the tracks are CC0 and the same for every board, and
+   * an `<audio>` element cannot send a header. The worker answers these
+   * itself — there is no board to wake.
+   */
+  | { readonly kind: 'catalogue' }
+  | { readonly kind: 'track'; readonly trackId: string }
   /** A CORS preflight for the above: the web app is on another origin. */
   | { readonly kind: 'preflight' }
   | { readonly kind: 'refuse'; readonly status: number; readonly reason: string }
@@ -115,6 +128,23 @@ export function routeRequest(url: URL, upgradeHeader: string | null, method = 'G
     if (method === 'OPTIONS') return { kind: 'preflight' }
     if (method !== 'POST') return { kind: 'refuse', status: 405, reason: `${name} is a POST` }
     return { kind, boardId }
+  }
+
+  if (CATALOGUE_PATH.test(url.pathname)) {
+    if (method === 'OPTIONS') return { kind: 'preflight' }
+    if (method !== 'GET' && method !== 'HEAD') {
+      return { kind: 'refuse', status: 405, reason: 'The catalogue is read, not written' }
+    }
+    return { kind: 'catalogue' }
+  }
+
+  const track = TRACK_PATH.exec(url.pathname)
+  if (track?.[1] !== undefined) {
+    if (method === 'OPTIONS') return { kind: 'preflight' }
+    if (method !== 'GET' && method !== 'HEAD') {
+      return { kind: 'refuse', status: 405, reason: 'A track is read, not written' }
+    }
+    return { kind: 'track', trackId: track[1] }
   }
 
   const asset = ASSET_PATH.exec(url.pathname)

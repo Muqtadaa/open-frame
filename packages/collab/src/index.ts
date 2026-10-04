@@ -76,6 +76,7 @@ export { CLOCK_SAMPLES, ServerClock } from './clock.js'
 export {
   facilitationOf,
   readFacilitation,
+  writeMusic,
   writeTimer,
   FACILITATION,
   type Facilitation,

@@ -102,6 +102,14 @@ export function TimerIcon({ className }: IconProps) {
   )
 }
 
+export function MusicIcon({ className }: IconProps) {
+  return (
+    <svg {...base} className={className}>
+      <path d="M9 18V6l10-2v12M9 18a2.5 2.5 0 11-5 0 2.5 2.5 0 015 0zM19 16a2.5 2.5 0 11-5 0 2.5 2.5 0 015 0z" />
+    </svg>
+  )
+}
+
 export function TrashIcon({ className }: IconProps) {
   return (
     <svg {...base} className={className}>

@@ -984,6 +984,22 @@ every device. At zero a two-note chime is synthesised (no audio file); where the
 page has not been touched since, so the browser will not sound it, the bar
 pulses in colour instead — colour, not movement, so reduced motion keeps it.
 
+### Session Music
+
+Beside the timer on the navigation bar, and only where there is a library to
+play from: no room server, or nothing approved in it yet, and the button is
+not there. At rest an icon button; while music plays or is paused it takes the
+accent ink and the control edge.
+
+Its sheet holds the genres that have tracks, as a row of pressed toggles —
+the one playing in the accent's wash — then what is playing: title, artist,
+"CC0", and the time into the track in mono. An editor gets Play, or Pause, and
+Stop. Everybody gets this device's sound: Mute and a volume slider, kept in
+this browser and never sent to anyone. Somebody who did not start the music
+gets "Listen here" first — the one press a browser needs before it will make a
+sound. A viewer gets everything but the editor's buttons, and no button on the
+bar until there is music to hear.
+
 ### Zoom Cluster
 
 Bottom-right, mono throughout. 30px buttons (`--of-hit-sm`) carrying 16px

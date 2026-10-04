@@ -14,6 +14,7 @@ import { BoardTitle } from './BoardTitle.js'
 import { AgentChanges } from './AgentChanges.js'
 import { Mentions } from './Mentions.js'
 import { DevPanel } from './DevPanel.js'
+import { SessionMusic } from './SessionMusic.js'
 import { SessionTimer } from './SessionTimer.js'
 import { ShareControl } from './ShareControl.js'
 import { ThemeToggle } from './ThemeToggle.js'
@@ -226,6 +227,7 @@ export function StatusBar() {
        */}
       {/* The session's clock, beside the session's people. */}
       <SessionTimer />
+      <SessionMusic />
       <ShareControl />
       {/*
        * Being named somewhere else has to reach you HERE. The bell was on the

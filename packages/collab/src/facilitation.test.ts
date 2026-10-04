@@ -1,10 +1,10 @@
 import { asObjectId, createSequentialIdGenerator } from '@openframe/core'
-import { idleTimer, startTimer } from '@openframe/core/facilitation'
+import { idleTimer, playMusic, startTimer, stoppedMusic } from '@openframe/core/facilitation'
 import { createTestHarness } from '@openframe/core/testing'
 import { describe, expect, it } from 'vitest'
 import * as Y from 'yjs'
 
-import { facilitationOf, readFacilitation, writeTimer } from './facilitation.js'
+import { facilitationOf, readFacilitation, writeMusic, writeTimer } from './facilitation.js'
 import { CollabSession } from './session.js'
 
 /**
@@ -51,6 +51,19 @@ describe('facilitation state', () => {
     expect(readFacilitation(b).timer).toEqual(timer)
   })
 
+  it('carries the music beside the timer, each without disturbing the other', () => {
+    const a = new Y.Doc()
+    const b = new Y.Doc()
+    join([a, b])
+    const timer = startTimer(idleTimer(), 1000, 'Ada')
+    const music = playMusic(stoppedMusic('jazzy'), 2000, 'Ada')
+    writeTimer(a, timer)
+    writeMusic(b, music)
+    expect(readFacilitation(a)).toEqual({ timer, music })
+    facilitationOf(a).set('music', { genre: 'polka' })
+    expect(readFacilitation(b)).toEqual({ timer, music: null })
+  })
+
   it('reads no timer where there is none, or where what is there is not one', () => {
     const doc = new Y.Doc()
     expect(readFacilitation(doc).timer).toBeNull()
@@ -75,6 +88,7 @@ describe('facilitation state', () => {
     })
 
     writeTimer(facilitator.doc, startTimer(idleTimer(), 1000, 'Ada'))
+    writeMusic(facilitator.doc, playMusic(stoppedMusic(), 1000, 'Ada'))
 
     expect(dispatched).toBe(0)
     expect(participant.refused).toEqual([])

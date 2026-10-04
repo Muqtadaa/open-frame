@@ -1,6 +1,7 @@
 import { expect, test, type Page, type WebSocketRoute } from '@playwright/test'
 
 import { buildBoard } from './boards.js'
+import { library, TRACKS } from './music.js'
 import { seedBoard } from './fixtures.js'
 import { seedLocalBoard } from './seed.js'
 import { BOARD_URL, HOME_URL } from './routes.js'
@@ -195,6 +196,20 @@ for (const world of WORLDS) {
       await page.getByTestId('timer-pause').click()
       await expect(page.getByTestId('timer-readout')).toHaveText('2:50')
       await snap(page, `${world}-session-timer`)
+    })
+
+    // The session music, paused a few seconds in, its sheet open on an editor's controls.
+    test('the session music', async ({ page }) => {
+      await library(page, TRACKS)
+      await page.clock.install()
+      await openLocalBoard(page)
+      await page.getByTestId('music-button').click()
+      await page.getByRole('radio', { name: 'Calm' }).click()
+      await page.getByTestId('music-play').click()
+      await page.clock.runFor(12_000)
+      await page.getByTestId('music-pause').click()
+      await expect(page.getByTestId('music-elapsed')).toHaveText('0:12 / 2:00')
+      await snap(page, `${world}-session-music`)
     })
 
     // An uncoloured frame on the world's paper, with a note laid on it.

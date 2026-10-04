@@ -126,6 +126,11 @@ export function contentSecurityPolicy(input: PolicyInput): string {
     // IndexedDB, the room server for images on a shared board.
     ['img-src', "'self'", 'data:', 'blob:', ...roomImages],
     ['connect-src', "'self'", ...rooms, ...identity],
+    /*
+     * Session music streams from the room server (ADR 0017). Without this the
+     * browser falls back to `default-src` and refuses every track.
+     */
+    ['media-src', "'self'", ...roomImages],
     ['font-src', "'self'"],
     ['object-src', "'none'"],
     ['base-uri', "'none'"],
