@@ -3537,8 +3537,11 @@ body {
  * exit's words (its arrow stays: it is the one control with no other route),
  * then — on a phone-width window — the save state's word, leaving its state
  * to the tip. Nothing ever runs out of the bar.
+ *
+ * At 680 rather than 640 since the session timer joined the bar: a shared
+ * board's ran out of it at exactly 640 by the width of that one button.
  */
-@media (width < 640px) {
+@media (width < 680px) {
   .of-status__counts {
     display: none;
   }
@@ -3578,6 +3581,16 @@ body {
 
   .of-status__rule {
     display: none;
+  }
+}
+
+/*
+ * A phone: the name gives up a few characters before anything runs off the
+ * edge. It ellipsises, and its full text is still its tip.
+ */
+@media (width < 420px) {
+  .of-status__heading {
+    min-width: 7ch;
   }
 }
 
