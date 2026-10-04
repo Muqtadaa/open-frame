@@ -69,6 +69,8 @@ export function describeCommand(command: Command): string {
     // change log or a sync trace will show when something has gone wrong.
     case 'ApplyRemotePatches':
       return `Merge ${plural(command.patches.length, 'remote change')}`
+    case 'ToggleReaction':
+      return 'React'
     case 'RepairParentage':
       return 'Repair board structure'
   }

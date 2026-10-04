@@ -67,6 +67,7 @@ export const imageType = defineObjectType<typeof IMAGE_TYPE, ImageData>({
     canHaveChildren: false,
     selectsAsUnit: false,
     connectable: true,
+    markable: true,
     styleProps: ['strokeColor', 'stroke', 'opacity'],
   },
 

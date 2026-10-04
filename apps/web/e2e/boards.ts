@@ -55,6 +55,12 @@ export interface BoardBuilder {
    * override either end, to pin it to a side.
    */
   readonly connect: (from: ObjectId, to: ObjectId, data?: Record<string, unknown>) => ObjectId
+  /** Somebody else's reaction on a note, as their `ToggleReaction` would leave it. */
+  readonly react: (
+    target: ObjectId,
+    glyph: string,
+    by: { key: string; name: string; hue: number },
+  ) => void
 }
 
 export interface BuiltBoard {
@@ -131,12 +137,19 @@ export function buildBoard(make: (board: BoardBuilder) => void, title = 'Untitle
           },
         ],
       }),
+    react: (target, glyph, by) => {
+      const result = dispatcher.dispatch({ kind: 'ToggleReaction', target, glyph, by })
+      if (!result.ok) throw result.error
+    },
   })
 
   const document = store.getDocument()
   return {
     title,
     payload: serializeBoard(document, SAVED_AT),
-    objects: document.objects.size,
+    // Only what is DRAWN: a reaction or a relation has no element of its own.
+    objects: [...document.objects.values()].filter(
+      (object) => registry.get(object.type)?.capabilities.spatial !== false,
+    ).length,
   }
 }

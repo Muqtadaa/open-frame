@@ -32,6 +32,7 @@ export const hypothesisType = defineObjectType<typeof HYPOTHESIS_TYPE, Hypothesi
     canHaveChildren: false,
     selectsAsUnit: false,
     connectable: true,
+    markable: true,
     styleProps: ['color', 'textColor', 'font', 'align', 'verticalAlign', 'opacity'],
   },
 

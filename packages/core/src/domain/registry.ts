@@ -43,6 +43,38 @@ interface RelationIndex {
 }
 
 /**
+ * A per-person mark on another object: a reaction, a vote.
+ *
+ * Marks are objects for the reason relations are (ADR 0011): a board is merged
+ * object by object, so a list of reactions inside a note's `data` would be one
+ * value two people overwrite when they react at the same moment. As separate
+ * objects, two reactions are two `add` patches, which commute.
+ *
+ * `within` is what else the mark cannot outlive — a vote dies with its round
+ * as well as with the note it was cast on.
+ */
+export interface MarkEdge {
+  /** The object the mark is on. */
+  readonly target: ObjectId
+  /** What kind of mark this is, and its value within that kind. */
+  readonly kind: string
+  readonly value: string
+  /** Who made it: a person's stable key, never a display name. */
+  readonly by: string
+  readonly within?: ObjectId
+}
+
+export interface MarkLink {
+  readonly id: ObjectId
+  readonly edge: MarkEdge
+}
+
+interface MarkIndex {
+  readonly on: Map<ObjectId, MarkLink[]>
+  readonly within: Map<ObjectId, MarkLink[]>
+}
+
+/**
  * What a type is handed when its geometry depends on ANOTHER object.
  *
  * Supplied rather than reached for, and shared across one pass: a type has no
@@ -244,6 +276,15 @@ export interface ObjectCapabilities {
    */
   readonly selectsAsUnit: boolean
   readonly connectable: boolean
+  /**
+   * Whether people can put per-person marks on it — reactions, votes.
+   *
+   * A note says something somebody can agree with; a frame, a line or a group
+   * is structure, and a reaction on one would be read as a reaction to what is
+   * inside it. Every type states its answer (rule 18), so a new type never
+   * acquires reactions nobody chose for it.
+   */
+  readonly markable: boolean
   /** Which style tokens this type honours. Others are ignored, not rejected. */
   readonly styleProps: readonly StyleProp[]
 }
@@ -549,6 +590,12 @@ export interface ObjectTypeDefinition<TType extends string, TData> {
   readonly relation?: (object: ObjectBase<TType, TData>) => RelationEdge | null
 
   /**
+   * The per-person mark this object represents, if it is one (see `MarkEdge`).
+   * A mark joins the mark index and dies with whatever it marks.
+   */
+  readonly mark?: (object: ObjectBase<TType, TData>) => MarkEdge | null
+
+  /**
    * The editable semantic fields of this type, in the order they are presented.
    *
    * Omitted by types whose content is not a record — a sticky's text is edited
@@ -644,6 +691,7 @@ export interface ErasedObjectTypeDefinition {
   ) => boolean
   readonly dependencies?: (object: AnyOpenFrameObject) => readonly ObjectId[]
   readonly relation?: (object: AnyOpenFrameObject) => RelationEdge | null
+  readonly mark?: (object: AnyOpenFrameObject) => MarkEdge | null
   readonly fields?: readonly FieldDefinition[]
   readonly promotions?: readonly string[]
   readonly derivations?: readonly Derivation[]
@@ -752,6 +800,7 @@ export function defineObjectType<TType extends string, TData>(
     moveDivider,
     cropWindow,
     relation,
+    mark,
     fields,
     actions,
     promotions,
@@ -790,6 +839,7 @@ export function defineObjectType<TType extends string, TData>(
     ...(relation === undefined
       ? {}
       : { relation: (object) => relation(object as ObjectBase<TType, TData>) }),
+    ...(mark === undefined ? {} : { mark: (object) => mark(object as ObjectBase<TType, TData>) }),
     ...(cropWindow === undefined
       ? {}
       : { cropWindow: (object) => cropWindow(object as ObjectBase<TType, TData>) }),
@@ -847,6 +897,8 @@ export class ObjectTypeRegistry {
   /** Same pattern, same invalidation key, for the relation index. */
   #relationIndexDoc: BoardDocument | undefined
   #relationIndex: RelationIndex | undefined
+  #markIndexDoc: BoardDocument | undefined
+  #markIndex: MarkIndex | undefined
 
   constructor(definitions: readonly ErasedObjectTypeDefinition[] = []) {
     for (const definition of definitions) this.register(definition)
@@ -1069,6 +1121,58 @@ export class ObjectTypeRegistry {
     for (const id of ids) {
       for (const link of index.outgoing.get(id) ?? []) doomed.add(link.id)
       for (const link of index.incoming.get(id) ?? []) doomed.add(link.id)
+    }
+    return [...doomed]
+  }
+
+  /**
+   * Marks, indexed by what they are on and by what they belong to, built once
+   * per document — the same shape and the same reason as `#relationIndexFor`:
+   * every visible note asks for its reactions, and answering by scanning the
+   * board would be the per-object O(n) pass rule 10 forbids.
+   */
+  #markIndexFor(doc: BoardDocument): MarkIndex {
+    if (this.#markIndexDoc === doc && this.#markIndex !== undefined) return this.#markIndex
+    const on = new Map<ObjectId, MarkLink[]>()
+    const within = new Map<ObjectId, MarkLink[]>()
+    const push = (index: Map<ObjectId, MarkLink[]>, key: ObjectId, link: MarkLink): void => {
+      const existing = index.get(key)
+      if (existing === undefined) index.set(key, [link])
+      else existing.push(link)
+    }
+    for (const object of doc.objects.values()) {
+      const edge = this.#definitions.get(object.type)?.mark?.(object)
+      if (edge === undefined || edge === null) continue
+      const link: MarkLink = { id: object.id, edge }
+      push(on, edge.target, link)
+      if (edge.within !== undefined) push(within, edge.within, link)
+    }
+    this.#markIndex = { on, within }
+    this.#markIndexDoc = doc
+    return this.#markIndex
+  }
+
+  /** The marks on `id`: its reactions, the votes cast on it. */
+  marksOn(doc: BoardDocument, id: ObjectId): readonly MarkLink[] {
+    return this.#markIndexFor(doc).on.get(id) ?? []
+  }
+
+  /** The marks that belong to `id` — a voting round's votes. */
+  marksWithin(doc: BoardDocument, id: ObjectId): readonly MarkLink[] {
+    return this.#markIndexFor(doc).within.get(id) ?? []
+  }
+
+  /**
+   * Every mark that would be orphaned by deleting `ids`. A reaction to nothing
+   * is not a reaction, so a mark dies with what it is on and with what it
+   * belongs to.
+   */
+  marksOrphanedBy(doc: BoardDocument, ids: readonly ObjectId[]): ObjectId[] {
+    const index = this.#markIndexFor(doc)
+    const doomed = new Set<ObjectId>()
+    for (const id of ids) {
+      for (const link of index.on.get(id) ?? []) doomed.add(link.id)
+      for (const link of index.within.get(id) ?? []) doomed.add(link.id)
     }
     return [...doomed]
   }

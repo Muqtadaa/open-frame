@@ -53,6 +53,7 @@ export const shapeType = defineObjectType<typeof SHAPE_TYPE, ShapeData>({
     canHaveChildren: false,
     selectsAsUnit: false,
     connectable: true,
+    markable: false,
     styleProps: WITH_CORNERS,
   },
 

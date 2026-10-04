@@ -472,12 +472,23 @@ export interface ChromeSlice {
    * another person's.
    */
   readonly searchOpen: boolean
+  /**
+   * The full emoji library, open for reacting to `targets`, hung from `anchor`
+   * (a SCREEN rectangle: the bar's More button, or the selection when it was
+   * opened from the context menu). Null when closed.
+   */
+  readonly reactionPicker: {
+    readonly targets: readonly ObjectId[]
+    readonly anchor: { x: number; y: number; width: number; height: number }
+  } | null
   showToast(message: string | null, action?: ToastAction): void
   announce(text: string): void
   setClipboard(objects: readonly AnyOpenFrameObject[]): void
   openContextMenu(at: ContextMenuAt): void
   closeContextMenu(): void
   setSearchOpen(open: boolean): void
+  openReactionPicker(picker: NonNullable<ChromeSlice['reactionPicker']>): void
+  closeReactionPicker(): void
 }
 
 /**

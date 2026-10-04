@@ -29,10 +29,19 @@ export function ChromeSurface({
   prefer,
   testId,
   avoid,
+  clearance = 0,
   children,
 }: {
   /** The WORLD rectangle this belongs beside. */
   readonly bounds: Rect | null
+  /**
+   * SCREEN pixels to keep clear of the rectangle on every side — for
+   * apparatus that already sits just outside it, like a single selected
+   * note's connection points. In screen pixels because that is what those
+   * are; converting to world units by dividing by the zoom is what rule 24
+   * retired.
+   */
+  readonly clearance?: number
   /**
    * Sides to try, in order.
    *
@@ -60,10 +69,10 @@ export function ChromeSurface({
   return (
     <AnchoredSurface
       anchor={{
-        x: topLeft.x,
-        y: topLeft.y,
-        width: bottomRight.x - topLeft.x,
-        height: bottomRight.y - topLeft.y,
+        x: topLeft.x - clearance,
+        y: topLeft.y - clearance,
+        width: bottomRight.x - topLeft.x + clearance * 2,
+        height: bottomRight.y - topLeft.y + clearance * 2,
       }}
       surface={canvasSize}
       prefer={prefer}

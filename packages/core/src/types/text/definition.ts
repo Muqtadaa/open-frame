@@ -32,6 +32,7 @@ export const textType = defineObjectType<typeof TEXT_TYPE, TextData>({
     canHaveChildren: false,
     selectsAsUnit: false,
     connectable: true,
+    markable: false,
     /*
      * No fill: text has no surface to fill. The registry is what stops the
      * toolbar offering a fill control for it.

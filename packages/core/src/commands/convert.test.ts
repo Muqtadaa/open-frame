@@ -226,6 +226,7 @@ describe('when two types spell a key the same way and mean different things', ()
       canHaveChildren: false,
       selectsAsUnit: false,
       connectable: true,
+      markable: false,
       styleProps: [],
     },
     describe: (object) => ({

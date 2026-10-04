@@ -1141,3 +1141,25 @@ Closed since (2026-10-03), in the order they were chosen:
 - relations drawn on the board: `6105633`.
 
 Not chosen: structured types on the rail, and a fixed type mark.
+
+## Facilitation A: reactions on notes (2026-10-03)
+
+The first of the owner's five facilitation features. Anyone with an edit link
+can leave 👍 ❤️ 🎉 💡 🔥 👀 ❓ ✅ on a sticky, a typed slip or an image, from a
+bar beside the selection or from the context menu, and take it back by pressing
+the chip. Each reaction is its own object per person, so two people reacting at
+once are both counted (the rooms suite holds this); deleting a note takes its
+reactions with it and undo brings them back (seen failing with the cascade
+removed). Found on the way: a double-click on a chip opened the note beneath
+for typing, because the board hit-tested the point; a press on a chrome button
+now ends the double-click there, seen failing first.
+
+The owner, trying it on the preview: the bar was drawn under the record panel,
+and the eight should not be the only choice. The bar mounted empty while it
+learned who was reacting and was placed at that size — nothing — and a
+floating surface only measured itself when it re-rendered, not when its
+contents changed; it now watches its own size, which every anchored surface
+gets. And the bar's last button, or "More…" in the context menu's React
+submenu, opens the whole Unicode emoji library: searched by name, walked with
+the arrows, loaded only when first opened. An emoji from it is stored as its
+code points, and one also on the bar is the bar's reaction.

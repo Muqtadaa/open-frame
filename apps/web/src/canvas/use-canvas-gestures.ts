@@ -37,6 +37,7 @@ import { HANDLERS } from './gestures/index.js'
 import {
   claimsDoubleClick,
   handleAt,
+  EDITOR_CHROME,
   handleUnderPointer,
   isTextEntry,
   lockedAmong,
@@ -165,6 +166,13 @@ export function useCanvasGestures(containerRef: RefObject<HTMLElement | null>) {
    * the note there.
    */
   const pressedHandle = useRef(false)
+  /**
+   * Whether the last press landed on a BUTTON in the board's own chrome — a
+   * reaction chip, say. Such a button sits inside its object's bounds, so the
+   * double-click that follows two presses on it hit-tests to the object and
+   * would open it for typing.
+   */
+  const pressedChromeButton = useRef(false)
   const spaceHeld = useRef(false)
 
   const toWorld = useCallback(
@@ -291,6 +299,8 @@ export function useCanvasGestures(containerRef: RefObject<HTMLElement | null>) {
        * up to here. Without this guard, clicking into a note to reposition the
        * caret would be read as a canvas gesture and close the editor.
        */
+      pressedChromeButton.current =
+        event.target instanceof Element && event.target.closest(`${EDITOR_CHROME} button`) !== null
       if (isTextEntry(event.target)) return
 
       /*
@@ -551,6 +561,7 @@ export function useCanvasGestures(containerRef: RefObject<HTMLElement | null>) {
        * true, so that is what is remembered.
        */
       if (pressedHandle.current || claimsDoubleClick(handleAt(event.clientX, event.clientY))) return
+      if (pressedChromeButton.current) return
 
       const worldPoint = toWorld(event.clientX, event.clientY)
       /*

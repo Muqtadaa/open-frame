@@ -31,6 +31,7 @@ export const relationType = defineObjectType<typeof RELATION_TYPE, RelationData>
     canHaveChildren: false,
     selectsAsUnit: false,
     connectable: false,
+    markable: false,
     styleProps: [],
   },
 

@@ -33,6 +33,7 @@ describe('object type registry contract', () => {
       'image',
       'insight',
       'journey-stage',
+      'reaction',
       'relation',
       'requirement',
       'shape',

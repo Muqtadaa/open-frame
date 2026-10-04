@@ -118,6 +118,16 @@ export function PlusIcon({ className }: IconProps) {
   )
 }
 
+/** A face with a plus: more reactions than the bar shows. */
+export function MoreReactionsIcon({ className }: IconProps) {
+  return (
+    <svg {...base} className={className}>
+      <path d="M20 11.5A8.5 8.5 0 1 1 12.5 3.5" />
+      <path d="M8.5 14.5c1.8 2 5.2 2 7 0M9 9.5h.01M14 9.5h.01M19 2.5v6M16 5.5h6" />
+    </svg>
+  )
+}
+
 export function FitIcon({ className }: IconProps) {
   return (
     <svg {...base} className={className}>

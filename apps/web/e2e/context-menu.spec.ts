@@ -45,6 +45,8 @@ test(
 
     await page.keyboard.press('ArrowDown')
     await page.keyboard.press('ArrowDown')
+    await expect(item(page, 'React')).toBeFocused()
+    await page.keyboard.press('ArrowDown')
     await expect(item(page, 'Cut')).toBeFocused()
     await page.keyboard.press('ArrowDown')
     await expect(item(page, 'Copy')).toBeFocused()

@@ -77,6 +77,7 @@ export const tableType = defineObjectType<typeof TABLE_TYPE, TableData>({
     canHaveChildren: false,
     selectsAsUnit: false,
     connectable: true,
+    markable: false,
     /*
      * No `fill`: a table's ground is its page, and a filled one hides the rule
      * lines that make it a table. Declared properties that the view ignores

@@ -32,6 +32,7 @@ export const journeystageType = defineObjectType<typeof JOURNEY_STAGE_TYPE, Jour
     canHaveChildren: false,
     selectsAsUnit: false,
     connectable: true,
+    markable: true,
     styleProps: ['color', 'textColor', 'font', 'align', 'verticalAlign', 'opacity'],
   },
 

@@ -10,6 +10,7 @@ export const chromeSlice: Slice<ChromeSlice> = (set) => ({
   clipboard: [],
   contextMenu: null,
   searchOpen: false,
+  reactionPicker: null,
 
   showToast: (toast, action) => set({ toast, toastAction: action ?? null }),
   announce: (text) =>
@@ -19,4 +20,6 @@ export const chromeSlice: Slice<ChromeSlice> = (set) => ({
   openContextMenu: (contextMenu) => set({ contextMenu }),
   closeContextMenu: () => set({ contextMenu: null }),
   setSearchOpen: (searchOpen) => set({ searchOpen }),
+  openReactionPicker: (reactionPicker) => set({ reactionPicker }),
+  closeReactionPicker: () => set({ reactionPicker: null }),
 })

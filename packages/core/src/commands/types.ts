@@ -5,6 +5,7 @@ import type { ObjectTypeRegistry } from '../domain/registry.js'
 import type { AlignEdge, DistributeAxis } from '../geometry/arrange.js'
 import type { Clock } from '../ports/clock.js'
 import type { IdGenerator } from '../ports/id-generator.js'
+import type { MarkAuthor } from '../types/reaction/schema.js'
 
 export interface NewObjectSpec {
   readonly type: string
@@ -145,6 +146,18 @@ export type Command =
        */
       readonly kind: 'ApplyRemotePatches'
       readonly patches: readonly Patch[]
+    }
+  | {
+      /**
+       * Adds this person's reaction of this kind to an object, or takes it
+       * away if they have already left one. One command either way, so it is
+       * one undo step, and a toggle rather than two commands because which of
+       * the two it is depends on the board at the moment it lands.
+       */
+      readonly kind: 'ToggleReaction'
+      readonly target: ObjectId
+      readonly glyph: string
+      readonly by: MarkAuthor
     }
   | {
       /**

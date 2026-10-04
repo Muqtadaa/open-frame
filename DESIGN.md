@@ -1270,6 +1270,35 @@ surfaces placed by separate arithmetic will eventually want the same space, and
 on a selection too wide for the panel to sit beside, the panel takes the whole
 band above — which is where a bar anchored to that selection wants to be.
 
+### Reactions
+
+A note that people can react to (`capabilities.markable`: sticky, the typed
+slips, images) carries its reactions as chips along its bottom edge, inside it:
+the emoji and a count, grouped by kind in the palette's order. A chip you have
+reacted with is pressed (the accent wash), and pressing it takes yours back;
+its tip names who reacted, in words — "Agree, 3: Otter, Heron and you". A
+viewer sees the chips, disabled, and no way to add one.
+
+Selecting one such object raises the reaction bar beside it on the apparatus
+layer: eight glyphs, each a pressed toggle, placed clear of the connect points
+(`ChromeSurface` `clearance`, in screen pixels) and off the record panel. The
+keyboard reaches the same eight through the context menu's React submenu, which
+also reacts to every note in a selection at once.
+
+Beyond the eight, the bar's last button — a face with a plus — opens the whole
+emoji library, as does "More…" at the foot of the context menu's React submenu:
+a search field over the Unicode list in its usual groups, eight across. Typing
+filters by name; Down goes from the field into the grid and the arrows walk
+it; Escape closes it and hands focus back. The library is loaded only when
+first opened, so nobody pays for it who reacts with the eight.
+
+The eight are stored by KEY (`plus-one`, `idea`…), never as the emoji, so a key
+a later version adds reads as "?" here rather than breaking the board. An emoji
+from the library is stored as its code points (`u-1f680`), and one that is
+also on the bar keeps the bar's key — 👍 picked from the library is the same
+reaction as 👍 on the bar, counted together. A chip is a button in the board's own chrome: a double-click on it is
+two presses, never an edit of the note beneath.
+
 ### Connector Bends
 
 An orthogonal or curved connector carries a third draggable point at the middle

@@ -15,6 +15,8 @@ import { ConnectPoints } from './ConnectPoints.js'
 import { DrawPreview } from './DrawPreview.js'
 import { EndpointOverlay } from './EndpointOverlay.js'
 import { ArrangeBar } from './ArrangeBar.js'
+import { ReactionBar } from './ReactionBar.js'
+import { ReactionPicker } from './ReactionPicker.js'
 import { CropOverlay } from './CropOverlay.js'
 import { DividerOverlay } from './DividerOverlay.js'
 import { MarqueeOverlay } from './MarqueeOverlay.js'
@@ -238,6 +240,8 @@ const Apparatus = memo(function Apparatus() {
       and lands on the chrome layer so it can be clamped to the window.
     */}
       <ArrangeBar />
+      <ReactionBar />
+      <ReactionPicker />
       {/*
       A pin is above the grips: it is the only way to open the thread under
       it, and one on the edge of a selected object was covered by that
