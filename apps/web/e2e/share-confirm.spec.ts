@@ -24,7 +24,7 @@ test('asks before moving, and says what moving does', async ({ page }) => {
   await page.getByTestId('share-board').click()
   const ask = page.getByRole('alertdialog', { name: 'Move this board to share it?' })
   await expect(ask).toBeVisible()
-  await expect(ask).toContainText('two links')
+  await expect(ask).toContainText('an edit link and a view link')
   await expect(page.getByTestId('share-confirm')).toBeFocused()
   // The board behind cannot be worked on while the question is open.
   await expect(page.getByTestId('tool-sticky')).not.toBeFocused()

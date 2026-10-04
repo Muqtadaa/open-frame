@@ -72,7 +72,7 @@ test.describe('the notice', () => {
   test('is advice, not alarm, and counts in words', async ({ page }) => {
     const notice = page.getByTestId('notice-banner')
     await expect(notice).toHaveAttribute('data-tone', 'advisory')
-    await expect(notice).toContainText('1 object could not be read')
+    await expect(notice).toContainText('1 object needs a newer version')
     await expect(notice).not.toContainText('(s)')
   })
 

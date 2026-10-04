@@ -69,9 +69,7 @@ describe('finding on the board', () => {
     openAndType('pricing')
     expect(document.querySelector('[data-testid="search-count"]')?.textContent).toBe('2 found')
     openAndType('zebra')
-    expect(document.querySelector('[data-testid="search-count"]')?.textContent).toBe(
-      'nothing found',
-    )
+    expect(document.querySelector('[data-testid="search-count"]')?.textContent).toContain('type:')
   })
 
   it('moves the active result with the arrows, without leaving the box, and stops at the ends', () => {

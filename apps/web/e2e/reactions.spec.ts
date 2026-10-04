@@ -212,7 +212,7 @@ test.describe('the library’s grid', () => {
       .poll(() =>
         page.evaluate(
           () =>
-            document.querySelector('[role="dialog"][aria-label="Pick a reaction"] [data-scroll]')
+            document.querySelector('[role="dialog"][aria-label="Emoji"] [data-scroll]')
               ?.scrollTop ?? 0,
         ),
       )
@@ -227,7 +227,7 @@ test.describe('the library’s grid', () => {
     await expect(page.getByRole('button', { name: 'grinning face', exact: true })).toBeVisible()
     const fits = await page.evaluate(() => {
       const list = document.querySelector<HTMLElement>(
-        '[role="dialog"][aria-label="Pick a reaction"] [data-scroll]',
+        '[role="dialog"][aria-label="Emoji"] [data-scroll]',
       )
       const grid = list?.querySelector<HTMLElement>('[role="group"]')
       if (!list || !grid) return { list: false, inside: false, sideways: true }

@@ -209,7 +209,7 @@ export function ShareControl() {
    */
   const linkKind = role === 'viewer' ? 'view' : 'edit'
   const who = here.length === 1 ? 'Only you' : here.map((person) => person.name).join(', ')
-  const handsOver = owned !== null ? 'Links and password' : `Copy ${linkKind} link`
+  const handsOver = owned !== null ? 'Both links and the password' : `Copy ${linkKind} link`
   const roomHint = `${who} · ${handsOver}`
   const ownLinks = (): SharedBoard => {
     const origin = window.location.origin

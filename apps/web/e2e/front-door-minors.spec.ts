@@ -38,7 +38,7 @@ test('a board of your own says it is yours, not merely shared', async ({ page })
 test('an empty list says what to do next', async ({ page }) => {
   await signedIn(page, [])
   await page.goto(HOME_URL)
-  await expect(page.getByTestId('home-empty')).toContainText('Start a board')
+  await expect(page.getByTestId('home-empty')).toContainText('No boards yet')
 })
 
 test('the door says a link needs no account', async ({ page }) => {

@@ -202,7 +202,7 @@ test.describe('as a dialog', () => {
   test('is named by what it asks, and holds the keyboard', async ({ page }) => {
     const gate = page.getByRole('alertdialog', { name: 'This board has a password' })
     await expect(gate).toBeVisible()
-    await expect(gate).toHaveAccessibleDescription(/Ask whoever sent it/)
+    await expect(gate).toHaveAccessibleDescription(/Ask whoever sent the link/)
     await expect(page.getByTestId('board-password')).toBeFocused()
 
     for (let i = 0; i < 6; i++) {

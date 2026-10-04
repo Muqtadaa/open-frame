@@ -558,7 +558,6 @@ export function CommentPanel({ author }: { readonly author: string | null }) {
             value={body}
             maxLength={4000}
             disabled={busy}
-            placeholder={thread === null ? 'Comment' : 'Reply'}
             aria-label={thread === null ? 'Your comment' : 'Your reply'}
             data-testid="comment-input"
             /*
