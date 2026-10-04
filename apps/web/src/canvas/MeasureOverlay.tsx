@@ -127,17 +127,19 @@ function Measurements({
      * what is on screen counts, as for a drag (rule 10), and only on a press —
      * never per frame.
      */
-    const others = alignmentTargets(
+    const visible = cullToViewport(
       document,
       runtime.registry,
-      cullToViewport(
-        document,
-        runtime.registry,
-        visibleWorldRect(viewport, canvasSize.width, canvasSize.height),
-      ),
-      selection,
+      visibleWorldRect(viewport, canvasSize.width, canvasSize.height),
     )
-    segments = toOutlines(nearestDistances(selected, others), [selectedShape])
+    const others = alignmentTargets(document, runtime.registry, visible, selection)
+    // The turned neighbours' outlines too, or a line to one ended at the
+    // upright box around it — though nudging the turned one measured fine.
+    const turned = visible
+      .filter((object) => !selection.has(object.id))
+      .map((object) => shapeOf(object, runtime.registry.boundsOf(object, document)))
+      .filter((shape) => shape.corners !== null)
+    segments = toOutlines(nearestDistances(selected, others), [selectedShape, ...turned])
     matches = guidesAround(selected, others, exactlyAligned(selected, others)).map((guide) => ({
       axis: guide.axis,
       position: guide.position,

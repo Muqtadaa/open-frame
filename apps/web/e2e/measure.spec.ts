@@ -315,3 +315,56 @@ test('measures from a turned shape’s edge, not the box around it', async ({ pa
   expect(under).toBe('shape')
   await page.keyboard.up('Alt')
 })
+
+/*
+ * Nudging an upright note beside a turned shape measured to the shape's
+ * upright box, so the line ended in empty space — though selecting the shape
+ * and nudging that measured the same gap correctly.
+ */
+test('a nudge measures to a turned neighbour’s edge too', async ({ page }) => {
+  await seedBoard(
+    page,
+    buildBoard((board) => {
+      board.note('Plain', A)
+      board.add('shape', { x: B.x, y: A.y })
+    }),
+  )
+  const turned = await page.evaluate(() => {
+    const runtime = (
+      window as unknown as {
+        __openframe: {
+          runtime: {
+            store: { getDocument(): { objects: Map<string, { id: string; type: string }> } }
+            dispatcher: { dispatch(command: unknown): { ok: boolean } }
+          }
+        }
+      }
+    ).__openframe.runtime
+    const shape = [...runtime.store.getDocument().objects.values()].find(
+      (object) => object.type === 'shape',
+    )
+    return shape === undefined
+      ? false
+      : runtime.dispatcher.dispatch({
+          kind: 'RotateObjects',
+          rotations: [{ id: shape.id, rotation: Math.PI / 12 }],
+        }).ok
+  })
+  expect(turned).toBe(true)
+
+  await page.locator(CANVAS).click({ position: A })
+  await page.mouse.move(640, 700)
+  await page.keyboard.press('ArrowRight')
+
+  const line = await boxOf(page.getByTestId('measure-line-x'))
+  // Just past the line's end is the turned shape itself, not the board.
+  const under = await page.evaluate(
+    ({ x, y }) =>
+      document
+        .elementsFromPoint(x, y)
+        .map((element) => element.closest('[data-object-type]')?.getAttribute('data-object-type'))
+        .find((type) => type !== undefined) ?? null,
+    { x: line.x + line.width + 3, y: line.y + line.height / 2 },
+  )
+  expect(under).toBe('shape')
+})
