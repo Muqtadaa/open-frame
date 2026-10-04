@@ -51,6 +51,7 @@ board, in a Durable Object) and
 | Room facts (`seeded`)                    | Selected object ids                                 |
 | Agents' change log                       |                                                     |
 | Session timer and music (`facilitation`) |                                                     |
+| Dot voting rounds and votes (objects)    |                                                     |
 
 A drag in progress is not shared at all. Nothing is written to the document
 during a gesture ([the drag rule](05-commands-and-undo.md#the-drag-rule)), so
@@ -174,6 +175,30 @@ catalogue only supplies titles. The tracks are CC0 files the rooms Worker serves
 `/music/catalogue` lists them, and it is the catalogue, kept in git, that
 decides what may be served. A device makes no sound until somebody there
 presses something, and mute and volume are that device's alone.
+
+---
+
+## Dot voting
+
+Unlike the timer, a round of dot voting IS on the board: it is something
+people will want afterwards, so it is saved, shared and undone like any
+object, through the dispatcher (rule 3). It is not drawn on it — both types are
+`spatial: false`, like a relation or a reaction.
+
+- A **`vote-round`** holds the title, which notes are in scope (the board,
+  what one frame holds, or the notes selected when it started), how many dots
+  each person gets, whether counts are hidden, and whether it is open. There is
+  one per board: starting a round replaces one that has ended, in the same
+  command, and is refused while one is open.
+- A **`vote`** is one dot, marked on its note and `within` its round, so the
+  registry's mark index counts them and deleting the note or clearing the round
+  takes them with it. Nothing keeps a tally.
+- A dot's id is the person's SLOT in the round (`vt_<round>_<key>_<n>`). Two
+  devices casting for one person at the same moment take the same free slot and
+  converge on one object, so nobody ever holds more dots than the round gives.
+
+"Hidden" is hidden by the interface only. The votes are objects in the shared
+document, and anybody who reads it can count them.
 
 ---
 

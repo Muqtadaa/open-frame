@@ -7,6 +7,7 @@ import type {
   ObjectStyle,
   Point,
   Viewport,
+  VoteScope,
 } from '@openframe/core'
 import type { StateCreator } from 'zustand'
 
@@ -489,6 +490,13 @@ export interface ChromeSlice {
   setSearchOpen(open: boolean): void
   openReactionPicker(picker: NonNullable<ChromeSlice['reactionPicker']>): void
   closeReactionPicker(): void
+  /**
+   * The notes a round of dot voting is being set up for, while its form is
+   * open. Null otherwise. Nothing is on the board until it is started.
+   */
+  readonly votingSetup: VoteScope | null
+  openVotingSetup(scope: VoteScope): void
+  closeVotingSetup(): void
 }
 
 /**

@@ -56,9 +56,8 @@ const cast = (h: TestHarness, round: ObjectId, target: ObjectId, by: MarkAuthor 
   h.dispatcher.dispatch({ kind: 'CastDotVote', round, target, by })
 
 const count = (h: TestHarness, target: ObjectId) =>
-  h.registry
-    .marksOn(h.store.getDocument(), target)
-    .filter((link) => link.edge.kind === VOTE_MARK).length
+  h.registry.marksOn(h.store.getDocument(), target).filter((link) => link.edge.kind === VOTE_MARK)
+    .length
 
 describe('dot voting', () => {
   let h: TestHarness

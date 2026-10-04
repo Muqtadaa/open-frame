@@ -68,3 +68,31 @@ export function currentVoteRound(doc: BoardDocument): VoteRoundObject | null {
   }
   return found
 }
+
+/**
+ * Whether a round's votes may go on `target`: anything on the board, one of
+ * the notes it was started on, or anything inside its frame, however deep — a
+ * note in a group in the frame counts. The command and the interface both
+ * ask this, so a menu never offers a vote the command would refuse.
+ */
+export function inVoteScope(
+  doc: BoardDocument,
+  round: VoteRoundData,
+  target: AnyOpenFrameObject,
+): boolean {
+  const { scope } = round
+  switch (scope.kind) {
+    case 'board':
+      return true
+    case 'objects':
+      return scope.ids.includes(target.id)
+    case 'frame': {
+      let parent = target.parentId
+      for (let hops = 0; parent !== null && hops < doc.objects.size; hops += 1) {
+        if (parent === scope.frame) return true
+        parent = doc.objects.get(parent)?.parentId ?? null
+      }
+      return false
+    }
+  }
+}

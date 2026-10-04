@@ -133,6 +133,7 @@ export { VoteDataSchema, type VoteData } from './vote/schema.js'
 export {
   VOTE_ROUND_TYPE,
   currentVoteRound,
+  inVoteScope,
   voteRoundType,
   type VoteRoundObject,
 } from './vote-round/definition.js'

@@ -8,12 +8,15 @@ import {
   type RefObject,
 } from 'react'
 
+import { inVoteScope, type VoteScope } from '@openframe/core'
+
 import { AnchoredSurface } from '../controls/AnchoredSurface.js'
 import { DisclosureIcon } from '../controls/icons.js'
 import { useViewportSize } from '../controls/use-viewport-size.js'
 import { useCanEdit } from '../hooks/use-can-edit.js'
 import { useCommands } from '../hooks/use-commands.js'
 import { useMe } from '../hooks/use-me.js'
+import { useVoteRound } from '../hooks/use-voting.js'
 import { useOpenFrame } from '../runtime/context.js'
 import { useInteractionStore, type ContextMenuAt } from '../interaction/interaction-store.js'
 import { ariaKeys, formatKeys } from '../interaction/keymap.js'
@@ -65,6 +68,7 @@ export function ContextMenu() {
   const clipboardSize = useInteractionStore((state) => state.clipboard.length)
   const commands = useCommands()
   const me = useMe()
+  const round = useVoteRound()
   const canEdit = useCanEdit()
   const { runtime } = useOpenFrame()
   /*
@@ -227,6 +231,60 @@ export function ContextMenu() {
       return type !== undefined && runtime.registry.get(type)?.capabilities.markable === true
     })
 
+  /*
+   * Dot voting. A round is started on what is selected — those notes, or what
+   * one container holds — or on the whole board from empty canvas; while one
+   * is open, the keyboard votes from here as the pointer does with the tool.
+   */
+  const roundOpen = round?.data.status === 'open'
+  const startable = canEdit && me !== null && !roundOpen
+  const only = selected.length === 1 ? runtime.store.getObject(selected[0]!) : undefined
+  const container =
+    only !== undefined && runtime.registry.get(only.type)?.capabilities.canHaveChildren === true
+  const votingScope: VoteScope | null = !hasSelection
+    ? { kind: 'board' }
+    : reactable
+      ? { kind: 'objects', ids: selected }
+      : container && only !== undefined
+        ? { kind: 'frame', frame: only.id }
+        : null
+  const startVoting =
+    startable && votingScope !== null
+      ? [
+          {
+            label: 'Start dot voting…',
+            run: () => {
+              useInteractionStore.getState().openVotingSetup(votingScope)
+            },
+          },
+        ]
+      : []
+  // Only where the round's votes may go, so the menu never offers a refusal.
+  const doc = runtime.store.getDocument()
+  const votable =
+    round !== null &&
+    selected.every((id) => {
+      const object = doc.objects.get(id)
+      return object !== undefined && inVoteScope(doc, round.data, object)
+    })
+  const voteItems =
+    roundOpen && reactable && votable && me !== null
+      ? [
+          {
+            label: 'Add vote',
+            run: () => {
+              for (const id of selected) commands.vote(id, me)
+            },
+          },
+          {
+            label: 'Remove vote',
+            run: () => {
+              for (const id of selected) commands.vote(id, me, true)
+            },
+          },
+        ]
+      : []
+
   const promotions = selected
     .map((id) => {
       const type = runtime.store.getObject(id)?.type
@@ -293,6 +351,7 @@ export function ContextMenu() {
         },
       },
     ],
+    ...(startVoting.length === 0 ? [] : [startVoting]),
   ]
 
   const selectionGroups: Group[] = [
@@ -371,6 +430,8 @@ export function ContextMenu() {
               ],
             },
           ]),
+      ...voteItems,
+      ...startVoting,
     ],
     [
       { label: 'Cut', shortcut: 'Mod+X', run: () => commands.cutSelection() },

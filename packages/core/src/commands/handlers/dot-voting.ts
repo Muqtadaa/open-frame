@@ -7,6 +7,7 @@ import { VOTE_MARK, VOTE_TYPE, voteId } from '../../types/vote/definition.js'
 import {
   VOTE_ROUND_TYPE,
   currentVoteRound,
+  inVoteScope,
   type VoteRoundObject,
 } from '../../types/vote-round/definition.js'
 import { VoteRoundDataSchema, type VoteRoundData } from '../../types/vote-round/schema.js'
@@ -185,29 +186,10 @@ function votable(
   if (ctx.registry.get(target.type)?.capabilities.markable !== true) {
     throw new CommandError('invalid-input', `A ${target.type} cannot be voted on`)
   }
-  if (!inScope(doc, round, target)) {
+  if (!inVoteScope(doc, round, target)) {
     throw new CommandError('invalid-input', 'That note is not part of this vote')
   }
   return target
-}
-
-function inScope(doc: BoardDocument, round: VoteRoundData, target: AnyOpenFrameObject): boolean {
-  const { scope } = round
-  switch (scope.kind) {
-    case 'board':
-      return true
-    case 'objects':
-      return scope.ids.includes(target.id)
-    case 'frame': {
-      // Anywhere inside the frame, however deep — a note in a group in it counts.
-      let parent = target.parentId
-      for (let hops = 0; parent !== null && hops < doc.objects.size; hops += 1) {
-        if (parent === scope.frame) return true
-        parent = doc.objects.get(parent)?.parentId ?? null
-      }
-      return false
-    }
-  }
 }
 
 function votesBy(doc: BoardDocument, round: ObjectId, key: string, ctx: CommandContext) {

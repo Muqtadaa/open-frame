@@ -212,6 +212,29 @@ for (const world of WORLDS) {
       await snap(page, `${world}-session-music`)
     })
 
+    // A round of dot voting, revealed, with its results open and a dot on the note.
+    test('dot voting', async ({ page }) => {
+      await page.addInitScript(() => {
+        localStorage.setItem(
+          'openframe:guest',
+          JSON.stringify({ name: 'Heron', hue: 2, key: 'g_0123456789abcdef' }),
+        )
+      })
+      await openLocalBoard(page)
+      await placeSticky(page, 'Free returns')
+      await page
+        .locator('[data-testid="canvas"]')
+        .click({ button: 'right', position: { x: 900, y: 600 } })
+      await page.getByRole('menuitem', { name: 'Start dot voting…' }).click()
+      await page.getByTestId('voting-title').fill('What first?')
+      await page.getByTestId('voting-start').click()
+      await page.locator('[data-testid="canvas"]').click({ position: { x: 520, y: 300 } })
+      await page.locator('[data-testid="canvas"]').click({ position: { x: 520, y: 300 } })
+      await expect(page.getByTestId('votes')).toHaveText('2')
+      await page.getByTestId('voting-results').click()
+      await snap(page, `${world}-dot-voting`)
+    })
+
     // An uncoloured frame on the world's paper, with a note laid on it.
     test('a frame holding a note', async ({ page }) => {
       await openLocalBoard(page)

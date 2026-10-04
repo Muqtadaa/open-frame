@@ -13,10 +13,13 @@
  */
 
 /**
- * The modes that are not a type: getting around the board and talking about
- * it. They are the chrome's, and a closed list on purpose.
+ * The modes that are not a type: getting around the board, talking about it,
+ * and voting on it. They are the chrome's, and a closed list on purpose.
+ *
+ * `dot` is armed from a round of dot voting rather than from the rail: it
+ * only means something while one is open.
  */
-export const CHROME_TOOLS = ['select', 'pan', 'comment'] as const
+export const CHROME_TOOLS = ['select', 'pan', 'comment', 'dot'] as const
 export type ChromeTool = (typeof CHROME_TOOLS)[number]
 
 /**

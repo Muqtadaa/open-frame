@@ -7274,6 +7274,164 @@ textarea.of-input {
   pointer-events: none;
 }
 
+/*
+ * Dot voting. The dots sit in a note's top corner, clear of its reactions
+ * along the bottom; they are read, not pressed — votes go on with the tool.
+ */
+.of-votes {
+  position: absolute;
+  top: var(--of-space-8);
+  right: var(--of-space-8);
+  display: inline-flex;
+  gap: var(--of-space-4);
+  align-items: center;
+  padding: var(--of-space-2) var(--of-space-6);
+  font-family: var(--of-mono);
+  font-size: var(--of-type-record);
+  line-height: 1.4;
+  color: var(--of-ink);
+  background: var(--of-panel);
+  border: 1px solid var(--of-control-border);
+  border-radius: var(--of-radius-capsule);
+  pointer-events: none;
+}
+
+.of-votes__dot {
+  width: var(--of-space-8);
+  height: var(--of-space-8);
+  background: var(--of-accent);
+  border-radius: var(--of-radius-round);
+}
+
+.of-votes[data-mine='true'] {
+  border-color: var(--of-accent);
+}
+
+.of-voting {
+  flex-direction: column;
+  align-items: stretch;
+}
+
+.of-voting__row,
+.of-voting--setup {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--of-space-8);
+  align-items: center;
+}
+
+.of-voting--setup {
+  flex-direction: row;
+  align-items: flex-end;
+}
+
+.of-voting__heading {
+  flex-basis: 100%;
+  margin: 0;
+  font-size: var(--of-type-ui);
+  font-weight: var(--of-weight-semibold);
+}
+
+/* The vote tool, armed: the same pressed bed as the timer's chosen preset. */
+.of-voting [aria-pressed='true'] {
+  color: var(--of-accent);
+  background: var(--of-accent-soft);
+  border-color: var(--of-accent);
+}
+
+.of-voting__title {
+  font-weight: var(--of-weight-semibold);
+}
+
+.of-voting__status {
+  flex: 1;
+  font-family: var(--of-mono);
+  font-size: var(--of-type-record);
+}
+
+.of-voting__field {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: var(--of-space-4);
+  min-width: 140px;
+  font-size: var(--of-type-record);
+}
+
+.of-voting__field--narrow {
+  flex: 0 0 auto;
+  min-width: 0;
+  width: 96px;
+}
+
+.of-voting__check {
+  display: inline-flex;
+  gap: var(--of-space-6);
+  align-items: center;
+  min-height: var(--of-hit-sm);
+}
+
+.of-voting__actions {
+  display: flex;
+  gap: var(--of-space-8);
+}
+
+.of-voting__results {
+  display: flex;
+  flex-direction: column;
+  gap: var(--of-space-8);
+  align-items: flex-start;
+  margin-top: var(--of-space-8);
+}
+
+.of-voting__list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--of-space-2);
+  width: 100%;
+  max-height: 240px;
+  padding: 0;
+  margin: 0;
+  overflow-y: auto;
+  list-style: none;
+}
+
+.of-voting__result {
+  display: flex;
+  gap: var(--of-space-8);
+  align-items: center;
+  width: 100%;
+  min-height: var(--of-hit-sm);
+  padding: var(--of-space-4) var(--of-space-8);
+  color: var(--of-ink);
+  text-align: left;
+  cursor: pointer;
+  background: none;
+  border: 0;
+  border-radius: var(--of-radius);
+}
+
+.of-voting__result:hover {
+  background: var(--of-hover);
+}
+
+.of-voting__gist {
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.of-voting__count {
+  font-family: var(--of-mono);
+  font-size: var(--of-type-record);
+}
+
+.of-voting__empty {
+  margin: var(--of-space-8) 0 0;
+  font-size: var(--of-type-record);
+}
+
 .of-reaction {
   display: inline-flex;
   gap: var(--of-space-4);

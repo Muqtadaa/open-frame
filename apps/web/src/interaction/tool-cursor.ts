@@ -47,6 +47,7 @@ const CHROME_MARK: Readonly<Record<ChromeTool, Mark | null>> = {
   comment: {
     body: 'M20 12a7 7 0 0 1-7 7H9l-4 3v-4.2A7 7 0 0 1 4 12a7 7 0 0 1 7-7h2a7 7 0 0 1 7 7Z',
   },
+  dot: { body: 'M12 5a7 7 0 1 1 0 14a7 7 0 1 1 0-14Z' },
 }
 
 /**
