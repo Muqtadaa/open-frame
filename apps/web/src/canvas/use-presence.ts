@@ -59,7 +59,8 @@ export function usePresence(containerRef: RefObject<HTMLDivElement | null>): voi
   }, [peers, setDrags])
 
   useEffect(() => {
-    if (collaboration === null || collaboration === undefined) return
+    // Published once it is known who this is, never under a passing guest name.
+    if (collaboration === null || collaboration === undefined || me === null) return
 
     let cursor: { x: number; y: number } | null = null
     let lastSent = 0

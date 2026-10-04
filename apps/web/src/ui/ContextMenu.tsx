@@ -337,7 +337,8 @@ export function ContextMenu() {
        * Reacting from the keyboard: the bar above a note is reached by
        * pointer, and this is the same eight, toggling the same way.
        */
-      ...(!reactable
+      // Not until it is known who is reacting: see `useMe`.
+      ...(!reactable || me === null
         ? []
         : [
             {
@@ -345,7 +346,7 @@ export function ContextMenu() {
               submenu: REACTION_GLYPHS.map((glyph) => ({
                 label: `${glyph.emoji} ${glyph.label}`,
                 run: () => {
-                  commands.toggleReaction(selected, glyph.key, me)
+                  if (me !== null) commands.toggleReaction(selected, glyph.key, me)
                 },
               })),
             },

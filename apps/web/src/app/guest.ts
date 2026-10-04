@@ -70,10 +70,23 @@ function invent(): Guest {
 }
 
 /**
+ * The guest this page settled on, kept in memory as well as in storage: with
+ * storage blocked, every call used to invent somebody new, and the reaction
+ * bar and the chips — which ask separately — disagreed about who "me" was.
+ */
+let remembered: Guest | null = null
+
+/** For tests: forget the page's guest, as a new page load would. */
+export function forgetGuestForTests(): void {
+  remembered = null
+}
+
+/**
  * The same identity every time this browser opens a board, so a collaborator
  * who comes back after lunch is still the same otter.
  */
 export function guestIdentity(): Guest {
+  if (remembered !== null) return remembered
   let guest: Guest | null = null
   let fresh = false
   try {
@@ -98,5 +111,6 @@ export function guestIdentity(): Guest {
       // Not being able to remember it must not stop it being used.
     }
   }
+  remembered = guest
   return guest
 }

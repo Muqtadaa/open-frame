@@ -3,7 +3,7 @@ import { useMemo } from 'react'
 import type { MarkAuthor } from '@openframe/core'
 
 import { guestIdentity } from '../app/guest.js'
-import { useIdentity } from './use-identity.js'
+import { useIdentityState } from './use-identity.js'
 
 /**
  * Who this person is on a board: the name and colour others see, and the key
@@ -12,16 +12,22 @@ import { useIdentity } from './use-identity.js'
  * A signed-in person is themselves on every device, so their key comes from
  * their account; a guest's comes from this browser. Either way it is a LABEL,
  * never an authorization (ADR 0016): the room admits writers by link.
+ *
+ * `null` until it is KNOWN. A signed-in person's session is restored after the
+ * first render, and handing out the guest key meanwhile filed anything they
+ * did in that moment under somebody else — a reaction they could then never
+ * take back. Whatever leaves a mark waits for this.
  */
-export function useMe(): MarkAuthor {
-  const identity = useIdentity()
+export function useMe(): MarkAuthor | null {
+  const { identity, settled } = useIdentityState()
   return useMemo(() => {
+    if (!settled) return null
     if (identity === null) {
       const guest = guestIdentity()
       return { key: guest.key, name: guest.name, hue: guest.hue }
     }
     return { key: accountKey(identity.userId), name: identity.displayName, hue: identity.hue }
-  }, [identity])
+  }, [identity, settled])
 }
 
 /**

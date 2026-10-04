@@ -63,6 +63,8 @@ function Bar({ id }: { readonly id: Parameters<typeof useReactions>[0] }) {
   const commands = useCommands()
   const me = useMe()
   const groups = useReactions(id)
+  // Nothing to offer until it is known whose reactions these would be.
+  if (me === null) return null
   return (
     <div className="of-reaction-bar of-surface" role="group" aria-label="React">
       {REACTION_GLYPHS.map((glyph) => {

@@ -45,8 +45,9 @@ function Chips({
     <div className="of-reactions of-editor-chrome" data-testid="reactions">
       {groups.map((group) => {
         const glyph = glyphFor(group.glyph)
-        const mine = group.people.some((person) => person.key === me.key)
-        const tip = describe(group, glyph.label, me.key, canEdit)
+        // Until it is known who "me" is, nothing is mine and nothing is pressable.
+        const mine = me !== null && group.people.some((person) => person.key === me.key)
+        const tip = describe(group, glyph.label, me?.key ?? null, canEdit && me !== null)
         return (
           <button
             key={group.glyph}
@@ -56,9 +57,9 @@ function Chips({
             aria-pressed={mine}
             aria-label={tip}
             data-tip={tip}
-            disabled={!canEdit}
+            disabled={!canEdit || me === null}
             onClick={() => {
-              commands.toggleReaction([id], group.glyph, me)
+              if (me !== null) commands.toggleReaction([id], group.glyph, me)
             }}
           >
             <span aria-hidden="true">{glyph.emoji}</span>
@@ -71,7 +72,12 @@ function Chips({
 }
 
 /** "Agree, 3: Otter, Heron and you. Press to take yours back." */
-function describe(group: ReactionGroup, label: string, myKey: string, canEdit: boolean): string {
+function describe(
+  group: ReactionGroup,
+  label: string,
+  myKey: string | null,
+  canEdit: boolean,
+): string {
   const others = group.people.filter((person) => person.key !== myKey).map((p) => p.name)
   const mine = others.length < group.people.length
   const names = mine ? [...others, 'you'] : others

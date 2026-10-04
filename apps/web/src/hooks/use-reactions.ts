@@ -32,30 +32,59 @@ export function useReactions(id: ObjectId): readonly ReactionGroup[] {
   )
   const getSnapshot = useCallback(() => {
     const doc = runtime.store.getDocument()
-    const lines: string[] = []
+    const rows: ReactionRow[] = []
     for (const link of runtime.registry.marksOn(doc, id)) {
       if (link.edge.kind !== REACTION_MARK) continue
       const data = doc.objects.get(link.id)?.data as
         { by?: { name?: unknown; hue?: unknown } } | undefined
-      const name = typeof data?.by?.name === 'string' ? data.by.name : 'Someone'
-      const hue = typeof data?.by?.hue === 'number' ? data.by.hue : 0
-      lines.push([link.edge.value, link.edge.by, name, String(hue)].join('\t'))
+      rows.push({
+        glyph: link.edge.value,
+        key: link.edge.by,
+        name: typeof data?.by?.name === 'string' ? data.by.name : 'Someone',
+        hue: typeof data?.by?.hue === 'number' ? data.by.hue : 0,
+      })
     }
-    return lines.sort().join('\n')
+    return encodeReactions(rows)
   }, [runtime, id])
   const signature = useSyncExternalStore(subscribe, getSnapshot, getSnapshot)
 
-  return useMemo(() => {
-    if (signature === '') return []
-    const groups = new Map<string, ReactionPerson[]>()
-    for (const line of signature.split('\n')) {
-      const [glyph = '', key = '', name = '', hue = '0'] = line.split('\t')
-      const people = groups.get(glyph) ?? []
-      people.push({ key, name, hue: Number(hue) })
-      groups.set(glyph, people)
-    }
-    return [...groups.entries()]
-      .map(([glyph, people]) => ({ glyph, people }))
-      .sort((a, b) => glyphOrder(a.glyph) - glyphOrder(b.glyph) || a.glyph.localeCompare(b.glyph))
-  }, [signature])
+  return useMemo(() => groupReactions(signature), [signature])
+}
+
+export interface ReactionRow {
+  readonly glyph: string
+  readonly key: string
+  readonly name: string
+  readonly hue: number
+}
+
+/**
+ * The rows as one string that compares by value. JSON rather than joining on
+ * a tab and a newline: a name may hold either, and once read as a field or a
+ * record of its own.
+ */
+export function encodeReactions(rows: readonly ReactionRow[]): string {
+  if (rows.length === 0) return ''
+  const tuples = rows.map((row) => [row.glyph, row.key, row.name, row.hue] as const)
+  tuples.sort((a, b) => (a.join('\u0000') < b.join('\u0000') ? -1 : 1))
+  return JSON.stringify(tuples)
+}
+
+/**
+ * Grouped by kind, in the palette's order, with each person ONCE per kind: a
+ * second record of the same reaction — an agent's, or two devices racing —
+ * is one person, not two.
+ */
+export function groupReactions(signature: string): readonly ReactionGroup[] {
+  if (signature === '') return []
+  const tuples = JSON.parse(signature) as [string, string, string, number][]
+  const groups = new Map<string, ReactionPerson[]>()
+  for (const [glyph, key, name, hue] of tuples) {
+    const people = groups.get(glyph) ?? []
+    if (!people.some((person) => person.key === key)) people.push({ key, name, hue })
+    groups.set(glyph, people)
+  }
+  return [...groups.entries()]
+    .map(([glyph, people]) => ({ glyph, people }))
+    .sort((a, b) => glyphOrder(a.glyph) - glyphOrder(b.glyph) || a.glyph.localeCompare(b.glyph))
 }

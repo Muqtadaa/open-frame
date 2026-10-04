@@ -9,8 +9,23 @@ import { useServices, type Identity } from '../runtime/services.js'
  * the time, and every consumer renders something sensible for it.
  */
 export function useIdentity(): Identity | null {
+  return useIdentityState().identity
+}
+
+/**
+ * The same, plus whether it is the ANSWER yet. The session is restored after
+ * the first render, so a signed-in person reads as a guest until it lands —
+ * harmless for a label, wrong for anything filed under who they are.
+ */
+export function useIdentityState(): {
+  readonly identity: Identity | null
+  readonly settled: boolean
+} {
   const { accounts } = useServices()
-  const [identity, setIdentity] = useState<Identity | null>(null)
+  const [state, setState] = useState<{ identity: Identity | null; settled: boolean }>(() => ({
+    identity: null,
+    settled: !accounts.enabled,
+  }))
 
   useEffect(() => {
     if (!accounts.enabled) return
@@ -19,11 +34,11 @@ export function useIdentity(): Identity | null {
     // The session is restored from storage asynchronously, so the first answer
     // arrives after the first render. Signed out until told otherwise.
     void accounts.current().then((found) => {
-      if (live) setIdentity(found)
+      if (live) setState({ identity: found, settled: true })
     })
 
     const stop = accounts.onChange((next) => {
-      if (live) setIdentity(next)
+      if (live) setState({ identity: next, settled: true })
     })
 
     return () => {
@@ -32,5 +47,5 @@ export function useIdentity(): Identity | null {
     }
   }, [accounts])
 
-  return identity
+  return state
 }

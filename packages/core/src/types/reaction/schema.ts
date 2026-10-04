@@ -22,7 +22,14 @@ export interface MarkAuthor {
 export const MarkAuthorSchema: ZodType<MarkAuthor> = z
   .object({
     key: z.string().regex(/^[A-Za-z0-9_-]{1,40}$/),
-    name: z.string().trim().min(1).max(60),
+    // One line wherever it is shown — a chip's tip, a list of who voted — and
+    // a tab or newline inside it once read as a field or a record of its own.
+    name: z
+      .string()
+      .trim()
+      .min(1)
+      .max(60)
+      .regex(/^[^\p{Cc}]+$/u),
     hue: z.number().finite().min(0).max(360),
   })
   .strict()

@@ -154,4 +154,48 @@ describe('reactions', () => {
     react(h, note, 'plus-one', heron)
     expect(on(h, note)).toEqual(['plus-one:g_heron', 'plus-one:g_otter'])
   })
+
+  /*
+   * Generic commands can make a reaction too — an agent's create_objects, an
+   * edit to its data — and then the id no longer says what it is. Taking one
+   * back must find it by what it IS, or pressing the chip adds a second.
+   */
+  it('takes back a reaction made under another id', () => {
+    const note = create(h, 'sticky', 'Ship it')
+    const made = h.dispatcher.dispatch({
+      kind: 'CreateObjects',
+      objects: [
+        { type: 'reaction', x: 0, y: 0, data: { target: note, glyph: 'plus-one', by: otter } },
+      ],
+    })
+    expect(made.ok).toBe(true)
+    expect(on(h, note)).toEqual(['plus-one:g_otter'])
+
+    expect(react(h, note, 'plus-one', otter).ok).toBe(true)
+    expect(on(h, note)).toEqual([])
+    expect(react(h, note, 'plus-one', otter).ok).toBe(true)
+    expect(on(h, note)).toEqual(['plus-one:g_otter'])
+  })
+
+  it('takes back a reaction whose glyph was changed under it', () => {
+    const note = create(h, 'sticky', 'Ship it')
+    react(h, note, 'plus-one', otter)
+    const id = reactionId(note, 'plus-one', otter.key) as ObjectId
+    const edited = h.dispatcher.dispatch({
+      kind: 'UpdateObjectData',
+      id,
+      patch: { glyph: 'heart' },
+    })
+    expect(edited.ok).toBe(true)
+    expect(on(h, note)).toEqual(['heart:g_otter'])
+
+    react(h, note, 'heart', otter)
+    expect(on(h, note)).toEqual([])
+  })
+
+  it('refuses a name that would break onto a second line', () => {
+    const note = create(h, 'sticky', 'Ship it')
+    expect(react(h, note, 'plus-one', { ...otter, name: 'Ot\nter' }).ok).toBe(false)
+    expect(react(h, note, 'plus-one', { ...otter, name: 'Ot\tter' }).ok).toBe(false)
+  })
 })
