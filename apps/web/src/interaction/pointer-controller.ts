@@ -29,6 +29,8 @@ export type PointerIntent =
       readonly on: ObjectId | null
     }
   | { readonly kind: 'begin-marquee'; readonly at: Point }
+  /** A dot on what was pressed, or one taken back off it. */
+  | { readonly kind: 'vote'; readonly on: ObjectId; readonly remove: boolean }
   /**
    * Starts drawing a new object to size.
    *
@@ -61,6 +63,8 @@ export interface PointerDownContext {
   readonly hitId: ObjectId | null
   readonly selection: ReadonlySet<ObjectId>
   readonly shiftKey: boolean
+  /** Takes a vote back rather than casting one. */
+  readonly altKey?: boolean
   /** 0 = primary, 1 = middle. */
   readonly button: number
   readonly spaceHeld: boolean
@@ -104,6 +108,16 @@ export function onPointerDown(ctx: PointerDownContext): readonly PointerIntent[]
    */
   if (ctx.tool === 'comment') {
     return [{ kind: 'drop-comment', at: ctx.worldPoint, on: ctx.hitId }]
+  }
+
+  /*
+   * A dot goes on whatever was pressed, and Alt takes one back. Pressing
+   * empty board does nothing: there is nothing to vote for there, and
+   * clearing the selection would only lose what somebody was looking at.
+   * Whether the object can carry a vote is the command's to say.
+   */
+  if (ctx.tool === 'dot') {
+    return ctx.hitId === null ? [] : [{ kind: 'vote', on: ctx.hitId, remove: ctx.altKey === true }]
   }
 
   /*

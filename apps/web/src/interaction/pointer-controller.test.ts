@@ -46,6 +46,16 @@ function ctx(
  * the decision logic was kept out of the React layer in the first place.
  */
 describe('pointer down', () => {
+  it('puts a dot on what the vote tool presses, takes one back with Alt, and ignores empty board', () => {
+    expect(onPointerDown(ctx({ tool: 'dot', hitId: A }))).toEqual([
+      { kind: 'vote', on: A, remove: false },
+    ])
+    expect(onPointerDown(ctx({ tool: 'dot', hitId: A, altKey: true }))).toEqual([
+      { kind: 'vote', on: A, remove: true },
+    ])
+    expect(onPointerDown(ctx({ tool: 'dot' }))).toEqual([])
+  })
+
   it('pans on middle button regardless of tool', () => {
     expect(onPointerDown(ctx({ button: 1, tool: 'sticky' }))).toEqual([{ kind: 'begin-pan' }])
   })

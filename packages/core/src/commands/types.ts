@@ -6,6 +6,7 @@ import type { AlignEdge, DistributeAxis } from '../geometry/arrange.js'
 import type { Clock } from '../ports/clock.js'
 import type { IdGenerator } from '../ports/id-generator.js'
 import type { MarkAuthor } from '../types/reaction/schema.js'
+import type { VoteRoundStatus, VoteScope } from '../types/vote-round/schema.js'
 
 export interface NewObjectSpec {
   readonly type: string
@@ -158,6 +159,41 @@ export type Command =
       readonly target: ObjectId
       readonly glyph: string
       readonly by: MarkAuthor
+    }
+  | {
+      /**
+       * Starts the board's round of dot voting. A round that has ENDED is
+       * replaced in the same command, so one undo brings it and its votes back;
+       * one still open is never silently thrown away. Its id is not the
+       * caller's: see `voteRoundId`.
+       */
+      readonly kind: 'StartVoteRound'
+      readonly title: string
+      readonly scope: VoteScope
+      readonly perPerson: number
+      readonly hidden: boolean
+      readonly by: MarkAuthor
+    }
+  | {
+      /** One more of this person's dots on a note, if they have one left. */
+      readonly kind: 'CastDotVote'
+      readonly round: ObjectId
+      readonly target: ObjectId
+      readonly by: MarkAuthor
+    }
+  | {
+      /** Takes one of this person's dots back off a note. */
+      readonly kind: 'RemoveDotVote'
+      readonly round: ObjectId
+      readonly target: ObjectId
+      readonly by: MarkAuthor
+    }
+  | {
+      /** Reveals the counts, or ends the round, or both. */
+      readonly kind: 'SetVoteRound'
+      readonly round: ObjectId
+      readonly hidden?: boolean
+      readonly status?: VoteRoundStatus
     }
   | {
       /**

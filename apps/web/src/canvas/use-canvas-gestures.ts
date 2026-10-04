@@ -21,6 +21,7 @@ import { pinFraction } from '../scene/comment-pin.js'
 import { pinchViewport, type PinchStart } from '../scene/pinch.js'
 import { makeFor } from '../scene/tools.js'
 import { useCommands } from '../hooks/use-commands.js'
+import { useMe } from '../hooks/use-me.js'
 import { useInteractionStore } from '../interaction/interaction-store.js'
 import {
   onDoubleClick as decideDoubleClick,
@@ -64,6 +65,13 @@ export function useCanvasGestures(containerRef: RefObject<HTMLElement | null>) {
   const { runtime, views } = useOpenFrame()
   const commands = useCommands()
   const gesture = useRef<Gesture | null>(null)
+  // Read at the press, through a ref, so who I am settling does not rebuild
+  // every handler below.
+  const me = useMe()
+  const meRef = useRef(me)
+  useEffect(() => {
+    meRef.current = me
+  }, [me])
 
   /**
    * Puts back whatever one-finger gesture was running, writing nothing — the
@@ -248,6 +256,12 @@ export function useCanvasGestures(containerRef: RefObject<HTMLElement | null>) {
         case 'begin-marquee':
           store.beginMarquee(worldPoint)
           return 'marquee'
+        case 'vote': {
+          // One command, and nothing to drag: a dot is placed by the press.
+          const by = meRef.current
+          if (by !== null) commands.vote(intent.on, by, intent.remove)
+          return null
+        }
         case 'begin-draw':
           store.beginDraw(intent.objectType, intent.at, intent.data)
           return 'draw'
@@ -411,6 +425,7 @@ export function useCanvasGestures(containerRef: RefObject<HTMLElement | null>) {
         hitId,
         selection: store.selection,
         shiftKey: event.shiftKey,
+        altKey: event.altKey,
         button: event.button,
         spaceHeld: spaceHeld.current,
         make: makeFor(store.tool, views.tools(), store.toolOptions),

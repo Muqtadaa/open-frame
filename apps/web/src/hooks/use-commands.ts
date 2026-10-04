@@ -11,9 +11,11 @@ import type {
   Point,
   Rect,
   TransactionId,
+  VoteScope,
 } from '@openframe/core'
 import {
   copySpec,
+  currentVoteRound,
   groupByParent,
   uncrop,
   unionAll,
@@ -33,6 +35,14 @@ import { pasteOrigin } from '../scene/paste.js'
 import { snapPoint } from '../scene/snapping.js'
 import { placeDerived } from '../scene/derived-placement.js'
 import { panToReveal } from '../scene/zoom.js'
+
+/** What a round of dot voting is started with. */
+export interface VotingOptions {
+  readonly title: string
+  readonly scope: VoteScope
+  readonly perPerson: number
+  readonly hidden: boolean
+}
 
 export interface BoardCommands {
   /** Creates any registered type. No per-type method — that is the registry's job. */
@@ -140,6 +150,14 @@ export interface BoardCommands {
   setColor(ids: readonly ObjectId[], color: ColorToken): void
   /** This person's reaction of this kind, on or off, on each of `targets`. */
   toggleReaction(targets: readonly ObjectId[], glyph: string, by: MarkAuthor): void
+  /** Starts the board's round of dot voting. */
+  startVoting(round: VotingOptions, by: MarkAuthor): boolean
+  /** One of this person's dots on a note, or back off it. Says why when it cannot. */
+  vote(target: ObjectId, by: MarkAuthor, remove?: boolean): void
+  /** Reveals the counts, or ends the round. */
+  setVoting(change: { readonly hidden?: boolean; readonly status?: 'closed' }): void
+  /** Takes the round off the board with every vote in it. */
+  clearVoting(): void
   /**
    * Sets any style properties at once. `setColor` is the one-property case kept
    * for its call sites; this is what the inspector uses, because a type's
@@ -725,6 +743,37 @@ export function useCommands(): BoardCommands {
             targets.map((target) => ({ kind: 'ToggleReaction' as const, target, glyph, by })),
           ),
         )
+      },
+
+      startVoting(round, by) {
+        const result = dispatcher.dispatch({ kind: 'StartVoteRound', ...round, by })
+        sayWhyNot(result)
+        return result.ok
+      },
+
+      vote(target, by, remove = false) {
+        const round = currentVoteRound(runtime.store.getDocument())
+        if (round === null) return
+        sayWhyNot(
+          dispatcher.dispatch({
+            kind: remove ? 'RemoveDotVote' : 'CastDotVote',
+            round: round.id,
+            target,
+            by,
+          }),
+        )
+      },
+
+      setVoting(change) {
+        const round = currentVoteRound(runtime.store.getDocument())
+        if (round === null) return
+        sayWhyNot(dispatcher.dispatch({ kind: 'SetVoteRound', round: round.id, ...change }))
+      },
+
+      clearVoting() {
+        const round = currentVoteRound(runtime.store.getDocument())
+        if (round === null) return
+        sayWhyNot(dispatcher.dispatch({ kind: 'DeleteObjects', ids: [round.id] }))
       },
 
       setStyle(ids, style) {
