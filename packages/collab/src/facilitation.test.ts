@@ -56,7 +56,9 @@ describe('facilitation state', () => {
     const b = new Y.Doc()
     join([a, b])
     const timer = startTimer(idleTimer(), 1000, 'Ada')
-    const music = playMusic(stoppedMusic('jazzy'), 2000, 'Ada')
+    const music = playMusic(stoppedMusic('jazzy'), 2000, 'Ada', [
+      { id: 'jazzy-1', durationMs: 60_000 },
+    ])
     writeTimer(a, timer)
     writeMusic(b, music)
     expect(readFacilitation(a)).toEqual({ timer, music })
@@ -88,7 +90,10 @@ describe('facilitation state', () => {
     })
 
     writeTimer(facilitator.doc, startTimer(idleTimer(), 1000, 'Ada'))
-    writeMusic(facilitator.doc, playMusic(stoppedMusic(), 1000, 'Ada'))
+    writeMusic(
+      facilitator.doc,
+      playMusic(stoppedMusic(), 1000, 'Ada', [{ id: 'calm-1', durationMs: 60_000 }]),
+    )
 
     expect(dispatched).toBe(0)
     expect(participant.refused).toEqual([])

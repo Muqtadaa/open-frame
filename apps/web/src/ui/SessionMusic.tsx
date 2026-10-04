@@ -86,9 +86,11 @@ function MusicControl({
 
   const genres = MUSIC_GENRES.filter((genre) => playlistOf(catalogue, genre).length > 0)
   const music = stored ?? stoppedMusic(genres[0] ?? 'calm')
-  const playlist = playlistOf(catalogue, music.genre)
   const now = useTick(channel.now, music.status === 'playing')
-  const position = positionOf(music, playlist, now)
+  const position = positionOf(music, now)
+  // The record says WHICH track; the catalogue only says what it is called.
+  const track =
+    position === null ? undefined : catalogue.tracks.find((entry) => entry.id === position.trackId)
 
   // One player for the life of the control, so the music outlives the sheet.
   useEffect(() => {
@@ -108,16 +110,16 @@ function MusicControl({
   // Follows the room on every tick: the right track, the right second.
   useEffect(() => {
     player.current?.follow(
-      position === null
+      position === null || track === undefined
         ? null
         : {
-            trackId: position.track.id,
-            url: library.trackUrl(position.track.id),
+            trackId: position.trackId,
+            url: library.trackUrl(position.trackId),
             offsetMs: position.offsetMs,
             playing: music.status === 'playing',
           },
     )
-  }, [position, music.status, library, joined])
+  }, [position, track, music.status, library, joined])
 
   useSheet({ open, placed: anchor !== null, setOpen, sheet, button })
 
@@ -182,7 +184,9 @@ function MusicControl({
                   aria-checked={music.genre === genre}
                   disabled={!canEdit || !ready}
                   onClick={() => {
-                    write((current, at, by) => setGenre(current, genre, at, by))
+                    write((current, at, by) =>
+                      setGenre(current, genre, at, by, playlistOf(catalogue, genre)),
+                    )
                   }}
                 >
                   {GENRE_NAMES[genre]}
@@ -190,12 +194,12 @@ function MusicControl({
               ))}
             </div>
 
-            {position !== null && (
+            {position !== null && track !== undefined && (
               <p className="of-music__now" data-testid="music-now">
-                <span className="of-music__title">{position.track.title}</span>
-                <span className="of-music__credit">{position.track.artist} · CC0</span>
+                <span className="of-music__title">{track.title}</span>
+                <span className="of-music__credit">{track.artist} · CC0</span>
                 <span className="of-music__elapsed" data-testid="music-elapsed">
-                  {elapsedText(position.offsetMs)} / {clockText(position.track.durationMs)}
+                  {elapsedText(position.offsetMs)} / {clockText(position.durationMs)}
                 </span>
               </p>
             )}
@@ -221,7 +225,9 @@ function MusicControl({
                     data-testid="music-play"
                     disabled={!ready}
                     onClick={() => {
-                      write(playMusic)
+                      write((current, at, by) =>
+                        playMusic(current, at, by, playlistOf(catalogue, current.genre)),
+                      )
                     }}
                   >
                     {state === 'paused' ? 'Resume' : 'Play'}

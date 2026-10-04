@@ -101,72 +101,96 @@ describe('the catalogue', () => {
 
 describe('where the music is', () => {
   it('is nowhere while stopped', () => {
-    expect(positionOf(stoppedMusic(), calm, 5000)).toBeNull()
+    expect(positionOf(stoppedMusic(), 5000)).toBeNull()
   })
 
   it('counts from when it started, across tracks', () => {
-    const music = playMusic(stoppedMusic('calm'), 1000, by)
-    expect(positionOf(music, calm, 1000 + 10 * SECOND)).toMatchObject({
+    const music = playMusic(stoppedMusic('calm'), 1000, by, calm)
+    expect(positionOf(music, 1000 + 10 * SECOND)).toMatchObject({
       index: 0,
+      trackId: 'a',
       offsetMs: 10 * SECOND,
     })
-    expect(positionOf(music, calm, 1000 + 70 * SECOND)).toMatchObject({
+    expect(positionOf(music, 1000 + 70 * SECOND)).toMatchObject({
       index: 1,
+      trackId: 'c',
       offsetMs: 10 * SECOND,
     })
   })
 
   it('goes round again after the last track', () => {
-    const music = playMusic(stoppedMusic('calm'), 0, by)
-    expect(positionOf(music, calm, 160 * SECOND)).toMatchObject({ index: 0, offsetMs: 10 * SECOND })
+    const music = playMusic(stoppedMusic('calm'), 0, by, calm)
+    expect(positionOf(music, 160 * SECOND)).toMatchObject({ index: 0, offsetMs: 10 * SECOND })
   })
 
   it('holds still while paused, and carries on from there', () => {
-    const paused = pauseMusic(playMusic(stoppedMusic('calm'), 0, by), 20 * SECOND, by)
-    expect(positionOf(paused, calm, 999 * SECOND)).toMatchObject({
-      index: 0,
-      offsetMs: 20 * SECOND,
-    })
-    const resumed = playMusic(paused, 100 * SECOND, by)
-    expect(positionOf(resumed, calm, 105 * SECOND)).toMatchObject({
-      index: 0,
-      offsetMs: 25 * SECOND,
-    })
+    const paused = pauseMusic(playMusic(stoppedMusic('calm'), 0, by, calm), 20 * SECOND, by)
+    expect(positionOf(paused, 999 * SECOND)).toMatchObject({ index: 0, offsetMs: 20 * SECOND })
+    const resumed = playMusic(paused, 100 * SECOND, by, [])
+    expect(positionOf(resumed, 105 * SECOND)).toMatchObject({ index: 0, offsetMs: 25 * SECOND })
   })
 
   it('is nowhere for a genre with no tracks', () => {
-    const music = playMusic(stoppedMusic('synthwave'), 0, by)
-    expect(positionOf(music, playlistOf(catalogue, 'synthwave'), 1000)).toBeNull()
+    const music = playMusic(stoppedMusic('synthwave'), 0, by, playlistOf(catalogue, 'synthwave'))
+    expect(positionOf(music, 1000)).toBeNull()
   })
 
   it('starts a new genre from its first track', () => {
-    const music = setGenre(playMusic(stoppedMusic('calm'), 0, by), 'jazzy', 50 * SECOND, by)
+    const jazzy = playlistOf(catalogue, 'jazzy')
+    const music = setGenre(
+      playMusic(stoppedMusic('calm'), 0, by, calm),
+      'jazzy',
+      50 * SECOND,
+      by,
+      jazzy,
+    )
     expect(music.genre).toBe('jazzy')
-    expect(positionOf(music, playlistOf(catalogue, 'jazzy'), 55 * SECOND)).toMatchObject({
-      index: 0,
-      offsetMs: 5 * SECOND,
-    })
+    expect(positionOf(music, 55 * SECOND)).toMatchObject({ trackId: 'b', offsetMs: 5 * SECOND })
   })
 
   it('stops back to the start', () => {
-    const stopped = stopMusic(playMusic(stoppedMusic('calm'), 0, by), 10, by)
+    const stopped = stopMusic(playMusic(stoppedMusic('calm'), 0, by, calm), 10, by)
     expect(stopped.status).toBe('stopped')
-    expect(positionOf(playMusic(stopped, 100, by), calm, 100)).toMatchObject({
+    expect(positionOf(playMusic(stopped, 100, by, calm), 100)).toMatchObject({
       index: 0,
       offsetMs: 0,
     })
   })
 
   it('counts each start from silence as a new run', () => {
-    const first = playMusic(stoppedMusic(), 0, by)
-    expect(playMusic(stopMusic(first, 1, by), 2, by).run).toBe(first.run + 1)
-    expect(playMusic(pauseMusic(first, 1, by), 2, by).run).toBe(first.run)
+    const first = playMusic(stoppedMusic(), 0, by, calm)
+    expect(playMusic(stopMusic(first, 1, by), 2, by, calm).run).toBe(first.run + 1)
+    expect(playMusic(pauseMusic(first, 1, by), 2, by, calm).run).toBe(first.run)
+  })
+
+  /*
+   * Every device works the position out for itself, so every device must work
+   * it out from the SAME list. A device that had loaded the catalogue before a
+   * track was added would otherwise play something else, at another place, for
+   * as long as the session ran (Codex, on #64). The run carries its playlist.
+   */
+  it('plays the playlist it started with, whatever the catalogue says now', () => {
+    const music = playMusic(stoppedMusic('calm'), 0, by, calm)
+    const later: Catalogue = {
+      v: 1,
+      tracks: [track('new', 'calm', 5 * SECOND), ...catalogue.tracks],
+    }
+    expect(playlistOf(later, 'calm')[0]?.id).toBe('new')
+    expect(positionOf(music, 10 * SECOND)).toMatchObject({ trackId: 'a', offsetMs: 10 * SECOND })
+  })
+
+  it('keeps only what a position needs, so the record stays small', () => {
+    const music = playMusic(stoppedMusic('calm'), 0, by, calm)
+    expect(music.playlist).toEqual([
+      { id: 'a', durationMs: 60 * SECOND },
+      { id: 'c', durationMs: 90 * SECOND },
+    ])
   })
 })
 
 describe('reading music someone else wrote', () => {
   it('reads one it wrote itself', () => {
-    const music = playMusic(stoppedMusic('jazzy'), 1000, by)
+    const music = playMusic(stoppedMusic('jazzy'), 1000, by, playlistOf(catalogue, 'jazzy'))
     expect(readMusic(structuredClone(music))).toEqual(music)
   })
 
@@ -176,6 +200,10 @@ describe('reading music someone else wrote', () => {
     ['playing with no start', { ...stoppedMusic(), status: 'playing', anchor: null }],
     ['an extra field', { ...stoppedMusic(), volume: 11 }],
     ['a newer version', { ...stoppedMusic(), v: 2 }],
+    [
+      'a playlist entry that is not a track',
+      { ...stoppedMusic(), playlist: [{ id: '../x', durationMs: 1000 }] },
+    ],
   ])('refuses %s', (_, value) => {
     expect(readMusic(value)).toBeNull()
   })

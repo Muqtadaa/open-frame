@@ -67,6 +67,35 @@ test('two devices whose clocks disagree are at the same place in the same track'
   expect(theirs).toBeLessThan(60)
 })
 
+/*
+ * A device that loaded the catalogue before a track was approved, and one
+ * that loaded it after, still play the same track at the same place: the run
+ * carries its own playlist (Codex, on #64).
+ */
+test('two devices with different catalogues still play the same track', async ({ browser }) => {
+  const room = newRoomId()
+  const alice = await join(browser, room)
+  await library(alice, TRACKS, ROOMS)
+  await alice.reload()
+  await expect(alice.getByTestId('room-status')).toHaveAttribute('data-status', 'connected', {
+    timeout: 20_000,
+  })
+  const bob = await (await browser.newContext()).newPage()
+  await library(bob, [{ id: 'jazzy-0', genre: 'jazzy', title: 'Approved Since' }, ...TRACKS], ROOMS)
+  await bob.goto(`/?room=${room}`)
+  await expect(bob.getByTestId('room-status')).toHaveAttribute('data-status', 'connected', {
+    timeout: 20_000,
+  })
+
+  await alice.getByTestId('music-button').click()
+  await alice.getByRole('radio', { name: 'Jazzy' }).click()
+  await alice.getByTestId('music-play').click()
+
+  await expect(bob.getByTestId('music-button')).toHaveAttribute('data-state', 'playing')
+  await bob.getByTestId('music-button').click()
+  await expect(bob.getByTestId('music-now')).toContainText('Late Set')
+})
+
 test('a viewer hears the music and cannot change it', async ({ browser }) => {
   const room = newRoomId()
   const opener = await (await browser.newContext()).newPage()

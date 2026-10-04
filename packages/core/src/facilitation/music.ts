@@ -89,6 +89,15 @@ export function playlistOf(catalogue: Catalogue, genre: MusicGenre): readonly Tr
 
 export type MusicStatus = 'stopped' | 'playing' | 'paused'
 
+/** What a position needs of a track, and all the record carries of one. */
+export interface PinnedTrack {
+  readonly id: string
+  readonly durationMs: number
+}
+
+/** A genre's playlist is short; this keeps a record that any editor can write from growing without end. */
+export const MAX_PLAYLIST = 50
+
 export interface SessionMusic {
   readonly v: typeof MUSIC_VERSION
   readonly genre: MusicGenre
@@ -97,6 +106,16 @@ export interface SessionMusic {
   readonly anchor: number | null
   /** How far into the playlist it was when paused. Zero while stopped. */
   readonly pausedAtMs: number
+  /**
+   * The playlist this run plays, pinned when it started or changed genre.
+   *
+   * Every device works the position out for itself, so every device has to
+   * work it out from the SAME list: a tab that loaded the catalogue before a
+   * track was approved would otherwise play another track, at another place,
+   * for as long as the session ran (Codex, on #64). The catalogue is consulted
+   * only for a track's title and where to stream it from.
+   */
+  readonly playlist: readonly PinnedTrack[]
   /** Which start from silence this is; pausing and resuming is the same run. */
   readonly run: number
   readonly by: string | null
@@ -110,6 +129,18 @@ const MusicSchema = z
     status: z.enum(['stopped', 'playing', 'paused']),
     anchor: z.number().finite().nullable(),
     pausedAtMs: z.number().finite().min(0),
+    playlist: z
+      .array(
+        z.strictObject({
+          id: z.string().regex(TRACK_ID),
+          durationMs: z
+            .number()
+            .int()
+            .min(1000)
+            .max(60 * 60 * 1000),
+        }),
+      )
+      .max(MAX_PLAYLIST),
     run: z.number().int().min(0),
     by: z.string().max(200).nullable(),
     at: z.number().finite(),
@@ -129,14 +160,27 @@ export function stoppedMusic(genre: MusicGenre = 'calm'): SessionMusic {
     status: 'stopped',
     anchor: null,
     pausedAtMs: 0,
+    playlist: [],
     run: 0,
     by: null,
     at: 0,
   }
 }
 
-/** Starts from silence, or carries on from a pause. Already playing is left alone. */
-export function playMusic(music: SessionMusic, now: number, by: string | null): SessionMusic {
+function pin(playlist: readonly PinnedTrack[]): PinnedTrack[] {
+  return playlist.slice(0, MAX_PLAYLIST).map(({ id, durationMs }) => ({ id, durationMs }))
+}
+
+/**
+ * Starts from silence with `playlist` pinned, or carries on from a pause with
+ * the playlist it already has. Already playing is left alone.
+ */
+export function playMusic(
+  music: SessionMusic,
+  now: number,
+  by: string | null,
+  playlist: readonly PinnedTrack[],
+): SessionMusic {
   switch (music.status) {
     case 'playing':
       return music
@@ -148,6 +192,7 @@ export function playMusic(music: SessionMusic, now: number, by: string | null): 
         status: 'playing',
         anchor: now,
         pausedAtMs: 0,
+        playlist: pin(playlist),
         run: music.run + 1,
         by,
         at: now,
@@ -180,11 +225,13 @@ export function setGenre(
   genre: MusicGenre,
   now: number,
   by: string | null,
+  playlist: readonly PinnedTrack[],
 ): SessionMusic {
   if (music.genre === genre) return music
   return {
     ...music,
     genre,
+    playlist: pin(playlist),
     anchor: music.status === 'playing' ? now : null,
     pausedAtMs: 0,
     by,
@@ -194,30 +241,30 @@ export function setGenre(
 
 export interface MusicPosition {
   readonly index: number
-  readonly track: Track
+  readonly trackId: string
+  readonly durationMs: number
   readonly offsetMs: number
 }
 
 /**
  * Which track, and how far into it, at `now` — or `null` while stopped or for
- * a genre with nothing in it. The playlist loops, so this is defined for any
- * time after the start.
+ * a run with nothing in its playlist. The playlist loops, so this is defined
+ * for any time after the start. Only the record is read: the catalogue does
+ * not enter into where the music is.
  */
-export function positionOf(
-  music: SessionMusic,
-  playlist: readonly Track[],
-  now: number,
-): MusicPosition | null {
+export function positionOf(music: SessionMusic, now: number): MusicPosition | null {
+  const { playlist } = music
   if (music.status === 'stopped' || playlist.length === 0) return null
   const total = playlist.reduce((sum, track) => sum + track.durationMs, 0)
   const elapsed =
     music.status === 'playing' && music.anchor !== null ? now - music.anchor : music.pausedAtMs
   let into = ((elapsed % total) + total) % total
   for (const [index, track] of playlist.entries()) {
-    if (into < track.durationMs) return { index, track, offsetMs: into }
+    if (into < track.durationMs) {
+      return { index, trackId: track.id, durationMs: track.durationMs, offsetMs: into }
+    }
     into -= track.durationMs
   }
   // Unreachable: `into` is below the sum of the durations it walks.
-  const first = playlist[0]
-  return first === undefined ? null : { index: 0, track: first, offsetMs: 0 }
+  return null
 }

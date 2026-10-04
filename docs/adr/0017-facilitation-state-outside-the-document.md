@@ -93,8 +93,9 @@ it is on.
 - A modified editor client can write a nonsense timer; every reader shows none.
 - Facilitation state is persisted with the room like any root map, so a timer
   still running is still running for whoever opens the board next.
-- Session music (PR C) lives in the same map: one record saying which genre
-  and when its playlist started on the room's clock. Which track, and how far
+- Session music (PR C) lives in the same map: one record saying which genre,
+  its playlist (pinned, so every device works from the same list), and when it
+  started on the room's clock. Which track, and how far
   into it, is worked out on every device, like "done". The tracks themselves
   are CC0 files served publicly by the rooms Worker from their own bucket,
   listed in a catalogue kept in git.

@@ -164,10 +164,12 @@ older room ignores the question, and after five seconds connected the client
 runs the timer on its own clock.
 
 **Session music** is a second record in the same map, read through `readMusic`:
-a genre, and when its playlist started on the room's clock. Which track is
-playing, and how far into it, is worked out on each device from that clock and
-the catalogue (`positionOf`), so a device that joins late lands where everybody
-else is. The tracks are CC0 files the rooms Worker serves publicly at
+a genre, its playlist (track ids and lengths, pinned when it started), and when
+that playlist started on the room's clock. Which track is playing, and how far
+into it, is worked out on each device from that clock and the pinned playlist
+(`positionOf`), so a device that joins late lands where everybody else is, and
+two devices holding different versions of the catalogue still agree; the
+catalogue only supplies titles. The tracks are CC0 files the rooms Worker serves publicly at
 `/music/track/:id` from its own bucket, with byte ranges so a device can seek.
 `/music/catalogue` lists them, and it is the catalogue, kept in git, that
 decides what may be served. A device makes no sound until somebody there
