@@ -27,7 +27,7 @@ describe('the room clock', () => {
   it('believes the quickest round trip, not the latest', () => {
     const clock = new ServerClock()
     clock.add(1000, 6010, 1020) // 20ms trip: offset 5000
-    clock.add(2000, 9000, 2900) // 900ms trip, queued behind something: offset 6550
+    clock.add(2000, 7850, 2900) // 900ms trip, queued behind something: offset 5400
     expect(clock.offset).toBe(5000)
   })
 
@@ -48,5 +48,24 @@ describe('the room clock', () => {
     expect(clock.add(Number.NaN, 5000, 1000)).toBe(false)
     expect(clock.add(1000, Number.POSITIVE_INFINITY, 1100)).toBe(false)
     expect(clock.synced).toBe(false)
+  })
+
+  /*
+   * A device's own clock can jump — a sleep, a correction — and every sample
+   * from before then is measuring a clock that no longer exists. Kept, the
+   * quickest of them went on winning for up to eight resyncs (Codex, on #63).
+   */
+  it('lets go of every earlier trip when the device’s clock has jumped', () => {
+    const clock = new ServerClock()
+    clock.add(0, 5005, 10) // quick, offset 5000
+    clock.add(100_000, 165_050, 100_100) // a minute out: this device's clock moved
+    expect(clock.offset).toBe(65_000)
+  })
+
+  it('keeps the quickest trip when a slower one merely disagrees within its own error', () => {
+    const clock = new ServerClock()
+    clock.add(0, 5005, 10) // offset 5000, ±5
+    clock.add(1000, 6400, 1600) // offset 5100, ±300: consistent with the first
+    expect(clock.offset).toBe(5000)
   })
 })

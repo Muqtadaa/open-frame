@@ -26,6 +26,8 @@ export function localFacilitation(
 
   return {
     now,
+    // This device's clock is the one a local board's timer runs on.
+    ready: () => true,
     timer: () => timer,
     subscribe: (listener) => {
       listeners.add(listener)

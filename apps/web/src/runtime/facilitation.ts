@@ -16,9 +16,15 @@ import type { SessionTimer } from '@openframe/core/facilitation'
 export interface FacilitationChannel {
   /** The time every timer on this board is measured against. */
   readonly now: () => number
+  /**
+   * Whether `now` can be trusted yet. A deadline written before it can is
+   * written on the wrong clock, and nothing afterwards repairs it, so the
+   * timer cannot be run until this is true.
+   */
+  readonly ready: () => boolean
   /** The timer, the same object until it changes (rule 9). `null` until somebody sets one. */
   readonly timer: () => SessionTimer | null
-  /** Called when the timer changes, or the clock it runs on is corrected. */
+  /** Called when the timer changes, the clock it runs on is corrected, or it becomes ready. */
   readonly subscribe: (listener: () => void) => () => void
   /** Replaces the timer, for everyone who can see this board. */
   readonly writeTimer: (timer: SessionTimer) => void

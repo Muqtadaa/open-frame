@@ -9,6 +9,14 @@ import type { FacilitationChannel } from '../runtime/facilitation.js'
 const RESYNC_MS = 5 * 60_000
 
 /**
+ * How long after connecting to wait for an answer before deciding the room is
+ * too old to give one. The question goes out the moment the socket opens, so
+ * a current room answers in one round trip; this only ever applies mid-way
+ * through a rolling deploy, when the timer runs on this device's clock.
+ */
+const OLD_ROOM_MS = 5000
+
+/**
  * A shared board's session timer: the room's state, on the room's clock.
  *
  * The clock is asked again every few minutes and whenever the page becomes
@@ -26,28 +34,48 @@ export function roomFacilitation(
   }
   document.addEventListener('visibilitychange', onVisible)
 
+  const listeners = new Set<() => void>()
+  const notify = (): void => {
+    for (const listener of [...listeners]) listener()
+  }
+  // `onFacilitation` answers at once; a store subscriber wants to hear only of changes.
+  let first = true
+  const stopState = connection.onFacilitation(() => {
+    if (first) first = false
+    else notify()
+  })
+  const stopClock = connection.onClock(notify)
+
+  let gaveUp = false
+  let waiting: ReturnType<typeof setTimeout> | null = null
+  const stopStatus = connection.onStatus((status) => {
+    if (status !== 'connected' || waiting !== null || gaveUp) return
+    waiting = setTimeout(() => {
+      if (connection.clockSynced) return
+      gaveUp = true
+      notify()
+    }, OLD_ROOM_MS)
+  })
+
   return {
     now: () => connection.serverNow(),
+    ready: () => connection.clockSynced || gaveUp,
     timer: () => connection.facilitation().timer,
     subscribe: (listener) => {
-      // `onFacilitation` answers at once; a store subscriber wants to hear only of changes.
-      let first = true
-      const stopState = connection.onFacilitation(() => {
-        if (first) first = false
-        else listener()
-      })
-      const stopClock = connection.onClock(listener)
-      return () => {
-        stopState()
-        stopClock()
-      }
+      listeners.add(listener)
+      return () => listeners.delete(listener)
     },
     writeTimer: (timer) => {
       connection.writeTimer(timer)
     },
     dispose: () => {
       clearInterval(resync)
+      if (waiting !== null) clearTimeout(waiting)
       document.removeEventListener('visibilitychange', onVisible)
+      stopState()
+      stopClock()
+      stopStatus()
+      listeners.clear()
     },
   }
 }

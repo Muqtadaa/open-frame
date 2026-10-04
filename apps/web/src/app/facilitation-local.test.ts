@@ -38,8 +38,10 @@ describe('a timer on a board that is nobody else’s', () => {
     expect(channel.timer()).toBe(channel.timer())
   })
 
-  it('runs on the clock it is given', () => {
-    expect(localFacilitation(board, () => 1234).now()).toBe(1234)
+  it('runs on the clock it is given, which is ready at once', () => {
+    const channel = localFacilitation(board, () => 1234)
+    expect(channel.now()).toBe(1234)
+    expect(channel.ready()).toBe(true)
   })
 
   it('reads nothing from storage that is not a timer', () => {

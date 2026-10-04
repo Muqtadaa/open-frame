@@ -11,7 +11,17 @@ function fakeConnection() {
   const facilitationListeners = new Set<(state: Facilitation) => void>()
   const clockListeners = new Set<() => void>()
   let asked = 0
+  let synced = false
+  const statusListeners = new Set<(status: string) => void>()
   const connection = {
+    get clockSynced() {
+      return synced
+    },
+    onStatus: (listener: (status: string) => void) => {
+      statusListeners.add(listener)
+      listener('connecting')
+      return () => statusListeners.delete(listener)
+    },
     serverNow: () => 99_000,
     syncClock: () => (asked += 1),
     onClock: (listener: () => void) => {
@@ -34,6 +44,13 @@ function fakeConnection() {
     asked: () => asked,
     tick: () => {
       for (const listener of clockListeners) listener()
+    },
+    answer: () => {
+      synced = true
+      for (const listener of clockListeners) listener()
+    },
+    connect: () => {
+      for (const listener of statusListeners) listener('connected')
     },
   }
 }
@@ -77,5 +94,38 @@ describe('a timer on a shared board', () => {
     channel.dispose()
     vi.advanceTimersByTime(5 * 60_000)
     expect(fake.asked()).toBe(2)
+  })
+
+  /*
+   * A deadline written before the room has said what time it is is written on
+   * this device's clock, and the room's answer cannot repair it afterwards
+   * (Codex, on #63). So the timer cannot be run until the clock is known.
+   */
+  it('is not ready to run until the room has said what time it is', () => {
+    const fake = fakeConnection()
+    const channel = roomFacilitation(fake.connection)
+    let told = 0
+    channel.subscribe(() => (told += 1))
+    expect(channel.ready()).toBe(false)
+    fake.answer()
+    expect(channel.ready()).toBe(true)
+    expect(told).toBe(1)
+    channel.dispose()
+  })
+
+  it('stops waiting for a room too old to answer, a few seconds after connecting', () => {
+    vi.useFakeTimers()
+    const fake = fakeConnection()
+    const channel = roomFacilitation(fake.connection)
+    let told = 0
+    channel.subscribe(() => (told += 1))
+    vi.advanceTimersByTime(60_000)
+    // Still connecting: an unanswered question means nothing yet.
+    expect(channel.ready()).toBe(false)
+    fake.connect()
+    vi.advanceTimersByTime(5000)
+    expect(channel.ready()).toBe(true)
+    expect(told).toBe(1)
+    channel.dispose()
   })
 })

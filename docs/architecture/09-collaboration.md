@@ -158,8 +158,10 @@ It runs on the **room's** clock. The room answers `MESSAGE_TIME` (3) to the
 asker alone, and `ServerClock` keeps the offset from the quickest of the last
 eight round trips. A client asks three times on connecting, every five minutes
 and when the page becomes visible. "Done" is never stored; it is worked out
-from that clock. An older room ignores the question, and the client stays on
-its own clock.
+from that clock. The controls that write a time wait for the first answer,
+because a deadline written on a skewed clock cannot be repaired afterwards. An
+older room ignores the question, and after five seconds connected the client
+runs the timer on its own clock.
 
 ---
 

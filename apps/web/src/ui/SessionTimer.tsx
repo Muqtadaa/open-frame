@@ -48,6 +48,7 @@ export function SessionTimer() {
 
 function TimerControl({ channel }: { readonly channel: FacilitationChannel }) {
   const stored = useSyncExternalStore(channel.subscribe, channel.timer)
+  const ready = useSyncExternalStore(channel.subscribe, channel.ready)
   const canEdit = useCanEdit()
   const me = useMe()
   const announce = useInteractionStore((s) => s.announce)
@@ -65,22 +66,32 @@ function TimerControl({ channel }: { readonly channel: FacilitationChannel }) {
    * Said once per run, on every device, at the moment it happens — never on
    * opening a board whose timer ran out an hour ago. So the first reading is
    * taken as already heard, and only a change from it is news.
+   *
+   * Remembered by RUN, not by the last reading: adding a minute to a run that
+   * has warned takes it back above the minute without making it a new run,
+   * and a check against the reading before said it a second time on the way
+   * back down (Codex, on #63).
    */
-  const heard = useRef<{ run: number; lastMinute: boolean; done: boolean } | null>(null)
+  const heard = useRef<{ warned: number | null; finished: number | null } | null>(null)
   const lastMinute = timer.status === 'running' && left <= MINUTE
   useEffect(() => {
-    const before = heard.current
-    heard.current = { run: timer.run, lastMinute, done }
-    if (before === null) return
-    const sameRun = before.run === timer.run
-    if (done && !(sameRun && before.done)) {
+    if (heard.current === null) {
+      heard.current = {
+        warned: lastMinute ? timer.run : null,
+        finished: done ? timer.run : null,
+      }
+      return
+    }
+    if (done && heard.current.finished !== timer.run) {
+      heard.current.finished = timer.run
       announce('Time’s up')
       // Where the chime cannot sound, the bar flashes in its place. On the
       // element directly: it is a one-off effect, not state anything renders from.
       if (!chime()) button.current?.classList.add('is-flashing')
       return
     }
-    if (lastMinute && !(sameRun && before.lastMinute) && timer.durationMs > MINUTE) {
+    if (lastMinute && heard.current.warned !== timer.run && timer.durationMs > MINUTE) {
+      heard.current.warned = timer.run
       announce('1 minute left')
     }
     if (!done) button.current?.classList.remove('is-flashing')
@@ -153,6 +164,7 @@ function TimerControl({ channel }: { readonly channel: FacilitationChannel }) {
               <TimerActions
                 timer={timer}
                 done={done}
+                ready={ready}
                 onWrite={(change) => {
                   write(change(timer, channel.now(), by))
                 }}
@@ -176,10 +188,17 @@ type Change = (timer: Timer, now: number, by: string | null) => Timer
 function TimerActions({
   timer,
   done,
+  ready,
   onWrite,
 }: {
   readonly timer: Timer
   readonly done: boolean
+  /**
+   * Whether the room has said what time it is. Every action below writes a
+   * time, and one written on this device's clock before then stays wrong for
+   * everybody (Codex, on #63) — so they wait, for the one round trip it takes.
+   */
+  readonly ready: boolean
   readonly onWrite: (change: Change) => void
 }) {
   const minutes = timer.durationMs / MINUTE
@@ -217,6 +236,7 @@ function TimerActions({
             type="button"
             className="of-button of-button--primary"
             data-testid="timer-start"
+            disabled={!ready}
             onClick={() => {
               onWrite(startTimer)
             }}
@@ -229,6 +249,7 @@ function TimerActions({
             type="button"
             className="of-button"
             data-testid="timer-pause"
+            disabled={!ready}
             onClick={() => {
               onWrite(pauseTimer)
             }}
@@ -241,6 +262,7 @@ function TimerActions({
             type="button"
             className="of-button of-button--primary"
             data-testid="timer-resume"
+            disabled={!ready}
             onClick={() => {
               onWrite(resumeTimer)
             }}
@@ -253,6 +275,7 @@ function TimerActions({
             type="button"
             className="of-button"
             data-testid="timer-add-minute"
+            disabled={!ready}
             aria-label="Add a minute"
             onClick={() => {
               onWrite(addMinute)
@@ -266,6 +289,7 @@ function TimerActions({
             type="button"
             className="of-button of-button--ghost"
             data-testid="timer-reset"
+            disabled={!ready}
             onClick={() => {
               onWrite(resetTimer)
             }}

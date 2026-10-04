@@ -42,6 +42,30 @@ test('says when one minute is left', async ({ page }) => {
   await expect(page.getByTestId('board-announcer')).toContainText('1 minute left')
 })
 
+/*
+ * Adding a minute to a run that has already warned does not make it a new
+ * run, so it does not warn again on the way back down (Codex, on #63).
+ */
+test('says one minute is left once per run, even after a minute is added', async ({ page }) => {
+  await page.clock.install()
+  await page.getByTestId('board-announcer').evaluate((region) => {
+    const said: string[] = []
+    new MutationObserver(() => {
+      if (region.textContent !== '') said.push(region.textContent ?? '')
+    }).observe(region, { childList: true, characterData: true, subtree: true })
+    Object.assign(window, { said })
+  })
+  await startFor(page, '1:05')
+  await page.clock.runFor(6000)
+  await expect(page.getByTestId('board-announcer')).toContainText('1 minute left')
+
+  await page.getByTestId('timer-add-minute').click()
+  await page.clock.runFor(61_000)
+  await expect(pill(page)).toContainText(/^0:5\d/)
+  const said = await page.evaluate(() => (window as unknown as { said: string[] }).said)
+  expect(said.filter((text) => text === '1 minute left')).toHaveLength(1)
+})
+
 test('pauses where it is, resumes from there, takes a minute more, and resets', async ({
   page,
 }) => {

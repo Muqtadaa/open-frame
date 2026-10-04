@@ -49,6 +49,14 @@ client alone with `[3, sentAt, roomNow]`. The client keeps the offset from the
 quickest of its last eight round trips (`ServerClock`), asks three times on
 connecting, again every five minutes and whenever the page becomes visible.
 
+- **Nothing that writes a time is offered until the clock is known.** A
+  deadline written on a skewed device's own clock stays wrong for everybody, and
+  the room's answer cannot repair it afterwards. The controls wait for the first
+  answer — one round trip — or, in a room too old to give one, five seconds
+  after connecting.
+- **A clock that jumps starts again.** A sample that cannot be reconciled with
+  the best earlier one, within their round trips plus a second, means the
+  device's clock moved (a sleep, a correction); the earlier samples are dropped.
 - **"Done" is never stored.** It is a fact about the clock (`now ≥ endsAt`),
   and a stored one would be wrong on every device that read it a moment late.
 - **A run counts starts**, so a finish is announced and chimed once per run on
