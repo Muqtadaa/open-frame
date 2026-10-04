@@ -1170,3 +1170,9 @@ because the board claimed every wheel event, and the chip's tip carried an
 instruction ("Press to take yours back") nobody needs. The columns now share
 the width beside the scrollbar; a wheel over anything in the chrome that can
 still scroll scrolls it; and the tip is who reacted, nothing more.
+
+And measuring from a turned object started in empty space: the measuring works
+on boxes, and a turned object's box is the upright one around it. Each end of a
+line is now pulled onto the outline it measures from — where that row or
+column actually crosses the turned shape — so the line touches it and the
+number is what is drawn. Upright objects are unchanged.

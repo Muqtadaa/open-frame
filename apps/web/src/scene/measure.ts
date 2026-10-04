@@ -1,4 +1,4 @@
-import type { Rect } from '@openframe/core'
+import type { Point, Rect } from '@openframe/core'
 
 /**
  * Measuring on purpose: what Alt shows between the selection and the object
@@ -234,4 +234,92 @@ export function nearestDistances(
     }
   }
   return segments
+}
+
+/**
+ * What was measured, for pulling a line's ends onto it: the box the measuring
+ * works from, and — for an object that is TURNED — its four corners. Upright
+ * things have no corners to offer; their box is their outline.
+ */
+export interface MeasuredShape {
+  readonly box: Rect
+  readonly corners: readonly Point[] | null
+}
+
+/** The corners of a frame turned by `rotation` radians about its centre. */
+export function outlineOf(frame: Rect, rotation: number): readonly Point[] {
+  const cx = frame.x + frame.width / 2
+  const cy = frame.y + frame.height / 2
+  const cos = Math.cos(rotation)
+  const sin = Math.sin(rotation)
+  return [
+    { x: frame.x, y: frame.y },
+    { x: frame.x + frame.width, y: frame.y },
+    { x: frame.x + frame.width, y: frame.y + frame.height },
+    { x: frame.x, y: frame.y + frame.height },
+  ].map((point) => ({
+    x: cx + (point.x - cx) * cos - (point.y - cy) * sin,
+    y: cy + (point.x - cx) * sin + (point.y - cy) * cos,
+  }))
+}
+
+/**
+ * Where a line across `axis` at `at` crosses an outline: the lowest and
+ * highest coordinate along the axis, or null if it misses.
+ */
+function crossings(corners: readonly Point[], axis: 'x' | 'y', at: number): Span | null {
+  const along = (point: Point): number => (axis === 'x' ? point.x : point.y)
+  const across = (point: Point): number => (axis === 'x' ? point.y : point.x)
+  const hits: number[] = []
+  corners.forEach((p, i) => {
+    const q = corners[(i + 1) % corners.length] ?? p
+    const lo = Math.min(across(p), across(q))
+    const hi = Math.max(across(p), across(q))
+    if (at < lo - EPSILON || at > hi + EPSILON) return
+    if (hi - lo <= EPSILON) {
+      hits.push(along(p), along(q))
+      return
+    }
+    const t = Math.min(1, Math.max(0, (at - across(p)) / (across(q) - across(p))))
+    hits.push(along(p) + t * (along(q) - along(p)))
+  })
+  return hits.length === 0 ? null : { from: Math.min(...hits), to: Math.max(...hits) }
+}
+
+/**
+ * Each end of each line pulled onto the outline it measures from.
+ *
+ * The measuring works on boxes, and a turned object's box is the upright one
+ * around it — so a line began in empty space at that box's corner, short of
+ * the shape. Here an end that sits on a turned shape's box moves to where the
+ * line actually crosses the shape, and the number becomes the length that is
+ * drawn. A line that misses the outline altogether (the far leg of an L) is
+ * left where it was; upright shapes are untouched.
+ */
+export function toOutlines(
+  segments: readonly MeasureSegment[],
+  shapes: readonly MeasuredShape[],
+): readonly MeasureSegment[] {
+  const pull = (segment: MeasureSegment, value: number): number => {
+    for (const shape of shapes) {
+      if (shape.corners === null) continue
+      const along = span(shape.box, segment.axis)
+      const across = span(shape.box, other(segment.axis))
+      if (segment.at < across.from - EPSILON || segment.at > across.to + EPSILON) continue
+      const atFrom = Math.abs(along.from - value) <= EPSILON
+      const atTo = Math.abs(along.to - value) <= EPSILON
+      if (!atFrom && !atTo) continue
+      const hit = crossings(shape.corners, segment.axis, segment.at)
+      if (hit === null) continue
+      return atTo ? hit.to : hit.from
+    }
+    return value
+  }
+  return segments
+    .map((segment) => ({
+      ...segment,
+      from: pull(segment, segment.from),
+      to: pull(segment, segment.to),
+    }))
+    .filter((segment) => segment.to - segment.from > EPSILON)
 }

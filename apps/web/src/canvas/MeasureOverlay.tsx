@@ -1,4 +1,9 @@
-import { visibleWorldRect, worldToScreen, type Rect } from '@openframe/core'
+import {
+  visibleWorldRect,
+  worldToScreen,
+  type AnyOpenFrameObject,
+  type Rect,
+} from '@openframe/core'
 
 import { useBoardDocument } from '../hooks/use-document-object.js'
 import { useInteractionStore } from '../interaction/interaction-store.js'
@@ -10,9 +15,24 @@ import {
   gapsWithin,
   matchesBetween,
   nearestDistances,
+  outlineOf,
+  toOutlines,
+  type MeasuredShape,
   type MeasureMatch,
   type MeasureSegment,
 } from '../scene/measure.js'
+
+/**
+ * What measuring knows of one object: its bounds (rule 16), and — when it is
+ * TURNED — the corners it is actually drawn with, so lines meet the shape
+ * rather than the upright box around it. As the hover outline decides it: a
+ * frame with no extent of its own (a group, a connector) has no corners to turn.
+ */
+function shapeOf(object: AnyOpenFrameObject, box: Rect): MeasuredShape {
+  const { frame } = object
+  const turned = frame.rotation !== 0 && frame.width > 0 && frame.height > 0
+  return { box, corners: turned ? outlineOf(frame, frame.rotation) : null }
+}
 
 /**
  * What Alt shows: how far the selection is from the object under the pointer,
@@ -69,12 +89,13 @@ function Measurements({
 
   // Bounds, never `.frame` (rule 16): a group's frame is nothing, and a
   // connector's is not where it is drawn.
-  const members: Rect[] = []
+  const shapes: MeasuredShape[] = []
   for (const id of selection) {
     const object = document.objects.get(id)
     if (object === undefined || object.hidden === true) continue
-    members.push(runtime.registry.boundsOf(object, document))
+    shapes.push(shapeOf(object, runtime.registry.boundsOf(object, document)))
   }
+  const members = shapes.map((shape) => shape.box)
   const selected = union(members)
   if (selected === null) return null
 
@@ -82,13 +103,22 @@ function Measurements({
     !measuring || hoveredId === null || selection.has(hoveredId)
       ? undefined
       : document.objects.get(hoveredId)
-  const target = hovered === undefined ? null : runtime.registry.boundsOf(hovered, document)
+  const targetShape =
+    hovered === undefined ? null : shapeOf(hovered, runtime.registry.boundsOf(hovered, document))
+  const target = targetShape?.box ?? null
+  // A selection of one is measured from its own outline; of several, as the
+  // one box it is moved as.
+  const selectedShape: MeasuredShape =
+    shapes.length === 1 && shapes[0] !== undefined ? shapes[0] : { box: selected, corners: null }
 
   let segments: readonly MeasureSegment[]
   let matches: readonly MeasureMatch[]
   if (target !== null) {
     // One box against what is pointed at.
-    segments = distancesBetween(selected, target)
+    segments = toOutlines(distancesBetween(selected, target), [
+      selectedShape,
+      ...(targetShape === null ? [] : [targetShape]),
+    ])
     matches = matchesBetween(selected, target)
   } else if (nudging) {
     /*
@@ -107,7 +137,7 @@ function Measurements({
       ),
       selection,
     )
-    segments = nearestDistances(selected, others)
+    segments = toOutlines(nearestDistances(selected, others), [selectedShape])
     matches = guidesAround(selected, others, exactlyAligned(selected, others)).map((guide) => ({
       axis: guide.axis,
       position: guide.position,
@@ -117,7 +147,7 @@ function Measurements({
   } else {
     // Nothing pointed at: the spacing inside the selection — which is how an
     // even row is checked.
-    segments = gapsWithin(members)
+    segments = toOutlines(gapsWithin(members), shapes)
     matches = []
   }
 

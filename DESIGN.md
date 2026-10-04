@@ -399,7 +399,10 @@ the only insistent hues in the whole system belong to the user's material.
   on both axes are measured as one L from corner to corner — across along the
   selection's near edge, then along the target's — never as two spokes from
   their middles that meet nowhere — and so is every pair of neighbours on a
-  diagonal inside a selection, each drawn whole. While Alt is held
+  diagonal inside a selection, each drawn whole. A turned object is measured
+  from its own edge — where the line crosses its outline — not from the
+  upright box around it, so a line always starts on what it measures and its
+  number is the length drawn. While Alt is held
   the record panel fades and lets the pointer through, because what you measure
   to is usually beside the selection, under the panel. Nudging with the arrows
   shows the same lines on every press — the distance to the nearest neighbour
