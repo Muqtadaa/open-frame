@@ -148,8 +148,9 @@ export function BoardOverview() {
           key,
           depth,
           parent,
-          label: opens ? `${label}, ${held}` : label,
-          content: opens ? (
+          // A container says what it holds even when that is nothing.
+          label: entry.holds ? `${label}, ${held}` : label,
+          content: entry.holds ? (
             <>
               {label}
               <span className="of-overview__held">{held}</span>

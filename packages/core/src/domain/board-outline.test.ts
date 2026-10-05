@@ -75,6 +75,28 @@ describe('what is on the board', () => {
     expect(total).toBe(3)
   })
 
+  // An empty frame still says it holds nothing, not like a note (Codex, on #78).
+  it('says an empty frame is one that holds things', () => {
+    create({ type: 'frame', x: 0, y: 0, data: {} })
+    of('sticky')
+    expect(outline().top.map((entry) => [entry.object.type, entry.holds, entry.held])).toEqual([
+      ['frame', true, 0],
+      ['sticky', false, 0],
+    ])
+  })
+
+  /*
+   * Hiding a frame hides the frame, not what is in it: its members are still
+   * drawn and still Tab stops, so they stand in its place (Codex, on #78).
+   */
+  it('lists what a hidden frame holds in its place', () => {
+    const frame = create({ type: 'frame', x: 0, y: 0, data: {}, hidden: true })
+    const inside = of('sticky', frame)
+    const { top, total } = outline()
+    expect(idsOf(top)).toEqual([inside])
+    expect(total).toBe(1)
+  })
+
   it('is empty for an empty board', () => {
     expect(outline()).toEqual({ counts: [], total: 0, top: [], unsupported: [] })
   })
@@ -88,6 +110,11 @@ describe('what the board claims without grounds', () => {
     relate(grounded, evidence)
 
     expect(outline().unsupported).toEqual([{ type: 'insight', ids: [bare] }])
+  })
+
+  it('names every bare claim of a type, in one list', () => {
+    const bare = [of('insight'), of('insight'), of('insight')]
+    expect(outline().unsupported).toEqual([{ type: 'insight', ids: bare }])
   })
 
   it('never names what nothing is derived into — a note is not a claim', () => {
