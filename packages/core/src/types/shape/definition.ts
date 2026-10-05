@@ -1,4 +1,4 @@
-import { plainTextOf } from '../../domain/rich-text.js'
+import { appendParagraph, plainTextOf } from '../../domain/rich-text.js'
 import { defineObjectType } from '../../domain/registry.js'
 import { resizeTokens } from '../shared/resize-tokens.js'
 import { textToSpans } from '../shared/text-to-spans.js'
@@ -44,6 +44,9 @@ export const shapeType = defineObjectType<typeof SHAPE_TYPE, ShapeData>({
     data: { shape: init?.shape ?? 'rectangle', text: init?.text ?? [{ text: '' }] },
     frame: { width: 160, height: 120 },
   }),
+
+  // Words pasted onto the shape while it is selected go in on a new line.
+  appendText: (data, text) => ({ ...data, text: appendParagraph(data.text, text) }),
 
   capabilities: {
     resizable: true,

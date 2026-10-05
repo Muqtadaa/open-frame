@@ -5,6 +5,7 @@ import type { Point } from '../geometry/point.js'
 import { groupByParent, type AssetRef, type BoardDocument } from './document.js'
 import type { ObjectId } from './ids.js'
 import type { AnyOpenFrameObject, ObjectBase, StyleProp } from './object.js'
+import type { RichText } from './rich-text.js'
 
 /**
  * One directed, named link between two objects.
@@ -265,6 +266,27 @@ export interface CopyContext {
    * when nothing could be uploaded (it is then shown as unavailable).
    */
   readonly asset: (ref: AssetRef) => AssetRef
+}
+
+/** One row of a grid pasted from outside the board, a cell's words each. */
+export type PastedRow = readonly RichText[]
+
+/** What a type makes of something pasted from outside the board (`fromOutside`). */
+export interface PastedObject<TData> {
+  readonly data: Partial<TData>
+  readonly width: number
+  readonly height: number
+  /** Some of what was pasted did not fit what this type can hold, and was left out. */
+  readonly clipped?: boolean
+}
+
+/**
+ * The kinds of content from outside the board that become an object of their
+ * own: words, and a grid copied out of a spreadsheet.
+ */
+export interface OutsidePaste<TData> {
+  readonly text?: (text: RichText) => PastedObject<TData>
+  readonly grid?: (rows: readonly PastedRow[]) => PastedObject<TData>
 }
 
 export interface ObjectCapabilities {
@@ -598,6 +620,24 @@ export interface ObjectTypeDefinition<TType extends string, TData> {
   readonly copyReferences?: (data: TData, copy: CopyContext) => TData | null
 
   /**
+   * Words pasted from outside the board while this object is the one thing
+   * selected, added to it on a new line — the data with them in.
+   *
+   * An OPTIONAL MEMBER: a type declares it when pasting words onto it should
+   * mean "into it" rather than "next to it". Without it, the words become an
+   * object of their own (`fromOutside.text`), whatever is selected.
+   */
+  readonly appendText?: (data: TData, text: RichText) => TData
+
+  /**
+   * What this type makes of content pasted from outside the board, for the
+   * kinds it is the home of. The web app asks the registry which type takes
+   * pasted words or a pasted grid rather than naming one (rule 5), and the
+   * registry contract holds that exactly one type answers each.
+   */
+  readonly fromOutside?: OutsidePaste<TData>
+
+  /**
    * The part of this object's content currently shown, for types that hold
    * more than they display.
    *
@@ -770,6 +810,8 @@ export interface ErasedObjectTypeDefinition {
     data: Record<string, unknown>,
     copy: CopyContext,
   ) => Record<string, unknown> | null
+  readonly appendText?: (data: Record<string, unknown>, text: RichText) => Record<string, unknown>
+  readonly fromOutside?: OutsidePaste<Record<string, unknown>>
   readonly actions?: readonly ErasedAction[]
 }
 
@@ -857,6 +899,8 @@ export function defineObjectType<TType extends string, TData>(
     cropWindow,
     assets,
     copyReferences,
+    appendText,
+    fromOutside,
     relation,
     mark,
     fields,
@@ -910,6 +954,13 @@ export function defineObjectType<TType extends string, TData>(
           copyReferences: (data, copy) =>
             copyReferences(data as TData, copy) as Record<string, unknown> | null,
         }),
+    ...(appendText === undefined
+      ? {}
+      : {
+          appendText: (data, text) =>
+            appendText(data as TData, text) as unknown as Record<string, unknown>,
+        }),
+    ...(fromOutside === undefined ? {} : { fromOutside }),
     ...(dividers === undefined
       ? {}
       : { dividers: (object) => dividers(object as ObjectBase<TType, TData>) }),
@@ -1257,6 +1308,32 @@ export class ObjectTypeRegistry {
   /** The stored files this object shows (`assets`), or none. */
   assetsOf(object: AnyOpenFrameObject): readonly AssetRef[] {
     return this.#definitions.get(object.type)?.assets?.(object) ?? []
+  }
+
+  /**
+   * This object's data with pasted words added on a new line, or `null` when
+   * its type takes no words that way (`appendText`).
+   */
+  appendedText(object: AnyOpenFrameObject, text: RichText): Record<string, unknown> | null {
+    const append = this.#definitions.get(object.type)?.appendText
+    return append === undefined ? null : append(object.data as Record<string, unknown>, text)
+  }
+
+  /**
+   * The object pasted words, or a pasted grid, become: the type that is their
+   * home and what it makes of them. `null` when no registered type takes them.
+   */
+  fromOutside(
+    pasted: { readonly text: RichText } | { readonly grid: readonly PastedRow[] },
+  ): (PastedObject<Record<string, unknown>> & { readonly type: string }) | null {
+    for (const definition of this.#definitions.values()) {
+      const made =
+        'text' in pasted
+          ? definition.fromOutside?.text?.(pasted.text)
+          : definition.fromOutside?.grid?.(pasted.grid)
+      if (made !== undefined) return { type: definition.type, ...made }
+    }
+    return null
   }
 
   /** Objects whose rendering depends on this one — the reverse of `dependencies`. */

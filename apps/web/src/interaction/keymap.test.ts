@@ -75,6 +75,10 @@ describe('editing shortcuts', () => {
     expect(resolveKeyAction(key('x', { metaKey: true }), TOOLS)).toEqual({ kind: 'cut' })
     expect(resolveKeyAction(key('c', { metaKey: true }), TOOLS)).toEqual({ kind: 'copy' })
     expect(resolveKeyAction(key('v', { metaKey: true }), TOOLS)).toEqual({ kind: 'paste' })
+    expect(resolveKeyAction(key('V', { metaKey: true, shiftKey: true }), TOOLS)).toEqual({
+      kind: 'paste',
+      plain: true,
+    })
   })
 
   it('reorders with bracket keys', () => {

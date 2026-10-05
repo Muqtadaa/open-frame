@@ -196,7 +196,10 @@ export function useKeyboardShortcuts(setSpaceHeld: (held: boolean) => void): voi
         return
       }
       if (action.kind === 'paste') {
-        expectPaste(() => void commands.paste())
+        expectPaste(
+          () => void commands.paste(undefined, action.plain === true),
+          action.plain === true,
+        )
         return
       }
       event.preventDefault()

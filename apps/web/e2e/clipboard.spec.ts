@@ -131,3 +131,138 @@ test('the menu pastes a copy made in another tab', async ({ page, context }) => 
   await expect(other.locator('[data-object-type="sticky"]')).toHaveCount(2)
   await expect(other.locator('[data-object-type="frame"]')).toHaveCount(1)
 })
+
+/** Puts what another application would on the system clipboard. */
+async function copyFromElsewhere(page: Page, kinds: Record<string, string>): Promise<void> {
+  await page.evaluate(async (entries) => {
+    const item = new ClipboardItem(
+      Object.fromEntries(
+        Object.entries(entries).map(([type, value]) => [type, new Blob([value], { type })]),
+      ),
+    )
+    await navigator.clipboard.write([item])
+  }, kinds)
+}
+
+test.describe('content from another application', () => {
+  test.use({ board: 'fresh' })
+
+  test('words from a document land as a text box, formatting and all', async ({ page }) => {
+    await copyFromElsewhere(page, {
+      'text/html': '<p>Pricing <b>is hidden</b></p>',
+      'text/plain': 'Pricing is hidden',
+    })
+    await page.locator(CANVAS).click({ position: { x: 20, y: 20 } })
+    await page.keyboard.press(`${MOD}+v`)
+
+    await expect(page.locator('[data-object-type="text"]')).toHaveCount(1)
+    const text = defined(
+      (await objects(page)).find((object) => object.type === 'text'),
+      'the pasted text box',
+    )
+    expect(text.data.text).toEqual([{ text: 'Pricing ' }, { text: 'is hidden', marks: ['bold'] }])
+  })
+
+  /*
+   * Chromium hands this paste only its plain text, so this holds the outcome;
+   * that the key itself is what asks for plain words, in a browser that does
+   * not strip them, is `clipboard-keys.test.ts`.
+   */
+  test('Shift+Mod+V pastes the words alone', async ({ page }) => {
+    await copyFromElsewhere(page, {
+      'text/html': '<p><b>Pricing is hidden</b></p>',
+      'text/plain': 'Pricing is hidden',
+    })
+    await page.locator(CANVAS).click({ position: { x: 20, y: 20 } })
+    await page.keyboard.press(`Shift+${MOD}+v`)
+
+    await expect(page.locator('[data-object-type="text"]')).toHaveCount(1)
+    const text = defined(
+      (await objects(page)).find((object) => object.type === 'text'),
+      'the pasted text box',
+    )
+    expect(text.data.text).toEqual([{ text: 'Pricing is hidden' }])
+  })
+
+  /*
+   * A browser that fires no paste event (nothing editable focused) leaves the
+   * key to paste this tab's copy itself — and Shift+Mod+V must still mean the
+   * words alone, not the notes again (Codex, on #76). The event is stopped
+   * here so the key's own path is the one that runs.
+   */
+  test('Shift+Mod+V pastes a copy as its words, with no paste event', async ({ page }) => {
+    await seedBoard(
+      page,
+      buildBoard((board) => board.note('Pricing is hidden', { x: 600, y: 400 })),
+    )
+    await page.locator('[data-object-type="sticky"]').click()
+    await page.keyboard.press(`${MOD}+c`)
+    await page.evaluate(() => {
+      window.addEventListener('paste', (event) => event.stopImmediatePropagation(), true)
+    })
+    await page.locator(CANVAS).click({ position: { x: 20, y: 20 } })
+    await page.keyboard.press(`Shift+${MOD}+v`)
+
+    await expect(page.locator('[data-object-type="text"]')).toHaveCount(1)
+    await expect(page.locator('[data-object-type="sticky"]')).toHaveCount(1)
+    const text = defined(
+      (await objects(page)).find((object) => object.type === 'text'),
+      'the pasted text box',
+    )
+    expect(text.data.text).toEqual([{ text: 'Pricing is hidden' }])
+  })
+
+  test('words pasted onto a selected note go in on a new line', async ({ page }) => {
+    await seedBoard(
+      page,
+      buildBoard((board) => board.note('Pricing', { x: 600, y: 400 })),
+    )
+    await page.locator('[data-object-type="sticky"]').click()
+    await copyFromElsewhere(page, { 'text/plain': 'is hidden' })
+    await page.keyboard.press(`${MOD}+v`)
+
+    await expect(page.locator('[data-object-type="sticky"]')).toContainText('is hidden')
+    await expect(page.locator('[data-object-type="text"]')).toHaveCount(0)
+    const note = defined(
+      (await objects(page)).find((object) => object.type === 'sticky'),
+      'the note',
+    )
+    expect(note.data.text).toEqual([{ text: 'Pricing\nis hidden' }])
+  })
+
+  test('a single spreadsheet column lands as a table', async ({ page }) => {
+    await copyFromElsewhere(page, {
+      'text/html': '<table><tr><td>P07</td></tr><tr><td>P09</td></tr></table>',
+      'text/plain': 'P07\nP09\n',
+    })
+    await page.locator(CANVAS).click({ position: { x: 20, y: 20 } })
+    await page.keyboard.press(`${MOD}+v`)
+
+    await expect(page.locator('[data-object-type="table"]')).toHaveCount(1)
+    await expect(page.locator('[data-object-type="text"]')).toHaveCount(0)
+  })
+
+  test('a spreadsheet range lands as a table, cell for cell', async ({ page }) => {
+    await copyFromElsewhere(page, {
+      'text/html':
+        '<table><tr><td>Who</td><td>What</td></tr><tr><td>P07</td><td>Price</td></tr></table>',
+      'text/plain': 'Who\tWhat\nP07\tPrice\n',
+    })
+    await page.locator(CANVAS).click({ position: { x: 20, y: 20 } })
+    await page.keyboard.press(`${MOD}+v`)
+
+    await expect(page.locator('[data-object-type="table"]')).toHaveCount(1)
+    const table = defined(
+      (await objects(page)).find((object) => object.type === 'table'),
+      'the pasted table',
+    ).data as { columns: unknown[]; rows: unknown[]; cells: { text: { text: string }[] }[] }
+    expect(table.columns).toHaveLength(2)
+    expect(table.rows).toHaveLength(2)
+    expect(table.cells.map((cell) => cell.text.map((span) => span.text).join(''))).toEqual([
+      'Who',
+      'What',
+      'P07',
+      'Price',
+    ])
+  })
+})

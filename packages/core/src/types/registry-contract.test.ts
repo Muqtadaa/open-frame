@@ -125,6 +125,36 @@ describe('object type registry contract', () => {
     }
   })
 
+  /*
+   * Content pasted from outside the board becomes one type's object: two types
+   * answering would make which one depend on registration order.
+   */
+  it('has exactly one home for pasted words and one for a pasted grid', () => {
+    const homes = (kind: 'text' | 'grid') =>
+      definitions.filter((d) => d.fromOutside?.[kind] !== undefined).map((d) => d.type)
+    expect(homes('text')).toEqual(['text'])
+    expect(homes('grid')).toEqual(['table'])
+    expect(
+      definitions
+        .filter((d) => d.appendText !== undefined)
+        .map((d) => d.type)
+        .sort(),
+    ).toEqual(['shape', 'sticky', 'text'])
+  })
+
+  // Every object pasted from outside must be one its own schema accepts.
+  it('makes pasted content into data its type accepts', () => {
+    const words = registry.fromOutside({ text: [{ text: 'Pricing\nis hidden' }] })
+    const grid = registry.fromOutside({
+      grid: [[[{ text: 'a' }], [{ text: 'b' }]], [[{ text: 'c' }]]],
+    })
+    for (const made of [words, grid]) {
+      if (made === null) throw new Error('expected a home')
+      const definition = registry.require(made.type)
+      expect(definition.validate(definition.create(made.data).data).ok).toBe(true)
+    }
+  })
+
   it('rejects duplicate registration', () => {
     const duplicate = definitions[0]
     expect(duplicate).toBeDefined()

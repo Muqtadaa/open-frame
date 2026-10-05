@@ -34,7 +34,7 @@ export type KeyAction =
   | { readonly kind: 'ungroup' }
   | { readonly kind: 'copy' }
   | { readonly kind: 'cut' }
-  | { readonly kind: 'paste' }
+  | { readonly kind: 'paste'; readonly plain?: true }
   | { readonly kind: 'reorder'; readonly placement: 'front' | 'back' | 'forward' | 'backward' }
   | { readonly kind: 'toggle-lock' }
   | { readonly kind: 'select-all' }
@@ -116,7 +116,8 @@ export function resolveKeyAction(
         return { kind: 'cut' }
       case 'v':
       case 'V':
-        return { kind: 'paste' }
+        // Shift+Mod+V pastes words without their formatting, as everywhere.
+        return ctx.shiftKey ? { kind: 'paste', plain: true } : { kind: 'paste' }
       /*
        * Claimed from the browser's own find-in-page, which would otherwise open
        * over the canvas and search the DOM — finding only what happens to be

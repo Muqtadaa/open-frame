@@ -460,7 +460,7 @@ describe('the words on a copy', () => {
     const b = note('b', 500, 0)
     relate(frame, b)
 
-    expect(wordsOf(h.store.getDocument(), copy([frame]), h.registry)).toEqual(['Findings', long])
+    expect(wordsOf(copy([frame]), h.registry)).toEqual(['Findings', long])
   })
 })
 
