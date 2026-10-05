@@ -100,7 +100,9 @@ their text.
 
 **Explicitly undecided — do not invent answers:**
 
-- Export formats.
+- Export formats. The [parity matrix](docs/product/parity-matrix.md) ranks
+  taking a board out as the first replacement-critical gap, and needs this
+  answered before it can be built.
 
 Collaboration transport and presence were on this list until they were decided:
 one room per board, held by a Durable Object

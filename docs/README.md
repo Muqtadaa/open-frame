@@ -116,4 +116,5 @@ pnpm verify     # typecheck + lint + boundaries + tests + build
 
 See the [roadmap](phases/README.md) for what is built and what is next, and
 [the current audit](reviews/audit-2026-10-02.md) for what was most recently
-checked and fixed.
+checked and fixed. Where the product stands against its neighbours is the
+[parity matrix](product/parity-matrix.md).
