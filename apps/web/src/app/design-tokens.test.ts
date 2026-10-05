@@ -1,4 +1,4 @@
-import { readFileSync } from 'node:fs'
+import { readdirSync, readFileSync } from 'node:fs'
 import { resolve } from 'node:path'
 import { COLOR_TOKENS, createDefaultRegistry } from '@openframe/core'
 import { describe, expect, it } from 'vitest'
@@ -983,6 +983,13 @@ describe.each(THEMES)('the apparatus reads on anything — $name', ({ token }) =
   })
 })
 
+/** Every file under `views/table/`, which is where a table is drawn. */
+function tableParts(): string[] {
+  return readdirSync(resolve(process.cwd(), 'src/views/table'))
+    .filter((file) => /\.tsx?$/.test(file) && !/\.test\.tsx?$/.test(file))
+    .map((file) => `src/views/table/${file}`)
+}
+
 /*
  * An object's EDGE is how you find it on the board, so it is a graphic you
  * must perceive — 3:1 against what it sits on (PRODUCT.md's open gap, closed
@@ -992,7 +999,10 @@ describe.each(THEMES)('the apparatus reads on anything — $name', ({ token }) =
  * an edge moved back onto a quieter token fails here.
  */
 describe.each(THEMES)('edges that never vanish — $name', ({ token }) => {
-  const TABLE = readFileSync(resolve(process.cwd(), 'src/views/TableView.tsx'), 'utf8')
+  // The table's view and the parts it is drawn from.
+  const TABLE = ['src/views/TableView.tsx', ...tableParts()]
+    .map((path) => readFileSync(resolve(process.cwd(), path), 'utf8'))
+    .join('\n')
 
   it.each(['line-black', 'line-white'])('a %s stroke shows on the page and the desk', (line) => {
     expect(contrast(token(line), token('page'))).toBeGreaterThanOrEqual(3)

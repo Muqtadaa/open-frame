@@ -2,15 +2,12 @@ import {
   useEffect,
   useRef,
   useState,
-  type CSSProperties,
-  type HTMLAttributes,
   type KeyboardEvent,
   type MouseEvent as ReactMouseEvent,
   type PointerEvent as ReactPointerEvent,
   type ReactNode,
 } from 'react'
 import { flushSync } from 'react-dom'
-
 import {
   DEFAULT_SIZE,
   LINE_PRESETS,
@@ -28,7 +25,6 @@ import {
   hasMerge,
   indicesOf,
   insertTracks,
-  lineLookup,
   mergeAt,
   mergeRange,
   rangeBetween,
@@ -49,17 +45,13 @@ import {
   type LinePreset,
   type ListKind,
   type Mark,
-  type Merge,
-  type ObjectStyle,
   type Rect,
   type RichText,
   type SizeToken,
   type StrokeToken,
   type TableCell,
   type TableData,
-  type TableLine,
 } from '@openframe/core'
-
 import {
   defineObjectView,
   type ObjectEditorProps,
@@ -77,20 +69,8 @@ import {
   type RichTextFieldHandle,
 } from './RichTextField.js'
 import { RichTextView } from './RichTextView.js'
-import { cellAt, tracks } from '../scene/table-grid.js'
+import { cellAt } from '../scene/table-grid.js'
 import { cellsInTrack, fitColumnWidth, fitRowHeight } from '../scene/fit-track.js'
-import {
-  STROKE_WIDTHS,
-  dashArray,
-  fontFamily,
-  inkColor,
-  inkOf,
-  lineOf,
-  readableInkOn,
-  surfaceOf,
-  textAlign,
-  verticalAlign,
-} from '../scene/style-tokens.js'
 import { Swatches, groundOf, type SwatchKind } from '../controls/Swatches.js'
 import {
   AlignIcon,
@@ -102,387 +82,10 @@ import {
 } from '../controls/icons.js'
 import { lineClamp } from './line-clamp.js'
 import { openingRange } from './rich-text-dom.js'
-
-/*
- * ---------------------------------------------------------------------------
- * Drawing a table
- * ---------------------------------------------------------------------------
- */
-
-/** Where each track boundary falls, in the object's own units, ends included. */
-function edgesOf(weights: readonly number[], extent: number): number[] {
-  const total = weights.reduce((sum, weight) => sum + weight, 0)
-  const found = [0]
-  let running = 0
-  for (const weight of weights) {
-    running += weight
-    found.push(total > 0 ? (running / total) * extent : 0)
-  }
-  return found
-}
-
-/** The same, as fractions — the unit apparatus is placed in. */
-function fractionsOf(weights: readonly number[]): number[] {
-  return edgesOf(weights, 1)
-}
-
-/**
- * Which cells a merge hides, and which cells anchor one, found ONCE per draw.
- *
- * Asked per cell, `mergeAt` is a scan of every merge per cell — rule 10 on a
- * grid that may hold five thousand of them.
- */
-function mergeIndex(data: TableData): {
-  readonly anchors: ReadonlyMap<number, Merge>
-  readonly covered: ReadonlySet<number>
-} {
-  const anchors = new Map<number, Merge>()
-  const covered = new Set<number>()
-  const width = data.columns.length
-  for (const merge of data.merges ?? []) {
-    anchors.set(merge.row * width + merge.col, merge)
-    for (let row = merge.row; row < merge.row + merge.rows; row++) {
-      for (let col = merge.col; col < merge.col + merge.cols; col++) {
-        if (row !== merge.row || col !== merge.col) covered.add(row * width + col)
-      }
-    }
-  }
-  return { anchors, covered }
-}
-
-/**
- * One cell's own dress — colours and alignment — as a style object, or
- * `undefined` for none.
- *
- * `undefined` rather than an empty object: React treats `style={{}}` as a
- * value that changed on every render, and this runs once per cell per frame on
- * a grid that may hold hundreds.
- *
- * Alignment set here beats the table's because the table's is INHERITED: its
- * `text-align` and its `--of-valign` come down from the grid, and a cell that
- * states its own simply shadows them.
- */
-function cellPaint(cell: TableCell): CSSProperties | undefined {
-  if (
-    cell.fill === undefined &&
-    cell.textColor === undefined &&
-    cell.align === undefined &&
-    cell.verticalAlign === undefined
-  ) {
-    return undefined
-  }
-  /*
-   * The ink flips on the CELL's own fill, not the table's. A black cell in a
-   * plain table is the case: the table says nothing about ink, so without this
-   * the cell takes the board's and disappears into itself.
-   */
-  const ink = cell.textColor === undefined ? readableInkOn(cell.fill) : inkOf(cell.textColor)
-  return {
-    ...(cell.fill === undefined ? {} : { background: surfaceOf(cell.fill, 'gray') }),
-    ...(ink === undefined ? {} : { color: ink }),
-    ...(cell.align === undefined ? {} : { textAlign: textAlign(cell.align) }),
-    ...(cell.verticalAlign === undefined
-      ? {}
-      : { ['--of-valign' as string]: verticalAlign(cell.verticalAlign) }),
-  }
-}
-
-/**
- * How a line at one address is drawn, or `null` for not at all.
- *
- * Anything the line does not say is the TABLE's: its `strokeColor`, its
- * `stroke`. A table nobody has ruled keeps the look it always had — a firmer
- * edge round a fainter grid — until somebody gives it a line colour, which
- * then means every line, because one colour meaning two was the confusion this
- * model was written to end.
- */
-function resolveLine(
-  stored: TableLine | undefined,
-  style: ObjectStyle,
-  outer: boolean,
-): { width: number; color: string; dash: DashToken | undefined } | null {
-  const weight: StrokeToken = stored?.weight ?? style.stroke ?? 'thin'
-  if (weight === 'none') return null
-  const color =
-    stored?.color !== undefined
-      ? lineOf(stored.color)
-      : style.strokeColor !== undefined
-        ? lineOf(style.strokeColor)
-        : outer
-          ? 'var(--of-control-border)'
-          : 'var(--of-edge-inner)'
-  return { width: STROKE_WIDTHS[weight], color, dash: stored?.dash }
-}
-
-/**
- * The grid's lines, drawn once over the cells.
- *
- * SVG rather than cell borders, because a line here belongs to the GRID: a
- * border belongs to one element, so two cells either side of a line each had
- * an opinion about it and one of them had to lose. It also lets a line be
- * thick without pushing the text of the cells beside it about, and dashed
- * without the browser's own idea of what a dashed border looks like.
- *
- * Runs of identical segments are joined into one line, so a dashed rule reads
- * as one rule rather than restarting its pattern at every cell.
- */
-function GridLines({
-  data,
-  style,
-  width,
-  height,
-}: {
-  readonly data: TableData
-  readonly style: ObjectStyle
-  readonly width: number
-  readonly height: number
-}) {
-  const xs = edgesOf(data.columns, width)
-  const ys = edgesOf(data.rows, height)
-  const cols = data.columns.length
-  const rows = data.rows.length
-  const line = lineLookup(data)
-
-  // The segments INSIDE a merge are not drawn: it is one cell.
-  const hidden = { h: new Set<string>(), v: new Set<string>() }
-  for (const merge of data.merges ?? []) {
-    for (let row = merge.row + 1; row < merge.row + merge.rows; row++) {
-      for (let col = merge.col; col < merge.col + merge.cols; col++) {
-        hidden.h.add(`${String(row)}:${String(col)}`)
-      }
-    }
-    for (let col = merge.col + 1; col < merge.col + merge.cols; col++) {
-      for (let row = merge.row; row < merge.row + merge.rows; row++) {
-        hidden.v.add(`${String(row)}:${String(col)}`)
-      }
-    }
-  }
-
-  const drawn: ReactNode[] = []
-  const run = (
-    orientation: 'h' | 'v',
-    at: number,
-    count: number,
-    outer: boolean,
-    place: (from: number, to: number) => { x1: number; y1: number; x2: number; y2: number },
-  ): void => {
-    let start = 0
-    let current: ReturnType<typeof resolveLine> = null
-    const flush = (end: number): void => {
-      if (current !== null && end > start) {
-        drawn.push(
-          <line
-            key={`${orientation}${String(at)}:${String(start)}`}
-            {...place(start, end)}
-            stroke={current.color}
-            strokeWidth={current.width}
-            strokeDasharray={dashArray(current.dash, current.width)}
-            strokeLinecap={current.dash === 'dotted' ? 'round' : 'square'}
-          />,
-        )
-      }
-    }
-    for (let index = 0; index <= count; index++) {
-      const key =
-        orientation === 'h' ? `${String(at)}:${String(index)}` : `${String(index)}:${String(at)}`
-      const next =
-        index === count || hidden[orientation].has(key)
-          ? null
-          : resolveLine(
-              orientation === 'h' ? line('h', at, index) : line('v', index, at),
-              style,
-              outer,
-            )
-      const same =
-        next !== null &&
-        current !== null &&
-        next.color === current.color &&
-        next.width === current.width &&
-        next.dash === current.dash
-      if (same) continue
-      flush(index)
-      current = next
-      start = index
-    }
-  }
-
-  for (let row = 0; row <= rows; row++) {
-    const y = ys[row] ?? 0
-    run('h', row, cols, row === 0 || row === rows, (from, to) => ({
-      x1: xs[from] ?? 0,
-      y1: y,
-      x2: xs[to] ?? 0,
-      y2: y,
-    }))
-  }
-  for (let col = 0; col <= cols; col++) {
-    const x = xs[col] ?? 0
-    run('v', col, rows, col === 0 || col === cols, (from, to) => ({
-      x1: x,
-      y1: ys[from] ?? 0,
-      x2: x,
-      y2: ys[to] ?? 0,
-    }))
-  }
-
-  return (
-    <svg
-      className="of-table__lines"
-      data-testid="table-lines"
-      width={width}
-      height={height}
-      aria-hidden="true"
-      focusable="false"
-    >
-      {drawn}
-    </svg>
-  )
-}
-
-/**
- * The grid itself: the cells laid out, and the lines over them.
- *
- * Shared by the board and the editor, so what you edit is what is drawn — the
- * editor only swaps one cell's contents for a field.
- */
-function TableGrid({
-  data,
-  style,
-  width,
-  height,
-  label,
-  content,
-  cellProps,
-  sized = false,
-}: {
-  readonly data: TableData
-  readonly style: ObjectStyle
-  readonly width: number
-  readonly height: number
-  readonly label: string
-  /** What goes in a cell; the board's text unless the editor says otherwise. */
-  readonly content?: ((index: number, cell: TableCell) => ReactNode) | undefined
-  readonly cellProps?:
-    | ((index: number) => HTMLAttributes<HTMLDivElement> & Record<`data-${string}`, string>)
-    | undefined
-  /**
-   * Drawn at `width` by `height` rather than filling the object: the editor's
-   * draft can be a different size from the object until the edit commits.
-   */
-  readonly sized?: boolean | undefined
-}) {
-  const { columns, rows, cells, headerRow } = data
-  const width_ = columns.length
-  const merges = mergeIndex(data)
-  // Placed explicitly only when something spans; otherwise the grid flows.
-  const placed = merges.anchors.size > 0
-
-  return (
-    <div
-      className="of-table-wrap"
-      style={sized ? { width: `${String(width)}px`, height: `${String(height)}px` } : undefined}
-    >
-      <div
-        className="of-table"
-        style={{
-          gridTemplateColumns: tracks(columns),
-          gridTemplateRows: tracks(rows),
-          fontFamily: fontFamily(style.font),
-          textAlign: textAlign(style.align),
-          /*
-           * A CUSTOM PROPERTY, because those inherit and `justify-content` does
-           * not. This element is a grid, where `justify-content` distributes
-           * tracks along the inline axis — so setting it here moved nothing at
-           * all, and vertical alignment in a table did nothing until this line
-           * changed. The cells read it in `.of-table__cell`.
-           */
-          ['--of-valign' as string]: verticalAlign(style.verticalAlign),
-          /*
-           * The table's colour is its GROUND — what every cell stands on
-           * unless it has a fill of its own. Unset, it is the panel, which is
-           * what a table always stood on and which follows After Hours.
-           */
-          ...(style.color === undefined ? {} : { background: surfaceOf(style.color, 'gray') }),
-          // On the table, not on each cell: one declaration the cells inherit,
-          // rather than a style object rebuilt per cell on every render.
-          color: inkColor(style.textColor) ?? readableInkOn(style.color),
-          opacity: style.opacity ?? 1,
-        }}
-        role="table"
-        aria-label={label}
-      >
-        {/*
-         * Each row its own element, laid out as if it were not there
-         * (`display: contents`), so the cells still sit on the table's grid.
-         * A cell outside a row has no table to belong to: assistive
-         * technology could not read the grid as one.
-         */}
-        {rows.map((_, row) => (
-          <div key={row} role="row" className="of-table__row">
-            {cells.slice(row * width_, (row + 1) * width_).map((cell, col) => {
-              const index = row * width_ + col
-              if (merges.covered.has(index)) return null
-              const merge = merges.anchors.get(index)
-              const head = headerRow && row === 0
-              const paint = cellPaint(cell)
-              return (
-                <div
-                  // The index IS the identity: cells have no ids, and their
-                  // position is what they are.
-                  key={index}
-                  className={`of-table__cell${head ? ' of-table__cell--head' : ''}`}
-                  role={head ? 'columnheader' : 'cell'}
-                  /*
-                   * A header nobody has typed yet still names its column, in
-                   * the words the editor's header strip uses: a fresh table
-                   * read as a grid of columns called nothing (audit
-                   * 2026-09-27).
-                   */
-                  aria-label={
-                    head && plainTextOf(cell.text).trim() === ''
-                      ? `Column ${letter(col)}`
-                      : undefined
-                  }
-                  // Where it is and how far it reaches, read back by fitting a
-                  // track: with merges, a cell's position among its siblings no
-                  // longer says which column it is in.
-                  data-row={row}
-                  data-col={col}
-                  data-rows={merge?.rows ?? 1}
-                  data-cols={merge?.cols ?? 1}
-                  {...(cellProps?.(index) ?? {})}
-                  style={
-                    placed
-                      ? {
-                          ...paint,
-                          gridRow: `${String(row + 1)} / span ${String(merge?.rows ?? 1)}`,
-                          gridColumn: `${String(col + 1)} / span ${String(merge?.cols ?? 1)}`,
-                        }
-                      : paint
-                  }
-                >
-                  {content?.(index, cell) ?? (
-                    <div
-                      className="of-table__cell-text"
-                      data-testid="table-cell-text"
-                      ref={lineClamp}
-                    >
-                      <RichTextView value={cell.text} />
-                    </div>
-                  )}
-                </div>
-              )
-            })}
-          </div>
-        ))}
-      </div>
-      <GridLines data={data} style={style} width={width} height={height} />
-    </div>
-  )
-}
-
-const describeShape = (data: TableData): string =>
-  `Table, ${String(data.columns.length)} columns by ${String(data.rows.length)} rows`
+import { CellChoice } from './table/CellChoice.js'
+import { TableGrid, describeShape } from './table/TableGrid.js'
+import { type Cell, type Selection, anchorOf, letter, step } from './table/cells.js'
+import { fractionsOf } from './table/geometry.js'
 
 /**
  * A table: one object holding a grid.
@@ -508,45 +111,6 @@ function TableRenderer({ object }: ObjectViewProps<TableData>) {
  * Editing a table, as a spreadsheet
  * ---------------------------------------------------------------------------
  */
-
-interface Cell {
-  readonly row: number
-  readonly col: number
-}
-
-/** The column's letter, as a spreadsheet names it. Twenty-six is the most. */
-const letter = (col: number): string => String.fromCharCode(65 + col)
-
-/** The top-left of whatever merge a cell is in, or the cell itself. */
-function anchorOf(data: TableData, cell: Cell): Cell {
-  const merge = mergeAt(data, cell.row, cell.col)
-  return merge === undefined ? cell : { row: merge.row, col: merge.col }
-}
-
-/**
- * One step from a cell, stepping OVER a merge rather than into its middle —
- * moving right out of a cell three columns wide lands in the fourth column,
- * as it looks like it should.
- */
-function step(data: TableData, from: Cell, rows: number, cols: number): Cell {
-  const merge = mergeAt(data, from.row, from.col)
-  const top = merge?.row ?? from.row
-  const left = merge?.col ?? from.col
-  const bottom = merge === undefined ? from.row : merge.row + merge.rows - 1
-  const right = merge === undefined ? from.col : merge.col + merge.cols - 1
-  const row = rows > 0 ? bottom + rows : rows < 0 ? top + rows : from.row
-  const col = cols > 0 ? right + cols : cols < 0 ? left + cols : from.col
-  return {
-    row: Math.max(0, Math.min(data.rows.length - 1, row)),
-    col: Math.max(0, Math.min(data.columns.length - 1, col)),
-  }
-}
-
-/** What the user's selection is, and which end of it is moving. */
-interface Selection {
-  readonly anchor: Cell
-  readonly focus: Cell
-}
 
 /**
  * What the lower half of the cell bar edits: the cells' ground, their ink, or
@@ -1787,68 +1351,6 @@ function TableEditor({
           )}
         </div>
       </Chrome>
-    </div>
-  )
-}
-
-const ALIGN_NAMES: Readonly<Record<AlignToken | VAlignToken, string>> = {
-  start: 'Left',
-  center: 'Centre',
-  end: 'Right',
-  top: 'Top',
-  middle: 'Middle',
-  bottom: 'Bottom',
-}
-
-/**
- * One row of alignment choices, as radios: one of three is always true, and
- * the arrows move along it as the record panel's own rows do.
- */
-function CellChoice<T extends AlignToken | VAlignToken>({
-  label,
-  name,
-  options,
-  current,
-  onPick,
-  render,
-}: {
-  readonly label: string
-  readonly name: string
-  readonly options: readonly T[]
-  readonly current: T
-  readonly onPick: (token: T) => void
-  readonly render: (token: T) => ReactNode
-}) {
-  const step = (event: KeyboardEvent<HTMLDivElement>): void => {
-    const by = event.key === 'ArrowRight' ? 1 : event.key === 'ArrowLeft' ? -1 : 0
-    if (by === 0) return
-    event.preventDefault()
-    const next = options[(options.indexOf(current) + by + options.length) % options.length]
-    if (next === undefined) return
-    onPick(next)
-    const button = event.currentTarget.querySelector<HTMLElement>(`[data-testid="${name}-${next}"]`)
-    button?.focus()
-  }
-  return (
-    <div className="of-choice" role="radiogroup" aria-label={label} onKeyDown={step}>
-      {options.map((option) => (
-        <button
-          key={option}
-          type="button"
-          role="radio"
-          className={`of-choice__item${option === current ? ' of-choice__item--on' : ''}`}
-          aria-checked={option === current}
-          aria-label={ALIGN_NAMES[option]}
-          data-tip={ALIGN_NAMES[option]}
-          tabIndex={option === current ? 0 : -1}
-          data-testid={`${name}-${option}`}
-          onClick={() => {
-            onPick(option)
-          }}
-        >
-          {render(option)}
-        </button>
-      ))}
     </div>
   )
 }
