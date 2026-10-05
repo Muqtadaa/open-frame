@@ -75,16 +75,23 @@ function ClusterPanel({ ids }: { readonly ids: readonly ObjectId[] }) {
   const noun = count === 1 ? 'note' : 'notes'
 
   const ask = async (): Promise<void> => {
-    if (!gathered.ok) return
-    const identity = services.accounts.enabled ? await services.accounts.current() : null
-    if (identity === null) {
-      setStage({ kind: 'refused', why: 'signed-out' })
-      return
-    }
+    /*
+     * Busy, and cancellable, BEFORE the first await. The account lookup is a
+     * wait during which the Cluster button was still there: a double-click
+     * asked twice and spent two runs, and closing the panel mid-lookup could
+     * not stop a request whose controller did not exist yet (Codex, on #67).
+     */
+    if (!gathered.ok || asking.current !== null) return
     const controller = new AbortController()
     asking.current = controller
     setStage({ kind: 'asking' })
     try {
+      const identity = services.accounts.enabled ? await services.accounts.current() : null
+      if (controller.signal.aborted) return
+      if (identity === null) {
+        setStage({ kind: 'refused', why: 'signed-out' })
+        return
+      }
       const outcome = await services.ai.cluster(
         gathered.request,
         identity.accessToken,

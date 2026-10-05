@@ -42,7 +42,7 @@ export function reserveRun(
       everyone: today.everyone + 1,
       people: { ...today.people, [userId]: mine + 1 },
     },
-    result: { ok: true, remaining: limits.person - mine - 1 },
+    result: { ok: true, remaining: limits.person - mine - 1, day },
   }
 }
 

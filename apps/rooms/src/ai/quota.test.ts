@@ -8,9 +8,9 @@ const day = dayOf(Date.UTC(2026, 9, 5, 12))
 describe('daily AI runs', () => {
   it('counts per person and stops each at their limit', () => {
     let counts = reserveRun(undefined, day, 'a', limits)
-    expect(counts.result).toEqual({ ok: true, remaining: 1 })
+    expect(counts.result).toEqual({ ok: true, remaining: 1, day })
     counts = reserveRun(counts.counts, day, 'a', limits)
-    expect(counts.result).toEqual({ ok: true, remaining: 0 })
+    expect(counts.result).toEqual({ ok: true, remaining: 0, day })
     expect(reserveRun(counts.counts, day, 'a', limits).result).toEqual({
       ok: false,
       limit: 'person',
@@ -30,6 +30,7 @@ describe('daily AI runs', () => {
     expect(reserveRun(counts, '2026-10-06', 'a', limits).result).toEqual({
       ok: true,
       remaining: 1,
+      day: '2026-10-06',
     })
   })
 

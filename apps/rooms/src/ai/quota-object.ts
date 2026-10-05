@@ -18,8 +18,13 @@ export class AiQuotaObject extends DurableObject {
     return result
   }
 
-  async refund(userId: string): Promise<void> {
+  /*
+   * To the day the run was TAKEN from, not today: a run reserved before
+   * midnight and given back after it would otherwise come off the new day's
+   * count, and hand out a run the cap never allowed (Codex, on #67).
+   */
+  async refund(userId: string, day: string): Promise<void> {
     const stored = await this.ctx.storage.get<DayCounts>(KEY)
-    await this.ctx.storage.put(KEY, refundRun(stored, dayOf(Date.now()), userId))
+    await this.ctx.storage.put(KEY, refundRun(stored, day, userId))
   }
 }

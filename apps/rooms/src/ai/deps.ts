@@ -23,7 +23,7 @@ export function clusterDeps(env: Env): ClusterDeps {
     configured: key !== '' && url !== '' && publishable !== '',
     verify: verifyWithSupabase({ url, publishableKey: publishable, fetch: fetcher }),
     reserve: (userId) => quota().reserve(userId, limits),
-    refund: (userId) => quota().refund(userId),
+    refund: (userId, day) => quota().refund(userId, day),
     ask: askClaude({
       apiKey: key,
       ...(env.AI_MODEL === undefined ? {} : { model: env.AI_MODEL }),

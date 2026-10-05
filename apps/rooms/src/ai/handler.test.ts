@@ -24,9 +24,9 @@ function deps(overrides: Partial<ClusterDeps> = {}) {
     configured: true,
     verify: vi.fn<(token: string) => Promise<Verified>>(() => Promise.resolve({ userId: 'u1' })),
     reserve: vi.fn<(id: string) => Promise<Reserved>>(() =>
-      Promise.resolve({ ok: true, remaining: 19 }),
+      Promise.resolve({ ok: true, remaining: 19, day: '2026-10-04' }),
     ),
-    refund: vi.fn<(id: string) => Promise<void>>(() => Promise.resolve()),
+    refund: vi.fn<(id: string, day: string) => Promise<void>>(() => Promise.resolve()),
     ask: vi.fn<ClusterDeps['ask']>(() =>
       Promise.resolve<Asked>({ kind: 'answer', answer: goodAnswer }),
     ),
@@ -119,7 +119,8 @@ describe('POST /ai/cluster', () => {
       const d = deps({ ask: () => Promise.resolve(asked as Asked) })
       const response = await handleCluster(post({ notes }), d)
       expect([response.status, await outcome(response)]).toEqual([status, why])
-      expect(d.refund).toHaveBeenCalledWith('u1')
+      // To the day it was taken from, whatever day it is now.
+      expect(d.refund).toHaveBeenCalledWith('u1', '2026-10-04')
     }
   })
 
@@ -132,7 +133,7 @@ describe('POST /ai/cluster', () => {
       },
       reserve: () => {
         order.push('reserve')
-        return Promise.resolve({ ok: true, remaining: 1 })
+        return Promise.resolve({ ok: true, remaining: 1, day: '2026-10-04' })
       },
       ask: () => {
         order.push('ask')

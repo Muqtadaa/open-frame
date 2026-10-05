@@ -26,7 +26,8 @@ export const MAX_BODY_BYTES = 128 * 1024
 export type Verified = { readonly userId: string } | 'refused' | 'unreachable'
 
 export type Reserved =
-  | { readonly ok: true; readonly remaining: number }
+  /** `day` is the UTC day the run was taken from, and the only one a refund may give it back to. */
+  | { readonly ok: true; readonly remaining: number; readonly day: string }
   | { readonly ok: false; readonly limit: 'person' | 'everyone' }
 
 export type Asked =
@@ -41,7 +42,7 @@ export interface ClusterDeps {
   readonly configured: boolean
   readonly verify: (token: string) => Promise<Verified>
   readonly reserve: (userId: string) => Promise<Reserved>
-  readonly refund: (userId: string) => Promise<void>
+  readonly refund: (userId: string, day: string) => Promise<void>
   readonly ask: (request: ClusterRequest) => Promise<Asked>
 }
 
@@ -96,14 +97,14 @@ export async function handleCluster(request: Request, deps: ClusterDeps): Promis
    */
   const asked = await deps.ask(parsed.data)
   if (asked.kind !== 'answer') {
-    await deps.refund(who.userId)
+    await deps.refund(who.userId, slot.day)
     return asked.kind === 'declined'
       ? refuse(422, 'declined', 'The AI declined to cluster these notes')
       : refuse(502, 'failed', 'The AI did not finish')
   }
   const checked = validateClusterProposal(asked.answer, parsed.data)
   if (!checked.ok) {
-    await deps.refund(who.userId)
+    await deps.refund(who.userId, slot.day)
     return refuse(422, 'invalid', checked.reason)
   }
   return json(200, { proposal: checked.proposal, remaining: slot.remaining })
