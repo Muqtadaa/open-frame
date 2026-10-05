@@ -65,6 +65,71 @@
       "licence": "CC0-1.0",
       "sourceUrl": "https://github.com/btahir/open-lofi",
       "retrievedAt": "2026-10-05"
+    },
+    {
+      "id": "sunset-offbeat",
+      "genre": "electronic",
+      "title": "Sunset Offbeat",
+      "artist": "Open Lo-Fi",
+      "durationMs": 159024,
+      "bytes": 3627030,
+      "sha256": "144bd62d4a762c281a432867ea38e5a459885cb7964683ae69505a959434a25e",
+      "mime": "audio/mpeg",
+      "licence": "CC0-1.0",
+      "sourceUrl": "https://github.com/btahir/open-lofi",
+      "retrievedAt": "2026-10-05"
+    },
+    {
+      "id": "cassette-pastel-nights",
+      "genre": "synthwave",
+      "title": "Cassette Pastel Nights",
+      "artist": "Open Lo-Fi",
+      "durationMs": 223056,
+      "bytes": 5220702,
+      "sha256": "3c3903cf4a7762f782706b0ced0f5c612f510d5c5a45e1472aa227e2e437beb0",
+      "mime": "audio/mpeg",
+      "licence": "CC0-1.0",
+      "sourceUrl": "https://github.com/btahir/open-lofi",
+      "retrievedAt": "2026-10-05"
+    },
+    {
+      "id": "vhs-heartbeat",
+      "genre": "synthwave",
+      "title": "VHS Heartbeat",
+      "artist": "Open Lo-Fi",
+      "durationMs": 213408,
+      "bytes": 4726782,
+      "sha256": "5ab7c01ad7af519fce51142d45766c905709e64c5b92d07ce98af5a324f77fb3",
+      "mime": "audio/mpeg",
+      "licence": "CC0-1.0",
+      "sourceUrl": "https://github.com/btahir/open-lofi",
+      "retrievedAt": "2026-10-05"
+    },
+    {
+      "id": "summer-curbside-glow",
+      "genre": "jazzy",
+      "title": "Summer Curbside Glow",
+      "artist": "Open Lo-Fi",
+      "durationMs": 144744,
+      "bytes": 3632118,
+      "sha256": "1cf312ab9f1a82300cfa1d9e8fe356e70b66130dd9a6bac4b11c081be791d2bc",
+      "mime": "audio/mpeg",
+      "licence": "CC0-1.0",
+      "sourceUrl": "https://github.com/btahir/open-lofi",
+      "retrievedAt": "2026-10-05"
+    },
+    {
+      "id": "fireplace-loop",
+      "genre": "calm",
+      "title": "Fireplace Loop",
+      "artist": "Open Lo-Fi",
+      "durationMs": 93936,
+      "bytes": 1930326,
+      "sha256": "56657eff4473b56ab04b72364dabbfd9c9460fb07b95f70ab2320c1371e708e8",
+      "mime": "audio/mpeg",
+      "licence": "CC0-1.0",
+      "sourceUrl": "https://github.com/btahir/open-lofi",
+      "retrievedAt": "2026-10-05"
     }
   ]
 }
