@@ -119,3 +119,5 @@ See the [roadmap](phases/README.md) for what is built and what is next, and
 checked and fixed. What automation cannot check — real devices, real screen
 readers — is a checklist for people:
 [device and screen-reader validation](reviews/device-and-sr-validation.md).
+Where the product stands against its neighbours is the
+[parity matrix](product/parity-matrix.md).
