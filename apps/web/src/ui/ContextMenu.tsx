@@ -9,6 +9,7 @@ import {
 } from 'react'
 
 import { inVoteScope, type VoteScope } from '@openframe/core'
+import { MIN_CLUSTER_NOTES } from '@openframe/core/ai'
 
 import { AnchoredSurface } from '../controls/AnchoredSurface.js'
 import { DisclosureIcon } from '../controls/icons.js'
@@ -17,7 +18,9 @@ import { useCanEdit } from '../hooks/use-can-edit.js'
 import { useCommands } from '../hooks/use-commands.js'
 import { useMe } from '../hooks/use-me.js'
 import { useVoteRound } from '../hooks/use-voting.js'
+import { clusterableCount } from '../app/ai-cluster.js'
 import { useOpenFrame } from '../runtime/context.js'
+import { useServices } from '../runtime/services.js'
 import { useInteractionStore, type ContextMenuAt } from '../interaction/interaction-store.js'
 import { ariaKeys, formatKeys } from '../interaction/keymap.js'
 import type { Rect } from '../scene/anchoring.js'
@@ -70,6 +73,7 @@ export function ContextMenu() {
   const me = useMe()
   const round = useVoteRound()
   const canEdit = useCanEdit()
+  const ai = useServices().ai
   const { runtime } = useOpenFrame()
   /*
    * Followed while the menu is open, since another person can hide or show
@@ -360,6 +364,26 @@ export function ContextMenu() {
     ...(startVoting.length === 0 ? [] : [startVoting]),
   ]
 
+  /*
+   * Clustering with AI: offered where it can act — a room server that has the
+   * AI, a board this person may change, and enough notes with something to
+   * sort. Whether they are signed in is said by the panel it opens, which can
+   * also say why AI needs an account; a greyed row could say neither.
+   */
+  const clusterItems =
+    ai.enabled &&
+    canEdit &&
+    clusterableCount(runtime.store.getDocument(), runtime.registry, selected) >= MIN_CLUSTER_NOTES
+      ? [
+          {
+            label: 'Cluster with AI…',
+            run: () => {
+              useInteractionStore.getState().openClusterReview(selected)
+            },
+          },
+        ]
+      : []
+
   const selectionGroups: Group[] = [
     /*
      * FIRST, because they are what this product is for: turning a note into
@@ -378,6 +402,7 @@ export function ContextMenu() {
           commands.derive(derivation.type, derivation.predicate)
         },
       })),
+      ...clusterItems,
       /*
        * "Promote", not "Convert": the note turns out to have BEEN evidence.
        * One entry however many a type offers — flat, the third target pushed

@@ -12,6 +12,7 @@ export const chromeSlice: Slice<ChromeSlice> = (set) => ({
   searchOpen: false,
   reactionPicker: null,
   votingSetup: null,
+  clusterReview: null,
 
   showToast: (toast, action) => set({ toast, toastAction: action ?? null }),
   announce: (text) =>
@@ -25,4 +26,6 @@ export const chromeSlice: Slice<ChromeSlice> = (set) => ({
   closeReactionPicker: () => set({ reactionPicker: null }),
   openVotingSetup: (votingSetup) => set({ votingSetup }),
   closeVotingSetup: () => set({ votingSetup: null }),
+  openClusterReview: (ids) => set({ clusterReview: [...ids] }),
+  closeClusterReview: () => set({ clusterReview: null }),
 })

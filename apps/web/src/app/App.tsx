@@ -5,6 +5,7 @@ import { BoardLocked } from '../ui/BoardLocked.js'
 import { BoardUnreadable } from '../ui/BoardUnreadable.js'
 import { ContextMenu } from '../ui/ContextMenu.js'
 import { Inspector } from '../ui/Inspector.js'
+import { ClusterReview } from '../ui/ClusterReview.js'
 import { VotingBanner } from '../ui/VotingBanner.js'
 import { NoticeBanner } from '../ui/NoticeBanner.js'
 import { SearchPanel } from '../ui/SearchPanel.js'
@@ -83,6 +84,7 @@ export function App() {
         <div className="of-overlay of-overlay--top">
           <NoticeBanner notices={runtime.notices} />
           <VotingBanner />
+          <ClusterReview />
           <Toast />
         </div>
 

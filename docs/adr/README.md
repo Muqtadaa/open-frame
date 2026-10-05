@@ -27,6 +27,7 @@ Format: Status · Context · Decision · Alternatives considered · Consequences
 | [0015](0015-tables-as-grids-lines-and-merges.md)        | **A table's lines live on its grid, and it edits as a spreadsheet** | Accepted           |
 | [0016](0016-room-trust-boundary.md)                     | **The room enforces who may write, not what they write**            | Accepted           |
 | [0017](0017-facilitation-state-outside-the-document.md) | **Facilitation state is outside the document**                      | Accepted           |
+| [0018](0018-ai-clustering-on-the-room-server.md)        | **AI clustering runs on the room server, and proposes copies**      | Proposed           |
 
 ## Writing a new one
 

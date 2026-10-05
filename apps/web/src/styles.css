@@ -721,6 +721,16 @@ body {
 }
 
 /*
+ * The same for the top while a panel there is being WORKED in. Clustering is
+ * opened on a selection of several notes, whose arrange bar floats above it on
+ * the apparatus layer and took the panel's first click.
+ */
+.of-overlay--top:has(.of-cluster),
+.of-overlay--top:focus-within {
+  z-index: var(--of-z-reached);
+}
+
+/*
  * The rail's BAND: from under the navigation bar down to the bottom gutter,
  * and the rail centred in it. It was centred on the WINDOW at a fixed 599
  * pixels, so at 640 tall it met the record line and at 560 it started above
@@ -7573,6 +7583,81 @@ textarea.of-input {
 
 .of-voting__empty {
   margin: var(--of-space-8) 0 0;
+  font-size: var(--of-type-record);
+}
+
+/* Clustering with AI: a notice along the top, like dot voting's setup. */
+.of-cluster {
+  flex-direction: column;
+  gap: var(--of-space-8);
+  align-items: stretch;
+  max-height: calc(100dvh - 160px);
+  overflow-y: auto;
+}
+
+.of-cluster__heading {
+  margin: 0;
+  font-size: var(--of-type-ui);
+  font-weight: var(--of-weight-semibold);
+}
+
+.of-cluster__note,
+.of-cluster__summary {
+  margin: 0;
+  font-size: var(--of-type-record);
+}
+
+.of-cluster__form {
+  display: flex;
+  flex-direction: column;
+  gap: var(--of-space-8);
+}
+
+.of-cluster__field {
+  display: flex;
+  flex-direction: column;
+  gap: var(--of-space-4);
+  font-size: var(--of-type-record);
+}
+
+.of-cluster__themes {
+  display: flex;
+  flex-direction: column;
+  gap: var(--of-step);
+  padding: 0;
+  margin: 0;
+  list-style: none;
+}
+
+.of-cluster__theme {
+  display: flex;
+  flex-direction: column;
+  gap: var(--of-space-4);
+}
+
+.of-cluster__notes {
+  padding: 0 0 0 var(--of-step);
+  margin: 0;
+  font-size: var(--of-type-record);
+  list-style: disc;
+}
+
+.of-cluster__gist {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.of-cluster__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--of-space-8);
+  align-items: center;
+}
+
+.of-cluster__remaining {
+  margin-left: auto;
+  font-family: var(--of-mono);
   font-size: var(--of-type-record);
 }
 

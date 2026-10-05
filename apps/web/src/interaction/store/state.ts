@@ -497,6 +497,14 @@ export interface ChromeSlice {
   readonly votingSetup: VoteScope | null
   openVotingSetup(scope: VoteScope): void
   closeVotingSetup(): void
+  /**
+   * The notes being clustered with AI, from asking through to applying or
+   * discarding what came back. Null otherwise. Held as the ids chosen when it
+   * opened, so selecting something else meanwhile changes nothing.
+   */
+  readonly clusterReview: readonly ObjectId[] | null
+  openClusterReview(ids: readonly ObjectId[]): void
+  closeClusterReview(): void
 }
 
 /**

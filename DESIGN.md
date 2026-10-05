@@ -1040,6 +1040,30 @@ count, in mono — clear of the reactions along its bottom edge. While counts ar
 hidden a person sees only their own; the capsule takes an accent edge when any
 of them are yours.
 
+### Cluster with AI
+
+Offered in the context menu of a selection holding three or more notes with
+text, on a board the person can edit, where the room server has the AI. It
+opens at the top of the board, in the notice's panel stock, like dot voting's
+setup. While it is open it rises above the selection's apparatus, which would
+otherwise float over it. It moves through stages, each with the keyboard on
+its first control:
+
+1. **Before anything is sent:** the note count in the heading, and one line
+   saying the notes' text goes to Anthropic. Cluster, Cancel.
+2. **While asking:** "Clustering 12 notes…" as a status. Cancel stops the
+   request.
+3. **The proposal:** the title and each theme's label are fields. Under each
+   theme sit its summary and its notes' gists, then "Other" with a count. The
+   runs left today are in mono, to the right. Apply, Discard.
+4. **A refusal:** the plain fact ("AI needs an account", "No AI runs left
+   today"), then Close.
+
+Apply lays the themes out beside the notes, never over them: one frame
+holding a frame per theme, with copies of the notes inside. The originals stay
+where they were. It is one undo step. Escape closes the panel at any stage and
+leaves nothing behind.
+
 ### Zoom Cluster
 
 Bottom-right, mono throughout. 30px buttons (`--of-hit-sm`) carrying 16px

@@ -1,4 +1,5 @@
 import type {
+  AnyOpenFrameObject,
   ColorToken,
   DispatchResult,
   MarkAuthor,
@@ -23,9 +24,11 @@ import {
   type DistributeAxis,
   type ImageCrop,
 } from '@openframe/core'
+import type { ClusterProposal } from '@openframe/core/ai'
 import { useMemo } from 'react'
 
 import type { LoggedChange } from '@openframe/collab'
+import { clusterObjects } from '../app/ai-cluster.js'
 import { guestIdentity } from '../app/guest.js'
 import { useOpenFrame } from '../runtime/context.js'
 import { useServices } from '../runtime/services.js'
@@ -138,6 +141,16 @@ export interface BoardCommands {
    */
   derive(toType: string, predicate: string): ObjectId | null
   /**
+   * Lays an AI proposal out beside the notes it was made from, as copies in
+   * a frame per theme, in ONE change marked as the AI's (ADR 0018): one undo
+   * step, and on a shared board a change anyone can revert. The originals are
+   * not moved, edited or deleted. Returns the outer frame, revealed.
+   */
+  applyClusterProposal(
+    proposal: ClusterProposal,
+    notes: ReadonlyMap<string, AnyOpenFrameObject>,
+  ): ObjectId | null
+  /**
    * Selects an object and pans the minimum needed to see it.
    *
    * Selecting something off-screen leaves the record panel describing an object
@@ -237,6 +250,34 @@ export function useCommands(): BoardCommands {
       const result = dispatcher.dispatch({ kind: 'SetHidden', ids: [...ids], hidden: false })
       report(result)
       if (result.ok) useInteractionStore.getState().setSelection(ids)
+    }
+
+    /**
+     * What a new object placed beside others must avoid, and the window it
+     * would rather land in. Built once per placement, never per frame (rule 10).
+     */
+    const placementSpace = () => {
+      const store = useInteractionStore.getState()
+      const doc = runtime.store.getDocument()
+      const occupied = [...doc.objects.values()].flatMap((object) => {
+        const capabilities = runtime.registry.get(object.type)?.capabilities
+        if (capabilities?.spatial === false) return []
+        return [
+          {
+            ...runtime.registry.boundsOf(object, doc),
+            // A frame the cluster sits in is not in the way of what goes beside it.
+            container: capabilities?.canHaveChildren === true,
+          },
+        ]
+      })
+      const { viewport, canvasSize } = store
+      const view = {
+        x: viewport.x,
+        y: viewport.y,
+        width: canvasSize.width / viewport.zoom,
+        height: canvasSize.height / viewport.zoom,
+      }
+      return { occupied, view, snap: store.snapToGrid ? snapPoint : undefined }
     }
 
     const revealObject = (id: ObjectId): void => {
@@ -389,6 +430,42 @@ export function useCommands(): BoardCommands {
 
       reveal: revealObject,
 
+      applyClusterProposal(proposal, sent) {
+        const doc = runtime.store.getDocument()
+        // As the notes are NOW: one may have moved, or gone, while the AI thought.
+        const notes = new Map<string, AnyOpenFrameObject>()
+        for (const [ref, note] of sent) {
+          const current = doc.objects.get(note.id)
+          if (current !== undefined) notes.set(ref, current)
+        }
+        const source = unionAll(
+          [...notes.values()].map((note) => runtime.registry.boundsOf(note, doc)),
+        )
+        if (source === null) {
+          useInteractionStore.getState().showToast('The notes are gone')
+          return null
+        }
+        const { occupied, view, snap } = placementSpace()
+        const { objects, outer } = clusterObjects({
+          proposal,
+          notes,
+          source,
+          occupied,
+          view,
+          ids: () => runtime.ids.objectId(),
+          ...(snap === undefined ? {} : { snap }),
+        })
+        const result = dispatcher.transact(
+          'Cluster with AI',
+          [{ kind: 'CreateObjects', objects }],
+          { origin: 'ai' },
+        )
+        report(result)
+        if (!result.ok) return null
+        revealObject(outer)
+        return outer
+      },
+
       derive(toType, predicate) {
         const store = useInteractionStore.getState()
         const doc = runtime.store.getDocument()
@@ -413,32 +490,8 @@ export function useCommands(): BoardCommands {
          * when that is free, and somewhere already on screen when it can be —
          * `placeDerived` says which.
          */
-        const occupied = [...doc.objects.values()].flatMap((object) => {
-          const capabilities = runtime.registry.get(object.type)?.capabilities
-          if (capabilities?.spatial === false) return []
-          return [
-            {
-              ...runtime.registry.boundsOf(object, doc),
-              // A frame the cluster sits in is not in the way of what goes beside it.
-              container: capabilities?.canHaveChildren === true,
-            },
-          ]
-        })
-        const { viewport, canvasSize } = store
-        const view = {
-          x: viewport.x,
-          y: viewport.y,
-          width: canvasSize.width / viewport.zoom,
-          height: canvasSize.height / viewport.zoom,
-        }
-        const at = placeDerived(
-          bounds,
-          size,
-          occupied,
-          view,
-          SYNTHESIS_GAP,
-          store.snapToGrid ? snapPoint : undefined,
-        )
+        const { occupied, view, snap } = placementSpace()
+        const at = placeDerived(bounds, size, occupied, view, SYNTHESIS_GAP, snap)
 
         // Minted here so the new object can be revealed and edited once it exists.
         const derivedId = runtime.ids.objectId()
