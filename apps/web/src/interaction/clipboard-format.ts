@@ -75,23 +75,52 @@ export function fromClipboard(html: string): unknown {
   }
 }
 
+/** Copies made so far: a write that is not the latest must not land over a newer one. */
+let copies = 0
+
+/**
+ * A copy has just been written some other way (a clipboard event), so any
+ * picture write still pending from an earlier one is stale (Codex, on #77).
+ */
+export function supersedeWrites(): void {
+  copies += 1
+}
+
+function base64Of(bytes: Uint8Array): string {
+  let binary = ''
+  for (let at = 0; at < bytes.length; at += 0x8000) {
+    binary += String.fromCharCode(...bytes.subarray(at, at + 0x8000))
+  }
+  return btoa(binary)
+}
+
+/**
+ * The copy's HTML with the picture in it, in place of its words: an editor
+ * that prefers HTML to an image would otherwise paste the picture's name
+ * with the PNG sitting unused beside it (Codex, on #77). The board's own copy
+ * stays on the same element, so a board still finds it.
+ */
+export async function htmlWithPicture(payload: ClipboardPayload, picture: Blob): Promise<string> {
+  const source = `data:image/png;base64,${base64Of(new Uint8Array(await picture.arrayBuffer()))}`
+  const image = `<img src="${source}" alt="${escapeHtml(payload.text)}">`
+  return payload.html.replace(/(<div [^>]*>)[\s\S]*(<\/div>)$/, `$1${image}$2`)
+}
+
 /**
  * Writes a copy to the system clipboard outside a clipboard event — the
  * menu's Copy, and a copied picture, which a clipboard event cannot carry.
  * Resolves false when the browser refuses (no permission, an insecure page,
- * no `ClipboardItem`); the tab's own copy still stands.
+ * no `ClipboardItem`) or a newer copy has been made since; the tab's own copy
+ * still stands.
  *
- * A picture that cannot be had (not in this browser, or not decodable) is
- * not worth losing the rest for, so the words and the board copy are written
- * again without it.
+ * A picture that cannot be had (it would not decode) is not worth losing the
+ * rest for, so the words and the board copy are written again without it.
  */
 export async function writeSystemClipboard(payload: ClipboardPayload): Promise<boolean> {
+  copies += 1
+  const mine = copies
   if (typeof ClipboardItem === 'undefined' || typeof navigator.clipboard?.write !== 'function') {
     return false
-  }
-  const words = {
-    'text/plain': new Blob([payload.text], { type: 'text/plain' }),
-    'text/html': new Blob([payload.html], { type: 'text/html' }),
   }
   const write = async (item: Record<string, Blob | Promise<Blob>>): Promise<boolean> => {
     try {
@@ -101,14 +130,27 @@ export async function writeSystemClipboard(payload: ClipboardPayload): Promise<b
       return false
     }
   }
+  const text = new Blob([payload.text], { type: 'text/plain' })
+  const html = new Blob([payload.html], { type: 'text/html' })
   if (payload.picture !== undefined) {
     /*
-     * Handed over as a promise rather than awaited first: Safari only writes
+     * Handed over as promises rather than awaited first: Safari only writes
      * inside the gesture that asked, and an item made after an await is no
-     * longer inside it.
+     * longer inside it. A copy made while this one was still encoding makes
+     * it fail, so it never lands over the newer one.
      */
-    const picture = payload.picture.then((blob) => blob ?? Promise.reject(new Error('no picture')))
-    if (await write({ ...words, 'image/png': picture })) return true
+    const picture = payload.picture.then((blob) => {
+      if (blob === null) throw new Error('no picture')
+      if (mine !== copies) throw new Error('a newer copy was made')
+      return blob
+    })
+    const withPicture = picture.then(
+      async (blob) => new Blob([await htmlWithPicture(payload, blob)], { type: 'text/html' }),
+    )
+    if (await write({ 'text/plain': text, 'text/html': withPicture, 'image/png': picture })) {
+      return true
+    }
   }
-  return write(words)
+  if (mine !== copies) return false
+  return write({ 'text/plain': text, 'text/html': html })
 }

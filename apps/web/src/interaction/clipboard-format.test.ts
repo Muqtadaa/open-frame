@@ -1,6 +1,12 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
-import { fromClipboard, toClipboard, writeSystemClipboard } from './clipboard-format.js'
+import {
+  fromClipboard,
+  htmlWithPicture,
+  supersedeWrites,
+  toClipboard,
+  writeSystemClipboard,
+} from './clipboard-format.js'
 
 /**
  * What a board copy looks like on the system clipboard, and what reading one
@@ -77,6 +83,26 @@ describe('writing a copy outside a clipboard event', () => {
     const picture = Promise.resolve(new Blob(['png'], { type: 'image/png' }))
     expect(await writeSystemClipboard({ ...payload, picture })).toBe(true)
     expect(written).toEqual([['text/plain', 'text/html', 'image/png']])
+  })
+
+  it('puts the picture in the HTML, where the board still finds its copy', async () => {
+    const picture = Promise.resolve(new Blob(['png'], { type: 'image/png' }))
+    const html = await htmlWithPicture(payload, await picture)
+    expect(html).toContain('<img src="data:image/png;base64,cG5n" alt="A picture">')
+    expect(html).not.toContain('<p>')
+    expect(fromClipboard(html)).toEqual({ format: 'openframe.clipboard' })
+  })
+
+  it('never lands over a copy made while the picture was still coming', async () => {
+    let deliver: (blob: Blob) => void = () => undefined
+    const picture = new Promise<Blob | null>((resolve) => {
+      deliver = resolve
+    })
+    const writing = writeSystemClipboard({ ...payload, picture })
+    supersedeWrites()
+    deliver(new Blob(['png'], { type: 'image/png' }))
+    expect(await writing).toBe(false)
+    expect(written).toEqual([])
   })
 
   it('writes the words alone when the picture cannot be had', async () => {

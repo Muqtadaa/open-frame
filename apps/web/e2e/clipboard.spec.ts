@@ -307,6 +307,13 @@ test.describe('a picture copied from the board', () => {
       return { width: bitmap.width, height: bitmap.height }
     })
     expect(size).toEqual({ width: 200, height: 150 })
+    // An editor that takes HTML over an image gets the picture there too.
+    const html = await page.evaluate(async () => {
+      const [item] = await navigator.clipboard.read()
+      if (item === undefined) throw new Error('nothing on the clipboard')
+      return (await item.getType('text/html')).text()
+    })
+    expect(html).toContain('<img src="data:image/png;base64,')
   })
 
   test('pastes back as the board copy, not as a new upload', async ({ page }) => {

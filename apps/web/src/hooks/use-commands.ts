@@ -631,6 +631,14 @@ export function useCommands(): BoardCommands {
         const object = only === undefined || others.length > 0 ? undefined : doc.objects.get(only)
         const [asset, ...more] = object === undefined ? [] : runtime.registry.assetsOf(object)
         if (object === undefined || asset === undefined || more.length > 0) return payload
+        /*
+         * Only a picture whose bytes this tab already has. Safari writes only
+         * inside the gesture that asked, so the menu's Copy cannot wait to
+         * learn a picture is missing and then write the words alone; the bytes
+         * being here already is what makes the picture a safe promise to hand
+         * over (Codex, on #77).
+         */
+        if (runtime.assets.urlFor(asset) === undefined) return payload
         const shown = runtime.registry.cropWindowOf(object) ?? { x: 0, y: 0, width: 1, height: 1 }
         return { ...payload, picture: runtime.assets.pictureOf(asset, shown) }
       },

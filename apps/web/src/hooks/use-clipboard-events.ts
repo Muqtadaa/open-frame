@@ -3,6 +3,7 @@ import { useEffect } from 'react'
 
 import {
   fromClipboard,
+  supersedeWrites,
   writeSystemClipboard,
   type ClipboardPayload,
 } from '../interaction/clipboard-format.js'
@@ -38,6 +39,7 @@ export function useClipboardEvents(): void {
       // A picture cannot go through the event, which carries strings only; it
       // follows in a write of its own, and the words stand if that is refused.
       if (payload.picture !== undefined) void writeSystemClipboard(payload)
+      else supersedeWrites()
     }
 
     const onCopy = (event: ClipboardEvent): void => {
