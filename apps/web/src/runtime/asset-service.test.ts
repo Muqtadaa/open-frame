@@ -201,3 +201,57 @@ describe('AssetService.copyIn', () => {
     expect(await service.copyIn(elsewhere)).toBeNull()
   })
 })
+
+/**
+ * One picture copied goes on the system clipboard as a PNG of what the board
+ * shows of it. The decoding is the browser's; what is asserted here is which
+ * bytes are encoded and with what window, and that a picture this browser
+ * cannot have is nothing rather than a failure.
+ */
+describe('AssetService.pictureOf', () => {
+  const ref: AssetRef = {
+    id: 'ast_picture' as AssetId,
+    mimeType: 'image/jpeg',
+    byteSize: 4,
+    locator: 'idb:ast_picture',
+  }
+  const shown = { x: 0.25, y: 0, width: 0.5, height: 1 }
+
+  class Encoding extends AssetService {
+    readonly encoded: { bytes: Blob; shown: unknown }[] = []
+    protected override readBytes(): Promise<Blob> {
+      return Promise.resolve(new Blob(['jpeg'], { type: 'image/jpeg' }))
+    }
+    protected override encodePng(bytes: Blob, window: typeof shown): Promise<Blob> {
+      this.encoded.push({ bytes, shown: window })
+      return Promise.resolve(new Blob(['png'], { type: 'image/png' }))
+    }
+  }
+
+  it('encodes the bytes this browser holds, cropped to what is shown', async () => {
+    const service = new Encoding(new FakeAssetStore(), createSequentialIdGenerator())
+    const picture = await service.pictureOf(ref, shown)
+    expect(picture?.type).toBe('image/png')
+    expect(service.encoded.map((call) => [call.bytes.type, call.shown])).toEqual([
+      ['image/jpeg', shown],
+    ])
+  })
+
+  it('is nothing when this browser does not have the bytes', async () => {
+    const store = new FakeAssetStore()
+    store.failResolution()
+    const service = new Encoding(store, createSequentialIdGenerator())
+    expect(await service.pictureOf(ref, shown)).toBeNull()
+    expect(service.encoded).toEqual([])
+  })
+
+  it('is nothing when the bytes will not decode', async () => {
+    class Undecodable extends Encoding {
+      protected override encodePng(): Promise<Blob> {
+        return Promise.reject(new Error('not an image'))
+      }
+    }
+    const service = new Undecodable(new FakeAssetStore(), createSequentialIdGenerator())
+    expect(await service.pictureOf(ref, shown)).toBeNull()
+  })
+})

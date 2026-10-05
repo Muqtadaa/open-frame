@@ -619,7 +619,18 @@ export function useCommands(): BoardCommands {
         const content = copyObjects(doc, store.selection, runtime.registry)
         if (content === null) return null
         store.setClipboard(content)
-        return toClipboard(content, wordsOf(doc, content, runtime.registry))
+        const payload = toClipboard(content, wordsOf(doc, content, runtime.registry))
+        /*
+         * One picture copied is also the picture, for anything that is not a
+         * board: what is shown of it, as a PNG. Asked of the registry — the
+         * object's one stored file, and its crop — not of a type.
+         */
+        const [only, ...others] = store.selection
+        const object = only === undefined || others.length > 0 ? undefined : doc.objects.get(only)
+        const [asset, ...more] = object === undefined ? [] : runtime.registry.assetsOf(object)
+        if (object === undefined || asset === undefined || more.length > 0) return payload
+        const shown = runtime.registry.cropWindowOf(object) ?? { x: 0, y: 0, width: 1, height: 1 }
+        return { ...payload, picture: runtime.assets.pictureOf(asset, shown) }
       },
 
       cutSelection() {

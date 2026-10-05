@@ -226,3 +226,65 @@ test.describe('content from another application', () => {
     ])
   })
 })
+
+test.describe('a picture copied from the board', () => {
+  test.use({ board: 'fresh' })
+
+  /** Uploads a 200×150 picture through the board's own file input. */
+  async function placePicture(page: Page): Promise<void> {
+    const encoded = await page.evaluate(async () => {
+      const canvas = new OffscreenCanvas(200, 150)
+      const context = canvas.getContext('2d')
+      if (context === null) throw new Error('no 2d context')
+      context.fillStyle = '#c33'
+      context.fillRect(0, 0, 200, 150)
+      const bytes = new Uint8Array(await (await canvas.convertToBlob()).arrayBuffer())
+      return btoa(String.fromCharCode(...bytes))
+    })
+    await page.locator('input[type="file"]').setInputFiles({
+      name: 'chart.png',
+      mimeType: 'image/png',
+      buffer: Buffer.from(encoded, 'base64'),
+    })
+    await expect(page.locator('[data-object-type="image"]')).toHaveCount(1)
+  }
+
+  test('reaches other applications as the picture itself', async ({ page }) => {
+    await placePicture(page)
+    await page.locator('[data-object-type="image"]').click()
+    await page.keyboard.press(`${MOD}+c`)
+
+    // The picture follows the words in a write of its own.
+    await expect
+      .poll(() =>
+        page.evaluate(async () => (await navigator.clipboard.read()).flatMap((item) => item.types)),
+      )
+      .toContain('image/png')
+    const size = await page.evaluate(async () => {
+      const [item] = await navigator.clipboard.read()
+      if (item === undefined) throw new Error('nothing on the clipboard')
+      const bitmap = await createImageBitmap(await item.getType('image/png'))
+      return { width: bitmap.width, height: bitmap.height }
+    })
+    expect(size).toEqual({ width: 200, height: 150 })
+  })
+
+  test('pastes back as the board copy, not as a new upload', async ({ page }) => {
+    await placePicture(page)
+    await page.locator('[data-object-type="image"]').click()
+    await page.keyboard.press(`${MOD}+c`)
+    await expect
+      .poll(() =>
+        page.evaluate(async () => (await navigator.clipboard.read()).flatMap((item) => item.types)),
+      )
+      .toContain('image/png')
+    await page.keyboard.press(`${MOD}+v`)
+
+    await expect(page.locator('[data-object-type="image"]')).toHaveCount(2)
+    // An upload would be named after the clipboard's file; the copy keeps the original's.
+    const alts = (await objects(page))
+      .filter((object) => object.type === 'image')
+      .map((object) => object.data.alt)
+    expect(alts).toEqual(['chart', 'chart'])
+  })
+})

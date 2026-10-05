@@ -39,6 +39,12 @@ function escapeHtml(text: string): string {
 export interface ClipboardPayload {
   readonly text: string
   readonly html: string
+  /**
+   * The picture, as a PNG, when what was copied is one image. Pending, because
+   * it has to be read and encoded — so only a write that can wait for it
+   * (`writeSystemClipboard`) can carry it.
+   */
+  readonly picture?: Promise<Blob | null>
 }
 
 /**
@@ -71,22 +77,38 @@ export function fromClipboard(html: string): unknown {
 
 /**
  * Writes a copy to the system clipboard outside a clipboard event — the
- * menu's Copy. Resolves false when the browser refuses (no permission, an
- * insecure page, no `ClipboardItem`); the tab's own copy still stands.
+ * menu's Copy, and a copied picture, which a clipboard event cannot carry.
+ * Resolves false when the browser refuses (no permission, an insecure page,
+ * no `ClipboardItem`); the tab's own copy still stands.
+ *
+ * A picture that cannot be had (not in this browser, or not decodable) is
+ * not worth losing the rest for, so the words and the board copy are written
+ * again without it.
  */
 export async function writeSystemClipboard(payload: ClipboardPayload): Promise<boolean> {
-  if (typeof ClipboardItem === 'undefined' || navigator.clipboard?.write === undefined) {
+  if (typeof ClipboardItem === 'undefined' || typeof navigator.clipboard?.write !== 'function') {
     return false
   }
-  try {
-    await navigator.clipboard.write([
-      new ClipboardItem({
-        'text/plain': new Blob([payload.text], { type: 'text/plain' }),
-        'text/html': new Blob([payload.html], { type: 'text/html' }),
-      }),
-    ])
-    return true
-  } catch {
-    return false
+  const words = {
+    'text/plain': new Blob([payload.text], { type: 'text/plain' }),
+    'text/html': new Blob([payload.html], { type: 'text/html' }),
   }
+  const write = async (item: Record<string, Blob | Promise<Blob>>): Promise<boolean> => {
+    try {
+      await navigator.clipboard.write([new ClipboardItem(item)])
+      return true
+    } catch {
+      return false
+    }
+  }
+  if (payload.picture !== undefined) {
+    /*
+     * Handed over as a promise rather than awaited first: Safari only writes
+     * inside the gesture that asked, and an item made after an await is no
+     * longer inside it.
+     */
+    const picture = payload.picture.then((blob) => blob ?? Promise.reject(new Error('no picture')))
+    if (await write({ ...words, 'image/png': picture })) return true
+  }
+  return write(words)
 }
