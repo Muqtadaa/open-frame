@@ -1,4 +1,70 @@
 {
   "v": 1,
-  "tracks": []
+  "tracks": [
+    {
+      "id": "cafe-da-tarde",
+      "genre": "bossa-nova",
+      "title": "Cafe Da Tarde",
+      "artist": "Open Lo-Fi",
+      "durationMs": 109536,
+      "bytes": 2640078,
+      "sha256": "b197f7a73480a2aafb0417dcee1a435a03eca942c29da4043c75da2f0952af54",
+      "mime": "audio/mpeg",
+      "licence": "CC0-1.0",
+      "sourceUrl": "https://github.com/btahir/open-lofi",
+      "retrievedAt": "2026-10-05"
+    },
+    {
+      "id": "continue-screen-dreams",
+      "genre": "synthwave",
+      "title": "Continue Screen Dreams",
+      "artist": "Open Lo-Fi",
+      "durationMs": 95208,
+      "bytes": 1873926,
+      "sha256": "8bca2116e603b858cffa96a830d2a932d445a3cdb81a2cdfc9d42cec10e6bf83",
+      "mime": "audio/mpeg",
+      "licence": "CC0-1.0",
+      "sourceUrl": "https://github.com/btahir/open-lofi",
+      "retrievedAt": "2026-10-05"
+    },
+    {
+      "id": "after-school-rain",
+      "genre": "calm",
+      "title": "After School Rain",
+      "artist": "Open Lo-Fi",
+      "durationMs": 97344,
+      "bytes": 2330190,
+      "sha256": "02389a480381b579941934251687b8d3976f953321147045ae41308f34bb9714",
+      "mime": "audio/mpeg",
+      "licence": "CC0-1.0",
+      "sourceUrl": "https://github.com/btahir/open-lofi",
+      "retrievedAt": "2026-10-05"
+    },
+    {
+      "id": "blue-below-the-surface",
+      "genre": "calm",
+      "title": "Blue Below the Surface",
+      "artist": "Open Lo-Fi",
+      "durationMs": 177816,
+      "bytes": 4079910,
+      "sha256": "374d66e77071eb81afa8ea62f5545cb41eb5fff89a17f2f8849f60ebc3ff921a",
+      "mime": "audio/mpeg",
+      "licence": "CC0-1.0",
+      "sourceUrl": "https://github.com/btahir/open-lofi",
+      "retrievedAt": "2026-10-05"
+    },
+    {
+      "id": "block-party-slow-jam",
+      "genre": "jazzy",
+      "title": "Block Party Slow Jam",
+      "artist": "Open Lo-Fi",
+      "durationMs": 148464,
+      "bytes": 3510198,
+      "sha256": "d92a4e9f692b85ae2c601d0a5a391d9544e0fda40e917a0e7d46d35df147e6d6",
+      "mime": "audio/mpeg",
+      "licence": "CC0-1.0",
+      "sourceUrl": "https://github.com/btahir/open-lofi",
+      "retrievedAt": "2026-10-05"
+    }
+  ]
 }
