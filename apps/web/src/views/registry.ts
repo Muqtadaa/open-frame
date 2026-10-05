@@ -6,6 +6,8 @@ import type {
   AssetRef,
   BoardDocument,
   ColorToken,
+  Command,
+  MarkAuthor,
   VAlignToken,
   ObjectBase,
   Point,
@@ -75,6 +77,27 @@ export interface ObjectViewProps<TData = unknown> {
    * joined to a group ran to the group's origin until this existed (rule 16).
    */
   readonly boundsOf: BoundsLookup
+  /**
+   * What people have marked on this object, who is looking, and a way to add
+   * their own — handed only to a view that declares `readsMarks`, and absent
+   * where nothing can act (a static render, a test without a board).
+   */
+  readonly marks?: ViewMarks
+}
+
+/**
+ * Marks on an object, and the one way a view may write: a command, through the
+ * same dispatcher as everything else (rule 3). A view is a leaf and cannot
+ * reach the dispatcher or know who is looking itself, so both arrive here.
+ */
+export interface ViewMarks {
+  readonly on: readonly { readonly kind: string; readonly value: string; readonly by: string }[]
+  /** Who is looking, once that is known. Null until then, and nothing is theirs. */
+  readonly me: MarkAuthor | null
+  /** Whether this person may write to the board at all. */
+  readonly canAct: boolean
+  /** Dispatches, and says why where the board refuses. */
+  readonly act: (command: Command) => void
 }
 
 /** The real extent of an object, as the registry computes it. */
@@ -199,6 +222,12 @@ export interface ObjectViewDefinition {
    * Absent for a type nobody makes from the rail.
    */
   readonly tool?: ObjectTool
+  /**
+   * Declares that this view draws, and lets people add, marks left ON it —
+   * a poll's answers — so its objects are handed `marks`. A flag for the
+   * reason `usesAssets` is one: only these objects subscribe.
+   */
+  readonly readsMarks?: boolean
 }
 
 /**
@@ -247,6 +276,7 @@ export function defineObjectView<TData, TOptions = unknown>(definition: {
   defaultAlign?: AlignToken
   defaultVerticalAlign?: VAlignToken
   tool?: ObjectTool<TOptions>
+  readsMarks?: boolean
 }): ObjectViewDefinition {
   /*
    * Spread one optional at a time. Every member has to be listed or it is
@@ -259,6 +289,7 @@ export function defineObjectView<TData, TOptions = unknown>(definition: {
     Renderer: definition.Renderer as ComponentType<ObjectViewProps>,
     ...(definition.usesAssets === true ? { usesAssets: true } : {}),
     ...(definition.usesZoom === true ? { usesZoom: true } : {}),
+    ...(definition.readsMarks === true ? { readsMarks: true } : {}),
     ...(definition.defaultColor === undefined ? {} : { defaultColor: definition.defaultColor }),
     ...(definition.defaultAlign === undefined ? {} : { defaultAlign: definition.defaultAlign }),
     ...(definition.defaultVerticalAlign === undefined

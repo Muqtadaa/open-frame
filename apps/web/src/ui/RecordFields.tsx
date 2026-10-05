@@ -1,5 +1,14 @@
-import type { AnyOpenFrameObject, FieldDefinition, ObjectId } from '@openframe/core'
+import {
+  MAX_POLL_OPTIONS,
+  MIN_POLL_OPTIONS,
+  type AnyOpenFrameObject,
+  type FieldDefinition,
+  type ObjectId,
+  type PollOption,
+} from '@openframe/core'
 import { useState } from 'react'
+
+import { CloseIcon } from '../controls/icons.js'
 import { fromText, toText } from './record-text.js'
 
 /**
@@ -70,10 +79,171 @@ function FieldRow({
     )
   }
 
+  if (field.kind === 'boolean') {
+    return (
+      <Row field={field}>
+        <input
+          type="checkbox"
+          className="of-field__check"
+          checked={stored === true}
+          aria-label={field.label}
+          data-testid={`field-${field.key}`}
+          onChange={(event) => {
+            onCommit(event.target.checked)
+          }}
+        />
+      </Row>
+    )
+  }
+
+  if (field.kind === 'choices') {
+    return (
+      <Row field={field}>
+        <Choices
+          field={field}
+          stored={Array.isArray(stored) ? (stored as PollOption[]) : []}
+          onCommit={onCommit}
+        />
+      </Row>
+    )
+  }
+
   return (
     <Row field={field}>
       <Textish field={field} stored={stored} onCommit={onCommit} />
     </Row>
+  )
+}
+
+/**
+ * A list of options, each a label that commits when the person is done with
+ * it, as any other field does — the whole list in one write, so it is one undo
+ * step.
+ *
+ * Ids are never edited and never reused: an answer names its option by id, so
+ * rewording an option keeps everybody's answer on it, and a new option takes
+ * an id nobody's answer has ever named.
+ */
+function Choices({
+  field,
+  stored,
+  onCommit,
+}: {
+  readonly field: FieldDefinition
+  readonly stored: readonly PollOption[]
+  readonly onCommit: (value: unknown) => void
+}) {
+  const relabel = (id: string, label: string): void => {
+    const trimmed = label.trim()
+    // An empty label is not an option; put the old one back rather than save it.
+    if (trimmed === '') return
+    onCommit(stored.map((option) => (option.id === id ? { ...option, label: trimmed } : option)))
+  }
+  return (
+    <div className="of-choices" data-testid={`field-${field.key}`}>
+      <ol className="of-choices__list">
+        {stored.map((option, index) => (
+          <li key={option.id} className="of-choices__row">
+            <ChoiceLabel
+              label={option.label}
+              name={`${field.label} ${String(index + 1)}`}
+              onCommit={(label) => {
+                relabel(option.id, label)
+              }}
+            />
+            <button
+              type="button"
+              className="of-icon-button"
+              aria-label={`Remove ${option.label}`}
+              disabled={stored.length <= MIN_POLL_OPTIONS}
+              onClick={() => {
+                onCommit(stored.filter((other) => other.id !== option.id))
+              }}
+            >
+              <CloseIcon />
+            </button>
+          </li>
+        ))}
+      </ol>
+      <button
+        type="button"
+        className="of-button of-button--ghost"
+        data-testid={`field-${field.key}-add`}
+        disabled={stored.length >= MAX_POLL_OPTIONS}
+        onClick={() => {
+          onCommit([
+            ...stored,
+            { id: newOptionId(stored), label: `Option ${String(stored.length + 1)}` },
+          ])
+        }}
+      >
+        Add option
+      </button>
+    </div>
+  )
+}
+
+/**
+ * An id no option has had: random rather than counted, because a removed
+ * option's answers stay on the board and an id counted from what is there now
+ * would hand them to the next option added.
+ */
+function newOptionId(taken: readonly PollOption[]): string {
+  for (;;) {
+    const bytes = crypto.getRandomValues(new Uint8Array(8))
+    const id = `o${Array.from(bytes, (byte) => (byte % 36).toString(36)).join('')}`
+    if (!taken.some((option) => option.id === id)) return id
+  }
+}
+
+/** One option's label: a draft while typing, written on Enter or leaving it. */
+function ChoiceLabel({
+  label,
+  name,
+  onCommit,
+}: {
+  readonly label: string
+  readonly name: string
+  readonly onCommit: (label: string) => void
+}) {
+  const [draft, setDraft] = useState(label)
+  const [seen, setSeen] = useState(label)
+  // Re-synced during render, as `Textish` is, so an undo never flashes the old value.
+  if (label !== seen) {
+    setSeen(label)
+    setDraft(label)
+  }
+  const commit = (): void => {
+    if (draft === label) return
+    if (draft.trim() === '') {
+      setDraft(label)
+      return
+    }
+    onCommit(draft)
+  }
+  return (
+    <input
+      className="of-input"
+      type="text"
+      value={draft}
+      maxLength={80}
+      aria-label={name}
+      onChange={(event) => {
+        setDraft(event.target.value)
+      }}
+      onBlur={commit}
+      onKeyDown={(event) => {
+        if (event.key === 'Enter') {
+          commit()
+          event.currentTarget.blur()
+        }
+        if (event.key === 'Escape') {
+          setDraft(label)
+          event.currentTarget.blur()
+        }
+        event.stopPropagation()
+      }}
+    />
   )
 }
 

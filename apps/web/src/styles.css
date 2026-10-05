@@ -787,15 +787,17 @@ body {
  * The tools step down a decade of the rule at a time as the window shortens —
  * 50, then 40, then 30, which is still the secondary-control target — rather
  * than shrinking continuously to sizes off the quadrille. Each threshold is
- * the height at which the larger rail stops fitting its band.
+ * the height at which the larger rail stops fitting its band, so each moves
+ * by one tool and its gap whenever a tool is added (52, 42 and 32px): the poll
+ * tool ran the comment tool off the end of a 720px window until they did.
  */
-@media (max-height: 719px) {
+@media (max-height: 771px) {
   .of-rail {
     --of-tool: var(--of-hit);
   }
 }
 
-@media (max-height: 603px) {
+@media (max-height: 645px) {
   .of-rail {
     --of-tool: var(--of-hit-sm);
   }
@@ -812,7 +814,7 @@ body {
  * padding — so with padding the fade stuck six pixels short of the edge and
  * the next tool showed through underneath it.
  */
-@media (max-height: 493px) {
+@media (max-height: 525px) {
   .of-rail {
     overflow-y: auto;
     padding-block: 0;
@@ -833,7 +835,7 @@ body {
  * and without this it overran its own box between 493 and 603, the last tools
  * drawn off the end of it and out of reach (audit 2026-09-27).
  */
-@media (pointer: coarse) and (max-height: 603px) {
+@media (pointer: coarse) and (max-height: 645px) {
   .of-rail {
     overflow-y: auto;
     padding-block: 0;
@@ -4354,6 +4356,148 @@ body {
   overflow: hidden;
   border-radius: var(--of-radius-slip);
   box-shadow: var(--of-slip-ring), var(--of-slip-shadow);
+}
+
+/*
+ * A poll: the slip's stock and corner, with its options as rows a press
+ * answers. A row's bar is the share of the most-picked option, drawn behind
+ * the label in the accent's wash so the words stay readable on top of it.
+ */
+.of-poll {
+  display: flex;
+  flex-direction: column;
+  gap: var(--of-space-8);
+  width: 100%;
+  height: 100%;
+  padding: var(--of-space-12);
+  overflow: hidden;
+  border-radius: var(--of-radius-slip);
+  box-shadow: var(--of-slip-ring), var(--of-slip-shadow);
+}
+
+.of-poll__question {
+  font-size: var(--of-type-ui);
+  font-weight: var(--of-weight-semibold);
+  line-height: 1.35;
+  overflow-wrap: anywhere;
+  white-space: pre-wrap;
+}
+
+.of-poll__editor {
+  overflow-wrap: anywhere;
+  white-space: pre-wrap;
+}
+
+/*
+ * Scrolls when the options outgrow the card: a poll may have ten and a new
+ * card fits about three, and a clipped option is one nobody can answer
+ * (Codex, on #66). The board's wheel hands a scrollable box under the
+ * pointer its own scroll.
+ */
+.of-poll__options {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: var(--of-space-4);
+  min-height: 0;
+  padding: 0;
+  margin: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  list-style: none;
+}
+
+.of-poll__options > li {
+  flex: none;
+}
+
+.of-poll__option {
+  position: relative;
+  display: flex;
+  gap: var(--of-space-8);
+  align-items: center;
+  width: 100%;
+  min-height: var(--of-hit-sm);
+  padding: var(--of-space-4) var(--of-space-8);
+  overflow: hidden;
+  font: inherit;
+  color: inherit;
+  text-align: left;
+  cursor: pointer;
+  background: transparent;
+  border: 1px solid var(--of-control-border);
+  border-radius: var(--of-radius);
+}
+
+.of-poll__option:disabled {
+  cursor: default;
+}
+
+.of-poll__option[aria-pressed='true'] {
+  border-color: currentcolor;
+  box-shadow: inset 0 0 0 1px currentcolor;
+}
+
+.of-poll__bar {
+  position: absolute;
+  inset: 0 auto 0 0;
+  /* A wash of the card's own ink, so it stays under the words on any paper. */
+  background: color-mix(in srgb, currentcolor 14%, transparent);
+}
+
+.of-poll__label,
+.of-poll__count {
+  position: relative;
+}
+
+.of-poll__label {
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.of-poll__count,
+.of-poll__state {
+  font-family: var(--of-mono);
+  font-size: var(--of-type-record);
+}
+
+.of-poll__state {
+  margin: 0;
+}
+
+.of-poll__state:empty {
+  display: none;
+}
+
+.of-choices {
+  display: flex;
+  flex-direction: column;
+  gap: var(--of-space-4);
+  align-items: flex-start;
+}
+
+.of-choices__list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--of-space-4);
+  width: 100%;
+  padding: 0;
+  margin: 0;
+  list-style: none;
+}
+
+.of-choices__row {
+  display: flex;
+  gap: var(--of-space-4);
+  align-items: center;
+}
+
+.of-field__check {
+  width: var(--of-space-16);
+  height: var(--of-space-16);
+  accent-color: var(--of-accent);
 }
 
 .of-slip__body {

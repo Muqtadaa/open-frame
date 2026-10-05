@@ -810,7 +810,7 @@ navigation bar and the bottom gutter and never crosses either: as the window
 shortens the tools step down a decade at a time — 40px below 720 tall, 30px
 below 604 — and only below 494 does the rail scroll, because a scrolling box
 clips the tips. Under a finger the smallest tools are still 40px, so there the
-rail scrolls from 603px. A rail that scrolls says so: the end with more beyond
+rail scrolls from 645px. A rail that scrolls says so: the end with more beyond
 it fades into the rail's stock (`data-more-before`/`-after`, written by
 `use-scroll-edges`), because a phone draws no scrollbar and a clipped rail
 otherwise looks like a rail with fewer tools.
@@ -999,6 +999,23 @@ this browser and never sent to anyone. Somebody who did not start the music
 gets "Listen here" first — the one press a browser needs before it will make a
 sound. A viewer gets everything but the editor's buttons, and no button on the
 bar until there is music to hear.
+
+### Poll Card
+
+Made from the rail (Poll, P). It is drawn on the slip's stock and corner, white
+by default, with the question in semibold. Its options are rows that a press
+answers, each with a control edge. A picked row takes a ring in the card's own
+ink, and the count sits in mono at the row's end. Each row's bar is the share
+of the most-picked option, drawn behind the words in a wash of the card's ink
+so it reads on any paper, in either world. Underneath, the state sits in mono:
+"Closed", and how many people have answered.
+
+One answer each by default, and picking another moves it. Several answers is a
+record field, as are hiding results until the poll closes and closing it. The
+options are edited in the record panel, as a list: each label commits when you
+leave it, and Add option and remove keep the poll between two and ten. A viewer
+sees the card and the counts, with the rows switched off. While results are
+hidden, each person sees which row is theirs, and nothing else.
 
 ### Dot Voting
 

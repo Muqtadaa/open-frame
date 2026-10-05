@@ -327,8 +327,13 @@ export interface ObjectDescription {
  * Deliberately small. Each kind exists because a shipped type uses it, and a
  * kind nothing uses is a control nobody has ever seen render — which is how
  * `sticky` came to declare a `fill` its view ignored (rule 21).
+ *
+ * `boolean` is a checkbox. `choices` is a list of `{ id, label }` whose labels
+ * are edited and whose ids never are: a poll's options, where an answer names
+ * its option by id and so must go on meaning the same option however its
+ * words change.
  */
-export type FieldKind = 'text' | 'longText' | 'tags' | 'select'
+export type FieldKind = 'text' | 'longText' | 'tags' | 'select' | 'boolean' | 'choices'
 
 /**
  * One editable field on an object's `data`, declared by the type.

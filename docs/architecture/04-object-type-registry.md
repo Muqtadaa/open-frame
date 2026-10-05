@@ -18,7 +18,7 @@ So the registry is split:
 |                        | Lives in        | Contains                                                         | Knows about React |
 | ---------------------- | --------------- | ---------------------------------------------------------------- | :---------------: |
 | `ObjectTypeDefinition` | `packages/core` | schema, version, migrations, factory, capabilities, `describe()` |        ❌         |
-| `ObjectViewDefinition` | `apps/web`      | `Renderer`, `InlineEditor`, defaults, `tool`                     |        ✅         |
+| `ObjectViewDefinition` | `apps/web`      | `Renderer`, `InlineEditor`, defaults, `tool`, `readsMarks`       |        ✅         |
 
 They are joined by the type string at startup, and **either can be missing
 without the other breaking**:
@@ -28,6 +28,14 @@ without the other breaking**:
 
 The first case is exactly what lets a board containing a future `evidence`
 object open in today's build instead of crashing.
+
+A view is a leaf, so it cannot reach the dispatcher or know who is looking. A
+view that is ANSWERED on the board, as a poll is, declares `readsMarks`. Its
+objects are then handed `marks`: what people have marked on the object, who is
+looking, whether they may write, and an `act` that dispatches a command. Only
+those objects subscribe. Fields a type declares come in six kinds: `text`,
+`longText`, `tags`, `select`, `boolean` (a checkbox) and `choices` (a list of
+`{ id, label }` whose labels are edited and whose ids never are).
 
 ---
 
