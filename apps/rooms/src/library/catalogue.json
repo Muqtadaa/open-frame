@@ -1,4 +1,135 @@
 {
   "v": 1,
-  "tracks": []
+  "tracks": [
+    {
+      "id": "cafe-da-tarde",
+      "genre": "bossa-nova",
+      "title": "Cafe Da Tarde",
+      "artist": "Open Lo-Fi",
+      "durationMs": 109536,
+      "bytes": 2640078,
+      "sha256": "b197f7a73480a2aafb0417dcee1a435a03eca942c29da4043c75da2f0952af54",
+      "mime": "audio/mpeg",
+      "licence": "CC0-1.0",
+      "sourceUrl": "https://github.com/btahir/open-lofi",
+      "retrievedAt": "2026-10-05"
+    },
+    {
+      "id": "continue-screen-dreams",
+      "genre": "synthwave",
+      "title": "Continue Screen Dreams",
+      "artist": "Open Lo-Fi",
+      "durationMs": 95208,
+      "bytes": 1873926,
+      "sha256": "8bca2116e603b858cffa96a830d2a932d445a3cdb81a2cdfc9d42cec10e6bf83",
+      "mime": "audio/mpeg",
+      "licence": "CC0-1.0",
+      "sourceUrl": "https://github.com/btahir/open-lofi",
+      "retrievedAt": "2026-10-05"
+    },
+    {
+      "id": "after-school-rain",
+      "genre": "calm",
+      "title": "After School Rain",
+      "artist": "Open Lo-Fi",
+      "durationMs": 97344,
+      "bytes": 2330190,
+      "sha256": "02389a480381b579941934251687b8d3976f953321147045ae41308f34bb9714",
+      "mime": "audio/mpeg",
+      "licence": "CC0-1.0",
+      "sourceUrl": "https://github.com/btahir/open-lofi",
+      "retrievedAt": "2026-10-05"
+    },
+    {
+      "id": "blue-below-the-surface",
+      "genre": "calm",
+      "title": "Blue Below the Surface",
+      "artist": "Open Lo-Fi",
+      "durationMs": 177816,
+      "bytes": 4079910,
+      "sha256": "374d66e77071eb81afa8ea62f5545cb41eb5fff89a17f2f8849f60ebc3ff921a",
+      "mime": "audio/mpeg",
+      "licence": "CC0-1.0",
+      "sourceUrl": "https://github.com/btahir/open-lofi",
+      "retrievedAt": "2026-10-05"
+    },
+    {
+      "id": "block-party-slow-jam",
+      "genre": "jazzy",
+      "title": "Block Party Slow Jam",
+      "artist": "Open Lo-Fi",
+      "durationMs": 148464,
+      "bytes": 3510198,
+      "sha256": "d92a4e9f692b85ae2c601d0a5a391d9544e0fda40e917a0e7d46d35df147e6d6",
+      "mime": "audio/mpeg",
+      "licence": "CC0-1.0",
+      "sourceUrl": "https://github.com/btahir/open-lofi",
+      "retrievedAt": "2026-10-05"
+    },
+    {
+      "id": "sunset-offbeat",
+      "genre": "electronic",
+      "title": "Sunset Offbeat",
+      "artist": "Open Lo-Fi",
+      "durationMs": 159024,
+      "bytes": 3627030,
+      "sha256": "144bd62d4a762c281a432867ea38e5a459885cb7964683ae69505a959434a25e",
+      "mime": "audio/mpeg",
+      "licence": "CC0-1.0",
+      "sourceUrl": "https://github.com/btahir/open-lofi",
+      "retrievedAt": "2026-10-05"
+    },
+    {
+      "id": "cassette-pastel-nights",
+      "genre": "synthwave",
+      "title": "Cassette Pastel Nights",
+      "artist": "Open Lo-Fi",
+      "durationMs": 223056,
+      "bytes": 5220702,
+      "sha256": "3c3903cf4a7762f782706b0ced0f5c612f510d5c5a45e1472aa227e2e437beb0",
+      "mime": "audio/mpeg",
+      "licence": "CC0-1.0",
+      "sourceUrl": "https://github.com/btahir/open-lofi",
+      "retrievedAt": "2026-10-05"
+    },
+    {
+      "id": "vhs-heartbeat",
+      "genre": "synthwave",
+      "title": "VHS Heartbeat",
+      "artist": "Open Lo-Fi",
+      "durationMs": 213408,
+      "bytes": 4726782,
+      "sha256": "5ab7c01ad7af519fce51142d45766c905709e64c5b92d07ce98af5a324f77fb3",
+      "mime": "audio/mpeg",
+      "licence": "CC0-1.0",
+      "sourceUrl": "https://github.com/btahir/open-lofi",
+      "retrievedAt": "2026-10-05"
+    },
+    {
+      "id": "summer-curbside-glow",
+      "genre": "jazzy",
+      "title": "Summer Curbside Glow",
+      "artist": "Open Lo-Fi",
+      "durationMs": 144744,
+      "bytes": 3632118,
+      "sha256": "1cf312ab9f1a82300cfa1d9e8fe356e70b66130dd9a6bac4b11c081be791d2bc",
+      "mime": "audio/mpeg",
+      "licence": "CC0-1.0",
+      "sourceUrl": "https://github.com/btahir/open-lofi",
+      "retrievedAt": "2026-10-05"
+    },
+    {
+      "id": "fireplace-loop",
+      "genre": "calm",
+      "title": "Fireplace Loop",
+      "artist": "Open Lo-Fi",
+      "durationMs": 93936,
+      "bytes": 1930326,
+      "sha256": "56657eff4473b56ab04b72364dabbfd9c9460fb07b95f70ab2320c1371e708e8",
+      "mime": "audio/mpeg",
+      "licence": "CC0-1.0",
+      "sourceUrl": "https://github.com/btahir/open-lofi",
+      "retrievedAt": "2026-10-05"
+    }
+  ]
 }

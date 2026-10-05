@@ -36,11 +36,19 @@ storage = "sqlite"
 
 # AI clustering (ADR 0018). The Claude key is a SECRET, never a variable here:
 #   wrangler secret put ANTHROPIC_API_KEY
-# Until it and both Supabase values below are set, the route says AI is not
-# set up. The limits are runs per signed-in person per day, and for everybody.
+# Until it is set, the route says AI is not set up. The limits are runs per
+# signed-in person per day, and for everybody.
+#
+# The Supabase project is the one the browser signs in with — the same PUBLIC
+# values as apps/web/.env, held equal by deploy-config.test.ts. Here and not
+# in the Cloudflare dashboard: every deploy replaces the dashboard's plain
+# variables with this file's, so a value set there lasts until the next merge.
+# (Secrets are different: `wrangler secret put` survives deploys.)
 [vars]
 AI_DAILY_LIMIT = "20"
 AI_GLOBAL_DAILY_LIMIT = "1000"
+SUPABASE_URL = "https://nayxpmxpornsjmmmedmh.supabase.co"
+SUPABASE_PUBLISHABLE_KEY = "sb_publishable_B5U44eQkoeAl8-MfrMG_zQ_cIVbQr2O"
 
 # Where a board's images live.
 #
