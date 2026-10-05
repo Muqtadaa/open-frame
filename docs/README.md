@@ -116,4 +116,6 @@ pnpm verify     # typecheck + lint + boundaries + tests + build
 
 See the [roadmap](phases/README.md) for what is built and what is next, and
 [the current audit](reviews/audit-2026-10-02.md) for what was most recently
-checked and fixed.
+checked and fixed. What automation cannot check — real devices, real screen
+readers — is a checklist for people:
+[device and screen-reader validation](reviews/device-and-sr-validation.md).
