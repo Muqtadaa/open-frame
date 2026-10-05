@@ -1,12 +1,23 @@
 name: CI
 
+# ONE run per push, and its jobs ONE AT A TIME.
+#
+# A push to a PR branch used to start two runs — the branch's `push` and the
+# PR's `pull_request` — four jobs each, eight at once. Runners were not
+# always there for eight, and jobs sat queued until they were cancelled
+# without running a step: red checks with no failing test. So PR branches are
+# tested by `pull_request` alone, `main` by its push, and the jobs follow one
+# another (`needs`). Each still runs when the one before it failed
+# (`!cancelled()`), so a red typecheck never hides what end-to-end would say.
+# A full run takes the sum of its jobs, about 25 minutes, not the longest.
 on:
   push:
-    branches: ['**']
+    branches: [main]
   pull_request:
 
+# One run per PR at a time: a newer push cancels the older run.
 concurrency:
-  group: ${{ github.workflow }}-${{ github.ref }}
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
   cancel-in-progress: true
 
 jobs:
@@ -66,6 +77,8 @@ jobs:
 
   rooms:
     name: Shared boards, against a real Durable Object
+    needs: e2e-browsers
+    if: ${{ !cancelled() }}
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -100,6 +113,8 @@ jobs:
 
   e2e:
     name: End-to-end
+    needs: verify
+    if: ${{ !cancelled() }}
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -140,6 +155,8 @@ jobs:
     # know it has not broken placing, editing, moving or saving in Firefox or
     # Safari's engine.
     name: End-to-end, Firefox and WebKit (smoke)
+    needs: e2e
+    if: ${{ !cancelled() }}
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
