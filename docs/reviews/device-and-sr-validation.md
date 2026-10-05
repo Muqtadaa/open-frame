@@ -20,9 +20,11 @@ the build is different or that is the finding.
 
 ## Before a run
 
-- **Build.** Use a preview deployment or `pnpm build && pnpm preview`, not
-  `pnpm dev`: the production build is what carries the content security policy
-  and the minified stylesheet. Record the commit.
+- **Build.** Use a preview deployment, or locally
+  `pnpm --filter @openframe/web build && pnpm --filter @openframe/web preview`
+  (the root has no `preview` script), not `pnpm dev`: the production build is
+  what carries the content security policy and the minified stylesheet.
+  Record the commit.
 - **Boards.** One shared board, signed in, with at least one other person (or
   a second browser) on it, so the comments and presence steps have someone to
   hear. Put on it:
@@ -38,22 +40,25 @@ the build is different or that is the finding.
 
 ## The matrix
 
-One row per run. A row is not done until all eleven steps and the device
-passes below have a result.
+One row per run. Each row names the passes that apply to it, and is done when
+those have a result; a pass that does not apply to the device is not run and
+does not count against it.
 
-| Device and browser                         | Assistive tech | Date | Commit | Tester | Result | Findings |
-| ------------------------------------------ | -------------- | ---- | ------ | ------ | ------ | -------- |
-| Windows, Firefox                           | NVDA           |      |        |        |        |          |
-| Windows, Chrome                            | NVDA           |      |        |        |        |          |
-| macOS, Safari                              | VoiceOver      |      |        |        |        |          |
-| iPadOS, Safari                             | VoiceOver      |      |        |        |        |          |
-| iPhone, Safari                             | VoiceOver      |      |        |        |        |          |
-| Android, Chrome                            | TalkBack       |      |        |        |        |          |
-| Windows laptop, integrated GPU, Chrome     | none           |      |        |        |        |          |
-| High-DPI display with a precision trackpad | none           |      |        |        |        |          |
+| Device and browser                         | Assistive tech | Passes                                | Date | Commit | Tester | Result | Findings |
+| ------------------------------------------ | -------------- | ------------------------------------- | ---- | ------ | ------ | ------ | -------- |
+| Windows, Firefox                           | NVDA           | workflow, newer surfaces, preferences |      |        |        |        |          |
+| Windows, Chrome                            | NVDA           | workflow, newer surfaces, preferences |      |        |        |        |          |
+| macOS, Safari                              | VoiceOver      | workflow, newer surfaces, preferences |      |        |        |        |          |
+| iPadOS, Safari                             | VoiceOver      | workflow, newer surfaces, touch       |      |        |        |        |          |
+| iPhone, Safari                             | VoiceOver      | workflow, newer surfaces, touch       |      |        |        |        |          |
+| Android, Chrome                            | TalkBack       | workflow, newer surfaces, touch       |      |        |        |        |          |
+| Windows laptop, integrated GPU, Chrome     | none           | integrated GPU                        |      |        |        |        |          |
+| High-DPI display with a precision trackpad | none           | trackpad and high-DPI                 |      |        |        |        |          |
 
-Result is **pass**, **pass with findings** or **blocked** (a step could not be
-finished at all).
+"Workflow" is the eleven steps below; the other passes are the sections under
+[The newer surfaces](#the-newer-surfaces) and [Device passes](#device-passes).
+Result is **pass**, **pass with findings** or **blocked** (a step in one of the
+row's passes could not be finished at all).
 
 ---
 
