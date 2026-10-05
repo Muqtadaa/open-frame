@@ -1,0 +1,107 @@
+/* ---------- zoom control ---------- */
+
+.of-zoom {
+  display: flex;
+  gap: var(--of-space-2);
+  align-items: center;
+  padding: var(--of-space-6);
+  font-family: var(--of-mono);
+  background: var(--of-page);
+  border: 1px solid var(--of-panel-border);
+  border-radius: var(--of-radius-apparatus);
+  box-shadow: var(--of-shadow);
+}
+
+.of-zoom__sep {
+  width: 1px;
+  height: 14px;
+  margin: 0 var(--of-space-4);
+  background: var(--of-panel-border);
+}
+
+/*
+ * The wheel-mode VALUE, not a heading. Mono and small so it reads as a setting
+ * beside its icon; at body size next to a mouse it looked like a panel title.
+ */
+.of-zoom__mode {
+  font-size: var(--of-type-record);
+  letter-spacing: 0.02em;
+}
+
+.of-zoom__slider {
+  width: 104px;
+  accent-color: var(--of-accent);
+  cursor: pointer;
+}
+
+.of-zoom__percent,
+.of-zoom__input {
+  width: 60px;
+  height: var(--of-hit-sm);
+  padding: 0 var(--of-space-4);
+  font: inherit;
+  font-size: var(--of-type-ui-small);
+  font-variant-numeric: tabular-nums;
+  color: var(--of-ink);
+  text-align: center;
+  background: transparent;
+  border: none;
+  border-radius: var(--of-radius);
+  cursor: pointer;
+}
+
+.of-zoom__percent:hover {
+  background: var(--of-hover);
+}
+
+.of-zoom__input {
+  background: var(--of-accent-soft);
+  outline: 1px solid var(--of-accent);
+  cursor: text;
+}
+
+.of-zoom__field {
+  display: flex;
+}
+
+/*
+ * The common zooms, above the field while it is open: a row of readouts in
+ * the readout's own face, so they read as values to jump to rather than as
+ * commands. The reason a typed zoom was refused sits above them, in ink.
+ */
+.of-zoom__presets {
+  display: grid;
+  gap: var(--of-space-4);
+  padding: var(--of-space-4);
+  font-family: var(--of-mono);
+}
+
+.of-zoom__preset-row {
+  display: flex;
+  gap: var(--of-space-2);
+}
+
+.of-zoom__preset {
+  min-width: var(--of-hit);
+  height: var(--of-hit-sm);
+  padding: 0 var(--of-space-6);
+  font: inherit;
+  font-size: var(--of-type-record);
+  font-variant-numeric: tabular-nums;
+  color: var(--of-ink);
+  background: transparent;
+  border: none;
+  border-radius: var(--of-radius);
+  cursor: pointer;
+}
+
+.of-zoom__preset:hover {
+  background: var(--of-hover);
+}
+
+.of-zoom__refused {
+  margin: 0;
+  padding: 0 var(--of-space-4);
+  font-size: var(--of-type-record);
+  color: var(--of-ink);
+}

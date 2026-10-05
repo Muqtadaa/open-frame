@@ -1,0 +1,173 @@
+/*
+ * A TABLE: one object, drawn as a grid.
+ *
+ * `fr` tracks, because that is exactly the weight model the data uses — the
+ * browser divides the frame, so resizing the table needs no recalculation
+ * anywhere.
+ */
+.of-table-wrap {
+  position: relative;
+  width: 100%;
+  height: 100%;
+}
+
+/*
+ * Square, and with no border of its own: every line on a table, the outer
+ * edge included, is a line on its GRID (ADR 0015), drawn by `.of-table__lines`
+ * over the cells. A border here would be a second edge that nothing in the
+ * borders menu could reach.
+ */
+.of-table {
+  display: grid;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  background: var(--of-panel);
+  /* A sheet laid on the page, as every object is. */
+  border-radius: var(--of-radius-slip);
+  box-shadow: var(--of-slip-shadow);
+}
+
+.of-table__row {
+  display: contents;
+}
+
+.of-table__cell {
+  min-width: 0;
+  min-height: 0;
+  padding: var(--of-space-4) var(--of-space-6);
+  overflow: hidden;
+  font-size: var(--of-type-record);
+  /*
+   * A cell aligns its own text up and down.
+   *
+   * The table used to set `justify-content` on itself, which is a GRID — there
+   * the property distributes tracks along the inline axis, so it moved nothing
+   * and the cells stayed `display: block` with `align-items: normal`. Vertical
+   * alignment in a table did nothing from the day it shipped.
+   *
+   * The value still arrives as ONE declaration on the table, as a custom
+   * property: those inherit, and `justify-content` does not. Setting it per cell
+   * would rebuild a style object four hundred times on a twenty-by-twenty grid.
+   *
+   * Not the textarea: `display: flex` on a form control is meaningless, and
+   * size containment would stop it scrolling with what is typed.
+   */
+  display: flex;
+  flex-direction: column;
+  justify-content: var(--of-valign, flex-start);
+  container-type: size;
+  /*
+   * INHERITED, not set. `color: var(--of-ink)` here won every text colour the
+   * table was given, because the ink is applied to the table as a whole and a
+   * property set on the child beats one inherited into it. `body` is the ink,
+   * so inheriting lands on exactly the same colour when nothing overrides it.
+   */
+  color: inherit;
+}
+
+/*
+ * The grid's lines, over the cells, in WORLD units: a table's lines are its
+ * content and scale with it, as a shape's outline does. Visible overflow, so
+ * the half of an outer line that falls outside the table is not cut off.
+ */
+.of-table__lines {
+  position: absolute;
+  top: 0;
+  left: 0;
+  overflow: visible;
+  pointer-events: none;
+}
+
+.of-table__cell--head {
+  font-weight: var(--of-weight-semibold);
+  background: var(--of-hover);
+}
+
+/*
+ * The one cell being typed in: a field filling its cell. The ring round it is
+ * the selection's, drawn in screen space, so it has no outline of its own.
+ */
+.of-table__input {
+  flex: 1;
+  min-height: 0;
+  overflow: auto;
+  overflow-wrap: anywhere;
+  white-space: pre-wrap;
+  cursor: text;
+  outline: none;
+}
+
+/*
+ * A division INSIDE an object, grabbed to move it.
+ *
+ * Invisible until hovered: a table with four boundaries drawn permanently
+ * would be a table wearing its own scaffolding. The grab area is wide enough
+ * to aim at (WCAG 2.5.8) while what is drawn on hover is a single rule.
+ *
+ * DIVIDER, not guide. `.of-guide` is the alignment feedback further down this
+ * file, and it sets `pointer-events: none` because a guide is something you
+ * look at. Written as `.of-guide`, these handles inherited that rule by cascade
+ * order and could not be pressed at all — two different ideas sharing one name,
+ * where the later one silently won.
+ */
+.of-divider {
+  position: absolute;
+  top: 0;
+  left: 0;
+  /*
+   * Above the object it divides. A selected object raises itself to `z-index:
+   * 1`, and these handles sit ENTIRELY inside it — unlike the resize handles,
+   * which hang half outside the edge and can be caught there. Left on `auto`
+   * the cell under the boundary took every press.
+   */
+  z-index: var(--of-z-guide);
+  background: transparent;
+  pointer-events: auto;
+}
+
+.of-divider--x {
+  cursor: col-resize;
+}
+
+.of-divider--y {
+  cursor: row-resize;
+}
+
+.of-divider::after {
+  position: absolute;
+  content: '';
+  background: var(--of-accent);
+  opacity: 0;
+}
+
+.of-divider--x::after {
+  top: 0;
+  bottom: 0;
+  left: 50%;
+  width: 2px;
+  transform: translateX(-50%);
+}
+
+.of-divider--y::after {
+  top: 50%;
+  right: 0;
+  left: 0;
+  height: 2px;
+  transform: translateY(-50%);
+}
+
+.of-divider:hover::after {
+  opacity: 1;
+}
+
+/*
+ * The editor's wrapper, which holds the grid AND the controls that change its
+ * shape. Relative, so the two button pairs sit against the edge each of them
+ * affects.
+ */
+.of-table-edit {
+  position: relative;
+  width: 100%;
+  height: 100%;
+}

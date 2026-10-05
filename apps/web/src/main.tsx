@@ -22,7 +22,7 @@ import { ServicesContext } from './runtime/services.js'
 import { Home } from './ui/Home.js'
 import { StartFailed } from './ui/StartFailed.js'
 import { createDefaultViewRegistry } from './views/index.js'
-import './styles.css'
+import './styles/index.css'
 
 const container = document.getElementById('root')
 if (container === null) throw new Error('Missing #root element')

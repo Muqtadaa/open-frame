@@ -1,6 +1,8 @@
-import { readFileSync } from 'node:fs'
+import { readdirSync, readFileSync } from 'node:fs'
 import { resolve } from 'node:path'
 import { describe, expect, it } from 'vitest'
+
+import { readStyles } from '../styles/read-styles.js'
 
 /**
  * The two things a piece of apparatus must not get wrong.
@@ -14,10 +16,16 @@ const LAYER = read('src/controls/AnchoredSurface.tsx')
 const WORLD_LAYER = read('src/canvas/EditorChrome.tsx')
 // Where the canvas decides a press belongs to an editor rather than to the board.
 const GESTURES = read('src/canvas/gestures/targets.ts')
-const VIEWS = ['TableView', 'CodeView', 'RichTextEditor'].map((name) => ({
-  name,
-  source: read(`src/views/${name}.tsx`),
-}))
+// A table's view is drawn from the parts in `views/table/`, so they are read
+// with it: a surface that moved into one of them would otherwise leave the rule.
+const TABLE_PARTS = readdirSync(resolve(process.cwd(), 'src/views/table'))
+  .filter((file) => /\.tsx?$/.test(file) && !/\.test\.tsx?$/.test(file))
+  .map((file) => `src/views/table/${file}`)
+const VIEWS = [
+  { name: 'TableView', paths: ['src/views/TableView.tsx', ...TABLE_PARTS] },
+  { name: 'CodeView', paths: ['src/views/CodeView.tsx'] },
+  { name: 'RichTextEditor', paths: ['src/views/RichTextEditor.tsx'] },
+].map(({ name, paths }) => ({ name, source: paths.map(read).join('\n') }))
 
 /**
  * Everything that floats beside something.
@@ -116,7 +124,7 @@ describe('the chrome layer', () => {
  * surface nobody thought to declare.
  */
 describe('nothing places itself', () => {
-  const CSS = read('src/styles.css')
+  const CSS = readStyles()
 
   /**
    * `calc(100% + n)` in an offset means exactly one thing: put me just outside

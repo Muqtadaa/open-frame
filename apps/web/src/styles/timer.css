@@ -1,0 +1,140 @@
+/*
+ * The session timer (ADR 0017). Quiet on the bar until it runs: an icon like
+ * the bar's other controls, then the time in mono beside it, tabular so the
+ * digits do not jitter as they change. At zero it takes the accent's wash
+ * and edge — the mentions chip's "look at me" — and, where the chime could
+ * not sound, pulses a few times instead.
+ */
+.of-timer {
+  position: relative;
+}
+
+.of-timer__button {
+  display: inline-flex;
+  gap: var(--of-space-6);
+  align-items: center;
+  min-width: var(--of-hit-sm);
+  min-height: var(--of-hit-sm);
+  padding: 0 var(--of-space-6);
+  font-family: var(--of-mono);
+  font-size: var(--of-type-record);
+  color: var(--of-ink-muted);
+  cursor: pointer;
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: var(--of-radius);
+}
+
+.of-timer__button svg {
+  width: 18px;
+  height: 18px;
+}
+
+.of-timer__button:hover {
+  color: var(--of-ink);
+  background: var(--of-hover);
+}
+
+.of-timer__button.is-active {
+  color: var(--of-ink);
+  border-color: var(--of-control-border);
+}
+
+.of-timer__time {
+  font-variant-numeric: tabular-nums;
+}
+
+.of-timer__button.is-done {
+  font-weight: var(--of-weight-semibold);
+  color: var(--of-accent);
+  background: var(--of-accent-soft);
+  border-color: var(--of-accent);
+}
+
+.of-timer__button.is-flashing {
+  /*
+   * Colour, not movement, so reduced motion keeps it: it stands in for a
+   * sound. Longhand, because the shorthand naming `--of-settle` reads to the
+   * motion guard as running the `of-settle` keyframes.
+   */
+  animation-name: of-timer-flash;
+  animation-duration: var(--of-settle);
+  animation-timing-function: var(--of-ease);
+  animation-iteration-count: 8;
+  animation-direction: alternate;
+}
+
+@keyframes of-timer-flash {
+  to {
+    color: var(--of-panel);
+    background: var(--of-accent);
+  }
+}
+
+.of-timer__sheet {
+  display: grid;
+  gap: var(--of-step);
+  width: 260px;
+  padding: var(--of-step);
+  background: var(--of-panel);
+  border: 1px solid var(--of-panel-border);
+  border-radius: var(--of-radius-surface);
+  box-shadow: var(--of-shadow);
+}
+
+.of-timer__readout {
+  font-family: var(--of-mono);
+  font-size: var(--of-type-display);
+  font-variant-numeric: tabular-nums;
+  line-height: 1.1;
+  color: var(--of-ink);
+  text-align: center;
+}
+
+.of-timer__by {
+  font-size: var(--of-type-record);
+  color: var(--of-ink-muted);
+  text-align: center;
+}
+
+.of-timer__presets {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: var(--of-space-4);
+}
+
+.of-timer__preset {
+  padding: 0;
+  font-family: var(--of-mono);
+}
+
+.of-timer__preset[aria-pressed='true'] {
+  color: var(--of-accent);
+  background: var(--of-accent-soft);
+  border-color: var(--of-accent);
+}
+
+.of-timer__field {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: var(--of-step);
+  align-items: center;
+}
+
+.of-timer__field-label {
+  font-family: var(--of-mono);
+  font-size: var(--of-type-record);
+  color: var(--of-ink-muted);
+}
+
+.of-timer__input {
+  font-family: var(--of-mono);
+  font-variant-numeric: tabular-nums;
+}
+
+.of-timer__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--of-space-6);
+  justify-content: center;
+}

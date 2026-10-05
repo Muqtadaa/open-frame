@@ -2,12 +2,14 @@ import { existsSync, readFileSync } from 'node:fs'
 import { resolve } from 'node:path'
 import { describe, expect, it } from 'vitest'
 
+import { readStyles } from '../styles/read-styles.js'
+
 /**
  * The splash is the one place a colour is allowed to be written twice.
  *
  * It has to paint at first paint, before any stylesheet has loaded, so its
  * critical CSS lives inline in `index.html` as literal values — outside the
- * reach of `design-tokens.test.ts`, which only reads `styles.css`. That is a
+ * reach of `design-tokens.test.ts`, which only reads the stylesheet. That is a
  * second source of truth for the brand, and a second source of truth drifts.
  *
  * So it is pinned here instead: every colour in the document's inline style has
@@ -15,7 +17,7 @@ import { describe, expect, it } from 'vitest'
  * brand token now either changes the splash or fails the build.
  */
 const HTML = readFileSync(resolve(process.cwd(), 'index.html'), 'utf8')
-const CSS = readFileSync(resolve(process.cwd(), 'src/styles.css'), 'utf8')
+const CSS = readStyles()
 
 function token(name: string): string {
   const match = new RegExp(`--of-${name}:\\s*(#[0-9a-fA-F]{6})`).exec(CSS)

@@ -32,7 +32,7 @@ const CREATURES = [
   'Curlew',
 ] as const
 
-/** Six hues kept apart from the content palette; see `--of-p-*` in styles.css. */
+/** Six hues kept apart from the content palette; see `--of-p-*` in styles/tokens.css. */
 export const PRESENCE_HUES = 6
 
 export interface Guest {

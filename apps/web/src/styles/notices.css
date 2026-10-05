@@ -1,0 +1,81 @@
+/* ---------- notices and status ---------- */
+
+/*
+ * The top of the board holds two kinds of message, stacked in
+ * `.of-overlay--top` with a gap between them: the
+ * notice (the board opened with something it could not read — advice, on the
+ * panel stock) and the toast (something just tried did not work — a failure,
+ * in the danger colours). Red is only ever for the second.
+ */
+.of-notice {
+  display: flex;
+  gap: var(--of-space-12);
+  align-items: center;
+  padding: var(--of-step) var(--of-space-12);
+  font-size: var(--of-type-ui);
+  color: var(--of-ink);
+  background: var(--of-panel);
+  border: 1px solid var(--of-panel-border);
+  border-radius: var(--of-radius-surface);
+  box-shadow: var(--of-shadow);
+}
+
+.of-notice__body {
+  flex: 1;
+}
+
+.of-toast {
+  display: flex;
+  gap: var(--of-space-8);
+  align-items: center;
+  padding: var(--of-space-4) var(--of-space-4) var(--of-space-4) var(--of-space-12);
+  font-size: var(--of-type-ui);
+  color: var(--of-danger);
+  background: var(--of-danger-wash);
+  border: 1px solid var(--of-danger-edge);
+  border-radius: var(--of-radius-surface);
+  box-shadow: var(--of-shadow);
+}
+
+.of-toast__body {
+  flex: 1;
+}
+
+/*
+ * News rather than a refusal: an agent changed the board, and the toast offers
+ * to take it back (tracks A-2). Red is kept for failures (the notice tiers),
+ * so this is the panel stock with the board's own ink.
+ */
+.of-toast--news {
+  color: var(--of-ink);
+  background: var(--of-panel);
+  border-color: var(--of-panel-border);
+}
+
+.of-toast__action {
+  flex: none;
+}
+
+/*
+ * A face you can press, for following somebody around the board.
+ *
+ * The chip already carried a colour and an initial; this only makes the ones
+ * that DO something look pressable, so a row of faces still reads as a row of
+ * faces rather than a toolbar.
+ */
+.of-status__person--follow {
+  padding: 0;
+  font: inherit;
+  cursor: pointer;
+  border: 1px solid transparent;
+}
+
+.of-status__person--follow:hover {
+  border-color: var(--of-ink);
+}
+
+/* Being followed: a ring, so it is legible without relying on the hue. */
+.of-status__person--following {
+  border-color: var(--of-ink);
+  box-shadow: 0 0 0 2px var(--of-page);
+}

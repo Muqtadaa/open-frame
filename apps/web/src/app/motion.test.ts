@@ -1,6 +1,6 @@
-import { readFileSync } from 'node:fs'
-import { resolve } from 'node:path'
 import { describe, expect, it } from 'vitest'
+
+import { readStyles } from '../styles/read-styles.js'
 
 /**
  * Every animation that MOVES something has a reduced-motion path.
@@ -23,10 +23,7 @@ import { describe, expect, it } from 'vitest'
  * how the first run of this reported `* eleven beats late is a list that feels
  * slow` as an unhandled animation.
  */
-const CSS = readFileSync(resolve(process.cwd(), 'src/styles.css'), 'utf8').replace(
-  /\/\*[\s\S]*?\*\//g,
-  '',
-)
+const CSS = readStyles().replace(/\/\*[\s\S]*?\*\//g, '')
 
 /**
  * EVERY reduced-motion block, not the first.

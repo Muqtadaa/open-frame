@@ -347,9 +347,17 @@ direction contract for a surface). They are maintained through the vendored
 ### 22. Contrast is tested, not asserted
 
 WCAG 2.2 AA is a product commitment, so `app/design-tokens.test.ts` parses
-`styles.css` and fails the build when a pair drops below its floor. It restates
+the stylesheet and fails the build when a pair drops below its floor. It restates
 no hex values: a duplicated palette drifts, and the test then passes against
 colours the app stopped using.
+
+The stylesheet is `apps/web/src/styles/`, one part per surface, and
+`styles/index.css` imports them in cascade order — that list IS the order the
+rules apply in, so it is never tidied. Tests read the whole thing through
+`styles/read-styles.ts`, joined in that order; a part `index.css` does not
+import is shipped to nobody and read by no test (`styles/split.test.ts`). A new
+surface gets its own part, above `motion.css`, which restates selectors from
+everywhere to animate them.
 
 Know which floor applies. 4.5:1 is text; 3:1 is a **UI component you must
 perceive to operate** — a control's boundary, a handle, a focus ring. The page

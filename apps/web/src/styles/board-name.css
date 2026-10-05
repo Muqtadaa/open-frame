@@ -1,0 +1,89 @@
+/* ---------- the board's name ---------- */
+
+/*
+ * The board's name, heading the page's navigation. In the interface's own
+ * face: it names the page, it is not a readout on it.
+ */
+.of-status__title {
+  /*
+   * Shrinks before anything else on the line gives — but not below a name you
+   * can still read. At 4ch it collapsed to "U…", which is a board title that
+   * has stopped being one.
+   */
+  flex: 0 1 auto;
+  min-width: 10ch;
+  /*
+   * The ROOM the bar has, up to a line you can read at a glance. It was 22
+   * characters, with half the bar's width empty beside it: a heading that
+   * gave up before it had to.
+   */
+  max-width: 48ch;
+  overflow: hidden;
+  height: var(--of-hit-sm);
+  padding: 0 var(--of-space-8);
+  /*
+   * The PAGE's name, in the interface's own voice — it heads the page now,
+   * where it was one more mono readout in a line at the foot of it.
+   */
+  font-family: var(--of-font);
+  font-size: var(--of-type-ui);
+  font-weight: var(--of-weight-semibold);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: var(--of-ink);
+  background: none;
+  border: none;
+  border-radius: var(--of-radius-apparatus);
+  cursor: text;
+}
+
+.of-status__title:hover {
+  background: var(--of-hover);
+}
+
+/*
+ * A board that could not be fully read is never written back, so it is named
+ * but not offered for renaming. A span, not a button, so it centres its own
+ * line and takes no hover bed — it sat at the top of its 30px box.
+ */
+.of-status__title--fixed {
+  display: inline-flex;
+  align-items: center;
+  color: var(--of-ink-muted);
+  cursor: default;
+}
+
+.of-status__title--fixed:hover {
+  background: none;
+}
+
+/*
+ * The same turn-a-readout-into-an-input the zoom percentage does: an
+ * accent-soft bed under a 1px accent outline, so the line has one way of doing
+ * this rather than two.
+ */
+.of-status__title--editing {
+  /* As wide as what is being typed, within the same bounds as the name. */
+  field-sizing: content;
+  min-width: 22ch;
+  background: var(--of-accent-soft);
+  outline: 1px solid var(--of-accent);
+}
+
+/*
+ * Whether a board is only yours. A record, like everything else in a ledger
+ * row that is not the name — mono, muted, and quiet enough that the name stays
+ * the thing you read.
+ */
+.of-home__board-tag {
+  justify-self: start;
+  padding: var(--of-space-4) var(--of-space-8);
+  font-family: var(--of-mono);
+  font-size: var(--of-type-record);
+  letter-spacing: 0.02em;
+  /* It is one column of a ledger; wrapping turns the row into two. */
+  white-space: nowrap;
+  color: var(--of-ink-muted);
+  background: var(--of-bg);
+  border-radius: var(--of-radius-apparatus);
+}

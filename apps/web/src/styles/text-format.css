@@ -1,0 +1,230 @@
+/*
+ * The type scale for a run of text inside an object.
+ *
+ * Nine steps in a √2 progression, spanning 0.6× to 7.6×. The first ladder ran
+ * 0.8× to 1.9× and was designed when every shape was the same 160×120;
+ * draw-to-size made a shape any size someone cares to draw, and on a large one
+ * the largest step still read as small type in a big box.
+ *
+ * Relative to the object's own size rather than absolute, so `lg` in a sticky
+ * and `lg` in a text object both mean "bigger than the rest of this" — which is
+ * what was picked. Absolute pixels would make `lg` SMALLER than a text
+ * object's normal.
+ *
+ * `md` has no rule: it is the object's own size, and a span at that size
+ * carries no token at all.
+ */
+.of-size--xs {
+  font-size: 0.6em;
+}
+
+.of-size--sm {
+  font-size: 0.8em;
+}
+
+.of-size--lg {
+  font-size: 1.4em;
+}
+
+.of-size--xl {
+  font-size: 2em;
+}
+
+.of-size--2xl {
+  font-size: 2.8em;
+}
+
+.of-size--3xl {
+  font-size: 3.9em;
+}
+
+.of-size--4xl {
+  font-size: 5.5em;
+}
+
+.of-size--5xl {
+  font-size: 7.6em;
+}
+
+/*
+ * Paragraphs and lists (ADR 0014).
+ *
+ * Every paragraph is a block, and a list item says so in data attributes —
+ * which a browser copies when Enter splits a block, so the editor continues a
+ * list by itself. The bullet or number is drawn here rather than typed, so it
+ * renumbers, never reaches search, and cannot be selected and deleted as if it
+ * were a character.
+ *
+ * A HANGING indent, not an absolutely placed marker: a centred shape label
+ * with a list in it keeps the bullet beside its words rather than stranded at
+ * the far edge of the box.
+ */
+.of-p[data-list] {
+  --of-depth: 0;
+
+  padding-inline-start: calc(1.4em * (var(--of-depth) + 1));
+  text-indent: -1.4em;
+}
+
+.of-p[data-indent='1'] {
+  --of-depth: 1;
+}
+
+.of-p[data-indent='2'] {
+  --of-depth: 2;
+}
+
+.of-p[data-indent='3'] {
+  --of-depth: 3;
+}
+
+.of-p[data-list]::before {
+  display: inline-block;
+  width: 1.4em;
+  text-indent: 0;
+  font-variant-numeric: tabular-nums;
+}
+
+.of-p[data-list='bullet']::before {
+  content: '•';
+}
+
+.of-p[data-list='bullet'][data-indent='1']::before {
+  content: '◦';
+}
+
+.of-p[data-list='bullet'][data-indent='2']::before {
+  content: '▪';
+}
+
+/*
+ * Numbering, one counter per level, and the paragraphs are SIBLINGS rather
+ * than nested lists — the shape the editor can keep while a browser splits
+ * and merges blocks under it. So each paragraph resets what should restart
+ * after it: a plain paragraph every level, an item every level deeper than
+ * itself, and a bullet its own level too, so a numbered list after bullets
+ * starts again at one.
+ */
+.of-p:not([data-list]) {
+  counter-reset: of-l0 of-l1 of-l2 of-l3;
+}
+
+.of-p[data-list='bullet']:not([data-indent]) {
+  counter-reset: of-l0 of-l1 of-l2 of-l3;
+}
+
+.of-p[data-list='bullet'][data-indent='1'] {
+  counter-reset: of-l1 of-l2 of-l3;
+}
+
+.of-p[data-list='bullet'][data-indent='2'] {
+  counter-reset: of-l2 of-l3;
+}
+
+.of-p[data-list='bullet'][data-indent='3'] {
+  counter-reset: of-l3;
+}
+
+.of-p[data-list='number']:not([data-indent]) {
+  counter-increment: of-l0;
+  counter-reset: of-l1 of-l2 of-l3;
+}
+
+.of-p[data-list='number']:not([data-indent])::before {
+  content: counter(of-l0) '.';
+}
+
+.of-p[data-list='number'][data-indent='1'] {
+  counter-increment: of-l1;
+  counter-reset: of-l2 of-l3;
+}
+
+.of-p[data-list='number'][data-indent='1']::before {
+  content: counter(of-l1, lower-alpha) '.';
+}
+
+.of-p[data-list='number'][data-indent='2'] {
+  counter-increment: of-l2;
+  counter-reset: of-l3;
+}
+
+.of-p[data-list='number'][data-indent='2']::before {
+  content: counter(of-l2, lower-roman) '.';
+}
+
+.of-p[data-list='number'][data-indent='3'] {
+  counter-increment: of-l3;
+}
+
+.of-p[data-list='number'][data-indent='3']::before {
+  content: counter(of-l3) '.';
+}
+
+/*
+ * The format bar, shown only while text is being edited.
+ *
+ * Above the object rather than in the record panel: the panel is hidden during
+ * an edit, and formatting applies to a SELECTION, which only exists while the
+ * caret is in the text. Page apparatus, like every other piece of chrome — the
+ * page's own stock, a hairline and a contact shadow, never a floating capsule.
+ */
+/* Placement and shell are shared; this only says how the controls sit. */
+.of-format-bar {
+  display: flex;
+  gap: var(--of-space-2);
+  align-items: center;
+  padding: var(--of-space-4);
+}
+
+/* The glyphs are letters in the text's own face, in full ink: they SHOW the mark. */
+.of-format-bar__button {
+  font-family: var(--of-font);
+  font-size: var(--of-type-ui);
+  color: var(--of-ink);
+}
+
+/* The glyphs SHOW the formatting, so the button is legible without its label. */
+.of-format-bar__button--bold {
+  font-weight: var(--of-weight-bold);
+}
+
+.of-format-bar__button--italic {
+  font-style: italic;
+}
+
+.of-format-bar__button--underline {
+  text-decoration: underline;
+}
+
+.of-format-bar__button--strike {
+  text-decoration: line-through;
+}
+
+.of-format-bar__rule {
+  width: 1px;
+  height: 16px;
+  margin: 0 var(--of-space-2);
+  background: var(--of-panel-border);
+}
+
+/*
+ * The size steppers. The glyph carries the meaning — a smaller A for smaller
+ * text — so the pair reads without either label.
+ */
+.of-format-bar__button--size {
+  font-size: var(--of-type-record);
+}
+
+.of-format-bar__button--bigger {
+  font-size: var(--of-type-ui);
+}
+
+/* A readout, so the mono every readout is set in; wide enough for ×7.6. */
+.of-format-bar__size {
+  min-width: 36px;
+  font-family: var(--of-mono);
+  font-size: var(--of-type-record);
+  font-variant-numeric: tabular-nums;
+  color: var(--of-ink-muted);
+  text-align: center;
+}

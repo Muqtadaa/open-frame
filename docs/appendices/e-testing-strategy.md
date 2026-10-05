@@ -93,6 +93,14 @@ owns.
 
 ---
 
+## What no suite can test
+
+The browser suites read the accessibility tree and drive synthetic input. They
+never hear what a screen reader says, and they never run on a phone, a
+trackpad or a weak GPU. That part is done by people, against
+[device and screen-reader validation](../reviews/device-and-sr-validation.md),
+and its findings are filed from there.
+
 ## What is deliberately not tested
 
 React component trees, rendering internals, library behaviour, styling, and any

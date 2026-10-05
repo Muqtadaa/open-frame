@@ -1,0 +1,90 @@
+/* ---------- shell ---------- */
+
+.of-app {
+  position: relative;
+  height: 100%;
+  overflow: hidden;
+}
+
+/* Overlays float over the canvas and are click-through except where they paint. */
+/*
+ * The board's landmark draws no box: the canvas and the overlays inside it are
+ * placed against the app exactly as they were before it existed.
+ */
+.of-board-main {
+  display: contents;
+}
+
+.of-overlay {
+  position: absolute;
+  z-index: var(--of-z-chrome);
+  pointer-events: none;
+}
+
+.of-overlay > * {
+  pointer-events: auto;
+}
+
+/*
+ * The rail rises over the apparatus layer while it is being reached for.
+ *
+ * Its tips are the rail's, and the rail sat under the layer the record panel
+ * floats in — so with a selection near the left edge the panel opened beside
+ * the rail and every tip slid out UNDER it. Raised only while the pointer or
+ * the keyboard is in the rail: then nothing it covers is being reached for.
+ */
+.of-overlay--left:hover,
+.of-overlay--left:focus-within {
+  z-index: var(--of-z-reached);
+}
+
+/*
+ * The same for the top while a panel there is being WORKED in. Clustering is
+ * opened on a selection of several notes, whose arrange bar floats above it on
+ * the apparatus layer and took the panel's first click.
+ */
+.of-overlay--top:has(.of-cluster),
+.of-overlay--top:focus-within {
+  z-index: var(--of-z-reached);
+}
+
+/*
+ * The rail's BAND: from under the navigation bar down to the bottom gutter,
+ * and the rail centred in it. It was centred on the WINDOW at a fixed 599
+ * pixels, so at 640 tall it met the record line and at 560 it started above
+ * the top of the window with Select cut off.
+ */
+.of-overlay--left {
+  top: var(--of-nav-band);
+  bottom: var(--of-gutter);
+  left: var(--of-gutter);
+  display: flex;
+  align-items: center;
+}
+
+/*
+ * The board's navigation, along the top: the way out, the board's name,
+ * history and the rest of the record line. It was at the bottom, where nothing
+ * reads as a page's heading.
+ */
+.of-overlay--nav {
+  top: var(--of-gutter);
+  left: var(--of-gutter);
+}
+
+/* Notices come in under the navigation, never over it. */
+.of-overlay--top {
+  top: var(--of-nav-band);
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  flex-direction: column;
+  gap: var(--of-space-8);
+  align-items: center;
+  max-width: min(720px, calc(100vw - 140px));
+}
+
+.of-overlay--bottom-right {
+  right: var(--of-gutter);
+  bottom: var(--of-gutter);
+}

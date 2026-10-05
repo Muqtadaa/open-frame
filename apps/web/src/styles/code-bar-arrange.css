@@ -1,0 +1,31 @@
+/*
+ * The code block's apparatus: its language menu and its format button, side by
+ * side on the chrome layer. Each carries its own surface rather than sharing
+ * one, which is how the table's groups are built and keeps the select's own
+ * control styling intact.
+ */
+.of-code__bar {
+  display: flex;
+  gap: var(--of-space-6);
+  align-items: center;
+}
+
+.of-code__format {
+  padding: 0 var(--of-step);
+  font-size: var(--of-type-record);
+  line-height: 24px;
+}
+
+/*
+ * Align and distribute, floating above a selection of two or more.
+ *
+ * Shares the contextual surface every floating thing shares — panel white, a
+ * 1px margin rule, 10px radius, the contact shadow — which `.of-surface`
+ * carries. This adds only the row.
+ */
+.of-arrange {
+  display: flex;
+  gap: var(--of-space-2);
+  align-items: center;
+  padding: var(--of-space-4);
+}
