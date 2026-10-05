@@ -2,7 +2,7 @@ import type { ZodType } from 'zod'
 
 import { containsRotatedPoint, rotatedBounds, type Rect } from '../geometry/rect.js'
 import type { Point } from '../geometry/point.js'
-import { groupByParent, type BoardDocument } from './document.js'
+import { groupByParent, type AssetRef, type BoardDocument } from './document.js'
 import type { ObjectId } from './ids.js'
 import type { AnyOpenFrameObject, ObjectBase, StyleProp } from './object.js'
 
@@ -259,6 +259,12 @@ export interface CopyContext {
   readonly ends: ReadonlyMap<string, Point>
   /** How far the copy lands from the original, in world units. */
   readonly by: Point
+  /**
+   * The asset a copy should use in place of `ref`: the same one on the board
+   * it came from, the one uploaded for it on another board, or `ref` itself
+   * when nothing could be uploaded (it is then shown as unavailable).
+   */
+  readonly asset: (ref: AssetRef) => AssetRef
 }
 
 export interface ObjectCapabilities {
@@ -562,6 +568,13 @@ export interface ObjectTypeDefinition<TType extends string, TData> {
   readonly dividers?: (object: ObjectBase<TType, TData>) => readonly DraggableDivider[]
 
   /**
+   * The stored files this object shows — a picture's bytes. A copy taken to
+   * another board has to take these with it, and `copyReferences` is told
+   * what each became (`copy.asset`).
+   */
+  readonly assets?: (object: ObjectBase<TType, TData>) => readonly AssetRef[]
+
+  /**
    * What a COPY of this object refers to, once it lands.
    *
    * A connector's ends and a relation's two sides name other objects by id.
@@ -752,6 +765,7 @@ export interface ErasedObjectTypeDefinition {
     context: GeometryContext,
   ) => Record<string, unknown>
   readonly cropWindow?: (object: AnyOpenFrameObject) => CropWindow
+  readonly assets?: (object: AnyOpenFrameObject) => readonly AssetRef[]
   readonly copyReferences?: (
     data: Record<string, unknown>,
     copy: CopyContext,
@@ -841,6 +855,7 @@ export function defineObjectType<TType extends string, TData>(
     dividers,
     moveDivider,
     cropWindow,
+    assets,
     copyReferences,
     relation,
     mark,
@@ -886,6 +901,9 @@ export function defineObjectType<TType extends string, TData>(
     ...(cropWindow === undefined
       ? {}
       : { cropWindow: (object) => cropWindow(object as ObjectBase<TType, TData>) }),
+    ...(assets === undefined
+      ? {}
+      : { assets: (object) => assets(object as ObjectBase<TType, TData>) }),
     ...(copyReferences === undefined
       ? {}
       : {
@@ -1234,6 +1252,11 @@ export class ObjectTypeRegistry {
    */
   drawnFromEnds(object: AnyOpenFrameObject): boolean {
     return this.#definitions.get(object.type)?.endpoints !== undefined
+  }
+
+  /** The stored files this object shows (`assets`), or none. */
+  assetsOf(object: AnyOpenFrameObject): readonly AssetRef[] {
+    return this.#definitions.get(object.type)?.assets?.(object) ?? []
   }
 
   /** Objects whose rendering depends on this one — the reverse of `dependencies`. */

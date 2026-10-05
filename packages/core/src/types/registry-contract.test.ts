@@ -66,6 +66,13 @@ describe('object type registry contract', () => {
     // `defineObjectType`, and forgetting one type checks perfectly.
     expect(registry.get('sticky')?.promotions).toEqual(['evidence', 'insight', 'journey-stage'])
     expect(registry.get('evidence')?.derivations).toEqual([{ type: 'insight', predicate: 'cites' }])
+    // A copy that lost these would paste lines attached to nothing and
+    // pictures without their bytes, and every paste test would still pass on
+    // the types that declare neither.
+    expect(registry.get('connector')?.copyReferences).toBeTypeOf('function')
+    expect(registry.get('relation')?.copyReferences).toBeTypeOf('function')
+    expect(registry.get('image')?.copyReferences).toBeTypeOf('function')
+    expect(registry.get('image')?.assets).toBeTypeOf('function')
   })
 
   /**

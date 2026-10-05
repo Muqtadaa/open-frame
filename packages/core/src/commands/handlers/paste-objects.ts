@@ -1,11 +1,8 @@
-import type { BoardDocument } from '../../domain/document.js'
+import type { AssetRef, BoardDocument } from '../../domain/document.js'
 import type { ObjectId } from '../../domain/ids.js'
-import type { AnyOpenFrameObject } from '../../domain/object.js'
 import type { Patch } from '../../domain/patch.js'
 import type { Point } from '../../geometry/point.js'
-import { CLIPBOARD_VERSION, ClipboardContentSchema } from '../../schema/clipboard.js'
-import { PersistedObjectSchema } from '../../schema/envelope.js'
-import { readPersistedObject } from '../../schema/read-object.js'
+import { readClipboard } from '../../schema/clipboard.js'
 import { CommandError } from '../errors.js'
 import type { Command, CommandContext, NewObjectSpec } from '../types.js'
 import { createObjects } from './create-objects.js'
@@ -37,39 +34,18 @@ export function pasteObjects(
   requireFinite(command.dx, 'Paste dx')
   requireFinite(command.dy, 'Paste dy')
 
-  const content = ClipboardContentSchema.safeParse(command.content)
-  if (!content.success) {
-    throw new CommandError('invalid-input', 'That is not something copied from a board')
-  }
-  if (content.data.version > CLIPBOARD_VERSION) {
-    throw new CommandError('invalid-input', 'That was copied from a newer version of OpenFrame')
-  }
-
-  const kept: AnyOpenFrameObject[] = []
-  for (const raw of content.data.objects) {
-    const persisted = PersistedObjectSchema.safeParse(raw)
-    if (!persisted.success) continue
-    const reading = readPersistedObject(persisted.data, ctx.registry)
-    if (!reading.ok) continue
-    const definition = ctx.registry.get(reading.object.type)
-    if (definition === undefined) continue
-    const refersToOthers = ctx.registry.dependenciesOf(reading.object).length > 0
-    if (definition.copyReferences === undefined) {
-      if (refersToOthers || !definition.capabilities.spatial) continue
-    }
-    kept.push(reading.object)
-  }
-  if (kept.length === 0) {
-    throw new CommandError('invalid-input', 'Nothing in that copy could be read by this board')
-  }
+  const content = readClipboard(command.content, ctx.registry)
+  if (!content.ok) throw new CommandError('invalid-input', content.problem)
+  const kept = content.objects
 
   const copies = new Map<ObjectId, ObjectId>()
   for (const object of kept) copies.set(object.id, ctx.ids.objectId())
 
-  const sameBoard = content.data.board === doc.id
+  const sameBoard = content.board === doc.id
   const to = (id: ObjectId): ObjectId | null =>
     copies.get(id) ?? (sameBoard && doc.objects.has(id) ? id : null)
   const by: Point = { x: command.dx, y: command.dy }
+  const asset = (ref: AssetRef): AssetRef => command.assets?.[ref.id] ?? ref
 
   /*
    * Rewrite what each copy refers to. A copy that cannot stand without what
@@ -89,8 +65,8 @@ export function pasteObjects(
         rewritten.set(object.id, data)
         continue
       }
-      const ends = new Map(Object.entries(content.data.ends[object.id] ?? {}))
-      const copy = rewrite(data, { to, ends, by })
+      const ends = new Map(Object.entries(content.ends[object.id] ?? {}))
+      const copy = rewrite(data, { to, ends, by, asset })
       if (copy === null) {
         copies.delete(object.id)
         settled = false

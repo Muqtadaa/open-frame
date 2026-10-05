@@ -77,6 +77,12 @@ export const imageType = defineObjectType<typeof IMAGE_TYPE, ImageData>({
    */
   cropWindow: (object) => object.data.crop ?? FULL_CROP,
 
+  /** The picture's bytes, which a copy to another board has to take along. */
+  assets: (object) => [object.data.asset],
+
+  /** And uses whatever the bytes became where it landed. */
+  copyReferences: (data, { asset }) => ({ ...data, asset: asset(data.asset) }),
+
   /**
    * ALT TEXT AS A NAMED FIELD, not an inline editor.
    *

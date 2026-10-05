@@ -1,5 +1,6 @@
 import type {
   AnyOpenFrameObject,
+  AssetRef,
   BoardDocument,
   ObjectTypeRegistry,
   ColorToken,
@@ -17,11 +18,15 @@ import type {
   VoteScope,
 } from '@openframe/core'
 import {
+  assetsToCarry,
   copyObjects,
+  readClipboard,
+  screenToWorld,
   currentVoteRound,
   groupByParent,
   uncrop,
   unionAll,
+  wordsOf,
   type AlignEdge,
   type DistributeAxis,
   type ImageCrop,
@@ -32,6 +37,7 @@ import { useMemo } from 'react'
 import type { LoggedChange } from '@openframe/collab'
 import { clusterObjects } from '../app/ai-cluster.js'
 import { guestIdentity } from '../app/guest.js'
+import { toClipboard, type ClipboardPayload } from '../interaction/clipboard-format.js'
 import { useOpenFrame } from '../runtime/context.js'
 import { useServices } from '../runtime/services.js'
 import { useInteractionStore } from '../interaction/interaction-store.js'
@@ -74,9 +80,20 @@ export interface BoardCommands {
     data?: Readonly<Record<string, unknown>>,
   ): ObjectId | null
   duplicateSelection(): void
-  copySelection(): void
-  cutSelection(): void
-  paste(at?: Point): void
+  /**
+   * Copies the selection for this tab's own paste, and returns it as the
+   * system clipboard holds it — the native `copy` event writes that.
+   */
+  copySelection(): ClipboardPayload | null
+  /** The same, then deletes what was copied. */
+  cutSelection(): ClipboardPayload | null
+  /**
+   * Pastes the last copy made in this browser — in this tab, or in another
+   * OpenFrame tab, which shares every copy it makes (`use-clipboard-events`).
+   */
+  paste(at?: Point): Promise<void>
+  /** Pastes board content, however it arrived: a native paste or this tab's copy. */
+  pasteContent(content: unknown, at?: Point): Promise<void>
   selectAll(): void
   /** Renames the board. Returns false when the name was refused. */
   setBoardTitle(title: string): boolean
@@ -588,33 +605,78 @@ export function useCommands(): BoardCommands {
       },
 
       copySelection() {
-        const content = copyObjects(
-          runtime.store.getDocument(),
-          useInteractionStore.getState().selection,
-          runtime.registry,
-        )
-        if (content !== null) useInteractionStore.getState().setClipboard(content)
+        const store = useInteractionStore.getState()
+        const doc = runtime.store.getDocument()
+        const content = copyObjects(doc, store.selection, runtime.registry)
+        if (content === null) return null
+        store.setClipboard(content)
+        return toClipboard(content, wordsOf(doc, content, runtime.registry))
       },
 
       cutSelection() {
-        this.copySelection()
-        this.deleteSelection()
+        const copied = this.copySelection()
+        if (copied !== null) this.deleteSelection()
+        return copied
       },
 
-      paste(at) {
-        const store = useInteractionStore.getState()
-        const content = store.clipboard
-        if (content === null) return
+      async paste(at) {
+        const content = useInteractionStore.getState().clipboard
+        if (content !== null) await this.pasteContent(content, at)
+      },
 
-        // Paste at the pointer when there is one, otherwise offset from the
-        // source so the copy is visibly a copy rather than hidden underneath.
-        const dx = at === undefined ? DUPLICATE_OFFSET : at.x - content.origin.x
-        const dy = at === undefined ? DUPLICATE_OFFSET : at.y - content.origin.y
-        const result = dispatcher.dispatch({ kind: 'PasteObjects', content, dx, dy })
+      async pasteContent(content, at) {
+        const store = useInteractionStore.getState()
+        const reading = readClipboard(content, runtime.registry)
+        if (!reading.ok) {
+          store.showToast(`${reading.problem}.`)
+          return
+        }
+        const sameBoard = reading.board === runtime.store.getDocument().id
+
+        /*
+         * At the pointer when there is one. Otherwise, on the board it came
+         * from, offset from the original so the copy reads as a copy; and on
+         * another board, in the middle of what is on screen, since where it
+         * was over there means nothing here.
+         */
+        const { viewport, canvasSize } = store
+        const target =
+          at ??
+          (sameBoard
+            ? {
+                x: reading.origin.x + DUPLICATE_OFFSET,
+                y: reading.origin.y + DUPLICATE_OFFSET,
+              }
+            : screenToWorld(viewport, { x: canvasSize.width / 2, y: canvasSize.height / 2 }))
+
+        // A picture from another board needs its bytes here first.
+        const assets: Record<string, AssetRef> = {}
+        let lost = 0
+        if (!sameBoard) {
+          for (const ref of assetsToCarry(content, runtime.registry)) {
+            const copied = await runtime.assets.copyIn(ref)
+            if (copied === null) lost++
+            else assets[ref.id] = copied
+          }
+        }
+
+        const result = dispatcher.dispatch({
+          kind: 'PasteObjects',
+          content,
+          dx: target.x - reading.origin.x,
+          dy: target.y - reading.origin.y,
+          assets,
+        })
         report(result)
-        if (result.ok) {
-          store.setSelection(
-            pastedRoots(result.affected, runtime.store.getDocument(), runtime.registry),
+        if (!result.ok) return
+        store.setSelection(
+          pastedRoots(result.affected, runtime.store.getDocument(), runtime.registry),
+        )
+        if (lost > 0) {
+          store.showToast(
+            lost === 1
+              ? 'One picture is not in this browser, so it shows as unavailable.'
+              : `${String(lost)} pictures are not in this browser, so they show as unavailable.`,
           )
         }
       },

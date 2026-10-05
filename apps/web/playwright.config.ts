@@ -20,10 +20,13 @@ const NOT_FUNCTIONAL = ['**/*.bench.spec.ts', '**/*.visual.spec.ts']
 /**
  * Specs that can only run in Chromium, by how they are built rather than by
  * what they find: `touch.spec.ts` dispatches touches through a CDP session,
- * and only Chromium speaks CDP. Excluded here, with the reason, rather than
- * skipped inside the spec.
+ * and only Chromium speaks CDP. `clipboard.spec.ts` carries a copy between two
+ * pages through the real system clipboard, which only Chromium lets a test
+ * grant (`clipboard-read`); elsewhere `useClipboard` can only stand in for
+ * `writeText` and `readText`, and a native paste would read nothing.
+ * Excluded here, with the reason, rather than skipped inside the spec.
  */
-const CHROMIUM_ONLY = ['**/touch.spec.ts']
+const CHROMIUM_ONLY = ['**/touch.spec.ts', '**/clipboard.spec.ts']
 
 /**
  * Specs that emulate a phone (`isMobile`), which Playwright cannot do in
