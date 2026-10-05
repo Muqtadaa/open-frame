@@ -46,9 +46,9 @@ resolve it.
 
 | Decision                                         | Why deferred                                                                                                                                                                                                                            | Resolved by                                  |
 | ------------------------------------------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------- |
-| **AI provider and model**                        | Changes monthly. The boundary — validated structured output → commands — is provider-agnostic                                                                                                                                           | Phase 5                                      |
+| ~~**AI provider and model**~~                    | ✅ **Closed** by [ADR 0018](../adr/0018-ai-clustering-on-the-room-server.md): Claude through the official SDK, called by the rooms Worker; the model and effort are Worker variables                                                    | Phase 5                                      |
 | ~~**Whether `apps/mcp` is a separate process**~~ | ✅ **Closed: yes.** A stdio MCP server (`apps/mcp/src/server.ts`, CLI in `cli.ts`) that joins a board's room as a peer, like a browser does. A remote HTTP transport is [Phase 5a](../phases/phase-5a-mcp-server.md) stage 5, not built | [Phase 5a](../phases/phase-5a-mcp-server.md) |
-| **AI preview UX**                                | Needs real AI output to design against                                                                                                                                                                                                  | Phase 5                                      |
+| ~~**AI preview UX**~~                            | ✅ **Closed** by [ADR 0018](../adr/0018-ai-clustering-on-the-room-server.md): a panel says what is sent and to whom, then shows the proposal to edit; Apply makes copies in one revertible change                                       | Phase 5                                      |
 
 ---
 

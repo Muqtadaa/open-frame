@@ -2,6 +2,7 @@ import { createContext, useContext } from 'react'
 
 import type { BoardDocument, BoardId, BoardRepository, ObjectId } from '@openframe/core'
 import type { Catalogue } from '@openframe/core/facilitation'
+import type { ClusterProposal, ClusterRequest } from '@openframe/core/ai'
 
 import type { OpenFrameRuntime } from './context.js'
 
@@ -423,6 +424,36 @@ export interface MusicService {
   readonly trackUrl: (trackId: string) => string
 }
 
+/** Why a request to cluster notes came back without a proposal. */
+export type ClusterRefusal =
+  | 'signed-out'
+  | 'unconfigured'
+  | 'too-large'
+  | 'invalid'
+  | 'unreachable'
+  | 'limit'
+  | 'declined'
+  | 'failed'
+
+export type ClusterOutcome =
+  | { readonly kind: 'proposal'; readonly proposal: ClusterProposal; readonly remaining: number }
+  | { readonly kind: 'refused'; readonly why: ClusterRefusal }
+
+/**
+ * Clustering notes into themes (ADR 0018). The model is called by the room
+ * server, which holds the key; this port sends the notes' text and a bearer
+ * token, and receives a proposal it checks again against what it sent. A
+ * deployment with no room server has no AI, and nothing offers it.
+ */
+export interface AiService {
+  readonly enabled: boolean
+  readonly cluster: (
+    request: ClusterRequest,
+    accessToken: string,
+    signal?: AbortSignal,
+  ) => Promise<ClusterOutcome>
+}
+
 export interface Services {
   /** This browser's boards. The front door has no runtime, so it reads them here. */
   readonly repository: BoardRepository
@@ -434,6 +465,7 @@ export interface Services {
   readonly boards: BoardService
   readonly passwords: PasswordService
   readonly music: MusicService
+  readonly ai: AiService
 }
 
 export const ServicesContext = createContext<Services | null>(null)

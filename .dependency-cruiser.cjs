@@ -34,8 +34,8 @@ module.exports = {
          * catches the case where someone also adds it to core's package.json.
          */
         path:
-          '^(react|react-dom|zustand|yjs|y-protocols|loro-crdt|@automerge/|tldraw|@tldraw/|@excalidraw/|pg|postgres|@supabase/|idb)($|/)' +
-          '|node_modules/(react|react-dom|zustand|yjs|y-protocols|loro-crdt|@automerge|tldraw|@tldraw|@excalidraw|pg|postgres|@supabase|idb)',
+          '^(react|react-dom|zustand|yjs|y-protocols|loro-crdt|@automerge/|tldraw|@tldraw/|@excalidraw/|pg|postgres|@supabase/|idb|@anthropic-ai/)($|/)' +
+          '|node_modules/(react|react-dom|zustand|yjs|y-protocols|loro-crdt|@automerge|tldraw|@tldraw|@excalidraw|pg|postgres|@supabase|idb|@anthropic-ai)',
       },
     },
     {
@@ -70,6 +70,16 @@ module.exports = {
         'door in its own app.',
       from: { pathNot: '^(apps/web/src/adapters/supabase|apps/mcp/src/supabase)' },
       to: { path: '^@supabase($|/)|node_modules/@supabase/' },
+    },
+    {
+      name: 'anthropic-sdk-lives-only-in-rooms',
+      severity: 'error',
+      comment:
+        'The Claude API key is a worker secret and must never reach a browser (ADR 0018). The ' +
+        'SDK lives in the rooms worker’s AI folder, so a component that imports it cannot be ' +
+        'written, and the web build cannot bundle a client that would want a key.',
+      from: { pathNot: '^apps/rooms/src/ai/' },
+      to: { path: '^@anthropic-ai($|/)|node_modules/@anthropic-ai/' },
     },
     {
       name: 'collab-does-not-depend-on-apps',

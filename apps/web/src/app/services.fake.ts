@@ -3,6 +3,8 @@ import { vi } from 'vitest'
 
 import type {
   AccountService,
+  AiService,
+  ClusterOutcome,
   Identity,
   MusicService,
   RemoteBoardService,
@@ -70,4 +72,12 @@ export function fakeMusic(catalogue: Catalogue | null = null): MusicService {
     catalogue: vi.fn(() => Promise.resolve(catalogue)),
     trackUrl: (trackId: string) => `https://rooms.test/music/track/${trackId}`,
   }
+}
+
+/** An AI that answers with the given outcome, for a test that needs one. */
+export function fakeAi(outcome: ClusterOutcome = { kind: 'refused', why: 'unconfigured' }) {
+  return {
+    enabled: true,
+    cluster: vi.fn<AiService['cluster']>(() => Promise.resolve(outcome)),
+  } satisfies AiService
 }

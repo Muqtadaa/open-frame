@@ -20,6 +20,10 @@ Last reconciled with the code on 2026-10-03.
     │        (routes only)        │                └──► R2 (images, prefix <boardId>/)
     │                             │
  MCP agent (stdio, on the user's machine) ── joins the same room as a peer
+
+ browser ── POST /ai/cluster (bearer) ──► rooms Worker ──► Supabase /auth/v1/user
+                                              ├──► AiQuotaObject (runs per day)
+                                              └──► Anthropic (ANTHROPIC_API_KEY, a secret)
 ```
 
 Four kinds of credential exist, and only one of them identifies a person. The
@@ -173,6 +177,32 @@ The rules are pure functions in `apps/rooms/src/access.ts`, tested in Node.
   (`media-src`), checked against the deployed policy in
   `e2e-rooms/content-security.spec.ts`.
 
+## AI clustering (`/ai/cluster`)
+
+[ADR 0018](../adr/0018-ai-clustering-on-the-room-server.md).
+
+- **The key is a Worker secret** (`wrangler secret put ANTHROPIC_API_KEY`).
+  Nothing in the browser can reach it. The SDK cannot be imported outside
+  `apps/rooms/src/ai/` (`anthropic-sdk-lives-only-in-rooms`).
+- **Checked in this order, all before the model is asked**
+  (`ai/handler.ts`):
+  1. size (413);
+  2. whether AI is set up at all (503);
+  3. a bearer token (401);
+  4. the request against the core contract (400);
+  5. who the token belongs to, asked of Supabase (401, or 503 if Supabase
+     cannot be reached);
+  6. a run reserved in `AiQuotaObject` (429).
+
+  `handler.test.ts` holds that order, and was broken once to watch it fail.
+
+- **The route reads no room.** It receives only the selected notes' text
+  under refs, never object ids, so ADR 0016's trust boundary is unchanged.
+- **The answer is untrusted** even though our Worker relays it. It is held to
+  a schema by the API, then by the Worker, then by the browser. It can name
+  only refs it was sent, and it becomes copies a person applies, which are
+  revertible.
+
 ## Collaboration: what the room trusts
 
 **The room enforces who may write, not what they write.** See
@@ -267,6 +297,10 @@ The architecture already helps in two ways:
 Neither of these is a complete defence, and they bound the damage rather than
 prevent it.
 
+Clustering adds a third. The notes are escaped and fenced in `<notes>` as data
+the model is told never to follow (`clusterPrompt`). The answer can only sort
+the refs it was given, and a person reads it before any of it is applied.
+
 ---
 
 ## Known gaps
@@ -287,6 +321,8 @@ with it and said why.
 | MCP cannot open password-protected boards                                                                                                       | `tools/context.ts:47`                 | **Accepted.** It fails closed; supporting it means the agent holding the token or owner key                          |
 | The page's policy allows inline styles                                                                                                          | `content-security-policy.ts`          | **Accepted.** React positions every object with a `style` attribute; scripts stay hash-only                          |
 | `CodeView` trusts highlight.js to escape                                                                                                        | `CodeView.tsx:87`                     | **Accepted.** Pin the version, and add a test with markup in a code block before upgrading                           |
+| Selected notes' text is sent to Anthropic when somebody clusters                                                                                | `ai/claude.ts`                        | **Owner to accept** with ADR 0018. Said in the panel before anything is sent                                         |
+| AI spend is capped per day (20 a person, 1,000 for everybody), not per month                                                                    | `ai/quota.ts`, `wrangler.toml`        | **Accepted.** Both are Worker variables; a failed run is given back                                                  |
 
 ---
 

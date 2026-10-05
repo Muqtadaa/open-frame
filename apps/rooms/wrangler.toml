@@ -25,6 +25,23 @@ class_name = "BoardRoomObject"
 type = "durable-object"
 storage = "sqlite"
 
+# The day's AI runs (ADR 0018): one object, so a reservation cannot be raced.
+[[durable_objects.bindings]]
+name = "AI_QUOTA"
+class_name = "AiQuotaObject"
+
+[exports.AiQuotaObject]
+type = "durable-object"
+storage = "sqlite"
+
+# AI clustering (ADR 0018). The Claude key is a SECRET, never a variable here:
+#   wrangler secret put ANTHROPIC_API_KEY
+# Until it and both Supabase values below are set, the route says AI is not
+# set up. The limits are runs per signed-in person per day, and for everybody.
+[vars]
+AI_DAILY_LIMIT = "20"
+AI_GLOBAL_DAILY_LIMIT = "1000"
+
 # Where a board's images live.
 #
 # Outside the Durable Object's storage on purpose: that storage is the board's
