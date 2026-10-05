@@ -23,6 +23,7 @@ import {
   MAX_ROWS,
   copyObjects,
   readClipboard,
+  richFromPlain,
   screenToWorld,
   currentVoteRound,
   groupByParent,
@@ -93,8 +94,9 @@ export interface BoardCommands {
   /**
    * Pastes the last copy made in this browser — in this tab, or in another
    * OpenFrame tab, which shares every copy it makes (`use-clipboard-events`).
+   * `plain` pastes its words instead, as Shift+Mod+V does.
    */
-  paste(at?: Point): Promise<void>
+  paste(at?: Point, plain?: boolean): Promise<void>
   /** Pastes board content, however it arrived: a native paste or this tab's copy. */
   pasteContent(content: unknown, at?: Point): Promise<void>
   /**
@@ -619,7 +621,7 @@ export function useCommands(): BoardCommands {
         const content = copyObjects(doc, store.selection, runtime.registry)
         if (content === null) return null
         store.setClipboard(content)
-        const payload = toClipboard(content, wordsOf(doc, content, runtime.registry))
+        const payload = toClipboard(content, wordsOf(content, runtime.registry))
         /*
          * One picture copied is also the picture, for anything that is not a
          * board: what is shown of it, as a PNG. Asked of the registry — the
@@ -639,9 +641,17 @@ export function useCommands(): BoardCommands {
         return copied
       },
 
-      async paste(at) {
+      async paste(at, plain = false) {
         const content = useInteractionStore.getState().clipboard
-        if (content !== null) await this.pasteContent(content, at)
+        if (content === null) return
+        if (!plain) {
+          await this.pasteContent(content, at)
+          return
+        }
+        // Shift+Mod+V in a browser that fired no paste event: the same words
+        // the system clipboard would have held (Codex, on #76).
+        const words = wordsOf(content, runtime.registry).join('\n')
+        if (words !== '') this.pasteOutside({ kind: 'text', text: richFromPlain(words) }, at)
       },
 
       async pasteContent(content, at) {

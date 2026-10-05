@@ -184,6 +184,34 @@ test.describe('content from another application', () => {
     expect(text.data.text).toEqual([{ text: 'Pricing is hidden' }])
   })
 
+  /*
+   * A browser that fires no paste event (nothing editable focused) leaves the
+   * key to paste this tab's copy itself — and Shift+Mod+V must still mean the
+   * words alone, not the notes again (Codex, on #76). The event is stopped
+   * here so the key's own path is the one that runs.
+   */
+  test('Shift+Mod+V pastes a copy as its words, with no paste event', async ({ page }) => {
+    await seedBoard(
+      page,
+      buildBoard((board) => board.note('Pricing is hidden', { x: 600, y: 400 })),
+    )
+    await page.locator('[data-object-type="sticky"]').click()
+    await page.keyboard.press(`${MOD}+c`)
+    await page.evaluate(() => {
+      window.addEventListener('paste', (event) => event.stopImmediatePropagation(), true)
+    })
+    await page.locator(CANVAS).click({ position: { x: 20, y: 20 } })
+    await page.keyboard.press(`Shift+${MOD}+v`)
+
+    await expect(page.locator('[data-object-type="text"]')).toHaveCount(1)
+    await expect(page.locator('[data-object-type="sticky"]')).toHaveCount(1)
+    const text = defined(
+      (await objects(page)).find((object) => object.type === 'text'),
+      'the pasted text box',
+    )
+    expect(text.data.text).toEqual([{ text: 'Pricing is hidden' }])
+  })
+
   test('words pasted onto a selected note go in on a new line', async ({ page }) => {
     await seedBoard(
       page,
@@ -200,6 +228,18 @@ test.describe('content from another application', () => {
       'the note',
     )
     expect(note.data.text).toEqual([{ text: 'Pricing\nis hidden' }])
+  })
+
+  test('a single spreadsheet column lands as a table', async ({ page }) => {
+    await copyFromElsewhere(page, {
+      'text/html': '<table><tr><td>P07</td></tr><tr><td>P09</td></tr></table>',
+      'text/plain': 'P07\nP09\n',
+    })
+    await page.locator(CANVAS).click({ position: { x: 20, y: 20 } })
+    await page.keyboard.press(`${MOD}+v`)
+
+    await expect(page.locator('[data-object-type="table"]')).toHaveCount(1)
+    await expect(page.locator('[data-object-type="text"]')).toHaveCount(0)
   })
 
   test('a spreadsheet range lands as a table, cell for cell', async ({ page }) => {
