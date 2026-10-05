@@ -93,11 +93,18 @@ export interface BuiltBoard {
 /** Fixed, so a seeded board is byte-for-byte the same on every run. */
 const SAVED_AT = 1_700_000_000_000
 
-export function buildBoard(make: (board: BoardBuilder) => void, title = 'Untitled'): BuiltBoard {
+/**
+ * `id` is the local board's unless a spec needs a board that is somewhere
+ * ELSE — the source of a paste across boards, which knows where it came from
+ * by the board's id.
+ */
+export function buildBoard(
+  make: (board: BoardBuilder) => void,
+  title = 'Untitled',
+  id = 'board_local',
+): BuiltBoard {
   const registry = createDefaultRegistry()
-  const { store, writer } = createDocumentStore(
-    createEmptyDocument(asBoardId('board_local'), title, SAVED_AT),
-  )
+  const { store, writer } = createDocumentStore(createEmptyDocument(asBoardId(id), title, SAVED_AT))
   const dispatcher = new CommandDispatcher({
     store,
     writer,

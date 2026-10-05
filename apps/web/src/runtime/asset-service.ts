@@ -108,6 +108,42 @@ export class AssetService {
   }
 
   /**
+   * A picture another board shows, stored again for THIS board: what a paste
+   * from another board does with each image before it puts the copy down.
+   *
+   * The bytes come from wherever this board's store can resolve them, which
+   * is this browser — every board in it shares one local store, so anything
+   * the person has had on screen is here. They are then uploaded like a file
+   * dropped on the board, checked by their content (rule 19) and given a new
+   * id. `null` when this browser does not have them or they will not pass,
+   * and the copy then shows the picture as unavailable rather than failing.
+   */
+  async copyIn(ref: AssetRef): Promise<AssetRef | null> {
+    try {
+      const blob = await this.readBytes(await this.#store.resolve(ref))
+      const uploaded = await this.upload({
+        name: ref.id,
+        type: blob.type === '' ? ref.mimeType : blob.type,
+        size: blob.size,
+        arrayBuffer: () => blob.arrayBuffer(),
+      })
+      return uploaded.ok ? uploaded.image.ref : null
+    } catch {
+      return null
+    }
+  }
+
+  /**
+   * The bytes behind a URL the store resolved. The store hands back its local
+   * copy's object URL, so this reads this browser's own bytes rather than
+   * making a request. A method so a test, which has no object URLs, can
+   * supply the bytes itself.
+   */
+  protected async readBytes(url: string): Promise<Blob> {
+    return (await fetch(url)).blob()
+  }
+
+  /**
    * The URL for an asset, if it is already resolved.
    *
    * Returns `undefined` on a miss and starts a load; callers re-render through

@@ -1,3 +1,4 @@
+import type { AssetRef } from '../domain/document.js'
 import type { ObjectId, TransactionId, UserId } from '../domain/ids.js'
 import type { ObjectFrame, ObjectStyle, Origin } from '../domain/object.js'
 import type { Patch } from '../domain/patch.js'
@@ -132,6 +133,12 @@ export type Command =
       readonly content: unknown
       readonly dx: number
       readonly dy: number
+      /**
+       * What each asset in the copy became on this board, by the copy's asset
+       * id — the pictures a paste from another board had to upload first.
+       * An asset not named here is kept as it was.
+       */
+      readonly assets?: Readonly<Record<string, AssetRef>>
     }
   /** Copies objects — geometry, style and data — offset by a delta, under new ids. */
   | {

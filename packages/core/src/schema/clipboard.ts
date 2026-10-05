@@ -2,11 +2,17 @@ import { z } from 'zod'
 
 import { unionAll, type Rect } from '../geometry/rect.js'
 import type { Point } from '../geometry/point.js'
-import { groupByParent, objectsInPaintOrder, type BoardDocument } from '../domain/document.js'
+import {
+  groupByParent,
+  objectsInPaintOrder,
+  type AssetRef,
+  type BoardDocument,
+} from '../domain/document.js'
 import type { ObjectId } from '../domain/ids.js'
 import type { AnyOpenFrameObject } from '../domain/object.js'
 import type { ObjectTypeRegistry } from '../domain/registry.js'
-import type { PersistedObject } from './envelope.js'
+import { PersistedObjectSchema, type PersistedObject } from './envelope.js'
+import { readPersistedObject } from './read-object.js'
 import { serializeObject } from './serialize.js'
 
 /**
@@ -138,4 +144,74 @@ function originOf(
     unionAll(solid) ??
     unionAll(points.map((point) => ({ x: point.x, y: point.y, width: 0, height: 0 })))
   return box === null ? { x: 0, y: 0 } : { x: box.x, y: box.y }
+}
+
+/** A copy read back: what `PasteObjects` can put down, or why not. */
+export type ClipboardReading =
+  | {
+      readonly ok: true
+      readonly board: string
+      readonly origin: Point
+      readonly ends: Readonly<Record<string, Readonly<Record<string, Point>>>>
+      /** Every object that read, upgraded to this build, in the copy's order. */
+      readonly objects: readonly AnyOpenFrameObject[]
+    }
+  | { readonly ok: false; readonly problem: string }
+
+/**
+ * A copy from anywhere, held to what loading a board is held to: each object
+ * through its type's migrations and schema (`readPersistedObject`). An object
+ * that does not read is left out rather than failing the rest — one note from
+ * a newer build must not cost the others.
+ *
+ * A type that refers to other objects is kept only if it says what a copy of
+ * it refers to (`copyReferences`), and a type with no place on the board only
+ * then too: reactions, votes and poll answers are things people did to an
+ * object, and a copy has not been reacted to.
+ */
+export function readClipboard(raw: unknown, registry: ObjectTypeRegistry): ClipboardReading {
+  const content = ClipboardContentSchema.safeParse(raw)
+  if (!content.success) return { ok: false, problem: 'That is not something copied from a board' }
+  if (content.data.version > CLIPBOARD_VERSION) {
+    return { ok: false, problem: 'That was copied from a newer version of OpenFrame' }
+  }
+
+  const objects: AnyOpenFrameObject[] = []
+  for (const candidate of content.data.objects) {
+    const persisted = PersistedObjectSchema.safeParse(candidate)
+    if (!persisted.success) continue
+    const reading = readPersistedObject(persisted.data, registry)
+    if (!reading.ok) continue
+    const definition = registry.get(reading.object.type)
+    if (definition === undefined) continue
+    if (definition.copyReferences === undefined) {
+      const refersToOthers = registry.dependenciesOf(reading.object).length > 0
+      if (refersToOthers || !definition.capabilities.spatial) continue
+    }
+    objects.push(reading.object)
+  }
+  if (objects.length === 0) {
+    return { ok: false, problem: 'Nothing in that copy could be read by this board' }
+  }
+  return {
+    ok: true,
+    board: content.data.board,
+    origin: content.data.origin,
+    ends: content.data.ends,
+    objects,
+  }
+}
+
+/**
+ * The stored files a copy shows, once each: what a paste onto another board
+ * has to upload before it can put the copy down.
+ */
+export function assetsToCarry(raw: unknown, registry: ObjectTypeRegistry): readonly AssetRef[] {
+  const reading = readClipboard(raw, registry)
+  if (!reading.ok) return []
+  const found = new Map<string, AssetRef>()
+  for (const object of reading.objects) {
+    for (const ref of registry.assetsOf(object)) found.set(ref.id, ref)
+  }
+  return [...found.values()]
 }

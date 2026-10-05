@@ -22,6 +22,7 @@ import { clusterableCount } from '../app/ai-cluster.js'
 import { useOpenFrame } from '../runtime/context.js'
 import { useServices } from '../runtime/services.js'
 import { useInteractionStore, type ContextMenuAt } from '../interaction/interaction-store.js'
+import { writeSystemClipboard, type ClipboardPayload } from '../interaction/clipboard-format.js'
 import { ariaKeys, formatKeys } from '../interaction/keymap.js'
 import type { Rect } from '../scene/anchoring.js'
 import { REACTION_GLYPHS } from '../scene/reaction-glyphs.js'
@@ -64,10 +65,20 @@ const testIdOf = (label: string): string =>
  * Every entry dispatches through the same command layer as the toolbar and the
  * keyboard — there is no third path into the document.
  */
+/**
+ * The menu has no clipboard event to write through, so it asks the browser
+ * directly. Best effort: a refusal leaves this tab's copy, which the menu's
+ * own Paste falls back to.
+ */
+function toSystem(copied: ClipboardPayload | null): void {
+  if (copied !== null) void writeSystemClipboard(copied)
+}
+
 export function ContextMenu() {
   const at = useInteractionStore((state) => state.contextMenu)
   const close = useInteractionStore((state) => state.closeContextMenu)
   const selectionSize = useInteractionStore((state) => state.selection.size)
+  // A copy from any OpenFrame tab in this browser lands here too.
   const hasCopy = useInteractionStore((state) => state.clipboard !== null)
   const commands = useCommands()
   const me = useMe()
@@ -316,7 +327,7 @@ export function ContextMenu() {
       {
         label: 'Paste here',
         shortcut: 'Mod+V',
-        run: () => commands.paste(at.world),
+        run: () => void commands.paste(at.world),
         disabled: !hasCopy,
       },
       {
@@ -465,12 +476,12 @@ export function ContextMenu() {
       ...startVoting,
     ],
     [
-      { label: 'Cut', shortcut: 'Mod+X', run: () => commands.cutSelection() },
-      { label: 'Copy', shortcut: 'Mod+C', run: () => commands.copySelection() },
+      { label: 'Cut', shortcut: 'Mod+X', run: () => toSystem(commands.cutSelection()) },
+      { label: 'Copy', shortcut: 'Mod+C', run: () => toSystem(commands.copySelection()) },
       {
         label: 'Paste',
         shortcut: 'Mod+V',
-        run: () => commands.paste(),
+        run: () => void commands.paste(),
         disabled: !hasCopy,
       },
       { label: 'Duplicate', shortcut: 'Mod+D', run: () => commands.duplicateSelection() },

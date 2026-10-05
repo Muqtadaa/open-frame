@@ -11,6 +11,7 @@ import {
   zoomAtCentre,
 } from '../scene/zoom.js'
 import { useCommands } from '../hooks/use-commands.js'
+import { expectPaste, keyCopied } from './clipboard-keys.js'
 import { useInteractionStore } from './interaction-store.js'
 import { resolveKeyAction } from './keymap.js'
 import { readingOrder } from '../scene/reading-order.js'
@@ -28,7 +29,7 @@ function normalise(radians: number): number {
   return wrapped > Math.PI ? wrapped - turn : wrapped
 }
 
-function isTextEntry(target: EventTarget | null): boolean {
+export function isTextEntry(target: EventTarget | null): boolean {
   if (!(target instanceof HTMLElement)) return false
   return target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.isContentEditable
 }
@@ -179,6 +180,25 @@ export function useKeyboardShortcuts(setSpaceHeld: (held: boolean) => void): voi
 
       const action = resolveKeyAction(event, views.tools())
       if (action === null) return
+
+      /*
+       * Left to the browser, which follows with its own clipboard event — the
+       * only place the system clipboard can be written and read without a
+       * permission prompt. The board's own part happens now, in case that
+       * event never comes (`clipboard-keys.ts`).
+       */
+      if (action.kind === 'copy') {
+        keyCopied(commands.copySelection())
+        return
+      }
+      if (action.kind === 'cut') {
+        keyCopied(commands.cutSelection())
+        return
+      }
+      if (action.kind === 'paste') {
+        expectPaste(() => void commands.paste())
+        return
+      }
       event.preventDefault()
 
       const { width, height } = store.canvasSize
@@ -244,15 +264,6 @@ export function useKeyboardShortcuts(setSpaceHeld: (held: boolean) => void): voi
           return
         case 'ungroup':
           commands.ungroup()
-          return
-        case 'copy':
-          commands.copySelection()
-          return
-        case 'cut':
-          commands.cutSelection()
-          return
-        case 'paste':
-          commands.paste()
           return
         case 'reorder':
           commands.reorder(action.placement)

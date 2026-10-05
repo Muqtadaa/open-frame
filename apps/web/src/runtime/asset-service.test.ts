@@ -155,3 +155,49 @@ describe('AssetService.urlFor', () => {
     expect(listener).not.toHaveBeenCalled()
   })
 })
+
+/**
+ * A picture pasted from another board: its bytes are read from wherever this
+ * browser holds them and uploaded again, under the same checks as a dropped
+ * file. Every board in a browser shares one local store, which is what makes
+ * "this browser has it" the right question.
+ */
+describe('AssetService.copyIn', () => {
+  const elsewhere: AssetRef = {
+    id: 'ast_elsewhere' as AssetId,
+    mimeType: 'image/png',
+    byteSize: PNG_BYTES.byteLength,
+    locator: 'room:ast_elsewhere',
+  }
+
+  /** A service whose store holds `bytes`, read without object URLs. */
+  function holding(bytes: Uint8Array) {
+    const store = new FakeAssetStore()
+    class Holding extends AssetService {
+      protected override readBytes(): Promise<Blob> {
+        return Promise.resolve(new Blob([bytes.slice().buffer], { type: 'image/png' }))
+      }
+    }
+    return { store, service: new Holding(store, createSequentialIdGenerator(), measure) }
+  }
+
+  it('stores the bytes again under an id of this board', async () => {
+    const { store, service } = holding(PNG_BYTES)
+    const copied = await service.copyIn(elsewhere)
+    expect(copied?.id).not.toBe(elsewhere.id)
+    expect(store.puts).toEqual([copied?.id])
+  })
+
+  it('checks them by their content, as a dropped file is checked', async () => {
+    const { store, service } = holding(new TextEncoder().encode('<svg><script/></svg>'))
+    expect(await service.copyIn(elsewhere)).toBeNull()
+    expect(store.puts).toEqual([])
+  })
+
+  it('answers nothing when this browser does not have them', async () => {
+    const store = new FakeAssetStore()
+    store.failResolution()
+    const { service } = createService(store)
+    expect(await service.copyIn(elsewhere)).toBeNull()
+  })
+})

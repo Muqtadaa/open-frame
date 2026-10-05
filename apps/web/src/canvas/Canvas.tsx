@@ -31,6 +31,7 @@ import { HoverOverlay } from './HoverOverlay.js'
 import { RelationOverlay } from './RelationOverlay.js'
 import { SelectionOverlay } from './SelectionOverlay.js'
 import { useCanvasGestures } from './use-canvas-gestures.js'
+import { useClipboardEvents } from '../hooks/use-clipboard-events.js'
 import { useImageDrop } from './use-image-drop.js'
 import { useWheelGesture } from './use-wheel-gesture.js'
 import { useCanvasSize } from './use-canvas-size.js'
@@ -93,6 +94,7 @@ export function Canvas() {
   // prop — see use-wheel-gesture.ts for why that is not optional.
   useWheelGesture(containerRef)
   useKeyboardShortcuts(gestures.setSpaceHeld)
+  useClipboardEvents()
   const imageDrop = useImageDrop(containerRef)
   // Publishes this person's cursor and claims, and keeps the advisory lock in
   // step with everybody else's. A no-op on a board that is nobody else's.

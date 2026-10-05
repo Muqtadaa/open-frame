@@ -1,10 +1,15 @@
 import { beforeEach, describe, expect, it } from 'vitest'
 
-import { childrenOf } from '../domain/document.js'
-import type { ObjectId } from '../domain/ids.js'
+import { childrenOf, type AssetRef } from '../domain/document.js'
+import { asAssetId, type ObjectId } from '../domain/ids.js'
 import type { AnyOpenFrameObject } from '../domain/object.js'
 import { richFromPlain } from '../domain/rich-text.js'
-import { CLIPBOARD_VERSION, copyObjects, type ClipboardContent } from '../schema/clipboard.js'
+import {
+  assetsToCarry,
+  CLIPBOARD_VERSION,
+  copyObjects,
+  type ClipboardContent,
+} from '../schema/clipboard.js'
 import { serializeObject } from '../schema/serialize.js'
 import { createTestHarness, type TestHarness } from '../testing.js'
 import type { ConnectorData } from '../types/connector/schema.js'
@@ -322,6 +327,47 @@ describe('a provenance link that is copied', () => {
 
     const pasted = paste(elsewhere(copy([insight])))
     expect(pasted.map((object) => object.type)).toEqual(['sticky'])
+  })
+})
+
+describe('a picture that is copied', () => {
+  const held: AssetRef = {
+    id: asAssetId('ast_here'),
+    mimeType: 'image/png',
+    byteSize: 10,
+    width: 4,
+    height: 4,
+    locator: 'idb:ast_here',
+  }
+  const picture = () =>
+    create({
+      type: 'image',
+      x: 0,
+      y: 0,
+      data: { asset: held, naturalWidth: 4, naturalHeight: 4, alt: 'a chart' },
+    })
+
+  it('names the bytes a paste on another board has to take along', () => {
+    expect(assetsToCarry(copy([picture(), note('words')]), h.registry)).toEqual([held])
+  })
+
+  it('shows what the bytes became where it landed', () => {
+    const uploaded: AssetRef = { ...held, id: asAssetId('ast_there'), locator: 'room:ast_there' }
+    const result = h.dispatcher.dispatch({
+      kind: 'PasteObjects',
+      content: elsewhere(copy([picture()])),
+      dx: 0,
+      dy: 0,
+      assets: { [held.id]: uploaded },
+    })
+    if (!result.ok) throw result.error
+    const pasted = h.store.getObject(only(result.affected))
+    expect((pasted?.data as { asset: AssetRef }).asset).toEqual(uploaded)
+  })
+
+  it('keeps the bytes it had when nothing was uploaded for it', () => {
+    const [pasted] = paste(copy([picture()]))
+    expect((pasted?.data as { asset: AssetRef }).asset).toEqual(held)
   })
 })
 
