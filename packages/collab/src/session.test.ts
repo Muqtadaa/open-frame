@@ -2,6 +2,7 @@ import {
   asObjectId,
   createSequentialIdGenerator,
   findParentCycle,
+  objectsInPaintOrder,
   richFromPlain,
   type AnyOpenFrameObject,
   type ObjectId,
@@ -250,6 +251,41 @@ describe('two clients on one board', () => {
 
     expect(mine.ok && yours.ok).toBe(true)
     expect(a.store.getDocument().objects.size).toBe(2)
+    expectConverged(a, b)
+  })
+})
+
+/*
+ * Two clients that each put something on top of the board at once both mint
+ * the key after the same last object, so the pair holds the SAME key. Each
+ * client's map then lists its own object first, and stacking by key alone
+ * painted them in opposite orders: a click on the overlap picked a different
+ * object on each screen.
+ */
+describe('two objects added on top at once', () => {
+  it('stack the same way on both clients', () => {
+    sticky('base', 'base')
+    wire.disconnect()
+    for (const [client, name] of [
+      [a, 'mine'],
+      [b, 'yours'],
+    ] as const) {
+      const result = client.dispatcher.dispatch({
+        kind: 'CreateObjects',
+        objects: [
+          { id: id(name), type: 'sticky', x: 0, y: 0, data: { text: richFromPlain(name) } },
+        ],
+      })
+      if (!result.ok) throw result.error
+    }
+    wire.reconnect()
+
+    const keyOf = (name: string) => a.store.getObject(id(name))?.order
+    expect(keyOf('mine'), 'the case this is about: the same key').toBe(keyOf('yours'))
+    const stacking = (client: typeof a) =>
+      objectsInPaintOrder(client.store.getDocument()).map((object) => object.id)
+    expect(stacking(a)).toEqual([id('base'), id('mine'), id('yours')])
+    expect(stacking(b)).toEqual(stacking(a))
     expectConverged(a, b)
   })
 })

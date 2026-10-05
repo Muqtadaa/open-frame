@@ -110,6 +110,21 @@ describe('paint order', () => {
   })
 
   /*
+   * Two keys can be the same (two people adding on top at once). The map yields
+   * them in the order each client learned of them, which differs between
+   * clients, so the order must not depend on it.
+   */
+  it('stacks siblings that share a key by id, whatever order they arrived in', () => {
+    const one = { ...obj('one', null), order: asOrderKey('a1') }
+    const two = { ...obj('two', null), order: asOrderKey('a1') }
+    const first = { ...obj('first', null), order: asOrderKey('a0') }
+    const ids = (doc: BoardDocument) => objectsInPaintOrder(doc).map((o) => o.id)
+    const expected = [asObjectId('first'), asObjectId('one'), asObjectId('two')]
+    expect(ids(docWith(first, one, two))).toEqual(expected)
+    expect(ids(docWith(two, first, one))).toEqual(expected)
+  })
+
+  /*
    * Asked on every pointer move by hover hit testing, and on every frame by
    * culling — and it regrouped and re-sorted the whole document each time:
    * about 1ms a move at 1,000 objects and 4.4ms at 10,000, with the pointer

@@ -1,5 +1,6 @@
 import {
   asObjectId,
+  compareSiblings,
   groupByParent,
   type AnyOpenFrameObject,
   type BoardDocument,
@@ -57,9 +58,11 @@ function described(peer: BoardPeer, object: AnyOpenFrameObject) {
 }
 
 function inDocumentOrder(document: BoardDocument): AnyOpenFrameObject[] {
-  // The order key is the board's own stacking order, and a stable one: two
-  // calls a minute apart page through the same list in the same sequence.
-  return [...document.objects.values()].sort((a, b) => a.order.localeCompare(b.order))
+  // Sibling order, the board's own: by key, then id where two keys are the
+  // same. A stable one, so two calls a minute apart page through the same list
+  // in the same sequence. Never `localeCompare`, which folds case and puts the
+  // key `aa` before `aB`.
+  return [...document.objects.values()].sort(compareSiblings)
 }
 
 const noArguments = z.strictObject({})

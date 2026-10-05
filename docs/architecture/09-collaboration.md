@@ -282,9 +282,11 @@ wrote, and does not damage it.
 
 ### Fractional index rebalancing
 
-A rebalance rewrites every sibling, which conflicts badly when two clients do
-it at once, and nothing coordinates it. See
-[risk R5](../appendices/c-risks.md).
+Two objects added on top at once share a key; siblings are ordered by key and
+then id (`compareSiblings`), so every client stacks them the same way. A
+rebalance, which would give such a pair room between them, rewrites every
+sibling, which conflicts badly when two clients do it at once, and nothing
+coordinates it. See [risk R5](../appendices/c-risks.md).
 
 ### Images
 

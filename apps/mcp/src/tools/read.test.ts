@@ -169,6 +169,30 @@ describe('reading a board', () => {
     await context.close()
   })
 
+  /*
+   * The board's keys run 0-9, A-Z, a-z, and a locale comparison folds case:
+   * forty notes in a row take keys up to `ad`, and locale order put `aa`
+   * between `aA` and `aB`, so an agent read the board in an order nobody had
+   * stacked it in.
+   */
+  it('lists objects in the board’s own stacking order', async () => {
+    const { room, author } = await boardWith(
+      Array.from({ length: 40 }, (_at, index) => ({
+        type: 'sticky',
+        text: `note ${String(index)}`,
+      })),
+    )
+    const context = accountHolding([ACCESS], () => peerOn(room))
+
+    const page = payloadOf((await getObjects.run({ board: TEST_BOARD, limit: 40 }, context)).text)
+    const stacked = [...author.store.getDocument().objects.values()]
+      .sort((a, b) => (a.order < b.order ? -1 : a.order > b.order ? 1 : 0))
+      .map((object) => object.id)
+    expect((page.objects as { id: string }[]).map((object) => object.id)).toEqual(stacked)
+    author.close()
+    await context.close()
+  })
+
   it('reads named objects, and says which of them are not there', async () => {
     const { room, author } = await boardWith([
       { type: 'sticky', text: 'kept' },
