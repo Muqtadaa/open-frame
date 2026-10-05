@@ -476,3 +476,16 @@ export function updateParagraph(
     paragraphsOf(rich).map((paragraph, at) => (at === index ? update(paragraph) : paragraph)),
   )
 }
+
+/**
+ * `added` on a line of its own after `rich` — words pasted onto an object
+ * that already says something. A text that already ends in a newline (a list
+ * item's, say) gets no second one, which would leave an empty line between.
+ */
+export function appendParagraph(rich: RichText, added: RichText): RichText {
+  const text = plainTextOf(rich)
+  if (text === '') return normaliseText(added)
+  return normaliseText(
+    text.endsWith('\n') ? [...rich, ...added] : [...rich, { text: '\n' }, ...added],
+  )
+}

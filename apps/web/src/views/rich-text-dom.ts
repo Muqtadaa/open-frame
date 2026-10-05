@@ -100,6 +100,14 @@ const BLOCKS = new Set([
   'ARTICLE',
 ])
 
+/**
+ * Elements whose text is not words on the page: a script's source, a style
+ * sheet. Pasted markup carries them — a browser copies the page's `<style>`,
+ * and anything can put a `<script>` on a clipboard — and their contents must
+ * not arrive as text.
+ */
+const UNREAD = new Set(['SCRIPT', 'STYLE', 'TEMPLATE', 'NOSCRIPT', 'TITLE', 'HEAD'])
+
 function isBlock(node: Node): node is Element {
   return node.nodeType === Node.ELEMENT_NODE && BLOCKS.has((node as Element).tagName)
 }
@@ -170,6 +178,7 @@ function read(root: Element): Reading {
   }
 
   const walkInline = (node: Node, home: Node, block: Block): void => {
+    if (node.nodeType === Node.ELEMENT_NODE && UNREAD.has((node as Element).tagName)) return
     if (node.nodeType === Node.TEXT_NODE) {
       const text = node.textContent ?? ''
       if (text === '') return

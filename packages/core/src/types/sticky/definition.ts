@@ -1,4 +1,4 @@
-import { plainTextOf } from '../../domain/rich-text.js'
+import { appendParagraph, plainTextOf } from '../../domain/rich-text.js'
 import { defineObjectType } from '../../domain/registry.js'
 import { resizeTokens } from '../shared/resize-tokens.js'
 import { textToSpans } from '../shared/text-to-spans.js'
@@ -21,6 +21,9 @@ export const stickyType = defineObjectType<typeof STICKY_TYPE, StickyData>({
     data: { text: init?.text ?? [{ text: '' }] },
     frame: { width: 180, height: 180 },
   }),
+
+  // Words pasted onto the note while it is selected go in on a new line.
+  appendText: (data, text) => ({ ...data, text: appendParagraph(data.text, text) }),
 
   capabilities: {
     resizable: true,

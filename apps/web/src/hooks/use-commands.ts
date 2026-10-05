@@ -19,6 +19,8 @@ import type {
 } from '@openframe/core'
 import {
   assetsToCarry,
+  MAX_COLUMNS,
+  MAX_ROWS,
   copyObjects,
   readClipboard,
   screenToWorld,
@@ -38,6 +40,7 @@ import type { LoggedChange } from '@openframe/collab'
 import { clusterObjects } from '../app/ai-cluster.js'
 import { guestIdentity } from '../app/guest.js'
 import { toClipboard, type ClipboardPayload } from '../interaction/clipboard-format.js'
+import type { OutsidePaste } from './outside-paste.js'
 import { useOpenFrame } from '../runtime/context.js'
 import { useServices } from '../runtime/services.js'
 import { useInteractionStore } from '../interaction/interaction-store.js'
@@ -94,6 +97,12 @@ export interface BoardCommands {
   paste(at?: Point): Promise<void>
   /** Pastes board content, however it arrived: a native paste or this tab's copy. */
   pasteContent(content: unknown, at?: Point): Promise<void>
+  /**
+   * Pastes content from another application: words onto the one note or
+   * shape selected, on a new line; otherwise a text box of their own, or a
+   * table for a spreadsheet range.
+   */
+  pasteOutside(pasted: OutsidePaste, at?: Point): void
   selectAll(): void
   /** Renames the board. Returns false when the name was refused. */
   setBoardTitle(title: string): boolean
@@ -677,6 +686,54 @@ export function useCommands(): BoardCommands {
             lost === 1
               ? 'One picture is not in this browser, so it shows as unavailable.'
               : `${String(lost)} pictures are not in this browser, so they show as unavailable.`,
+          )
+        }
+      },
+
+      pasteOutside(pasted, at) {
+        const store = useInteractionStore.getState()
+        const doc = runtime.store.getDocument()
+
+        if (pasted.kind === 'text' && store.selection.size === 1) {
+          const [id] = store.selection
+          const target = id === undefined ? undefined : doc.objects.get(id)
+          const data =
+            target === undefined ? null : runtime.registry.appendedText(target, pasted.text)
+          if (target !== undefined && data !== null) {
+            report(dispatcher.dispatch({ kind: 'UpdateObjectData', id: target.id, patch: data }))
+            return
+          }
+        }
+
+        const made = runtime.registry.fromOutside(
+          pasted.kind === 'text' ? { text: pasted.text } : { grid: pasted.rows },
+        )
+        if (made === null) return
+        // Centred where it is put: at the pointer, or in the middle of the view.
+        const { viewport, canvasSize } = store
+        const centre =
+          at ?? screenToWorld(viewport, { x: canvasSize.width / 2, y: canvasSize.height / 2 })
+        const corner = { x: centre.x - made.width / 2, y: centre.y - made.height / 2 }
+        const placed = store.snapToGrid ? snapPoint(corner) : corner
+        const result = dispatcher.dispatch({
+          kind: 'CreateObjects',
+          objects: [
+            {
+              type: made.type,
+              x: placed.x,
+              y: placed.y,
+              width: made.width,
+              height: made.height,
+              data: made.data,
+            },
+          ],
+        })
+        report(result)
+        if (!result.ok) return
+        store.setSelection(result.affected)
+        if (made.clipped === true) {
+          store.showToast(
+            `Only the first ${String(MAX_ROWS)} rows and ${String(MAX_COLUMNS)} columns fit in a table.`,
           )
         }
       },

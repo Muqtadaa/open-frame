@@ -13,6 +13,7 @@ import type { ClipboardPayload } from './clipboard-format.js'
 
 let keyed: ClipboardPayload | null = null
 let fallback: ReturnType<typeof setTimeout> | null = null
+let plainAsked = false
 
 /** A copy or cut the key has just made, for the event that follows it to write. */
 export function keyCopied(payload: ClipboardPayload | null): void {
@@ -32,18 +33,28 @@ export function takeKeyCopy(): ClipboardPayload | null {
 /**
  * The key wants a paste. If no `paste` event arrives — a browser that will not
  * fire one with nothing editable focused — this tab's own copy is pasted.
+ * `plain` is Shift+Mod+V, which the event cannot tell from Mod+V by itself.
  */
-export function expectPaste(run: () => void): void {
+export function expectPaste(run: () => void, plain = false): void {
   if (fallback !== null) clearTimeout(fallback)
+  plainAsked = plain
   fallback = setTimeout(() => {
     fallback = null
+    plainAsked = false
     run()
   }, 0)
 }
 
-/** A `paste` event arrived, so the fallback is not needed. */
-export function pasteArrived(): void {
-  if (fallback === null) return
-  clearTimeout(fallback)
-  fallback = null
+/**
+ * A `paste` event arrived, so the fallback is not needed. Whether the key
+ * that asked for it wanted the words alone.
+ */
+export function pasteArrived(): boolean {
+  const plain = plainAsked
+  plainAsked = false
+  if (fallback !== null) {
+    clearTimeout(fallback)
+    fallback = null
+  }
+  return plain
 }

@@ -1,8 +1,11 @@
 import { plainTextOf } from '../../domain/rich-text.js'
 import { defineObjectType } from '../../domain/registry.js'
+import { snapUp } from '../shared/snap-up.js'
 import { borderToLines } from './border-to-lines.js'
 import { isCovered } from './grid.js'
 import {
+  MAX_COLUMNS,
+  MAX_ROWS,
   TABLE_VERSION,
   TableDataSchema,
   emptyCells,
@@ -16,6 +19,10 @@ export const TABLE_TYPE = 'table'
 /** What a new table starts as: something you can type into immediately. */
 const COLUMNS = 3
 const ROWS = 3
+
+/** What a pasted column and row are given, in world units: a new table's own proportions. */
+const PASTED_COLUMN = 140
+const PASTED_ROW = 40
 
 export const tableType = defineObjectType<typeof TABLE_TYPE, TableData>({
   type: TABLE_TYPE,
@@ -56,6 +63,34 @@ export const tableType = defineObjectType<typeof TABLE_TYPE, TableData>({
       },
       frame: { width: 420, height: 180 },
     }
+  },
+
+  /*
+   * A range copied out of a spreadsheet is a table, cell for cell. Anything
+   * past what a table holds is left out, and said to be (`clipped`), rather
+   * than refusing a paste that is mostly fine.
+   */
+  fromOutside: {
+    grid: (pasted) => {
+      const rows = pasted.slice(0, MAX_ROWS)
+      const width = Math.min(MAX_COLUMNS, Math.max(1, ...rows.map((row) => row.length)))
+      const height = Math.max(1, rows.length)
+      const cells = Array.from({ length: height }, (_, row) =>
+        Array.from({ length: width }, (_, col) => ({
+          text: rows[row]?.[col] ?? [{ text: '' }],
+        })),
+      ).flat()
+      return {
+        data: {
+          columns: Array.from({ length: width }, () => 1),
+          rows: Array.from({ length: height }, () => 1),
+          cells,
+        },
+        width: snapUp(width * PASTED_COLUMN),
+        height: snapUp(height * PASTED_ROW),
+        clipped: pasted.length > MAX_ROWS || pasted.some((row) => row.length > MAX_COLUMNS),
+      }
+    },
   },
 
   capabilities: {

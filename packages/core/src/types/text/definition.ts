@@ -1,10 +1,18 @@
-import { plainTextOf } from '../../domain/rich-text.js'
+import { appendParagraph, plainTextOf } from '../../domain/rich-text.js'
+import { snapUp } from '../shared/snap-up.js'
 import { defineObjectType } from '../../domain/registry.js'
 import { resizeTokens } from '../shared/resize-tokens.js'
 import { textToSpans } from '../shared/text-to-spans.js'
 import { TEXT_VERSION, TextDataSchema, type TextData } from './schema.js'
 
 export const TEXT_TYPE = 'text'
+
+/** The widest a pasted text box is made, a comfortable line of reading. */
+const PASTED_MEASURE = 640
+/** An average character and a line of the default size, in world units: an estimate, not a layout. */
+const CHAR_WIDTH = 9
+const LINE_HEIGHT = 28
+const INSET = 20
 
 export const textType = defineObjectType<typeof TEXT_TYPE, TextData>({
   type: TEXT_TYPE,
@@ -23,6 +31,31 @@ export const textType = defineObjectType<typeof TEXT_TYPE, TextData>({
     // and the first sentence typed wrapped out of sight.
     frame: { width: 240, height: 60 },
   }),
+
+  appendText: (data, text) => ({ ...data, text: appendParagraph(data.text, text) }),
+
+  /*
+   * Words pasted from outside the board are a text box: a sticky is a unit of
+   * content that gets clustered and counted, and a paragraph out of a
+   * document is not one until somebody makes it one.
+   *
+   * Sized from the words, roughly, so a pasted paragraph is not squeezed into
+   * the two lines a fresh box has: as wide as the longest line up to a
+   * reading measure, and as tall as the lines wrap to.
+   */
+  fromOutside: {
+    text: (text) => {
+      const lines = plainTextOf(text).split('\n')
+      const longest = Math.max(...lines.map((line) => line.length))
+      const width = snapUp(Math.min(PASTED_MEASURE, Math.max(240, longest * CHAR_WIDTH + INSET)))
+      const perLine = Math.max(1, Math.floor((width - INSET) / CHAR_WIDTH))
+      const wrapped = lines.reduce(
+        (sum, line) => sum + Math.max(1, Math.ceil(line.length / perLine)),
+        0,
+      )
+      return { data: { text }, width, height: snapUp(Math.max(60, wrapped * LINE_HEIGHT + INSET)) }
+    },
+  },
 
   capabilities: {
     resizable: true,

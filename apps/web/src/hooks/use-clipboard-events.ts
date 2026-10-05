@@ -5,6 +5,7 @@ import { fromClipboard, type ClipboardPayload } from '../interaction/clipboard-f
 import { pasteArrived, takeKeyCopy } from '../interaction/clipboard-keys.js'
 import { useInteractionStore } from '../interaction/interaction-store.js'
 import { isTextEntry } from '../interaction/use-keyboard-shortcuts.js'
+import { readOutside } from './outside-paste.js'
 import { useCommands } from './use-commands.js'
 
 /**
@@ -13,7 +14,8 @@ import { useCommands } from './use-commands.js'
  * selection reaches another tab, another board or a document.
  *
  * A field being typed in keeps all three: copying a word out of a note is the
- * field's business, not the board's. Pictures pasted from outside are handled
+ * field's business, not the board's. Anything pasted from another application
+ * — words, formatted or not, or a spreadsheet range — is `readOutside`'s. Pictures pasted from outside are handled
  * by `use-image-drop.ts`, which listens for the same event.
  */
 /** Where this browser's OpenFrame tabs tell each other about copies. */
@@ -45,7 +47,7 @@ export function useClipboardEvents(): void {
 
     const onPaste = (event: ClipboardEvent): void => {
       if (isTextEntry(event.target)) return
-      pasteArrived()
+      const plain = pasteArrived()
       const data = event.clipboardData
       if (data === null) {
         void commands.paste()
@@ -54,10 +56,19 @@ export function useClipboardEvents(): void {
       // Files are pictures from outside, and the image importer's.
       if (data.files.length > 0) return
 
-      const content = fromClipboard(data.getData('text/html'))
+      const html = data.getData('text/html')
+      const content = plain ? undefined : fromClipboard(html)
       if (content !== undefined) {
         event.preventDefault()
         void commands.pasteContent(content)
+        return
+      }
+      // Words, formatted or not, or a spreadsheet range from another
+      // application — or a board copy's own words, when asked for plainly.
+      const outside = readOutside(html, data.getData('text/plain'), plain)
+      if (outside !== null) {
+        event.preventDefault()
+        commands.pasteOutside(outside)
         return
       }
       /*
