@@ -44,6 +44,9 @@ const ASSET_PATH = /^\/room\/([^/]+)\/asset\/([A-Za-z0-9_-]{1,64})\/?$/
 const CATALOGUE_PATH = /^\/music\/catalogue\/?$/
 const TRACK_PATH = /^\/music\/track\/([a-z0-9-]{1,48})\/?$/
 
+/** Themes for a set of notes, from Claude (ADR 0018). Names no board. */
+const AI_CLUSTER_PATH = /^\/ai\/cluster\/?$/
+
 const ACCESS_KEY = /^[A-Za-z0-9_-]{16,64}$/
 
 /** `?k=<key>` — which link this connection arrived on. */
@@ -51,6 +54,7 @@ export const KEY_PARAM = 'k'
 
 export type Route =
   | { readonly kind: 'health' }
+  | { readonly kind: 'ai-cluster' }
   | {
       readonly kind: 'room'
       readonly boardId: string
@@ -128,6 +132,12 @@ export function routeRequest(url: URL, upgradeHeader: string | null, method = 'G
     if (method === 'OPTIONS') return { kind: 'preflight' }
     if (method !== 'POST') return { kind: 'refuse', status: 405, reason: `${name} is a POST` }
     return { kind, boardId }
+  }
+
+  if (AI_CLUSTER_PATH.test(url.pathname)) {
+    if (method === 'OPTIONS') return { kind: 'preflight' }
+    if (method !== 'POST') return { kind: 'refuse', status: 405, reason: 'Clustering is a POST' }
+    return { kind: 'ai-cluster' }
   }
 
   if (CATALOGUE_PATH.test(url.pathname)) {

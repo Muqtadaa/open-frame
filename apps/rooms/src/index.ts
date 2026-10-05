@@ -1,11 +1,14 @@
 import { readCatalogue } from '@openframe/core/facilitation'
 
+import { clusterDeps } from './ai/deps.js'
+import { handleCluster } from './ai/handler.js'
 import type { Env } from './env.js'
 import shipped from './library/catalogue.json' with { type: 'json' }
 import { serveCatalogue, serveTrack } from './music.js'
 import { routeRequest } from './route.js'
 
 export { BoardRoomObject } from './room-object.js'
+export { AiQuotaObject } from './ai/quota-object.js'
 
 /**
  * The Worker in front of the rooms.
@@ -59,10 +62,14 @@ export default {
              * `range` is for the music: a seek is a ranged read.
              */
             'access-control-allow-headers':
-              'content-type, range, x-openframe-key, x-openframe-owner, x-openframe-token',
+              'authorization, content-type, range, x-openframe-key, x-openframe-owner, x-openframe-token',
             'access-control-max-age': '86400',
           },
         })
+
+      // Names no board and reads none (ADR 0018), so no room is woken for it.
+      case 'ai-cluster':
+        return handleCluster(request, clusterDeps(env))
 
       // The music library names no board, so no room is woken for it.
       case 'catalogue':
