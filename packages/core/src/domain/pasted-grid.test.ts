@@ -33,6 +33,15 @@ describe('a range copied out of a spreadsheet', () => {
     expect(gridFromText('"quoted" word\tb')).toEqual([['"quoted" word', 'b']])
   })
 
+  it('is one column when one column was copied, which its table says', () => {
+    expect(gridFromText('a\nb\n', { fromTable: true })).toEqual([['a'], ['b']])
+    expect(gridFromText('a\nb\n')).toBeNull()
+  })
+
+  it('is a word, not a table, when one cell was copied', () => {
+    expect(gridFromText('a\n', { fromTable: true })).toBeNull()
+  })
+
   it('is one row when one row was copied', () => {
     expect(gridFromText('a\tb\tc')).toEqual([['a', 'b', 'c']])
   })

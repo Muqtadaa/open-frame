@@ -8,7 +8,7 @@ import {
   type AssetRef,
   type BoardDocument,
 } from '../domain/document.js'
-import { asObjectId, type ObjectId } from '../domain/ids.js'
+import type { ObjectId } from '../domain/ids.js'
 import type { AnyOpenFrameObject } from '../domain/object.js'
 import type { ObjectTypeRegistry } from '../domain/registry.js'
 import { PersistedObjectSchema, type PersistedObject } from './envelope.js'
@@ -222,17 +222,19 @@ export function assetsToCarry(raw: unknown, registry: ObjectTypeRegistry): reado
  * and not only the ones selected — a frame copied into a document is the
  * notes inside it. Each object's whole text (`searchText`), never its
  * one-line summary, which is cut short (Codex, on #75).
+ *
+ * Read from the copy itself, as a paste reads it, rather than from the board
+ * it was made on: Shift+Mod+V pastes a copy's words, and the copy may have
+ * come from another tab's board (Codex, on #76).
  */
-export function wordsOf(
-  doc: BoardDocument,
-  content: ClipboardContent,
-  registry: ObjectTypeRegistry,
-): string[] {
+export function wordsOf(content: ClipboardContent, registry: ObjectTypeRegistry): string[] {
   const words: string[] = []
-  for (const copied of content.objects) {
-    const object = doc.objects.get(asObjectId(copied.id))
-    if (object === undefined || registry.get(object.type)?.capabilities.spatial !== true) continue
-    const text = registry.describeObject(object).searchText.trim()
+  for (const raw of content.objects) {
+    const persisted = PersistedObjectSchema.safeParse(raw)
+    if (!persisted.success) continue
+    const reading = readPersistedObject(persisted.data, registry)
+    if (!reading.ok || registry.get(reading.object.type)?.capabilities.spatial !== true) continue
+    const text = registry.describeObject(reading.object).searchText.trim()
     if (text !== '') words.push(text)
   }
   return words

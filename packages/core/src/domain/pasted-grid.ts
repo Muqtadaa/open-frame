@@ -7,8 +7,9 @@
  * Words from a document can hold a tab too — code indented with them, most
  * often — so text is only a grid when it is SHAPED like one: every row the
  * same number of cells, and more than one. `fromTable` says the same copy
- * also carried an HTML table, which settles it, and a ragged range is then
- * padded rather than refused.
+ * also carried an HTML table, which settles it: a single column, which has no
+ * tab, is a grid then, and a ragged range is padded rather than refused. One
+ * cell alone is never a grid; it is a word (Codex, on #76).
  *
  * `null` when the text is not a grid, so it is pasted as words instead.
  */
@@ -16,14 +17,19 @@ export function gridFromText(
   text: string,
   options: { readonly fromTable?: boolean } = {},
 ): string[][] | null {
-  if (!text.includes('\t')) return null
+  const fromTable = options.fromTable === true
+  // A single column has no tab to show for itself, but its table does.
+  if (!text.includes('\t') && !fromTable) return null
   const rows = readRows(text.replace(/\r\n?/g, '\n'))
   // The newline a spreadsheet ends its last row with is not an empty row.
   if (rows.length > 1 && rows.at(-1)?.every((cell) => cell === '') === true) rows.pop()
   const widths = new Set(rows.map((row) => row.length))
   const widest = Math.max(...widths)
-  if (widest < 2) return null
-  if (widths.size > 1 && options.fromTable !== true) return null
+  if (fromTable) {
+    // One cell is a word, not a table.
+    return rows.length > 1 || widest > 1 ? rows : null
+  }
+  if (widest < 2 || widths.size > 1) return null
   return rows
 }
 
