@@ -20,6 +20,8 @@ export interface KeyContext {
   readonly ctrlKey: boolean
   readonly shiftKey: boolean
   readonly altKey: boolean
+  /** The physical key, where it differs from what it types: Option+S types "ß" on a Mac. */
+  readonly code?: string
 }
 
 export type KeyAction =
@@ -50,6 +52,8 @@ export type KeyAction =
   | { readonly kind: 'zoom-fit' }
   | { readonly kind: 'zoom-selection' }
   | { readonly kind: 'search' }
+  /** The board told as a whole: what is on it and how it is organised. */
+  | { readonly kind: 'overview' }
 
 const NUDGE = 1
 const NUDGE_COARSE = 10
@@ -167,6 +171,15 @@ export function resolveKeyAction(
         return { kind: 'resize-by', dw: by.dx * step, dh: by.dy * step }
       }
     }
+  }
+
+  /*
+   * Alt+S, the board overview — where Miro puts its board summary, so
+   * somebody arriving from there finds it. Matched on the physical key as
+   * well, because on a Mac Option+S types "ß" and `key` never says "s".
+   */
+  if (ctx.altKey && !ctx.shiftKey && (ctx.code === 'KeyS' || key.toLowerCase() === 's')) {
+    return { kind: 'overview' }
   }
 
   // Alt is the measuring key, and with an arrow it moves like the arrow alone.

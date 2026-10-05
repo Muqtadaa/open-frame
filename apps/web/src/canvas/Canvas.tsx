@@ -77,6 +77,7 @@ const BOARD_KEYS = [
   `${formatKeys('Mod+Shift+L')}: lock.`,
   'Enter: edit.',
   'Escape: deselect.',
+  `${formatKeys('Alt+S')}: board overview.`,
 ].join(' ')
 
 export function Canvas() {

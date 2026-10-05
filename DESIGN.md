@@ -1482,7 +1482,10 @@ focus ring is drawn inside its edge.
 
 - Tab and Shift+Tab walk its objects in reading order and let go past the
   last one.
-- Arrows move the selection, and Alt+arrows resize it by the grid step.
+- Arrows move the selection, and Mod+arrows resize it by the grid step.
+- Alt+S opens the board overview: what is on the board, its frames closed
+  with how much they hold, and anything citing nothing. Choosing an entry
+  selects it, pans to it and gives the keyboard back to the board.
 - Period and comma rotate by 15°, and > and < by 1°.
 - Mod+Shift+L locks and unlocks.
 - A polite announcer says what is selected and what a key did.

@@ -90,6 +90,20 @@ confirms it or clears it.
 - **Check.** Renaming: Enter commits, Escape reverts, and focus comes back to
   the name either way.
 
+### 2a. Hear the board as a whole
+
+- **Do.** With focus on the board, press Alt+S (Option+S on a Mac).
+- **Expect.** A dialog, "Board overview", described by its summary: "{n}
+  objects: {count} {type}, …", then "Citing nothing: …" when a claim stands
+  on no evidence (`ui/BoardOverview.tsx`, `outlineBoard` in core). Focus is
+  on a tree, "Objects": frames closed, each named "Frame: {name}, {n}
+  objects". Up and Down move, Right opens a frame, Left closes it or goes to
+  its frame, Enter goes to the object and gives the keyboard back to the
+  board, Escape closes.
+- **Confirm.** Whether the summary line is heard on opening, and whether the
+  tree's items are read with their level and open state. Past 200 entries a
+  level ends in "{n} more — find on board", which opens search.
+
 ### 3. Navigate objects
 
 - **Do.** Tab to the canvas, then Tab and Shift+Tab through the objects.
@@ -114,7 +128,9 @@ confirms it or clears it.
 - **Expect.** "Selected: {the quote}". On the board the slip's group is named
   "Evidence. {participant} · {source}. #{tag}" (`views/EvidenceView.tsx`).
 - **Confirm.** The announcement does not say "Evidence", so a quote and a
-  sticky note with the same words sound the same. Record whether the tester
+  sticky note with the same words sound the same on Tab. The overview (step
+  2a) names each entry by its type ("Evidence: …"), so check that the two can
+  be told apart there. Record whether the tester
   could tell what kind of object it was without opening the record panel.
 
 ### 5. Open its record panel
@@ -264,8 +280,8 @@ All in `apps/web/e2e/`.
 - **Landmarks and order:** `landmarks` (main "Board" holds the canvas and the
   tools, the board's name is the first heading).
 - **Keyboard:** `rail-keyboard`, `keys-at-load`, `sheets-keyboard`,
-  `comment-keys`, `escape-keeps-words`, `search`, `inspector` (record panel
-  order and radio rows).
+  `comment-keys`, `escape-keeps-words`, `search`, `board-overview`,
+  `inspector` (record panel order and radio rows).
 - **Focus:** `focus-return`, `board-password` (trap, naming, focus after a
   wrong password), `board-unreadable`.
 - **Small screens and touch:** `touch`, `phone-width`, `rail-overflow`,

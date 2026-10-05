@@ -8,6 +8,7 @@ import { Inspector } from '../ui/Inspector.js'
 import { ClusterReview } from '../ui/ClusterReview.js'
 import { VotingBanner } from '../ui/VotingBanner.js'
 import { NoticeBanner } from '../ui/NoticeBanner.js'
+import { BoardOverview } from '../ui/BoardOverview.js'
 import { SearchPanel } from '../ui/SearchPanel.js'
 import { StatusBar } from '../ui/StatusBar.js'
 import { Toast } from '../ui/Toast.js'
@@ -91,6 +92,7 @@ export function App() {
         <Inspector />
         <ContextMenu />
         <SearchPanel />
+        <BoardOverview />
         <Comments />
 
         {/*

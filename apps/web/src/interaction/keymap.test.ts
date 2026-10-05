@@ -55,6 +55,24 @@ describe('tool shortcuts', () => {
   })
 })
 
+describe('the board overview', () => {
+  it('opens on Alt+S, where Miro puts its board summary', () => {
+    expect(resolveKeyAction(key('s', { altKey: true }), TOOLS)).toEqual({ kind: 'overview' })
+  })
+
+  // On a Mac Option+S types "ß", so the physical key is what says it.
+  it('opens on Option+S, which types a different character', () => {
+    expect(resolveKeyAction({ ...key('ß', { altKey: true }), code: 'KeyS' }, TOOLS)).toEqual({
+      kind: 'overview',
+    })
+  })
+
+  it('leaves S alone, and Alt with anything else', () => {
+    expect(resolveKeyAction(key('s'), TOOLS)).not.toEqual({ kind: 'overview' })
+    expect(resolveKeyAction(key('t', { altKey: true }), TOOLS)).toBeNull()
+  })
+})
+
 describe('editing shortcuts', () => {
   it('undoes and redoes', () => {
     expect(resolveKeyAction(key('z', { metaKey: true }), TOOLS)).toEqual({ kind: 'undo' })
