@@ -47,6 +47,8 @@ export interface BoardBuilder {
     at: Point,
     data?: Record<string, unknown>,
     style?: ObjectStyle,
+    /** The frame or group it is inside, if any. */
+    parent?: ObjectId,
   ) => ObjectId
   /** A sticky note saying `text`. */
   readonly note: (text: string, at: Point, style?: ObjectStyle) => ObjectId
@@ -114,7 +116,7 @@ export function buildBoard(make: (board: BoardBuilder) => void, title = 'Untitle
     return id
   }
 
-  const add: BoardBuilder['add'] = (type, at, data, style) => {
+  const add: BoardBuilder['add'] = (type, at, data, style, parent) => {
     const definition = registry.get(type)
     if (definition === undefined) throw new Error(`no such object type "${type}"`)
     const { frame } = definition.create(data === undefined ? undefined : { ...data })
@@ -129,6 +131,7 @@ export function buildBoard(make: (board: BoardBuilder) => void, title = 'Untitle
           height: frame.height,
           ...(data === undefined ? {} : { data }),
           ...(style === undefined ? {} : { style }),
+          ...(parent === undefined ? {} : { parentId: parent }),
         },
       ],
     })

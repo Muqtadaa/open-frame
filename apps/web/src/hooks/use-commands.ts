@@ -1,5 +1,7 @@
 import type {
   AnyOpenFrameObject,
+  BoardDocument,
+  ObjectTypeRegistry,
   ColorToken,
   DispatchResult,
   MarkAuthor,
@@ -15,7 +17,7 @@ import type {
   VoteScope,
 } from '@openframe/core'
 import {
-  copySpec,
+  copyObjects,
   currentVoteRound,
   groupByParent,
   uncrop,
@@ -34,7 +36,6 @@ import { useOpenFrame } from '../runtime/context.js'
 import { useServices } from '../runtime/services.js'
 import { useInteractionStore } from '../interaction/interaction-store.js'
 import { objectsInMarquee } from '../scene/hit-testing.js'
-import { pasteOrigin } from '../scene/paste.js'
 import { snapPoint } from '../scene/snapping.js'
 import { placeDerived } from '../scene/derived-placement.js'
 import { panToReveal } from '../scene/zoom.js'
@@ -200,6 +201,25 @@ export interface BoardCommands {
  */
 /** Enough offset that a copy is visibly a copy, not a misclick. */
 const DUPLICATE_OFFSET = 24
+
+/**
+ * What a paste leaves selected: the outermost things it put down. Not their
+ * contents, which a selection of the frame already moves, and not the links
+ * between them, which have nowhere to be on the board.
+ */
+function pastedRoots(
+  ids: readonly ObjectId[],
+  doc: BoardDocument,
+  registry: ObjectTypeRegistry,
+): ObjectId[] {
+  const pasted = new Set(ids)
+  return ids.filter((id) => {
+    const object = doc.objects.get(id)
+    if (object === undefined) return false
+    if (registry.get(object.type)?.capabilities.spatial !== true) return false
+    return object.parentId === null || !pasted.has(object.parentId)
+  })
+}
 /** Clearance between a new insight and the evidence it was drawn from. */
 const SYNTHESIS_GAP = 80
 
@@ -560,11 +580,12 @@ export function useCommands(): BoardCommands {
       },
 
       copySelection() {
-        const document = runtime.store.getDocument()
-        const objects = [...useInteractionStore.getState().selection]
-          .map((id) => document.objects.get(id))
-          .filter((object) => object !== undefined)
-        if (objects.length > 0) useInteractionStore.getState().setClipboard(objects)
+        const content = copyObjects(
+          runtime.store.getDocument(),
+          useInteractionStore.getState().selection,
+          runtime.registry,
+        )
+        if (content !== null) useInteractionStore.getState().setClipboard(content)
       },
 
       cutSelection() {
@@ -574,23 +595,20 @@ export function useCommands(): BoardCommands {
 
       paste(at) {
         const store = useInteractionStore.getState()
-        const clipboard = store.clipboard
-        if (clipboard.length === 0) return
+        const content = store.clipboard
+        if (content === null) return
 
-        const origin = pasteOrigin(clipboard, runtime.registry, runtime.store.getDocument())
         // Paste at the pointer when there is one, otherwise offset from the
         // source so the copy is visibly a copy rather than hidden underneath.
-        const offsetX = at === undefined ? DUPLICATE_OFFSET : at.x - origin.x
-        const offsetY = at === undefined ? DUPLICATE_OFFSET : at.y - origin.y
-
-        const result = dispatcher.dispatch({
-          kind: 'CreateObjects',
-          // The clipboard may hold objects the board no longer has, so these are
-          // made from the copies rather than duplicated by id.
-          objects: clipboard.map((object) => copySpec(object, offsetX, offsetY)),
-        })
+        const dx = at === undefined ? DUPLICATE_OFFSET : at.x - content.origin.x
+        const dy = at === undefined ? DUPLICATE_OFFSET : at.y - content.origin.y
+        const result = dispatcher.dispatch({ kind: 'PasteObjects', content, dx, dy })
         report(result)
-        if (result.ok) store.setSelection(result.affected)
+        if (result.ok) {
+          store.setSelection(
+            pastedRoots(result.affected, runtime.store.getDocument(), runtime.registry),
+          )
+        }
       },
 
       selectAll() {

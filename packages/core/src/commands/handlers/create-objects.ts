@@ -37,6 +37,9 @@ export function createObjects(
     if (!Number.isFinite(spec.x) || !Number.isFinite(spec.y)) {
       throw new CommandError('invalid-input', 'Object position must be finite')
     }
+    if (spec.rotation !== undefined && !Number.isFinite(spec.rotation)) {
+      throw new CommandError('invalid-input', 'Object rotation must be finite')
+    }
 
     if (spec.id !== undefined) {
       if (doc.objects.has(spec.id) || claimed.has(spec.id)) {
@@ -63,6 +66,8 @@ export function createObjects(
       ...(spec.height === undefined ? {} : { height: spec.height }),
       ...(spec.style === undefined ? {} : { style: spec.style }),
       ...(spec.data === undefined ? {} : { data: spec.data }),
+      ...(spec.rotation === undefined ? {} : { rotation: spec.rotation }),
+      ...(spec.hidden === undefined ? {} : { hidden: spec.hidden }),
       createdAt: ctx.clock.now(),
       createdBy: ctx.actor,
       createdVia: ctx.origin,

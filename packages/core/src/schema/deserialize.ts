@@ -2,7 +2,7 @@ import type { AssetRef, BoardDocument } from '../domain/document.js'
 import { asAssetId, asBoardId, asObjectId, asOrderKey, asUserId } from '../domain/ids.js'
 import type { AssetId, ObjectId } from '../domain/ids.js'
 import { repairDocument, type Repair } from '../domain/invariants.js'
-import { ORIGINS, type AnyOpenFrameObject, type Origin } from '../domain/object.js'
+import type { AnyOpenFrameObject } from '../domain/object.js'
 import type { ObjectTypeRegistry } from '../domain/registry.js'
 import { sanitizeStyle } from '../domain/style-boundary.js'
 import { UNKNOWN_TYPE } from '../types/unknown/definition.js'
@@ -12,6 +12,7 @@ import {
   type PersistedObject,
 } from './envelope.js'
 import { migrateDocumentPayload } from './migrations/index.js'
+import { readPersistedObject, toOrigin } from './read-object.js'
 import { CURRENT_SCHEMA_VERSION } from './version.js'
 
 /**
@@ -46,10 +47,6 @@ export type LoadResult =
       readonly message: string
       readonly raw: unknown
     }
-
-function toOrigin(value: string): Origin {
-  return (ORIGINS as readonly string[]).includes(value) ? (value as Origin) : 'import'
-}
 
 const toStyle = sanitizeStyle
 
@@ -145,62 +142,17 @@ export function deserializeBoard(raw: unknown, registry: ObjectTypeRegistry): Lo
 
   for (const persisted of payload.data.objects) {
     const id = asObjectId(persisted.id)
-    const definition = registry.get(persisted.type)
-
-    if (definition === undefined) {
-      objects.set(id, quarantineObject(persisted, registry))
-      degraded.push({
-        id,
-        originalType: persisted.type,
-        reason: 'unknown-type',
-        detail: `This build has no definition for object type "${persisted.type}".`,
-      })
+    const reading = readPersistedObject(persisted, registry)
+    if (reading.ok) {
+      objects.set(id, reading.object)
       continue
     }
-
-    let data: unknown
-    try {
-      data = definition.migrate(persisted.data, persisted.dataVersion, persisted.style)
-    } catch (error) {
-      objects.set(id, quarantineObject(persisted, registry))
-      degraded.push({
-        id,
-        originalType: persisted.type,
-        reason: 'migration-failed',
-        detail: error instanceof Error ? error.message : String(error),
-      })
-      continue
-    }
-
-    const validated = definition.validate(data)
-    if (!validated.ok) {
-      objects.set(id, quarantineObject(persisted, registry))
-      degraded.push({
-        id,
-        originalType: persisted.type,
-        reason: 'invalid-data',
-        detail: validated.issues.join('; '),
-      })
-      continue
-    }
-
-    objects.set(id, {
+    objects.set(id, quarantineObject(persisted, registry))
+    degraded.push({
       id,
-      type: persisted.type,
-      dataVersion: definition.currentVersion,
-      frame: { ...persisted.frame },
-      parentId: persisted.parentId === null ? null : asObjectId(persisted.parentId),
-      order: asOrderKey(persisted.order),
-      style: toStyle(persisted.style),
-      locked: persisted.locked,
-      hidden: persisted.hidden,
-      data: validated.data,
-      meta: {
-        createdAt: persisted.meta.createdAt,
-        createdBy: persisted.meta.createdBy === null ? null : asUserId(persisted.meta.createdBy),
-        createdVia: toOrigin(persisted.meta.createdVia),
-        ...(persisted.meta.tags === undefined ? {} : { tags: persisted.meta.tags }),
-      },
+      originalType: persisted.type,
+      reason: reading.reason,
+      detail: reading.detail,
     })
   }
 

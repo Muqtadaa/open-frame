@@ -6,6 +6,7 @@ import { applyRemotePatches } from './apply-remote-patches.js'
 import { alignObjects, distributeObjects } from './arrange-objects.js'
 import { deriveObject } from './derive-object.js'
 import { duplicateObjects } from './duplicate-objects.js'
+import { pasteObjects } from './paste-objects.js'
 import { groupObjects } from './group-objects.js'
 import { ungroupObjects } from './ungroup-objects.js'
 import { convertObjects } from './convert-objects.js'
@@ -72,6 +73,8 @@ export function handleCommand(
       return alignObjects(doc, command, ctx)
     case 'DistributeObjects':
       return distributeObjects(doc, command, ctx)
+    case 'PasteObjects':
+      return pasteObjects(doc, command, ctx)
     case 'DuplicateObjects':
       return duplicateObjects(doc, command, ctx)
     case 'DeriveObject':

@@ -68,7 +68,7 @@ export function ContextMenu() {
   const at = useInteractionStore((state) => state.contextMenu)
   const close = useInteractionStore((state) => state.closeContextMenu)
   const selectionSize = useInteractionStore((state) => state.selection.size)
-  const clipboardSize = useInteractionStore((state) => state.clipboard.length)
+  const hasCopy = useInteractionStore((state) => state.clipboard !== null)
   const commands = useCommands()
   const me = useMe()
   const round = useVoteRound()
@@ -317,7 +317,7 @@ export function ContextMenu() {
         label: 'Paste here',
         shortcut: 'Mod+V',
         run: () => commands.paste(at.world),
-        disabled: clipboardSize === 0,
+        disabled: !hasCopy,
       },
       {
         label: 'Add a note here',
@@ -471,7 +471,7 @@ export function ContextMenu() {
         label: 'Paste',
         shortcut: 'Mod+V',
         run: () => commands.paste(),
-        disabled: clipboardSize === 0,
+        disabled: !hasCopy,
       },
       { label: 'Duplicate', shortcut: 'Mod+D', run: () => commands.duplicateSelection() },
     ],

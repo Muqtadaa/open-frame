@@ -60,6 +60,8 @@ export function describeCommand(command: Command): string {
       return ALIGN_LABELS[command.edge]
     case 'DistributeObjects':
       return command.axis === 'x' ? 'Distribute horizontally' : 'Distribute vertically'
+    case 'PasteObjects':
+      return 'Paste'
     case 'DuplicateObjects':
       return `Duplicate ${plural(command.ids.length, 'object')}`
     case 'DeriveObject':

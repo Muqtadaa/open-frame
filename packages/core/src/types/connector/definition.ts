@@ -34,6 +34,7 @@ import {
   ConnectorDataSchema,
   ROUTINGS,
   type Bend,
+  type ConnectorEndpoint,
   type ConnectorData,
 } from './schema.js'
 
@@ -337,6 +338,27 @@ export const connectorType = defineObjectType<typeof CONNECTOR_TYPE, ConnectorDa
 
   /** Redraw when either end moves. */
   dependencies: (object) => endpointDependencies(object.data.from, object.data.to),
+
+  /**
+   * A copied line stays attached to whatever it can still find, and lets go
+   * of what it cannot — where that end was, so the line keeps its shape. A
+   * free end is a point on the board, so it travels with the copy; the stops
+   * along the route are relative to the ends, so they need nothing.
+   */
+  copyReferences: (data, { to, ends, by }) => {
+    const end = (endpoint: ConnectorEndpoint, id: 'from' | 'to'): ConnectorEndpoint | null => {
+      if (endpoint.kind === 'point') {
+        return { kind: 'point', x: endpoint.x + by.x, y: endpoint.y + by.y }
+      }
+      const target = to(endpoint.objectId)
+      if (target !== null) return { ...endpoint, objectId: target }
+      const at = ends.get(id)
+      return at === undefined ? null : { kind: 'point', x: at.x + by.x, y: at.y + by.y }
+    }
+    const from = end(data.from, 'from')
+    const until = end(data.to, 'to')
+    return from === null || until === null ? null : { ...data, from, to: until }
+  },
 
   /** Both ends are draggable, at wherever they currently resolve to. */
   endpoints: (object, doc, { boundsOf }) => {

@@ -251,6 +251,16 @@ export type EndpointTarget =
 /** Nesting beyond this is a malformed document, not a board someone built. */
 const MAX_BOUNDS_DEPTH = 32
 
+/** What a type is told about a copy of one of its objects (`copyReferences`). */
+export interface CopyContext {
+  /** The id a reference names where the copy lands, or null for nothing. */
+  readonly to: (id: ObjectId) => ObjectId | null
+  /** Where the original's endpoints were, by endpoint id. */
+  readonly ends: ReadonlyMap<string, Point>
+  /** How far the copy lands from the original, in world units. */
+  readonly by: Point
+}
+
 export interface ObjectCapabilities {
   readonly resizable: boolean
   readonly rotatable: boolean
@@ -552,6 +562,29 @@ export interface ObjectTypeDefinition<TType extends string, TData> {
   readonly dividers?: (object: ObjectBase<TType, TData>) => readonly DraggableDivider[]
 
   /**
+   * What a COPY of this object refers to, once it lands.
+   *
+   * A connector's ends and a relation's two sides name other objects by id.
+   * Copied, those names have to be rewritten: to the copy of the object when
+   * it came along, to the original when the copy lands on the same board and
+   * the original is still there, and to nothing when it lands on another
+   * board. `copy.to(id)` answers which, and `null` means nothing.
+   * `copy.ends` is where this object's endpoints were (by the ids `endpoints`
+   * gave them) when it was copied, so a type that can let go of an object
+   * keeps its shape rather than losing itself; `copy.by` is how far the copy
+   * lands from the original, for anything in `data` held in world units.
+   *
+   * Returns the copy's data, or `null` when the copy cannot stand without what
+   * it referred to — a relation with one side missing is not a relation.
+   *
+   * An OPTIONAL MEMBER, like `endpoints`: most types refer to nothing. A type
+   * that does refer to other objects and declares nothing here is not copied
+   * at all, because a copy that silently pointed at the wrong board would be
+   * worse than one that never arrived.
+   */
+  readonly copyReferences?: (data: TData, copy: CopyContext) => TData | null
+
+  /**
    * The part of this object's content currently shown, for types that hold
    * more than they display.
    *
@@ -719,6 +752,10 @@ export interface ErasedObjectTypeDefinition {
     context: GeometryContext,
   ) => Record<string, unknown>
   readonly cropWindow?: (object: AnyOpenFrameObject) => CropWindow
+  readonly copyReferences?: (
+    data: Record<string, unknown>,
+    copy: CopyContext,
+  ) => Record<string, unknown> | null
   readonly actions?: readonly ErasedAction[]
 }
 
@@ -804,6 +841,7 @@ export function defineObjectType<TType extends string, TData>(
     dividers,
     moveDivider,
     cropWindow,
+    copyReferences,
     relation,
     mark,
     fields,
@@ -848,6 +886,12 @@ export function defineObjectType<TType extends string, TData>(
     ...(cropWindow === undefined
       ? {}
       : { cropWindow: (object) => cropWindow(object as ObjectBase<TType, TData>) }),
+    ...(copyReferences === undefined
+      ? {}
+      : {
+          copyReferences: (data, copy) =>
+            copyReferences(data as TData, copy) as Record<string, unknown> | null,
+        }),
     ...(dividers === undefined
       ? {}
       : { dividers: (object) => dividers(object as ObjectBase<TType, TData>) }),

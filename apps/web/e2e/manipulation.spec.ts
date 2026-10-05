@@ -1,7 +1,9 @@
 import type { Page } from '@playwright/test'
+import { richFromPlain } from '@openframe/core'
 
 import {
   CANVAS,
+  defined,
   drag,
   EDITOR,
   expect,
@@ -145,6 +147,49 @@ test.describe('clipboard and ordering', () => {
 
     await expect(page.locator('[data-object-type="sticky"]')).toHaveCount(2)
     await expect(page.locator('[data-object-type="sticky"]').nth(1)).toContainText('Original')
+  })
+
+  /*
+   * A frame used to be copied empty: the copy was each selected object on its
+   * own, so what the frame held stayed behind. Moving the pasted frame is how
+   * a person finds out whether its note is really inside it.
+   */
+  test('copies a frame with what is inside it', async ({ page }) => {
+    await seed(page, (board) => {
+      const frame = board.add('frame', { x: 500, y: 350 }, { name: richFromPlain('Findings') })
+      board.add('sticky', { x: 500, y: 380 }, { text: richFromPlain('Inside') }, undefined, frame)
+    })
+    const ids = (type: string) =>
+      page
+        .locator(`[data-object-type="${type}"]`)
+        .evaluateAll((els) => els.map((el) => el.getAttribute('data-object-id')))
+    const [originalFrame] = await ids('frame')
+    const [originalNote] = await ids('sticky')
+    await page.getByTestId('frame-title').click()
+
+    await page.keyboard.press(`${MOD}+c`)
+    await page.keyboard.press(`${MOD}+v`)
+    await expect(page.locator('[data-object-type="frame"]')).toHaveCount(2)
+    await expect(page.locator('[data-object-type="sticky"]')).toHaveCount(2)
+    const pastedFrame = (await ids('frame')).find((id) => id !== originalFrame)
+    const pastedNote = (await ids('sticky')).find((id) => id !== originalNote)
+
+    const parentOf = (id: string | null | undefined) =>
+      page.evaluate((target) => {
+        const runtime = (
+          window as unknown as {
+            __openframe?: {
+              runtime: {
+                store: { getDocument: () => { objects: Map<string, { parentId: string | null }> } }
+              }
+            }
+          }
+        ).__openframe?.runtime
+        const object = runtime?.store.getDocument().objects.get(target ?? '')
+        return object === undefined ? 'missing' : object.parentId
+      }, id)
+    expect(await parentOf(pastedNote)).toBe(defined(pastedFrame, 'the pasted frame'))
+    expect(await parentOf(originalNote)).toBe(originalFrame)
   })
 
   test('cuts', async ({ page }) => {
