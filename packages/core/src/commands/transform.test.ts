@@ -63,6 +63,77 @@ describe('RotateObjects', () => {
   })
 })
 
+/**
+ * Two siblings can hold the SAME key: two people who each put something on top
+ * of the same container at once both mint the key after the same last child.
+ * Order is then (key, id) — the same on every client — and reordering has to
+ * work in it rather than in the keys alone, which cannot tell the pair apart.
+ */
+describe('ReorderObjects among siblings that share a key', () => {
+  let h: TestHarness
+  let a: ObjectId
+  let b: ObjectId
+  let c: ObjectId
+
+  beforeEach(() => {
+    h = createTestHarness()
+    a = create(h, 'sticky', 0, 0)
+    b = create(h, 'sticky', 10, 0)
+    c = create(h, 'sticky', 20, 0)
+  })
+
+  /** Gives `id` the key `from` already has, as a concurrent create would. */
+  function tie(id: ObjectId, from: ObjectId): void {
+    const key = h.store.getDocument().objects.get(from)?.order
+    if (key === undefined) throw new Error('expected a key')
+    h.writer.applyPatches([{ op: 'set', id, path: ['order'], value: key }])
+  }
+
+  function reorder(ids: ObjectId[], placement: 'front' | 'back' | 'forward' | 'backward') {
+    const result = h.dispatcher.dispatch({ kind: 'ReorderObjects', ids, placement })
+    if (!result.ok) throw result.error
+  }
+
+  it('stacks the pair by id', () => {
+    tie(b, c)
+    expect(order(h)).toEqual([a, b, c])
+  })
+
+  it('steps forward past a tied pair, rather than failing to fit between them', () => {
+    tie(b, c)
+    reorder([a], 'forward')
+    expect(order(h)).toEqual([b, c, a])
+  })
+
+  it('steps backward past a tied pair', () => {
+    tie(a, b)
+    reorder([c], 'backward')
+    expect(order(h)).toEqual([c, a, b])
+  })
+
+  it('steps backward past exactly the one it shares a key with', () => {
+    tie(b, c)
+    reorder([c], 'backward')
+    expect(order(h)).toEqual([a, c, b])
+  })
+
+  it('keeps a tied pair in its order when both move', () => {
+    tie(b, c)
+    reorder([c, b], 'front')
+    expect(order(h)).toEqual([a, b, c])
+    reorder([c, b], 'back')
+    expect(order(h)).toEqual([b, c, a])
+  })
+
+  it('leaves what it moved with keys of its own', () => {
+    tie(b, c)
+    reorder([a], 'forward')
+    const keys = order(h).map((id) => h.store.getDocument().objects.get(id as ObjectId)?.order)
+    expect(new Set(keys).size).toBe(2)
+    expect(keys[2]).not.toBe(keys[1])
+  })
+})
+
 describe('ReorderObjects', () => {
   let h: TestHarness
   let a: ObjectId

@@ -1,5 +1,6 @@
 import type { AssetId, BoardId, ObjectId, OrderKey } from './ids.js'
 import type { AnyOpenFrameObject } from './object.js'
+import { compareSiblings } from './order.js'
 
 /**
  * A reference to binary content. The BYTES are never in the document — only
@@ -53,10 +54,6 @@ export function getObject(doc: BoardDocument, id: ObjectId): AnyOpenFrameObject 
   return doc.objects.get(id)
 }
 
-/** Direct children of a container, in sibling order. `null` means the board root. */
-const byOrder = (a: AnyOpenFrameObject, b: AnyOpenFrameObject): number =>
-  a.order < b.order ? -1 : a.order > b.order ? 1 : 0
-
 /**
  * Direct children of one container, in sibling order.
  *
@@ -68,7 +65,7 @@ export function childrenOf(doc: BoardDocument, parentId: ObjectId | null): AnyOp
   for (const object of doc.objects.values()) {
     if (object.parentId === parentId) children.push(object)
   }
-  children.sort(byOrder)
+  children.sort(compareSiblings)
   return children
 }
 
@@ -106,7 +103,7 @@ export function groupByParent(doc: BoardDocument): Map<ObjectId | null, AnyOpenF
     if (siblings === undefined) byParent.set(object.parentId, [object])
     else siblings.push(object)
   }
-  for (const siblings of byParent.values()) siblings.sort(byOrder)
+  for (const siblings of byParent.values()) siblings.sort(compareSiblings)
   return byParent
 }
 

@@ -82,10 +82,15 @@ after roughly 230 — deliberate, repetitive reordering rather than ordinary use
 detects it. Nothing acts on it yet: there is no rebalance command, and
 nothing outside the tests calls the detector.
 
-**Still open, and now multiplayer.** Two people dropping between the same pair
-of neighbours at once can mint the same key, and nothing breaks that tie:
-`byOrder` in `packages/core/src/domain/document.ts` compares keys only, so the
-two stack in whatever order the map yields them. A rebalance
+**Ties are settled; collisions and rebalancing are not.** Two people adding on
+top of the same container at once both mint the key after the same last child,
+so the pair holds the SAME key — every time, not by chance. Siblings are
+ordered by `compareSiblings` in `packages/core/src/domain/order.ts`, by key and
+then by id, so every client stacks the pair the same way; it is the only place
+siblings are compared (`sibling-order-rule.test.ts`), and reordering steps past
+a tied pair rather than failing to fit between them. What remains: the pair
+stays adjacent with no key between them until one is reordered, and nothing
+makes new keys collision-resistant (a per-client suffix would). A rebalance
 rewrites every sibling, and the room does not coordinate writes (it relays
 them, [ADR 0016](../adr/0016-room-trust-boundary.md)), so one run by a client
 would race every concurrent reorder in that container. Whoever builds it has

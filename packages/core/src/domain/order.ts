@@ -38,9 +38,31 @@ export function firstOrder(): OrderKey {
   return orderBetween(null, null)
 }
 
-/** Comparator for `Array.prototype.sort`. */
+/** Comparator for `Array.prototype.sort`, over keys alone. */
 export function compareOrder(a: OrderKey, b: OrderKey): number {
   return a < b ? -1 : a > b ? 1 : 0
+}
+
+/**
+ * THE sibling order: by key, and by id where two keys are the same.
+ *
+ * Two keys can be the same, and on a shared board they routinely are: two
+ * people who each put something on top of the same container at once both
+ * mint the key after the same last child, because each started from the same
+ * document. Compared by key alone the pair then stacks in whatever order the
+ * object map yields them, which is the order each client happened to learn of
+ * them — so one person sees A over B and the other B over A, and a click on
+ * the overlap picks a different object on each screen. The id is the same
+ * everywhere, so the order is too.
+ *
+ * Code units, never `localeCompare`: a key is not a word, and locale order
+ * puts `aa` before `aB` where the keys mean the opposite.
+ */
+export function compareSiblings(
+  a: { readonly order: OrderKey; readonly id: string },
+  b: { readonly order: OrderKey; readonly id: string },
+): number {
+  return compareOrder(a.order, b.order) || (a.id < b.id ? -1 : a.id > b.id ? 1 : 0)
 }
 
 /**

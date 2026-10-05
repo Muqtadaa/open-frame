@@ -1,7 +1,8 @@
 import { childrenOf, groupByParent } from '../../domain/document.js'
 import type { BoardDocument } from '../../domain/document.js'
 import type { ObjectId, OrderKey } from '../../domain/ids.js'
-import { compareOrder, orderBetween, ordersBetween } from '../../domain/order.js'
+import type { AnyOpenFrameObject } from '../../domain/object.js'
+import { compareSiblings, orderBetween, ordersBetween } from '../../domain/order.js'
 import type { Patch } from '../../domain/patch.js'
 import { CommandError } from '../errors.js'
 import type { Command } from '../types.js'
@@ -42,11 +43,13 @@ export function reorderObjects(doc: BoardDocument, command: ReorderObjects): Pat
 
   for (const [parentId, ids] of byContainer) {
     const siblings = (byParent.get(parentId) ?? []).filter((object) => !moving.has(object.id))
-    const ordered = [...ids].sort((a, b) => {
-      const left = doc.objects.get(a)?.order
-      const right = doc.objects.get(b)?.order
-      return left === undefined || right === undefined ? 0 : compareOrder(left, right)
-    })
+    // In sibling order — by key, then id — so a pair that shares a key keeps
+    // its stacking when both move. By key alone the sort could not tell them
+    // apart and they took new keys in whatever order the command listed them.
+    const ordered = ids
+      .map((id) => doc.objects.get(id))
+      .filter((object): object is AnyOpenFrameObject => object !== undefined)
+      .sort(compareSiblings)
 
     const first = siblings[0]?.order ?? null
     const last = siblings[siblings.length - 1]?.order ?? null
@@ -63,18 +66,30 @@ export function reorderObjects(doc: BoardDocument, command: ReorderObjects): Pat
       case 'backward': {
         // Step past exactly one neighbour, which is what users expect from
         // repeated presses — jumping to an end would make the command useless.
-        const anchorIndex = neighbourIndex(siblings, doc, ordered, command.placement)
-        const before = anchorIndex <= 0 ? null : (siblings[anchorIndex - 1]?.order ?? null)
-        const after = siblings[anchorIndex]?.order ?? null
+        const anchorIndex = neighbourIndex(siblings, ordered, command.placement)
+        let before = anchorIndex <= 0 ? null : (siblings[anchorIndex - 1]?.order ?? null)
+        let after = siblings[anchorIndex]?.order ?? null
+        // Two neighbours that share a key have no key between them, and
+        // asking for one throws. Landing between them is not possible without
+        // rewriting one of them, so the move carries on past the pair: over
+        // all of it going forward, under all of it going back.
+        if (before !== null && before === after) {
+          const tied = before
+          if (command.placement === 'forward') {
+            after = siblings.find((s) => s.order > tied)?.order ?? null
+          } else {
+            before = siblings.findLast((s) => s.order < tied)?.order ?? null
+          }
+        }
         keys = ordersBetween(before, after, ordered.length)
         break
       }
     }
 
-    ordered.forEach((id, index) => {
+    ordered.forEach((object, index) => {
       const key = keys[index]
       if (key === undefined) return
-      patches.push({ op: 'set', id, path: ['order'], value: key })
+      patches.push({ op: 'set', id: object.id, path: ['order'], value: key })
     })
   }
 
@@ -82,24 +97,23 @@ export function reorderObjects(doc: BoardDocument, command: ReorderObjects): Pat
 }
 
 function neighbourIndex(
-  siblings: readonly { readonly id: ObjectId; readonly order: OrderKey }[],
-  doc: BoardDocument,
-  moving: readonly ObjectId[],
+  siblings: readonly AnyOpenFrameObject[],
+  moving: readonly AnyOpenFrameObject[],
   direction: 'forward' | 'backward',
 ): number {
-  const orders = moving
-    .map((id) => doc.objects.get(id)?.order)
-    .filter((order): order is OrderKey => order !== undefined)
-  if (orders.length === 0) return siblings.length
+  const highest = moving.at(-1)
+  const lowest = moving[0]
+  if (highest === undefined || lowest === undefined) return siblings.length
 
+  // Compared as (key, id) pairs, as the siblings are sorted: by key alone a
+  // neighbour that shares the moving object's key is neither above it nor
+  // below it, and the step skipped it.
   if (direction === 'forward') {
-    const highest = orders.reduce((a, b) => (compareOrder(a, b) >= 0 ? a : b))
-    const above = siblings.findIndex((s) => compareOrder(s.order, highest) > 0)
+    const above = siblings.findIndex((s) => compareSiblings(s, highest) > 0)
     return above === -1 ? siblings.length : above + 1
   }
 
-  const lowest = orders.reduce((a, b) => (compareOrder(a, b) <= 0 ? a : b))
-  const belowCount = siblings.filter((s) => compareOrder(s.order, lowest) < 0).length
+  const belowCount = siblings.filter((s) => compareSiblings(s, lowest) < 0).length
   return Math.max(0, belowCount - 1)
 }
 
