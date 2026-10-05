@@ -16,7 +16,7 @@ let ui: Mounted
 let opener: HTMLButtonElement
 
 beforeEach(async () => {
-  useInteractionStore.setState({ contextMenu: null, selection: new Set(), clipboard: [] })
+  useInteractionStore.setState({ contextMenu: null, selection: new Set(), clipboard: null })
   ui = await mountOnBoard(<ContextMenu />)
   opener = document.createElement('button')
   document.body.append(opener)

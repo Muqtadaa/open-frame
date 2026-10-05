@@ -1,5 +1,5 @@
 import type {
-  AnyOpenFrameObject,
+  ClipboardContent,
   ConnectorEndpoint,
   ImageCrop,
   ObjectFrame,
@@ -456,13 +456,15 @@ export interface ChromeSlice {
    */
   readonly announcement: { readonly text: string; readonly serial: number } | null
   /**
-   * Copied objects, held in memory rather than the system clipboard.
+   * The last copy made in this tab, held in memory rather than the system
+   * clipboard: what the board's own cut, copy and paste use.
    *
-   * The system clipboard needs permission prompts and a serialization format
-   * that other applications could interpret — worth doing, and not worth
-   * blocking copy/paste on. Cross-tab paste is the deliberate gap.
+   * In the board's own copy format (`ClipboardContent`), which is what a paste
+   * reads, so a copy of a frame brings its contents and a copied line keeps
+   * its ends. Cross-tab paste is the deliberate gap, closed by putting this
+   * same content on the system clipboard.
    */
-  readonly clipboard: readonly AnyOpenFrameObject[]
+  readonly clipboard: ClipboardContent | null
   /** Where the open context menu hangs from, or null. */
   readonly contextMenu: ContextMenuAt | null
   /**
@@ -484,7 +486,7 @@ export interface ChromeSlice {
   } | null
   showToast(message: string | null, action?: ToastAction): void
   announce(text: string): void
-  setClipboard(objects: readonly AnyOpenFrameObject[]): void
+  setClipboard(content: ClipboardContent | null): void
   openContextMenu(at: ContextMenuAt): void
   closeContextMenu(): void
   setSearchOpen(open: boolean): void

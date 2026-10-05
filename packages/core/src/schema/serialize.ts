@@ -1,5 +1,5 @@
 import type { BoardDocument } from '../domain/document.js'
-import type { ObjectStyle } from '../domain/object.js'
+import type { AnyOpenFrameObject, ObjectStyle } from '../domain/object.js'
 import type { PersistedBoard, PersistedObject } from './envelope.js'
 import { CURRENT_SCHEMA_VERSION, SCHEMA_FORMAT } from './version.js'
 
@@ -19,42 +19,43 @@ function styleToJson(style: ObjectStyle): Record<string, unknown> {
 }
 
 /**
- * Converts a live document to its on-disk form.
+ * One live object in its stored form.
  *
  * `unknown` objects are written back under their ORIGINAL type and version with
  * their original payload, so a board round-trips losslessly through a build
  * that does not understand every type on it.
  */
-export function serializeBoard(doc: BoardDocument, savedAt: number): PersistedBoard {
-  const objects: PersistedObject[] = []
+export function serializeObject(object: AnyOpenFrameObject): PersistedObject {
+  const isQuarantined = object.type === 'unknown'
+  const quarantined = isQuarantined ? (object.data as QuarantinedData) : undefined
+  const originalType =
+    typeof quarantined?.originalType === 'string' ? quarantined.originalType : 'unknown'
+  const originalVersion =
+    typeof quarantined?.originalVersion === 'number' ? quarantined.originalVersion : 0
 
-  for (const object of doc.objects.values()) {
-    const isQuarantined = object.type === 'unknown'
-    const quarantined = isQuarantined ? (object.data as QuarantinedData) : undefined
-    const originalType =
-      typeof quarantined?.originalType === 'string' ? quarantined.originalType : 'unknown'
-    const originalVersion =
-      typeof quarantined?.originalVersion === 'number' ? quarantined.originalVersion : 0
-
-    objects.push({
-      id: object.id,
-      type: isQuarantined ? originalType : object.type,
-      dataVersion: isQuarantined ? originalVersion : object.dataVersion,
-      frame: { ...object.frame },
-      parentId: object.parentId,
-      order: object.order,
-      style: styleToJson(object.style),
-      locked: object.locked,
-      hidden: object.hidden,
-      data: isQuarantined ? quarantined?.raw : object.data,
-      meta: {
-        createdAt: object.meta.createdAt,
-        createdBy: object.meta.createdBy,
-        createdVia: object.meta.createdVia,
-        ...(object.meta.tags === undefined ? {} : { tags: object.meta.tags }),
-      },
-    })
+  return {
+    id: object.id,
+    type: isQuarantined ? originalType : object.type,
+    dataVersion: isQuarantined ? originalVersion : object.dataVersion,
+    frame: { ...object.frame },
+    parentId: object.parentId,
+    order: object.order,
+    style: styleToJson(object.style),
+    locked: object.locked,
+    hidden: object.hidden,
+    data: isQuarantined ? quarantined?.raw : object.data,
+    meta: {
+      createdAt: object.meta.createdAt,
+      createdBy: object.meta.createdBy,
+      createdVia: object.meta.createdVia,
+      ...(object.meta.tags === undefined ? {} : { tags: object.meta.tags }),
+    },
   }
+}
+
+/** Converts a live document to its on-disk form. */
+export function serializeBoard(doc: BoardDocument, savedAt: number): PersistedBoard {
+  const objects = [...doc.objects.values()].map(serializeObject)
 
   return {
     format: SCHEMA_FORMAT,

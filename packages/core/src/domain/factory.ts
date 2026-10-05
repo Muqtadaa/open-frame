@@ -13,6 +13,8 @@ export interface InstantiateParams {
   readonly height?: number
   readonly style?: ObjectStyle
   readonly data?: Record<string, unknown>
+  readonly rotation?: number
+  readonly hidden?: boolean
   readonly createdAt: number
   readonly createdBy: UserId | null
   readonly createdVia: Origin
@@ -35,13 +37,13 @@ export function instantiateObject(params: InstantiateParams): AnyOpenFrameObject
       y: params.y,
       width: params.width ?? frame.width,
       height: params.height ?? frame.height,
-      rotation: 0,
+      rotation: params.rotation ?? 0,
     },
     parentId: params.parentId ?? null,
     order: params.order,
     style: params.style ?? {},
     locked: false,
-    hidden: false,
+    hidden: params.hidden ?? false,
     data,
     meta: {
       createdAt: params.createdAt,

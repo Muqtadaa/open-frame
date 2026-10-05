@@ -48,6 +48,13 @@ export const relationType = defineObjectType<typeof RELATION_TYPE, RelationData>
    */
   dependencies: (object) => [object.data.from, object.data.to],
 
+  /** A link with a side missing is not a link, so it is not copied. */
+  copyReferences: (data, { to }) => {
+    const from = to(data.from)
+    const until = to(data.to)
+    return from === null || until === null ? null : { ...data, from, to: until }
+  },
+
   describe: (object) => ({
     searchText: object.data.predicate,
     summary: `Relation: ${object.data.predicate}`,

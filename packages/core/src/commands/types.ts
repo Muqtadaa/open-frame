@@ -28,6 +28,10 @@ export interface NewObjectSpec {
   readonly parentId?: ObjectId | null
   readonly data?: Record<string, unknown>
   readonly style?: ObjectStyle
+  /** Radians, as `ObjectFrame.rotation`; a copy keeps the turn of what it was copied from. Default 0. */
+  readonly rotation?: number
+  /** A copy of a hidden object stays hidden. Default false. */
+  readonly hidden?: boolean
 }
 
 /**
@@ -114,6 +118,20 @@ export type Command =
       readonly kind: 'DistributeObjects'
       readonly ids: readonly ObjectId[]
       readonly axis: DistributeAxis
+    }
+  /**
+   * Puts down what was copied (`ClipboardContent`), offset by a delta, under
+   * new ids — from this board or another, from this build or another.
+   *
+   * `content` is `unknown` on purpose: by the time it is pasted it has been
+   * through the system clipboard, so the handler reads it the way a board is
+   * read from storage and holds every object to its type's schema.
+   */
+  | {
+      readonly kind: 'PasteObjects'
+      readonly content: unknown
+      readonly dx: number
+      readonly dy: number
     }
   /** Copies objects — geometry, style and data — offset by a delta, under new ids. */
   | {
