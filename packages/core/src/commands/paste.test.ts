@@ -8,6 +8,7 @@ import {
   assetsToCarry,
   CLIPBOARD_VERSION,
   copyObjects,
+  wordsOf,
   type ClipboardContent,
 } from '../schema/clipboard.js'
 import { serializeObject } from '../schema/serialize.js'
@@ -436,6 +437,30 @@ describe('what a paste will not take', () => {
       dy: 0,
     })
     expect(result.ok).toBe(false)
+  })
+})
+
+/*
+ * The plain text a copy carries, for a document or a chat window: a frame
+ * pasted there is the notes inside it, and a long note arrives whole
+ * (Codex, on #75).
+ */
+describe('the words on a copy', () => {
+  it('are every object it holds, each in full', () => {
+    const frame = create({
+      type: 'frame',
+      x: 0,
+      y: 0,
+      width: 400,
+      height: 300,
+      data: { name: 'Findings' },
+    })
+    const long = 'Pricing is hidden behind a sales call. '.repeat(10).trim()
+    note(long, 20, 20, frame)
+    const b = note('b', 500, 0)
+    relate(frame, b)
+
+    expect(wordsOf(h.store.getDocument(), copy([frame]), h.registry)).toEqual(['Findings', long])
   })
 })
 

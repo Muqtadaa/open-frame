@@ -26,6 +26,7 @@ import {
   groupByParent,
   uncrop,
   unionAll,
+  wordsOf,
   type AlignEdge,
   type DistributeAxis,
   type ImageCrop,
@@ -609,11 +610,7 @@ export function useCommands(): BoardCommands {
         const content = copyObjects(doc, store.selection, runtime.registry)
         if (content === null) return null
         store.setClipboard(content)
-        const lines = [...store.selection]
-          .map((id) => doc.objects.get(id))
-          .filter((object) => object !== undefined)
-          .map((object) => runtime.registry.describeObject(object).summary)
-        return toClipboard(content, lines)
+        return toClipboard(content, wordsOf(doc, content, runtime.registry))
       },
 
       cutSelection() {

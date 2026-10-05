@@ -8,7 +8,7 @@ import {
   type AssetRef,
   type BoardDocument,
 } from '../domain/document.js'
-import type { ObjectId } from '../domain/ids.js'
+import { asObjectId, type ObjectId } from '../domain/ids.js'
 import type { AnyOpenFrameObject } from '../domain/object.js'
 import type { ObjectTypeRegistry } from '../domain/registry.js'
 import { PersistedObjectSchema, type PersistedObject } from './envelope.js'
@@ -214,4 +214,26 @@ export function assetsToCarry(raw: unknown, registry: ObjectTypeRegistry): reado
     for (const ref of registry.assetsOf(object)) found.set(ref.id, ref)
   }
   return [...found.values()]
+}
+
+/**
+ * The words on a copy, for anything it is pasted into that is not a board:
+ * one line per object that says something, for EVERY object the copy holds
+ * and not only the ones selected — a frame copied into a document is the
+ * notes inside it. Each object's whole text (`searchText`), never its
+ * one-line summary, which is cut short (Codex, on #75).
+ */
+export function wordsOf(
+  doc: BoardDocument,
+  content: ClipboardContent,
+  registry: ObjectTypeRegistry,
+): string[] {
+  const words: string[] = []
+  for (const copied of content.objects) {
+    const object = doc.objects.get(asObjectId(copied.id))
+    if (object === undefined || registry.get(object.type)?.capabilities.spatial !== true) continue
+    const text = registry.describeObject(object).searchText.trim()
+    if (text !== '') words.push(text)
+  }
+  return words
 }
