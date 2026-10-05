@@ -1,4 +1,11 @@
-import type { AssetBlob, AssetId, AssetRef, AssetStore, IdGenerator } from '@openframe/core'
+import type {
+  AssetBlob,
+  AssetId,
+  AssetRef,
+  AssetStore,
+  CropWindow,
+  IdGenerator,
+} from '@openframe/core'
 
 import { describeFailure, validateImage } from './asset-validation.js'
 
@@ -130,6 +137,42 @@ export class AssetService {
       return uploaded.ok ? uploaded.image.ref : null
     } catch {
       return null
+    }
+  }
+
+  /**
+   * A picture as a PNG, cropped to what the board shows of it: what copying
+   * one image puts on the system clipboard, so a document, a chat or an image
+   * editor gets the picture rather than a description of it. PNG because it
+   * is the one image type every browser will write there. `null` when this
+   * browser does not have the bytes, or cannot decode them.
+   */
+  async pictureOf(ref: AssetRef, shown: CropWindow): Promise<Blob | null> {
+    try {
+      return await this.encodePng(await this.readBytes(await this.#store.resolve(ref)), shown)
+    } catch {
+      return null
+    }
+  }
+
+  /**
+   * Decodes, crops and encodes off the DOM. A method so a test, which has no
+   * canvas to draw on, can stand in for it.
+   */
+  protected async encodePng(bytes: Blob, shown: CropWindow): Promise<Blob> {
+    const bitmap = await createImageBitmap(bytes)
+    try {
+      const sx = Math.round(shown.x * bitmap.width)
+      const sy = Math.round(shown.y * bitmap.height)
+      const width = Math.max(1, Math.round(shown.width * bitmap.width))
+      const height = Math.max(1, Math.round(shown.height * bitmap.height))
+      const canvas = new OffscreenCanvas(width, height)
+      const context = canvas.getContext('2d')
+      if (context === null) throw new Error('no 2d context')
+      context.drawImage(bitmap, sx, sy, width, height, 0, 0, width, height)
+      return await canvas.convertToBlob({ type: 'image/png' })
+    } finally {
+      bitmap.close()
     }
   }
 

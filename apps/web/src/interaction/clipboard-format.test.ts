@@ -1,6 +1,12 @@
-import { describe, expect, it } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
-import { fromClipboard, toClipboard } from './clipboard-format.js'
+import {
+  fromClipboard,
+  htmlWithPicture,
+  supersedeWrites,
+  toClipboard,
+  writeSystemClipboard,
+} from './clipboard-format.js'
 
 /**
  * What a board copy looks like on the system clipboard, and what reading one
@@ -38,5 +44,69 @@ describe('a board copy on the system clipboard', () => {
     expect(
       fromClipboard(`<div data-openframe-clipboard="${btoa('{not json')}"></div>`),
     ).toBeUndefined()
+  })
+})
+
+/**
+ * A copied picture goes in a write of its own, since a clipboard event
+ * carries strings only. A picture that cannot be had must not cost the words
+ * and the board copy that came with it.
+ */
+describe('writing a copy outside a clipboard event', () => {
+  class FakeItem {
+    constructor(readonly entries: Record<string, Blob | Promise<Blob>>) {}
+  }
+  const written: string[][] = []
+
+  beforeEach(() => {
+    written.length = 0
+    vi.stubGlobal('ClipboardItem', FakeItem)
+    vi.stubGlobal('navigator', {
+      clipboard: {
+        // As a browser does: every entry is awaited, and one that fails fails the write.
+        write: async (items: FakeItem[]) => {
+          for (const item of items) {
+            await Promise.all(Object.values(item.entries).map((value) => Promise.resolve(value)))
+          }
+          written.push(items.flatMap((item) => Object.keys(item.entries)))
+        },
+      },
+    })
+  })
+  afterEach(() => {
+    vi.unstubAllGlobals()
+  })
+
+  const payload = toClipboard({ format: 'openframe.clipboard' }, ['A picture'])
+
+  it('carries the picture with the words', async () => {
+    const picture = Promise.resolve(new Blob(['png'], { type: 'image/png' }))
+    expect(await writeSystemClipboard({ ...payload, picture })).toBe(true)
+    expect(written).toEqual([['text/plain', 'text/html', 'image/png']])
+  })
+
+  it('puts the picture in the HTML, where the board still finds its copy', async () => {
+    const picture = Promise.resolve(new Blob(['png'], { type: 'image/png' }))
+    const html = await htmlWithPicture(payload, await picture)
+    expect(html).toContain('<img src="data:image/png;base64,cG5n" alt="A picture">')
+    expect(html).not.toContain('<p>')
+    expect(fromClipboard(html)).toEqual({ format: 'openframe.clipboard' })
+  })
+
+  it('never lands over a copy made while the picture was still coming', async () => {
+    let deliver: (blob: Blob) => void = () => undefined
+    const picture = new Promise<Blob | null>((resolve) => {
+      deliver = resolve
+    })
+    const writing = writeSystemClipboard({ ...payload, picture })
+    supersedeWrites()
+    deliver(new Blob(['png'], { type: 'image/png' }))
+    expect(await writing).toBe(false)
+    expect(written).toEqual([])
+  })
+
+  it('writes the words alone when the picture cannot be had', async () => {
+    expect(await writeSystemClipboard({ ...payload, picture: Promise.resolve(null) })).toBe(true)
+    expect(written).toEqual([['text/plain', 'text/html']])
   })
 })

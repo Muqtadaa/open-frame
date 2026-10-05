@@ -2,6 +2,7 @@ import { screenToWorld, type Point } from '@openframe/core'
 import { useCallback, useEffect, type DragEvent, type RefObject } from 'react'
 
 import { useImageImport } from '../hooks/use-image-import.js'
+import { fromClipboard } from '../interaction/clipboard-format.js'
 import { useInteractionStore } from '../interaction/interaction-store.js'
 
 function imageFilesOf(list: FileList | null | undefined): File[] {
@@ -61,6 +62,9 @@ export function useImageDrop(containerRef: RefObject<HTMLElement | null>): Image
     const onPaste = (event: ClipboardEvent): void => {
       const files = imageFilesOf(event.clipboardData?.files)
       if (files.length === 0) return
+      // A picture copied on a board comes with the board's copy of it, which
+      // keeps its crop, its alt text and where it sat; that paste is not ours.
+      if (fromClipboard(event.clipboardData?.getData('text/html') ?? '') !== undefined) return
       /*
        * Only prevented once an image is actually present, so pasting objects
        * copied from the board still reaches the keyboard shortcut. A paste that

@@ -1,7 +1,12 @@
 import { ClipboardContentSchema, type ClipboardContent } from '@openframe/core'
 import { useEffect } from 'react'
 
-import { fromClipboard, type ClipboardPayload } from '../interaction/clipboard-format.js'
+import {
+  fromClipboard,
+  supersedeWrites,
+  writeSystemClipboard,
+  type ClipboardPayload,
+} from '../interaction/clipboard-format.js'
 import { pasteArrived, takeKeyCopy } from '../interaction/clipboard-keys.js'
 import { useInteractionStore } from '../interaction/interaction-store.js'
 import { isTextEntry } from '../interaction/use-keyboard-shortcuts.js'
@@ -31,6 +36,10 @@ export function useClipboardEvents(): void {
       event.clipboardData.setData('text/plain', payload.text)
       event.clipboardData.setData('text/html', payload.html)
       event.preventDefault()
+      // A picture cannot go through the event, which carries strings only; it
+      // follows in a write of its own, and the words stand if that is refused.
+      if (payload.picture !== undefined) void writeSystemClipboard(payload)
+      else supersedeWrites()
     }
 
     const onCopy = (event: ClipboardEvent): void => {
@@ -53,9 +62,8 @@ export function useClipboardEvents(): void {
         void commands.paste()
         return
       }
-      // Files are pictures from outside, and the image importer's.
-      if (data.files.length > 0) return
-
+      // Board content first: a copied picture carries its PNG as well, and
+      // the board's own copy of it is the one that keeps everything else.
       const html = data.getData('text/html')
       const content = plain ? undefined : fromClipboard(html)
       if (content !== undefined) {
@@ -63,6 +71,8 @@ export function useClipboardEvents(): void {
         void commands.pasteContent(content)
         return
       }
+      // Files are pictures from outside, and the image importer's.
+      if (data.files.length > 0) return
       // Words, formatted or not, or a spreadsheet range from another
       // application — or a board copy's own words, when asked for plainly.
       const outside = readOutside(html, data.getData('text/plain'), plain)
