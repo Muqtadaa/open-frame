@@ -47,10 +47,19 @@ describe('the stylesheet’s parts', () => {
     expect(cssFilesUnder('src').sort()).toEqual(
       [...importedParts().map((file) => `src/styles/${file}`), 'src/styles/index.css'].sort(),
     )
-    const main = readFileSync(resolve(ROOT, 'src/main.tsx'), 'utf8')
-    expect([...main.matchAll(/^import '[^']+\.css'$/gm)].map((match) => match[0])).toEqual([
-      "import './styles/index.css'",
-    ])
+    // Every source, not only the entry: a component that imported a part
+    // itself would be a second way into the cascade, in an order `index.css`
+    // does not state and the tests reading it cannot see.
+    const imports = readdirSync(resolve(ROOT, 'src'), { recursive: true, encoding: 'utf8' })
+      .filter((file) => /\.tsx?$/.test(file) && !/\.test\.tsx?$/.test(file))
+      .flatMap((file) =>
+        [
+          ...readFileSync(resolve(ROOT, 'src', file), 'utf8').matchAll(
+            /^\s*import\s+(?:[^'"]*\sfrom\s+)?['"]([^'"]+\.css)(?:\?[^'"]*)?['"]/gm,
+          ),
+        ].map((match) => `${file}: ${match[1] ?? ''}`),
+      )
+    expect(imports).toEqual(['main.tsx: ./styles/index.css'])
   })
 
   it('end on a rule, so joining them on a blank line is the stylesheet as written', () => {
