@@ -28,7 +28,7 @@ export interface NewObjectSpec {
   readonly parentId?: ObjectId | null
   readonly data?: Record<string, unknown>
   readonly style?: ObjectStyle
-  /** Degrees; a copy keeps the turn of what it was copied from. Default 0. */
+  /** Radians, as `ObjectFrame.rotation`; a copy keeps the turn of what it was copied from. Default 0. */
   readonly rotation?: number
   /** A copy of a hidden object stays hidden. Default false. */
   readonly hidden?: boolean

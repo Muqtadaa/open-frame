@@ -100,6 +100,16 @@ export function pasteObjects(
     }
   }
 
+  /*
+   * The copies that can hold the ones after them. A copy names its parent,
+   * and a copy is content from anywhere: a parent that does not hold
+   * children, or two objects naming each other, would be a hierarchy no
+   * command could have made, and `CreateObjects` takes parentage on trust.
+   * A copy made here lists every container before what it holds (paint
+   * order), so only a parent ALREADY put down, of a type that holds things,
+   * is honoured — which makes a cycle impossible by construction.
+   */
+  const containers = new Map<ObjectId, ObjectId>()
   const specs: NewObjectSpec[] = []
   for (const object of kept) {
     const id = copies.get(object.id)
@@ -108,7 +118,7 @@ export function pasteObjects(
     // Inside something that came along, it stays inside the copy of it.
     // Anything else lands loose: the container it was in may be on another
     // board, or may be exactly where the paste is NOT going.
-    const parentId = object.parentId === null ? null : (copies.get(object.parentId) ?? null)
+    const parentId = object.parentId === null ? null : (containers.get(object.parentId) ?? null)
     specs.push({
       type: object.type,
       id,
@@ -122,6 +132,9 @@ export function pasteObjects(
       style: object.style,
       data,
     })
+    if (ctx.registry.get(object.type)?.capabilities.canHaveChildren === true) {
+      containers.set(object.id, id)
+    }
   }
   if (specs.length === 0) {
     throw new CommandError('invalid-input', 'Nothing in that copy could be put on this board')

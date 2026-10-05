@@ -192,6 +192,27 @@ test.describe('clipboard and ordering', () => {
     expect(await parentOf(originalNote)).toBe(originalFrame)
   })
 
+  /*
+   * A duplicate is a copy and a paste, so it puts down the frame AND what it
+   * holds — but what it leaves selected is what was duplicated, as the
+   * original was one selection. Selecting everything inside it as well would
+   * aim the next edit at all of it (Codex, on #74).
+   */
+  test('duplicating a frame leaves the duplicate selected, not everything in it', async ({
+    page,
+  }) => {
+    await seed(page, (board) => {
+      const frame = board.add('frame', { x: 500, y: 350 }, { name: richFromPlain('Findings') })
+      board.add('sticky', { x: 500, y: 380 }, { text: richFromPlain('Inside') }, undefined, frame)
+    })
+    await page.getByTestId('frame-title').click()
+    await page.keyboard.press(`${MOD}+d`)
+
+    await expect(page.locator('[data-object-type="frame"]')).toHaveCount(2)
+    await expect(page.locator('[data-object-type="sticky"]')).toHaveCount(2)
+    await expect(page.getByTestId('board-announcer')).toHaveText(/^Selected: /)
+  })
+
   test('cuts', async ({ page }) => {
     await seed(page, (board) => {
       board.note('Cut me', { x: 400, y: 300 })

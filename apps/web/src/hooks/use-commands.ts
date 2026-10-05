@@ -576,7 +576,15 @@ export function useCommands(): BoardCommands {
           dy: DUPLICATE_OFFSET,
         })
         report(result)
-        if (result.ok) useInteractionStore.getState().setSelection(result.affected)
+        // The duplicates the person asked for, not everything inside them:
+        // a duplicated frame is one selection, as the original was.
+        if (result.ok) {
+          useInteractionStore
+            .getState()
+            .setSelection(
+              pastedRoots(result.affected, runtime.store.getDocument(), runtime.registry),
+            )
+        }
       },
 
       copySelection() {

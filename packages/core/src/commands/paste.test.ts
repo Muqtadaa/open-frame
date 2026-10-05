@@ -204,6 +204,35 @@ describe('what a paste will not put down, whatever the copy says', () => {
     const pasted = paste({ ...content, objects: [...content.objects, ...extras] })
     expect(pasted.map((object) => object.type)).toEqual(['sticky'])
   })
+
+  /*
+   * `CreateObjects` takes parentage on trust, so a copy that names a parent
+   * no command could have given it — one that holds nothing, or one that is
+   * inside the object it holds — must not reach it (Codex, on #74).
+   */
+  it('puts down loose what names a parent that cannot hold it, or that it holds', () => {
+    const outer = create({ type: 'frame', x: 0, y: 0, width: 400, height: 300, data: {} })
+    const inner = create({ type: 'frame', x: 20, y: 20, width: 200, height: 150, data: {} })
+    const a = note('a', 40, 40)
+    const b = note('b', 60, 60)
+    const content = copy([outer, inner, a, b])
+    const named: Record<string, ObjectId> = { [outer]: inner, [inner]: outer, [a]: b }
+    const forged = {
+      ...content,
+      objects: content.objects.map((object) => ({
+        ...object,
+        parentId: named[object.id] ?? null,
+      })),
+    }
+
+    const pasted = paste(forged)
+    // The two frames name each other: the one put down first is loose and
+    // the other stays inside its copy. A note holds nothing.
+    expect(pasted).toHaveLength(4)
+    const [first, second] = pasted
+    expect(pasted.map((object) => object.parentId)).toEqual([null, first?.id, null, null])
+    expect(second?.type).toBe('frame')
+  })
 })
 
 /**
