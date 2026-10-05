@@ -136,3 +136,23 @@ describe('the packages the bundle resolves from the root', () => {
     }
   })
 })
+
+describe('the room server asks the same Supabase project as the browser', () => {
+  /*
+   * The AI route checks who a bearer token belongs to by asking Supabase
+   * (ADR 0018), so the Worker must name the project the browser signed in
+   * with. Both values are public. They live in `wrangler.toml`, not the
+   * Cloudflare dashboard: every deploy replaces the dashboard's plain
+   * variables with the file's, so a value set there lasts until the next merge.
+   */
+  const env = readFileSync(resolve(process.cwd(), '.env'), 'utf8')
+  const toml = readFileSync(resolve(process.cwd(), '../rooms/wrangler.toml'), 'utf8')
+  const envValue = (name: string) => new RegExp(`^${name}=(.+)$`, 'm').exec(env)?.[1]?.trim()
+  const tomlValue = (name: string) => new RegExp(`^${name}\\s*=\\s*"([^"]*)"`, 'm').exec(toml)?.[1]
+
+  it('in its URL and its publishable key', () => {
+    expect(envValue('VITE_SUPABASE_URL')).toBeDefined()
+    expect(tomlValue('SUPABASE_URL')).toBe(envValue('VITE_SUPABASE_URL'))
+    expect(tomlValue('SUPABASE_PUBLISHABLE_KEY')).toBe(envValue('VITE_SUPABASE_PUBLISHABLE_KEY'))
+  })
+})

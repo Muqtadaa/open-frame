@@ -1,8 +1,8 @@
 # ADR 0018 · AI clustering runs on the room server, and proposes copies
 
-**Status:** Proposed · 2026-10-05 · built in PR E. Waiting on the owner to
-accept it, to set the key, and to accept that note text is sent to Anthropic.
-Cites ADR 0016.
+**Status:** Accepted · 2026-10-05 · built in PR E (#67). The owner accepted it,
+including that the selected notes' text is sent to Anthropic. Cites ADR 0016.
+Switching it on: [enabling facilitation](../operations/enabling-facilitation.md).
 
 ## Context
 

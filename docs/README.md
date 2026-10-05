@@ -34,6 +34,7 @@ product grows.
 | Change what happens on the board         | [Commands and undo](architecture/05-commands-and-undo.md)           |
 | Know what we are building next           | [Roadmap](phases/README.md)                                         |
 | Know why something was decided           | [Decision records](adr/README.md)                                   |
+| Switch on session music and AI           | [Enabling facilitation](operations/enabling-facilitation.md)        |
 | Work on this repo with Claude Code       | [`CLAUDE.md`](../CLAUDE.md)                                         |
 
 ---
