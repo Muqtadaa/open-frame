@@ -1,0 +1,198 @@
+/*
+ * Browser surfaces. Selection, caret, scrollbars and focus rings ship with
+ * defaults that belong to no design system; left alone they are the tell that a
+ * page was assembled rather than built.
+ */
+::selection {
+  background: var(--of-accent-soft);
+  color: var(--of-ink);
+}
+
+:focus-visible {
+  outline: 2px solid var(--of-accent);
+  outline-offset: 2px;
+  border-radius: var(--of-radius-apparatus);
+}
+
+/*
+ * The button. One, with three weights.
+ *
+ * `.of-button` was used twelve times — the notice's Dismiss, the comment
+ * composer's Close and Comment, the password gate, workspaces, the code and
+ * table bars — and had no rule anywhere, so every one of them was a browser
+ * default in a world that claims its browser surfaces. Meanwhile the account
+ * and share sheets each drew their own identical accent button and the record
+ * panel drew a third, bordered one. Same intent, four implementations, one of
+ * them missing.
+ *
+ * - default: a bordered control on panel white — "do this", not the main act
+ * - primary: the accent fill — the one thing a sheet or gate exists to do
+ * - ghost:   text on no ground — dismissals and secondary moves beside a primary
+ *
+ * Layout (width, alignment in a row) stays with the surface that places the
+ * button; what a button LOOKS like is decided here. Declared before
+ * `.of-surface` on purpose: a ghost button that is also a surface (the code
+ * block's format button) takes the surface's stock.
+ */
+.of-button {
+  display: inline-flex;
+  gap: var(--of-space-6);
+  align-items: center;
+  justify-content: center;
+  min-height: var(--of-hit-sm);
+  padding: 0 var(--of-space-12);
+  font: inherit;
+  font-family: var(--of-font);
+  font-size: var(--of-type-control);
+  line-height: 1;
+  color: var(--of-ink);
+  white-space: nowrap;
+  text-decoration: none;
+  background: var(--of-panel);
+  border: 1px solid var(--of-control-border);
+  border-radius: var(--of-radius);
+  cursor: pointer;
+  transition:
+    background-color var(--of-quick) var(--of-ease),
+    border-color var(--of-quick) var(--of-ease),
+    color var(--of-quick) var(--of-ease);
+}
+
+.of-button:hover:not(:disabled) {
+  background: var(--of-hover);
+}
+
+.of-button:disabled {
+  opacity: var(--of-disabled);
+  cursor: default;
+}
+
+.of-button--primary {
+  color: var(--of-panel);
+  background: var(--of-accent);
+  border-color: var(--of-accent);
+}
+
+/*
+ * Not yet pressable, and looking it: an outlined wash rather than the accent
+ * faded to 38%, which read as the live button seen through fog — "Reply" on
+ * an empty box looked like it was about to send.
+ */
+.of-button--primary:disabled {
+  color: var(--of-ink-muted);
+  background: var(--of-hover);
+  border-color: var(--of-control-border);
+  opacity: 1;
+}
+
+/* Toward the ink, in either world: deeper blue on the page, paler cyan at night. */
+.of-button--primary:hover:not(:disabled) {
+  background: color-mix(in srgb, var(--of-accent) 84%, var(--of-ink));
+  border-color: color-mix(in srgb, var(--of-accent) 84%, var(--of-ink));
+}
+
+.of-button--ghost {
+  color: var(--of-ink-muted);
+  background: transparent;
+  border-color: transparent;
+}
+
+.of-button--ghost:hover:not(:disabled) {
+  color: var(--of-ink);
+}
+
+/* The one act a sheet or a gate exists for, at the operating height. */
+.of-button--large {
+  min-height: var(--of-hit);
+  padding: 0 var(--of-gutter);
+}
+
+/*
+ * The icon button: a glyph on no ground that takes a bed when you reach for it.
+ *
+ * There were six, at 24, 26, 28 and 30px — the record line's history, the
+ * front door's row actions and pin, the record panel's remove, the arrange
+ * bar, the format bar and the zoom cluster — with two hover grounds and three
+ * disabled opacities. The three below 30px were under the target this world
+ * sets for a secondary control, so folding them in is an accessibility fix
+ * as much as a tidy one.
+ *
+ * - pressed (`aria-pressed` or `--on`): accent on the accent wash, the same
+ *   state an active tool takes in the rail
+ * - destructive: correction red, on hover only — a row of permanently red
+ *   buttons reads as a list of warnings
+ *
+ * It holds a label as well as a glyph (the zoom cluster's wheel mode): the
+ * minimum width keeps an icon square and lets words widen it.
+ */
+.of-icon-button {
+  display: inline-flex;
+  flex: none;
+  gap: var(--of-space-6);
+  align-items: center;
+  justify-content: center;
+  min-width: var(--of-hit-sm);
+  height: var(--of-hit-sm);
+  padding: 0 var(--of-space-6);
+  font: inherit;
+  color: var(--of-ink-muted);
+  background: transparent;
+  border: none;
+  border-radius: var(--of-radius);
+  cursor: pointer;
+  transition:
+    background-color var(--of-quick) var(--of-ease),
+    color var(--of-quick) var(--of-ease);
+}
+
+.of-icon-button svg {
+  flex: none;
+  width: 16px;
+  height: 16px;
+}
+
+.of-icon-button:hover:not(:disabled, [aria-disabled='true']) {
+  color: var(--of-ink);
+  background: var(--of-hover);
+}
+
+.of-icon-button:disabled,
+.of-icon-button[aria-disabled='true'] {
+  opacity: var(--of-disabled);
+  cursor: default;
+}
+
+.of-icon-button[aria-pressed='true'],
+.of-icon-button--on {
+  color: var(--of-accent);
+  background: var(--of-accent-soft);
+  /*
+   * Its own mark: the wash alone is 1.13:1 against the bar, so only the icon's
+   * colour said the toggle was on (design-tokens.test holds it to 3:1 in both
+   * worlds). A bar along the foot rather than a ring, because a ring is what
+   * FOCUS draws — a pressed toggle read as a focused one, and a focused
+   * pressed one wore two rings (audit 2026-09-27).
+   */
+  box-shadow: inset 0 -2px 0 var(--of-accent);
+}
+
+/*
+ * Some of the selection has it and some does not: the pressed mark's foot bar
+ * without its wash. Plain off said a half-bold selection had no bold in it;
+ * fully on said all of it did, and pressing would have un-bolded the rest.
+ */
+.of-icon-button[aria-pressed='mixed'] {
+  color: var(--of-ink);
+  box-shadow: inset 0 -2px 0 var(--of-accent);
+}
+
+.of-icon-button--destructive:hover:not(:disabled) {
+  color: var(--of-danger);
+  background: var(--of-danger-wash);
+}
+
+/* Numerals in any record read as columns, never as ransom text. */
+.of-status,
+.of-inspector {
+  font-variant-numeric: tabular-nums;
+}

@@ -2,6 +2,8 @@ import { readdirSync, readFileSync } from 'node:fs'
 import { join, resolve } from 'node:path'
 import { describe, expect, it } from 'vitest'
 
+import { readStyles } from '../styles/read-styles.js'
+
 /**
  * The stylesheet says what the app is, and nothing else (audit 2026-09-27).
  *
@@ -11,7 +13,7 @@ import { describe, expect, it } from 'vitest'
  * it is and fails on the drift, so it cannot quietly come back.
  */
 const ROOT = process.cwd()
-const CSS = readFileSync(resolve(ROOT, 'src/styles.css'), 'utf8')
+const CSS = readStyles()
 const PLAIN = CSS.replace(/\/\*[\s\S]*?\*\//g, '')
 
 function sources(): string {

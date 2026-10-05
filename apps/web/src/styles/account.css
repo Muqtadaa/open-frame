@@ -1,0 +1,257 @@
+/* ---------- account ---------- */
+
+/*
+ * A small sheet under the navigation bar, not a modal. Signing in is never
+ * required to use a board, so it must never take the screen — the craft floor
+ * bans a modal for a task that needs neither interruption nor protected focus,
+ * and this is the clearest possible case.
+ */
+/*
+ * A sheet: what comes out of the navigation bar — the account sheet and the
+ * share sheet. They were two byte-identical rules under two names, which is
+ * how the next one would have become a third.
+ *
+ * The surface radius, not the control one: a sheet floats over the board
+ * rather than sitting in its margin, and everything else that does — menus,
+ * the record panel, the comment panel, a gate — is already 10px. These two
+ * were the only floating surfaces at 6.
+ */
+.of-sheet {
+  width: 320px;
+  padding: var(--of-gutter);
+  font-family: var(--of-font);
+  color: var(--of-ink);
+  background: var(--of-panel);
+  border: 1px solid var(--of-panel-border);
+  border-radius: var(--of-radius-surface);
+  box-shadow: var(--of-shadow);
+  /*
+   * A sheet hangs below the bar and grows with what it holds — the owner's
+   * links plus the password form outgrow a phone on its side. The surface
+   * that places it only clamps its position, so the sheet bounds its own
+   * height and scrolls, or Done ends up below the window where nothing can
+   * reach it.
+   */
+  max-height: calc(100dvh - var(--of-nav-band) - var(--of-gutter));
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+
+/* Who is signed in: a label, the name, and the address it came from. */
+.of-account-sheet__who {
+  display: grid;
+  gap: var(--of-space-2);
+  margin: 0 0 var(--of-space-16);
+  font-size: var(--of-type-control);
+}
+
+.of-account-sheet__label,
+.of-account-sheet__email {
+  font-family: var(--of-mono);
+  font-size: var(--of-type-record);
+  letter-spacing: 0.02em;
+  color: var(--of-ink-muted);
+}
+
+.of-account__field {
+  display: block;
+  margin-bottom: var(--of-space-12);
+}
+
+/*
+ * The source offer, repeated in the account and sign-in sheets for the one
+ * width where the bar has no room for it. Hidden everywhere else.
+ */
+.of-sheet__source {
+  display: none;
+  margin-top: var(--of-space-12);
+  font-size: var(--of-type-record);
+  color: var(--of-ink-muted);
+}
+
+/* What a field is for, kept beside it once somebody has started typing. */
+.of-account__hint {
+  display: block;
+  margin-top: var(--of-space-4);
+  font-size: var(--of-type-record);
+  color: var(--of-ink-muted);
+}
+
+/* A field label, set the way the record panel sets one. */
+.of-account__field span {
+  display: block;
+  margin-bottom: var(--of-space-6);
+  font-family: var(--of-mono);
+  font-size: var(--of-type-record);
+  letter-spacing: 0.02em;
+  color: var(--of-ink-muted);
+}
+
+.of-account__error {
+  margin: 0 0 var(--of-space-12);
+  font-size: var(--of-type-control);
+  line-height: 1.4;
+  color: var(--of-danger);
+}
+
+.of-account__actions {
+  display: flex;
+  gap: var(--of-space-8);
+  align-items: center;
+  justify-content: space-between;
+}
+
+.of-account__switch {
+  padding: var(--of-space-4) 0;
+  font-family: var(--of-font);
+  font-size: var(--of-type-ui-small);
+  color: var(--of-ink-muted);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+  background: none;
+  border: none;
+  cursor: pointer;
+  /* A whole target: as a bare line of text it was 23px tall. */
+  min-height: var(--of-hit-sm);
+}
+
+.of-account__switch:hover {
+  color: var(--of-ink);
+}
+
+/*
+ * Capping the line's WIDTH is not the same as keeping its contents inside it.
+ *
+ * A flex child defaults to `min-width: auto`, so it refuses to shrink below
+ * its content and simply overflows the box instead — which is how the bench
+ * panel came to sit 21px past the zoom cluster while the line's own bounding
+ * box measured perfectly inside it. The first guard written for this measured
+ * the box, so it passed.
+ */
+/*
+ * WHAT GIVES, in order, when the line runs out of room.
+ *
+ * A flex child defaults to shrinking, so at the new scale every readout
+ * squashed at once and "100%", "Source" and "Share" ran into one another. The
+ * order is a decision, not an accident: the board's NAME shortens first
+ * because it is the only thing here that can lose characters and still mean
+ * something, the bench panel clips because it is not the product, and every
+ * readout holds its size — a count that has been compressed into its
+ * neighbour has not degraded, it has broken.
+ */
+.of-status > * {
+  flex: none;
+  min-width: 0;
+  white-space: nowrap;
+}
+
+.of-status__title,
+.of-status__heading {
+  flex: 0 1 auto;
+}
+
+/*
+ * An icon button keeps its 30px floor on the bar. The rule above lets every
+ * child shrink, which squeezed the theme toggle to 28 — under the target the
+ * rest of the product keeps (DESIGN.md, Icon Buttons).
+ */
+.of-status > .of-icon-button {
+  min-width: var(--of-hit-sm);
+}
+
+/*
+ * The heading that holds the board's name: a landmark for a screen reader,
+ * no box of its own for anybody else. The name inside it sets the size.
+ */
+.of-status__heading {
+  display: flex;
+  min-width: 10ch;
+  margin: 0;
+  font: inherit;
+}
+
+/*
+ * A NARROW window: what the bar gives up, in order, when it truly runs out of
+ * room. The selection count first (the record panel says it too), then the
+ * exit's words (its arrow stays: it is the one control with no other route),
+ * then — on a phone-width window — the save state's word, leaving its state
+ * to the tip. Nothing ever runs out of the bar.
+ *
+ * At 680 rather than 640 since the session timer joined the bar: a shared
+ * board's ran out of it at exactly 640 by the width of that one button.
+ */
+@media (width < 680px) {
+  .of-status__counts {
+    display: none;
+  }
+
+  .of-status__exit-label {
+    display: none;
+  }
+
+  /*
+   * A shared board's chip keeps its dot — green, amber, grey say the same
+   * thing the word did — and its name and tip carry the rest.
+   */
+  .of-status__room .of-status__share-label {
+    display: none;
+  }
+}
+
+/*
+ * The second step, at 560 rather than 480: between the two a shared board's
+ * bar — the room chip, whoever is here — ran out of room with the full gaps
+ * and the save word still standing (audit 2026-09-27).
+ */
+@media (width < 560px) {
+  .of-status {
+    gap: var(--of-space-4);
+    padding: var(--of-space-6);
+  }
+
+  /*
+   * The word goes, but never a FAILURE: `display: none` also removes the live
+   * region, so a phone-width window would be the one place a failed save said
+   * nothing at all.
+   */
+  .of-status__save:not(.of-status__save--failed) {
+    display: none;
+  }
+
+  .of-status__rule {
+    display: none;
+  }
+}
+
+/*
+ * A phone: the name gives up a few characters before anything runs off the
+ * edge. It ellipsises, and its full text is still its tip.
+ */
+@media (width < 420px) {
+  .of-status__heading {
+    min-width: 7ch;
+  }
+}
+
+/*
+ * The account shrinks to its face, and the source offer moves into the
+ * account sheet: both ran off the right edge — a phone at first, and then
+ * any window under about 820px once the bar carried a shared board's chip
+ * and the people in it (audit 2026-09-27). The source link has to stay
+ * reachable from inside the running app (AGPL §13), and the sheet is where
+ * it goes.
+ *
+ * Only a signed-in account has a face to shrink to. Signed out, the label
+ * is the whole button, so it stays — and with it the sheet that carries the
+ * source link.
+ */
+@media (width < 820px) {
+  .of-status__account:not([data-testid='sign-in']) .of-status__share-label,
+  .of-status__source {
+    display: none;
+  }
+
+  .of-sheet__source {
+    display: block;
+  }
+}

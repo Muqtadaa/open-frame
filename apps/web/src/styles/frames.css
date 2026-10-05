@@ -1,0 +1,68 @@
+/* ---------- frames ---------- */
+
+.of-frame {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  border-radius: var(--of-radius-slip);
+  /* The title sits ABOVE the frame, so it must not be clipped. */
+  overflow: visible;
+}
+
+/*
+ * The edge, laid out at `zoom` times the frame and painted at `1 / zoom` (see
+ * FrameEdge), so this 1px is one screen pixel at every zoom (rule 24).
+ */
+.of-frame__edge {
+  position: absolute;
+  top: 0;
+  left: 0;
+  box-sizing: border-box;
+  /* An edge you find the frame by, so a boundary at 3:1, not a panel hairline. */
+  border: 1px solid var(--of-control-border);
+  border-radius: var(--of-radius-slip);
+  transform-origin: 0 0;
+  pointer-events: none;
+}
+
+/*
+ * A frame's title, which is rich text (ADR 0014): it can wrap, take a list and
+ * carry a larger size, so it is anchored by its BOTTOM edge to the frame's top
+ * and grows upward, rather than living in a fixed 18-pixel band that clipped
+ * anything taller than one line.
+ */
+.of-frame__title {
+  position: absolute;
+  bottom: 100%;
+  left: 0;
+  max-width: 480px;
+  padding-bottom: var(--of-space-2);
+  overflow: hidden;
+  font-size: var(--of-type-ui);
+  line-height: 1.2;
+  color: var(--of-ink-muted);
+  overflow-wrap: anywhere;
+  white-space: pre-wrap;
+}
+
+.of-frame__editor {
+  width: 300px;
+  min-height: 18px;
+  padding: 0;
+  background: var(--of-panel);
+  outline: 1px solid var(--of-accent);
+}
+
+/*
+ * A self-positioned object (a connector) draws in absolute world coordinates,
+ * so its wrapper must SPAN the world layer rather than occupy a frame —
+ * otherwise the SVG inside it has zero size and nothing renders.
+ */
+.of-object--self-positioned {
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  /* It covers the whole world layer, so it must not intercept anything.
+     Hit testing for these types is geometric, via the registry. */
+  pointer-events: none;
+}

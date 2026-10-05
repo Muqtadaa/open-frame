@@ -3,17 +3,17 @@ import { resolve } from 'node:path'
 import { COLOR_TOKENS, createDefaultRegistry } from '@openframe/core'
 import { describe, expect, it } from 'vitest'
 
+import { readStyles } from '../styles/read-styles.js'
+
 /**
  * The palette's WCAG 2.2 AA floor, checked against the REAL stylesheet.
  *
  * AA is a product commitment (PRODUCT.md), and a commitment nobody measures is
- * a wish. Parsing `styles.css` rather than restating the hex values here is the
+ * a wish. Parsing the stylesheet rather than restating the hex values here is the
  * whole point: a duplicated palette would drift, and the test would keep passing
  * against colours the app no longer uses.
  */
-// Resolved from the package root, not `import.meta.url`: under jsdom that is an
-// http URL, not a file one.
-const CSS = readFileSync(resolve(process.cwd(), 'src/styles.css'), 'utf8')
+const CSS = readStyles()
 
 /**
  * EVERY theme, not the first one that matches.
@@ -878,7 +878,7 @@ describe('the stylesheet is well formed', () => {
  */
 describe('a failed save survives a narrow window', () => {
   it('hides the save state below 560px only when it has not failed', () => {
-    const css = readFileSync(resolve(process.cwd(), 'src/styles.css'), 'utf8')
+    const css = readStyles()
     // The bar's own block at that width; other surfaces have theirs too.
     const narrow =
       [...css.matchAll(/@media \(width < 560px\)\s*\{([\s\S]*?)\n\}/g)]

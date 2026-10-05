@@ -1,0 +1,440 @@
+/* ---------- object types ---------- */
+
+.of-sticky {
+  width: 100%;
+  height: 100%;
+  padding: var(--of-space-12);
+  overflow: hidden;
+  font-size: var(--of-type-ui);
+  line-height: 1.35;
+  border-radius: var(--of-radius-slip);
+  /* A slip laid on the page. Shared token so every placed object sits at the
+     same height above the rule. */
+  box-shadow: var(--of-slip-ring), var(--of-slip-shadow);
+}
+
+/*
+ * A COLUMN, which it was not.
+ *
+ * The view has always set `justify-content` from the vertical-alignment
+ * control, and this element computed `display: block`, where that property
+ * does nothing at all. Vertical alignment on a sticky note was inert from the
+ * day it shipped and no test noticed, because every test asserted the style
+ * was WRITTEN rather than that the text moved.
+ *
+ * `container-type` is what lets the clamp below count lines: `100cqh` is this
+ * element's content height, so the text knows how many lines fit without any
+ * measurement and without a copy of the padding or the font size in JS.
+ *
+ * Not the editor. A contenteditable turned into a flex container wraps each
+ * run of text in an anonymous flex item, and size containment stops it growing
+ * with what is typed.
+ */
+.of-sticky:not(.of-sticky__editor) {
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-start;
+  container-type: size;
+}
+
+.of-sticky__text {
+  overflow-wrap: anywhere;
+  white-space: pre-wrap;
+}
+
+/*
+ * A structured slip: the same physical object as a sticky note, carrying a
+ * record.
+ *
+ * Deliberately the same stock, padding, radius and elevation. PRODUCT.md's
+ * claim is that a sticky and a piece of evidence are the SAME kind of thing
+ * differing only in payload, so a different-looking card would contradict the
+ * thesis the type exists to prove. What distinguishes it is the record line,
+ * and only when there is a record to show.
+ */
+.of-slip {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  height: 100%;
+  padding: var(--of-space-12);
+  overflow: hidden;
+  border-radius: var(--of-radius-slip);
+  box-shadow: var(--of-slip-ring), var(--of-slip-shadow);
+}
+
+/*
+ * A poll: the slip's stock and corner, with its options as rows a press
+ * answers. A row's bar is the share of the most-picked option, drawn behind
+ * the label in the accent's wash so the words stay readable on top of it.
+ */
+.of-poll {
+  display: flex;
+  flex-direction: column;
+  gap: var(--of-space-8);
+  width: 100%;
+  height: 100%;
+  padding: var(--of-space-12);
+  overflow: hidden;
+  border-radius: var(--of-radius-slip);
+  box-shadow: var(--of-slip-ring), var(--of-slip-shadow);
+}
+
+.of-poll__question {
+  font-size: var(--of-type-ui);
+  font-weight: var(--of-weight-semibold);
+  line-height: 1.35;
+  overflow-wrap: anywhere;
+  white-space: pre-wrap;
+}
+
+.of-poll__editor {
+  overflow-wrap: anywhere;
+  white-space: pre-wrap;
+}
+
+/*
+ * Scrolls when the options outgrow the card: a poll may have ten and a new
+ * card fits about three, and a clipped option is one nobody can answer
+ * (Codex, on #66). The board's wheel hands a scrollable box under the
+ * pointer its own scroll.
+ */
+.of-poll__options {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: var(--of-space-4);
+  min-height: 0;
+  padding: 0;
+  margin: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  list-style: none;
+}
+
+.of-poll__options > li {
+  flex: none;
+}
+
+.of-poll__option {
+  position: relative;
+  display: flex;
+  gap: var(--of-space-8);
+  align-items: center;
+  width: 100%;
+  min-height: var(--of-hit-sm);
+  padding: var(--of-space-4) var(--of-space-8);
+  overflow: hidden;
+  font: inherit;
+  color: inherit;
+  text-align: left;
+  cursor: pointer;
+  background: transparent;
+  border: 1px solid var(--of-control-border);
+  border-radius: var(--of-radius);
+}
+
+.of-poll__option:disabled {
+  cursor: default;
+}
+
+.of-poll__option[aria-pressed='true'] {
+  border-color: currentcolor;
+  box-shadow: inset 0 0 0 1px currentcolor;
+}
+
+.of-poll__bar {
+  position: absolute;
+  inset: 0 auto 0 0;
+  /* A wash of the card's own ink, so it stays under the words on any paper. */
+  background: color-mix(in srgb, currentcolor 14%, transparent);
+}
+
+.of-poll__label,
+.of-poll__count {
+  position: relative;
+}
+
+.of-poll__label {
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.of-poll__count,
+.of-poll__state {
+  font-family: var(--of-mono);
+  font-size: var(--of-type-record);
+}
+
+.of-poll__state {
+  margin: 0;
+}
+
+.of-poll__state:empty {
+  display: none;
+}
+
+.of-choices {
+  display: flex;
+  flex-direction: column;
+  gap: var(--of-space-4);
+  align-items: flex-start;
+}
+
+.of-choices__list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--of-space-4);
+  width: 100%;
+  padding: 0;
+  margin: 0;
+  list-style: none;
+}
+
+.of-choices__row {
+  display: flex;
+  gap: var(--of-space-4);
+  align-items: center;
+}
+
+.of-field__check {
+  width: var(--of-space-16);
+  height: var(--of-space-16);
+  accent-color: var(--of-accent);
+}
+
+.of-slip__body {
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
+  font-size: var(--of-type-ui);
+  line-height: 1.35;
+  overflow-wrap: anywhere;
+  white-space: pre-wrap;
+}
+
+/*
+ * A COLUMN, for the same reason the sticky is one: the view sets
+ * `justify-content` here from the vertical-alignment control, and a block box
+ * does nothing with it. Eight types share this element, so vertical alignment
+ * did nothing on eight of them.
+ */
+.of-slip:not(.of-slip__editor) .of-slip__body {
+  display: flex;
+  flex-direction: column;
+  container-type: size;
+}
+
+/*
+ * The record line: mono, because mono marks records and measurement. It sits
+ * under a hairline in the slip's own ink at low alpha rather than a token
+ * colour — the slip's stock varies with the colour token, so a fixed rule
+ * colour would be invisible on some of the seven and heavy on others.
+ */
+.of-slip__record {
+  display: flex;
+  /*
+   * A column of single-line rows, never a wrapping row. Wrapping put a source
+   * and two tags on three separate lines and gave 11px mono most of a 180px
+   * card — the quote it was describing had been squeezed into a corner.
+   * Bounded at one line each, the record stays subordinate to the content.
+   */
+  flex-direction: column;
+  gap: var(--of-space-2);
+  padding-top: var(--of-space-6);
+  margin-top: var(--of-space-8);
+  font-family: var(--of-mono);
+  /* The twelve pixel floor: this is functional text, not decoration. */
+  font-size: var(--of-type-record);
+  line-height: 1.3;
+  letter-spacing: 0.02em;
+  /*
+   * currentcolor rather than a rule token: the slip's stock changes with its
+   * colour token, so one fixed hairline would be invisible on some of the seven
+   * and heavy on others. Mixed toward transparent so it separates without
+   * competing with the quote above it.
+   */
+  border-top: 1px solid color-mix(in srgb, currentcolor 16%, transparent);
+}
+
+/*
+ * One row of the record, bounded to a single line.
+ *
+ * There used to be a second class here for an evidence card's tags, a shade
+ * fainter than the provenance above them — and only the evidence card, which
+ * drew its own slip, ever rendered it. The record line is already subordinate
+ * to the body; a second level of subordination inside it did not survive being
+ * glanced at, and the `#` on a tag says what it is.
+ */
+.of-slip__trail {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/*
+ * What the slip IS, leading its record. Weight rather than size or colour: the
+ * band is already the smallest functional text on the board, and the slip's
+ * own ink is the one colour guaranteed to read on whatever stock it is given.
+ */
+.of-slip__type {
+  font-weight: var(--of-weight-semibold);
+}
+
+/*
+ * Every in-place editor inherits the object's own type and drops its border,
+ * carrying an accent outline instead. The rich editors are `contenteditable`
+ * divs rather than textareas — a textarea cannot show a bold word — so they
+ * also need the wrapping behaviour a textarea had for free.
+ */
+.of-sticky__editor,
+.of-slip__editor,
+.of-text__editor,
+.of-shape__editor {
+  overflow-wrap: anywhere;
+  white-space: pre-wrap;
+  /*
+   * The family only. `font: inherit` reset the object's own size and leading
+   * to the world's, so a note reflowed the moment it was opened and the word
+   * somebody aimed at moved.
+   */
+  font-family: inherit;
+  border: none;
+  resize: none;
+  outline: 2px solid var(--of-accent);
+}
+
+.of-text {
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  font-size: var(--of-type-display);
+  line-height: 1.3;
+  overflow-wrap: anywhere;
+  white-space: pre-wrap;
+}
+
+.of-text--empty {
+  /* Muted, not faded: faded ink was 1.95:1, and this is text to be read. */
+  color: var(--of-ink-muted);
+}
+
+.of-text__editor {
+  background: transparent;
+  outline-offset: 3px;
+}
+
+/* Same as the sticky, for the same two reasons. */
+.of-text:not(.of-text__editor) {
+  display: flex;
+  flex-direction: column;
+  container-type: size;
+}
+
+.of-shape {
+  position: relative;
+  width: 100%;
+  height: 100%;
+}
+
+.of-shape__svg {
+  display: block;
+  width: 100%;
+  height: 100%;
+  overflow: visible;
+}
+
+/*
+ * The label CLIPS, which it did not.
+ *
+ * Shape text ran straight out of the shape and over whatever was next to it,
+ * while a sticky and a text box both cut theirs off — an inconsistency nobody
+ * chose. Worse than the inconsistency: an object whose text escapes its bounds
+ * disagrees with culling, hit testing and marquee selection, all of which ask
+ * the registry for the extent and get the shape.
+ */
+.of-shape__label:not(.of-shape__editor) {
+  /*
+   * A BACKSTOP, not the mechanism: the line clamp below is what keeps the text
+   * inside, and this suite passes with this line deleted. It stays for what a
+   * clamp counted in lines cannot cover — anything inline that is wider than
+   * the box and will not break, such as a run set in `pre`.
+   */
+  overflow: hidden;
+  container-type: size;
+}
+
+.of-shape__label-text {
+  /* A flex item sizes to its content, so without this a long word pushes the
+     label wider than the box it is meant to be clipped by. */
+  min-width: 0;
+  max-width: 100%;
+}
+
+.of-shape__editor .of-shape__label-text {
+  /* While typing you see everything you type. */
+  display: block;
+  overflow: visible;
+}
+
+.of-shape__label {
+  position: absolute;
+  /* Overridden per shape by ShapeView — see scene/shape-geometry.ts. */
+  inset: 10%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: var(--of-type-control);
+  line-height: 1.3;
+  overflow-wrap: anywhere;
+  white-space: pre-wrap;
+}
+
+.of-shape__editor {
+  display: block;
+  background: transparent;
+  text-align: center;
+}
+
+.of-unknown,
+.of-fallback,
+.of-render-error {
+  display: flex;
+  flex-direction: column;
+  gap: var(--of-space-4);
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  height: 100%;
+  padding: var(--of-space-8);
+  font-size: var(--of-type-record);
+  color: var(--of-ink-muted);
+  text-align: center;
+  background: repeating-linear-gradient(
+    45deg,
+    var(--of-page),
+    var(--of-page) 8px,
+    var(--of-bg) 8px,
+    var(--of-bg) 16px
+  );
+  border: 1px dashed var(--of-panel-border);
+  border-radius: var(--of-radius);
+}
+
+.of-render-error {
+  color: var(--of-danger);
+  border-color: var(--of-danger);
+}
+
+.of-unknown__badge,
+.of-fallback__type,
+.of-render-error__label {
+  font-weight: var(--of-weight-semibold);
+}
+
+.of-unknown__hint,
+.of-fallback__hint {
+  font-size: var(--of-type-record);
+}

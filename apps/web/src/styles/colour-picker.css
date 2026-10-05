@@ -1,0 +1,224 @@
+/* ---------- colour picker ---------- */
+
+/*
+ * THE ONE PLACE LITERAL COLOURS BELONG.
+ *
+ * Everything else in this file must come from a token, because a literal
+ * answers to nothing and a theme cannot move it — `design-tokens.test.ts`
+ * enforces that and has caught two real drifts. Three rules below are the
+ * exception it names, and only three: they do not paint the product's colour
+ * SCHEME, they paint the colour SPACE. The hue ramp is the spectrum, and the
+ * two washes over the area are the definition of saturation and value.
+ * Theming them would mean showing somebody a different colour from the one
+ * they are pointing at. The picker's own chrome is tokenised like everything
+ * else.
+ */
+
+/*
+ * BESIDE the panel, on the side away from the board.
+ *
+ * Two placements were wrong before this one. Under the swatch grid it covered
+ * the face, align and opacity rows of the panel it belongs to — you could not
+ * see what you were changing while you changed it. Moved to the panel's left
+ * it covered the OBJECT instead, because the record panel is placed beside the
+ * selection and its left edge is always the side the object is on.
+ */
+.of-picker {
+  display: grid;
+  gap: var(--of-space-8);
+  width: 212px;
+  padding: var(--of-step);
+}
+
+/*
+ * Saturation across, value up, over the pure hue underneath. Two gradients
+ * rather than a canvas: the area is a continuous function of two coordinates,
+ * so the compositor draws it once and a drag costs nothing, while a canvas
+ * would be repainted on every pointer move.
+ */
+.of-picker__area {
+  position: relative;
+  height: 128px;
+  cursor: crosshair;
+  border-radius: var(--of-radius);
+}
+
+.of-picker__area::before {
+  position: absolute;
+  inset: 0;
+  content: '';
+  background: linear-gradient(to right, #fff, rgb(255 255 255 / 0%));
+  border-radius: inherit;
+}
+
+.of-picker__area::after {
+  position: absolute;
+  inset: 0;
+  content: '';
+  background: linear-gradient(to top, #000, rgb(0 0 0 / 0%));
+  border-radius: inherit;
+}
+
+.of-picker__pointer {
+  position: absolute;
+  z-index: var(--of-z-lifted);
+  width: 12px;
+  height: 12px;
+  /* Centred on the value it marks, not hanging below and right of it. */
+  margin: -6px 0 0 -6px;
+  pointer-events: none;
+  border: 2px solid #fff;
+  border-radius: var(--of-radius-round);
+  box-shadow: 0 0 0 1px rgb(0 0 0 / 45%);
+}
+
+/*
+ * The hue, as an INSTRUMENT.
+ *
+ * The stock range input ships a saturated filled track and a large round knob,
+ * which DESIGN.md bans by name — it is the loudest toy tell in the system and
+ * this shipped one straight into the panel. The track is the spectrum because
+ * here the track IS the data, and the index is the same 4x14 ink mark the
+ * measurement sliders use: a position on a scale, not a volume control.
+ */
+.of-picker__hue {
+  width: 100%;
+  height: var(--of-hit-sm);
+  appearance: none;
+  background: transparent;
+}
+
+.of-picker__hue::-webkit-slider-runnable-track {
+  height: 10px;
+  background: linear-gradient(
+    to right,
+    #f00 0%,
+    #ff0 17%,
+    #0f0 33%,
+    #0ff 50%,
+    #00f 67%,
+    #f0f 83%,
+    #f00 100%
+  );
+  border: 1px solid var(--of-control-border);
+  border-radius: var(--of-radius-hair);
+}
+
+.of-picker__hue::-moz-range-track {
+  height: 10px;
+  background: linear-gradient(
+    to right,
+    #f00 0%,
+    #ff0 17%,
+    #0f0 33%,
+    #0ff 50%,
+    #00f 67%,
+    #f0f 83%,
+    #f00 100%
+  );
+  border: 1px solid var(--of-control-border);
+  border-radius: var(--of-radius-hair);
+}
+
+.of-picker__hue::-webkit-slider-thumb {
+  width: 4px;
+  height: 18px;
+  margin-top: -5px;
+  appearance: none;
+  background: var(--of-ink);
+  border: 1px solid var(--of-panel);
+  border-radius: 0;
+}
+
+.of-picker__hue::-moz-range-thumb {
+  width: 4px;
+  height: 18px;
+  background: var(--of-ink);
+  border: 1px solid var(--of-panel);
+  border-radius: 0;
+}
+
+.of-picker__row {
+  display: flex;
+  gap: var(--of-space-6);
+  align-items: center;
+}
+
+.of-picker__hex {
+  flex: 1;
+  min-width: 0;
+  font-family: var(--of-mono);
+  font-size: var(--of-type-record);
+  letter-spacing: 0.02em;
+}
+
+/*
+ * The eyedropper is an ICON. As a labelled button it wrapped "Pick from
+ * screen" onto three lines beside the hex field and was the ugliest thing in
+ * the panel; the label lives in its title and accessible name instead.
+ */
+.of-picker__dropper {
+  display: grid;
+  flex: none;
+  place-items: center;
+  width: var(--of-hit-sm);
+  height: var(--of-hit-sm);
+  padding: 0;
+  color: var(--of-ink-muted);
+  background: var(--of-panel);
+  border: 1px solid var(--of-control-border);
+  border-radius: var(--of-radius);
+}
+
+.of-picker__dropper svg {
+  width: 17px;
+  height: 17px;
+}
+
+.of-picker__dropper:hover {
+  color: var(--of-ink);
+  background: var(--of-hover);
+}
+
+/* 12px is the functional-text floor: this is a readout, not smallprint. */
+.of-picker__contrast {
+  margin: 0;
+  font-size: var(--of-type-record);
+  color: var(--of-ink-muted);
+}
+
+.of-picker__contrast--low {
+  color: var(--of-danger);
+}
+
+/*
+ * Picking a colour should be acknowledged, and the acknowledgement is the ring
+ * arriving rather than snapping. Colour and shadow only: under reduced motion
+ * these still run, because they are the feedback, not the movement.
+ */
+.of-swatch {
+  transition:
+    border-color var(--of-quick) var(--of-ease),
+    box-shadow var(--of-quick) var(--of-ease);
+}
+
+.of-swatch:hover:not(:disabled) {
+  border-color: var(--of-ink);
+}
+
+.of-swatch--on {
+  border-color: var(--of-ink);
+  /*
+   * A ring OUTSIDE the chip as well as the panel-coloured gap inside it: an
+   * ink border alone read as one more outlined chip among twelve, and on the
+   * pale tokens nobody could say which colour the object was.
+   */
+  box-shadow:
+    inset 0 0 0 2px var(--of-panel),
+    0 0 0 2px var(--of-accent);
+}
+
+.of-swatch:disabled {
+  opacity: var(--of-disabled);
+  cursor: default;
+}

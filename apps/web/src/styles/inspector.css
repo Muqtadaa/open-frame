@@ -1,0 +1,542 @@
+/* Inspector ---------------------------------------------------------------- */
+
+/*
+ * The record panel. Floats beside the selection rather than occupying a fixed
+ * rail, because the canvas is the product and a standing panel is a permanent
+ * tax on board space for something only relevant when something is selected.
+ */
+.of-inspector {
+  /* For Delete, drawn in the top corner — see .of-inspector__delete. */
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: var(--of-space-2);
+  padding: var(--of-step);
+}
+
+/*
+ * Taller than the room it has: it scrolls inside rather than running off the
+ * window. Only then — scrolling clips, and the panel's tips hang outside it.
+ */
+/*
+ * Its rows keep their height under a cap: in a flex column they would shrink
+ * instead, and overlap one another rather than overflow and scroll.
+ */
+.of-inspector > * {
+  flex-shrink: 0;
+}
+
+.of-inspector--scrolls {
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+
+/*
+ * Docked along the bottom of a narrow window: the full width, square to the
+ * edges it meets, and still the panel's own stock.
+ */
+.of-inspector-dock {
+  top: auto;
+  right: 0;
+  bottom: 0;
+}
+
+.of-inspector--docked {
+  border-bottom: none;
+  border-right: none;
+  border-left: none;
+  border-radius: var(--of-radius-surface) var(--of-radius-surface) 0 0;
+}
+
+/*
+ * Holding Shift is building a selection, and the panel beside the first
+ * object is usually over the next one: the shift-click landed on the panel
+ * and the selection never grew. It steps aside while Shift is held — faint,
+ * and with the pointer passing through — and comes back when it is let go.
+ */
+.of-inspector {
+  transition: opacity var(--of-quick) var(--of-ease);
+}
+
+.of-inspector--yielding {
+  opacity: 0.25;
+  pointer-events: none;
+}
+
+/*
+ * Delete is LAST in the panel's order and drawn in its top corner. It was the
+ * first thing Tab reached from the board — one Enter from removing the
+ * selection — while the place it is drawn is right where people look for it.
+ */
+.of-inspector__delete {
+  position: absolute;
+  top: var(--of-step);
+  right: var(--of-step);
+}
+
+.of-inspector__head {
+  display: flex;
+  gap: var(--of-space-8);
+  align-items: flex-start;
+  /* Clear of the delete button drawn over this corner. */
+  padding-right: calc(var(--of-hit-sm) + var(--of-space-8));
+  justify-content: space-between;
+  padding-bottom: var(--of-space-8);
+  margin-bottom: var(--of-space-6);
+  border-bottom: 1px solid var(--of-panel-border);
+}
+
+/*
+ * THE HEAD names the thing: its type as a title in the interface's own voice,
+ * and what it says beneath, one line. It was the type id in 12px muted mono —
+ * the faintest text in the panel, on the line that should carry the most.
+ */
+.of-inspector__heading {
+  display: flex;
+  flex-direction: column;
+  gap: var(--of-space-2);
+  min-width: 0;
+}
+
+.of-inspector__title {
+  margin: 0;
+  font-size: var(--of-type-ui);
+  font-weight: var(--of-weight-semibold);
+  line-height: 1.25;
+  color: var(--of-ink);
+}
+
+.of-inspector__note {
+  margin: 0;
+  font-size: var(--of-type-record);
+  line-height: 1.4;
+  color: var(--of-ink-muted);
+}
+
+.of-inspector__summary {
+  overflow: hidden;
+  margin: 0;
+  font-size: var(--of-type-record);
+  line-height: 1.35;
+  color: var(--of-ink-muted);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/*
+ * A band's name — "record", "appearance" — as a specimen label, the register
+ * the front door names its sections in. It is what separates the half of the
+ * panel that MEANS something from the half that dresses it.
+ */
+.of-inspector__band {
+  margin: var(--of-space-6) 0 var(--of-space-2);
+  font-family: var(--of-mono);
+  font-size: var(--of-type-record);
+  font-weight: var(--of-weight-regular);
+  color: var(--of-ink-muted);
+  text-transform: lowercase;
+  letter-spacing: 0.02em;
+}
+
+/*
+ * The record is the half of the panel that MEANS something, so its band is
+ * ink over a rule rather than one more muted label: the first critique found
+ * the panel's two halves indistinguishable at a glance.
+ */
+.of-inspector__band--record {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  padding-bottom: var(--of-space-4);
+  color: var(--of-ink);
+  border-bottom: 1px solid var(--of-rule);
+}
+
+.of-inspector__blanks {
+  color: var(--of-ink-muted);
+}
+
+/*
+ * The appearance band is a disclosure on a type that carries a record: the
+ * name is the control, and the arrow turns to say which way it is.
+ */
+.of-inspector__disclosure {
+  display: inline-flex;
+  gap: var(--of-space-4);
+  align-items: center;
+  min-height: var(--of-hit-sm);
+  padding: 0 var(--of-space-4) 0 0;
+  font: inherit;
+  color: inherit;
+  text-transform: inherit;
+  letter-spacing: inherit;
+  background: none;
+  border: none;
+  border-radius: var(--of-radius);
+  cursor: pointer;
+}
+
+.of-inspector__disclosure:hover {
+  color: var(--of-ink);
+}
+
+.of-inspector__disclosure svg {
+  width: 12px;
+  height: 12px;
+  transition: transform var(--of-quick) var(--of-ease);
+}
+
+.of-inspector__disclosure[aria-expanded='true'] svg {
+  transform: rotate(90deg);
+}
+
+/*
+ * A record row: label column, value column.
+ *
+ * The label column is 82px, not the 52px that fitted the six hardcoded style
+ * labels. Labels now come from the REGISTRY — a type declares them — so they
+ * can be any length, and "participant" rendered as "participa": a panel
+ * clipped into telling the user the wrong field name. 82px holds eleven mono
+ * characters; anything longer ellipsises and keeps its full text in a title,
+ * which is honest in a way a silent truncation is not.
+ */
+.of-field {
+  display: grid;
+  grid-template-columns: 82px 1fr;
+  gap: var(--of-step);
+  align-items: center;
+  min-height: var(--of-hit);
+}
+
+.of-field__label {
+  overflow: hidden;
+  font-family: var(--of-mono);
+  font-size: var(--of-type-record);
+  color: var(--of-ink-muted);
+  text-align: right;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  letter-spacing: 0.02em;
+}
+
+.of-field__control {
+  display: flex;
+  align-items: center;
+  /*
+   * A grid item's default `min-width: auto` is its CONTENT's minimum, so a
+   * long provenance entry pushed the column wider than the panel and the text
+   * ran out past its right edge — ellipsis and `overflow: hidden` on the entry
+   * itself did nothing, because the box it was told to fit had already grown to
+   * hold it. This is the fix for that whole class, not just for the trail.
+   */
+  min-width: 0;
+}
+
+/*
+ * A long-text row: the label sits at the top of the control rather than
+ * centred against three lines of it, which is how a form reads and how a
+ * centred label against a tall box does not.
+ */
+.of-field--tall {
+  align-items: start;
+}
+
+.of-field--tall .of-field__label {
+  padding-top: var(--of-space-8);
+}
+
+/*
+ * A written value, as opposed to a chosen one. One field, everywhere.
+ *
+ * There were four: this one at 28px and 12px, the account sheet's at 40px and
+ * 15px, the comment composer's textarea, and the workspace bar's name and link
+ * fields — three radii, two grounds. This one was also drawn with the MARGIN
+ * rule, about 1.5:1 on the page, when its edge is a boundary you must see to
+ * operate the control: that is `control-border` and 3:1 (WCAG 1.4.11), which
+ * the other three already used.
+ *
+ * 30px in a panel row; `--large` is the 40px operating height for a sheet or a
+ * gate, where the field is the whole task.
+ */
+.of-input {
+  width: 100%;
+  min-height: var(--of-hit-sm);
+  padding: var(--of-space-6) var(--of-step);
+  font-family: var(--of-font);
+  font-size: var(--of-type-control);
+  color: var(--of-ink);
+  background: var(--of-page);
+  border: 1px solid var(--of-control-border);
+  border-radius: var(--of-radius);
+}
+
+.of-input--large {
+  min-height: var(--of-hit);
+  padding: var(--of-space-8) var(--of-space-12);
+}
+
+.of-input::placeholder {
+  /*
+   * Muted, and it must stay above 4.5:1 on the field background — a placeholder
+   * that says what a field MEANS ("P07") is the only explanation of the field
+   * there is, so it is content, not decoration. Italic, so an example is never
+   * read as a value somebody entered.
+   */
+  font-style: italic;
+  color: var(--of-ink-muted);
+}
+
+/*
+ * A field with nothing in it looks like a blank to be filled: a dashed edge,
+ * the way this world already draws absent content. A returning collaborator
+ * can then see at a glance which evidence has been sourced and which has not.
+ */
+.of-inspector .of-input:placeholder-shown {
+  border-style: dashed;
+}
+
+.of-input:focus-visible {
+  border-color: var(--of-accent);
+  outline: 2px solid var(--of-accent);
+  outline-offset: 1px;
+}
+
+textarea.of-input {
+  min-height: 60px;
+  line-height: 1.45;
+  resize: vertical;
+}
+
+.of-input--select {
+  cursor: pointer;
+}
+
+/* No background at all, drawn as the absence it is. */
+.of-swatch--none {
+  background:
+    linear-gradient(
+      to top right,
+      transparent calc(50% - 1px),
+      var(--of-danger) calc(50% - 1px),
+      var(--of-danger) calc(50% + 1px),
+      transparent calc(50% + 1px)
+    ),
+    var(--of-panel);
+}
+.of-inspector__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--of-space-6);
+  padding: 0 var(--of-step) var(--of-space-8);
+}
+/*
+ * A quiet button, not a loud one. These undo something you did by hand, so
+ * they sit at the weight of a field label rather than of the delete control —
+ * which is the one thing in this panel that is meant to give you pause.
+ */
+.of-inspector__rule {
+  height: 0;
+  margin: var(--of-space-8) 0 var(--of-space-6);
+  border: none;
+  border-top: 1px solid var(--of-panel-border);
+}
+
+/*
+ * The colour field: what to paint, then the palette.
+ */
+.of-paint {
+  display: grid;
+  gap: var(--of-space-6);
+  justify-items: start;
+}
+
+.of-paint__target {
+  font-family: var(--of-mono);
+  font-size: var(--of-type-record);
+  letter-spacing: 0.02em;
+}
+
+/*
+ * A GRID, six across, not a row that happens to wrap.
+ *
+ * Seven colours fitted one line; eleven and the custom swatch do not, and
+ * DESIGN.md's objection was always to the accidental 5 + 2 rather than to two
+ * rows. Six and six is a block you read as a palette, and it closes on the way
+ * out of the palette.
+ */
+.of-swatches {
+  position: relative;
+  display: grid;
+  grid-template-columns: repeat(6, var(--of-hit-sm));
+  gap: var(--of-space-4);
+  justify-content: start;
+}
+
+.of-choice {
+  display: flex;
+  gap: var(--of-space-2);
+  padding: var(--of-space-2);
+  background: var(--of-bg);
+  border-radius: var(--of-radius);
+}
+
+.of-choice__item {
+  display: grid;
+  place-items: center;
+  /* The secondary-control target: these were 28×26, under the floor. */
+  width: var(--of-hit-sm);
+  height: var(--of-hit-sm);
+  font: inherit;
+  font-size: var(--of-type-control);
+  color: var(--of-ink-muted);
+  background: transparent;
+  border: none;
+  border-radius: var(--of-radius-apparatus);
+  cursor: pointer;
+}
+
+/*
+ * A segmented control carrying WORDS rather than icons.
+ *
+ * The item is a 28px square because every one of these held a drawn glyph.
+ * Given text it clipped, and two labels beside each other overlapped into
+ * `surfatext` — legible as nothing at all. Text items size to their content
+ * and keep the square as a floor.
+ */
+.of-choice--text .of-choice__item {
+  width: auto;
+  min-width: var(--of-hit-sm);
+  padding: 0 var(--of-step);
+}
+
+.of-choice__item svg {
+  width: 17px;
+  height: 17px;
+}
+
+.of-choice__item:hover {
+  color: var(--of-ink);
+}
+
+.of-choice__item--on {
+  color: var(--of-accent);
+  background: var(--of-panel);
+  box-shadow: var(--of-pressed-shadow);
+}
+
+.of-face {
+  font-size: var(--of-type-ui-small);
+  line-height: 1;
+}
+
+.of-face--sans {
+  font-family: var(--of-font);
+}
+
+.of-face--serif {
+  font-family: var(--of-serif);
+}
+
+.of-face--mono {
+  font-family: var(--of-mono);
+}
+
+.of-inspector__slider {
+  display: flex;
+  gap: var(--of-space-8);
+  align-items: center;
+  width: 100%;
+}
+
+.of-inspector__slider input[type='range'] {
+  flex: 1;
+  min-width: 0;
+  accent-color: var(--of-accent);
+}
+
+.of-inspector__reading {
+  min-width: 36px;
+  font-family: var(--of-mono);
+  font-size: var(--of-type-record);
+  color: var(--of-ink-muted);
+  text-align: right;
+}
+
+/* Narrow viewports ---------------------------------------------------------- */
+
+/*
+ * A narrow window has less room along each edge than the chrome wants.
+ *
+ * Touch interaction is out of scope for now, but a chrome layout that breaks is
+ * not the same thing as one that is merely not optimised. Below this width the
+ * navigation drops its counts and the zoom cluster drops its slider: both are
+ * readouts and coarse controls that the canvas itself already provides, and the
+ * controls that remain are the ones with no other route.
+ */
+@media (width < 820px) {
+  /*
+   * The exit keeps its words and the bar keeps the rail's gutter at this
+   * width. Both went at 820 once, with a quarter of the bar still empty — and
+   * the bar stepped in to 12px from the edge while the rail stayed at 20, so
+   * the two left edges no longer lined up.
+   */
+
+  .of-zoom__slider {
+    display: none;
+  }
+}
+
+/* Measurement controls ------------------------------------------------------ */
+
+/*
+ * Sliders as instruments, not consumer volume controls.
+ *
+ * A saturated filled track with a large round knob is the stock component every
+ * app ships, and next to a ruled page it was the loudest remaining toy tell.
+ * A measurement control is a thin track with a square index that reads as a
+ * position on a scale.
+ */
+.of-zoom__slider,
+.of-inspector__slider input[type='range'] {
+  appearance: none;
+  /* The track stays a hairline; what you can press is a full control's height. */
+  height: var(--of-hit-sm);
+  /* The browser's own margin would push the zoom cluster past its 30px row. */
+  margin: 0;
+  background: transparent;
+  cursor: pointer;
+}
+
+.of-zoom__slider::-webkit-slider-runnable-track,
+.of-inspector__slider input[type='range']::-webkit-slider-runnable-track {
+  height: 3px;
+  background: var(--of-rule-decade);
+  border-radius: 0;
+}
+
+.of-zoom__slider::-moz-range-track,
+.of-inspector__slider input[type='range']::-moz-range-track {
+  height: 3px;
+  background: var(--of-rule-decade);
+  border-radius: 0;
+}
+
+.of-zoom__slider::-webkit-slider-thumb,
+.of-inspector__slider input[type='range']::-webkit-slider-thumb {
+  appearance: none;
+  width: 4px;
+  height: 14px;
+  margin-top: -5px;
+  background: var(--of-ink);
+  border: none;
+  border-radius: var(--of-radius-hair);
+}
+
+.of-zoom__slider::-moz-range-thumb,
+.of-inspector__slider input[type='range']::-moz-range-thumb {
+  width: 4px;
+  height: 14px;
+  background: var(--of-ink);
+  border: none;
+  border-radius: var(--of-radius-hair);
+}

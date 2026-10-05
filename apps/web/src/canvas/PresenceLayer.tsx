@@ -126,7 +126,7 @@ function PresentPeers({ peers }: { readonly peers: readonly Peer[] }) {
                 height: screenRect.height,
                 // Both, and they are not the same thing: `color` drives the border
                 // through `currentcolor`, while the label needs a value that
-                // survives setting its own `color`. See the note in styles.css.
+                // survives setting its own `color`. See the note in styles/presence.css.
                 color: hueVar(peer.hue),
                 ['--of-presence-hue' as string]: hueVar(peer.hue),
               }}

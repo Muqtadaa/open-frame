@@ -63,7 +63,7 @@ const FITS: Partial<Record<string, 'x' | 'y'>> = { e: 'x', s: 'y' }
  *
  * It used to be drawn inside the world transform with every length divided by
  * the zoom, which works down to one pixel and then fails — see `.of-apparatus`
- * in styles.css for exactly how, and what it looked like.
+ * in styles/canvas.css for exactly how, and what it looked like.
  *
  * A single rotated object gets an ORIENTED box that turns with it; a
  * multi-selection gets the axis-aligned union, because there is no meaningful

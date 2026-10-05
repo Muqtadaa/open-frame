@@ -1,0 +1,729 @@
+/* ---------- the front door ---------- */
+
+/*
+ * The one surface in this product that is not a board, and it is still the
+ * page.
+ *
+ * It was a flat grey ground, which made it the only place in OpenFrame that
+ * looked like a generic app shell — the neutral void this world exists to
+ * refuse, met before anybody had seen the board. It is ruled now, in the same
+ * two weights at the same 10 and 100 unit rhythm, and it is cut from page
+ * stock rather than desk. Somebody arriving here has already been told what
+ * kind of thing they are about to open.
+ *
+ * The rule stays under the 3:1 non-text ceiling `design-tokens.test.ts`
+ * asserts. Ground you cannot ignore is a cage the content has to fight.
+ */
+.of-home {
+  /* The most actions a ledger row carries — three targets and two 2px gaps,
+     so 94px under a mouse and wider under a finger, whose targets grow.
+     See .of-home__row-actions. */
+  --of-home-actions: calc(3 * var(--of-hit-sm) + 2 * var(--of-space-2));
+
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  /* On the rule, like every other offset in the chrome: three steps between
+     the header and the ledger, five above it, the gutter at the sides. */
+  gap: calc(3 * var(--of-step));
+  width: 100%;
+  min-height: 100dvh;
+  /*
+   * Never sideways. A tip is laid out even while it is invisible, and the
+   * ones on the header's far end reached past a narrow window and made the
+   * whole page scroll — with nothing visible out there to scroll to.
+   */
+  overflow-x: clip;
+  padding: calc(5 * var(--of-step)) var(--of-gutter);
+  font-family: var(--of-font);
+  color: var(--of-ink);
+  background-color: var(--of-page);
+  /*
+   * Decade first, so the heavier line paints over the fine one.
+   *
+   * `linear-gradient` plus `background-size`, not `repeating-linear-gradient`:
+   * the repeating form accumulates its stops in floating point across the
+   * whole box, and at a 10px pitch that drifts into visible plaid banding
+   * instead of a rule. A tiled single line rasterises the same every cell.
+   */
+  background-image:
+    linear-gradient(to right, var(--of-rule-decade) 1px, transparent 1px),
+    linear-gradient(to bottom, var(--of-rule-decade) 1px, transparent 1px),
+    linear-gradient(to right, var(--of-rule) 1px, transparent 1px),
+    linear-gradient(to bottom, var(--of-rule) 1px, transparent 1px);
+  background-size:
+    100px 100px,
+    100px 100px,
+    10px 10px,
+    10px 10px;
+}
+
+/*
+ * The column, centred in the viewport rather than pinned to the top.
+ *
+ * `margin: auto` rather than `justify-content: center`, which clips the top of
+ * a column taller than the viewport instead of letting it scroll — the state
+ * this page reaches on a phone with the sign-in form open.
+ */
+.of-home__column {
+  display: flex;
+  flex-direction: column;
+  gap: var(--of-gutter);
+  width: 100%;
+  /*
+   * 680, up from 560 on 2026-09-19.
+   *
+   * 560 was right for a ledger of name, tag and time. The ledger has since
+   * grown a pin in its margin and rename/remove at its end, and those two
+   * reserve about 95px on every row whether or not anyone is pointing at it —
+   * so the NAME, the one column that identifies anything, was down to about
+   * fifteen characters and every row read "Pricing co…". Widening is the
+   * honest fix; shortening the names is not one.
+   */
+  max-width: 680px;
+  margin: auto;
+}
+
+.of-home__head {
+  display: flex;
+  flex-direction: column;
+  gap: var(--of-space-6);
+}
+
+/*
+ * The account sits at the column's right edge, so its tip hangs from its
+ * right-hand side, like the zoom cluster's, and stays on screen.
+ */
+/*
+ * A row's own actions say what they do BESIDE themselves, on their own row.
+ * Above, the default, a focused rename's tip lay over the board in the row
+ * above — the one thing on screen it was not about.
+ */
+.of-home__row-actions [data-tip]::after {
+  top: 50%;
+  right: calc(100% + var(--of-space-6));
+  bottom: auto;
+  left: auto;
+  transform: translate(var(--of-space-2), -50%);
+}
+
+.of-home__row-actions [data-tip]:hover::after,
+.of-home__row-actions [data-tip]:focus-visible::after {
+  transform: translate(0, -50%);
+}
+
+.of-home__lockup .of-home__account[data-tip]::after {
+  right: 0;
+  left: auto;
+  transform: translateY(var(--of-space-2));
+}
+
+.of-home__lockup .of-home__account[data-tip]:hover::after,
+.of-home__lockup .of-home__account[data-tip]:focus-visible::after {
+  transform: none;
+}
+
+/*
+ * The world sits at the far edge on its own when nobody is signed in; with an
+ * account, the account takes that edge and the world follows it.
+ */
+.of-home__title + .of-home__world {
+  margin-left: auto;
+}
+
+/*
+ * Last in the head either way, so the world is always at the column's right
+ * edge: its tip hangs from its right-hand side like the account's. Centred, it
+ * ran off a phone and `.of-home` clipped the words.
+ */
+.of-home__lockup .of-home__world[data-tip]::after {
+  right: 0;
+  left: auto;
+  transform: translateY(var(--of-space-2));
+}
+
+.of-home__lockup .of-home__world[data-tip]:hover::after,
+.of-home__lockup .of-home__world[data-tip]:focus-visible::after {
+  transform: none;
+}
+
+.of-home__lockup {
+  display: flex;
+  /*
+   * Wraps: the mark, the name, the account and the mentions do not fit a
+   * phone on one line, and unwrapped they made the whole page 480px wide.
+   */
+  flex-wrap: wrap;
+  gap: var(--of-step);
+  align-items: center;
+}
+
+/*
+ * The third surface the brand paints, after the boot splash and the tab icon —
+ * an extension to the rule in DESIGN.md, taken deliberately rather than by
+ * drift. An entry page is where a product says its own name.
+ */
+.of-home__mark {
+  width: 32px;
+  height: 32px;
+}
+
+.of-home__title {
+  margin: 0;
+  font-size: var(--of-type-headline);
+  font-weight: var(--of-weight-semibold);
+  line-height: 1.35;
+}
+
+.of-home__account {
+  display: flex;
+  gap: var(--of-space-8);
+  align-items: center;
+  /* Pushed to the far edge rather than floated, so a long name cannot collide
+     with the wordmark block. */
+  margin-left: auto;
+  height: var(--of-hit);
+  padding: 0 var(--of-space-16) 0 var(--of-space-6);
+  font-family: var(--of-font);
+  font-size: var(--of-type-control);
+  color: var(--of-ink);
+  /*
+   * Borderless, like the board's account chip: apparatus, not an outlined
+   * chip. The outline it had was a boundary at 1.45:1, drawn but not seen.
+   * Apparatus radius, because fully round is reserved for grab points.
+   */
+  background: transparent;
+  border: none;
+  border-radius: var(--of-radius-apparatus);
+  cursor: pointer;
+}
+
+.of-home__account:hover {
+  background: var(--of-hover);
+}
+
+.of-home__account-name {
+  overflow: hidden;
+  max-width: 18ch;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.of-home__person {
+  display: grid;
+  flex: none;
+  place-items: center;
+  width: var(--of-hit-sm);
+  height: var(--of-hit-sm);
+  font-size: var(--of-type-ui-small);
+  color: var(--of-panel);
+  border-radius: var(--of-radius-round);
+}
+
+/*
+ * ONE sheet of apparatus, divided by a rule.
+ *
+ * This was two same-size panels of white floating side by side — the page
+ * scaffold this world's header names as its first refusal, and the one the
+ * craft floor calls the lazy container. Stacking them fixed the side-by-side
+ * and left two boxes; a notebook page with a ruled divider is the form this
+ * world already has for "two things on one page".
+ *
+ * Page stock, not panel white: panel is for surfaces that OVERLAY the board,
+ * and nothing here overlays anything.
+ */
+.of-home__body {
+  background: var(--of-page);
+  border: 1px solid var(--of-panel-border);
+  border-radius: var(--of-radius-apparatus);
+  box-shadow: var(--of-shadow);
+}
+
+.of-home__boards,
+.of-home__signin {
+  padding: var(--of-gutter);
+}
+
+.of-home__signin {
+  border-top: 1px solid var(--of-panel-border);
+}
+
+/*
+ * A specimen label, the way the record panel names its subject: lowercase mono,
+ * tracked, muted. It says what this block IS rather than shouting a heading.
+ */
+.of-home__heading {
+  margin: 0 0 var(--of-space-12);
+  font-family: var(--of-mono);
+  font-size: var(--of-type-record);
+  font-weight: var(--of-weight-regular);
+  line-height: 1;
+  letter-spacing: 0.02em;
+  color: var(--of-ink-muted);
+}
+
+.of-home__note {
+  margin: 0 0 var(--of-space-16);
+  font-size: var(--of-type-control);
+  line-height: 1.5;
+  color: var(--of-ink-muted);
+}
+
+/* A ledger: rows on a page, divided by the margin rule. */
+.of-home__list {
+  margin: 0 0 var(--of-space-16);
+  padding: 0;
+  list-style: none;
+  border-top: 1px solid var(--of-panel-border);
+}
+
+.of-home__list li {
+  border-bottom: 1px solid var(--of-panel-border);
+}
+
+/*
+ * A ledger row: the mark in the margin, the entry, the things you can do to it.
+ *
+ * The link covers the ENTRY and nothing else. A button inside an anchor is
+ * invalid, and the browsers that tolerate it disagree about which one owns the
+ * click — so the pin and the row actions sit beside the anchor rather than
+ * inside it, and the anchor still fills everything between them.
+ */
+.of-home__row-main {
+  display: flex;
+  gap: var(--of-space-4);
+  align-items: center;
+  padding-right: var(--of-space-6);
+}
+
+.of-home__row-main .of-home__board {
+  flex: 1;
+  min-width: 0;
+}
+
+/*
+ * The margin mark. Always present rather than revealed on hover: a pinned
+ * board has to READ as pinned when nobody is pointing at it, and a control
+ * that only exists under the cursor cannot be found on a touch screen.
+ */
+/*
+ * Quiet at rest, so a column of pins does not read as a column of warnings —
+ * but in the control boundary's colour rather than faded ink. Faded, an
+ * unpinned pin was 1.68:1: a control that is always there, and nearly unseen.
+ */
+.of-home__pin {
+  color: var(--of-control-border);
+}
+
+.of-home__pin:hover,
+.of-home__pin:focus-visible {
+  color: var(--of-ink);
+}
+
+/*
+ * Revealed by hover or focus, and never by hover ALONE — `:focus-within` is
+ * what keeps these reachable by keyboard, and leaving it out is how a control
+ * becomes mouse-only without anybody noticing.
+ */
+.of-home__row-actions {
+  display: flex;
+  flex: none;
+  /*
+   * A FIXED width, right-aligned, sized for the most actions a row can carry:
+   * the view-only link, the password, rename, and remove. Rows do not all
+   * carry the same number — only a board you own offers the first two — so a
+   * block that sized to its own contents made the owner's row wider and pulled
+   * its tag out of the column. Four 30px targets and three 2px gaps.
+   *
+   * THE NUMBER MUST FIT THE ACTIONS, and that is a different claim from the
+   * one first written here. A fixed width of ANY size keeps the columns in
+   * line, because every row then reserves the same box — the alignment test
+   * passes at 94px just as it does at 126px, which is how the first version of
+   * this comment was found to be asserting something it had not checked.
+   *
+   * What the number does is stop the buttons overflowing the box they were
+   * given. The block is right-aligned, so content too wide for it spills
+   * LEFTWARD into the column beside it rather than being clipped. Three 30px
+   * targets and two 2px gaps is 94, exactly — the password moved into the
+   * share sheet, and the 32px it no longer needs went back to the name.
+   */
+  justify-content: flex-end;
+  width: var(--of-home-actions);
+  gap: var(--of-space-2);
+  opacity: 0;
+}
+
+.of-home__row-main:hover .of-home__row-actions,
+.of-home__row-main:focus-within .of-home__row-actions {
+  opacity: 1;
+}
+
+/* On a touch screen there is no hover to reveal anything, so nothing hides. */
+@media (hover: none) {
+  .of-home__row-actions {
+    opacity: 1;
+  }
+}
+
+.of-home__rename {
+  flex: 1;
+  min-width: 0;
+  height: var(--of-hit);
+  padding: 0 var(--of-space-8);
+  font-family: inherit;
+  font-size: var(--of-type-ui);
+  color: var(--of-ink);
+  background: var(--of-accent-soft);
+  border: none;
+  border-radius: var(--of-radius-apparatus);
+  outline: 1px solid var(--of-accent);
+}
+
+/*
+ * Confirmation in the row, not in a dialog.
+ *
+ * The craft floor bans a modal for anything needing neither protected focus
+ * nor interruption, and a confirmation that appears beside the board it names
+ * is a better one anyway: nobody has to remember which board the dialog was
+ * about.
+ */
+.of-home__confirm {
+  display: flex;
+  gap: var(--of-step);
+  align-items: center;
+  margin: 0;
+  padding: var(--of-space-8) var(--of-space-8) var(--of-space-12) 40px;
+  font-size: var(--of-type-ui-small);
+  color: var(--of-ink);
+}
+
+.of-home__confirm-what {
+  flex: 1;
+  min-width: 0;
+}
+
+.of-home__confirm-yes,
+.of-home__confirm-no {
+  flex: none;
+  height: var(--of-hit-sm);
+  padding: 0 var(--of-space-16);
+  font-family: inherit;
+  font-size: var(--of-type-ui-small);
+  border-radius: var(--of-radius-apparatus);
+  cursor: pointer;
+}
+
+/*
+ * The destructive answer, stated in the one red this world reserves for it.
+ * Set on the page rather than as filled red-on-white: `design-tokens.test.ts`
+ * measures every pair against its floor, and a button invented here with a
+ * hardcoded white would be a colour the test cannot see.
+ */
+.of-home__confirm-yes {
+  color: var(--of-danger);
+  background: var(--of-danger-wash);
+  border: 1px solid var(--of-danger);
+}
+
+/* Deleting a remark is the same answer, said the same way. */
+.of-comment__confirm-yes {
+  color: var(--of-danger);
+  background: var(--of-danger-wash);
+  border: 1px solid var(--of-danger);
+}
+
+.of-comment__confirm-yes:hover {
+  background: var(--of-page);
+  border-color: var(--of-danger);
+}
+
+.of-home__confirm-yes:hover {
+  background: var(--of-page);
+  border-color: var(--of-danger);
+}
+
+/* Keeping the board is the safe answer, so it is the quiet one — but it is a
+   real button, not a link: both answers are the same kind of act. */
+.of-home__confirm-no {
+  color: var(--of-ink);
+  background: var(--of-page);
+  border: 1px solid var(--of-control-border);
+}
+
+/*
+ * The strays: boards that live only in this browser, offered for moving.
+ *
+ * One line under the ledger, not a section beside it. It used to be a heading,
+ * two sentences and a bulleted list of every board — which put the SAME five
+ * rows on screen twice, under two names for one thing, and stood a second
+ * full-width accent button next to the primary one. The rows carry a
+ * `this browser` tag now, so all that is left to say is what the button does.
+ */
+.of-home__claim {
+  display: flex;
+  gap: var(--of-step);
+  align-items: center;
+  flex-wrap: wrap;
+  margin: 0 0 var(--of-space-16);
+}
+
+.of-home__claim-what {
+  flex: 1;
+  min-width: 14ch;
+  margin: 0;
+  font-size: var(--of-type-ui-small);
+  color: var(--of-ink-muted);
+}
+
+/*
+ * Secondary, and firmly so. Two accent buttons on one surface means neither is
+ * the primary action, and starting a board is — this is housekeeping offered
+ * once, not the thing the page is for.
+ */
+.of-home__claim-go {
+  flex: none;
+  height: var(--of-hit-sm);
+  padding: 0 var(--of-space-16);
+  font-family: inherit;
+  font-size: var(--of-type-ui-small);
+  color: var(--of-ink);
+  background: var(--of-page);
+  border: 1px solid var(--of-control-border);
+  border-radius: var(--of-radius-apparatus);
+  cursor: pointer;
+}
+
+.of-home__claim-go:hover:not(:disabled) {
+  color: var(--of-accent);
+  border-color: var(--of-accent);
+  background: var(--of-accent-soft);
+}
+
+.of-home__claim-go:disabled {
+  opacity: 0.55;
+  cursor: default;
+}
+
+.of-home__claim-problem {
+  flex-basis: 100%;
+  margin: 0;
+  font-size: var(--of-type-ui-small);
+  color: var(--of-danger);
+}
+
+/*
+ * A board nobody else can reach reads as a STATE, not as a label like the
+ * sharing ones — quieter, so the ledger's tag column does not turn into a
+ * column of badges competing with the names beside them.
+ */
+.of-home__board-tag[data-kind='local'] {
+  color: var(--of-ink-muted);
+  background: none;
+  border-color: transparent;
+}
+
+.of-home__row-note,
+.of-home__row-problem {
+  margin: 0;
+  padding: var(--of-space-4) var(--of-space-8) var(--of-step) 40px;
+  font-size: var(--of-type-ui-small);
+  color: var(--of-ink-muted);
+}
+
+.of-home__row-problem {
+  color: var(--of-danger);
+}
+
+/*
+ * A grid, not a flex row with `space-between`.
+ *
+ * Three rows of different title lengths put their tags at three different
+ * places across the page, which is a ledger you cannot read down. The columns
+ * are fixed now: name, what it is, when it was touched.
+ */
+.of-home__board {
+  display: grid;
+  gap: var(--of-step);
+  /* Centred, not baseline-aligned: at a 50px row the shared baseline puts
+     every cell against the top edge and leaves the row looking half empty. */
+  align-items: center;
+  /*
+   * FIXED columns, not `auto`.
+   *
+   * Every row is its own grid, so `auto` sizes each one to its own content and
+   * the columns stop being columns: with four different tags on screen the
+   * badges landed at four different x positions, and a name lost width to the
+   * longest tag in its OWN row rather than to the longest on the page. So
+   * "Onboarding drop-off — Q3" truncated while a longer title two rows up did
+   * not. A ledger you cannot read down is not a ledger.
+   *
+   * Sized in px from the real metric, not in `ch`. `ch` resolves against THIS
+   * element's font — the 15px body face — while the text in those columns is
+   * 12px mono, so `15ch` reserved about eighty pixels more than the tag needs
+   * and took every one of them from the name.
+   *
+   * 118px fits the longest tag ("shared with you", 15 mono characters plus its
+   * padding); 108px fits the longest time ("11 months ago") WITH the mono's
+   * 0.02em tracking, which 96 forgot — "9 minutes ago" wrapped at 1280.
+   */
+  grid-template-columns: minmax(0, 1fr) 118px 108px;
+  /* 36px rather than the 24px AA floor: a list row is a large target that costs
+     nothing to make comfortable. */
+  min-height: var(--of-hit-lg);
+  padding: 0 var(--of-space-8);
+  color: inherit;
+  text-decoration: none;
+}
+
+.of-home__board:hover {
+  background: var(--of-accent-soft);
+}
+
+.of-home__board-title {
+  overflow: hidden;
+  font-size: var(--of-type-ui);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/*
+ * A measurement, so it is set as one: mono, tabular, muted. Every readout in
+ * this product that carries numbers reads as a column rather than as ransom
+ * text.
+ */
+.of-home__board-when {
+  /* A fixed column so the times stack, whatever they say. */
+  min-width: 13ch;
+  font-family: var(--of-mono);
+  text-align: right;
+  font-size: var(--of-type-record);
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0.02em;
+  color: var(--of-ink-muted);
+}
+
+.of-home__start {
+  width: 100%;
+  height: var(--of-hit-lg);
+  font-family: var(--of-font);
+  font-size: var(--of-type-ui);
+  color: var(--of-panel);
+  background: var(--of-accent);
+  border: 1px solid var(--of-accent);
+  border-radius: var(--of-radius-apparatus);
+  cursor: pointer;
+}
+
+.of-home__start:hover:not(:disabled) {
+  background: var(--of-ink);
+  border-color: var(--of-ink);
+}
+
+.of-home__start:disabled {
+  opacity: 0.55;
+  cursor: default;
+}
+
+/* Below the rail's own breakpoint, the page stops being a margin exercise. */
+@media (width <= 560px) {
+  .of-home {
+    padding: var(--of-gutter) var(--of-space-16);
+  }
+
+  .of-home__column {
+    gap: var(--of-space-16);
+  }
+
+  /*
+   * A confirmation says its sentence on a line of its own and answers under
+   * it. In one row with its two buttons it was one word per line on a phone.
+   */
+  .of-home__confirm {
+    flex-wrap: wrap;
+    padding-left: var(--of-space-8);
+  }
+
+  .of-home__confirm-what {
+    flex-basis: 100%;
+  }
+
+  /*
+   * The row stacks rather than squeezing.
+   *
+   * Three columns across a phone left the NAME with about one character —
+   * "S", "I", "C" — while the tag and the timestamp kept their full width.
+   * That is precisely backwards: the name is the only thing on the row that
+   * identifies the board, and the other two are the same handful of words
+   * repeating down the page. So the name takes its own line and the two
+   * readouts share the one below it.
+   */
+  /*
+   * And the stack has to leave the name room to BE read. Stacked, it still
+   * lost everything past about sixteen characters to a single line beside an
+   * action block, and "an hour ago" stood in a column one word wide, three
+   * lines tall (audit 2026-09-27).
+   *
+   * So on a phone the name has the whole row and may take two lines; the
+   * readouts flow, the time dropping under the tag WHOLE rather than breaking;
+   * and the actions sit at the end of the last readout line, under the name
+   * rather than beside it. The spacer after the readouts keeps that line's end
+   * clear for them — sized for the most a row carries, since a flowing line
+   * cannot know how many its own row has.
+   */
+  .of-home__row-main {
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr) auto;
+    align-items: center;
+  }
+
+  .of-home__row-main > .of-home__board,
+  .of-home__row-main > .of-home__rename {
+    grid-row: 1;
+    grid-column: 2 / 4;
+  }
+
+  .of-home__row-main > .of-home__row-actions {
+    grid-row: 1;
+    grid-column: 3;
+    align-self: end;
+    width: auto;
+    /* Level with the spacer, which sits inside the link's padding. */
+    margin-bottom: var(--of-step);
+  }
+
+  .of-home__row-main > .of-home__row-note {
+    grid-column: 2 / 4;
+  }
+
+  .of-home__board {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: var(--of-space-2) var(--of-step);
+    padding: var(--of-step) var(--of-space-8);
+  }
+
+  /* As tall as the actions too: a spacer that wraps onto a line of its own
+     has to MAKE that line, or the actions hang over the readouts above it. */
+  .of-home__board::after {
+    flex: 0 0 var(--of-home-actions);
+    height: var(--of-hit-sm);
+    content: '';
+  }
+
+  .of-home__board-title {
+    display: -webkit-box;
+    flex-basis: 100%;
+    overflow-wrap: anywhere;
+    white-space: normal;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 2;
+    line-clamp: 2;
+  }
+
+  .of-home__board-when {
+    min-width: 0;
+    white-space: nowrap;
+    text-align: left;
+  }
+}

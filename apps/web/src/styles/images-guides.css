@@ -1,0 +1,203 @@
+/* Images ------------------------------------------------------------------ */
+
+.of-image {
+  display: block;
+  width: 100%;
+  height: 100%;
+  border-radius: var(--of-radius-apparatus);
+  /*
+   * `fill`, not `contain`. The frame IS the placed size and a user who resizes
+   * an image off its aspect ratio meant to; letterboxing would leave dead space
+   * inside the selection box that still belongs to the object and still takes
+   * clicks.
+   */
+  object-fit: fill;
+  /* The whole object is the drag target, so the img must not swallow pointers. */
+  pointer-events: none;
+  -webkit-user-drag: none;
+}
+
+.of-image--loading,
+.of-image--missing {
+  display: grid;
+  place-items: center;
+  padding: var(--of-space-8);
+  font-size: var(--of-type-record);
+  text-align: center;
+  color: var(--of-ink-muted);
+  background: var(--of-s-gray);
+  border: 1px dashed var(--of-panel-border);
+}
+
+.of-image--missing {
+  color: var(--of-danger);
+  border-color: var(--of-danger-edge);
+  background: var(--of-danger-wash);
+}
+
+/* Toast ------------------------------------------------------------------- */
+
+/* A drawn × on a 24px target: it was a glyph with no size, in an 8×15 box. */
+.of-toast__dismiss {
+  display: inline-grid;
+  flex: none;
+  place-items: center;
+  width: 24px;
+  height: 24px;
+  padding: 0;
+  color: inherit;
+  background: none;
+  border: 0;
+  border-radius: var(--of-radius);
+  cursor: pointer;
+}
+
+.of-toast__dismiss:hover {
+  background: var(--of-hover);
+}
+
+.of-toast__glyph {
+  width: 16px;
+  height: 16px;
+}
+
+/* Offscreen but still focusable and still clickable via `.click()`. */
+.of-visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+  border: 0;
+}
+
+/* Alignment guides ---------------------------------------------------------- */
+
+.of-guide {
+  position: absolute;
+  top: 0;
+  left: 0;
+  z-index: var(--of-z-guide);
+  background: var(--of-guide);
+  /* The same halo as the selection, for the same reason: see `.of-selection`. */
+  box-shadow: 0 0 0 1px var(--of-page);
+  /* Guides are feedback, never a target. */
+  pointer-events: none;
+}
+
+/*
+ * How far apart two lined-up things are, sat on the guide at the middle of the
+ * gap: the guide's own colour, so it reads as the guide talking. Set in the
+ * mono face of every other readout, at the functional floor.
+ */
+.of-guide__gap {
+  position: absolute;
+  top: 0;
+  left: 0;
+  z-index: var(--of-z-guide);
+  padding: 0 var(--of-space-4);
+  font-family: var(--of-mono);
+  font-size: var(--of-type-record);
+  line-height: 1.5;
+  color: var(--of-page);
+  white-space: nowrap;
+  background: var(--of-guide);
+  border-radius: var(--of-radius-apparatus);
+  pointer-events: none;
+}
+
+/*
+ * Where the selection and what Alt points at line up exactly: dashed, so it
+ * reads as a relation between two things rather than as a measured stretch.
+ */
+.of-measure__match {
+  position: absolute;
+  top: 0;
+  left: 0;
+  z-index: var(--of-z-guide);
+  border: 0 dashed var(--of-guide);
+  pointer-events: none;
+}
+
+.of-measure__match--x {
+  border-left-width: 1px;
+}
+
+.of-measure__match--y {
+  border-top-width: 1px;
+}
+
+/*
+ * A selected object's relations: dashed, thin and muted, so a statement about
+ * two things is never mistaken for a connector, which is a thing on the board.
+ * The page-coloured halo under the dashes keeps them legible over anything.
+ */
+.of-relations {
+  position: absolute;
+  inset: 0;
+  overflow: visible;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+}
+
+.of-relation {
+  stroke: var(--of-ink-muted);
+  stroke-width: 1.5;
+  stroke-dasharray: 5 4;
+  fill: none;
+}
+
+.of-relation__halo {
+  stroke: var(--of-page);
+  stroke-width: 4;
+  fill: none;
+}
+
+.of-relation__head {
+  fill: var(--of-ink-muted);
+}
+
+.of-relation__label {
+  position: absolute;
+  top: 0;
+  left: 0;
+  padding: 0 var(--of-space-4);
+  font-family: var(--of-mono);
+  font-size: var(--of-type-record);
+  line-height: 1.5;
+  color: var(--of-ink-muted);
+  white-space: nowrap;
+  background: var(--of-page);
+  border-radius: var(--of-radius-apparatus);
+  pointer-events: none;
+}
+
+/* Connector endpoint handles ------------------------------------------------ */
+
+.of-endpoint {
+  position: absolute;
+  top: 0;
+  left: 0;
+  z-index: var(--of-z-grip);
+  background: var(--of-panel);
+  border: 1.5px solid var(--of-accent);
+  border-radius: var(--of-radius-round);
+  cursor: crosshair;
+  /*
+   * Stated, not inherited. The apparatus layer is glass — `pointer-events:
+   * none` — so that a press meant for the board passes through it, and every
+   * grip on it has to turn presses back on for itself. This one did not, and
+   * an end could not be dragged at all: the layer swallowed it. Every other
+   * grip already said so; this is the one that was relying on the default.
+   */
+  pointer-events: auto;
+}
+
+/* A filled dot means this end is attached to an object rather than floating. */
+.of-endpoint--attached {
+  background: var(--of-accent);
+}

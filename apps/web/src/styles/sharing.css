@@ -1,0 +1,110 @@
+/* ---------- sharing ---------- */
+
+/*
+ * A sheet above the record line, like the account form and for the same
+ * reason: choosing which link to send needs no interruption and no protected
+ * focus, so it must not take the screen.
+ */
+
+.of-share__lead {
+  margin: 0 0 var(--of-space-16);
+  font-size: var(--of-type-control);
+  line-height: 1.4;
+  color: var(--of-ink-muted);
+}
+
+.of-share__link {
+  display: block;
+  width: 100%;
+  /* The largest target, not a secondary one: two links that differ only in a
+     word are the one control in this product where hitting the wrong one has a
+     consequence. */
+  min-height: var(--of-hit-lg);
+  margin-bottom: var(--of-step);
+  padding: var(--of-space-8) var(--of-space-16);
+  font-family: var(--of-font);
+  text-align: left;
+  color: var(--of-ink);
+  background: var(--of-page);
+  border: 1px solid var(--of-control-border);
+  border-radius: var(--of-radius-apparatus);
+  cursor: pointer;
+}
+
+.of-share__link:hover {
+  background: var(--of-hover);
+}
+
+.of-share__link-name {
+  display: block;
+  font-size: var(--of-type-ui);
+}
+
+.of-share__link-what {
+  display: block;
+  margin-top: 1px;
+  /* This line is what stops somebody sending the wrong link, so it sits a
+     step above the floor rather than on it. */
+  font-size: var(--of-type-ui-small);
+  line-height: 1.35;
+  color: var(--of-ink-muted);
+}
+
+.of-share__open {
+  width: 100%;
+}
+
+/*
+ * The password, under a rule below the links it protects: part of the same
+ * decision about who can open the board, and so part of the same sheet.
+ */
+.of-share__password {
+  display: grid;
+  gap: var(--of-space-8);
+  padding-top: var(--of-space-12);
+  margin: var(--of-space-12) 0;
+  border-top: 1px solid var(--of-rule);
+}
+
+.of-share__password .of-account__field {
+  margin-bottom: 0;
+}
+
+.of-share__password-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--of-space-8);
+}
+
+/* What happened, said inside the sheet rather than in a panel of its own. */
+.of-share__said,
+.of-share__problem {
+  margin: 0;
+  font-size: var(--of-type-ui-small);
+  line-height: 1.35;
+  color: var(--of-ink-muted);
+}
+
+.of-share__problem {
+  color: var(--of-danger);
+}
+
+/*
+ * What you are, when you are not an editor.
+ *
+ * Set as a record rather than as a badge: this is a state readout, and it sits
+ * in the record line beside the other readouts that are mono and muted. A pill
+ * would also have been the third fully-round thing in a world where round
+ * means "grab me".
+ */
+.of-status__watching {
+  padding: 0 var(--of-step);
+  font-family: var(--of-mono);
+  font-size: var(--of-type-record);
+  line-height: 28px;
+  letter-spacing: 0.02em;
+  color: var(--of-ink-muted);
+  background: var(--of-page);
+  border: 1px solid var(--of-panel-border);
+  border-radius: var(--of-radius-apparatus);
+}

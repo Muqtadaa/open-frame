@@ -1,0 +1,512 @@
+/* ---------- tool rail ---------- */
+
+.of-rail {
+  display: flex;
+  flex-direction: column;
+  max-height: 100%;
+  gap: var(--of-space-2);
+  /*
+   * The right-hand padding is where a tool's options strip lives, as wide as
+   * a target may be: it was 12px, which failed WCAG 2.5.8 on every board.
+   */
+  padding: var(--of-space-6) var(--of-hit-min) var(--of-space-6) var(--of-space-6);
+  /* The page's own stock, with a margin rule down its inner edge — the way a
+     ruled pad prints its margin — rather than a white card hovering over it. */
+  background: var(--of-page);
+  border: 1px solid var(--of-panel-border);
+  border-radius: var(--of-radius-apparatus);
+  box-shadow: var(--of-shadow);
+  /* A tool's size, stepped down below as the window shortens. */
+  --of-tool: var(--of-hit-lg);
+}
+
+/*
+ * The tools step down a decade of the rule at a time as the window shortens —
+ * 50, then 40, then 30, which is still the secondary-control target — rather
+ * than shrinking continuously to sizes off the quadrille. Each threshold is
+ * the height at which the larger rail stops fitting its band, so each moves
+ * by one tool and its gap whenever a tool is added (52, 42 and 32px): the poll
+ * tool ran the comment tool off the end of a 720px window until they did.
+ */
+@media (max-height: 771px) {
+  .of-rail {
+    --of-tool: var(--of-hit);
+  }
+}
+
+@media (max-height: 645px) {
+  .of-rail {
+    --of-tool: var(--of-hit-sm);
+  }
+}
+
+/*
+ * The last resort, for a window too short for even the smallest tools: the
+ * rail scrolls. Only here, because a scrolling box clips everything that hangs
+ * outside it, and every tool's tip does.
+ *
+ * A scrolling rail keeps its end space INSIDE the scroll, as margins on the
+ * first and last groups, rather than as padding. The fade below is sticky,
+ * and a sticky box cannot leave its containing block, which stops at the
+ * padding — so with padding the fade stuck six pixels short of the edge and
+ * the next tool showed through underneath it.
+ */
+@media (max-height: 525px) {
+  .of-rail {
+    overflow-y: auto;
+    padding-block: 0;
+  }
+
+  .of-rail > .of-rail__group:first-of-type {
+    margin-top: var(--of-space-6);
+  }
+
+  .of-rail > .of-rail__group:last-of-type {
+    margin-bottom: var(--of-space-6);
+  }
+}
+
+/*
+ * Under a finger the smallest tools are 40px, not 30 (see `--of-hit-sm`), so
+ * the rail runs out of room at the height where a mouse's would step down —
+ * and without this it overran its own box between 493 and 603, the last tools
+ * drawn off the end of it and out of reach (audit 2026-09-27).
+ */
+@media (pointer: coarse) and (max-height: 645px) {
+  .of-rail {
+    overflow-y: auto;
+    padding-block: 0;
+  }
+
+  .of-rail > .of-rail__group:first-of-type {
+    margin-top: var(--of-space-6);
+  }
+
+  .of-rail > .of-rail__group:last-of-type {
+    margin-bottom: var(--of-space-6);
+  }
+}
+
+/*
+ * A rail that scrolls says so. A phone draws no scrollbar, so the tools past
+ * the edge looked like tools that did not exist. The end with more beyond it
+ * fades into the rail's stock, drawn by `use-scroll-edges` marking which end
+ * that is. Sticky, so the fade stays at the edge while the tools move under
+ * it, and laid over the tools rather than taking room from them.
+ */
+.of-rail[data-more-before]::before,
+.of-rail[data-more-after]::after {
+  --of-rail-fade: calc(2 * var(--of-space-12));
+
+  position: sticky;
+  z-index: var(--of-z-lifted);
+  flex: none;
+  height: var(--of-rail-fade);
+  /* Across the side padding too, where the options strip's chevrons live;
+     that padding is inside the scroll area, so this overflows nothing. */
+  margin-inline: calc(-1 * var(--of-space-6)) calc(-1 * var(--of-hit-min));
+  content: '';
+  pointer-events: none;
+}
+
+/* The negative margins take back the fade's height AND the rail's gap, so a
+   fade arriving does not nudge a single tool. */
+.of-rail[data-more-before]::before {
+  top: 0;
+  margin-bottom: calc(-1 * (var(--of-rail-fade) + var(--of-space-2)));
+  background: linear-gradient(to top, transparent, var(--of-page));
+}
+
+.of-rail[data-more-after]::after {
+  bottom: 0;
+  margin-top: calc(-1 * (var(--of-rail-fade) + var(--of-space-2)));
+  background: linear-gradient(to bottom, transparent, var(--of-page));
+}
+
+.of-rail__group {
+  display: flex;
+  flex-direction: column;
+  gap: var(--of-space-2);
+}
+
+.of-rail__slot {
+  position: relative;
+}
+
+.of-rail__rule {
+  height: 1px;
+  margin: var(--of-space-6) var(--of-space-4);
+  background: var(--of-panel-border);
+}
+
+.of-tool {
+  position: relative;
+  display: grid;
+  place-items: center;
+  /*
+   * The largest target in the product, and the one reached for most. The AA
+   * 2.5.8 minimum is 24; this is a whole decade of the rule.
+   */
+  width: var(--of-tool);
+  height: var(--of-tool);
+  font: inherit;
+  color: var(--of-ink-muted);
+  background: transparent;
+  border: none;
+  border-radius: var(--of-radius);
+  cursor: pointer;
+}
+
+.of-tool svg {
+  width: 21px;
+  height: 21px;
+}
+
+/*
+ * The label, as a tooltip. Eleven standing captions were most of the old rail's
+ * height; the name still has to be reachable, so it appears on hover AND on
+ * keyboard focus — a tooltip only a mouse can summon is not a label.
+ */
+.of-tool__tip {
+  position: absolute;
+  left: calc(100% + 10px);
+  z-index: var(--of-z-tip);
+  display: flex;
+  gap: var(--of-space-8);
+  align-items: center;
+  padding: var(--of-space-6) var(--of-space-8);
+  font-size: var(--of-type-record);
+  line-height: 1;
+  color: var(--of-page);
+  white-space: nowrap;
+  background: var(--of-ink);
+  border-radius: var(--of-radius);
+  opacity: 0;
+  transition: opacity var(--of-quick) var(--of-ease);
+  pointer-events: none;
+}
+
+.of-tool__tip kbd {
+  font-family: var(--of-mono);
+  /* 12px is the legibility floor for functional text, shortcuts included. */
+  font-size: var(--of-type-record);
+  color: var(--of-rule-decade);
+}
+
+.of-tool:hover .of-tool__tip,
+.of-tool:focus-visible .of-tool__tip {
+  opacity: 1;
+}
+
+/*
+ * A pointer passing over the rail waits the same dwell as every other tip
+ * before one appears, so sweeping down to a tool does not flash a label per
+ * tool. Focus shows it at once: a keyboard arriving on a tool asked for it.
+ */
+.of-tool:hover:not(:focus-visible) .of-tool__tip {
+  transition-delay: var(--of-dwell);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .of-tool__tip {
+    transition: none;
+  }
+}
+
+/*
+ * THE TIP, for every control that is not a rail tool. The rail's tips are the
+ * pattern: the label, in ink, on hover AND on keyboard focus. Everything else
+ * used the browser's `title`, which only a mouse can summon, never appears on
+ * focus, waits a second and a half, and is drawn in the operating system's
+ * chrome rather than this world's — so DESIGN.md's own rule that "a tooltip
+ * only a mouse can summon is not a label" was broken forty-two times.
+ *
+ * `data-tip` carries the text and `aria-description` carries the same text to
+ * assistive tech, which is what `title` had been doing. Above by default,
+ * because most of the chrome that has tips lives at the bottom of the screen;
+ * `data-tip-side` turns it, and the zoom cluster — flush with the right edge —
+ * hangs its tips from their right-hand side so none leaves the window.
+ *
+ * A pointer dwells before the tip answers; keyboard focus gets it at once,
+ * because tabbing to a control IS asking what it is.
+ */
+:where([data-tip]) {
+  position: relative;
+}
+
+[data-tip]::after {
+  position: absolute;
+  bottom: calc(100% + var(--of-space-6));
+  left: 50%;
+  z-index: var(--of-z-tip);
+  width: max-content;
+  max-width: 280px;
+  padding: var(--of-space-6) var(--of-space-8);
+  font-family: var(--of-font);
+  font-size: var(--of-type-record);
+  font-style: normal;
+  font-weight: var(--of-weight-regular);
+  line-height: 1.35;
+  color: var(--of-page);
+  text-align: left;
+  text-decoration: none;
+  text-transform: none;
+  letter-spacing: normal;
+  white-space: normal;
+  content: attr(data-tip);
+  background: var(--of-ink);
+  border-radius: var(--of-radius);
+  opacity: 0;
+  transform: translate(-50%, var(--of-space-2));
+  transition:
+    opacity var(--of-quick) var(--of-ease),
+    transform var(--of-quick) var(--of-ease);
+  pointer-events: none;
+}
+
+[data-tip]:hover::after {
+  opacity: 1;
+  transform: translate(-50%, 0);
+  transition-delay: var(--of-dwell);
+}
+
+[data-tip]:focus-visible::after {
+  opacity: 1;
+  transform: translate(-50%, 0);
+}
+
+/*
+ * A control whose sheet is open says nothing more: its tip peeked out from
+ * behind every open sheet, over the sheet's own edge.
+ */
+[data-tip][aria-expanded='true']::after {
+  display: none;
+}
+
+[data-tip-side='below']::after,
+.of-overlay--nav [data-tip]::after {
+  top: calc(100% + var(--of-space-6));
+  bottom: auto;
+}
+
+/*
+ * Along the top the tips hang DOWN, and from their control's leading edge:
+ * the first control sits at the window's edge, where a centred tip would run
+ * off it.
+ */
+.of-overlay--nav [data-tip]::after {
+  left: 0;
+  transform: translateY(calc(-1 * var(--of-space-2)));
+}
+
+.of-overlay--nav [data-tip]:hover::after,
+.of-overlay--nav [data-tip]:focus-visible::after {
+  transform: none;
+}
+
+.of-zoom [data-tip]::after {
+  right: 0;
+  left: auto;
+  transform: translateY(var(--of-space-2));
+}
+
+.of-zoom [data-tip]:hover::after,
+.of-zoom [data-tip]:focus-visible::after {
+  transform: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  [data-tip]::after,
+  [data-tip]:hover::after,
+  [data-tip]:focus-visible::after {
+    transform: translate(-50%, 0);
+  }
+
+  .of-zoom [data-tip]::after,
+  .of-zoom [data-tip]:hover::after,
+  .of-zoom [data-tip]:focus-visible::after {
+    transform: none;
+  }
+}
+
+.of-tool:hover:not(:disabled) {
+  color: var(--of-ink);
+  background: var(--of-accent-soft);
+}
+
+/*
+ * The ARMED tool is a filled ink bed, so it differs from a hovered one in
+ * kind rather than in hue: both used to be the accent wash, told apart only by
+ * the icon's colour. The rail says which tool you are holding at a glance.
+ */
+.of-tool--active,
+.of-tool--active:hover:not(:disabled) {
+  color: var(--of-page);
+  background: var(--of-ink);
+}
+
+.of-tool:disabled {
+  opacity: var(--of-disabled);
+  cursor: default;
+}
+
+/*
+ * A tool's options picker is the tool's own (declared on its view); this only
+ * marks where the rail's menu ends, for dismissal, and takes no part in the
+ * layout the surface gives it.
+ */
+.of-rail__picker {
+  display: contents;
+}
+
+/*
+ * A tool's options, as a strip down its OUTER edge, in the rail's padding.
+ *
+ * It was a 16-pixel chevron inside the tool's own corner: too small to aim at,
+ * and a press a few pixels off opened a menu instead of arming the tool. The
+ * tool itself is now the full-size way in (press it again once armed), so this
+ * strip is the mouse's shortcut beside it, never on top of it.
+ */
+.of-rail__more {
+  position: absolute;
+  top: 0;
+  right: calc(-1 * var(--of-hit-min));
+  display: grid;
+  place-items: center;
+  width: var(--of-hit-min);
+  height: 100%;
+  padding: 0;
+  color: var(--of-ink-muted);
+  background: transparent;
+  border: none;
+  border-radius: var(--of-radius-slip);
+  cursor: pointer;
+}
+
+.of-rail__more svg {
+  width: 10px;
+  height: 10px;
+}
+
+.of-rail__more:hover,
+.of-rail__more[aria-expanded='true'] {
+  color: var(--of-ink);
+  background: var(--of-hover);
+}
+
+/*
+ * The rail's menus. PLACED BY THE SURFACE THEY SIT ON, not by this rule.
+ *
+ * `position: absolute; top: 0; left: calc(100% + 10px)` pinned them to the
+ * rail slot with their own arithmetic and no clamping, so the table picker ran
+ * 48 pixels off the bottom of a 420-pixel window. Being in the rail rather
+ * than on the board did not make that a different problem from the one the
+ * chrome layer was built for.
+ */
+.of-flyout {
+  /* Two columns: one column of eight shapes is a list to read rather than a
+     palette to glance at.
+
+     `max-content` is not optional. An absolutely positioned box shrinks to fit
+     its CONTAINING BLOCK, which here is an icon-width rail slot, so the two
+     columns were squeezed until the items overlapped and the second column
+     swallowed clicks meant for the first. */
+  display: grid;
+  grid-template-columns: repeat(2, max-content);
+  width: max-content;
+  gap: var(--of-space-2);
+  padding: var(--of-space-6);
+  background: var(--of-panel);
+  border: 1px solid var(--of-panel-border);
+  border-radius: var(--of-radius-surface);
+  box-shadow: var(--of-shadow);
+}
+
+.of-flyout__item {
+  display: flex;
+  gap: var(--of-space-8);
+  align-items: center;
+  min-height: var(--of-hit-sm);
+  padding: var(--of-space-6) var(--of-step) var(--of-space-6) var(--of-space-8);
+  font: inherit;
+  font-size: var(--of-type-record);
+  color: var(--of-ink-muted);
+  text-transform: capitalize;
+  background: transparent;
+  border: none;
+  border-radius: var(--of-radius);
+  cursor: pointer;
+}
+
+.of-flyout__item svg {
+  width: 17px;
+  height: 17px;
+}
+
+.of-flyout__item:hover {
+  color: var(--of-ink);
+  background: var(--of-hover);
+}
+
+.of-flyout__item--active {
+  color: var(--of-accent);
+  background: var(--of-accent-soft);
+}
+
+.of-swatch {
+  /*
+   * 30px. PRODUCT.md recorded these as a known gap against the target-size
+   * commitment — they were 12, then 24, which is the AA 2.5.8 minimum EXACTLY
+   * and therefore a control sitting on the floor. A decade of the rule clears
+   * it, and the gap comes off the list.
+   */
+  width: var(--of-hit-sm);
+  height: var(--of-hit-sm);
+  padding: 0;
+  border: 1px solid var(--of-control-border);
+  /*
+   * Square, at the slip radius. DESIGN.md has said so since it was written —
+   * "index-slip stock, not paint dots: seven saturated circles read as a paint
+   * app" — and the stylesheet had them at 50% anyway. The document was right
+   * and the code had drifted.
+   */
+  border-radius: var(--of-radius-slip);
+  cursor: pointer;
+}
+
+/*
+ * The text-colour swatch: an ink specimen, not a paper one.
+ *
+ * It carries a letter in the token's ink on the panel's own ground, because
+ * that is the pair the user is actually going to read. A filled square in the
+ * same row as the surface swatches would be two rows of the same control
+ * differing only in which one you happened to press.
+ */
+.of-swatch--ink {
+  font-size: var(--of-type-ui-small);
+  font-weight: var(--of-weight-semibold);
+  line-height: 1;
+}
+
+/*
+ * The way out of the palette.
+ *
+ * Deliberately not another colour square: the palette is what the product
+ * recommends and what `design-tokens.test.ts` can prove, and a literal is
+ * available rather than equal. It shows the literal it holds once there is
+ * one, because a row of swatches has to be able to answer "what is this set
+ * to" even when the answer is not in it.
+ */
+/*
+ * The way out of the palette.
+ *
+ * It was a dashed box holding a typed `+`, which read as a control that had
+ * failed to load rather than as an invitation. It is an ordinary swatch now,
+ * carrying a drawn mark — and once a literal is set it simply shows it, so the
+ * grid can always answer "what is this set to".
+ */
+.of-swatch--custom {
+  display: grid;
+  place-items: center;
+  background: var(--of-panel);
+}

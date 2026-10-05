@@ -1,0 +1,319 @@
+/*
+ * COMMENTS: pins on the board, words beside it.
+ *
+ * The layer takes no pointer events and each pin takes its own — an invisible
+ * sheet over the whole board would swallow every click aimed at the canvas.
+ */
+.of-comments {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+
+.of-comments__pin {
+  /*
+   * On the apparatus layer, placed in screen pixels, so a pin is the same size
+   * at any zoom — the same rule the presence cursors follow, and for the same
+   * reason: one that shrank with the board would be a dot at 25%.
+   */
+  position: absolute;
+  top: 0;
+  left: 0;
+  --of-pin: 26px;
+
+  display: grid;
+  place-items: center;
+  width: var(--of-pin);
+  height: var(--of-pin);
+  padding: 0;
+  font-size: var(--of-type-record);
+  font-weight: var(--of-weight-semibold);
+  color: var(--of-panel);
+  pointer-events: auto;
+  cursor: pointer;
+  background: var(--of-accent);
+  border: 2px solid var(--of-panel);
+  /* A speech-bubble tail: round but for the corner that points at the spot. */
+  border-radius: var(--of-radius-round) var(--of-radius-round) var(--of-radius-round)
+    var(--of-radius-slip);
+  box-shadow: var(--of-slip-shadow);
+  transform-origin: top left;
+  /*
+   * Lifted by its own height, so the pointed corner — bottom left — is the
+   * spot the remark is about. The box's top left was, which put the point
+   * 26px below where anybody clicked.
+   */
+  margin-top: calc(-1 * var(--of-pin));
+}
+
+/*
+ * The one being read: ink, not the alignment guide's hue — that colour MEANS
+ * "lined up", and the presence palette keeps clear of it for the same reason.
+ */
+.of-comments__pin--open {
+  color: var(--of-page);
+  background: var(--of-ink);
+}
+
+/* Not yet said, so not yet solid. */
+.of-comments__pin--new {
+  background: var(--of-ink-muted);
+}
+
+/*
+ * A comment written and not posted: the pin's outline, dashed, on the panel's
+ * stock — present enough to be found again, and plainly not yet said.
+ */
+.of-comments__pin--draft {
+  background: var(--of-panel);
+  border: 2px dashed var(--of-ink-muted);
+}
+
+.of-comment-panel {
+  position: absolute;
+  top: var(--of-nav-band);
+  /* The gutter every other edge of the chrome keeps; it was 8px off the bar. */
+  right: var(--of-gutter);
+  z-index: var(--of-z-panel);
+  display: flex;
+  flex-direction: column;
+  gap: var(--of-step);
+  width: 300px;
+  /*
+   * The dynamic viewport, like everything else here: `100vh` on a phone
+   * includes the browser's own bar, so the panel's foot sat under it.
+   */
+  max-height: calc(100dvh - var(--of-nav-band) - var(--of-gutter));
+  padding: var(--of-space-16);
+  overflow-y: auto;
+  background: var(--of-panel);
+  border: 1px solid var(--of-panel-border);
+  border-radius: var(--of-radius-surface);
+  box-shadow: var(--of-shadow);
+}
+
+/*
+ * On a phone it is a sheet along the bottom, as the record panel is below
+ * the same width: a 300px card pinned under the bar sat across the rail,
+ * and over Find when both were open (audit 2026-09-27).
+ */
+@media (width < 560px) {
+  .of-comment-panel {
+    top: auto;
+    right: 0;
+    bottom: 0;
+    left: 0;
+    width: auto;
+    max-height: 60dvh;
+    border-right: none;
+    border-bottom: none;
+    border-left: none;
+    border-radius: var(--of-radius-surface) var(--of-radius-surface) 0 0;
+  }
+}
+
+.of-comment-panel__head {
+  display: flex;
+  gap: var(--of-space-4);
+  align-items: center;
+}
+
+/* The title takes the room, so Back and Close sit together at the end. */
+.of-comment-panel__head .of-comment-panel__title {
+  flex: 1;
+}
+
+.of-comment-panel__title {
+  margin: 0;
+  font-size: var(--of-type-control);
+  font-weight: var(--of-weight-semibold);
+  color: var(--of-ink);
+}
+
+.of-comment-panel__gone {
+  margin: 0;
+  font-size: var(--of-type-record);
+  color: var(--of-danger);
+}
+
+.of-comment-panel__thread {
+  display: flex;
+  flex-direction: column;
+  gap: var(--of-step);
+  max-height: 320px;
+  overflow-y: auto;
+}
+
+.of-comment-panel__hint {
+  margin: var(--of-space-6) 0 0;
+  font-size: var(--of-type-record);
+  color: var(--of-ink-muted);
+}
+
+/*
+ * The invite sits INSIDE the sentence that explains it, so it reads as part
+ * of the offer rather than as a second control competing with Post. Inline,
+ * and sized to the 12px functional floor like the hint around it.
+ */
+/*
+ * BROWSING: the board's open threads, when the panel is showing but nothing
+ * in particular is chosen.
+ */
+.of-comment-panel__list {
+  display: grid;
+  gap: var(--of-space-2);
+  max-height: 320px;
+  overflow-y: auto;
+}
+
+.of-comment-panel__entry {
+  display: grid;
+  gap: 1px;
+  padding: var(--of-space-6) var(--of-space-8);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+  background: none;
+  border: none;
+  border-radius: var(--of-radius);
+}
+
+/*
+ * A finished discussion, still readable.
+ *
+ * Quietened rather than struck through: it was agreed, not withdrawn, and the
+ * point of keeping it is that somebody can go back and read what was said.
+ */
+.of-comment-panel__entry.is-resolved .of-comment-panel__who,
+.of-comment-panel__entry.is-resolved .of-comment-panel__said {
+  color: var(--of-ink-muted);
+}
+
+.of-comment-panel__resolved-toggle {
+  align-self: start;
+  font-size: var(--of-type-record);
+}
+
+.of-comment-panel__entry:hover {
+  background: var(--of-hover);
+}
+
+.of-comment-panel__who {
+  font-size: var(--of-type-record);
+  font-weight: var(--of-weight-semibold);
+  color: var(--of-ink);
+}
+
+.of-comment-panel__said {
+  overflow: hidden;
+  font-size: var(--of-type-record);
+  color: var(--of-ink-muted);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.of-comment-panel__invite {
+  padding: 0;
+  font-size: var(--of-type-record);
+  color: var(--of-accent);
+  text-decoration: underline;
+  vertical-align: baseline;
+  background: none;
+  border: none;
+}
+
+.of-comment-panel__problem {
+  margin: var(--of-space-6) 0 0;
+  font-size: var(--of-type-record);
+  color: var(--of-danger);
+}
+
+.of-comment-panel__actions {
+  display: flex;
+  gap: var(--of-space-8);
+  margin-top: var(--of-step);
+}
+
+.of-comment {
+  display: flex;
+  gap: var(--of-space-8);
+  align-items: flex-start;
+}
+
+.of-comment__who {
+  display: grid;
+  flex: none;
+  place-items: center;
+  width: 22px;
+  height: 22px;
+  font-size: var(--of-type-record);
+  font-weight: var(--of-weight-semibold);
+  color: var(--of-panel);
+  border-radius: var(--of-radius-round);
+}
+
+/*
+ * When, in the mono every readout is set in — the ledger row's "how long ago"
+ * — beside the name it belongs to.
+ */
+.of-ago {
+  font-family: var(--of-mono);
+  font-size: var(--of-type-record);
+  font-variant-numeric: tabular-nums;
+  color: var(--of-ink-muted);
+  white-space: nowrap;
+}
+
+.of-comment__edited {
+  color: var(--of-ink-muted);
+  font-size: var(--of-type-ui-small);
+}
+
+/* A remark's own controls: quiet, under its words, and only on your own. */
+.of-comment__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--of-space-6);
+  margin-top: var(--of-space-4);
+}
+
+.of-comment__edit {
+  display: flex;
+  flex-direction: column;
+  gap: var(--of-space-4);
+}
+
+/* Previous and Next sit together, between "All comments" and Close. */
+.of-comment-panel__walk {
+  display: flex;
+  gap: var(--of-space-2);
+}
+
+.of-comment__byline,
+.of-comment-panel__byline {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0 var(--of-space-8);
+  align-items: baseline;
+}
+
+.of-comment-panel__replies {
+  font-size: var(--of-type-record);
+  color: var(--of-ink-muted);
+}
+
+.of-comment__name {
+  font-size: var(--of-type-record);
+  font-weight: var(--of-weight-semibold);
+  color: var(--of-ink);
+}
+
+.of-comment__text {
+  /* Somebody else's words, wrapped as written rather than reflowed into one line. */
+  margin: var(--of-space-2) 0 0;
+  font-size: var(--of-type-ui-small);
+  line-height: 1.4;
+  color: var(--of-ink);
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}

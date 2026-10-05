@@ -1,0 +1,327 @@
+/*
+ * THE CHROME LAYER.
+ *
+ * Outside the world transform, so a type's apparatus is the same size on
+ * screen at every zoom and can be clamped to the window. Click-through except
+ * where a surface actually paints, like every other overlay here.
+ */
+/*
+ * FIXED, not absolute.
+ *
+ * `placeAnchored` works in the coordinates `getBoundingClientRect` returns,
+ * which are the viewport's. Inside the board that made no difference — the app
+ * shell is exactly one viewport and does not scroll — but the front door does
+ * scroll, and an absolute layer there is as tall as the document, so a surface
+ * placed at a viewport y lands that far down the PAGE instead.
+ *
+ * Above the comment panel, below the board-is-gone notice: apparatus sits over
+ * the interface it belongs to, and nothing sits over being told the board no
+ * longer exists.
+ */
+.of-chrome-layer {
+  position: fixed;
+  inset: 0;
+  z-index: var(--of-z-apparatus);
+  pointer-events: none;
+}
+
+/*
+ * THE SHELL every contextual surface shares.
+ *
+ * A record panel, a colour bar, a language menu, a format bar, a context menu
+ * and a colour picker were six pieces of stock with four radii and two
+ * grounds, because each was written where it was needed rather than from one
+ * place. One class means a seventh inherits the world instead of guessing at
+ * it — which is the whole of "unfragment the experience".
+ *
+ * Panel white and 10px, which is what DESIGN.md already gave flyouts: these
+ * overlay the board rather than sitting in its margins. The record panel moves
+ * onto it too. It was 6px as the system's nominal radius, and being the
+ * signature component is not a reason to be the one surface that does not
+ * match the others.
+ */
+.of-surface {
+  background: var(--of-panel);
+  border: 1px solid var(--of-panel-border);
+  border-radius: var(--of-radius-surface);
+  box-shadow: var(--of-shadow);
+}
+
+.of-chrome {
+  position: absolute;
+  top: 0;
+  left: 0;
+  pointer-events: auto;
+}
+
+.of-chrome--menu {
+  z-index: var(--of-z-menu);
+}
+
+/*
+ * A panel that has stepped aside lets the pointer through its whole box —
+ * the shell it is placed in as well as the panel itself.
+ */
+.of-chrome:has(> .of-inspector--yielding) {
+  pointer-events: none;
+}
+
+/*
+ * The cell colours.
+ *
+ * The other two edges are taken — columns to the right, rows underneath — and
+ * the fourth is where a formatting bar goes in everything people come from.
+ * It reads the range's own colours, so it also answers "what are these cells
+ * set to" without a separate inspector.
+ */
+.of-cellbar {
+  display: grid;
+  gap: var(--of-space-8);
+  padding: var(--of-space-8);
+}
+
+/* The format bar inside the cell bar: its row, on the bar's own stock. */
+.of-format-bar.of-format-bar--embedded {
+  padding: 0;
+  background: none;
+  border: none;
+  box-shadow: none;
+}
+
+.of-cellbar__head {
+  display: flex;
+  gap: var(--of-step);
+  align-items: center;
+}
+
+/* Across, then down: the record panel's two rows, side by side. */
+.of-cellbar__align {
+  display: flex;
+  gap: var(--of-step);
+  align-items: center;
+}
+
+/* A count is a measurement, so it is set as one. */
+.of-cellbar__count {
+  font-family: var(--of-mono);
+  font-size: var(--of-type-record);
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0.02em;
+  color: var(--of-ink-muted);
+  white-space: nowrap;
+}
+
+.of-cellbar__target {
+  font-family: var(--of-mono);
+  font-size: var(--of-type-record);
+  letter-spacing: 0.02em;
+}
+
+/* Pushed to the far end: it undoes rather than chooses. */
+.of-cellbar__clear {
+  margin-left: auto;
+}
+
+/*
+ * A TABLE BEING EDITED AS A SPREADSHEET: its apparatus, in screen space.
+ *
+ * The overlay is the whole chrome layer and lets the pointer through; only
+ * the letters and numbers take presses.
+ */
+.of-editor-overlay {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+
+.of-table-edit:focus {
+  outline: none;
+}
+
+/* The selection: a ring, and a wash over a range of more than one cell. */
+/*
+ * The selected cell, made obvious. It was a 2px accent line lying exactly on
+ * the grid lines, so it read as one more line, and a single cell got no fill
+ * at all. Now it is washed, and ringed with a page-coloured halo on both sides
+ * so the ring stands clear of the grid and of any cell colour — the same halo
+ * the board's own selection carries, measured in design-tokens.test.
+ */
+.of-table-ring {
+  position: absolute;
+  box-sizing: border-box;
+  background: color-mix(in srgb, var(--of-accent) 16%, transparent);
+  border: 2px solid var(--of-accent);
+  box-shadow:
+    0 0 0 1px var(--of-page),
+    inset 0 0 0 1px var(--of-page);
+  pointer-events: none;
+}
+
+.of-table-ring--range {
+  background: color-mix(in srgb, var(--of-accent) 20%, transparent);
+}
+
+/*
+ * Where typing would go inside a range: the cell the range started from, by
+ * its own ring. No fill of its own — the ring is drawn over the cells, and a
+ * fill that cleared the range's wash would also veil the cell's text.
+ */
+.of-table-ring--cursor {
+  background: none;
+}
+
+/*
+ * The column letters and row numbers. Set as records — mono, small, muted —
+ * because they are addresses rather than content, and pressed to select what
+ * they name.
+ */
+.of-table-strip__item {
+  position: absolute;
+  box-sizing: border-box;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  overflow: hidden;
+  font-family: var(--of-mono);
+  font-size: var(--of-type-record);
+  font-variant-numeric: tabular-nums;
+  color: var(--of-ink-muted);
+  background: var(--of-panel);
+  border: 1px solid var(--of-panel-border);
+  border-radius: var(--of-radius-apparatus);
+  cursor: pointer;
+  pointer-events: auto;
+}
+
+.of-table-strip__item:hover {
+  color: var(--of-ink);
+  background: var(--of-hover);
+}
+
+.of-table-strip__item--within {
+  font-weight: var(--of-weight-semibold);
+  color: var(--of-accent);
+  background: var(--of-accent-soft);
+  border-color: var(--of-accent);
+}
+
+.of-table-strip__item--on {
+  color: var(--of-page);
+  background: var(--of-accent);
+  border-color: var(--of-accent);
+}
+
+.of-table-strip__item--on:hover {
+  color: var(--of-page);
+  background: var(--of-accent);
+}
+
+/*
+ * The boundary between two letters or two numbers, grabbed to size the track
+ * before it. Invisible until reached for, then a single accent rule, like a
+ * divider on the board — and over the letters, so it wins the press there.
+ */
+.of-table-strip__grip {
+  position: absolute;
+  pointer-events: auto;
+  touch-action: none;
+}
+
+.of-table-strip__grip--column {
+  cursor: col-resize;
+}
+
+.of-table-strip__grip--row {
+  cursor: row-resize;
+}
+
+.of-table-strip__grip::after {
+  position: absolute;
+  background: var(--of-accent);
+  opacity: 0;
+  transition: opacity var(--of-quick) var(--of-ease);
+  content: '';
+}
+
+.of-table-strip__grip--column::after {
+  top: 0;
+  bottom: 0;
+  left: calc(50% - 1px);
+  width: 2px;
+}
+
+.of-table-strip__grip--row::after {
+  top: calc(50% - 1px);
+  right: 0;
+  left: 0;
+  height: 2px;
+}
+
+.of-table-strip__grip:hover::after {
+  opacity: 1;
+}
+
+/* A borders choice: which lines, then how they are drawn. */
+.of-borders {
+  display: grid;
+  gap: var(--of-space-8);
+}
+
+.of-borders__presets {
+  display: grid;
+  grid-template-columns: repeat(6, var(--of-hit-sm));
+  gap: var(--of-space-2);
+}
+
+.of-borders__pen {
+  display: flex;
+  gap: var(--of-step);
+}
+
+/*
+ * CHOOSING A TABLE'S SIZE by pointing at it.
+ *
+ * The grid is the control: you see the shape you are about to get rather than
+ * reading two numbers and imagining it.
+ */
+.of-grid-pick {
+  padding: var(--of-space-6);
+}
+
+.of-grid-pick__row {
+  display: flex;
+  gap: var(--of-space-2);
+}
+
+.of-grid-pick__row + .of-grid-pick__row {
+  margin-top: var(--of-space-2);
+}
+
+.of-grid-pick__cell {
+  /* The AA 2.5.8 minimum: at 16 on an 18-pixel pitch a hand hit its neighbour. */
+  width: 24px;
+  height: 24px;
+  padding: 0;
+  cursor: pointer;
+  background: var(--of-panel);
+  border: 1px solid var(--of-control-border);
+  border-radius: var(--of-radius-slip);
+}
+
+.of-grid-pick__cell--on {
+  background: var(--of-accent);
+  border-color: var(--of-accent);
+}
+
+.of-grid-pick__readout {
+  margin: var(--of-space-6) 0 0;
+  font-size: var(--of-type-record);
+  color: var(--of-ink-muted);
+  text-align: center;
+  font-variant-numeric: tabular-nums;
+}
+
+.of-flyout--wide {
+  width: auto;
+}

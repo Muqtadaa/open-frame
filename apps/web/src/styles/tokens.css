@@ -1,0 +1,464 @@
+/*
+ * OpenFrame — The Notebook.
+ *
+ * The board is a laboratory record, not a drawing surface. The ground is
+ * engineering quadrille: cold stock, a cyan-grey rule, blue-black ink, and one
+ * correction red that appears only where something is being undone or removed.
+ *
+ * Deliberately NOT stationery. Cream, parchment, serif display, handwriting and
+ * paper texture are the twee rendition of a notebook and are banned here — the
+ * register is the engineering computation pad, not the diary.
+ *
+ * Two token families stay separate, as before:
+ *   --of-c-*  content colours  (strokes, text)      the token's "ink"
+ *   --of-s-*  content surfaces (fills, note bodies) the token's "paper"
+ * Documents store token NAMES, never these values, so a theme can change
+ * without touching a single saved board.
+ *
+ * Contrast is not asserted here, it is tested: `app/design-tokens.test.ts` parses
+ * this block and fails the build if a pair drops below its WCAG 2.2 AA floor.
+ */
+:root {
+  color-scheme: light;
+  caret-color: var(--of-accent);
+  scrollbar-color: var(--of-control-border) transparent;
+  scrollbar-width: thin;
+
+  /* Ground. The desk the page sits on, and the page itself. */
+  --of-bg: #eef2f6;
+  --of-page: #f7f9fb;
+
+  /*
+   * Quadrille. Two weights, because the grid is a real 10-unit rule and
+   * snapping lands on it — the heavier decade line is the one you aim at.
+   * Both are deliberately below the 3:1 UI-component floor: the rule is ground,
+   * not a control, and a rule you cannot ignore fights the content on it.
+   */
+  --of-rule: #e4ebf2;
+  --of-rule-decade: #c9d6e4;
+
+  --of-panel: #ffffff;
+  --of-panel-border: #c7d2de;
+  /* Boundaries you must SEE to operate a control. Held at 3:1 by test. */
+  --of-control-border: #758596;
+
+  --of-ink: #16202b;
+  --of-ink-muted: #4e6070;
+
+  --of-accent: #1450b5;
+  --of-accent-soft: #e4ecfa;
+  --of-guide: #b0197a;
+  /* Reserved for destructive and corrective meaning. Never decoration. */
+  --of-danger: #a3231b;
+  /*
+   * The correction wash. A notice is corrective, so it belongs to the one red
+   * rather than to a second warm family — the banner was previously cream on
+   * tan, which is the stationery register this world bans, surviving in a
+   * component the restyle never touched.
+   */
+  --of-danger-wash: #f9ebea;
+  --of-danger-edge: #e0bcb8;
+  /* The bed under a hovered control. Was three copies of a literal. */
+  --of-hover: #e8edf3;
+
+  /*
+   * Chrome is page apparatus, not cards. A white capsule with a 24px blur
+   * floating over the board is the "floating candy chrome" this design refuses,
+   * and three of them at once was the single biggest reason the interface read
+   * as a toy. Apparatus takes the page's own colour, a hairline margin rule and
+   * a contact shadow just deep enough to separate it from the ruling.
+   */
+  --of-shadow: 0 1px 0 rgb(22 32 43 / 4%), 0 2px 8px rgb(22 32 43 / 7%);
+  /*
+   * The dim over a board that can no longer be used. The page's own ink rather
+   * than black, so the board reads as receding behind the message instead of
+   * being switched off.
+   */
+  --of-scrim: rgb(22 32 43 / 55%);
+  /*
+   * A slip laid ON the page. Deeper and tighter than the chrome shadow, because
+   * this is the ONE place the world asks for physical depth — an index slip
+   * sitting on the rule rather than printed into it.
+   */
+  --of-slip-shadow: 0 1px 1px rgb(22 32 43 / 18%), 0 3px 7px rgb(22 32 43 / 14%);
+  /* Nothing by day: a pale slip on a pale page is parted by its shadow. */
+  --of-slip-ring: 0 0 transparent;
+  /* A segmented control's selected index, pressed into its bed. */
+  --of-pressed-shadow: 0 1px 2px rgb(22 32 43 / 12%);
+  /*
+   * THE LAYERS. What paints over what, named, because ten bare integers from 1
+   * to 100 said nothing about why a search panel sits under a notice or the
+   * handles over a comment.
+   *
+   * The first five order things WITHIN one stacking context — objects and
+   * their apparatus on the board, a tip beside its tool — and only compare
+   * with each other. The last five are the application's own layers.
+   */
+  --of-z-lifted: 1; /* a selected object above its neighbours; a picker's pointer */
+  --of-z-preview: 2; /* a connector being drawn */
+  --of-z-guide: 3; /* alignment guides, table dividers, the crop frame */
+  --of-z-grip: 4; /* connector endpoints, over the guides they snap to */
+  --of-z-tip: 5; /* a tool tip, over the tools below it */
+  --of-z-menu: 6; /* a menu, over every other surface beside the selection */
+  --of-z-search: 8; /* find on board: under the chrome layer's notices */
+  --of-z-chrome: 10; /* rail, navigation bar, zoom, notices */
+  --of-z-panel: 40; /* the comment panel */
+  --of-z-apparatus: 60; /* the screen-space layer of an object's own apparatus */
+  --of-z-reached: 70; /* chrome the pointer or keyboard is IN, so its tips read over apparatus */
+  --of-z-gate: 100; /* a board that is gone or locked: nothing is usable behind it */
+
+  /*
+   * THE TYPE RAMP. Seven steps, named for what they carry rather than how big
+   * they are, because the same 15px is a sticky's body and a menu item and the
+   * name has to say which question is being asked.
+   *
+   * The interface uses record, ui-small, control, ui and title. Headline and
+   * display belong to the front door's wordmark and to the user's own text
+   * objects; content INSIDE an object scales in `em` from its object's size
+   * and is not on this ramp at all. 12px is the floor (rule 22).
+   */
+  --of-type-record: 0.75rem; /* mono records: labels, readouts, shortcuts, counts */
+  --of-type-ui-small: 0.8125rem; /* secondary lines: a hint, a row's second line */
+  --of-type-control: 0.875rem; /* what you operate: buttons, fields, a shape's label */
+  --of-type-ui: 0.9375rem; /* menus, notices, toasts, a sticky's body */
+  --of-type-title: 1.0625rem; /* the title of a gate or a sheet */
+  --of-type-headline: 1.1875rem; /* the wordmark on the front door */
+  /*
+   * In px, unlike the rest: a text object's size is CONTENT, in world units,
+   * and a board must lay out the same for everybody looking at it. The ramp
+   * above is the interface's, in rem, so it follows a reader's text size;
+   * each is written as its px at the default 16px root.
+   */
+  --of-type-display: 22px; /* a text object: the largest type, and the user's */
+
+  /*
+   * THE RADIUS SCALE. Corners get smaller the closer a form is to the page:
+   * stock laid ON the page is nearly square, apparatus in its margins a little
+   * softer, a control you press softer again, and a surface that floats over
+   * the board the softest. Round means "grab me" and is spent on grab points.
+   *
+   * Seventeen values were in use against one token, and the 5–8px band of
+   * "interactive beds" was four different numbers for one idea. A nested bed
+   * takes the next step down from the one that holds it, so the curves stay
+   * concentric: a 6px segmented bed with 2px of padding holds 4px items.
+   */
+  --of-radius-hair: 1px; /* the index on a measurement slider */
+  --of-radius-slip: 2px; /* stock on the page: notes, frames, swatches, handles */
+  --of-radius-apparatus: 4px; /* margin chrome, chips, a focus ring, a nested bed */
+  --of-radius: 6px; /* a control: buttons, fields, menu items, segmented beds */
+  --of-radius-surface: 10px; /* what floats over the board: menus, panels, notices */
+  --of-radius-grip: 25%; /* the rotate grip and the lock badge */
+  --of-radius-round: 50%; /* grab points, presence dots, faces */
+  --of-radius-capsule: 999px; /* a grab point that is longer than it is wide */
+
+  /*
+   * THE INTERFACE SCALE, on the page's own rule.
+   *
+   * `GRID_SIZE` is 10 world units and the quadrille draws it, so the chrome
+   * measures itself in the same steps: every height and offset below is a
+   * multiple of 10. That is not decoration — it means a control's edge lands
+   * where a rule does, and the apparatus shares the rhythm of the thing it
+   * sits on instead of floating at sizes nobody chose.
+   *
+   * These replaced a set of 11/12/22/28px values that were individually
+   * defensible and collectively too small to use comfortably. DESIGN.md's
+   * "density is high and quiet" is amended rather than quietly broken: still
+   * quiet, no longer cramped.
+   */
+  --of-step: 10px;
+  /*
+   * The AA 2.5.8 floor itself, for a control that has to sit beside a larger
+   * one — the rail's disclosures. Anything that can be 30 is.
+   */
+  --of-hit-min: 24px;
+  /* A secondary control inside apparatus — the AA 2.5.8 floor is 24. */
+  --of-hit-sm: 30px;
+  /*
+   * How far an unavailable control fades — ONE value. The menu used 0.38 and
+   * the icon buttons 0.35, so the same state looked different across a gap
+   * of a few pixels.
+   */
+  --of-disabled: 0.38;
+  /* Anything you operate. */
+  --of-hit: 40px;
+  /* A row, or a primary action. Clears the 44px AAA target with room over. */
+  --of-hit-lg: 50px;
+  /* From the viewport edge, and between a cluster and what it clears. */
+  --of-gutter: 20px;
+  /*
+   * How far down the navigation bar reaches, and so where everything else
+   * anchored to the top of the window starts: the gutter, a bar no taller
+   * than a tool, and a step of air.
+   */
+  --of-nav-band: calc(var(--of-gutter) + var(--of-hit-lg) + var(--of-step));
+
+  /*
+   * THE SPACING SCALE, below the rule. The quadrille sets the big rhythm —
+   * `--of-step` between things on a line, `--of-gutter` from the edge — and
+   * these are the small steps inside a control or a row. Even pixels only:
+   * sixteen values were in use, and a 3, a 5, a 7 and a 9 beside the 2, 4, 6
+   * and 8 they were meant to be was the drift, not a decision. Named for their
+   * size, because what they space is written where they are used.
+   */
+  --of-space-2: 2px;
+  --of-space-4: 4px;
+  --of-space-6: 6px;
+  --of-space-8: 8px;
+  --of-space-12: 12px;
+  --of-space-16: 16px;
+
+  --of-font: ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+  /*
+   * Mono is for records and measurement — counts, zoom, field values — never as
+   * a costume for "technical".
+   */
+  --of-mono: ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace;
+  /* The board's serif, and the face picker's specimen of it: one stack, so the
+     sample shows the face a note will actually get. */
+  --of-serif: ui-serif, Georgia, 'Times New Roman', serif;
+
+  /* Four weights, each a decision: body, a quiet emphasis, headings and
+     labels, and the one bold the brand's name takes. */
+  --of-weight-regular: 400;
+  --of-weight-medium: 500;
+  --of-weight-semibold: 600;
+  --of-weight-bold: 700;
+
+  /*
+   * The content palette: eleven, each an ink and its paper.
+   *
+   * NEUTRALS ARE THE EXCEPTION, and deliberately so. Every hue is a deep ink
+   * over a pale slip — that is what makes a coloured note a slip laid on the
+   * page rather than a block of paint. Black and white cannot work that way: a
+   * black fill has to be black, and white text is only white. For those two
+   * the ink and the paper are the same value, and `inkFor` picks the readable
+   * one from the fill rather than a test pretending white-on-white passes.
+   *
+   * `black` is the notebook's own ink, not `#000000`. The world has never used
+   * pure black and does not start here.
+   */
+  --of-c-black: #16202b;
+  --of-s-black: #16202b;
+  --of-c-white: #ffffff;
+  --of-s-white: #ffffff;
+  /*
+   * A LINE in black or white: a stroke, an outline, a connector. Each of the
+   * two is the page in one world, so there it is drawn in the gray ink
+   * instead — a white shape vanished into the notebook at 1.06:1. Held at 3:1
+   * on the page by design-tokens.test.
+   */
+  --of-line-black: #16202b;
+  --of-line-white: #3f5163;
+  /*
+   * The paper a frame nobody has coloured is laid on: a sheet of the page's
+   * own stock, which in this world is white. Not the `white` token — After
+   * Hours gives it a different sheet, and a white somebody chose stays white.
+   */
+  --of-frame-paper: var(--of-s-white);
+  /*
+   * The inner lines of a table: quieter than an outer edge, but still an
+   * edge you have to see to aim at a cell. Held at 3:1 on the panel.
+   */
+  --of-edge-inner: #8595a6;
+
+  --of-c-yellow: #7a5c00;
+  --of-c-green: #146045;
+  --of-c-blue: #17529e;
+  --of-c-red: #8a4038;
+  --of-c-violet: #5b3ba8;
+  --of-c-orange: #8c4715;
+  --of-c-gray: #3f5163;
+  /* Raspberry, not rose: a lighter pink sits on top of the guide magenta. */
+  --of-c-pink: #8f2a67;
+  --of-c-brown: #6a4a2a;
+
+  --of-s-yellow: #ffe9a3;
+  --of-s-green: #bff0d4;
+  --of-s-blue: #cfe2ff;
+  --of-s-red: #ffd5d0;
+  --of-s-violet: #e3daff;
+  --of-s-orange: #ffddb8;
+  --of-s-gray: #dfe5ec;
+  --of-s-pink: #ffd4ef;
+  /*
+   * A real tan. A pale tint of brown sits between the yellow and orange slips
+   * by nature, so this was searched for rather than picked: the best-separated
+   * paper that every one of the eleven inks still reads on at 4.5:1. An
+   * unconstrained search returned a pale olive, which separates beautifully
+   * and is not brown.
+   */
+  --of-s-brown: #e8dcc6;
+
+  /*
+   * PRESENCE. Six people, told apart from each other.
+   *
+   * A separate family from the content hues on purpose: `--of-c-*` says what
+   * something MEANS, and these say only which person. They are checked by
+   * `design-tokens.test.ts` on three counts — visible on the page at the 3:1
+   * non-text floor, at least 60 sRGB units apart from one another, and clear of
+   * the three hues that carry meaning (accent, guide, danger).
+   *
+   * Blue and red are absent for that last reason, which is most of why this
+   * palette looks the way it does.
+   */
+  --of-p-1: #0f766e;
+  --of-p-2: #8a5a00;
+  --of-p-3: #3730a3;
+  --of-p-4: #7b2d8e;
+  --of-p-5: #1f6b34;
+  --of-p-6: #4b5a6b;
+
+  /*
+   * BRAND. Shared by every theme, because the identity does not change when the
+   * ground does. Sampled from the supplied artwork (see assets/PROVENANCE.md).
+   *
+   * These are deliberately NOT part of the working palette. They paint the
+   * splash, the mark's halo and nothing else: the board reserves saturated
+   * colour for the user's own material, and a chrome that glowed magenta would
+   * compete with a magenta slip that MEANS something.
+   */
+  --of-brand-void: #150a2e;
+  --of-brand-horizon: #4a2b7a;
+  --of-brand-magenta: #ff2fbf;
+  --of-brand-cyan: #35e2ff;
+}
+
+/*
+ * FOR A FINGER, the secondary floor is the operating size. 30px is a fair
+ * target for a mouse and a poor one for a thumb, and nothing grew for a
+ * coarse pointer: the zoom cluster, history, swatches and segmented
+ * controls were all 30 on a phone (audit 2026-09-27). 40 rather than the
+ * 44 of some platform guides, because this product's sizes step in tens.
+ */
+@media (pointer: coarse) {
+  :root {
+    --of-hit-sm: var(--of-hit);
+  }
+}
+
+/*
+ * AFTER HOURS — the second world, opt-in.
+ *
+ * The same notebook at night, lit by its own grid: the quadrille stops being
+ * printed rule and becomes a lit horizon line, and ink inverts to a violet-white
+ * that never reaches pure white. The synthwave palette earns its place here
+ * because the ground is doing the glowing, not the chrome.
+ *
+ * Every pair in here is measured by the same build test as the default world —
+ * `design-tokens.test.ts` walks EVERY theme block, not the first one it finds.
+ * A theme that only looked checked would be worse than an unchecked one.
+ *
+ * Content hues keep their MEANING across both worlds: a red slip is still red,
+ * inverted to light ink on a deep body rather than re-hued. `danger` moved
+ * instead — on a dark ground both a content red and a correction red have to be
+ * light, which put them 18 sRGB units apart until the correction red was pushed
+ * to a hot red-orange.
+ */
+:root[data-theme='after-hours'] {
+  color-scheme: dark;
+
+  --of-bg: #140c24;
+  --of-page: #1b1033;
+
+  --of-rule: #2a1a4d;
+  --of-rule-decade: #3d2770;
+
+  --of-panel: #231645;
+  --of-panel-border: #4b3280;
+
+  --of-control-border: #9a83d4;
+
+  --of-ink: #ece8fb;
+  --of-ink-muted: #b3a6d8;
+
+  --of-accent: #5cd8f2;
+  --of-accent-soft: #10324a;
+  --of-guide: #ff5fd6;
+
+  --of-danger: #ff6a55;
+  --of-danger-wash: #3a1620;
+  --of-danger-edge: #6b2e3a;
+
+  --of-hover: #2c1c52;
+
+  /*
+   * Depth on a dark ground. The same offset-and-blur structure as the default
+   * world at greater opacity, because a 7% black shadow over #1b1033 is nothing.
+   * No glow: a zero-offset halo is decoration, and the light in this world comes
+   * from the ground, not from every edge.
+   */
+  --of-shadow: 0 1px 0 rgb(5 2 14 / 40%), 0 2px 8px rgb(5 2 14 / 55%);
+  /* Deeper here: 55% of a mid ink over #1b1033 barely reads as a dim at all. */
+  --of-scrim: rgb(5 2 14 / 68%);
+  /*
+   * A slip needs a LIT TOP EDGE here, not just a deeper shadow. A cast shadow
+   * works by being darker than the surface it falls on, and there is very little
+   * room below #1b1033 — the slips read as holes cut in the page rather than
+   * cards laid on it. The hairline is where the light catches the raised edge,
+   * which is the same physics the default world gets for free from a white page.
+   */
+  --of-slip-shadow:
+    inset 0 1px 0 rgb(255 255 255 / 9%), 0 1px 2px rgb(5 2 14 / 65%), 0 4px 12px rgb(5 2 14 / 55%);
+  /*
+   * A slip is a deep colour on a deep page here, so the shadow alone cannot
+   * part them: violet and blue were 1.2:1 on the page. A hairline at 3:1 is
+   * what does, and a second lit top edge doubles the first, so the slip still
+   * reads as catching the light rather than as outlined. Slips only — the
+   * gates and pins that share the shadow have edges of their own.
+   */
+  --of-slip-edge: #6b5a98;
+  --of-slip-ring: inset 0 1px 0 rgb(255 255 255 / 9%), 0 0 0 1px var(--of-slip-edge);
+  --of-pressed-shadow: 0 1px 2px rgb(5 2 14 / 50%);
+
+  /*
+   * Black and white do not invert. A black fill is black in both worlds and a
+   * white fill is white — they are the two colours that mean themselves.
+   * Black is pushed below the night page so a black slip reads as laid ON it
+   * rather than as a hole cut in it. White PAPER is paper under a lamp: at
+   * full white it was 18:1 on the page, brighter than the ink and the
+   * brightest thing on the board. A white line stays white.
+   */
+  --of-c-black: #07030f;
+  --of-s-black: #07030f;
+  --of-c-white: #ffffff;
+  --of-s-white: #d6d9e2;
+  /* Black is the page here, so a black line is drawn in the gray ink. */
+  --of-line-black: #bcc8de;
+  --of-line-white: #ffffff;
+  /*
+   * Night paper. Even dimmed, white paper under a frame was a bright slab the
+   * size of a region of the board, under everything laid on it. An uncoloured
+   * frame is cut from the panel stock instead — the dark sheet the board's own
+   * panels are — and its control-border edge says where it ends.
+   */
+  --of-frame-paper: var(--of-panel);
+  --of-edge-inner: #7a64b8;
+
+  --of-c-yellow: #ffd95e;
+  --of-c-green: #5eeaba;
+  --of-c-blue: #8cc8ff;
+  --of-c-red: #ffa79c;
+  --of-c-violet: #cbaaff;
+  --of-c-orange: #ffb478;
+  --of-c-gray: #bcc8de;
+  --of-c-pink: #ff9fd6;
+  --of-c-brown: #e6bd92;
+
+  --of-s-yellow: #463400;
+  --of-s-green: #053626;
+  --of-s-blue: #12294f;
+  --of-s-red: #4d1b1b;
+  --of-s-violet: #301a5e;
+  --of-s-orange: #4a2408;
+  --of-s-gray: #27314a;
+  --of-s-pink: #4a1338;
+  --of-s-brown: #3a2614;
+
+  /* Presence, inverted: light enough to sit on the night page. */
+  --of-p-1: #4fd6c0;
+  --of-p-2: #ffb454;
+  --of-p-3: #7f96ff;
+  --of-p-4: #dc9cf0;
+  --of-p-5: #f0879f;
+  --of-p-6: #b9c4a8;
+}
