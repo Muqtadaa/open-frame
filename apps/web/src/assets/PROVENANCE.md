@@ -4,7 +4,7 @@
 
 The artwork was supplied by the project owner: a synthwave hero with the
 OpenFrame lockup composited into it, and the same lockup on transparency.
-They are the origin of the `--of-brand-*` tokens in `src/styles.css`; no other
+They are the origin of the `--of-brand-*` tokens in `src/styles/tokens.css`; no other
 artwork exists.
 
 **Replaced 2026-09-19** with 2896×2172 versions — twice the linear resolution

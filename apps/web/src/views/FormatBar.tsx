@@ -28,7 +28,7 @@ const LIST_BUTTONS: readonly {
 
 /**
  * Each step of the ladder as a multiple of the object's own size — the
- * `.of-size--*` rules in styles.css, which `design-tokens.test.ts` holds this
+ * `.of-size--*` rules in styles/text-format.css, which `design-tokens.test.ts` holds this
  * to. Shown as the readout because a size is RELATIVE: `lg` in a sticky and in
  * a heading are different pixels and the same "1.4 times the rest of it".
  */

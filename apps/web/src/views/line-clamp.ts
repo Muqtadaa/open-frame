@@ -3,7 +3,7 @@ import type { RefCallback } from 'react'
 /**
  * The line count for a clipped text, for browsers that cannot work it out in CSS.
  *
- * `styles.css` derives it as `round(down, 100cqh / 1lh, 1)` — how many whole
+ * `styles/canvas.css` derives it as `round(down, 100cqh / 1lh, 1)` — how many whole
  * lines fit the container — and that is the whole mechanism wherever it
  * works. It divides a length by a length, which Firefox does not support, and
  * a value it cannot compute drops the entire `-webkit-line-clamp`: shape text

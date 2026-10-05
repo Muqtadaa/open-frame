@@ -1,0 +1,202 @@
+/*
+ * WORKSPACES: which shelf the board list is showing.
+ *
+ * A row of filters rather than a dropdown. The count of workspaces somebody
+ * has is small and the whole point is to see at a glance where your boards
+ * are — a control that hides the answer until you open it is the wrong shape
+ * for four items.
+ */
+.of-spaces {
+  display: grid;
+  gap: var(--of-space-6);
+  margin: 0 0 var(--of-step);
+}
+
+/*
+ * A SEGMENTED CHOICE, not a row of pills.
+ *
+ * Both the filters and the action were fully-round capsules, which this world
+ * reserves for the two things that mean "grab me" — the rotate handle and a
+ * connector endpoint. DESIGN.md records refusing a pill for the view-only
+ * badge for exactly this reason, and then a pill shipped here anyway.
+ *
+ * What this is, is the same choice the record panel makes between three fills:
+ * one of a small set, mutually exclusive. So it takes that component's shape —
+ * a recessed desk bed, the selected index lifted onto panel stock with the
+ * pressed-index shadow — and reads as a filter rather than as three unrelated
+ * buttons that happen to be beside each other.
+ */
+.of-spaces__row {
+  display: flex;
+  gap: var(--of-step);
+  align-items: center;
+}
+
+.of-spaces__tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--of-space-2);
+  padding: var(--of-space-2);
+  background: var(--of-bg);
+  border-radius: var(--of-radius);
+}
+
+.of-spaces__tab {
+  display: inline-flex;
+  gap: var(--of-space-6);
+  align-items: center;
+  /* A target, not a label: it was 26px, under the secondary floor. */
+  min-height: var(--of-hit-sm);
+  padding: var(--of-space-4) var(--of-step);
+  font: inherit;
+  font-size: var(--of-type-record);
+  color: var(--of-ink-muted);
+  cursor: pointer;
+  background: none;
+  border: 1px solid transparent;
+  border-radius: var(--of-radius-apparatus);
+  transition:
+    background var(--of-quick) var(--of-ease),
+    color var(--of-quick) var(--of-ease);
+}
+
+.of-spaces__tab:hover:not(.of-spaces__tab--on) {
+  color: var(--of-ink);
+  background: var(--of-hover);
+}
+
+.of-spaces__tab--on {
+  color: var(--of-accent);
+  background: var(--of-panel);
+  /* The chosen workspace is seen by its edge too, not only by a 1.12:1 fill. */
+  border: 1px solid var(--of-control-border);
+  box-shadow: var(--of-pressed-shadow);
+}
+
+/*
+ * The count is a MEASUREMENT, so it is set as one and separated from the name.
+ * Run together in the same face, "Muqtadaa Miandara 2" read as a workspace
+ * with a number in its name.
+ */
+.of-spaces__count {
+  font-family: var(--of-mono);
+  font-size: var(--of-type-record);
+  font-variant-numeric: tabular-nums;
+  color: var(--of-ink-muted);
+}
+
+.of-spaces__tab--on .of-spaces__count {
+  color: var(--of-accent);
+}
+
+/*
+ * Making one is an ACTION, so it does not wear a filter's clothes. It sits
+ * after the bed rather than inside it, and carries a drawn mark.
+ */
+.of-spaces__new {
+  display: inline-flex;
+  flex: none;
+  gap: var(--of-space-6);
+  align-items: center;
+  min-height: 26px;
+  padding: var(--of-space-4) var(--of-step) var(--of-space-4) var(--of-space-8);
+  font: inherit;
+  font-size: var(--of-type-record);
+  color: var(--of-ink-muted);
+  cursor: pointer;
+  background: none;
+  border: 1px solid transparent;
+  border-radius: var(--of-radius);
+  transition:
+    background var(--of-quick) var(--of-ease),
+    color var(--of-quick) var(--of-ease);
+}
+
+.of-spaces__new svg {
+  width: 14px;
+  height: 14px;
+}
+
+.of-spaces__new:hover {
+  color: var(--of-ink);
+  background: var(--of-hover);
+}
+
+.of-spaces__naming {
+  display: flex;
+  gap: var(--of-space-6);
+  align-items: flex-end;
+}
+
+.of-spaces__label {
+  flex: 1 1 auto;
+  min-width: 0;
+  margin-bottom: 0;
+}
+
+.of-spaces__label .of-spaces__name {
+  width: 100%;
+}
+
+.of-spaces__name,
+.of-spaces__link {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.of-spaces__share {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--of-space-6);
+  align-items: center;
+}
+
+/* What the invite gives, on its own line under the link it describes. */
+.of-spaces__invite-what {
+  flex-basis: 100%;
+  font-size: var(--of-type-record);
+  color: var(--of-ink-muted);
+}
+
+/* What somebody wanted you to see, on the front door. */
+.of-mentions {
+  position: relative;
+}
+
+/*
+ * What agents have done to the board (tracks A-2). The same button and list
+ * as Mentions — a count that asks for attention, quiet once nothing is left
+ * to review — with a row that can be acted on rather than followed.
+ */
+.of-agent-changes {
+  position: relative;
+}
+
+.of-agent-changes__item {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 1px var(--of-space-8);
+  align-items: center;
+  padding: var(--of-space-8);
+  border-radius: var(--of-radius);
+}
+
+.of-agent-changes__item > .of-mentions__who,
+.of-agent-changes__item > .of-mentions__where {
+  grid-column: 1;
+}
+
+.of-agent-changes__revert,
+.of-agent-changes__done {
+  grid-column: 2;
+  grid-row: 1 / span 2;
+}
+
+.of-agent-changes__done {
+  font-size: var(--of-type-record);
+  color: var(--of-ink-muted);
+}
+
+.of-agent-changes__item[data-reverted='true'] .of-mentions__who {
+  color: var(--of-ink-muted);
+}

@@ -1,0 +1,112 @@
+/*
+ * A CODE BLOCK: whitespace is the content.
+ *
+ * It never wraps. A wrapped line of code is a line whose indentation lies
+ * about its depth, which is the one thing the block exists to preserve.
+ */
+.of-code {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  background: var(--of-s-gray);
+  border: 1px solid var(--of-control-border);
+  /* Stock on the page, like every object: the page's corner and slip height. */
+  border-radius: var(--of-radius-slip);
+  box-shadow: var(--of-slip-shadow);
+}
+
+.of-code__language {
+  position: absolute;
+  top: 2px;
+  right: 6px;
+  font-size: var(--of-type-record);
+  color: var(--of-ink-muted);
+}
+
+.of-code__pre {
+  width: 100%;
+  height: 100%;
+  padding: var(--of-space-8) var(--of-step);
+  margin: 0;
+  /*
+   * Clipped, not scrolled. On the board the wheel belongs to the canvas, so
+   * nobody could reach the scroll — it only made a scroll region no keyboard
+   * could focus. The editor scrolls; the object is resized to show more.
+   */
+  overflow: hidden;
+  tab-size: 2;
+}
+
+.of-code__code,
+.of-code__input {
+  font-family: var(--of-mono);
+  font-size: var(--of-type-record);
+  line-height: 1.5;
+  color: var(--of-ink);
+  white-space: pre;
+}
+
+.of-code__input {
+  width: 100%;
+  height: 100%;
+  padding: var(--of-space-8) var(--of-step);
+  resize: none;
+  background: transparent;
+  border: none;
+  tab-size: 2;
+}
+
+.of-code__input:focus {
+  outline: 2px solid var(--of-accent);
+  outline-offset: -2px;
+}
+
+/* Placement and shell are shared; this only says how the control looks. */
+.of-code__picker {
+  padding: var(--of-space-4) var(--of-space-6);
+  font: inherit;
+  font-size: var(--of-type-record);
+  color: var(--of-ink-muted);
+}
+
+/*
+ * The highlighter's own stylesheet is NOT used.
+ *
+ * Every theme it ships is a list of hard-coded hex values, which would sit
+ * outside the token system entirely — invisible to the contrast test, wrong in
+ * one of the two palettes, and unfixable without editing a vendored file. The
+ * classes are mapped to this product's own content colours instead, and
+ * `design-tokens.test.ts` measures every one of them against the code surface.
+ */
+.hljs-keyword,
+.hljs-built_in,
+.hljs-selector-tag {
+  color: var(--of-c-violet);
+}
+
+.hljs-string,
+.hljs-regexp,
+.hljs-attr {
+  color: var(--of-c-green);
+}
+
+.hljs-number,
+.hljs-literal {
+  color: var(--of-c-orange);
+}
+
+.hljs-title,
+.hljs-title.function_,
+.hljs-section {
+  color: var(--of-c-blue);
+}
+
+.hljs-comment {
+  color: var(--of-c-gray);
+}
+
+.hljs-meta,
+.hljs-type {
+  color: var(--of-c-red);
+}

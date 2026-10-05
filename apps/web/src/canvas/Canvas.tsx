@@ -201,7 +201,7 @@ export function Canvas() {
        * Everything here is measured in screen pixels and positioned from the
        * viewport, because none of it is part of the board: a handle is 9px at
        * 5% and at 1600% alike. Inside the world transform that is not
-       * expressible — see `.of-apparatus` in styles.css for what fails.
+       * expressible — see `.of-apparatus` in styles/canvas.css for what fails.
        */}
       <Apparatus />
 

@@ -1,0 +1,357 @@
+/*
+ * Reactions, drawn on the note they are on.
+ *
+ * In world units (rule 24): part of how the note looks, so they scale with it.
+ * Inside its bottom edge, so hit testing by bounds still finds the note, and on
+ * the panel stock with a hairline edge so they read on every note colour.
+ */
+.of-reactions {
+  position: absolute;
+  right: var(--of-space-8);
+  bottom: var(--of-space-8);
+  left: var(--of-space-8);
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--of-space-4);
+  pointer-events: none;
+}
+
+/*
+ * Dot voting. The dots sit in a note's top corner, clear of its reactions
+ * along the bottom; they are read, not pressed — votes go on with the tool.
+ */
+.of-votes {
+  position: absolute;
+  top: var(--of-space-8);
+  right: var(--of-space-8);
+  display: inline-flex;
+  gap: var(--of-space-4);
+  align-items: center;
+  padding: var(--of-space-2) var(--of-space-6);
+  font-family: var(--of-mono);
+  font-size: var(--of-type-record);
+  line-height: 1.4;
+  color: var(--of-ink);
+  background: var(--of-panel);
+  border: 1px solid var(--of-control-border);
+  border-radius: var(--of-radius-capsule);
+  pointer-events: none;
+}
+
+.of-votes__dot {
+  width: var(--of-space-8);
+  height: var(--of-space-8);
+  background: var(--of-accent);
+  border-radius: var(--of-radius-round);
+}
+
+.of-votes[data-mine='true'] {
+  border-color: var(--of-accent);
+}
+
+.of-voting {
+  flex-direction: column;
+  align-items: stretch;
+}
+
+.of-voting__row,
+.of-voting--setup {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--of-space-8);
+  align-items: center;
+}
+
+.of-voting--setup {
+  flex-direction: row;
+  align-items: flex-end;
+}
+
+.of-voting__heading {
+  flex-basis: 100%;
+  margin: 0;
+  font-size: var(--of-type-ui);
+  font-weight: var(--of-weight-semibold);
+}
+
+/* The vote tool, armed: the same pressed bed as the timer's chosen preset. */
+.of-voting [aria-pressed='true'] {
+  color: var(--of-accent);
+  background: var(--of-accent-soft);
+  border-color: var(--of-accent);
+}
+
+.of-voting__title {
+  font-weight: var(--of-weight-semibold);
+}
+
+.of-voting__status {
+  flex: 1;
+  font-family: var(--of-mono);
+  font-size: var(--of-type-record);
+}
+
+.of-voting__field {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: var(--of-space-4);
+  min-width: 140px;
+  font-size: var(--of-type-record);
+}
+
+.of-voting__field--narrow {
+  flex: 0 0 auto;
+  min-width: 0;
+  width: 96px;
+}
+
+.of-voting__check {
+  display: inline-flex;
+  gap: var(--of-space-6);
+  align-items: center;
+  min-height: var(--of-hit-sm);
+}
+
+.of-voting__actions {
+  display: flex;
+  gap: var(--of-space-8);
+}
+
+.of-voting__results {
+  display: flex;
+  flex-direction: column;
+  gap: var(--of-space-8);
+  align-items: flex-start;
+  margin-top: var(--of-space-8);
+}
+
+.of-voting__list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--of-space-2);
+  width: 100%;
+  max-height: 240px;
+  padding: 0;
+  margin: 0;
+  overflow-y: auto;
+  list-style: none;
+}
+
+.of-voting__result {
+  display: flex;
+  gap: var(--of-space-8);
+  align-items: center;
+  width: 100%;
+  min-height: var(--of-hit-sm);
+  padding: var(--of-space-4) var(--of-space-8);
+  color: var(--of-ink);
+  text-align: left;
+  cursor: pointer;
+  background: none;
+  border: 0;
+  border-radius: var(--of-radius);
+}
+
+.of-voting__result:hover {
+  background: var(--of-hover);
+}
+
+.of-voting__gist {
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.of-voting__count {
+  font-family: var(--of-mono);
+  font-size: var(--of-type-record);
+}
+
+.of-voting__empty {
+  margin: var(--of-space-8) 0 0;
+  font-size: var(--of-type-record);
+}
+
+/* Clustering with AI: a notice along the top, like dot voting's setup. */
+.of-cluster {
+  flex-direction: column;
+  gap: var(--of-space-8);
+  align-items: stretch;
+  max-height: calc(100dvh - 160px);
+  overflow-y: auto;
+}
+
+.of-cluster__heading {
+  margin: 0;
+  font-size: var(--of-type-ui);
+  font-weight: var(--of-weight-semibold);
+}
+
+.of-cluster__note,
+.of-cluster__summary {
+  margin: 0;
+  font-size: var(--of-type-record);
+}
+
+.of-cluster__form {
+  display: flex;
+  flex-direction: column;
+  gap: var(--of-space-8);
+}
+
+.of-cluster__field {
+  display: flex;
+  flex-direction: column;
+  gap: var(--of-space-4);
+  font-size: var(--of-type-record);
+}
+
+.of-cluster__themes {
+  display: flex;
+  flex-direction: column;
+  gap: var(--of-step);
+  padding: 0;
+  margin: 0;
+  list-style: none;
+}
+
+.of-cluster__theme {
+  display: flex;
+  flex-direction: column;
+  gap: var(--of-space-4);
+}
+
+.of-cluster__notes {
+  padding: 0 0 0 var(--of-step);
+  margin: 0;
+  font-size: var(--of-type-record);
+  list-style: disc;
+}
+
+.of-cluster__gist {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.of-cluster__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--of-space-8);
+  align-items: center;
+}
+
+.of-cluster__remaining {
+  margin-left: auto;
+  font-family: var(--of-mono);
+  font-size: var(--of-type-record);
+}
+
+.of-reaction {
+  display: inline-flex;
+  gap: var(--of-space-4);
+  align-items: center;
+  padding: var(--of-space-2) var(--of-space-6);
+  font-size: var(--of-type-record);
+  line-height: 1.4;
+  color: var(--of-ink);
+  cursor: pointer;
+  background: var(--of-panel);
+  border: 1px solid var(--of-control-border);
+  border-radius: var(--of-radius-capsule);
+  pointer-events: auto;
+}
+
+.of-reaction[aria-pressed='true'] {
+  background: var(--of-accent-soft);
+  border-color: var(--of-accent);
+}
+
+.of-reaction:disabled {
+  cursor: default;
+}
+
+.of-reaction__count {
+  font-family: var(--of-mono);
+  font-variant-numeric: tabular-nums;
+}
+
+/* The eight on offer, beside one selected note: on the chrome layer, like the arrange bar. */
+.of-reaction-bar {
+  display: flex;
+  gap: var(--of-space-2);
+  align-items: center;
+  padding: var(--of-space-4);
+}
+
+.of-reaction-bar__button {
+  font-size: var(--of-type-ui);
+}
+
+.of-reaction-bar__button[aria-pressed='true'] {
+  background: var(--of-accent-soft);
+}
+
+/*
+ * The rest of the emoji library: a search field over a scrolling grid. A menu
+ * in kind (it paints over everything and goes on Escape), sized to show eight
+ * across and a few rows, so finding one is typing a word rather than scrolling.
+ */
+.of-emoji-picker {
+  display: flex;
+  flex-direction: column;
+  gap: var(--of-space-6);
+  /* Eight 36px emoji, and room for a classic scrollbar beside them. */
+  width: calc(8 * 36px + 16px + 2 * var(--of-space-6));
+  padding: var(--of-space-6);
+}
+
+/*
+ * The eight columns share what is left beside the scrollbar rather than
+ * assuming a width: a classic scrollbar (Windows) ate the last column, and the
+ * cut-off column then scrolled sideways.
+ */
+.of-emoji-picker__list {
+  max-height: min(300px, calc(100dvh - 12 * var(--of-space-12)));
+  overflow-x: hidden;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+
+.of-emoji-picker__heading {
+  margin: var(--of-space-6) 0 var(--of-space-2);
+  font-family: var(--of-mono);
+  font-size: var(--of-type-record);
+  font-weight: var(--of-weight-regular);
+  color: var(--of-ink-muted);
+}
+
+.of-emoji-picker__grid {
+  display: grid;
+  grid-template-columns: repeat(8, minmax(0, 1fr));
+}
+
+.of-emoji-picker__cell {
+  width: 100%;
+  aspect-ratio: 1;
+  padding: 0;
+  font-size: 1.25rem;
+  line-height: 1;
+  background: transparent;
+  border: none;
+  border-radius: var(--of-radius);
+  cursor: pointer;
+}
+
+.of-emoji-picker__cell:hover,
+.of-emoji-picker__cell:focus-visible {
+  background: var(--of-hover);
+}
+
+.of-emoji-picker__note {
+  margin: var(--of-space-8) 0;
+  font-size: var(--of-type-ui-small);
+  color: var(--of-ink-muted);
+}

@@ -1,0 +1,251 @@
+/* ---------- other people ---------- */
+
+/*
+ * Presence never takes a click. Every layer here is inert: a cursor belonging
+ * to somebody else sitting on top of a note you are trying to select would make
+ * the board feel broken in a way that is very hard to diagnose.
+ */
+.of-presence,
+.of-presence * {
+  pointer-events: none;
+}
+
+/*
+ * Two pixels, stated here rather than set per render.
+ *
+ * The width used to be written inline as `2 / zoom` because the outline was
+ * drawn inside the world transform, and this rule's own `1px` never applied at
+ * all — a declaration that is always overridden is a declaration nobody can
+ * trust. On the apparatus layer it is simply two screen pixels.
+ */
+.of-presence__outline {
+  position: absolute;
+  border: 2px dashed currentcolor;
+  border-radius: var(--of-radius-slip);
+}
+
+/*
+ * A wash of the holder's colour, faint enough to read through.
+ *
+ * The outline alone is a line at the edge of an object you may be looking at
+ * the middle of. This is what makes "somebody has this" survive a glance
+ * across a busy board — and it is kept very low, because an object somebody
+ * else has selected is still an object you need to be able to READ.
+ */
+.of-presence__outline::after {
+  position: absolute;
+  inset: 0;
+  content: '';
+  background: var(--of-presence-hue);
+  border-radius: inherit;
+  opacity: 0.08;
+}
+
+/*
+ * Solid, not dashed, for an object somebody has OPEN. The difference has to
+ * survive being glanced at: a dashed outline says "they have this selected",
+ * and a solid one says "you cannot type in this".
+ */
+.of-presence__outline--editing {
+  border-style: solid;
+}
+
+/*
+ * A label in the peer's own colour, with the page's colour as its text.
+ *
+ * The background reads `--of-presence-hue` rather than `currentcolor`, and that
+ * is not a preference. Setting `color` on this element redefines
+ * `currentcolor` FOR this element, so `background: currentcolor` resolved to
+ * the text colour and every name rendered as a near-white blob on a near-white
+ * page. The custom property is set alongside `color` on the parent and is not
+ * affected by either.
+ */
+.of-presence__tag,
+.of-presence__name {
+  position: absolute;
+  top: 0;
+  left: 0;
+  padding: var(--of-space-2) var(--of-space-6);
+  font-family: var(--of-font);
+  font-size: var(--of-type-record);
+  font-weight: var(--of-weight-medium);
+  line-height: 1.3;
+  color: var(--of-page);
+  white-space: nowrap;
+  background: var(--of-presence-hue);
+  border-radius: var(--of-radius-apparatus);
+  transform-origin: top left;
+}
+
+/* The tag sits ABOVE its object, clear of the content it is describing. */
+.of-presence__tag {
+  top: -4px;
+  translate: 0 -100%;
+}
+
+.of-presence__cursor {
+  position: absolute;
+  top: 0;
+  left: 0;
+  transform-origin: top left;
+}
+
+.of-presence__name {
+  top: 14px;
+  left: 12px;
+}
+
+/*
+ * The name sits inside the tag's own colour, so the text takes the PAGE colour
+ * rather than ink — which is what keeps it readable on all six hues in both
+ * worlds without a second palette for labels.
+ */
+
+/*
+ * The room: whether it can be reached, and who is in it.
+ *
+ * Reads as apparatus, not as a call to action. Sharing a board is a deliberate
+ * act somebody goes looking for, and a button loud enough to be noticed by
+ * accident is a button that gets pressed by accident.
+ */
+/*
+ * YOUR account, signed in or not: the app's own apparatus, set as quietly as
+ * the theme toggle beside it. It shared the share button's bordered chip, so
+ * "Sign in" was the only outlined control on the bar and the second loudest
+ * thing on it — louder than the board's own history.
+ */
+.of-status__account {
+  display: flex;
+  gap: var(--of-space-6);
+  align-items: center;
+  height: var(--of-hit-sm);
+  padding: 0 var(--of-space-8);
+  font: inherit;
+  color: var(--of-ink-muted);
+  background: transparent;
+  border: none;
+  border-radius: var(--of-radius-apparatus);
+  cursor: pointer;
+}
+
+.of-status__account:hover {
+  color: var(--of-ink);
+  background: var(--of-hover);
+}
+
+.of-status__share {
+  display: flex;
+  gap: var(--of-space-6);
+  align-items: center;
+  height: var(--of-hit-sm);
+  padding: 0 var(--of-step);
+  font: inherit;
+  color: var(--of-ink-muted);
+  background: transparent;
+  /* A boundary you must see to find the control: 3:1, not the panel hairline. */
+  border: 1px solid var(--of-control-border);
+  border-radius: var(--of-radius-apparatus);
+  cursor: pointer;
+}
+
+.of-status__share:hover:not(:disabled) {
+  color: var(--of-ink);
+  background: var(--of-bg);
+}
+
+.of-status__share:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+
+.of-status__share svg {
+  width: 13px;
+  height: 13px;
+}
+
+/*
+ * A person's NAME is arbitrary-length content sitting on a fixed-height
+ * control, which is a combination that has to be said out loud. "Muqtadaa
+ * Miandara" wrapped onto two lines, grew the record line to two rows, and
+ * starved the board title beside it down to "U…". Every name in this interface
+ * is capped, ellipsised and forbidden from wrapping for that reason.
+ */
+.of-status__share-label {
+  overflow: hidden;
+  max-width: 14ch;
+  font-family: var(--of-font);
+  font-size: var(--of-type-ui-small);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.of-status__room {
+  display: flex;
+  gap: var(--of-space-6);
+  align-items: center;
+}
+
+.of-status__people {
+  display: flex;
+  /*
+   * Side by side, never overlapped: a face you can press to follow somebody
+   * is a TARGET, and overlapping 22px faces left an 18px pitch — under the
+   * 24px minimum, with nothing between them to aim at. Three at most, and a
+   * count for the rest, keeps the bar from paying for it in width.
+   */
+  gap: var(--of-space-4);
+  align-items: center;
+}
+
+.of-status__more {
+  font-family: var(--of-mono);
+  font-size: var(--of-type-record);
+  color: var(--of-ink-muted);
+}
+
+.of-status__person {
+  display: grid;
+  /* Never squeezed: a flex child with no basis becomes an ellipse when the
+     row is tight, which is what a long name did to it. */
+  flex: none;
+  place-items: center;
+  /* The AA target minimum: a face can be pressed to follow somebody. */
+  width: 24px;
+  height: 24px;
+  font-family: var(--of-font);
+  font-size: var(--of-type-record);
+  font-weight: var(--of-weight-semibold);
+  color: var(--of-page);
+  border: 1.5px solid var(--of-page);
+  border-radius: var(--of-radius-round);
+}
+
+/*
+ * Connection state as a dot. Colour alone never carries it — the label beside
+ * it says the same thing in words, because a red and a green dot are the same
+ * dot to a good number of people.
+ */
+.of-status__dot {
+  width: 7px;
+  height: 7px;
+  border-radius: var(--of-radius-round);
+}
+
+.of-status__dot--connected {
+  background: var(--of-c-green);
+}
+
+.of-status__dot--connecting {
+  background: var(--of-c-orange);
+}
+
+.of-status__dot--offline {
+  background: var(--of-control-border);
+}
+
+/* A ruled divider, the way a ledger column is separated. */
+.of-status__rule {
+  width: 1px;
+  height: 14px;
+  background: var(--of-panel-border);
+}

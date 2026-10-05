@@ -2,7 +2,7 @@
 version: 1
 slug: "apps-web-src-app-app-tsx"
 primary_target: "apps/web/src/app/App.tsx"
-related_targets: ["apps/web/src/ui","apps/web/src/canvas","apps/web/src/styles.css"]
+related_targets: ["apps/web/src/ui","apps/web/src/canvas","apps/web/src/styles"]
 ---
 
 THESIS: The board is a laboratory record, not a drawing surface. It refuses the

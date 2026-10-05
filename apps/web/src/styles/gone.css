@@ -1,0 +1,203 @@
+.of-gone {
+  position: fixed;
+  inset: 0;
+  z-index: var(--of-z-gate);
+  display: grid;
+  place-items: center;
+  padding: var(--of-space-16);
+  background: var(--of-scrim);
+}
+
+/*
+ * A gate with no board behind it — start-up failed before there was one. A
+ * scrim there dims an empty page into grey, which reads as something greyed
+ * out that is not there; it stands on the page's own ground instead.
+ */
+.of-gone--alone {
+  background: var(--of-bg);
+}
+
+.of-gone__panel {
+  max-width: 360px;
+  padding: var(--of-gutter);
+  text-align: left;
+  background: var(--of-panel);
+  border: 1px solid var(--of-panel-border);
+  border-radius: var(--of-radius-surface);
+  box-shadow: var(--of-slip-shadow);
+}
+
+.of-gone__title {
+  margin: 0 0 var(--of-space-8);
+  font-size: var(--of-type-title);
+  font-weight: var(--of-weight-semibold);
+  color: var(--of-ink);
+}
+
+.of-gone__body {
+  margin: 0 0 var(--of-space-16);
+  font-size: var(--of-type-ui);
+  line-height: 1.45;
+  color: var(--of-ink-muted);
+}
+
+/*
+ * The panel takes focus only so that a gate with nothing to press first still
+ * moves the keyboard off the board behind it; the panel is not a control, so
+ * it draws no ring.
+ */
+.of-gone__panel:focus {
+  outline: none;
+}
+
+/* The one thing to do, then the way out, on one line. */
+.of-gone__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--of-space-8);
+}
+
+.of-gone__input {
+  width: 100%;
+  margin-bottom: var(--of-space-12);
+}
+
+.of-gone__problem {
+  margin: 0 0 var(--of-space-12);
+  font-size: var(--of-type-ui-small);
+  color: var(--of-danger);
+}
+
+.of-gone__submit {
+  width: 100%;
+}
+
+/* Under a full-width submit, the way out is centred on it, not hung left. */
+.of-gone__submit + .of-gone__actions {
+  justify-content: center;
+  margin-top: var(--of-space-8);
+}
+
+/*
+ * A 12px word is a 15px-tall target, so the link keeps its size of type and
+ * takes the bar's height to be pressed (WCAG 2.5.8). Underlined as TEXT, with
+ * a set offset, rather than with a bottom border — a border sits at the foot
+ * of the box, which is now the foot of the bar.
+ */
+.of-status__source {
+  display: inline-flex;
+  align-items: center;
+  min-height: var(--of-hit-sm);
+  color: inherit;
+  text-decoration: underline 1px;
+  text-underline-offset: 3px;
+}
+
+.of-status__source:hover {
+  color: var(--of-accent);
+}
+
+.of-status {
+  /* The dialog's positioning context. */
+  position: relative;
+  display: flex;
+  gap: var(--of-step);
+  align-items: center;
+  /*
+   * The line yields rather than running off the window. It shared the bottom
+   * edge with the zoom cluster once, and reserved the cluster's width; along
+   * the top it has the whole width to itself, less the gutters.
+   *
+   * The title is the part that absorbs the difference, because it is the only
+   * thing here that can be shortened without losing information the canvas
+   * does not otherwise show.
+   */
+  max-width: calc(100vw - 2 * var(--of-gutter));
+  padding: var(--of-space-6) var(--of-step);
+  font-family: var(--of-mono);
+  font-size: var(--of-type-record);
+  color: var(--of-ink-muted);
+  background: var(--of-page);
+  border: 1px solid var(--of-panel-border);
+  border-radius: var(--of-radius-apparatus);
+  box-shadow: var(--of-shadow);
+}
+
+/*
+ * Whether the work is safe. A record like the counts it replaced — mono,
+ * muted — and wide enough for "Saving…" that the bar does not shift every
+ * time it says so. Only a failure is inked: it is the one state that asks
+ * somebody to do something.
+ */
+.of-status__save {
+  min-width: 8ch;
+}
+
+.of-status__save--failed {
+  font-weight: var(--of-weight-semibold);
+  color: var(--of-danger);
+}
+
+.of-status b {
+  font-weight: var(--of-weight-semibold);
+  color: var(--of-ink);
+}
+
+/*
+ * The way out, at the head of the line.
+ *
+ * Sized like the other controls on this line and labelled like none of them,
+ * because it is the only one whose job is to be FOUND. Undo is discovered by
+ * reaching for it; an exit that nobody spots is an exit that does not exist,
+ * and this board had none at all until it did.
+ */
+.of-status__exit {
+  display: flex;
+  gap: var(--of-space-6);
+  align-items: center;
+  height: var(--of-hit-sm);
+  padding: 0 var(--of-step) 0 var(--of-space-8);
+  /* Navigation, so the interface's voice at a control's weight, not a readout. */
+  font-family: var(--of-font);
+  font-size: var(--of-type-control);
+  font-weight: var(--of-weight-medium);
+  color: var(--of-ink);
+  text-decoration: none;
+  border-radius: var(--of-radius);
+}
+
+.of-status__exit svg {
+  width: 16px;
+  height: 16px;
+}
+
+.of-status__exit:hover {
+  color: var(--of-ink);
+  background: var(--of-bg);
+}
+
+/* The arrow leads, so it is the arrow that moves. */
+.of-status__exit:hover svg {
+  transform: translateX(-2px);
+}
+
+/*
+ * Mid-flight: the pending save is being written before the page goes. It is
+ * normally too fast to see, and on a slow disk this is the difference between
+ * "nothing happened" and "it is working".
+ */
+.of-status__exit[aria-busy='true'] {
+  opacity: 0.55;
+  pointer-events: none;
+}
+
+/*
+ * A board of somebody else's that you have kept.
+ *
+ * A statement, not a control — the same register as "View only", which is the
+ * other thing this line says about a board that is not yours.
+ */
+.of-status__history {
+  display: flex;
+  gap: var(--of-space-2);
+}

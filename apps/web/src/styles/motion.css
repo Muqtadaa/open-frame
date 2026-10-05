@@ -1,0 +1,164 @@
+/* ---------- motion ---------- */
+
+/*
+ * The thesis: entries are set down on a page.
+ *
+ * This world is an engineering computation pad where every mark is a record,
+ * so the one authored moment belongs to the surface whose whole job is "here
+ * is what you have written down" — the board ledger, settling in as if inked
+ * a row at a time. Nothing else on the front door moves.
+ *
+ * Everything below that is feedback or continuity: a sheet rises out of the
+ * record line it belongs to rather than appearing over the board, and a copied
+ * link says so where the click landed. There is no scroll choreography, no
+ * hover lift, and nothing that loops.
+ *
+ * `--of-ease` is a confident arrival, not a bounce: a ledger entry does not
+ * overshoot.
+ */
+:root {
+  --of-ease: cubic-bezier(0.16, 1, 0.3, 1);
+  --of-quick: 140ms;
+  --of-settle: 240ms;
+  /* How long an acknowledgement stays where the click landed. */
+  --of-hold: 600ms;
+  /* Between one ledger row and the next as they settle. */
+  --of-stagger: 28ms;
+  /* How long a pointer rests on a control before its tip answers. */
+  --of-dwell: 400ms;
+}
+
+@keyframes of-settle {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+}
+
+/*
+ * Staggered by index, capped in the markup at six. An eleventh row arriving
+ * eleven beats late is a list that feels slow, which is the opposite of what
+ * a stagger is for.
+ */
+.of-home__list li {
+  animation: of-settle var(--of-settle) var(--of-ease) backwards;
+  animation-delay: calc(var(--of-row, 0) * var(--of-stagger));
+}
+
+.of-home__board {
+  transition:
+    background-color var(--of-quick) var(--of-ease),
+    box-shadow var(--of-quick) var(--of-ease);
+}
+
+.of-home__start,
+.of-home__account,
+.of-status__title,
+.of-share__link {
+  transition:
+    background-color var(--of-quick) var(--of-ease),
+    border-color var(--of-quick) var(--of-ease),
+    color var(--of-quick) var(--of-ease);
+}
+
+.of-status__exit,
+.of-status__exit svg {
+  transition:
+    background-color var(--of-quick) var(--of-ease),
+    color var(--of-quick) var(--of-ease),
+    transform var(--of-quick) var(--of-ease);
+}
+
+/*
+ * A sheet comes OUT of the line it belongs to. The origin is the bottom-left
+ * corner because that is where the control that opened it sits — the sheet is
+ * pulled from the apparatus rather than pasted over the board.
+ */
+@keyframes of-raise {
+  from {
+    opacity: 0;
+    transform: translateY(4px) scale(0.985);
+  }
+}
+
+.of-sheet {
+  animation: of-drop var(--of-quick) var(--of-ease) backwards;
+  /* Sheets hang BELOW their control now the bar runs along the top. */
+  transform-origin: top left;
+}
+
+@keyframes of-drop {
+  from {
+    opacity: 0;
+    transform: translateY(-4px) scale(0.985);
+  }
+}
+
+/*
+ * The same idiom, for the two surfaces that come out of something.
+ *
+ * The picker is pulled from the swatch grid that opened it, so it grows from
+ * the edge nearest that grid rather than appearing whole in the margin. The
+ * cell bar is pulled from the table's top edge, which is the thing it is
+ * about. Both are continuity, not decoration: a surface that simply APPEARS
+ * beside a control leaves you finding the relationship yourself.
+ */
+.of-picker {
+  animation: of-raise var(--of-quick) var(--of-ease) backwards;
+  transform-origin: top left;
+}
+
+.of-cellbar {
+  animation: of-raise var(--of-quick) var(--of-ease) backwards;
+  transform-origin: bottom left;
+}
+
+/*
+ * The copy landed. A 600ms wash on the row that was clicked, rather than a
+ * toast: the acknowledgement belongs where the click did, and this is a
+ * control somebody uses twice and then never again in that session.
+ */
+@keyframes of-took {
+  0%,
+  60% {
+    background-color: var(--of-accent-soft);
+  }
+}
+
+.of-share__link[data-copied='yes'] {
+  animation: of-took var(--of-hold) var(--of-ease);
+}
+
+/*
+ * Reduced motion means fewer and gentler, not none: the fades and the colour
+ * still carry the feedback, and only the movement goes. An interface that
+ * stops acknowledging a copied link under this setting has traded an
+ * accessibility preference for a loss of information.
+ */
+@media (prefers-reduced-motion: reduce) {
+  .of-home__list li,
+  .of-sheet,
+  .of-picker,
+  .of-cellbar {
+    animation-name: of-fade;
+  }
+
+  .of-share__link[data-copied='yes'] {
+    animation-duration: calc(var(--of-hold) * 1.5);
+  }
+
+  /*
+   * The exit's arrow stops travelling and the colour change carries the hover
+   * on its own. Reduced motion means fewer and gentler, not none — the control
+   * still answers, it just stops moving to do it.
+   */
+  .of-status__exit:hover svg {
+    transform: none;
+  }
+}
+
+@keyframes of-fade {
+  from {
+    opacity: 0;
+  }
+}

@@ -1,0 +1,17 @@
+* {
+  box-sizing: border-box;
+}
+
+html,
+body,
+#root {
+  height: 100%;
+  margin: 0;
+}
+
+body {
+  font-family: var(--of-font);
+  color: var(--of-ink);
+  background: var(--of-bg);
+  overscroll-behavior: none;
+}

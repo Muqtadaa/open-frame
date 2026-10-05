@@ -2,6 +2,8 @@ import { readFileSync } from 'node:fs'
 import { resolve } from 'node:path'
 import { describe, expect, it } from 'vitest'
 
+import { readStyles } from '../styles/read-styles.js'
+
 /**
  * The two things a piece of apparatus must not get wrong.
  *
@@ -116,7 +118,7 @@ describe('the chrome layer', () => {
  * surface nobody thought to declare.
  */
 describe('nothing places itself', () => {
-  const CSS = read('src/styles.css')
+  const CSS = readStyles()
 
   /**
    * `calc(100% + n)` in an offset means exactly one thing: put me just outside

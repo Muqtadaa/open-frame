@@ -1,0 +1,52 @@
+/* ---------- development instrumentation (stripped from production) ---------- */
+
+.of-dev {
+  display: flex;
+  /*
+   * Gives all but nothing to the name in the bar: development
+   * instrumentation goes before the board's name loses a character.
+   * Shrinking at the same rate, the two split the loss and the name was cut
+   * beside a panel no user ever sees. And it clips rather than pushes.
+   */
+  flex: 0 10000 auto;
+  gap: var(--of-space-4);
+  align-items: center;
+  overflow: hidden;
+  font-size: var(--of-type-record);
+}
+
+.of-dev__label {
+  color: var(--of-ink-muted);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.of-dev__button {
+  padding: 1px var(--of-space-6);
+  font: inherit;
+  color: var(--of-ink-muted);
+  background: var(--of-panel);
+  border: 1px solid var(--of-panel-border);
+  border-radius: var(--of-radius-apparatus);
+  cursor: pointer;
+}
+
+.of-dev__button:hover {
+  color: var(--of-ink);
+  border-color: var(--of-accent);
+}
+
+.of-dev__button--active {
+  color: #fff;
+  background: var(--of-accent);
+  border-color: var(--of-accent);
+}
+
+.of-dev__timing {
+  font-variant-numeric: tabular-nums;
+  color: var(--of-ink);
+}
+
+.of-dev__status {
+  color: var(--of-ink-muted);
+}

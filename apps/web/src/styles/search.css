@@ -1,0 +1,104 @@
+/*
+ * Find on board.
+ *
+ * Top centre, over the canvas: it is summoned, answers, and leaves. Page
+ * apparatus like every other panel — the page's own stock, a hairline and a
+ * contact shadow — never a floating capsule.
+ */
+.of-search {
+  position: absolute;
+  top: var(--of-nav-band);
+  left: 50%;
+  z-index: var(--of-z-search);
+  display: flex;
+  flex-direction: column;
+  width: min(440px, calc(100vw - 32px));
+  overflow: hidden;
+  transform: translateX(-50%);
+}
+
+/*
+ * The box's focus is the PANEL's ring. The input had `outline: none` and
+ * nothing in its place — the one text field in the product with no sign it
+ * had the keyboard. On the panel rather than the input, whose edges are the
+ * panel's own and would draw a ring inside a ring.
+ */
+.of-search:has(.of-search__input:focus-visible) {
+  outline: 2px solid var(--of-accent);
+  outline-offset: 2px;
+}
+
+.of-search__input {
+  width: 100%;
+  padding: var(--of-step) var(--of-space-12);
+  font-family: var(--of-font);
+  font-size: var(--of-type-control);
+  color: var(--of-ink);
+  background: transparent;
+  border: none;
+  outline: none;
+}
+
+.of-search__input::placeholder {
+  /* The placeholder is the grammar, so it is content and holds the 4.5:1 floor. */
+  color: var(--of-ink-muted);
+}
+
+.of-search__count {
+  padding: 0 var(--of-space-12) var(--of-space-8);
+  font-family: var(--of-mono);
+  /* The twelve pixel floor: a readout, like the zoom percentage. */
+  font-size: var(--of-type-record);
+  color: var(--of-ink-muted);
+  letter-spacing: 0.02em;
+}
+
+.of-search__results {
+  max-height: min(50vh, 420px);
+  padding: 0;
+  margin: 0;
+  overflow-y: auto;
+  list-style: none;
+}
+
+.of-search__results:not(:empty) {
+  border-top: 1px solid var(--of-panel-border);
+}
+
+.of-search__result {
+  display: flex;
+  min-height: var(--of-hit-sm);
+  gap: var(--of-step);
+  align-items: baseline;
+  width: 100%;
+  padding: var(--of-space-6) var(--of-space-12);
+  font-family: var(--of-font);
+  font-size: var(--of-type-ui);
+  color: var(--of-ink);
+  text-align: left;
+  background: transparent;
+  border: none;
+  cursor: pointer;
+}
+
+/* The same wash as the menu's: one look for "the one you are about to choose". */
+.of-search__result--on,
+.of-search__result:hover {
+  background: var(--of-accent-soft);
+}
+
+/* Mono marks the record — here, which KIND of thing was found. */
+.of-search__type {
+  flex: none;
+  min-width: 56px;
+  font-family: var(--of-mono);
+  font-size: var(--of-type-record);
+  color: var(--of-ink-muted);
+  letter-spacing: 0.02em;
+}
+
+.of-search__summary {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}

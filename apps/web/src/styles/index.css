@@ -1,0 +1,54 @@
+/*
+ * The stylesheet, in cascade order.
+ *
+ * This list IS the order the rules are applied in, so it is the one thing here
+ * that must not be tidied: several selectors are written in more than one part
+ * (.of-inspector, .of-sheet, .of-canvas, .of-cellbar) and the later one wins.
+ * Joined in this order, the parts are byte for byte the single styles.css they
+ * were cut from.
+ *
+ * motion.css restates selectors from everywhere above it to animate them, so a
+ * part that a motion rule refers to belongs ABOVE it. The three parts after it
+ * were after it in the single file and stay there. A new surface gets its own
+ * part, above motion.css.
+ *
+ * Tests read the parts through read-styles.ts, joined in exactly this order,
+ * so a rule that is not imported here is a rule no test can see either.
+ */
+@import './tokens.css';
+@import './primitives.css';
+@import './base.css';
+@import './shell.css';
+@import './rail.css';
+@import './colour-picker.css';
+@import './zoom.css';
+@import './notices.css';
+@import './table.css';
+@import './chrome-cellbar.css';
+@import './code.css';
+@import './spaces-agents.css';
+@import './timer.css';
+@import './music.css';
+@import './mentions.css';
+@import './comments.css';
+@import './gone.css';
+@import './account.css';
+@import './presence.css';
+@import './canvas.css';
+@import './objects.css';
+@import './dev.css';
+@import './context-menu.css';
+@import './frames.css';
+@import './connectors.css';
+@import './images-guides.css';
+@import './inspector.css';
+@import './trail-connect.css';
+@import './text-format.css';
+@import './search.css';
+@import './home.css';
+@import './sharing.css';
+@import './board-name.css';
+@import './motion.css';
+@import './code-bar-arrange.css';
+@import './reactions-voting-cluster.css';
+@import './selection-apparatus.css';

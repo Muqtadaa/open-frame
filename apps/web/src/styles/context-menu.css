@@ -1,0 +1,93 @@
+/* ---------- context menu ---------- */
+
+.of-menu {
+  min-width: 196px;
+  /*
+   * A menu opened near the foot of a short window, or on an object with every
+   * section to offer, ran off the bottom: its last items were unreachable.
+   * The margin is the one AnchoredSurface places it within, so a menu that
+   * fits is never made to scroll.
+   */
+  max-height: calc(100dvh - 2 * var(--of-space-12));
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  padding: var(--of-space-6);
+}
+
+.of-menu__group + .of-menu__group {
+  margin-top: var(--of-space-4);
+  padding-top: var(--of-space-4);
+  border-top: 1px solid var(--of-panel-border);
+}
+
+/*
+ * Rows at the small target, not the tool target: a menu is read down a
+ * column and pressed once, and at 40px a selection's thirteen entries were
+ * taller than the space under a pointer halfway down a laptop screen — so the
+ * menu was clamped up over the very object it was about.
+ */
+.of-menu__item {
+  display: flex;
+  min-height: var(--of-hit-sm);
+  gap: var(--of-space-16);
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  padding: var(--of-space-4) var(--of-step);
+  font: inherit;
+  font-size: var(--of-type-ui);
+  color: var(--of-ink);
+  text-align: left;
+  background: transparent;
+  border: none;
+  border-radius: var(--of-radius);
+  cursor: pointer;
+}
+
+.of-menu__item:hover:not([aria-disabled='true']) {
+  background: var(--of-accent-soft);
+}
+
+/*
+ * The keyboard's item gets the SAME bed as the pointer's, plus the ring. It
+ * had the ring alone, on a menu whose hover was a wash — so the item somebody
+ * arrowed to looked less chosen than the one a mouse happened to cross.
+ */
+.of-menu__item:focus-visible {
+  background: var(--of-accent-soft);
+}
+
+.of-menu__item[aria-disabled='true'] {
+  opacity: var(--of-disabled);
+  cursor: default;
+}
+
+/*
+ * Shortcuts in the mono DESIGN.md gives every readout, so the column reads as
+ * keys rather than as a second, fainter label.
+ */
+.of-menu__shortcut {
+  font-family: var(--of-mono);
+  font-size: var(--of-type-record);
+  color: var(--of-ink-muted);
+}
+
+.of-menu__more {
+  width: 16px;
+  height: 16px;
+  color: var(--of-ink-muted);
+}
+
+.of-menu__item[aria-expanded='true'] {
+  background: var(--of-accent-soft);
+}
+
+/*
+ * Delete is the one entry that destroys, so it says so the moment it is
+ * aimed at — not at rest, where a red word in every menu would shout.
+ */
+.of-menu__item--danger:hover:not([aria-disabled='true']),
+.of-menu__item--danger:focus-visible {
+  color: var(--of-danger);
+  background: var(--of-danger-wash);
+}
