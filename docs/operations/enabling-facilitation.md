@@ -64,15 +64,22 @@ music button appears only once it lists some. Every track must be **CC0 1.0**.
    `mime: "audio/mpeg"`, `licence: "CC0-1.0"`, `sourceUrl`, and
    `retrievedAt`. `catalogue.test.ts` refuses an entry the browser would
    refuse.
-4. **Upload them** once that PR is merged, from the repo root, with wrangler
-   logged in:
-
-   ```sh
-   pnpm music:upload <folder with the .mp3 files>
-   ```
-
-   It checks every file's size and SHA-256 against its catalogue entry, and
-   uploads nothing if any one of them fails.
+4. **Upload them**, which happens on its own. Merging a change to the
+   catalogue starts the **Upload music** workflow
+   (`.github/workflows/upload-music.yml`). It downloads the release archive
+   the tracks came from (Open Lo-Fi's by default), takes each catalogue track
+   out of it by id, and runs `pnpm music:upload`. That checks every file's
+   size and SHA-256 against its entry and uploads nothing if any one fails.
+   No terminal needed.
+   - It needs the `CLOUDFLARE_API_TOKEN` GitHub secret to be allowed to
+     **edit Workers R2 Storage**, as well as to deploy Workers. If the run
+     fails at the upload, add that permission to the token in the Cloudflare
+     dashboard (My Profile → API Tokens), then re-run it from the Actions
+     tab.
+   - Tracks from somewhere else: Actions → **Upload music** → Run workflow,
+     and give the address of a `.zip` holding them as `<id>.mp3`.
+   - From a terminal instead: `pnpm music:upload <folder>`, with wrangler
+     logged in.
 
 **To check it:** open any board. The music button appears beside the timer.
 Choose a genre, press play, and open the board on a second device: both hear

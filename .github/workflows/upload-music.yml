@@ -1,0 +1,67 @@
+# Puts the music catalogue's tracks into the library bucket (ADR 0017), so
+# nobody needs a terminal to do it.
+#
+# The tracks are fetched from where they were published, never from the repo:
+# audio does not belong in git. Each one is taken from the release archive by
+# its id and handed to `pnpm music:upload`, which refuses the whole batch if
+# any file's size or SHA-256 differs from its catalogue entry. The catalogue,
+# reviewed in a PR, is what decides what reaches the bucket.
+#
+# It uses the same CLOUDFLARE_API_TOKEN as deploy-rooms.yml. That token must
+# be allowed to write R2 (Account → Workers R2 Storage → Edit) as well as to
+# deploy Workers; if it is not, this job fails at the upload and nothing else
+# is affected.
+name: Upload music
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'apps/rooms/src/library/catalogue.json'
+      - '.github/workflows/upload-music.yml'
+  workflow_dispatch:
+    inputs:
+      archive:
+        description: 'A .zip holding the tracks as <id>.mp3'
+        required: true
+        default: 'https://github.com/btahir/open-lofi/releases/latest/download/openlofi.zip'
+
+concurrency:
+  group: upload-music
+  cancel-in-progress: false
+
+jobs:
+  upload:
+    name: Upload the catalogue's tracks
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+
+      - name: Fetch the tracks the catalogue lists
+        env:
+          ARCHIVE: ${{ inputs.archive || 'https://github.com/btahir/open-lofi/releases/latest/download/openlofi.zip' }}
+        run: |
+          set -euo pipefail
+          mkdir -p "$RUNNER_TEMP/tracks"
+          curl -sSfL -o "$RUNNER_TEMP/archive.zip" "$ARCHIVE"
+          for id in $(node -e "for (const t of require('./apps/rooms/src/library/catalogue.json').tracks) console.log(t.id)"); do
+            entry=$(unzip -Z1 "$RUNNER_TEMP/archive.zip" | grep -E "(^|/)${id}\.mp3$" | head -n 1 || true)
+            if [ -z "$entry" ]; then
+              echo "::error::${id}.mp3 is not in the archive"
+              exit 1
+            fi
+            unzip -p "$RUNNER_TEMP/archive.zip" "$entry" > "$RUNNER_TEMP/tracks/${id}.mp3"
+          done
+          ls -l "$RUNNER_TEMP/tracks"
+
+      - name: Check and upload
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ vars.CLOUDFLARE_ACCOUNT_ID }}
+        run: pnpm music:upload "$RUNNER_TEMP/tracks"
