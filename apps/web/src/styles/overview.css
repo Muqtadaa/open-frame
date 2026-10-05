@@ -1,0 +1,88 @@
+/*
+ * The board overview (Alt+S).
+ *
+ * Search's place and stock — top centre, summoned, answers, leaves — because
+ * it is the same kind of surface: a way to reach an object without looking
+ * for it. A tree rather than a list, indented by depth.
+ */
+.of-overview {
+  position: absolute;
+  top: var(--of-nav-band);
+  left: 50%;
+  z-index: var(--of-z-search);
+  display: flex;
+  flex-direction: column;
+  width: min(440px, calc(100vw - 32px));
+  overflow: hidden;
+  transform: translateX(-50%);
+}
+
+.of-overview:has(.of-overview__tree:focus-visible) {
+  outline: 2px solid var(--of-accent);
+  outline-offset: 2px;
+}
+
+.of-overview__title {
+  margin: 0;
+  padding: var(--of-step) var(--of-space-12) 0;
+  font-family: var(--of-font);
+  font-size: var(--of-type-control);
+  font-weight: var(--of-weight-semibold);
+  color: var(--of-ink);
+}
+
+.of-overview__summary {
+  margin: 0;
+  padding: var(--of-space-6) var(--of-space-12) 0;
+  font-family: var(--of-font);
+  font-size: var(--of-type-ui);
+  color: var(--of-ink);
+}
+
+.of-overview__summary:last-child {
+  padding-bottom: var(--of-space-8);
+}
+
+.of-overview__tree {
+  max-height: min(50vh, 420px);
+  padding: 0;
+  margin: 0;
+  overflow-y: auto;
+  list-style: none;
+  border-top: 1px solid var(--of-panel-border);
+  outline: none;
+}
+
+.of-overview__row {
+  display: flex;
+  min-height: var(--of-hit-sm);
+  gap: var(--of-step);
+  align-items: baseline;
+  padding: var(--of-space-6) var(--of-space-12);
+  padding-inline-start: calc(var(--of-space-12) * (1 + var(--of-depth, 0)));
+  font-family: var(--of-font);
+  font-size: var(--of-type-ui);
+  color: var(--of-ink);
+  cursor: pointer;
+}
+
+/* The same wash as search and the menu: the one you are about to choose. */
+.of-overview__row--on,
+.of-overview__row:hover {
+  background: var(--of-accent-soft);
+}
+
+.of-overview__twisty {
+  flex: none;
+  width: var(--of-space-12);
+  color: var(--of-ink-muted);
+}
+
+/* Mono marks the record: how much a frame holds. */
+.of-overview__held {
+  margin-inline-start: auto;
+  font-family: var(--of-mono);
+  font-size: var(--of-type-record);
+  color: var(--of-ink-muted);
+  letter-spacing: 0.02em;
+}

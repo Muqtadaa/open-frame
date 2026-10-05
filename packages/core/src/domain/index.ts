@@ -1,3 +1,4 @@
+export * from './board-outline.js'
 export * from './ids.js'
 export * from './object.js'
 export * from './document.js'

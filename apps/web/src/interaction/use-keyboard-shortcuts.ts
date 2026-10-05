@@ -337,6 +337,10 @@ export function useKeyboardShortcuts(setSpaceHeld: (held: boolean) => void): voi
             store.setSearchOpen(false)
             return
           }
+          if (store.overviewOpen) {
+            store.setOverviewOpen(false)
+            return
+          }
           // An open menu is closed and nothing else: the selection it was
           // about is still what the next action is about.
           if (store.contextMenu !== null) {
@@ -392,6 +396,9 @@ export function useKeyboardShortcuts(setSpaceHeld: (held: boolean) => void): voi
           return
         case 'search':
           store.setSearchOpen(true)
+          return
+        case 'overview':
+          store.setOverviewOpen(true)
           return
         case 'zoom-fit': {
           const next = fitToDocument(runtime.store.getDocument(), runtime.registry, width, height)

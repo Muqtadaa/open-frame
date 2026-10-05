@@ -475,6 +475,8 @@ export interface ChromeSlice {
    * another person's.
    */
   readonly searchOpen: boolean
+  /** Whether the board overview is open (Alt+S). Interaction state, like search. */
+  readonly overviewOpen: boolean
   /**
    * The full emoji library, open for reacting to `targets`, hung from `anchor`
    * (a SCREEN rectangle: the bar's More button, or the selection when it was
@@ -490,6 +492,7 @@ export interface ChromeSlice {
   openContextMenu(at: ContextMenuAt): void
   closeContextMenu(): void
   setSearchOpen(open: boolean): void
+  setOverviewOpen(open: boolean): void
   openReactionPicker(picker: NonNullable<ChromeSlice['reactionPicker']>): void
   closeReactionPicker(): void
   /**
