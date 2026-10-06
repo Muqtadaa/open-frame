@@ -1220,7 +1220,9 @@ The **mentions bell** is a quiet chip at control height — the accent's wash an
 a bold count while unread — and opens a sheet like account and share.
 **Presence** names people, not colours: a tag rides each peer's cursor and
 selection, dashed for selected and solid for editing; the bar shows 24px faces
-side by side, three at most and "+N", initials in page or panel colour.
+side by side, three at most and "+N", initials in page or panel colour. "+N" is
+a button that opens a sheet listing everyone on the board, each person someone
+you can follow. The person you follow is always among the three faces.
 
 ### Search
 
