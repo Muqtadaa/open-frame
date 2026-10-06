@@ -173,7 +173,8 @@ test('starts a round on what one frame holds, and only that', async ({ page }) =
       board.add('frame', { x: 400, y: 320 }, { title: [{ text: 'Ideas' }] })
     }),
   )
-  await page.locator(CANVAS).click({ button: 'right', position: { x: 400, y: 320 } })
+  // By its title: a frame's body is hollow, so a press there reaches the board.
+  await page.getByTestId('frame-title').click({ button: 'right' })
   await page.getByRole('menuitem', { name: 'Start dot voting…' }).click()
   await expect(page.getByTestId('voting-setup').getByRole('heading')).toHaveText(
     'Dot voting · this frame',

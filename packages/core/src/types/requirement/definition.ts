@@ -31,6 +31,7 @@ export const requirementType = defineObjectType<typeof REQUIREMENT_TYPE, Require
     spatial: true,
     canHaveChildren: false,
     selectsAsUnit: false,
+    hollow: false,
     connectable: true,
     markable: true,
     styleProps: ['color', 'textColor', 'font', 'align', 'verticalAlign', 'opacity'],

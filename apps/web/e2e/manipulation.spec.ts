@@ -351,6 +351,55 @@ test.describe('frames', () => {
     expect(Math.round(after.y - inFrame.y)).toBeLessThan(-80)
   })
 
+  /*
+   * A frame is picked up by its title and nothing else. Its body used to be a
+   * target too, so a press that missed a note inside one by a few pixels
+   * dragged the whole frame and everything in it — the commonest accident on
+   * the board. A drag that starts on the body now draws a marquee instead.
+   */
+  test(
+    'a drag inside a frame selects what it encloses and leaves the frame where it is',
+    {
+      tag: '@smoke',
+    },
+    async ({ page }) => {
+      await seed(page, (board) => {
+        const frame = board.add('frame', { x: 700, y: 400 })
+        board.add('sticky', { x: 640, y: 380 }, { text: richFromPlain('Inside') }, undefined, frame)
+      })
+      const frame = viewOf(page, 'frame')
+      const note = page.locator('[data-object-type="sticky"]')
+      const frameBefore = await boxOf(frame)
+      const noteBox = await boxOf(note)
+
+      // From empty frame body above and left of the note, to past its far corner.
+      await drag(
+        page,
+        { x: noteBox.x - 30, y: noteBox.y - 30 },
+        { x: noteBox.x + noteBox.width + 30, y: noteBox.y + noteBox.height + 30 },
+      )
+
+      expect(await boxOf(frame)).toEqual(frameBefore)
+      await expect(note).toHaveAttribute('data-selected', 'true')
+    },
+  )
+
+  /*
+   * The title is the only way to a frame, so it must win over an object whose
+   * bounds lie under it — that note took the press, and the frame could not
+   * be selected at all (Codex, on #81).
+   */
+  test('a frame’s title picks the frame up even over a note beneath it', async ({ page }) => {
+    await seed(page, (board) => {
+      board.note('Under the title', { x: 420, y: 160 })
+      board.add('frame', { x: 700, y: 400 }, { name: richFromPlain('Findings') })
+    })
+    await page.getByTestId('frame-title').click()
+    await page.keyboard.press('Delete')
+    await expect(page.locator('[data-object-type="frame"]')).toHaveCount(0)
+    await expect(page.locator('[data-object-type="sticky"]')).toHaveCount(1)
+  })
+
   test('undo returns a nested note to the board', async ({ page }) => {
     await seed(page, (board) => {
       board.add('frame', { x: 700, y: 400 })
@@ -528,14 +577,16 @@ test.describe('reported regressions', () => {
    * then hid everything inside it for as long as it was selected.
    */
   test('selecting a frame does not hide what is inside it', async ({ page }) => {
+    // Low enough that the frame's title, above it, is clear of the navigation bar.
+    const spot = { x: 500, y: 420 }
     await seed(page, (board) => {
-      board.note('inside', AT)
+      board.note('inside', spot)
     })
 
     // The frame is still PLACED: adopting what it lands on is how the note
     // gets inside it, and a seeded frame adopts nothing.
     await page.keyboard.press('f')
-    await page.locator(CANVAS).click({ position: AT })
+    await page.locator(CANVAS).click({ position: spot })
     await page.locator(EDITOR).fill('Findings')
     await page.locator(CANVAS).click({ position: CLEAR })
     await page.keyboard.press('v')
@@ -544,8 +595,8 @@ test.describe('reported regressions', () => {
     const note = viewOf(page, 'sticky').first()
     await expect(note).toBeVisible()
 
-    // Selecting the frame by its edge, away from the note.
-    await page.locator(CANVAS).click({ position: { x: AT.x - 150, y: AT.y } })
+    // Selecting the frame by its title, the one place it is picked up.
+    await page.getByTestId('frame-title').click()
     await expect(page.getByTestId('selection-overlay')).toBeVisible()
     await expect(note).toBeVisible()
     // Still painted above its container, not behind it.

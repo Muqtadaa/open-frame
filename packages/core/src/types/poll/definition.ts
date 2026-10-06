@@ -32,6 +32,7 @@ export const pollType = defineObjectType<typeof POLL_TYPE, PollData>({
     spatial: true,
     canHaveChildren: false,
     selectsAsUnit: false,
+    hollow: false,
     connectable: true,
     // Answered on the card itself; reactions and dots on top of it would be
     // a second way to say the same thing.

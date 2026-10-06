@@ -64,6 +64,7 @@ export const textType = defineObjectType<typeof TEXT_TYPE, TextData>({
     spatial: true,
     canHaveChildren: false,
     selectsAsUnit: false,
+    hollow: false,
     connectable: true,
     markable: false,
     /*

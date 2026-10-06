@@ -32,6 +32,7 @@ export const experimentType = defineObjectType<typeof EXPERIMENT_TYPE, Experimen
     spatial: true,
     canHaveChildren: false,
     selectsAsUnit: false,
+    hollow: false,
     connectable: true,
     markable: true,
     styleProps: ['color', 'textColor', 'font', 'align', 'verticalAlign', 'opacity'],

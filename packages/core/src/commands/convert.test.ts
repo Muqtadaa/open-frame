@@ -225,6 +225,7 @@ describe('when two types spell a key the same way and mean different things', ()
       spatial: true,
       canHaveChildren: false,
       selectsAsUnit: false,
+      hollow: false,
       connectable: true,
       markable: false,
       styleProps: [],

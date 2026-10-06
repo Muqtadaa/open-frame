@@ -238,6 +238,9 @@ function ObjectViewInner({ id, views }: Props) {
   // Asked of the registry, like containment: a type states whether people
   // can react to it, and nothing here knows which types do.
   const markable = runtime.registry.get(object.type)?.capabilities.markable === true
+  // A body you cannot press, so the DOM agrees with the registry's hit test:
+  // a press inside lands on what is beneath, never on this object.
+  const hollow = runtime.registry.get(object.type)?.capabilities.hollow === true
   /*
    * Your own drag wins over somebody else's.
    *
@@ -255,7 +258,7 @@ function ObjectViewInner({ id, views }: Props) {
     <div
       className={`of-object${lifted ? ' of-object--selected' : ''}${
         selfPositioned ? ' of-object--self-positioned' : ''
-      }${object.locked ? ' of-object--locked' : ''}`}
+      }${object.locked ? ' of-object--locked' : ''}${hollow ? ' of-object--hollow' : ''}`}
       data-object-id={id}
       data-object-type={object.type}
       data-selected={lifted ? 'true' : undefined}

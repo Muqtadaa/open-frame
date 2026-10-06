@@ -32,6 +32,7 @@ export const reactionType = defineObjectType<typeof REACTION_TYPE, ReactionData>
     spatial: false,
     canHaveChildren: false,
     selectsAsUnit: false,
+    hollow: false,
     connectable: false,
     markable: false,
     styleProps: [],

@@ -30,6 +30,7 @@ export const pollAnswerType = defineObjectType<typeof POLL_ANSWER_TYPE, PollAnsw
     spatial: false,
     canHaveChildren: false,
     selectsAsUnit: false,
+    hollow: false,
     connectable: false,
     markable: false,
     styleProps: [],

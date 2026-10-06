@@ -36,6 +36,7 @@ export const evidenceType = defineObjectType<typeof EVIDENCE_TYPE, EvidenceData>
     spatial: true,
     canHaveChildren: false,
     selectsAsUnit: false,
+    hollow: false,
     connectable: true,
     markable: true,
     styleProps: ['color', 'textColor', 'font', 'align', 'verticalAlign', 'opacity'],

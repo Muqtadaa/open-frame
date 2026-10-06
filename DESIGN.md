@@ -1462,6 +1462,12 @@ are spent outside the object, so its face is left for moving it. A grip
 answers the pointer: the accent's wash on hover and the accent while held. A
 handle's cursor turns with the object.
 
+**A frame is held by its title.** Its body passes presses through to the board,
+so working among a frame's contents never picks up the frame: a drag that
+starts on the body draws a marquee, and a right-click there is the board's
+menu. Selecting, moving, renaming and the frame's own menu all start at the
+title.
+
 **Small selections.** Below 48px on screen, in either direction, a selection
 is compact: four corners, drawn just outside it, and nothing else. The rest
 return when there is room.
