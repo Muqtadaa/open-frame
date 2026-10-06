@@ -447,8 +447,15 @@ export class BoardRoomObject extends DurableObject<Env> {
     this.#knownBoardId = stored ?? boardId
   }
 
+  /**
+   * The board's id: as stored, or else the name the Worker reached this room
+   * by. The fallback is for a socket that was open before this was deployed
+   * and is restored from hibernation without ever passing through `fetch` —
+   * its edits still need somewhere to file a version.
+   */
   async #storedBoardId(): Promise<string | null> {
-    this.#knownBoardId ??= (await this.ctx.storage.get<string>(BOARD_ID)) ?? null
+    this.#knownBoardId ??=
+      (await this.ctx.storage.get<string>(BOARD_ID)) ?? this.ctx.id.name ?? null
     return this.#knownBoardId
   }
 

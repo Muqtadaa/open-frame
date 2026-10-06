@@ -73,7 +73,13 @@ class MemoryBucket implements HistoryBucket {
   }
 }
 
-function setup(options: { going?: () => boolean; snapshot?: () => Uint8Array } = {}) {
+function setup(
+  options: {
+    going?: () => boolean
+    snapshot?: () => Uint8Array
+    boardId?: () => string | null
+  } = {},
+) {
   const storage = new MemoryStorage()
   const bucket = new MemoryBucket()
   const clock = { now: T0 }
@@ -81,7 +87,7 @@ function setup(options: { going?: () => boolean; snapshot?: () => Uint8Array } =
   const history = new RoomHistory({
     storage,
     bucket,
-    boardId: () => Promise.resolve(BOARD),
+    boardId: () => Promise.resolve(options.boardId === undefined ? BOARD : options.boardId()),
     snapshot: options.snapshot ?? (() => new Uint8Array([1, 2, 3, seq++])),
     going: () => Promise.resolve(options.going?.() ?? false),
     track: (write) => write,
@@ -270,6 +276,23 @@ describe('RoomHistory', () => {
     await history.alarm()
     expect(await history.list()).toHaveLength(0)
     expect(bucket.objects.size).toBe(0)
+  })
+
+  it('sets no version alarm while it cannot say which board it is', async () => {
+    // A socket restored from hibernation edits before any request named the
+    // board. An alarm due now would fire, file nothing, and come back due.
+    let board: string | null = null
+    const { history, storage, clock } = setup({ boardId: () => board })
+    await history.edited()
+    expect(storage.alarm).toBeNull()
+
+    clock.now = T0 + 5000
+    board = BOARD
+    await history.edited()
+    expect(storage.alarm).toBe(T0 + 5000 + SETTLE_MS)
+    clock.now = T0 + 5000 + SETTLE_MS
+    await history.alarm()
+    expect(await history.list()).toHaveLength(1)
   })
 
   it('reads only versions it has a record of, by a well-formed id', async () => {

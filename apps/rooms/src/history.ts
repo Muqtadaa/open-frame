@@ -288,7 +288,15 @@ export class RoomHistory {
   /** Sets the alarm for whichever comes first: a version, or thinning. */
   async #schedule(state: HistoryState): Promise<void> {
     const now = this.#now()
-    const due = this.#versionDue(state)
+    /*
+     * No version is scheduled while the room cannot say which board it is:
+     * `#take` could not file one, so a due alarm would come straight back
+     * due, and the platform runs a past alarm at once — a loop. The board
+     * stays dirty, and the first edit once the id is known (an editor
+     * joining through `fetch` records it) finds no alarm and sets one.
+     */
+    const known = (await this.#deps.boardId()) !== null
+    const due = known ? this.#versionDue(state) : null
     const records = await this.list()
     const thin = nextThinningAt(records, now, state.lastThinnedAt, ROOM_RETENTION)
     const next = earliest(due, thin)
