@@ -115,3 +115,24 @@ export function objectChromeUnderPointer(target: EventTarget | null): ObjectId |
   const id = target.closest<HTMLElement>('[data-object-id]')?.dataset.objectId
   return id === undefined ? null : (id as ObjectId)
 }
+
+/**
+ * The chrome of a HOLLOW object under the pointer — a frame's title — which
+ * wins over whatever the board's geometry finds there.
+ *
+ * A hollow object can only be reached through its chrome, so asking geometry
+ * first would let a note that happens to lie under a frame's title take the
+ * press, and the frame could then be neither selected, moved, renamed nor
+ * given its menu. Any other object's element is left to geometry, which is
+ * what resolves a member of a group to its group.
+ */
+export function hollowChromeUnderPointer(
+  targets: readonly (EventTarget | null)[],
+  isHollow: (id: ObjectId) => boolean,
+): ObjectId | null {
+  for (const target of targets) {
+    const id = objectChromeUnderPointer(target)
+    if (id !== null && isHollow(id)) return id
+  }
+  return null
+}

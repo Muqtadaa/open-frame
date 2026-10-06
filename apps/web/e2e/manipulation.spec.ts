@@ -384,6 +384,22 @@ test.describe('frames', () => {
     },
   )
 
+  /*
+   * The title is the only way to a frame, so it must win over an object whose
+   * bounds lie under it — that note took the press, and the frame could not
+   * be selected at all (Codex, on #81).
+   */
+  test('a frame’s title picks the frame up even over a note beneath it', async ({ page }) => {
+    await seed(page, (board) => {
+      board.note('Under the title', { x: 420, y: 160 })
+      board.add('frame', { x: 700, y: 400 }, { name: richFromPlain('Findings') })
+    })
+    await page.getByTestId('frame-title').click()
+    await page.keyboard.press('Delete')
+    await expect(page.locator('[data-object-type="frame"]')).toHaveCount(0)
+    await expect(page.locator('[data-object-type="sticky"]')).toHaveCount(1)
+  })
+
   test('undo returns a nested note to the board', async ({ page }) => {
     await seed(page, (board) => {
       board.add('frame', { x: 700, y: 400 })

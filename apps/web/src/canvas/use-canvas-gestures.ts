@@ -3,6 +3,7 @@ import {
   unionAll,
   worldRectToScreen,
   type AnyOpenFrameObject,
+  type ObjectId,
   type Point,
 } from '@openframe/core'
 import {
@@ -42,6 +43,7 @@ import {
   handleUnderPointer,
   isTextEntry,
   lockedAmong,
+  hollowChromeUnderPointer,
   objectChromeUnderPointer,
 } from './gestures/targets.js'
 import { beginTransformDrag } from './gestures/transform.js'
@@ -182,6 +184,15 @@ export function useCanvasGestures(containerRef: RefObject<HTMLElement | null>) {
    */
   const pressedChromeButton = useRef(false)
   const spaceHeld = useRef(false)
+
+  /** Whether an object is picked up only by its chrome — asked of the registry, never of its type. */
+  const isHollow = useCallback(
+    (id: ObjectId): boolean => {
+      const object = runtime.store.getObject(id)
+      return object !== undefined && runtime.registry.get(object.type)?.capabilities.hollow === true
+    },
+    [runtime.registry, runtime.store],
+  )
 
   const toWorld = useCallback(
     (clientX: number, clientY: number): Point => {
@@ -418,7 +429,9 @@ export function useCanvasGestures(containerRef: RefObject<HTMLElement | null>) {
       const worldPoint = toWorld(event.clientX, event.clientY)
       const document = runtime.store.getDocument()
       const hitId =
-        hitTest(document, runtime.registry, worldPoint) ?? objectChromeUnderPointer(event.target)
+        hollowChromeUnderPointer([event.target], isHollow) ??
+        hitTest(document, runtime.registry, worldPoint) ??
+        objectChromeUnderPointer(event.target)
       const intents = decidePointerDown({
         tool: store.tool,
         worldPoint,
@@ -478,7 +491,7 @@ export function useCanvasGestures(containerRef: RefObject<HTMLElement | null>) {
         moved: false,
       }
     },
-    [abandon, applyIntent, beginPinch, canvasPoint, context, runtime, toWorld, views],
+    [abandon, applyIntent, beginPinch, canvasPoint, context, isHollow, runtime, toWorld, views],
   )
 
   const onPointerMove = useCallback(
@@ -596,6 +609,10 @@ export function useCanvasGestures(containerRef: RefObject<HTMLElement | null>) {
        * frame from its title opened nothing.
        */
       const hitId =
+        hollowChromeUnderPointer(
+          [event.target, document.elementFromPoint(event.clientX, event.clientY)],
+          isHollow,
+        ) ??
         hitTestRaw(runtime.store.getDocument(), runtime.registry, worldPoint) ??
         objectChromeUnderPointer(event.target) ??
         objectChromeUnderPointer(document.elementFromPoint(event.clientX, event.clientY))
@@ -623,7 +640,7 @@ export function useCanvasGestures(containerRef: RefObject<HTMLElement | null>) {
 
       for (const intent of decideDoubleClick(hitId)) applyIntent(intent, worldPoint)
     },
-    [applyIntent, runtime.registry, runtime.store, toWorld],
+    [applyIntent, isHollow, runtime.registry, runtime.store, toWorld],
   )
 
   /*
@@ -698,10 +715,12 @@ export function useCanvasGestures(containerRef: RefObject<HTMLElement | null>) {
        * hand this event to the canvas instead of the frame title it was on —
        * and a frame's title is the only place a frame can be pointed at.
        */
+      const under = window.document.elementFromPoint(event.clientX, event.clientY)
       const hit =
+        hollowChromeUnderPointer([event.target, under], isHollow) ??
         hitTest(runtime.store.getDocument(), runtime.registry, worldPoint) ??
         objectChromeUnderPointer(event.target) ??
-        objectChromeUnderPointer(window.document.elementFromPoint(event.clientX, event.clientY))
+        objectChromeUnderPointer(under)
 
       // Right-clicking an unselected object selects it first, so the menu always
       // acts on what the user pointed at.
@@ -717,7 +736,7 @@ export function useCanvasGestures(containerRef: RefObject<HTMLElement | null>) {
         world: worldPoint,
       })
     },
-    [openContextMenuFromKeyboard, runtime.registry, runtime.store, toWorld],
+    [isHollow, openContextMenuFromKeyboard, runtime.registry, runtime.store, toWorld],
   )
 
   const setSpaceHeld = useCallback((held: boolean): void => {
