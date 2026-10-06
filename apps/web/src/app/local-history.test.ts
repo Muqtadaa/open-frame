@@ -95,7 +95,18 @@ function setup(versions = new MemoryVersions()) {
     clock.now = to
     await history.idle()
   }
-  return { history, versions, clock, edit, advance, live: () => timers.some((t) => t.live) }
+  /** Moves the clock and fires due timers WITHOUT waiting for the work they queue. */
+  const tick = (to: number): void => {
+    for (;;) {
+      const next = timers.filter((t) => t.live && t.at <= to).sort((a, b) => a.at - b.at)[0]
+      if (next === undefined) break
+      next.live = false
+      clock.now = next.at
+      next.run()
+    }
+    clock.now = to
+  }
+  return { history, versions, clock, edit, advance, tick, live: () => timers.some((t) => t.live) }
 }
 
 describe('a local board’s history', () => {
@@ -176,6 +187,40 @@ describe('a local board’s history', () => {
       [BOARD, T0 - DAY_MS],
       [gone, T0 - 60 * DAY_MS],
     ])
+  })
+
+  it('never takes a second version straight after one written while an edit arrived', async () => {
+    const versions = new MemoryVersions()
+    const put = versions.put
+    let release: () => void = () => undefined
+    let held = true
+    Object.assign(versions, {
+      put: async (version: LocalVersion) => {
+        if (held) {
+          held = false
+          await new Promise<void>((resolve) => {
+            release = resolve
+          })
+        }
+        return put(version)
+      },
+    })
+    const { history, edit, advance, tick } = setup(versions)
+    await history.idle()
+    edit()
+    // The first version comes due, and its write is held open.
+    tick(T0 + SETTLE_MS)
+    await Promise.resolve()
+    // An edit while it is being written arms a timer on the stale state, and
+    // that timer fires and queues a second take behind the first…
+    edit()
+    tick(T0 + 2 * SETTLE_MS + 1)
+    release()
+    await history.idle()
+    // …which must not produce a second version until the interval allows.
+    expect(versions.rows).toHaveLength(1)
+    await advance(T0 + SETTLE_MS + MAX_INTERVAL_MS)
+    expect(versions.rows).toHaveLength(2)
   })
 
   it('stops for good once disposed', async () => {

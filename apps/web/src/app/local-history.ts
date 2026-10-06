@@ -91,6 +91,19 @@ export function keepLocalHistory(deps: LocalHistoryDeps): LocalHistory {
 
   const take = async (): Promise<void> => {
     if (disposed) return
+    /*
+     * Asked again now that the work has reached the front of the queue. A
+     * timer armed by an edit while the PREVIOUS version was being written saw
+     * that version's stale state and queued this one; taken unconditionally,
+     * it would land straight after it rather than an interval later (Codex,
+     * on #82).
+     */
+    const due = dueAt()
+    if (due === null) return
+    if (due > now()) {
+      arm()
+      return
+    }
     const at = now()
     // Read together and synchronously: an edit after this is one the version missed.
     const seen = edits
