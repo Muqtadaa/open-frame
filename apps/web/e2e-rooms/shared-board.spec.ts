@@ -178,6 +178,27 @@ test('anyone behind the count can be followed, from the list it opens', async ({
   await me.keyboard.press('Escape')
   await expect(sheet).toHaveCount(0)
   await expect(more).toBeFocused()
+
+  /*
+   * The room shrinks to three while the list is open, and then somebody new
+   * arrives: the list stays closed. It used to come back by itself, with
+   * nobody having asked for it (Codex, on #84).
+   */
+  await more.click()
+  await expect(sheet).toBeVisible()
+  // Two people who are not the one being followed leave.
+  const leaving = pages
+    .slice(1)
+    .filter((page) => page !== me)
+    .slice(0, 2)
+  for (const page of leaving) await page.context().close()
+  await expect(more).toHaveCount(0, { timeout: 20_000 })
+  await expect(sheet).toHaveCount(0)
+  pages.push(await join(browser, room))
+  pages.push(await join(browser, room))
+  await expect(more).toBeVisible({ timeout: 20_000 })
+  await expect(more).toHaveAttribute('aria-expanded', 'false')
+  await expect(sheet).toHaveCount(0)
 })
 
 test('undo takes back your own change, not the last one made', async ({ browser }) => {

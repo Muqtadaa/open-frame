@@ -221,6 +221,13 @@ export function ShareControl() {
       : [...here.slice(0, MAX_FACES - 1), followed]
   const hidden = here.filter((person) => !shown.includes(person))
   const moreLabel = `Also here: ${hidden.map((person) => person.name).join(', ')}`
+  /*
+   * The list closes when the count goes — the room shrank to three while it
+   * was open. Left open, it came back by itself the moment somebody else
+   * arrived, with nobody having asked for it (Codex, on #84). Set while
+   * rendering, React's own way to adjust state to what just changed.
+   */
+  if (peopleOpen && hidden.length === 0) setPeopleOpen(false)
 
   /*
    * The chip says which link it hands over, because that is the whole risk of
