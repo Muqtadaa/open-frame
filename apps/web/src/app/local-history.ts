@@ -36,6 +36,12 @@ export interface LocalHistoryDeps {
 }
 
 export interface LocalHistory {
+  /**
+   * Keeps the board as it is now, if anything has changed since its newest
+   * version — asked before a restore, so what is replaced is kept too.
+   * Answers `false` when it could not be kept.
+   */
+  readonly keepNow: () => Promise<boolean>
   /** Resolves once whatever the keeper has started has finished. For tests. */
   readonly idle: () => Promise<void>
   readonly dispose: () => void
@@ -104,6 +110,11 @@ export function keepLocalHistory(deps: LocalHistoryDeps): LocalHistory {
       arm()
       return
     }
+    await write()
+  }
+
+  /** Writes the board as it is now as a version, due or not. */
+  const write = async (): Promise<void> => {
     const at = now()
     // Read together and synchronously: an edit after this is one the version missed.
     const seen = edits
@@ -159,6 +170,18 @@ export function keepLocalHistory(deps: LocalHistoryDeps): LocalHistory {
   })
 
   return {
+    keepNow: () =>
+      new Promise<boolean>((resolve) => {
+        run(async () => {
+          try {
+            if (!disposed && dirtySince !== null) await write()
+            resolve(true)
+          } catch (error) {
+            resolve(false)
+            throw error
+          }
+        })
+      }),
     idle: async () => {
       // Work queued while waiting is waited for too.
       let seen: Promise<void>

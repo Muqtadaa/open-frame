@@ -82,6 +82,7 @@ export default {
       case 'asset':
       case 'versions':
       case 'version':
+      case 'keep-version':
       case 'claim':
       case 'destroy':
       case 'password':

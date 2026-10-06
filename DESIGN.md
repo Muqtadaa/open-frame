@@ -1462,6 +1462,12 @@ are spent outside the object, so its face is left for moving it. A grip
 answers the pointer: the accent's wash on hover and the accent while held. A
 handle's cursor turns with the object.
 
+**An earlier version is a different board, read-only.** Choosing one in History
+puts it on the canvas with a bar in place of the navigation: "Viewing {time}",
+**Restore this version** for an editor, and **Back to now**. There are no tools
+and no rail, because nothing on it can be changed. Escape goes back to the board
+as it is now.
+
 **Small selections.** Below 48px on screen, in either direction, a selection
 is compact: four corners, drawn just outside it, and nothing else. The rest
 return when there is room.

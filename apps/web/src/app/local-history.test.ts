@@ -223,6 +223,16 @@ describe('a local board’s history', () => {
     expect(versions.rows).toHaveLength(2)
   })
 
+  it('keeps the board as it is at once when asked, and only if it changed', async () => {
+    const { history, versions, edit } = setup()
+    await history.idle()
+    expect(await history.keepNow()).toBe(true)
+    expect(versions.rows).toHaveLength(0)
+    edit('Before the restore')
+    expect(await history.keepNow()).toBe(true)
+    expect(versions.rows.map((v) => v.title)).toEqual(['Before the restore'])
+  })
+
   it('stops for good once disposed', async () => {
     const { history, versions, edit, advance } = setup()
     await history.idle()

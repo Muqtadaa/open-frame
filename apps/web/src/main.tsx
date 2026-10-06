@@ -11,6 +11,7 @@ import { COLLAB_ENABLED } from './app/collab-config.js'
 import { healAssets, publishRewrite } from './app/heal-assets.js'
 import { localFacilitation } from './app/facilitation-local.js'
 import { keepLocalHistory } from './app/local-history.js'
+import { boardHistoryFor } from './app/board-history.js'
 import { roomFacilitation } from './app/facilitation-room.js'
 import { holdAssets } from './app/hold-assets.js'
 import { createRuntime } from './app/composition-root.js'
@@ -241,14 +242,21 @@ if (route.kind === 'home') {
    * whose room keeps its history. Lives as long as the page does, like
    * autosave.
    */
-  if (!route.shared && !runtime.readOnly) {
-    keepLocalHistory({
-      boardId: route.boardId,
-      subscribe: (listener) => runtime.dispatcher.subscribe(listener),
-      document: () => runtime.store.getDocument(),
-      versions: indexedDbVersionStore,
-    })
-  }
+  const keeper =
+    !route.shared && !runtime.readOnly
+      ? keepLocalHistory({
+          boardId: route.boardId,
+          subscribe: (listener) => runtime.dispatcher.subscribe(listener),
+          document: () => runtime.store.getDocument(),
+          versions: indexedDbVersionStore,
+        })
+      : null
+  const history = boardHistoryFor({
+    boardId: route.boardId,
+    shared: route.shared,
+    registry: runtime.registry,
+    keeper,
+  })
 
   // Exposed for the E2E suite to assert on persisted state without reaching into
   // React internals. Debug surface only — never a mutation path.
@@ -258,7 +266,9 @@ if (route.kind === 'home') {
     <StrictMode>
       <AppErrorBoundary>
         <ServicesContext.Provider value={services}>
-          <OpenFrameContext.Provider value={{ runtime, views, collaboration, facilitation }}>
+          <OpenFrameContext.Provider
+            value={{ runtime, views, collaboration, facilitation, history }}
+          >
             <App />
           </OpenFrameContext.Provider>
         </ServicesContext.Provider>

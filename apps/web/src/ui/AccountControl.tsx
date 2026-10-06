@@ -1,12 +1,14 @@
-import { useCallback, useRef, useState, type RefObject } from 'react'
+import { useCallback, useContext, useRef, useState, type RefObject } from 'react'
 
 import { SOURCE_URL } from '../app/source-link.js'
 import { AnchoredSurface } from '../controls/AnchoredSurface.js'
 import { useAnchoredTo } from '../controls/use-anchor.js'
 import { useDismiss, useFocusOnOpen } from '../controls/use-dismiss.js'
 import { useIdentity } from '../hooks/use-identity.js'
+import { OpenFrameContext } from '../runtime/context.js'
 import { useServices } from '../runtime/services.js'
 import { AccountForm } from './AccountForm.js'
+import { VersionList } from './VersionHistory.js'
 import { hueVar, initialOf } from '../scene/presence.js'
 import type { Size } from '../scene/anchoring.js'
 
@@ -142,6 +144,7 @@ function SignInSheet({
         data-testid="account-dialog"
       >
         <AccountForm onDone={onClose} />
+        <SheetHistory onChosen={onClose} />
         <SheetSource />
       </div>
     </AnchoredSurface>
@@ -212,9 +215,36 @@ export function AccountSheet({
             Sign out
           </button>
         </div>
+        <SheetHistory onChosen={onClose} />
         <SheetSource />
       </div>
     </AnchoredSurface>
+  )
+}
+
+/**
+ * The board's history, for the width where the bar has no room for its
+ * button. Shown by the stylesheet only there; everywhere else the bar
+ * carries it (`VersionHistory`).
+ */
+function SheetHistory({ onChosen }: { readonly onChosen: () => void }) {
+  // Read without insisting on a board: the account sheet is on the front door too.
+  const history = useContext(OpenFrameContext)?.history
+  const [open, setOpen] = useState(false)
+  if (history === null || history === undefined) return null
+  return (
+    <div className="of-sheet__history">
+      <button
+        type="button"
+        className="of-button of-button--ghost"
+        aria-expanded={open}
+        data-testid="sheet-history"
+        onClick={() => setOpen((was) => !was)}
+      >
+        Version history
+      </button>
+      {open && <VersionList onChosen={onChosen} />}
+    </div>
   )
 }
 

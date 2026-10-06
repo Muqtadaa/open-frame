@@ -12,6 +12,7 @@ import type {
 } from '@openframe/core'
 
 import type { AssetService } from './asset-service.js'
+import type { BoardHistory } from './board-history.js'
 import type { FacilitationChannel } from './facilitation.js'
 import type { ObjectViewRegistry } from '../views/registry.js'
 
@@ -129,6 +130,11 @@ export interface OpenFrameContextValue {
    * the app always provides it.
    */
   readonly facilitation?: FacilitationChannel
+  /**
+   * The board's earlier versions (ADR 0019): its room's, or this browser's.
+   * `null` where there are none to read; absent in a test that has no need.
+   */
+  readonly history?: BoardHistory | null
   readonly views: ObjectViewRegistry
 }
 
