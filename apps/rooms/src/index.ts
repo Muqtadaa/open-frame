@@ -14,7 +14,8 @@ export { AiQuotaObject } from './ai/quota-object.js'
  * The Worker in front of the rooms.
  *
  * It does as little as possible on purpose: find the board, and hand the socket
- * or the request (claim, images, password, unlock, destroy, owner, protection)
+ * or the request (claim, images, versions, password, unlock, destroy, owner,
+ * protection)
  * to that board's Durable Object. Health checks, CORS preflights and unknown
  * paths it answers itself. Everything that matters happens inside the room,
  * and everything about the shared document happens in `@openframe/collab`,
@@ -79,6 +80,8 @@ export default {
         return serveTrack(env.LIBRARY, CATALOGUE, route.trackId, request)
 
       case 'asset':
+      case 'versions':
+      case 'version':
       case 'claim':
       case 'destroy':
       case 'password':

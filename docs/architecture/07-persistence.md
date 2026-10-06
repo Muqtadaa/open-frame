@@ -86,14 +86,15 @@ session, which subscribes to the same command stream (see
 
 ## Where a board lives
 
-A local board lives in one place; a shared board lives in four, and each holds
+A local board lives in one place; a shared board lives in five, and each holds
 something different.
 
 | Where                             | What it holds                                                                                                          | Source                                                   |
 | --------------------------------- | ---------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------- |
 | This browser: `boards` store      | The board document, as the interface reads it. Every board, shared or not.                                             | `adapters/indexeddb/indexeddb-board-repository.ts`       |
 | This browser: `crdt` store        | A shared board's whole `Y.Doc`, one row per board, so a session starts from what it last saw rather than from empty.   | `adapters/indexeddb/crdt-store.ts`                       |
-| The room (Durable Object storage) | The shared `Y.Doc`: a compacted snapshot plus up to 64 loose updates.                                                  | `apps/rooms/src/room-object.ts` (`#persist`, `#compact`) |
+| The room (Durable Object storage) | The shared `Y.Doc`: a compacted snapshot plus up to 64 loose updates. A record for each earlier version.               | `apps/rooms/src/room-object.ts` (`#persist`, `#compact`) |
+| The room's bucket (R2)            | The board's images, and its earlier versions as gzipped snapshots (ADR 0019).                                          | `apps/rooms/src/assets.ts`, `apps/rooms/src/history.ts`  |
 | Supabase                          | Who owns and may open a board, its title and links, workspaces, comments and mentions. **Never the board's contents.** | `supabase/migrations/`                                   |
 
 The room is the copy everyone agrees on. The browser's two stores are what make

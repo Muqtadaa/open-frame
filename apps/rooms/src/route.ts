@@ -34,6 +34,13 @@ const PROTECTION_PATH = /^\/room\/([^/]+)\/protection\/?$/
 const ASSET_PATH = /^\/room\/([^/]+)\/asset\/([A-Za-z0-9_-]{1,64})\/?$/
 
 /**
+ * A board's earlier versions (ADR 0019): the list, and one version's bytes.
+ * The id's shape is checked here for the asset id's reason.
+ */
+const VERSIONS_PATH = /^\/room\/([^/]+)\/versions\/?$/
+const VERSION_PATH = /^\/room\/([^/]+)\/versions\/([0-9]{16}-[0-9a-f]{8})\/?$/
+
+/**
  * The shape of an access key.
  *
  * A key is the whole of a link's authority, so the only thing this check does
@@ -90,6 +97,12 @@ export type Route =
    * a credential in an access log.
    */
   | { readonly kind: 'asset'; readonly boardId: string; readonly assetId: string }
+  /**
+   * The board's versions, and one of them. Reads only, with the credential in
+   * a header as for an image.
+   */
+  | { readonly kind: 'versions'; readonly boardId: string }
+  | { readonly kind: 'version'; readonly boardId: string; readonly versionId: string }
   /**
    * The session music's catalogue, and one of its tracks.
    *
@@ -169,6 +182,21 @@ export function routeRequest(url: URL, upgradeHeader: string | null, method = 'G
       return { kind: 'refuse', status: 405, reason: 'An asset is a GET or a PUT' }
     }
     return { kind: 'asset', boardId, assetId }
+  }
+
+  const versions = VERSIONS_PATH.exec(url.pathname) ?? VERSION_PATH.exec(url.pathname)
+  if (versions !== null) {
+    const boardId = versions[1]
+    if (boardId === undefined || !BOARD_ID.test(boardId)) {
+      return { kind: 'refuse', status: 400, reason: 'That is not a board id' }
+    }
+    if (method === 'OPTIONS') return { kind: 'preflight' }
+    if (method !== 'GET')
+      return { kind: 'refuse', status: 405, reason: 'History is read with a GET' }
+    const versionId = versions[2]
+    return versionId === undefined
+      ? { kind: 'versions', boardId }
+      : { kind: 'version', boardId, versionId }
   }
 
   const match = ROOM_PATH.exec(url.pathname)

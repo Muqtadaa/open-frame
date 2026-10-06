@@ -74,8 +74,11 @@ export default defineConfig({
   webServer: [
     {
       // `--local` is the point: a real workerd with a real SQLite-backed
-      // Durable Object, and no Cloudflare account involved.
-      command: 'pnpm --filter @openframe/rooms exec wrangler dev --port 8787 --local',
+      // Durable Object, and no Cloudflare account involved. History runs on
+      // seconds rather than minutes, so `history.spec.ts` sees a version
+      // without waiting two minutes for editing to settle.
+      command:
+        'pnpm --filter @openframe/rooms exec wrangler dev --port 8787 --local --var HISTORY_TIMING:1000,3000',
       url: `${ROOM_SERVER}/health`,
       reuseExistingServer: !isCI,
       timeout: 120_000,

@@ -16,6 +16,7 @@
     "./types": "./src/types/index.ts",
     "./uploads": "./src/uploads/index.ts",
     "./facilitation": "./src/facilitation/index.ts",
+    "./history": "./src/history/index.ts",
     "./ai": "./src/ai/index.ts",
     "./testing": "./src/testing.ts"
   },

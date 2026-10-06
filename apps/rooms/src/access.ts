@@ -290,3 +290,41 @@ export function protectionDecision(
   if (roleForKey(keys, key) !== null || isOwnerKey(keys, key)) return { ok: true }
   return { ok: false, status: 403, error: 'That link does not open this board' }
 }
+
+export interface ReadRequest {
+  /** What the caller's key entitles them to, or `null` for no valid key. */
+  readonly role: RoomRole | null
+  /** Whether the caller presented the owner key, which skips the password. */
+  readonly owner: boolean
+  /** Whether this board's password has been satisfied for this caller. */
+  readonly unlocked: boolean
+}
+
+export type ReadDecision =
+  { readonly ok: true } | { readonly ok: false; readonly status: 403; readonly reason: string }
+
+/**
+ * Whether a request may READ what a board keeps outside its socket — its
+ * images, and its earlier versions.
+ *
+ * Any valid key, because anyone who can open the board can already see what
+ * is on it; the password over that as a second factor, exactly as over the
+ * socket; and the owner never asked for it. One function for both, so the
+ * pictures on a board and the board's past cannot come to disagree about who
+ * may see them.
+ */
+export function readDecision(request: ReadRequest): ReadDecision {
+  if (request.role === null) {
+    // The same answer for a wrong key and a missing one. Distinguishing them
+    // tells somebody probing which half of the guess to keep.
+    return { ok: false, status: 403, reason: 'That link does not open this board' }
+  }
+  /*
+   * Checked after the link, so a request without a valid key learns nothing
+   * about whether the board is protected — it gets the same 403 either way.
+   */
+  if (!request.owner && !request.unlocked) {
+    return { ok: false, status: 403, reason: 'That link does not open this board' }
+  }
+  return { ok: true }
+}

@@ -227,6 +227,36 @@ describe('one image on a board', () => {
   })
 })
 
+describe('a board’s earlier versions', () => {
+  const at = (path: string, method: string) =>
+    routeRequest(new URL(`https://rooms.example${path}`), null, method)
+  const id = '0001789000000000-00ff00ff'
+
+  it('routes the list and one version', () => {
+    expect(at('/room/brd_1/versions', 'GET')).toEqual({ kind: 'versions', boardId: 'brd_1' })
+    expect(at(`/room/brd_1/versions/${id}`, 'GET')).toEqual({
+      kind: 'version',
+      boardId: 'brd_1',
+      versionId: id,
+    })
+  })
+
+  it('answers the preflight, and refuses anything but a read', () => {
+    expect(at('/room/brd_1/versions', 'OPTIONS')).toEqual({ kind: 'preflight' })
+    expect(at('/room/brd_1/versions', 'POST')).toMatchObject({ kind: 'refuse', status: 405 })
+    expect(at(`/room/brd_1/versions/${id}`, 'PUT')).toMatchObject({ kind: 'refuse', status: 405 })
+  })
+
+  it('refuses an id that is not a version’s, before it reaches a bucket', () => {
+    expect(at('/room/brd_1/versions/0001789000000000-00FF00FF', 'GET')).toMatchObject({
+      kind: 'refuse',
+    })
+    expect(at('/room/brd_1/versions/a%2Fb', 'GET')).toMatchObject({ kind: 'refuse' })
+    expect(at('/room/brd_1/versions/ast_2', 'GET')).toMatchObject({ kind: 'refuse' })
+    expect(at('/room/not a board/versions', 'GET')).toMatchObject({ kind: 'refuse', status: 400 })
+  })
+})
+
 describe('asking whether a board has a password', () => {
   it('is a POST to the board’s protection path', () => {
     expect(routeRequest(new URL('https://r.dev/room/brd_one/protection'), null, 'POST')).toEqual({

@@ -1,6 +1,8 @@
 import type { RoomRole } from '@openframe/collab'
 import { isAllowedImageType, MAX_IMAGE_BYTES, validateImage } from '@openframe/core/uploads'
 
+import { readDecision } from './access.js'
+
 /**
  * Who may read and write a board's images, decided without touching storage,
  * R2 or a runtime.
@@ -63,19 +65,8 @@ export function assetDecision(request: AssetRequest): AssetDecision {
     return { ok: false, status: 405, reason: 'An asset is a GET or a PUT' }
   }
 
-  if (request.role === null) {
-    // The same answer for a wrong key and a missing one. Distinguishing them
-    // tells somebody probing which half of the guess to keep.
-    return { ok: false, status: 403, reason: 'That link does not open this board' }
-  }
-
-  /*
-   * Checked after the link, so a request without a valid key learns nothing
-   * about whether the board is protected — it gets the same 403 either way.
-   */
-  if (!request.owner && !request.unlocked) {
-    return { ok: false, status: 403, reason: 'That link does not open this board' }
-  }
+  const read = readDecision(request)
+  if (!read.ok) return read
 
   if (!writing) return { ok: true, write: false }
 
