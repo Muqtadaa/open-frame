@@ -13,7 +13,7 @@
  * at any earlier version, including one that does not exist yet.
  */
 const DB_NAME = 'openframe'
-export const DB_VERSION = 3
+export const DB_VERSION = 4
 
 export const STORES = {
   boards: 'boards',
@@ -23,6 +23,12 @@ export const STORES = {
    * an empty `Y.Doc` — see `crdt-store.ts` for what that cost.
    */
   crdt: 'crdt',
+  /**
+   * A local board's earlier versions (ADR 0019), one row each, keyed so that a
+   * board's versions — and what kind each is — can be listed from the keys
+   * alone, without reading a single board back.
+   */
+  versions: 'versions',
 } as const
 
 let connection: Promise<IDBDatabase> | undefined

@@ -12,6 +12,8 @@ export interface LifecycleDeps {
   readonly remoteBoards: RemoteBoardService
   /** Drops a board's stored collaborative history from this browser. */
   readonly forgetCrdt: (boardId: BoardId) => Promise<void>
+  /** Drops a board's earlier versions from this browser (ADR 0019). */
+  readonly forgetVersions: (boardId: BoardId) => Promise<void>
   /** Renames the board where it really lives: in its room, as a peer would. */
   readonly renameInRoom: (boardId: BoardId, key: string | null, title: string) => Promise<boolean>
 }
@@ -143,6 +145,7 @@ export async function deleteBoardEverywhere(
   // The CRDT too, or a deleted board leaves its whole history behind and the
   // next board to reuse the id would inherit it.
   await deps.forgetCrdt(board.boardId)
+  await deps.forgetVersions(board.boardId)
   forgetLocalPrefs(board.boardId)
 
   return { ok: true }
@@ -159,6 +162,7 @@ export async function leaveBoard(deps: LifecycleDeps, boardId: BoardId): Promise
     // As above: a local copy left behind is untidy, not damaging.
   }
   await deps.forgetCrdt(boardId)
+  await deps.forgetVersions(boardId)
   forgetLocalPrefs(boardId)
   return { ok: true }
 }
@@ -182,7 +186,7 @@ export async function leaveBoard(deps: LifecycleDeps, boardId: BoardId): Promise
  * tidying failed would be worse.
  */
 export async function forgetDeletedBoard(
-  deps: Pick<LifecycleDeps, 'repository' | 'forgetCrdt'>,
+  deps: Pick<LifecycleDeps, 'repository' | 'forgetCrdt' | 'forgetVersions'>,
   boardId: BoardId,
 ): Promise<void> {
   try {
@@ -191,6 +195,7 @@ export async function forgetDeletedBoard(
     // As elsewhere: a local copy left behind is untidy, not damaging.
   }
   await deps.forgetCrdt(boardId)
+  await deps.forgetVersions(boardId)
   forgetLocalPrefs(boardId)
 }
 

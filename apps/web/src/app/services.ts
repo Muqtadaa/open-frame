@@ -1,6 +1,7 @@
 import type { BoardId, BoardRepository } from '@openframe/core'
 
 import { forgetCrdt } from '../adapters/indexeddb/crdt-store.js'
+import { indexedDbVersionStore } from '../adapters/indexeddb/version-store.js'
 import { createAiClient } from '../adapters/room/ai-client.js'
 import { createMusicClient } from '../adapters/room/music-client.js'
 import { createRoomClient } from '../adapters/room/room-client.js'
@@ -102,6 +103,7 @@ export function createServices(options: {
     rooms,
     remoteBoards,
     forgetCrdt,
+    forgetVersions: indexedDbVersionStore.forget,
     // Loaded only when needed, like the rest of collaboration: the list must
     // not pay for Yjs to render.
     renameInRoom: async (boardId: BoardId, key: string | null, title: string) =>

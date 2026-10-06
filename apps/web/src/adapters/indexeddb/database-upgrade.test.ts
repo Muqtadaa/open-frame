@@ -30,7 +30,7 @@ function createVersion1Database(): Promise<void> {
  * not against a fresh one where the upgrade path is trivially empty.
  *
  * `assets` came with images; `crdt` came with local CRDT persistence on
- * 2026-09-19. The assertion names EVERY store rather than the newest one, so
+ * 2026-09-19; `versions` with version history on 2026-10-06. The assertion names EVERY store rather than the newest one, so
  * the next bump fails here until somebody has looked at it — which is how this
  * one was caught.
  */
@@ -41,7 +41,7 @@ describe('database upgrade from v1', () => {
     const db = await openDatabase()
 
     expect([...db.objectStoreNames].sort()).toEqual(
-      [STORES.assets, STORES.boards, STORES.crdt].sort(),
+      [STORES.assets, STORES.boards, STORES.crdt, STORES.versions].sort(),
     )
     /*
      * The DECLARED version, not one derived from the store count. Those line

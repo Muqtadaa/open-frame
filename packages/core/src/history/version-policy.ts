@@ -41,6 +41,20 @@ export const VERSION_TIMING: VersionTiming = { settleMs: SETTLE_MS, intervalMs: 
 
 export type VersionKind = 'auto' | 'named'
 
+/**
+ * A version's id: the time it was taken, zero-padded so ids sort as times do,
+ * and a random tail so two taken in the same millisecond do not collide. The
+ * same shape in the room and in the browser, so one panel lists both.
+ */
+export const VERSION_ID = /^[0-9]{16}-[0-9a-f]{8}$/
+
+export function versionId(at: number, random: () => number = Math.random): string {
+  const tail = Math.floor(random() * 0x1_0000_0000)
+    .toString(16)
+    .padStart(8, '0')
+  return `${String(at).padStart(16, '0')}-${tail}`
+}
+
 /** What thinning needs to know about a version — the rest is the store's. */
 export interface VersionEntry {
   readonly id: string
