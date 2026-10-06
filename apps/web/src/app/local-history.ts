@@ -62,6 +62,13 @@ export function keepLocalHistory(deps: LocalHistoryDeps): LocalHistory {
   let lastVersionAt: number | null = null
   /** Counts edits, so a version taken while one arrives knows it missed it. */
   let edits = 0
+  /**
+   * Whether THIS session has written a version of the board as it now is.
+   * Until it has, nothing says the newest stored version matches what is on
+   * screen: an edit made last time, after the last version and before the tab
+   * closed, is autosaved but in no version.
+   */
+  let versionedHere = false
   let cancel: (() => void) | null = null
   let disposed = false
   /** Everything started, in order: a version is never written before the thinning ahead of it. */
@@ -129,6 +136,7 @@ export function keepLocalHistory(deps: LocalHistoryDeps): LocalHistory {
     })
     lastVersionAt = at
     dirtySince = edits === seen ? null : (lastEditAt ?? at)
+    versionedHere = true
     await thin()
     arm()
   }
@@ -174,7 +182,13 @@ export function keepLocalHistory(deps: LocalHistoryDeps): LocalHistory {
       new Promise<boolean>((resolve) => {
         run(async () => {
           try {
-            if (!disposed && dirtySince !== null) await write()
+            /*
+             * Skipped only when this session knows the board is already a
+             * version. On a board just reopened it cannot know that — edits
+             * from last time may be in no version — so it keeps one rather
+             * than let a restore replace them unkept (Codex, on #83).
+             */
+            if (!disposed && (dirtySince !== null || !versionedHere)) await write()
             resolve(true)
           } catch (error) {
             resolve(false)
