@@ -24,6 +24,7 @@ export {
   OBJECTS,
   ROOM,
 } from './document-map.js'
+export { boardFromUpdate, type DecodedVersion } from './version.js'
 export { metaPatchesFromEvent, parentageCandidates, patchesFromEvent } from './remote-patches.js'
 export {
   createAwareness,

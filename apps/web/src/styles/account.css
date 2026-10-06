@@ -62,6 +62,11 @@
  * The source offer, repeated in the account and sign-in sheets for the one
  * width where the bar has no room for it. Hidden everywhere else.
  */
+.of-sheet__history {
+  display: none;
+  margin-top: var(--of-space-12);
+}
+
 .of-sheet__source {
   display: none;
   margin-top: var(--of-space-12);
@@ -220,6 +225,21 @@
 
   .of-status__rule {
     display: none;
+  }
+}
+
+/*
+ * Version history moves into the account sheet, as the source link does
+ * below 820: with its button, a shared board's bar ran out of room at 560
+ * and at 390.
+ */
+@media (width < 600px) {
+  .of-status__versions {
+    display: none;
+  }
+
+  .of-sheet__history {
+    display: block;
   }
 }
 

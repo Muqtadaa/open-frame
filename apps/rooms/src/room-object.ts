@@ -16,6 +16,7 @@ import {
   unlockDecision,
   protectionDecision,
   readDecision,
+  keepVersionDecision,
   mintKey,
   mintKeys,
   roleForKey,
@@ -397,11 +398,27 @@ export class BoardRoomObject extends DurableObject<Env> {
   async #versions(request: Request, url: URL): Promise<Response> {
     const keys = await this.ctx.storage.get<AccessKeys>(KEYS)
     const verifier = await this.ctx.storage.get<PasswordVerifier>(PASSWORD)
-    const decision = readDecision({
+    const caller = {
       role: roleForKey(keys, request.headers.get('x-openframe-key')),
       owner: isOwnerKey(keys, request.headers.get('x-openframe-owner')),
       unlocked: tokenAdmits(verifier, request.headers.get('x-openframe-token')),
-    })
+    }
+
+    /*
+     * The one write: an editor's client keeping the board as it is now, just
+     * before it restores an older version, so what is replaced is kept too.
+     * The restore itself is an ordinary edit through the socket.
+     */
+    if (request.method === 'POST') {
+      const keep = keepVersionDecision(caller)
+      if (!keep.ok) return new Response(keep.reason, { status: keep.status, headers: CORS })
+      const kept = await this.#history.keepNow()
+      return kept
+        ? Response.json({ kept: true }, { headers: CORS })
+        : Response.json({ kept: false }, { status: 503, headers: CORS })
+    }
+
+    const decision = readDecision(caller)
     if (!decision.ok) {
       return new Response(decision.reason, { status: decision.status, headers: CORS })
     }

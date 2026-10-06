@@ -130,3 +130,9 @@ export async function renameInRoom(
     }, 250)
   }
 }
+
+/**
+ * Opens one of a room's earlier versions (ADR 0019). Here because decoding it
+ * is Yjs, and this module is what a shared board already loads lazily for Yjs.
+ */
+export { boardFromUpdate as decodeVersion } from '@openframe/collab'

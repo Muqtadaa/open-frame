@@ -175,6 +175,25 @@ export class RoomHistory {
     await this.#schedule(state)
   }
 
+  /**
+   * Keeps the board as it is now, if anything has changed since the last
+   * version — what an editor's client asks for just before it restores an
+   * older one, so the state being replaced is kept too (ADR 0019). A board
+   * with nothing unversioned already has this state as its newest version.
+   *
+   * Answers whether the state is now kept. A failure to write throws, and the
+   * caller must not go on to restore.
+   */
+  async keepNow(): Promise<boolean> {
+    if (await this.#deps.going()) return false
+    const state = await this.#state()
+    if (state.dirtySince === null) return true
+    if ((await this.#deps.boardId()) === null) return false
+    const next = await this.#take('auto', this.#now(), state)
+    await this.#schedule(next)
+    return next.lastVersionAt !== state.lastVersionAt
+  }
+
   /** Every version this board has, newest first. */
   async list(): Promise<VersionRecord[]> {
     const records = await this.#deps.storage.list<VersionRecord>({ prefix: VERSION_PREFIX })

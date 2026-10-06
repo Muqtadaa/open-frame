@@ -103,6 +103,8 @@ export type Route =
    */
   | { readonly kind: 'versions'; readonly boardId: string }
   | { readonly kind: 'version'; readonly boardId: string; readonly versionId: string }
+  /** Keep the board as it is now, before a restore. Editors only; credentials in headers, as for a read. */
+  | { readonly kind: 'keep-version'; readonly boardId: string }
   /**
    * The session music's catalogue, and one of its tracks.
    *
@@ -191,9 +193,12 @@ export function routeRequest(url: URL, upgradeHeader: string | null, method = 'G
       return { kind: 'refuse', status: 400, reason: 'That is not a board id' }
     }
     if (method === 'OPTIONS') return { kind: 'preflight' }
-    if (method !== 'GET')
-      return { kind: 'refuse', status: 405, reason: 'History is read with a GET' }
     const versionId = versions[2]
+    // The one write: keep the board as it is now, before a restore.
+    if (method === 'POST' && versionId === undefined) return { kind: 'keep-version', boardId }
+    if (method !== 'GET') {
+      return { kind: 'refuse', status: 405, reason: 'History is read with a GET' }
+    }
     return versionId === undefined
       ? { kind: 'versions', boardId }
       : { kind: 'version', boardId, versionId }
