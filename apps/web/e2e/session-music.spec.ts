@@ -2,6 +2,7 @@ import type { Page } from '@playwright/test'
 
 import { expect, test } from './fixtures.js'
 import { library, TRACKS } from './music.js'
+import { BOARD_URL } from './routes.js'
 
 /**
  * Session music (ADR 0017): one playlist, at the same place on every device.
@@ -76,4 +77,175 @@ test('opens and closes from the keyboard, and hands focus back', async ({ page }
   await page.keyboard.press('Escape')
   await expect(sheet(page)).toHaveCount(0)
   await expect(button(page)).toBeFocused()
+})
+
+/*
+ * Somebody else started the music. On a local board that is a record already
+ * in this browser's storage when the board opens — exactly what a peer's Play
+ * looks like to a device that has not pressed anything yet.
+ */
+async function startedByAda(page: Page): Promise<void> {
+  await library(page, TRACKS)
+  await page.evaluate(() => {
+    const now = Date.now()
+    window.localStorage.setItem(
+      'openframe:music:board_local',
+      JSON.stringify({
+        v: 1,
+        genre: 'jazzhop',
+        status: 'playing',
+        anchor: now,
+        pausedAtMs: 0,
+        playlist: [{ id: 'jazzy-1', durationMs: 120_000 }],
+        run: 1,
+        by: 'Ada',
+        startedBy: 'Ada',
+        at: now,
+      }),
+    )
+  })
+  await page.reload()
+  await page.waitForSelector('[data-testid="status-bar"]')
+}
+
+const prompt = (page: Page) => page.getByTestId('music-prompt')
+
+test('says who started the music, and lets this device in with one press', async ({ page }) => {
+  await startedByAda(page)
+  await expect(prompt(page)).toHaveText('Ada started the music')
+  await expect(button(page)).toHaveAttribute('data-state', 'unheard')
+  // It asks; it does not take the keyboard from whatever had it.
+  await expect(page.getByTestId('music-prompt-listen')).not.toBeFocused()
+
+  const fetched = page.waitForRequest('**/music/track/jazzy-1')
+  await page.getByTestId('music-prompt-listen').click()
+  await fetched
+  await expect(prompt(page)).toHaveCount(0)
+  await expect(button(page)).toHaveAttribute('data-state', 'playing')
+})
+
+test('waved away, the prompt goes and the button still says so', async ({ page }) => {
+  await startedByAda(page)
+  await page.getByTestId('music-prompt-dismiss').click()
+  await expect(prompt(page)).toHaveCount(0)
+  await expect(button(page)).toHaveAttribute('data-state', 'unheard')
+  await expect(button(page)).toHaveAccessibleName('Music, Jazz lounge, playing, not playing here')
+})
+
+test('once this browser has said yes, the next press anywhere lets the music in', async ({
+  page,
+  context,
+}) => {
+  await startedByAda(page)
+  await page.getByTestId('music-prompt-listen').click()
+  await expect(button(page)).toHaveAttribute('data-state', 'playing')
+  // Chromium: the remembered yes needs no further press at all.
+  const opened = await context.newPage()
+  await library(opened, TRACKS)
+  await opened.goto(BOARD_URL)
+  await expect(button(opened)).toHaveAttribute('data-state', 'playing')
+  await expect(prompt(opened)).toHaveCount(0)
+
+  /*
+   * A page nobody has pressed yet waits for a press, anywhere. Chromium counts
+   * opening a page as one, so there it joins at once; Safari does not, and
+   * this tab is made to answer as Safari would.
+   */
+  const tab = await context.newPage()
+  await tab.addInitScript(() => {
+    Object.defineProperty(navigator, 'userActivation', {
+      value: { hasBeenActive: false, isActive: false },
+    })
+  })
+  await library(tab, TRACKS)
+  await tab.goto(BOARD_URL)
+  await tab.waitForSelector('[data-testid="status-bar"]')
+  await expect(button(tab)).toHaveAttribute('data-state', 'unheard')
+  const fetched = tab.waitForRequest('**/music/track/jazzy-1')
+  await tab.getByTestId('canvas').click({ position: { x: 400, y: 300 } })
+  await fetched
+  await expect(button(tab)).toHaveAttribute('data-state', 'playing')
+  await expect(prompt(tab)).toHaveCount(0)
+})
+
+test('a browser that has not said yes waits for the prompt, whatever else is pressed', async ({
+  page,
+}) => {
+  await startedByAda(page)
+  await expect(prompt(page)).toBeVisible()
+  await page.getByTestId('canvas').click({ position: { x: 400, y: 300 } })
+  await expect(button(page)).toHaveAttribute('data-state', 'unheard')
+  await expect(prompt(page)).toBeVisible()
+})
+
+test('moves to the next track and back, within the genre', async ({ page }) => {
+  await withLibrary(page, [
+    { id: 'jazzy-1', genre: 'jazzhop', title: 'Late Set' },
+    { id: 'jazzy-2', genre: 'jazzhop', title: 'Encore' },
+  ])
+  await button(page).click()
+  await page.getByTestId('music-play').click()
+  await expect(page.getByTestId('music-now')).toContainText('Late Set')
+
+  const next = page.waitForRequest('**/music/track/jazzy-2')
+  await page.getByRole('button', { name: 'Next track' }).click()
+  await next
+  await expect(page.getByTestId('music-now')).toContainText('Encore')
+  await expect(page.getByTestId('music-elapsed')).toHaveText(/^0:0\d \/ 2:00$/)
+  await expect(button(page)).toHaveAttribute('data-state', 'playing')
+
+  await page.getByRole('button', { name: 'Previous track' }).click()
+  await expect(page.getByTestId('music-now')).toContainText('Late Set')
+
+  // Paused, it moves too, and stays paused at the top of the track.
+  await page.getByTestId('music-pause').click()
+  await page.getByRole('button', { name: 'Next track' }).click()
+  await expect(page.getByTestId('music-now')).toContainText('Encore')
+  await expect(page.getByTestId('music-elapsed')).toHaveText('0:00 / 2:00')
+  await expect(button(page)).toHaveAttribute('data-state', 'paused')
+})
+
+/*
+ * Managing somebody else's music is not asking to hear it: only Listen, Play
+ * and Resume are, so only they are remembered (Codex, on #87).
+ */
+test('stopping music this device was not hearing says no yes', async ({ page }) => {
+  await startedByAda(page)
+  await button(page).click()
+  await page.getByRole('button', { name: 'Next track' }).click()
+  await page.getByTestId('music-pause').click()
+  await page.getByTestId('music-stop').click()
+  expect(await page.evaluate(() => window.localStorage.getItem('openframe:music-join'))).toBeNull()
+})
+
+/*
+ * A browser that refuses the sound after all — an autoplay policy — is asked
+ * once and then left to the prompt: no retrying, over and over, behind it
+ * (Codex, on #87).
+ */
+test('a refused automatic join waits for a press instead of retrying', async ({ page }) => {
+  await page.addInitScript(() => {
+    window.localStorage.setItem('openframe:music-join', 'true')
+    const plays = { count: 0 }
+    Object.assign(window, { plays })
+    HTMLMediaElement.prototype.play = function play() {
+      plays.count += 1
+      return Promise.reject(new DOMException('refused', 'NotAllowedError'))
+    }
+  })
+  await startedByAda(page)
+  await expect(prompt(page)).toHaveText('Ada started the music')
+  // Long enough for a loop to show itself: several follow ticks.
+  await expect(button(page)).toHaveAttribute('data-state', 'unheard')
+  await page.waitForFunction(() => document.readyState === 'complete')
+  const settle = await page.evaluate(
+    () =>
+      new Promise<number>((resolve) => {
+        setTimeout(() => {
+          resolve((window as unknown as { plays: { count: number } }).plays.count)
+        }, 3000)
+      }),
+  )
+  expect(settle).toBeLessThanOrEqual(1)
+  await expect(prompt(page)).toBeVisible()
 })

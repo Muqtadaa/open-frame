@@ -217,6 +217,31 @@ for (const world of WORLDS) {
       await snap(page, `${world}-session-music`)
     })
 
+    // Somebody else started the music: the prompt under the bar's music button.
+    test('the listen prompt', async ({ page }) => {
+      await library(page, TRACKS)
+      await page.addInitScript(() => {
+        window.localStorage.setItem(
+          'openframe:music:board_local',
+          JSON.stringify({
+            v: 1,
+            genre: 'jazzhop',
+            status: 'playing',
+            anchor: Date.now(),
+            pausedAtMs: 0,
+            playlist: [{ id: 'jazzy-1', durationMs: 120_000 }],
+            run: 1,
+            by: 'Ada',
+            startedBy: 'Ada',
+            at: Date.now(),
+          }),
+        )
+      })
+      await openLocalBoard(page)
+      await expect(page.getByTestId('music-prompt')).toHaveText('Ada started the music')
+      await snap(page, `${world}-listen-prompt`)
+    })
+
     // A poll with its results showing: one option picked here, one by someone else.
     test('a poll', async ({ page }) => {
       await page.addInitScript(() => {

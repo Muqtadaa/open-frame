@@ -995,9 +995,18 @@ Its sheet holds the genres that have tracks, as a row of pressed toggles —
 the one playing in the accent's wash — then what is playing: title, artist,
 "CC0", and the time into the track in mono. An editor gets Play, or Pause, and
 Stop. Everybody gets this device's sound: Mute and a volume slider, kept in
-this browser and never sent to anyone. Somebody who did not start the music
-gets "Listen here" first — the one press a browser needs before it will make a
-sound. A viewer gets everything but the editor's buttons, and no button on the
+this browser and never sent to anyone. An editor also gets the track before
+and the next one, either side of Play — the playlist wraps, and "previous" more
+than three seconds into a track starts it again, as every player does.
+
+A browser makes no sound until somebody on that device presses something, so
+music somebody else starts is OFFERED rather than waited for: a notice under
+the music button, "Ada started the music", with Listen and a dismiss. It never
+takes focus, and it is announced once. Waved away, the button keeps saying so
+— the accent edge and a dot, "not playing here" in its name — and the sheet
+keeps "Listen here". Once somebody in a browser has said yes, later music
+joins on its own, or on their next press anywhere where the browser insists on
+one. A viewer gets everything but the editor's buttons, and no button on the
 bar until there is music to hear.
 
 ### Poll Card

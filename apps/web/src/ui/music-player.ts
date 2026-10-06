@@ -17,6 +17,9 @@ export function shouldSeek(currentSeconds: number, targetMs: number): boolean {
   return Math.abs(currentSeconds * 1000 - targetMs) >= DRIFT_MS
 }
 
+/** How long a resumed audio context has to start running before it counts as refused. */
+const RESUME_GRACE_MS = 1000
+
 export interface Listening {
   readonly muted: boolean
   /** 0 to 1. */
@@ -63,8 +66,15 @@ export class MusicPlayer {
   #trackId: string | null = null
   #listening: Listening = DEFAULT_LISTENING
   #joined = false
+  readonly #refused: () => void
 
-  constructor() {
+  /**
+   * `refused` is told when the browser will not make a sound after all — a
+   * join that was not made from a press it accepts. This device then stops
+   * claiming to listen, and the prompt comes back.
+   */
+  constructor(refused: () => void = () => undefined) {
+    this.#refused = refused
     this.#audio = new Audio()
     // The tracks come from the room server's origin; Web Audio may only read
     // a cross-origin stream that was fetched with CORS.
@@ -91,7 +101,15 @@ export class MusicPlayer {
         this.#context.createMediaElementSource(this.#audio).connect(this.#gain)
         this.#gain.connect(this.#context.destination)
       }
-      if (this.#context.state === 'suspended') void this.#context.resume()
+      if (this.#context.state === 'suspended') {
+        const context = this.#context
+        // A resume the browser will not allow either rejects or never
+        // settles, so the answer is read off the context a moment later.
+        void context.resume().catch(() => undefined)
+        setTimeout(() => {
+          if (this.#joined && context.state === 'suspended') this.#refuse()
+        }, RESUME_GRACE_MS)
+      }
     } catch {
       this.#context = null
       this.#gain = null
@@ -122,12 +140,20 @@ export class MusicPlayer {
       this.#seek(cue.offsetMs)
     }
     if (cue.playing && this.#audio.paused) {
-      void this.#audio.play().catch(() => {
-        // Refused until a press; the sheet offers one.
+      void this.#audio.play().catch((error: unknown) => {
+        // Refused until a press; the prompt offers one. Anything else — an
+        // abort because the next track replaced this one — is not a refusal.
+        if (error instanceof DOMException && error.name === 'NotAllowedError') this.#refuse()
       })
     } else if (!cue.playing && !this.#audio.paused) {
       this.#audio.pause()
     }
+  }
+
+  #refuse(): void {
+    this.#joined = false
+    this.#audio.pause()
+    this.#refused()
   }
 
   destroy(): void {
