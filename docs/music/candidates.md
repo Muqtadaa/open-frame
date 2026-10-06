@@ -14,10 +14,11 @@ tracks are AI-generated (Suno v5), a fact this page flagged before they were
 chosen. Each track's `id` is Open Lo-Fi's own filename, so a file downloaded
 from there already has the name `pnpm music:upload` looks for.
 
-| Pass | Tracks                                                                                                                                                |
-| ---- | ----------------------------------------------------------------------------------------------------------------------------------------------------- |
-| 1    | Cafe Da Tarde (bossa nova), Continue Screen Dreams (synthwave), Block Party Slow Jam (jazzy), After School Rain (calm), Blue Below the Surface (calm) |
-| 2    | Sunset Offbeat (electronic), Cassette Pastel Nights (synthwave), VHS Heartbeat (synthwave), Summer Curbside Glow (jazzy), Fireplace Loop (calm)       |
+| Pass | Tracks                                                                                                                                                                                                                                      |
+| ---- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 1    | Cafe Da Tarde (bossa nova), Continue Screen Dreams (synthwave), Block Party Slow Jam (jazzy), After School Rain (calm), Blue Below the Surface (calm)                                                                                       |
+| 2    | Sunset Offbeat (electronic), Cassette Pastel Nights (synthwave), VHS Heartbeat (synthwave), Summer Curbside Glow (jazzy), Fireplace Loop (calm)                                                                                             |
+| 3    | Dusk on Red Earth (electronic), Burnt Sunset Groove (jazzy), Picnic Polaroids (jazzy), Watercolors By the Window (jazzy), Palm Breeze Nap (bossa nova), Bloom Between Showers (calm), Moon Through Bamboo (calm), Teacup Morning Fog (calm) |
 
 Every genre now has at least one track. A genre with none would simply not be offered.
 
