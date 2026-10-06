@@ -194,6 +194,39 @@ export class RoomHistory {
     return next.lastVersionAt !== state.lastVersionAt
   }
 
+  /**
+   * Keeps the board as it is now as a NAMED version, which retention never
+   * drops (ADR 0019) — whether or not anything changed since the last one,
+   * because a name is a statement about this moment, not a change to it.
+   * Answers the new version's record, or `null` when it could not be kept.
+   */
+  async name(name: string): Promise<VersionRecord | null> {
+    if (await this.#deps.going()) return null
+    if ((await this.#deps.boardId()) === null) return null
+    const state = await this.#state()
+    const at = this.#now()
+    const next = await this.#take('named', at, state, name)
+    await this.#schedule(next)
+    if (next.lastVersionAt !== at) return null
+    return (await this.list()).find((record) => record.at === at && record.kind === 'named') ?? null
+  }
+
+  /**
+   * Deletes a NAMED version. An automatic one is retention's to drop, never a
+   * person's: it is what makes "a version every ten minutes" true.
+   */
+  async forget(id: string): Promise<'deleted' | 'missing' | 'automatic'> {
+    if (!VERSION_ID.test(id)) return 'missing'
+    const record = await this.#deps.storage.get<VersionRecord>(VERSION_PREFIX + id)
+    if (record === undefined) return 'missing'
+    if (record.kind !== 'named') return 'automatic'
+    const boardId = await this.#deps.boardId()
+    // Bytes first, then the record, as thinning does: never bytes nobody knows of.
+    if (boardId !== null) await this.#deps.bucket.delete([versionKey(boardId, id)])
+    await this.#deps.storage.delete([VERSION_PREFIX + id])
+    return 'deleted'
+  }
+
   /** Every version this board has, newest first. */
   async list(): Promise<VersionRecord[]> {
     const records = await this.#deps.storage.list<VersionRecord>({ prefix: VERSION_PREFIX })
@@ -232,7 +265,12 @@ export class RoomHistory {
   }
 
   /** Writes the document as a version, and answers the state after it. */
-  async #take(kind: VersionKind, at: number, state: HistoryState): Promise<HistoryState> {
+  async #take(
+    kind: VersionKind,
+    at: number,
+    state: HistoryState,
+    name?: string,
+  ): Promise<HistoryState> {
     const boardId = await this.#deps.boardId()
     if (boardId === null) return state
 
@@ -255,7 +293,10 @@ export class RoomHistory {
       return state
     }
 
-    const record: VersionRecord = { id, at, kind, bytes: bytes.byteLength }
+    const record: VersionRecord =
+      name === undefined
+        ? { id, at, kind, bytes: bytes.byteLength }
+        : { id, at, kind, name, bytes: bytes.byteLength }
     await this.#deps.storage.put(VERSION_PREFIX + id, record)
 
     const next: HistoryState = {

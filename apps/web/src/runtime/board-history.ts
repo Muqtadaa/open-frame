@@ -34,4 +34,16 @@ export interface BoardHistory {
    * restore must not go ahead when this answers `false`.
    */
   readonly keepNow: () => Promise<boolean>
+  /**
+   * Keeps the board as it is now as a NAMED version, changed since the last
+   * or not: naming a moment is the point. The name is checked by
+   * `versionName` here and again by whoever stores it. Answers `false` when
+   * it could not be kept.
+   */
+  readonly name: (name: string) => Promise<boolean>
+  /**
+   * Deletes a named version. An automatic one is retention's, never a
+   * person's, and is refused: answers `false`.
+   */
+  readonly forget: (id: string) => Promise<boolean>
 }

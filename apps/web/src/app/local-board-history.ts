@@ -23,7 +23,16 @@ export function localBoardHistory(deps: {
     list: async () => {
       try {
         const all = await deps.versions.entries()
-        return [...(all.get(deps.boardId) ?? [])].sort((a, b) => b.at - a.at)
+        const entries = [...(all.get(deps.boardId) ?? [])].sort((a, b) => b.at - a.at)
+        // The keys say which versions are named, not what: a name is read from
+        // its row. Only named versions are read, and they are few.
+        return await Promise.all(
+          entries.map(async (entry) => {
+            if (entry.kind !== 'named') return entry
+            const name = (await deps.versions.read(deps.boardId, entry.id))?.name
+            return name === undefined ? entry : { ...entry, name }
+          }),
+        )
       } catch {
         return null
       }
@@ -42,5 +51,20 @@ export function localBoardHistory(deps: {
       }
     },
     keepNow: () => deps.keeper?.keepNow() ?? Promise.resolve(false),
+    name: (name) => deps.keeper?.keepNamed(name) ?? Promise.resolve(false),
+    forget: async (id) => {
+      // A board that cannot be written back keeps its history as it found it.
+      if (deps.keeper === null) return false
+      try {
+        const all = await deps.versions.entries()
+        const entry = all.get(deps.boardId)?.find((version) => version.id === id)
+        // Automatic versions are retention's to drop, as in the room.
+        if (entry?.kind !== 'named') return false
+        await deps.versions.drop(deps.boardId, [entry])
+        return true
+      } catch {
+        return false
+      }
+    },
   }
 }

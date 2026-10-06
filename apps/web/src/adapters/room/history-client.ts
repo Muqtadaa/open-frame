@@ -1,5 +1,5 @@
 import type { BoardId } from '@openframe/core'
-import { VERSION_ID } from '@openframe/core/history'
+import { VERSION_ID, versionName } from '@openframe/core/history'
 
 import type { BoardHistory, OpenedVersion, VersionListing } from '../../runtime/board-history.js'
 import type { RoomCredentials } from './room-asset-store.js'
@@ -68,6 +68,34 @@ export function createRoomHistory(options: RoomHistoryOptions): BoardHistory {
     keepNow: async () => {
       try {
         const response = await options.fetch(url, { method: 'POST', headers: headers() })
+        return response.ok
+      } catch {
+        return false
+      }
+    },
+
+    name: async (raw) => {
+      const name = versionName(raw)
+      if (name === null) return false
+      try {
+        const response = await options.fetch(url, {
+          method: 'POST',
+          headers: { ...headers(), 'content-type': 'application/json' },
+          body: JSON.stringify({ name }),
+        })
+        return response.ok
+      } catch {
+        return false
+      }
+    },
+
+    forget: async (id) => {
+      if (!VERSION_ID.test(id)) return false
+      try {
+        const response = await options.fetch(`${url}/${id}`, {
+          method: 'DELETE',
+          headers: headers(),
+        })
         return response.ok
       } catch {
         return false

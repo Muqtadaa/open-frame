@@ -189,3 +189,82 @@ test('an editor restores a version for everyone, and a viewer can only look', as
     await expect(page.getByTestId('canvas')).not.toContainText('Written since')
   }
 })
+
+/** A raw request to the room's versions, as `key`: its status. */
+function ask(
+  page: Page,
+  room: string,
+  key: string,
+  request: { readonly method: 'POST' | 'DELETE'; readonly id?: string; readonly body?: unknown },
+): Promise<number> {
+  return page.evaluate(
+    async ({ url, key, method, body }) =>
+      (
+        await fetch(url, {
+          method,
+          headers: { 'x-openframe-key': key, 'content-type': 'application/json' },
+          ...(body === undefined ? {} : { body: JSON.stringify(body) }),
+        })
+      ).status,
+    {
+      url: `${ROOMS}/room/${room}/versions${request.id === undefined ? '' : `/${request.id}`}`,
+      key,
+      method: request.method,
+      body: request.body,
+    },
+  )
+}
+
+/*
+ * Named versions: an editor names the board as it is and may delete the name
+ * again; a viewer sees the name and is offered neither. The room holds the
+ * same line the interface draws.
+ */
+test('an editor names a version and deletes it; a viewer only sees it', async ({ browser }) => {
+  const room = newRoomId()
+  const keys = await claimed(browser, room)
+  const editor = await open(browser, room, keys.editor)
+  const viewer = await open(browser, room, keys.viewer)
+  await addNote(editor, 'Kickoff notes')
+
+  await editor.getByTestId('history-button').click()
+  await editor.getByRole('textbox', { name: 'Version name' }).fill('Before the workshop')
+  await editor.getByTestId('history-name-save').click()
+  await expect(
+    editor.getByTestId('history-version').filter({ hasText: 'Before the workshop' }),
+  ).toHaveCount(1)
+
+  await viewer.getByTestId('history-button').click()
+  await expect(
+    viewer.getByTestId('history-version').filter({ hasText: 'Before the workshop' }),
+  ).toHaveCount(1)
+  await expect(viewer.getByRole('textbox', { name: 'Version name' })).toHaveCount(0)
+  await expect(viewer.getByTestId('history-delete')).toHaveCount(0)
+
+  // The room refuses what the interface does not offer.
+  const [, listed] = await list(editor, room, keys.viewer)
+  const named = listed?.versions.find((version) => version.kind === 'named')
+  expect(named).toBeDefined()
+  const id = named?.id ?? ''
+  expect(await ask(viewer, room, keys.viewer, { method: 'DELETE', id })).toBe(403)
+  expect(await ask(viewer, room, keys.viewer, { method: 'POST', body: { name: 'Mine' } })).toBe(403)
+  expect(await ask(editor, room, keys.editor, { method: 'POST', body: { name: ' ' } })).toBe(400)
+
+  await editor.getByRole('button', { name: 'Delete Before the workshop' }).click()
+  await expect(
+    editor.getByTestId('history-version').filter({ hasText: 'Before the workshop' }),
+  ).toHaveCount(0)
+  expect(await ask(editor, room, keys.editor, { method: 'DELETE', id })).toBe(404)
+
+  // An automatic version is retention's, never a person's.
+  await addNote(editor, 'Written since')
+  await expect
+    .poll(
+      async () =>
+        (await list(editor, room, keys.viewer))[1]?.versions.find((v) => v.kind === 'auto')?.id,
+      { timeout: 20_000 },
+    )
+    .toBeDefined()
+  const auto = (await list(editor, room, keys.viewer))[1]?.versions.find((v) => v.kind === 'auto')
+  expect(await ask(editor, room, keys.editor, { method: 'DELETE', id: auto?.id ?? '' })).toBe(409)
+})

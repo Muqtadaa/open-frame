@@ -90,4 +90,28 @@ describe('a shared board’s history, read from its room', () => {
       await history(() => Promise.resolve(new Response('', { status: 403 }))).client.keepNow(),
     ).toBe(false)
   })
+
+  it('names a version with a JSON body, checked before it is sent', async () => {
+    const { client, calls } = history(() => Promise.resolve(Response.json({ version: {} })))
+    expect(await client.name('  Kickoff ')).toBe(true)
+    expect(calls[0]?.init?.method).toBe('POST')
+    expect(calls[0]?.init?.body).toBe(JSON.stringify({ name: 'Kickoff' }))
+    expect(calls[0]?.init?.headers).toMatchObject({ 'content-type': 'application/json' })
+    // A name the room would refuse never reaches it.
+    expect(await client.name('')).toBe(false)
+    expect(calls).toHaveLength(1)
+  })
+
+  it('deletes a version by id, and says whether the room did', async () => {
+    const { client, calls } = history(() => Promise.resolve(new Response(null, { status: 204 })))
+    expect(await client.forget(ID)).toBe(true)
+    expect(calls[0]?.url).toBe(`https://rooms.example/room/brd_one/versions/${ID}`)
+    expect(calls[0]?.init?.method).toBe('DELETE')
+    // An automatic version is refused by the room.
+    expect(
+      await history(() => Promise.resolve(new Response('', { status: 409 }))).client.forget(ID),
+    ).toBe(false)
+    expect(await client.forget('../asset/x')).toBe(false)
+    expect(calls).toHaveLength(1)
+  })
 })

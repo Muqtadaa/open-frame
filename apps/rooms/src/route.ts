@@ -105,6 +105,8 @@ export type Route =
   | { readonly kind: 'version'; readonly boardId: string; readonly versionId: string }
   /** Keep the board as it is now, before a restore. Editors only; credentials in headers, as for a read. */
   | { readonly kind: 'keep-version'; readonly boardId: string }
+  /** Delete a NAMED version. Editors only; credentials in headers. */
+  | { readonly kind: 'forget-version'; readonly boardId: string; readonly versionId: string }
   /**
    * The session music's catalogue, and one of its tracks.
    *
@@ -196,6 +198,10 @@ export function routeRequest(url: URL, upgradeHeader: string | null, method = 'G
     const versionId = versions[2]
     // The one write: keep the board as it is now, before a restore.
     if (method === 'POST' && versionId === undefined) return { kind: 'keep-version', boardId }
+    // And the one deletion: a named version, by the editor who no longer wants it.
+    if (method === 'DELETE' && versionId !== undefined) {
+      return { kind: 'forget-version', boardId, versionId }
+    }
     if (method !== 'GET') {
       return { kind: 'refuse', status: 405, reason: 'History is read with a GET' }
     }

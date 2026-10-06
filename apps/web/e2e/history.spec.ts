@@ -110,3 +110,49 @@ test.describe('looking back, and restoring', () => {
     },
   )
 })
+
+/*
+ * Named versions (ADR 0019): an editor names the board as it is now, and
+ * deletes a named version. Automatic ones are retention's and offer no
+ * Delete. That a name outlives the fortnight is `local-history.test.ts`'s.
+ */
+test('names the board as it is, lists it, and deletes it', async ({ page }) => {
+  await page.goto(BOARD_URL)
+  await page.waitForSelector('[data-testid="status-bar"]')
+  await place(page, 's', { x: 500, y: 400 }, 'Kickoff notes')
+
+  await page.getByTestId('history-button').click()
+  await expect(
+    page.getByRole('status').filter({ hasText: 'No earlier versions yet.' }),
+  ).toBeVisible()
+  const field = page.getByRole('textbox', { name: 'Version name' })
+  const save = page.getByTestId('history-name-save')
+  // Nothing to keep under a name that is no name.
+  await field.fill('   ')
+  await expect(save).toBeDisabled()
+  await field.fill('Before the workshop')
+  await save.click()
+
+  const version = page.getByTestId('history-version')
+  await expect(version).toHaveCount(1)
+  await expect(version).toContainText('Before the workshop')
+  await expect(field).toHaveValue('')
+  await expect.poll(() => versionKeys(page)).toEqual([expect.stringMatching(/\|n$/) as unknown])
+
+  await page.getByRole('button', { name: 'Delete Before the workshop' }).click()
+  await expect(version).toHaveCount(0)
+  await expect.poll(() => versionKeys(page)).toEqual([])
+})
+
+test('offers no Delete for an automatic version', async ({ page }) => {
+  await page.clock.install()
+  await page.goto(BOARD_URL)
+  await page.waitForSelector('[data-testid="status-bar"]')
+  await place(page, 's', { x: 500, y: 400 }, 'Kept for later')
+  await page.clock.runFor(SETTLE)
+  await expect.poll(() => versionKeys(page)).toHaveLength(1)
+
+  await page.getByTestId('history-button').click()
+  await expect(page.getByTestId('history-version')).toHaveCount(1)
+  await expect(page.getByTestId('history-delete')).toHaveCount(0)
+})

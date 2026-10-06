@@ -24,6 +24,33 @@
   background: var(--of-accent-soft);
 }
 
+/*
+ * An editor names the board as it is now above the list, and deletes a
+ * named version beside its row. A row with a Delete keeps the version as the
+ * wide target; the Delete sits at its end.
+ */
+.of-history__name {
+  display: flex;
+  gap: var(--of-space-8);
+  align-items: center;
+  margin-block-end: var(--of-space-8);
+}
+
+.of-history__name .of-input {
+  flex: 1;
+  min-width: 0;
+}
+
+.of-history__row {
+  display: flex;
+  gap: var(--of-space-4);
+  align-items: center;
+}
+
+.of-history__delete {
+  flex: none;
+}
+
 /* The bar over a version on the canvas: what you are looking at, and the way out. */
 .of-history-bar__title {
   margin: 0;
