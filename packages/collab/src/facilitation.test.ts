@@ -56,7 +56,7 @@ describe('facilitation state', () => {
     const b = new Y.Doc()
     join([a, b])
     const timer = startTimer(idleTimer(), 1000, 'Ada')
-    const music = playMusic(stoppedMusic('jazzy'), 2000, 'Ada', [
+    const music = playMusic(stoppedMusic('jazzhop'), 2000, 'Ada', [
       { id: 'jazzy-1', durationMs: 60_000 },
     ])
     writeTimer(a, timer)

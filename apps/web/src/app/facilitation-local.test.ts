@@ -25,7 +25,7 @@ describe('a timer on a board that is nobody else’s', () => {
   })
 
   it('keeps its music through a reload too, beside the timer', () => {
-    const music = playMusic(stoppedMusic('calm'), 1000, null, [
+    const music = playMusic(stoppedMusic('ambient-lofi'), 1000, null, [
       { id: 'calm-1', durationMs: 60_000 },
     ])
     const timer = startTimer(idleTimer(), 1000, null)

@@ -15,7 +15,7 @@ import { checkTrack, uploadCommand } from './tracks.js'
 const bytes = new Uint8Array([1, 2, 3, 4, 5])
 const track: Track = {
   id: 'calm-1',
-  genre: 'calm',
+  genre: 'ambient-lofi',
   title: 'Still',
   artist: 'Somebody',
   durationMs: 60_000,

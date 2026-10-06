@@ -50,12 +50,14 @@ not finish", and the Worker's log says why.
 
 ## Session music ([ADR 0017](../adr/0017-facilitation-state-outside-the-document.md))
 
-The bucket exists. What it lacks is tracks: the catalogue ships empty, and the
-music button appears only once it lists some. Every track must be **CC0 1.0**.
+Done: the catalogue lists all of Open Lo-Fi (166 tracks), and the music button
+appears on every board. The steps below are for adding tracks from anywhere
+else. Every track must be **CC0 1.0**.
 
 1. **Choose tracks** from [the candidates](../music/candidates.md), or find
-   others. On each one's own page, confirm the licence says CC0 1.0. One or
-   two per genre is plenty: electronic, jazzy, synthwave, bossa nova, calm.
+   others. On each one's own page, confirm the licence says CC0 1.0. A
+   track's genre is one of Open Lo-Fi's ten categories (`MUSIC_GENRES` in
+   `packages/core/src/facilitation/music.ts`).
 2. **Download them** as MP3, ideally two to six minutes long at 128kbps, and
    name each `<id>.mp3`. An id is lowercase letters, digits and hyphens, for
    example `calm-rain-1`.

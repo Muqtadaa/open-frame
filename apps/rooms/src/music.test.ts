@@ -75,7 +75,7 @@ const catalogue: Catalogue = {
   tracks: [
     {
       id: 'calm-1',
-      genre: 'calm',
+      genre: 'ambient-lofi',
       title: 'Still',
       artist: 'Somebody',
       durationMs: 60_000,

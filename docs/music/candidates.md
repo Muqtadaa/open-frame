@@ -14,17 +14,27 @@ tracks are AI-generated (Suno v5), a fact this page flagged before they were
 chosen. Each track's `id` is Open Lo-Fi's own filename, so a file downloaded
 from there already has the name `pnpm music:upload` looks for.
 
-| Pass | Tracks                                                                                                                                                                                                                                      |
-| ---- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| 1    | Cafe Da Tarde (bossa nova), Continue Screen Dreams (synthwave), Block Party Slow Jam (jazzy), After School Rain (calm), Blue Below the Surface (calm)                                                                                       |
-| 2    | Sunset Offbeat (electronic), Cassette Pastel Nights (synthwave), VHS Heartbeat (synthwave), Summer Curbside Glow (jazzy), Fireplace Loop (calm)                                                                                             |
-| 3    | Dusk on Red Earth (electronic), Burnt Sunset Groove (jazzy), Picnic Polaroids (jazzy), Watercolors By the Window (jazzy), Palm Breeze Nap (bossa nova), Bloom Between Showers (calm), Moon Through Bamboo (calm), Teacup Morning Fog (calm) |
+**The whole catalogue is in (2026-10-06): all 166 tracks.** The genres are
+Open Lo-Fi's own ten categories, and each track's genre is the category it was
+published under, so nothing here is a guess about how a track sounds. The
+sheet shortens the category labels to fit a row of toggles:
 
-Every genre now has at least one track. A genre with none would simply not be offered.
+| Genre (slug)       | In the sheet      | Open Lo-Fi's label              | Tracks |
+| ------------------ | ----------------- | ------------------------------- | ------ |
+| `chillhop`         | Chillhop          | Chillhop & Cozy Beats           | 8      |
+| `jazzhop`          | Jazz lounge       | Jazz Lounge & Bookstore Grooves | 12     |
+| `ambient-lofi`     | Ambient           | Ambient Drift & Dreamscapes     | 21     |
+| `soul-rnb`         | Soul & slow jams  | Soul, Slow Jams & Warm Rooms    | 21     |
+| `asian-lofi`       | Asian & zen       | Asian & Zen Lo-Fi               | 8      |
+| `funk-soul`        | Funk & soul       | Funk, Soul & Retro Bounce       | 14     |
+| `seasonal-weather` | Seasons & weather | Seasons, Rain & Weather         | 27     |
+| `late-night`       | Late night        | Late Night, Neon & After Hours  | 18     |
+| `activities`       | Focus & routines  | Focus, Rituals & Daily Routines | 29     |
+| `hybrid`           | Hybrid & world    | Hybrid, World & Cinematic       | 8      |
 
-**Every pass after the first:** keep every track in one folder. The upload
-checks each catalogue entry against its file and uploads nothing if one is
-missing. Re-uploading an unchanged file is harmless.
+The catalogue lists the tracks in Open Lo-Fi's order, which is the order each
+genre plays in. The **Upload music** workflow takes every file from Open
+Lo-Fi's release archive, so nothing needs uploading by hand.
 
 To add one:
 
@@ -47,17 +57,3 @@ To add one:
 | [OpenGameArt — CC0 music](https://opengameart.org/content/good-cc0-music)         | Game music marked CC0, with synthwave and calm loops                    | **Not opened** — as above                                                                                          |
 | [Open Lo-Fi](https://github.com/btahir/open-lofi)                                 | 150+ tracks, CC0, a `catalog.json`                                      | **CC0 confirmed** on the repository. The tracks are **AI-generated (Suno v5)** — decide whether that is acceptable |
 | [Freesound](https://freesound.org/search/?f=license:%22Creative+Commons+0%22)     | Filter by "Creative Commons 0"; better for short loops than full tracks | Per sound — check each                                                                                             |
-
-## Proposed, one or two per genre
-
-| Genre      | Candidate                                          | Source                                                                     | To check                        |
-| ---------- | -------------------------------------------------- | -------------------------------------------------------------------------- | ------------------------------- |
-| Electronic | A HoliznaCC0 "Background Music" track              | FMA                                                                        | Licence on the track page       |
-| Jazzy      | "Jazz Lounge & Bookstore Grooves" (pick two)       | Open Lo-Fi                                                                 | AI-generated; length            |
-| Synthwave  | "Calm Ambient 1 (Synthwave 4k)", The Cynic Project | [OpenGameArt](https://opengameart.org/content/calm-ambient-1-synthwave-4k) | Licence on the page             |
-| Bossa nova | "Bossa Nova" (8-bit)                               | [OpenGameArt](https://opengameart.org/content/bossa-nova)                  | Licence; whether chiptune suits |
-| Calm       | A HoliznaCC0 "Lo-fi and Chill" track               | FMA                                                                        | Licence on the track page       |
-
-Aim for tracks of two to six minutes at 128kbps MP3: long enough not to repeat
-inside an exercise, small enough that a device joining mid-track starts within
-a second.

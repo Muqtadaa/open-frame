@@ -1,4 +1,5 @@
 import { expect, test, type Page, type WebSocketRoute } from '@playwright/test'
+import { MUSIC_GENRES } from '@openframe/core/facilitation'
 
 import { buildBoard } from './boards.js'
 import { library, TRACKS } from './music.js'
@@ -198,13 +199,17 @@ for (const world of WORLDS) {
       await snap(page, `${world}-session-timer`)
     })
 
-    // The session music, paused a few seconds in, its sheet open on an editor's controls.
+    // The session music, paused a few seconds in, its sheet open on an editor's controls,
+    // with every genre offered — as the library offers them all.
     test('the session music', async ({ page }) => {
-      await library(page, TRACKS)
+      await library(page, [
+        ...TRACKS,
+        ...MUSIC_GENRES.map((genre) => ({ id: `${genre}-1`, genre, title: 'Elsewhere' })),
+      ])
       await page.clock.install()
       await openLocalBoard(page)
       await page.getByTestId('music-button').click()
-      await page.getByRole('radio', { name: 'Calm' }).click()
+      await page.getByRole('radio', { name: 'Ambient' }).click()
       await page.getByTestId('music-play').click()
       await page.clock.runFor(12_000)
       await page.getByTestId('music-pause').click()
