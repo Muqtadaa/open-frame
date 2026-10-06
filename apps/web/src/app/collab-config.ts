@@ -245,3 +245,8 @@ export function claimUrl(boardId: BoardId): string {
 export function destroyUrl(boardId: BoardId): string {
   return `${httpBase()}/room/${boardId}/destroy`
 }
+
+/** Where a board's earlier versions are listed, read and kept (ADR 0019). */
+export function versionsBase(): string {
+  return httpBase()
+}

@@ -102,6 +102,15 @@ export function TimerIcon({ className }: IconProps) {
   )
 }
 
+/** A clock with its hand turned back: earlier versions of the board. */
+export function HistoryIcon({ className }: IconProps) {
+  return (
+    <svg {...base} className={className}>
+      <path d="M4.5 12a7.5 7.5 0 102.2-5.3M4.5 4v3.5H8M12 8.5v4l2.5 1.5" />
+    </svg>
+  )
+}
+
 export function MusicIcon({ className }: IconProps) {
   return (
     <svg {...base} className={className}>

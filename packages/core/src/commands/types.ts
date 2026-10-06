@@ -58,6 +58,11 @@ export type Command =
    * renaming it is a persistent mutation that has to reach the one path.
    */
   | { readonly kind: 'SetBoardTitle'; readonly title: string }
+  /**
+   * Puts the whole board back to an earlier version (ADR 0019). `objects` is
+   * the version's objects as stored — unread, since storage is a boundary.
+   */
+  | { readonly kind: 'RestoreBoard'; readonly objects: readonly unknown[]; readonly title: string }
   | { readonly kind: 'DeleteObjects'; readonly ids: readonly ObjectId[] }
   /**
    * Changes objects' TYPE while keeping their identity — a sticky becoming a

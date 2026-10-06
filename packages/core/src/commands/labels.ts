@@ -18,6 +18,8 @@ export function describeCommand(command: Command): string {
   switch (command.kind) {
     case 'SetBoardTitle':
       return 'Rename board'
+    case 'RestoreBoard':
+      return 'Restore version'
     case 'CreateObjects':
       return `Create ${plural(command.objects.length, 'object')}`
     case 'DeleteObjects':

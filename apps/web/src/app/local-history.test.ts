@@ -223,6 +223,38 @@ describe('a local board’s history', () => {
     expect(versions.rows).toHaveLength(2)
   })
 
+  it('keeps the board as it is at once when asked, and not twice for no change', async () => {
+    const { history, versions, edit } = setup()
+    await history.idle()
+    edit('Before the restore')
+    expect(await history.keepNow()).toBe(true)
+    expect(versions.rows.map((v) => v.title)).toEqual(['Before the restore'])
+    // Nothing changed since that version, so nothing more is kept.
+    expect(await history.keepNow()).toBe(true)
+    expect(versions.rows).toHaveLength(1)
+  })
+
+  /*
+   * A board reopened after its tab closed between an edit and the version it
+   * was due: the edit is autosaved but in no version, and this session has no
+   * way to know. A restore must not replace it unkept (Codex, on #83).
+   */
+  it('keeps the board before a restore on a board just reopened, edited or not', async () => {
+    const versions = new MemoryVersions()
+    await versions.put({
+      boardId: BOARD,
+      id: versionId(T0 - 60_000),
+      at: T0 - 60_000,
+      kind: 'auto',
+      title: 'Older',
+      payload: null,
+    })
+    const { history } = setup(versions)
+    await history.idle()
+    expect(await history.keepNow()).toBe(true)
+    expect(versions.rows.map((v) => v.title)).toEqual(['Older', 'Plans'])
+  })
+
   it('stops for good once disposed', async () => {
     const { history, versions, edit, advance } = setup()
     await history.idle()

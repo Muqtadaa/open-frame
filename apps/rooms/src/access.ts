@@ -328,3 +328,23 @@ export function readDecision(request: ReadRequest): ReadDecision {
   }
   return { ok: true }
 }
+
+export type KeepVersionDecision =
+  { readonly ok: true } | { readonly ok: false; readonly status: 403; readonly reason: string }
+
+/**
+ * Whether a request may have the room keep the board as it is now — what an
+ * editor's client asks for just before restoring an older version (ADR 0019).
+ *
+ * The edit link, or the owner's key: a version is a write, however harmless,
+ * and a viewer's restore is refused anyway. Reading's rules first, so the
+ * password applies exactly as it does to everything else.
+ */
+export function keepVersionDecision(request: ReadRequest): KeepVersionDecision {
+  const read = readDecision(request)
+  if (!read.ok) return read
+  if (request.role !== 'editor' && !request.owner) {
+    return { ok: false, status: 403, reason: 'That link cannot change this board' }
+  }
+  return { ok: true }
+}

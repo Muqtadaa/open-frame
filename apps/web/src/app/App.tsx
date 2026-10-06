@@ -14,7 +14,11 @@ import { StatusBar } from '../ui/StatusBar.js'
 import { Toast } from '../ui/Toast.js'
 import { Toolbar } from '../ui/Toolbar.js'
 import { ZoomControl } from '../ui/ZoomControl.js'
-import { useOpenFrame } from '../runtime/context.js'
+import { useContext, useSyncExternalStore } from 'react'
+
+import { OpenFrameContext, useOpenFrame } from '../runtime/context.js'
+import { VersionPreviewBar } from '../ui/VersionPreviewBar.js'
+import { versionPreview } from './version-preview.js'
 
 /**
  * The application shell.
@@ -28,6 +32,8 @@ import { useOpenFrame } from '../runtime/context.js'
  */
 export function App() {
   const { runtime } = useOpenFrame()
+  const context = useContext(OpenFrameContext)
+  const preview = useSyncExternalStore(versionPreview.subscribe, versionPreview.get)
   /*
    * A board this build could not read has nothing on it to work on, so it
    * gets the navigation bar and a sheet saying the work is safe — no rail, no
@@ -43,6 +49,31 @@ export function App() {
           <Canvas />
         </main>
         <BoardUnreadable />
+      </div>
+    )
+  }
+  /*
+   * An earlier version on the canvas, read-only (ADR 0019). The canvas reads a
+   * runtime of the version's own through its own context; the bar above it
+   * reads the LIVE board, which goes on running underneath, so "Back to now"
+   * is simply this branch no longer being taken.
+   */
+  if (preview !== null && context !== null) {
+    return (
+      <div className="of-app">
+        <div className="of-overlay of-overlay--nav" data-keep-clear="top">
+          <VersionPreviewBar preview={preview} />
+        </div>
+        <main className="of-board-main" aria-label="Board as it was">
+          <OpenFrameContext.Provider
+            value={{ ...context, runtime: preview.runtime, collaboration: null, history: null }}
+          >
+            <Canvas />
+          </OpenFrameContext.Provider>
+        </main>
+        <div className="of-overlay of-overlay--top">
+          <Toast />
+        </div>
       </div>
     )
   }

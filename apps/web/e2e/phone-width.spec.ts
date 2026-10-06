@@ -248,3 +248,21 @@ test('the workspace tabs are a target, not a label', async ({ page }) => {
   const box = await tab.boundingBox()
   expect(box?.height).toBeGreaterThanOrEqual(40)
 })
+
+/*
+ * Version history has no room on a phone's bar, so it is offered from the
+ * account sheet, as the source link is.
+ */
+test('version history is in the account sheet when the bar has no room for it', async ({
+  page,
+}) => {
+  await signedIn(page, [])
+  await page.goto(BOARD_URL)
+  await page.waitForSelector('[data-testid="status-bar"]')
+  await expect(page.getByTestId('history-button')).toBeHidden()
+  await page.getByTestId('account').click()
+  await page.getByTestId('sheet-history').click()
+  await expect(page.getByTestId('account-sheet').getByRole('status')).toHaveText(
+    'No earlier versions yet.',
+  )
+})

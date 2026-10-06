@@ -1,0 +1,33 @@
+/* ---------- version history (ADR 0019) ---------- */
+
+/*
+ * One version in the list: a row you choose, like a search result. The row
+ * is the whole target, so it spans the sheet.
+ */
+.of-history__version {
+  display: grid;
+  gap: 1px;
+  width: 100%;
+  min-height: var(--of-hit-sm);
+  padding: var(--of-space-8);
+  font: inherit;
+  color: inherit;
+  text-align: start;
+  cursor: pointer;
+  background: transparent;
+  border: 0;
+  border-radius: var(--of-radius);
+}
+
+.of-history__version:hover,
+.of-history__version:focus-visible {
+  background: var(--of-accent-soft);
+}
+
+/* The bar over a version on the canvas: what you are looking at, and the way out. */
+.of-history-bar__title {
+  margin: 0;
+  font-size: var(--of-type-ui);
+  font-weight: var(--of-weight-semibold);
+  white-space: nowrap;
+}

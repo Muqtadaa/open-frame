@@ -241,9 +241,10 @@ describe('a board’s earlier versions', () => {
     })
   })
 
-  it('answers the preflight, and refuses anything but a read', () => {
+  it('answers the preflight, keeps a version on a POST, and refuses anything else', () => {
     expect(at('/room/brd_1/versions', 'OPTIONS')).toEqual({ kind: 'preflight' })
-    expect(at('/room/brd_1/versions', 'POST')).toMatchObject({ kind: 'refuse', status: 405 })
+    expect(at('/room/brd_1/versions', 'POST')).toEqual({ kind: 'keep-version', boardId: 'brd_1' })
+    expect(at(`/room/brd_1/versions/${id}`, 'POST')).toMatchObject({ kind: 'refuse', status: 405 })
     expect(at(`/room/brd_1/versions/${id}`, 'PUT')).toMatchObject({ kind: 'refuse', status: 405 })
   })
 

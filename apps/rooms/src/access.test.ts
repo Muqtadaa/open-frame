@@ -6,6 +6,7 @@ import {
   isOwnerKey,
   protectionDecision,
   readDecision,
+  keepVersionDecision,
   setPasswordDecision,
   unlockDecision,
   mintKey,
@@ -380,5 +381,29 @@ describe('reading what a board keeps: its images and its versions', () => {
 
   it('never asks the owner for the password', () => {
     expect(readDecision({ role: 'editor', owner: true, unlocked: false })).toEqual({ ok: true })
+  })
+})
+
+describe('keeping the board as it is now, before a restore', () => {
+  it('is for an editor, or the owner', () => {
+    expect(keepVersionDecision({ role: 'editor', owner: false, unlocked: true })).toEqual({
+      ok: true,
+    })
+    expect(keepVersionDecision({ role: 'viewer', owner: true, unlocked: false })).toEqual({
+      ok: true,
+    })
+  })
+
+  it('is refused to a viewer, a stranger and a locked board alike', () => {
+    expect(keepVersionDecision({ role: 'viewer', owner: false, unlocked: true })).toMatchObject({
+      ok: false,
+      status: 403,
+    })
+    expect(keepVersionDecision({ role: null, owner: false, unlocked: true })).toMatchObject({
+      ok: false,
+    })
+    expect(keepVersionDecision({ role: 'editor', owner: false, unlocked: false })).toMatchObject({
+      ok: false,
+    })
   })
 })

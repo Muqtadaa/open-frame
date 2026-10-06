@@ -87,19 +87,48 @@ two copies of these rules would drift.
 
 Restoring is done by an editor's own client, not by the room:
 
-1. Ask the room to keep the current state as a version first, so the state
-   being replaced is kept too.
-2. Open the chosen version and read its objects and title through
-   `readRemoteObject`.
-3. Dispatch ONE command that turns the live board into that version: remove,
-   add and set, worked out against the current document.
+1. **Keep the current state first.** The client asks for this through
+   `history.keepNow()`: `POST /room/:id/versions` for an editor or the owner
+   (`keepVersionDecision`), or the browser's keeper for a local board. If the
+   current state cannot be kept, nothing is restored.
+2. **Read the version.** Open it and read its objects with
+   `readVersionObjects`, the same check `readRemoteObject` applies to every
+   remote object.
+3. **Dispatch one command.** `RestoreBoard` turns the live board into the
+   version, worked out against the current document: objects that are gone are
+   removed, objects that are missing are added, and objects that changed are
+   replaced whole. The title is set as well.
 
 That one command is one undo entry, crosses the socket like any other edit,
-and is taken as a new version once it settles. If any object in the version
-cannot be read by this build, the restore is refused as a whole, and the
-version can still be browsed. Rule 7: never write back a board that could not
-be fully read. Only editors may restore, because the command is refused by
-the capabilities a viewer's session holds.
+and is taken as a new version once it settles. Locks are restored along with
+everything else, so a lock neither blocks a restore nor survives one
+unchanged.
+
+If any object in the version cannot be read by this build, the restore is
+refused as a whole. The version can still be browsed, unless the preview
+itself cannot be built, because the preview applies the same check. Rule 7:
+never write back a board that could not be fully read. Only editors may
+restore: viewers are offered no button, and the command is refused by the
+capabilities a viewer's session holds.
+
+### Browsing: the version on the canvas
+
+The user chose this on 2026-10-06. Choosing a version in the History panel
+(in the navigation bar) puts it on the canvas in place of the board as it is
+now. A bar across the top reads "Viewing {time}", with **Restore this
+version** for editors and **Back to now** for everyone.
+
+The version is shown by a runtime of its own (`app/version-preview.ts`):
+
+- **its own document store,** separate from the live board's;
+- **a dispatcher with read-only capabilities,** so every edit and undo is
+  refused;
+- **no persistence of any kind:** no autosave, no history keeper, no room.
+
+The live board keeps running underneath, so other people's edits still
+arrive, and **Back to now** simply stops showing the version. The bar reads
+the live runtime, so the restore is dispatched there and never on the
+preview.
 
 ### A local board: the browser's own store
 

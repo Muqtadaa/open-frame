@@ -312,3 +312,25 @@ describe('timingFrom', () => {
     expect(timingFrom('1500,4000')).toEqual({ settleMs: 1500, intervalMs: 4000 })
   })
 })
+
+describe('keeping the board as it is now, before a restore', () => {
+  it('takes a version of unversioned changes at once', async () => {
+    const { history, clock } = setup()
+    await history.edited()
+    clock.now = T0 + 1000
+    expect(await history.keepNow()).toBe(true)
+    expect((await history.list()).map((v) => v.at)).toEqual([T0 + 1000])
+  })
+
+  it('takes nothing when the newest version already is the board', async () => {
+    const { history } = setup()
+    expect(await history.keepNow()).toBe(true)
+    expect(await history.list()).toHaveLength(0)
+  })
+
+  it('says no for a board that is going', async () => {
+    const { history } = setup({ going: () => true })
+    await history.edited()
+    expect(await history.keepNow()).toBe(false)
+  })
+})

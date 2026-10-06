@@ -36,6 +36,12 @@ export interface LocalHistoryDeps {
 }
 
 export interface LocalHistory {
+  /**
+   * Keeps the board as it is now, if anything has changed since its newest
+   * version — asked before a restore, so what is replaced is kept too.
+   * Answers `false` when it could not be kept.
+   */
+  readonly keepNow: () => Promise<boolean>
   /** Resolves once whatever the keeper has started has finished. For tests. */
   readonly idle: () => Promise<void>
   readonly dispose: () => void
@@ -56,6 +62,13 @@ export function keepLocalHistory(deps: LocalHistoryDeps): LocalHistory {
   let lastVersionAt: number | null = null
   /** Counts edits, so a version taken while one arrives knows it missed it. */
   let edits = 0
+  /**
+   * Whether THIS session has written a version of the board as it now is.
+   * Until it has, nothing says the newest stored version matches what is on
+   * screen: an edit made last time, after the last version and before the tab
+   * closed, is autosaved but in no version.
+   */
+  let versionedHere = false
   let cancel: (() => void) | null = null
   let disposed = false
   /** Everything started, in order: a version is never written before the thinning ahead of it. */
@@ -104,6 +117,11 @@ export function keepLocalHistory(deps: LocalHistoryDeps): LocalHistory {
       arm()
       return
     }
+    await write()
+  }
+
+  /** Writes the board as it is now as a version, due or not. */
+  const write = async (): Promise<void> => {
     const at = now()
     // Read together and synchronously: an edit after this is one the version missed.
     const seen = edits
@@ -118,6 +136,7 @@ export function keepLocalHistory(deps: LocalHistoryDeps): LocalHistory {
     })
     lastVersionAt = at
     dirtySince = edits === seen ? null : (lastEditAt ?? at)
+    versionedHere = true
     await thin()
     arm()
   }
@@ -159,6 +178,24 @@ export function keepLocalHistory(deps: LocalHistoryDeps): LocalHistory {
   })
 
   return {
+    keepNow: () =>
+      new Promise<boolean>((resolve) => {
+        run(async () => {
+          try {
+            /*
+             * Skipped only when this session knows the board is already a
+             * version. On a board just reopened it cannot know that — edits
+             * from last time may be in no version — so it keeps one rather
+             * than let a restore replace them unkept (Codex, on #83).
+             */
+            if (!disposed && (dirtySince !== null || !versionedHere)) await write()
+            resolve(true)
+          } catch (error) {
+            resolve(false)
+            throw error
+          }
+        })
+      }),
     idle: async () => {
       // Work queued while waiting is waited for too.
       let seen: Promise<void>

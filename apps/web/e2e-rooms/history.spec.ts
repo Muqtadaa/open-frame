@@ -147,3 +147,45 @@ test('an edit to a shared board is kept as a version once it settles', async ({ 
   expect(await inBucket(key)).toBe(false)
   expect((await list(editor, room, keys.viewer))[0]).toBe(410)
 })
+
+/*
+ * The history panel on a shared board: the editor's restore is an edit like
+ * any other, so it reaches everybody in the room; a viewer may look back but
+ * is never offered the restore.
+ */
+test('an editor restores a version for everyone, and a viewer can only look', async ({
+  browser,
+}) => {
+  const room = newRoomId()
+  const keys = await claimed(browser, room)
+  const editor = await open(browser, room, keys.editor)
+  const viewer = await open(browser, room, keys.viewer)
+
+  await addNote(editor, 'Kept for later')
+  await expect
+    .poll(async () => (await list(editor, room, keys.viewer))[1]?.versions.length ?? 0, {
+      timeout: 20_000,
+    })
+    .toBeGreaterThan(0)
+  await addNote(editor, 'Written since')
+  await expect(viewer.getByTestId('canvas')).toContainText('Written since')
+
+  // The viewer looks back, and is offered no restore.
+  await viewer.getByTestId('history-button').click()
+  await viewer.getByTestId('history-version').last().click()
+  await expect(viewer.getByTestId('version-preview')).toBeVisible()
+  await expect(viewer.getByTestId('version-restore')).toHaveCount(0)
+  await expect(viewer.getByTestId('canvas')).not.toContainText('Written since')
+  await viewer.getByTestId('version-back').click()
+
+  // The oldest version is the one with only the first note on it.
+  await editor.getByTestId('history-button').click()
+  await editor.getByTestId('history-version').last().click()
+  await editor.getByTestId('version-restore').click()
+  await expect(editor.getByTestId('version-preview')).toHaveCount(0)
+
+  for (const page of [editor, viewer]) {
+    await expect(page.getByTestId('canvas')).toContainText('Kept for later')
+    await expect(page.getByTestId('canvas')).not.toContainText('Written since')
+  }
+})
