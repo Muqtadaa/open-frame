@@ -4,6 +4,7 @@ import {
   EDITOR_CHROME,
   claimsDoubleClick,
   handleUnderPointer,
+  hollowChromeUnderPointer,
   isTextEntry,
   objectChromeUnderPointer,
 } from './targets.js'
@@ -75,5 +76,27 @@ describe('chrome drawn outside an object’s bounds', () => {
     object.dataset.objectId = 'obj_frame'
     expect(objectChromeUnderPointer(inside(object))).toBe('obj_frame')
     expect(objectChromeUnderPointer(document.body)).toBeNull()
+  })
+})
+
+describe('the title of a hollow object', () => {
+  /*
+   * A frame is reached only by its title, so the title must win over what the
+   * board's geometry finds under it — a note under a frame's title would
+   * otherwise take every press meant for the frame (Codex, on #81).
+   */
+  it('wins for a hollow object, from either target', () => {
+    const frame = document.createElement('div')
+    frame.dataset.objectId = 'obj_frame'
+    const title = inside(frame)
+    const hollow = (id: string) => id === 'obj_frame'
+    expect(hollowChromeUnderPointer([title], hollow)).toBe('obj_frame')
+    expect(hollowChromeUnderPointer([document.body, title], hollow)).toBe('obj_frame')
+  })
+
+  it('leaves any other object to geometry, which resolves a member to its group', () => {
+    const note = document.createElement('div')
+    note.dataset.objectId = 'obj_note'
+    expect(hollowChromeUnderPointer([inside(note)], () => false)).toBeNull()
   })
 })

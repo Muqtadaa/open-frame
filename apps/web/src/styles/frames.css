@@ -45,6 +45,19 @@
   white-space: pre-wrap;
 }
 
+/*
+ * A hollow object's body passes presses through to what is beneath it (the
+ * `hollow` capability), so it is picked up by its title alone. Pointer events
+ * are inherited, which is why the title has to take them back.
+ */
+.of-object--hollow {
+  pointer-events: none;
+}
+
+.of-object--hollow .of-frame__title {
+  pointer-events: auto;
+}
+
 .of-frame__editor {
   width: 300px;
   min-height: 18px;

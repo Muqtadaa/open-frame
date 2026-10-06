@@ -32,6 +32,7 @@ export const voteRoundType = defineObjectType<typeof VOTE_ROUND_TYPE, VoteRoundD
     spatial: false,
     canHaveChildren: false,
     selectsAsUnit: false,
+    hollow: false,
     connectable: false,
     markable: false,
     styleProps: [],

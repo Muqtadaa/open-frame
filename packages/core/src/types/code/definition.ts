@@ -30,6 +30,7 @@ export const codeType = defineObjectType<typeof CODE_TYPE, CodeData>({
     spatial: true,
     canHaveChildren: false,
     selectsAsUnit: false,
+    hollow: false,
     connectable: true,
     markable: false,
     /*
