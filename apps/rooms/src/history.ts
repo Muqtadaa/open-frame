@@ -1,5 +1,6 @@
 import {
   ROOM_RETENTION,
+  VERSION_ID,
   VERSION_TIMING,
   nextThinningAt,
   versionDueAt,
@@ -7,6 +8,7 @@ import {
   type VersionEntry,
   type VersionKind,
   type VersionTiming,
+  versionId,
 } from '@openframe/core/history'
 
 /**
@@ -52,18 +54,7 @@ export const HISTORY_STATE = 'history'
 /** `v:<id>` — one version's record. Ids sort by time, so a listing is in order. */
 export const VERSION_PREFIX = 'v:'
 
-/**
- * A version id: the time it was taken, zero-padded so ids sort as times do,
- * and a random tail so two taken in the same millisecond do not collide.
- */
-export const VERSION_ID = /^[0-9]{16}-[0-9a-f]{8}$/
-
-export function versionId(at: number, random: () => number = Math.random): string {
-  const tail = Math.floor(random() * 0x1_0000_0000)
-    .toString(16)
-    .padStart(8, '0')
-  return `${String(at).padStart(16, '0')}-${tail}`
-}
+export { VERSION_ID, versionId }
 
 /**
  * Where a version's bytes live: under the board's own prefix, so the sweep that

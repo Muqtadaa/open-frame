@@ -107,7 +107,19 @@ A new IndexedDB store, `versions`, holds the persisted board envelope (what
 `serializeBoard` writes, so opening a version is `deserializeBoard`, quarantine
 included). Versions are taken from the same command stream autosave listens
 to, with the same `versionDueAt`, and kept by `LOCAL_RETENTION`: 14 days, then
-named versions only.
+named versions only (`apps/web/src/app/local-history.ts`). The keeper is never
+attached to a read-only board (rule 7) or to a shared one.
+
+- **Keys.** A row's key is `<boardId>|<versionId>|<a or n>`. That holds
+  everything thinning needs, so the whole store is listed with its keys and no
+  board is read back to decide what to keep
+  (`adapters/indexeddb/version-store.ts`).
+- **Thinning covers every board in this browser, not only the open one.** A
+  board deleted elsewhere is never opened again to thin its own versions, and
+  neither is one shared since, which moved to a new id. Thinning everything is
+  what lets their versions age out.
+- **Deleting a board** forgets its versions, named ones included, along with
+  its CRDT.
 
 **What a version does not hold:**
 

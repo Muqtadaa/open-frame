@@ -2,6 +2,7 @@ import { asBoardId, richFromPlain, type BoardId, type BoardRepository } from '@o
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 import { forgetCrdt } from '../adapters/indexeddb/crdt-store.js'
+import { indexedDbVersionStore } from '../adapters/indexeddb/version-store.js'
 import { MemoryBoardRepository } from '../adapters/memory/memory-board-repository.js'
 import * as lifecycle from './board-lifecycle.js'
 import { createRuntime } from './composition-root.js'
@@ -39,6 +40,7 @@ const deps = (repository: BoardRepository): lifecycle.LifecycleDeps => ({
   rooms,
   remoteBoards: remote,
   forgetCrdt,
+  forgetVersions: indexedDbVersionStore.forget,
   renameInRoom: roomRename,
 })
 
@@ -168,6 +170,14 @@ describe('deleting a board', () => {
   /** A board that was never shared has no room and no row — just a local copy. */
   it('touches no network for a board that is only in this browser', async () => {
     const repository = await boardOnDisk(LOCAL)
+    await indexedDbVersionStore.put({
+      boardId: LOCAL,
+      id: '0001789000000000-00000000',
+      at: 1789000000000,
+      kind: 'named',
+      title: 'Alone',
+      payload: null,
+    })
 
     const outcome = await deleteBoardEverywhere(repository, {
       boardId: LOCAL,
@@ -179,6 +189,8 @@ describe('deleting a board', () => {
     expect(rooms.destroy).not.toHaveBeenCalled()
     expect(remote.remove).not.toHaveBeenCalled()
     expect(await repository.getBoard(LOCAL)).toMatchObject({ status: 'not-found' })
+    // Its history too, named versions included: they belonged to the board.
+    expect((await indexedDbVersionStore.entries()).get(LOCAL)).toBeUndefined()
   })
 })
 

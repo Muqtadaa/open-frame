@@ -2,6 +2,7 @@ import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
 
 import { IndexedDbBoardRepository } from './adapters/indexeddb/indexeddb-board-repository.js'
+import { indexedDbVersionStore } from './adapters/indexeddb/version-store.js'
 import { App } from './app/App.js'
 import { AppErrorBoundary } from './app/AppErrorBoundary.js'
 import { createBoardCapabilities } from './app/board-capabilities.js'
@@ -9,6 +10,7 @@ import type { BoardConnection } from '@openframe/collab'
 import { COLLAB_ENABLED } from './app/collab-config.js'
 import { healAssets, publishRewrite } from './app/heal-assets.js'
 import { localFacilitation } from './app/facilitation-local.js'
+import { keepLocalHistory } from './app/local-history.js'
 import { roomFacilitation } from './app/facilitation-room.js'
 import { holdAssets } from './app/hold-assets.js'
 import { createRuntime } from './app/composition-root.js'
@@ -232,6 +234,21 @@ if (route.kind === 'home') {
    */
   const facilitation =
     collaboration === null ? localFacilitation(route.boardId) : roomFacilitation(collaboration)
+
+  /*
+   * A local board's history, kept in this browser (ADR 0019). Never for a
+   * board that cannot be written back (rule 7), and never for a shared one,
+   * whose room keeps its history. Lives as long as the page does, like
+   * autosave.
+   */
+  if (!route.shared && !runtime.readOnly) {
+    keepLocalHistory({
+      boardId: route.boardId,
+      subscribe: (listener) => runtime.dispatcher.subscribe(listener),
+      document: () => runtime.store.getDocument(),
+      versions: indexedDbVersionStore,
+    })
+  }
 
   // Exposed for the E2E suite to assert on persisted state without reaching into
   // React internals. Debug surface only — never a mutation path.
