@@ -1,4 +1,5 @@
 import type { Page } from '@playwright/test'
+import type { MusicGenre } from '@openframe/core/facilitation'
 
 /**
  * A stand-in music library for the browser suites, served from where the app
@@ -31,7 +32,7 @@ export function silence(seconds: number): Buffer {
 
 export interface StubTrack {
   readonly id: string
-  readonly genre: 'electronic' | 'jazzy' | 'synthwave' | 'bossa-nova' | 'calm'
+  readonly genre: MusicGenre
   readonly title: string
 }
 
@@ -85,6 +86,6 @@ export async function library(
 }
 
 export const TRACKS: readonly StubTrack[] = [
-  { id: 'calm-1', genre: 'calm', title: 'Still Water' },
-  { id: 'jazzy-1', genre: 'jazzy', title: 'Late Set' },
+  { id: 'calm-1', genre: 'ambient-lofi', title: 'Still Water' },
+  { id: 'jazzy-1', genre: 'jazzhop', title: 'Late Set' },
 ]

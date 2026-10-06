@@ -86,7 +86,7 @@ describe('the session timer on a connection', () => {
     expect(heard.at(-1)).toEqual(timer)
     // The same object each time it is asked, so a React store does not render forever (rule 9).
     expect(participant.facilitation()).toBe(participant.facilitation())
-    const music = playMusic(stoppedMusic('calm'), 2000, 'Ada', [
+    const music = playMusic(stoppedMusic('ambient-lofi'), 2000, 'Ada', [
       { id: 'calm-1', durationMs: 60_000 },
     ])
     facilitator.writeMusic(music)

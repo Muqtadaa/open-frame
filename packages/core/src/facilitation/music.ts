@@ -17,7 +17,23 @@ import { z } from 'zod'
 export const MUSIC_VERSION = 1
 export const CATALOGUE_VERSION = 1
 
-export const MUSIC_GENRES = ['electronic', 'jazzy', 'synthwave', 'bossa-nova', 'calm'] as const
+/**
+ * Open Lo-Fi's own categories, by their slugs and in its order: the library is
+ * its catalogue, so a track's genre is the category it was published under
+ * rather than one somebody here guessed at without hearing it.
+ */
+export const MUSIC_GENRES = [
+  'chillhop',
+  'jazzhop',
+  'ambient-lofi',
+  'soul-rnb',
+  'asian-lofi',
+  'funk-soul',
+  'seasonal-weather',
+  'late-night',
+  'activities',
+  'hybrid',
+] as const
 export type MusicGenre = (typeof MUSIC_GENRES)[number]
 
 /** What a track may be stored as. Production tracks are MP3; the others are for tests and later choices. */
@@ -153,7 +169,7 @@ export function readMusic(value: unknown): SessionMusic | null {
   return parsed.success ? parsed.data : null
 }
 
-export function stoppedMusic(genre: MusicGenre = 'calm'): SessionMusic {
+export function stoppedMusic(genre: MusicGenre = 'chillhop'): SessionMusic {
   return {
     v: MUSIC_VERSION,
     genre,

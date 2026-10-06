@@ -67,7 +67,7 @@ describe('a timer on a shared board', () => {
   it('reads and writes the room’s music beside its timer', () => {
     const fake = fakeConnection()
     const channel = roomFacilitation(fake.connection)
-    const music = playMusic(stoppedMusic('jazzy'), 1000, 'Ada', [
+    const music = playMusic(stoppedMusic('jazzhop'), 1000, 'Ada', [
       { id: 'jazzy-1', durationMs: 60_000 },
     ])
     let told = 0

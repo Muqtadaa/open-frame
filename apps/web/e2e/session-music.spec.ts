@@ -31,8 +31,8 @@ test('offers no music where there is no library to play from', async ({ page }) 
 test('plays a genre, and pauses and stops it', async ({ page }) => {
   await withLibrary(page)
   await button(page).click()
-  await sheet(page).getByRole('radio', { name: 'Jazzy' }).click()
-  await expect(sheet(page).getByRole('radio', { name: 'Jazzy' })).toHaveAttribute(
+  await sheet(page).getByRole('radio', { name: 'Jazz lounge' }).click()
+  await expect(sheet(page).getByRole('radio', { name: 'Jazz lounge' })).toHaveAttribute(
     'aria-checked',
     'true',
   )
@@ -53,7 +53,7 @@ test('plays a genre, and pauses and stops it', async ({ page }) => {
 test('offers only the genres the library has', async ({ page }) => {
   await withLibrary(page)
   await button(page).click()
-  await expect(sheet(page).getByRole('radio')).toHaveText(['Jazzy', 'Calm'])
+  await expect(sheet(page).getByRole('radio')).toHaveText(['Jazz lounge', 'Ambient'])
 })
 
 test('keeps this device’s mute through a reload', async ({ page }) => {

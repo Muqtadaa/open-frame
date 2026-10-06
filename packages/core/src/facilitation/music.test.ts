@@ -44,16 +44,27 @@ function track(id: string, genre: Track['genre'], durationMs: number): Track {
 const catalogue: Catalogue = {
   v: 1,
   tracks: [
-    track('a', 'calm', 60 * SECOND),
-    track('b', 'jazzy', 30 * SECOND),
-    track('c', 'calm', 90 * SECOND),
+    track('a', 'ambient-lofi', 60 * SECOND),
+    track('b', 'jazzhop', 30 * SECOND),
+    track('c', 'ambient-lofi', 90 * SECOND),
   ],
 }
-const calm = playlistOf(catalogue, 'calm')
+const calm = playlistOf(catalogue, 'ambient-lofi')
 
 describe('the catalogue', () => {
-  it('names five genres', () => {
-    expect(MUSIC_GENRES).toEqual(['electronic', 'jazzy', 'synthwave', 'bossa-nova', 'calm'])
+  it('names Open Lo-Fi’s categories, in its order', () => {
+    expect(MUSIC_GENRES).toEqual([
+      'chillhop',
+      'jazzhop',
+      'ambient-lofi',
+      'soul-rnb',
+      'asian-lofi',
+      'funk-soul',
+      'seasonal-weather',
+      'late-night',
+      'activities',
+      'hybrid',
+    ])
   })
 
   it('reads one it wrote', () => {
@@ -72,10 +83,10 @@ describe('the catalogue', () => {
     const read = readCatalogue({
       v: 1,
       tracks: [
-        { ...track('ok', 'calm', SECOND * 10) },
-        { ...track('cc-by', 'calm', SECOND * 10), licence: 'CC-BY-4.0' },
-        { ...track('extra', 'calm', SECOND * 10), mood: 'sunny' },
-        { ...track('no-source', 'calm', SECOND * 10), sourceUrl: 'not a url' },
+        { ...track('ok', 'ambient-lofi', SECOND * 10) },
+        { ...track('cc-by', 'ambient-lofi', SECOND * 10), licence: 'CC-BY-4.0' },
+        { ...track('extra', 'ambient-lofi', SECOND * 10), mood: 'sunny' },
+        { ...track('no-source', 'ambient-lofi', SECOND * 10), sourceUrl: 'not a url' },
         'a string',
       ],
     })
@@ -85,10 +96,10 @@ describe('the catalogue', () => {
   it('keeps the first of two tracks with one id', () => {
     const read = readCatalogue({
       v: 1,
-      tracks: [track('x', 'calm', 1000), track('x', 'jazzy', 2000)],
+      tracks: [track('x', 'ambient-lofi', 1000), track('x', 'jazzhop', 2000)],
     })
     expect(read?.tracks).toHaveLength(1)
-    expect(read?.tracks[0]?.genre).toBe('calm')
+    expect(read?.tracks[0]?.genre).toBe('ambient-lofi')
   })
 
   it.each([null, { v: 2, tracks: [] }, { tracks: [] }, { v: 1, tracks: 'all' }])(
@@ -105,7 +116,7 @@ describe('where the music is', () => {
   })
 
   it('counts from when it started, across tracks', () => {
-    const music = playMusic(stoppedMusic('calm'), 1000, by, calm)
+    const music = playMusic(stoppedMusic('ambient-lofi'), 1000, by, calm)
     expect(positionOf(music, 1000 + 10 * SECOND)).toMatchObject({
       index: 0,
       trackId: 'a',
@@ -119,37 +130,37 @@ describe('where the music is', () => {
   })
 
   it('goes round again after the last track', () => {
-    const music = playMusic(stoppedMusic('calm'), 0, by, calm)
+    const music = playMusic(stoppedMusic('ambient-lofi'), 0, by, calm)
     expect(positionOf(music, 160 * SECOND)).toMatchObject({ index: 0, offsetMs: 10 * SECOND })
   })
 
   it('holds still while paused, and carries on from there', () => {
-    const paused = pauseMusic(playMusic(stoppedMusic('calm'), 0, by, calm), 20 * SECOND, by)
+    const paused = pauseMusic(playMusic(stoppedMusic('ambient-lofi'), 0, by, calm), 20 * SECOND, by)
     expect(positionOf(paused, 999 * SECOND)).toMatchObject({ index: 0, offsetMs: 20 * SECOND })
     const resumed = playMusic(paused, 100 * SECOND, by, [])
     expect(positionOf(resumed, 105 * SECOND)).toMatchObject({ index: 0, offsetMs: 25 * SECOND })
   })
 
   it('is nowhere for a genre with no tracks', () => {
-    const music = playMusic(stoppedMusic('synthwave'), 0, by, playlistOf(catalogue, 'synthwave'))
+    const music = playMusic(stoppedMusic('late-night'), 0, by, playlistOf(catalogue, 'late-night'))
     expect(positionOf(music, 1000)).toBeNull()
   })
 
   it('starts a new genre from its first track', () => {
-    const jazzy = playlistOf(catalogue, 'jazzy')
+    const jazzy = playlistOf(catalogue, 'jazzhop')
     const music = setGenre(
-      playMusic(stoppedMusic('calm'), 0, by, calm),
-      'jazzy',
+      playMusic(stoppedMusic('ambient-lofi'), 0, by, calm),
+      'jazzhop',
       50 * SECOND,
       by,
       jazzy,
     )
-    expect(music.genre).toBe('jazzy')
+    expect(music.genre).toBe('jazzhop')
     expect(positionOf(music, 55 * SECOND)).toMatchObject({ trackId: 'b', offsetMs: 5 * SECOND })
   })
 
   it('stops back to the start', () => {
-    const stopped = stopMusic(playMusic(stoppedMusic('calm'), 0, by, calm), 10, by)
+    const stopped = stopMusic(playMusic(stoppedMusic('ambient-lofi'), 0, by, calm), 10, by)
     expect(stopped.status).toBe('stopped')
     expect(positionOf(playMusic(stopped, 100, by, calm), 100)).toMatchObject({
       index: 0,
@@ -170,17 +181,17 @@ describe('where the music is', () => {
    * as long as the session ran (Codex, on #64). The run carries its playlist.
    */
   it('plays the playlist it started with, whatever the catalogue says now', () => {
-    const music = playMusic(stoppedMusic('calm'), 0, by, calm)
+    const music = playMusic(stoppedMusic('ambient-lofi'), 0, by, calm)
     const later: Catalogue = {
       v: 1,
-      tracks: [track('new', 'calm', 5 * SECOND), ...catalogue.tracks],
+      tracks: [track('new', 'ambient-lofi', 5 * SECOND), ...catalogue.tracks],
     }
-    expect(playlistOf(later, 'calm')[0]?.id).toBe('new')
+    expect(playlistOf(later, 'ambient-lofi')[0]?.id).toBe('new')
     expect(positionOf(music, 10 * SECOND)).toMatchObject({ trackId: 'a', offsetMs: 10 * SECOND })
   })
 
   it('keeps only what a position needs, so the record stays small', () => {
-    const music = playMusic(stoppedMusic('calm'), 0, by, calm)
+    const music = playMusic(stoppedMusic('ambient-lofi'), 0, by, calm)
     expect(music.playlist).toEqual([
       { id: 'a', durationMs: 60 * SECOND },
       { id: 'c', durationMs: 90 * SECOND },
@@ -190,7 +201,7 @@ describe('where the music is', () => {
 
 describe('reading music someone else wrote', () => {
   it('reads one it wrote itself', () => {
-    const music = playMusic(stoppedMusic('jazzy'), 1000, by, playlistOf(catalogue, 'jazzy'))
+    const music = playMusic(stoppedMusic('jazzhop'), 1000, by, playlistOf(catalogue, 'jazzhop'))
     expect(readMusic(structuredClone(music))).toEqual(music)
   })
 

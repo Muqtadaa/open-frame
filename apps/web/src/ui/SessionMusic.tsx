@@ -25,12 +25,18 @@ import { MusicPlayer, readListening, writeListening, type Listening } from './mu
 import { clockText, elapsedText } from './clock-text.js'
 import { useSheet } from './use-sheet.js'
 
+/** Open Lo-Fi's category labels, cut to what fits a row of toggles. */
 const GENRE_NAMES: Readonly<Record<MusicGenre, string>> = {
-  electronic: 'Electronic',
-  jazzy: 'Jazzy',
-  synthwave: 'Synthwave',
-  'bossa-nova': 'Bossa nova',
-  calm: 'Calm',
+  chillhop: 'Chillhop',
+  jazzhop: 'Jazz lounge',
+  'ambient-lofi': 'Ambient',
+  'soul-rnb': 'Soul & slow jams',
+  'asian-lofi': 'Asian & zen',
+  'funk-soul': 'Funk & soul',
+  'seasonal-weather': 'Seasons & weather',
+  'late-night': 'Late night',
+  activities: 'Focus & routines',
+  hybrid: 'Hybrid & world',
 }
 
 /** Often enough that a device which buffered is back in place within a second. */
@@ -85,7 +91,7 @@ function MusicControl({
   const player = useRef<MusicPlayer | null>(null)
 
   const genres = MUSIC_GENRES.filter((genre) => playlistOf(catalogue, genre).length > 0)
-  const music = stored ?? stoppedMusic(genres[0] ?? 'calm')
+  const music = stored ?? stoppedMusic(genres[0] ?? 'ambient-lofi')
   const now = useTick(channel.now, music.status === 'playing')
   const position = positionOf(music, now)
   // The record says WHICH track; the catalogue only says what it is called.

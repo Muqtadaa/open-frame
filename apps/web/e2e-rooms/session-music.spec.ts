@@ -53,7 +53,7 @@ test('two devices whose clocks disagree are at the same place in the same track'
   const bob = await joinSkewed(browser, room)
 
   await alice.getByTestId('music-button').click()
-  await alice.getByRole('radio', { name: 'Jazzy' }).click()
+  await alice.getByRole('radio', { name: 'Jazz lounge' }).click()
   await alice.getByTestId('music-play').click()
 
   await expect(bob.getByTestId('music-button')).toHaveAttribute('data-state', 'playing')
@@ -81,14 +81,18 @@ test('two devices with different catalogues still play the same track', async ({
     timeout: 20_000,
   })
   const bob = await (await browser.newContext()).newPage()
-  await library(bob, [{ id: 'jazzy-0', genre: 'jazzy', title: 'Approved Since' }, ...TRACKS], ROOMS)
+  await library(
+    bob,
+    [{ id: 'jazzy-0', genre: 'jazzhop', title: 'Approved Since' }, ...TRACKS],
+    ROOMS,
+  )
   await bob.goto(`/?room=${room}`)
   await expect(bob.getByTestId('room-status')).toHaveAttribute('data-status', 'connected', {
     timeout: 20_000,
   })
 
   await alice.getByTestId('music-button').click()
-  await alice.getByRole('radio', { name: 'Jazzy' }).click()
+  await alice.getByRole('radio', { name: 'Jazz lounge' }).click()
   await alice.getByTestId('music-play').click()
 
   await expect(bob.getByTestId('music-button')).toHaveAttribute('data-state', 'playing')
@@ -126,7 +130,7 @@ test('a viewer hears the music and cannot change it', async ({ browser }) => {
   await expect(viewer.getByTestId('music-listen')).toBeVisible()
   await expect(viewer.getByTestId('music-play')).toHaveCount(0)
   await expect(viewer.getByTestId('music-pause')).toHaveCount(0)
-  await expect(viewer.getByRole('radio', { name: 'Calm' })).toBeDisabled()
+  await expect(viewer.getByRole('radio', { name: 'Ambient' })).toBeDisabled()
 })
 
 test('the room server serves its library publicly, and only what it lists', async ({ request }) => {
