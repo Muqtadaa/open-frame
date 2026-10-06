@@ -5,6 +5,7 @@ import {
   destroyDecision,
   isOwnerKey,
   protectionDecision,
+  readDecision,
   setPasswordDecision,
   unlockDecision,
   mintKey,
@@ -361,5 +362,23 @@ describe('asking whether a board has a password', () => {
 
   it('answers for a board shared before links had roles, which lets anybody in', () => {
     expect(protectionDecision(undefined, null)).toEqual({ ok: true })
+  })
+})
+
+describe('reading what a board keeps: its images and its versions', () => {
+  it('lets any valid key read an open board', () => {
+    expect(readDecision({ role: 'viewer', owner: false, unlocked: true })).toEqual({ ok: true })
+    expect(readDecision({ role: 'editor', owner: false, unlocked: true })).toEqual({ ok: true })
+  })
+
+  it('gives a missing key and a locked board the same answer', () => {
+    const noKey = readDecision({ role: null, owner: false, unlocked: true })
+    const locked = readDecision({ role: 'viewer', owner: false, unlocked: false })
+    expect(noKey).toEqual(locked)
+    expect(noKey).toMatchObject({ ok: false, status: 403 })
+  })
+
+  it('never asks the owner for the password', () => {
+    expect(readDecision({ role: 'editor', owner: true, unlocked: false })).toEqual({ ok: true })
   })
 })

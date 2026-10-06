@@ -15,6 +15,7 @@ import {
   setPasswordDecision,
   unlockDecision,
   protectionDecision,
+  readDecision,
   mintKey,
   mintKeys,
   roleForKey,
@@ -31,6 +32,7 @@ import {
   type UnlockThrottle,
 } from './password.js'
 import { assetDecision, assetKey, checkUpload, purgeBoardAssets } from './assets.js'
+import { RoomHistory, timingFrom } from './history.js'
 import { InFlight } from './in-flight.js'
 import type { Env } from './env.js'
 
@@ -103,6 +105,12 @@ const PASSWORD = 'password'
  * when nobody has failed lately, which is almost always.
  */
 const UNLOCK_THROTTLE = 'unlock-throttle'
+/**
+ * Which board this room is. An alarm arrives with no request to read it from,
+ * and the board's versions are kept under its id, so the first request
+ * writes it down.
+ */
+const BOARD_ID = 'board-id'
 
 const CORS = {
   'access-control-allow-origin': '*',
@@ -115,6 +123,9 @@ export class BoardRoomObject extends DurableObject<Env> {
   #sequence = 0
   /** Uploads admitted and not yet in R2, which a destroy waits for. */
   readonly #uploads = new InFlight()
+  /** The board's earlier versions (ADR 0019). */
+  #history!: RoomHistory
+  #knownBoardId: string | null = null
 
   constructor(ctx: DurableObjectState, env: Env) {
     super(ctx, env)
@@ -125,6 +136,16 @@ export class BoardRoomObject extends DurableObject<Env> {
      * storage, and answer a sync step from an empty board — which looks to the
      * client exactly like everyone's work having been deleted.
      */
+    this.#history = new RoomHistory({
+      storage: ctx.storage,
+      bucket: env.ASSETS,
+      boardId: () => this.#storedBoardId(),
+      snapshot: () => this.#room.snapshot(),
+      going: () => this.#going(),
+      track: (write) => this.#uploads.track(write),
+      timing: timingFrom(env.HISTORY_TIMING),
+    })
+
     void ctx.blockConcurrencyWhile(async () => {
       this.#room = new BoardRoom({
         doc: documentFromSnapshot(await this.#load()),
@@ -161,6 +182,7 @@ export class BoardRoomObject extends DurableObject<Env> {
     }
 
     if (url.pathname.includes('/asset/')) return this.#asset(request, url)
+    if (url.pathname.includes('/versions')) return this.#versions(request, url)
 
     if (url.pathname.endsWith('/claim')) return this.#claim()
     if (url.pathname.endsWith('/password')) return this.#setPassword(request)
@@ -215,6 +237,13 @@ export class BoardRoomObject extends DurableObject<Env> {
       refused[1].close(CLOSE_PASSWORD_REQUIRED, 'This board needs its password')
       return new Response(null, { status: 101, webSocket: refused[0] })
     }
+
+    /*
+     * Only once somebody who can change the board is let in: an edit is what
+     * a version needs the id for, and writing it on any request would let
+     * anyone leave a row in a room by naming one.
+     */
+    if (role === 'editor') await this.#rememberBoardId(url)
 
     const pair = new WebSocketPair()
     const client = pair[0]
@@ -357,6 +386,72 @@ export class BoardRoomObject extends DurableObject<Env> {
     })
   }
 
+  /**
+   * The board's history: the list of its versions, or one version's bytes.
+   *
+   * Read by the same rule as an image (`readDecision`), because a version is
+   * the board as it was and anyone who may open the board may see what it
+   * was. Restoring one is an EDIT, made by an editor's own client through the
+   * command layer and the socket like any other — nothing here writes.
+   */
+  async #versions(request: Request, url: URL): Promise<Response> {
+    const keys = await this.ctx.storage.get<AccessKeys>(KEYS)
+    const verifier = await this.ctx.storage.get<PasswordVerifier>(PASSWORD)
+    const decision = readDecision({
+      role: roleForKey(keys, request.headers.get('x-openframe-key')),
+      owner: isOwnerKey(keys, request.headers.get('x-openframe-owner')),
+      unlocked: tokenAdmits(verifier, request.headers.get('x-openframe-token')),
+    })
+    if (!decision.ok) {
+      return new Response(decision.reason, { status: decision.status, headers: CORS })
+    }
+
+    const versionId = url.pathname.split('/versions/')[1]?.replace(/\/$/, '')
+    if (versionId === undefined || versionId === '') {
+      return Response.json(
+        { versions: await this.#history.list() },
+        { headers: { ...CORS, 'cache-control': 'no-store' } },
+      )
+    }
+
+    const bytes = await this.#history.read(versionId)
+    if (bytes === null) return new Response('No such version', { status: 404, headers: CORS })
+    return new Response(bytes, {
+      headers: {
+        ...CORS,
+        // Gzipped Yjs, which the client opens itself — not `content-encoding`,
+        // which a proxy along the way is free to undo or redo.
+        'content-type': 'application/octet-stream',
+        // A version never changes once taken; its id names it for good.
+        'cache-control': 'private, max-age=31536000, immutable',
+        'x-content-type-options': 'nosniff',
+      },
+    })
+  }
+
+  /**
+   * Wakes the room to take a version once editing has settled, and to thin
+   * the ones retention no longer keeps (`history.ts`). The only alarm this
+   * room sets.
+   */
+  override async alarm(): Promise<void> {
+    await this.#history.alarm()
+  }
+
+  async #rememberBoardId(url: URL): Promise<void> {
+    if (this.#knownBoardId !== null) return
+    const boardId = this.#boardId(url)
+    if (boardId === '') return
+    const stored = await this.ctx.storage.get<string>(BOARD_ID)
+    if (stored === undefined) await this.ctx.storage.put(BOARD_ID, boardId)
+    this.#knownBoardId = stored ?? boardId
+  }
+
+  async #storedBoardId(): Promise<string | null> {
+    this.#knownBoardId ??= (await this.ctx.storage.get<string>(BOARD_ID)) ?? null
+    return this.#knownBoardId
+  }
+
   /** Whether the board is being deleted or already has been. */
   async #going(): Promise<boolean> {
     const [deleting, destroyed] = await Promise.all([
@@ -447,6 +542,8 @@ export class BoardRoomObject extends DurableObject<Env> {
       )
     }
 
+    // An alarm left set would wake a deleted room to version nothing.
+    await this.ctx.storage.deleteAlarm()
     await this.ctx.storage.deleteAll()
     // After, deliberately: `deleteAll` would take it with everything else.
     await this.ctx.storage.put(DESTROYED, true)
@@ -662,6 +759,8 @@ export class BoardRoomObject extends DurableObject<Env> {
     const key = `${UPDATE_PREFIX}${String(this.#sequence++).padStart(8, '0')}`
     await this.ctx.storage.put(key, bufferOf(update))
     if (this.#sequence >= COMPACT_AFTER) await this.#compact()
+    // After the change is safe: history is a copy, and the copy can wait.
+    await this.#history.edited()
   }
 
   /** Folds the loose updates back into one snapshot, so a cold start stays cheap. */

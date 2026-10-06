@@ -141,7 +141,8 @@ The rules are pure functions in `apps/rooms/src/access.ts`, tested in Node.
 
 - **Who can do what:** any valid link may read, and only the editor link may
   write. The password applies to both, as it does on the socket
-  (`assetDecision`, `apps/rooms/src/assets.ts`).
+  (`assetDecision`, `apps/rooms/src/assets.ts`). Reading is `readDecision` in
+  `access.ts`, which a board's versions share.
 - **One policy, applied by the browser and again by the room.** It is
   `packages/core/src/uploads/image-policy.ts`, checked in this order:
   1. size, with a 12MB limit;
@@ -159,6 +160,30 @@ The rules are pure functions in `apps/rooms/src/access.ts`, tested in Node.
 - **Deletion:** images are deleted with the board (see Destruction above). A
   browser that already fetched one keeps its cached copy, which is outside
   what the room can reach.
+
+## Versions (R2)
+
+ADR 0019. A shared board's earlier versions are whole Yjs snapshots, gzipped,
+at `<boardId>/versions/<versionId>` in the images bucket. The room keeps one
+record for each in its own storage.
+
+- **Who can do what:** reading follows the same rule as an image
+  (`readDecision`): any valid link, the password as a second factor, and the
+  owner is never asked for the password. Viewers can therefore see what a
+  board used to say. This is the decision as made: anyone who may open the
+  board may see its past.
+- **No request writes a version.** The room takes versions itself, on its
+  alarm (`apps/rooms/src/history.ts`). Restoring is an editor's own edit,
+  through the socket.
+- **The room never reads a version.** Its contents are checked by the client
+  that opens it, through `readRemoteObject`, as for any remote change
+  (ADR 0016).
+- **Ids are checked twice.** The route accepts only the version-id shape
+  (`route.ts`). The room serves only versions it has a record of, so a key
+  in the bucket that has no record cannot be read.
+- **Deletion:** versions live under the board's prefix, so destroying the
+  board sweeps them with its images. Thinning removes the bytes before the
+  record, so a failure part-way never leaves bytes that nothing knows about.
 
 ## Music (R2, public)
 

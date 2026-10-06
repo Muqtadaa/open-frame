@@ -38,4 +38,9 @@ export interface Env {
   /** Runs per signed-in person per day, and for everybody together. */
   readonly AI_DAILY_LIMIT?: string
   readonly AI_GLOBAL_DAILY_LIMIT?: string
+  /**
+   * `"<settle ms>,<interval ms>"`, for the rooms suite only, which cannot wait
+   * minutes for a version (ADR 0019). Never set in `wrangler.toml`.
+   */
+  readonly HISTORY_TIMING?: string
 }
