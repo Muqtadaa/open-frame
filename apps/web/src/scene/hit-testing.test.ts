@@ -57,6 +57,35 @@ describe('a press inside a container', () => {
     expect(hitTest(h.store.getDocument(), h.registry, at(600, 100))).toBe(inFrame)
   })
 
+  /*
+   * A frame is picked up by its title, which the DOM finds (rule 15), never by
+   * its body: a press that misses a note inside one by a few pixels used to
+   * pick up the whole frame and everything in it.
+   */
+  it('passes a press on a frame’s empty body through to the board', () => {
+    const frame = make('frame', { x: 500, y: 0, width: 300, height: 300 })
+    make('sticky', { x: 550, y: 50, width: 100, height: 100 }, frame)
+    expect(hitTest(h.store.getDocument(), h.registry, at(750, 250))).toBeNull()
+    expect(hitTestRaw(h.store.getDocument(), h.registry, at(750, 250))).toBeNull()
+    // Something underneath the frame is reached through it.
+    const under = make('sticky', { x: 700, y: 200, width: 50, height: 50 })
+    h.dispatcher.dispatch({ kind: 'ReorderObjects', ids: [under], placement: 'back' })
+    expect(hitTest(h.store.getDocument(), h.registry, at(720, 220))).toBe(under)
+  })
+
+  it('selects what a marquee drawn inside a frame encloses, and not the frame', () => {
+    const frame = make('frame', { x: 0, y: 0, width: 400, height: 400 })
+    const note = make('sticky', { x: 50, y: 50, width: 100, height: 100 }, frame)
+    expect(
+      objectsInMarquee(h.store.getDocument(), h.registry, {
+        x: 20,
+        y: 20,
+        width: 200,
+        height: 200,
+      }),
+    ).toEqual([note])
+  })
+
   it('reaches the member itself when asked raw, so grouped text stays editable', () => {
     const a = make('sticky', { x: 0, y: 0, width: 100, height: 100 })
     const b = make('sticky', { x: 200, y: 0, width: 100, height: 100 })

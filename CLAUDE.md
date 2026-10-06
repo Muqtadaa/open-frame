@@ -285,10 +285,16 @@ or the test passes with the feature deleted — three of these did.
 
 ### 18. A container's behaviour is a capability, not a check for its type
 
-`frame` and `group` both hold children and differ in ONE thing: clicking a
-member of a group selects the group, clicking a member of a frame selects the
-member. That lives in `capabilities.selectsAsUnit`, so the hit tester names
-neither type.
+`frame` and `group` both hold children and differ in two things. The first is
+membership: clicking a member of a group selects the group, while clicking a
+member of a frame selects the member. That lives in
+`capabilities.selectsAsUnit`, so the hit tester names neither type.
+
+The second is the body. A frame is `hollow`: a press on its body lands on
+whatever is beneath it, so a frame is picked up by its title alone. A press
+that missed a note by a few pixels used to drag the whole frame. The registry's
+hit test and the DOM (`.of-object--hollow`) both read the capability, so they
+cannot disagree.
 
 Adding a capability is deliberately a breaking change — every type must state
 its answer. A capability that defaulted to `false` would let a new type acquire

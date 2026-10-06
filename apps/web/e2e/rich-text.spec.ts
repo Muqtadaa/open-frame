@@ -406,10 +406,14 @@ test('a frame title takes formatting and a list', async ({ page }) => {
   await seedBoard(
     page,
     buildBoard((board) => {
-      board.add('frame', AT, { name: [{ text: 'Findings' }] })
+      // Low enough that its title, above it, is clear of the navigation bar.
+      board.add('frame', { x: 400, y: 420 }, { name: [{ text: 'Findings' }] })
     }),
   )
-  await openEditor(page, 'frame')
+  // Selected by its title: a frame's body is hollow.
+  await page.getByTestId('frame-title').click()
+  await page.keyboard.press('Enter')
+  await expect(page.locator(EDITOR)).toBeFocused()
   await page.keyboard.press('ControlOrMeta+a')
   await page.getByTestId('format-bold').click()
   await page.locator(CANVAS).click({ position: CLEAR })

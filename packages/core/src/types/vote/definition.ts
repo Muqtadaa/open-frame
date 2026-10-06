@@ -30,6 +30,7 @@ export const voteType = defineObjectType<typeof VOTE_TYPE, VoteData>({
     spatial: false,
     canHaveChildren: false,
     selectsAsUnit: false,
+    hollow: false,
     connectable: false,
     markable: false,
     styleProps: [],

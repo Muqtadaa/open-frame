@@ -209,6 +209,7 @@ export const connectorType = defineObjectType<typeof CONNECTOR_TYPE, ConnectorDa
     spatial: true,
     canHaveChildren: false,
     selectsAsUnit: false,
+    hollow: false,
     connectable: false,
     markable: false,
     /*

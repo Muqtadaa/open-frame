@@ -692,9 +692,16 @@ export function useCanvasGestures(containerRef: RefObject<HTMLElement | null>) {
         return
       }
       const worldPoint = toWorld(event.clientX, event.clientY)
+      /*
+       * The chrome is asked of the element under the pointer as well as of the
+       * target, as a double-click is: a press captures the pointer, which can
+       * hand this event to the canvas instead of the frame title it was on —
+       * and a frame's title is the only place a frame can be pointed at.
+       */
       const hit =
         hitTest(runtime.store.getDocument(), runtime.registry, worldPoint) ??
-        objectChromeUnderPointer(event.target)
+        objectChromeUnderPointer(event.target) ??
+        objectChromeUnderPointer(window.document.elementFromPoint(event.clientX, event.clientY))
 
       // Right-clicking an unselected object selects it first, so the menu always
       // acts on what the user pointed at.

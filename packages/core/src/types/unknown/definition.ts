@@ -44,6 +44,7 @@ export const unknownType = defineObjectType<typeof UNKNOWN_TYPE, UnknownData>({
     spatial: true,
     canHaveChildren: false,
     selectsAsUnit: false,
+    hollow: false,
     connectable: false,
     markable: false,
     styleProps: [],

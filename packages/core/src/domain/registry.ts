@@ -313,6 +313,19 @@ export interface ObjectCapabilities {
    * while a group is meant to behave as one thing.
    */
   readonly selectsAsUnit: boolean
+  /**
+   * Its body is not something you can press: a press inside it lands on
+   * whatever is beneath, and the object is picked up by its chrome alone —
+   * a frame by its title (rule 15).
+   *
+   * What a frame is for is holding other things, and the person working
+   * inside one is aiming at those things or at the space between them. When
+   * the body was a target, a press that missed a note by a few pixels picked
+   * up the whole frame and everything in it, which was the commonest
+   * accident on the board. A marquee started inside one now selects what is
+   * in it.
+   */
+  readonly hollow: boolean
   readonly connectable: boolean
   /**
    * Whether people can put per-person marks on it — reactions, votes.
@@ -1077,7 +1090,9 @@ export class ObjectTypeRegistry {
   }
 
   hitTestObject(object: AnyOpenFrameObject, doc: BoardDocument, point: Point): boolean {
-    const precise = this.#definitions.get(object.type)?.hitTest
+    const definition = this.#definitions.get(object.type)
+    if (definition?.capabilities.hollow === true) return false
+    const precise = definition?.hitTest
     if (precise !== undefined) return precise(object, doc, point, this.#geometryContext(doc))
     const { x, y, width, height } = object.frame
     return containsRotatedPoint({ x, y, width, height }, object.frame.rotation, point)

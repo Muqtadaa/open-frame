@@ -111,6 +111,7 @@ export const tableType = defineObjectType<typeof TABLE_TYPE, TableData>({
      */
     canHaveChildren: false,
     selectsAsUnit: false,
+    hollow: false,
     connectable: true,
     markable: false,
     /*

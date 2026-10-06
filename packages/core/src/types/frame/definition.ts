@@ -26,6 +26,7 @@ export const frameType = defineObjectType<typeof FRAME_TYPE, FrameData>({
     spatial: true,
     canHaveChildren: true,
     selectsAsUnit: false,
+    hollow: true,
     connectable: true,
     markable: false,
     styleProps: ['color', 'textColor', 'strokeColor', 'fill', 'opacity'],
