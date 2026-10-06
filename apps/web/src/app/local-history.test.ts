@@ -284,6 +284,16 @@ describe('a local board’s history', () => {
     expect(versions.rows.map((v) => v.kind)).toEqual(['named', 'auto'])
   })
 
+  it('keeps no named version once disposed, even one asked for before', async () => {
+    const { history, versions } = setup()
+    // Queued behind the opening thinning, then disposed before its turn.
+    const kept = history.keepNamed('Too late')
+    history.dispose()
+    expect(await kept).toBe(false)
+    await history.idle()
+    expect(versions.rows).toHaveLength(0)
+  })
+
   it('stops for good once disposed', async () => {
     const { history, versions, edit, advance } = setup()
     await history.idle()

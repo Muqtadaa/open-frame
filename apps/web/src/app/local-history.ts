@@ -186,13 +186,12 @@ export function keepLocalHistory(deps: LocalHistoryDeps): LocalHistory {
     arm()
   })
 
-  /** Runs `step` behind whatever is queued; answers whether it finished. */
-  const settle = (step: () => Promise<void>): Promise<boolean> =>
+  /** Runs `step` behind whatever is queued; answers what it did, or `false` if it failed. */
+  const settle = (step: () => Promise<boolean>): Promise<boolean> =>
     new Promise<boolean>((resolve) => {
       run(async () => {
         try {
-          await step()
-          resolve(true)
+          resolve(await step())
         } catch (error) {
           resolve(false)
           throw error
@@ -204,7 +203,14 @@ export function keepLocalHistory(deps: LocalHistoryDeps): LocalHistory {
     keepNamed: (raw) => {
       const name = versionName(raw)
       if (name === null || disposed) return Promise.resolve(false)
-      return settle(() => write('named', name))
+      return settle(async () => {
+        // Asked again at its turn: a keeper disposed while this waited behind
+        // other work must not write a board that is no longer on screen
+        // (Codex, on #85).
+        if (disposed) return false
+        await write('named', name)
+        return true
+      })
     },
     keepNow: () =>
       new Promise<boolean>((resolve) => {

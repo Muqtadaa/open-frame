@@ -34,6 +34,7 @@ import {
   type UnlockThrottle,
 } from './password.js'
 import { assetDecision, assetKey, checkUpload, purgeBoardAssets } from './assets.js'
+import { readBounded } from './body.js'
 import { RoomHistory, timingFrom } from './history.js'
 import { InFlight } from './in-flight.js'
 import type { Env } from './env.js'
@@ -415,12 +416,11 @@ export class BoardRoomObject extends DurableObject<Env> {
       /*
        * The body is read before anything is decided: the runtime errors on a
        * request stream still open once the response has gone. A name is at
-       * most eighty characters, so anything long is refused unread.
+       * most eighty characters, so the read stops at a few kilobytes,
+       * whatever the request claims its length is (Codex, on #85).
        */
-      if (Number(request.headers.get('content-length') ?? 0) > MAX_NAMED_BODY) {
-        return new Response('Too long', { status: 413, headers: CORS })
-      }
       const body = request.method === 'POST' ? await readNamed(request) : { named: false as const }
+      if (body === TOO_LONG) return new Response('Too long', { status: 413, headers: CORS })
       const keep = keepVersionDecision(caller)
       if (!keep.ok) return new Response(keep.reason, { status: keep.status, headers: CORS })
 
@@ -871,19 +871,24 @@ async function readBody(request: Request): Promise<{
   }
 }
 
+/** Far more than `{"name": …}` with an eighty-character name, escaped, can take. */
+const MAX_NAMED_BODY = 4096
+const TOO_LONG = 'too-long'
+
 /**
  * Whether a request to keep a version asks for a NAMED one, and the name it
  * gave — still to be checked. No body, or one that is not a JSON object
- * carrying `name`, is a plain "keep the board as it is now".
+ * carrying `name`, is a plain "keep the board as it is now". A body longer
+ * than `MAX_NAMED_BODY` is `TOO_LONG`, and no more of it is read.
  */
-/** Far more than `{"name": …}` with an eighty-character name, escaped, can take. */
-const MAX_NAMED_BODY = 4096
-
 async function readNamed(
   request: Request,
-): Promise<{ readonly named: false } | { readonly named: true; readonly name: unknown }> {
+): Promise<
+  { readonly named: false } | { readonly named: true; readonly name: unknown } | typeof TOO_LONG
+> {
   try {
-    const text = await request.text()
+    const text = await readBounded(request, MAX_NAMED_BODY)
+    if (text === null) return TOO_LONG
     if (text.trim() === '') return { named: false }
     const body: unknown = JSON.parse(text)
     if (typeof body !== 'object' || body === null || !('name' in body)) return { named: false }
