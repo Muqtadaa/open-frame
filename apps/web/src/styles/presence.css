@@ -198,9 +198,23 @@
 }
 
 .of-status__more {
+  /* A button now (it opens everyone on the board), and a target like a face. */
+  min-width: 24px;
+  height: 24px;
+  padding: 0 var(--of-space-4);
   font-family: var(--of-mono);
   font-size: var(--of-type-record);
   color: var(--of-ink-muted);
+  cursor: pointer;
+  background: transparent;
+  border: 0;
+  border-radius: var(--of-radius);
+}
+
+.of-status__more:hover,
+.of-status__more[aria-expanded='true'] {
+  color: var(--of-ink);
+  background: var(--of-accent-soft);
 }
 
 .of-status__person {

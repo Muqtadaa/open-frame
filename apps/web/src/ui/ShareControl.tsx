@@ -18,6 +18,7 @@ import {
 } from '../runtime/services.js'
 import { canFollow, hueVar, initialOf } from '../scene/presence.js'
 import { Gate, GateActions, GateBody } from './Gate.js'
+import { PeopleSheet, type BoardPerson } from './PeopleSheet.js'
 import { handOver, takeHandedOver } from './share-handover.js'
 
 /**
@@ -68,6 +69,13 @@ export function ShareControl() {
     anchor: shareAnchor,
     surface,
   } = useAnchoredTo<HTMLButtonElement>(links !== null)
+  /** Everyone on the board, from the count of those the bar has no room for. */
+  const [peopleOpen, setPeopleOpen] = useState(false)
+  const {
+    ref: moreButton,
+    anchor: peopleAnchor,
+    surface: peopleSurface,
+  } = useAnchoredTo<HTMLButtonElement>(peopleOpen)
 
   useEffect(() => {
     if (collaboration === null || collaboration === undefined) return
@@ -170,8 +178,15 @@ export function ShareControl() {
   // leftmost is always yours is a row you can read without hunting.
   const guest = guestIdentity()
   const you = identity === null ? guest : { name: identity.displayName, hue: identity.hue }
-  const here = [
-    { key: 'you', name: `${you.name} (you)`, hue: you.hue, clientId: null, followable: false },
+  const here: (BoardPerson & { readonly followable: boolean })[] = [
+    {
+      key: 'you',
+      name: `${you.name} (you)`,
+      hue: you.hue,
+      clientId: null,
+      followable: false,
+      unfollowable: null,
+    },
     ...peers.map((peer) => ({
       key: String(peer.clientId),
       name: peer.name,
@@ -184,6 +199,11 @@ export function ShareControl() {
        * made.
        */
       followable: canFollow(peer),
+      unfollowable: canFollow(peer)
+        ? null
+        : peer.following !== null
+          ? 'Following someone'
+          : 'No view to follow',
     })),
   ]
 
@@ -201,6 +221,13 @@ export function ShareControl() {
       : [...here.slice(0, MAX_FACES - 1), followed]
   const hidden = here.filter((person) => !shown.includes(person))
   const moreLabel = `Also here: ${hidden.map((person) => person.name).join(', ')}`
+  /*
+   * The list closes when the count goes — the room shrank to three while it
+   * was open. Left open, it came back by itself the moment somebody else
+   * arrived, with nobody having asked for it (Codex, on #84). Set while
+   * rendering, React's own way to adjust state to what just changed.
+   */
+  if (peopleOpen && hidden.length === 0) setPeopleOpen(false)
 
   /*
    * The chip says which link it hands over, because that is the whole risk of
@@ -344,18 +371,49 @@ export function ShareControl() {
             </button>
           )
         })}
+        {/*
+         * The count opens the whole room. It was a picture of names in a
+         * tooltip, so whoever it stood for — decided only by when they
+         * arrived — could not be followed at all.
+         */}
         {hidden.length > 0 && (
-          <span
+          <button
+            ref={moreButton}
+            type="button"
             className="of-status__more"
             data-testid="room-more"
             data-tip={moreLabel}
-            role="img"
-            aria-label={moreLabel}
+            aria-label={`${String(hidden.length)} more on this board`}
+            aria-description={moreLabel}
+            aria-haspopup="dialog"
+            aria-expanded={peopleOpen}
+            onClick={() => {
+              setPeopleOpen((open) => !open)
+            }}
           >
             +{hidden.length}
-          </span>
+          </button>
         )}
       </span>
+      {peopleOpen && hidden.length > 0 && (
+        <AnchoredSurface
+          anchor={peopleAnchor}
+          surface={peopleSurface}
+          prefer={['below', 'above']}
+          testId="people-surface"
+        >
+          <PeopleSheet
+            people={here}
+            following={following}
+            trigger={moreButton}
+            onFollow={setFollowing}
+            onClose={() => {
+              setPeopleOpen(false)
+              moreButton.current?.focus()
+            }}
+          />
+        </AnchoredSurface>
+      )}
       {links !== null && (
         <AnchoredSurface
           anchor={shareAnchor}

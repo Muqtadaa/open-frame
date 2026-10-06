@@ -136,6 +136,71 @@ test('faces are targets, side by side, and a crowd is counted', async ({ browser
   await expect(me.getByTestId('room-more')).toHaveText('+1')
 })
 
+/*
+ * Whoever the count stands for can be followed too. The count was a picture
+ * of names in a tooltip, so the people behind it — decided only by when they
+ * arrived — could not be followed at all. It opens everyone on the board now,
+ * each one a choice.
+ */
+test('anyone behind the count can be followed, from the list it opens', async ({ browser }) => {
+  const room = newRoomId()
+  const pages = [await join(browser, room)]
+  for (let i = 0; i < 4; i++) pages.push(await join(browser, room))
+  const me = defined(pages[0], 'the first page')
+  await expect(me.getByTestId('room-people')).toHaveAttribute('data-count', '5', {
+    timeout: 20_000,
+  })
+  const more = me.getByTestId('room-more')
+  await expect(more).toHaveText('+2')
+
+  await more.click()
+  const sheet = me.getByTestId('people-sheet')
+  await expect(sheet).toBeVisible()
+  // Everyone, you included: five rows, four of them people you can follow.
+  await expect(sheet.locator('li')).toHaveCount(5)
+  const choices = sheet.locator('[data-testid^="people-follow-"]')
+  await expect(choices).toHaveCount(4, { timeout: 20_000 })
+
+  // The last of them is one the bar has no room for.
+  const last = choices.last()
+  const key = ((await last.getAttribute('data-testid')) ?? '').replace('people-follow-', '')
+  await expect(me.getByTestId(`follow-${key}`)).toHaveCount(0)
+  await last.click()
+
+  // Following them now, and so they are among the three faces.
+  await expect(sheet).toHaveCount(0)
+  await expect(me.getByTestId(`follow-${key}`)).toHaveAttribute('aria-pressed', 'true')
+  await expect(more).toBeFocused()
+
+  // And Escape closes the list, handing the keyboard back to the count.
+  await more.click()
+  await expect(sheet).toBeVisible()
+  await me.keyboard.press('Escape')
+  await expect(sheet).toHaveCount(0)
+  await expect(more).toBeFocused()
+
+  /*
+   * The room shrinks to three while the list is open, and then somebody new
+   * arrives: the list stays closed. It used to come back by itself, with
+   * nobody having asked for it (Codex, on #84).
+   */
+  await more.click()
+  await expect(sheet).toBeVisible()
+  // Two people who are not the one being followed leave.
+  const leaving = pages
+    .slice(1)
+    .filter((page) => page !== me)
+    .slice(0, 2)
+  for (const page of leaving) await page.context().close()
+  await expect(more).toHaveCount(0, { timeout: 20_000 })
+  await expect(sheet).toHaveCount(0)
+  pages.push(await join(browser, room))
+  pages.push(await join(browser, room))
+  await expect(more).toBeVisible({ timeout: 20_000 })
+  await expect(more).toHaveAttribute('aria-expanded', 'false')
+  await expect(sheet).toHaveCount(0)
+})
+
 test('undo takes back your own change, not the last one made', async ({ browser }) => {
   const room = newRoomId()
   const alice = await join(browser, room)
