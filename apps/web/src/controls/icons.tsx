@@ -119,6 +119,24 @@ export function MusicIcon({ className }: IconProps) {
   )
 }
 
+/** Skip to the next track: a triangle into a bar, drawn as the outline icons are. */
+export function NextTrackIcon({ className }: IconProps) {
+  return (
+    <svg {...base} className={className}>
+      <path d="M6 6.5v11l9-5.5ZM18 6v12" />
+    </svg>
+  )
+}
+
+/** The track before — or this one again, more than a moment in. */
+export function PreviousTrackIcon({ className }: IconProps) {
+  return (
+    <svg {...base} className={className}>
+      <path d="M18 6.5v11L9 12ZM6 6v12" />
+    </svg>
+  )
+}
+
 export function TrashIcon({ className }: IconProps) {
   return (
     <svg {...base} className={className}>

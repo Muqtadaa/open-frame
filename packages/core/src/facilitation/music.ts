@@ -255,6 +255,36 @@ export function setGenre(
   }
 }
 
+/**
+ * Further into a track than this, "previous" starts it again rather than going
+ * back one — what every player does, so a press that lands a moment late still
+ * means the song before.
+ */
+export const RESTART_MS = 3000
+
+/**
+ * The next track (`1`) or the one before (`-1`), from its beginning, in the
+ * same run: the playlist wraps both ways, playing music keeps playing and
+ * paused music stays paused at the top of the new track. It is the same run
+ * because it is the same music — nobody is asked to listen again.
+ */
+export function skipMusic(
+  music: SessionMusic,
+  now: number,
+  by: string | null,
+  step: 1 | -1,
+): SessionMusic {
+  const at = positionOf(music, now)
+  if (at === null) return music
+  const count = music.playlist.length
+  const target =
+    step === -1 && at.offsetMs > RESTART_MS ? at.index : (at.index + step + count) % count
+  const start = music.playlist.slice(0, target).reduce((sum, track) => sum + track.durationMs, 0)
+  return music.status === 'playing'
+    ? { ...music, anchor: now - start, by, at: now }
+    : { ...music, pausedAtMs: start, by, at: now }
+}
+
 export interface MusicPosition {
   readonly index: number
   readonly trackId: string

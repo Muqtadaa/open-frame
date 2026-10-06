@@ -9,6 +9,7 @@ import {
   readCatalogue,
   readMusic,
   setGenre,
+  skipMusic,
   stopMusic,
   stoppedMusic,
   type Catalogue,
@@ -196,6 +197,63 @@ describe('where the music is', () => {
       { id: 'a', durationMs: 60 * SECOND },
       { id: 'c', durationMs: 90 * SECOND },
     ])
+  })
+})
+
+describe('skipping within a genre', () => {
+  // `calm` is a (60s) then c (90s).
+  it('goes to the start of the next track, and keeps playing', () => {
+    const music = playMusic(stoppedMusic('ambient-lofi'), 0, by, calm)
+    const next = skipMusic(music, 20 * SECOND, 'Grace', 1)
+    expect(positionOf(next, 20 * SECOND)).toMatchObject({ trackId: 'c', offsetMs: 0 })
+    expect(next.status).toBe('playing')
+    expect(next.by).toBe('Grace')
+    expect(positionOf(next, 25 * SECOND)?.offsetMs).toBe(5 * SECOND)
+  })
+
+  it('wraps from the last track to the first, both ways', () => {
+    const music = playMusic(stoppedMusic('ambient-lofi'), 0, by, calm)
+    const onLast = 70 * SECOND // ten seconds into c
+    expect(positionOf(skipMusic(music, onLast, by, 1), onLast)?.trackId).toBe('a')
+    const onFirst = 1 * SECOND
+    expect(positionOf(skipMusic(music, onFirst, by, -1), onFirst)?.trackId).toBe('c')
+  })
+
+  it('starts the track again when it is more than a moment in, rather than going back', () => {
+    const music = playMusic(stoppedMusic('ambient-lofi'), 0, by, calm)
+    const deep = 70 * SECOND
+    expect(positionOf(skipMusic(music, deep, by, -1), deep)).toMatchObject({
+      trackId: 'c',
+      offsetMs: 0,
+    })
+    const early = 62 * SECOND
+    expect(positionOf(skipMusic(music, early, by, -1), early)).toMatchObject({
+      trackId: 'a',
+      offsetMs: 0,
+    })
+  })
+
+  it('stays paused, at the top of the track it moved to', () => {
+    const paused = pauseMusic(playMusic(stoppedMusic('ambient-lofi'), 0, by, calm), 20 * SECOND, by)
+    const next = skipMusic(paused, 40 * SECOND, by, 1)
+    expect(next.status).toBe('paused')
+    expect(positionOf(next, 99 * SECOND)).toMatchObject({ trackId: 'c', offsetMs: 0 })
+  })
+
+  it('is the same run, so nobody is asked to listen again', () => {
+    const music = playMusic(stoppedMusic('ambient-lofi'), 0, by, calm)
+    expect(skipMusic(music, 10 * SECOND, by, 1).run).toBe(music.run)
+  })
+
+  it('leaves stopped music alone', () => {
+    const stopped = stoppedMusic('ambient-lofi')
+    expect(skipMusic(stopped, 10, by, 1)).toBe(stopped)
+  })
+
+  it('writes a record any reader accepts', () => {
+    const music = playMusic(stoppedMusic('ambient-lofi'), 0, by, calm)
+    const next = skipMusic(music, 20 * SECOND, by, -1)
+    expect(readMusic(structuredClone(next))).toEqual(next)
   })
 })
 
