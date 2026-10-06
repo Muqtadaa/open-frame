@@ -55,7 +55,7 @@ export default {
           status: 204,
           headers: {
             'access-control-allow-origin': '*',
-            'access-control-allow-methods': 'GET, HEAD, PUT, POST, OPTIONS',
+            'access-control-allow-methods': 'GET, HEAD, PUT, POST, DELETE, OPTIONS',
             /*
              * The key and the password token travel as headers rather than in
              * the URL, so the preflight has to allow them by name — a browser
@@ -83,6 +83,7 @@ export default {
       case 'versions':
       case 'version':
       case 'keep-version':
+      case 'forget-version':
       case 'claim':
       case 'destroy':
       case 'password':

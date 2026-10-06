@@ -2,6 +2,8 @@ import { describe, expect, it } from 'vitest'
 
 import {
   DAY_MS,
+  MAX_VERSION_NAME,
+  versionName,
   LOCAL_RETENTION,
   MAX_INTERVAL_MS,
   ROOM_RETENTION,
@@ -147,5 +149,19 @@ describe('nextThinningAt', () => {
 
   it('has nothing to wait for when the local band has one boundary', () => {
     expect(nextThinningAt([auto(T0)], T0, null, LOCAL_RETENTION)).toBe(T0 + 14 * DAY_MS)
+  })
+})
+
+describe('versionName', () => {
+  it('keeps a name trimmed', () => {
+    expect(versionName('  Kickoff  ')).toBe('Kickoff')
+  })
+
+  it('refuses nothing, too much, control characters and anything not text', () => {
+    expect(versionName('   ')).toBeNull()
+    expect(versionName('x'.repeat(MAX_VERSION_NAME + 1))).toBeNull()
+    expect(versionName('x'.repeat(MAX_VERSION_NAME))).toHaveLength(MAX_VERSION_NAME)
+    expect(versionName('two\nlines')).toBeNull()
+    expect(versionName(42)).toBeNull()
   })
 })

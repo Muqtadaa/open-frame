@@ -6,6 +6,7 @@ import {
   type RoomPeer,
   type RoomRole,
 } from '@openframe/collab'
+import { versionName } from '@openframe/core/history'
 import { DurableObject } from 'cloudflare:workers'
 
 import {
@@ -33,6 +34,7 @@ import {
   type UnlockThrottle,
 } from './password.js'
 import { assetDecision, assetKey, checkUpload, purgeBoardAssets } from './assets.js'
+import { readBounded } from './body.js'
 import { RoomHistory, timingFrom } from './history.js'
 import { InFlight } from './in-flight.js'
 import type { Env } from './env.js'
@@ -405,13 +407,52 @@ export class BoardRoomObject extends DurableObject<Env> {
     }
 
     /*
-     * The one write: an editor's client keeping the board as it is now, just
-     * before it restores an older version, so what is replaced is kept too.
-     * The restore itself is an ordinary edit through the socket.
+     * The writes, both an editor's: keeping the board as it is now — just
+     * before a restore, so what is replaced is kept too, or under a name —
+     * and deleting a named version. The restore itself is an ordinary edit
+     * through the socket.
      */
-    if (request.method === 'POST') {
+    if (request.method === 'POST' || request.method === 'DELETE') {
+      /*
+       * The body is read before anything is decided: the runtime errors on a
+       * request stream still open once the response has gone. A name is at
+       * most eighty characters, so the read stops at a few kilobytes,
+       * whatever the request claims its length is (Codex, on #85).
+       */
+      const body = request.method === 'POST' ? await readNamed(request) : { named: false as const }
+      if (body === TOO_LONG) return new Response('Too long', { status: 413, headers: CORS })
       const keep = keepVersionDecision(caller)
       if (!keep.ok) return new Response(keep.reason, { status: keep.status, headers: CORS })
+
+      if (request.method === 'DELETE') {
+        const id = url.pathname.split('/versions/')[1]?.replace(/\/$/, '') ?? ''
+        const forgotten = await this.#history.forget(id)
+        return forgotten === 'deleted'
+          ? new Response(null, { status: 204, headers: CORS })
+          : forgotten === 'automatic'
+            ? new Response('Only a named version can be deleted', { status: 409, headers: CORS })
+            : new Response('No such version', { status: 404, headers: CORS })
+      }
+
+      /*
+       * With a name, a named version of the board as it is now (ADR 0019);
+       * without one, the board kept before a restore. The name is checked by
+       * the same rule the browser applies, so neither keeps one the other
+       * would refuse.
+       */
+      if (body.named) {
+        const name = versionName(body.name)
+        if (name === null) {
+          return new Response('That is not a name a version can have', {
+            status: 400,
+            headers: CORS,
+          })
+        }
+        const record = await this.#history.name(name)
+        return record === null
+          ? Response.json({ named: false }, { status: 503, headers: CORS })
+          : Response.json({ version: record }, { headers: CORS })
+      }
       const kept = await this.#history.keepNow()
       return kept
         ? Response.json({ kept: true }, { headers: CORS })
@@ -827,6 +868,33 @@ async function readBody(request: Request): Promise<{
     }
   } catch {
     return { key: null, password: null }
+  }
+}
+
+/** Far more than `{"name": …}` with an eighty-character name, escaped, can take. */
+const MAX_NAMED_BODY = 4096
+const TOO_LONG = 'too-long'
+
+/**
+ * Whether a request to keep a version asks for a NAMED one, and the name it
+ * gave — still to be checked. No body, or one that is not a JSON object
+ * carrying `name`, is a plain "keep the board as it is now". A body longer
+ * than `MAX_NAMED_BODY` is `TOO_LONG`, and no more of it is read.
+ */
+async function readNamed(
+  request: Request,
+): Promise<
+  { readonly named: false } | { readonly named: true; readonly name: unknown } | typeof TOO_LONG
+> {
+  try {
+    const text = await readBounded(request, MAX_NAMED_BODY)
+    if (text === null) return TOO_LONG
+    if (text.trim() === '') return { named: false }
+    const body: unknown = JSON.parse(text)
+    if (typeof body !== 'object' || body === null || !('name' in body)) return { named: false }
+    return { named: true, name: body.name }
+  } catch {
+    return { named: false }
   }
 }
 

@@ -1,9 +1,11 @@
+import { MAX_VERSION_NAME, versionName } from '@openframe/core/history'
 import { useEffect, useRef, useState } from 'react'
 
 import { previewRuntime, versionPreview } from '../app/version-preview.js'
 import { AnchoredSurface } from '../controls/AnchoredSurface.js'
 import { HistoryIcon } from '../controls/icons.js'
 import { useAnchoredTo } from '../controls/use-anchor.js'
+import { useCanEdit } from '../hooks/use-can-edit.js'
 import { useInteractionStore } from '../interaction/interaction-store.js'
 import type { VersionListing } from '../runtime/board-history.js'
 import { useOpenFrame } from '../runtime/context.js'
@@ -107,8 +109,13 @@ export function VersionList({
   readonly ready?: boolean
 }) {
   const { runtime, history } = useOpenFrame()
+  const canEdit = useCanEdit()
   const [versions, setVersions] = useState<readonly VersionListing[] | null | 'loading'>('loading')
   const [failed, setFailed] = useState<string | null>(null)
+  const [name, setName] = useState('')
+  /** Bumped after a version is named or deleted, so the list is read again. */
+  const [reads, setReads] = useState(0)
+  const [busy, setBusy] = useState(false)
   const list = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
@@ -120,11 +127,17 @@ export function VersionList({
     return () => {
       current = false
     }
-  }, [history])
+  }, [history, reads])
 
   useEffect(() => {
     if (!ready) return
-    list.current?.querySelector<HTMLElement>('button')?.focus()
+    // The versions are what the list is for, so the keyboard lands on the
+    // newest — not on the name field above it, which an editor reaches by
+    // going back one.
+    const target =
+      list.current?.querySelector<HTMLElement>('[data-testid="history-version"]') ??
+      list.current?.querySelector<HTMLElement>('input, button')
+    target?.focus()
   }, [ready, versions])
 
   if (history === null || history === undefined) return null
@@ -158,8 +171,73 @@ export function VersionList({
     })
   }
 
+  const keep = async (): Promise<void> => {
+    const chosen = versionName(name)
+    if (chosen === null || busy) return
+    setBusy(true)
+    const kept = await history.name(chosen)
+    setBusy(false)
+    if (!kept) {
+      setFailed('That version could not be kept.')
+      return
+    }
+    setFailed(null)
+    setName('')
+    setReads((count) => count + 1)
+    useInteractionStore.getState().announce(`Kept as ${chosen}`)
+  }
+
+  const forget = async (version: VersionListing): Promise<void> => {
+    if (busy) return
+    setBusy(true)
+    const forgotten = await history.forget(version.id)
+    setBusy(false)
+    if (!forgotten) {
+      setFailed('That version could not be deleted.')
+      return
+    }
+    setFailed(null)
+    setReads((count) => count + 1)
+    useInteractionStore.getState().announce(`Deleted ${version.name ?? versionTime(version.at)}`)
+  }
+
   return (
     <div ref={list}>
+      {canEdit && (
+        <form
+          className="of-history__name"
+          onSubmit={(event) => {
+            event.preventDefault()
+            void keep()
+          }}
+        >
+          <label className="of-visually-hidden" htmlFor="of-version-name">
+            Version name
+          </label>
+          <input
+            id="of-version-name"
+            className="of-input"
+            type="text"
+            autoComplete="off"
+            placeholder="Name this version"
+            maxLength={MAX_VERSION_NAME}
+            value={name}
+            readOnly={busy}
+            onChange={(event) => {
+              setName(event.target.value)
+            }}
+            data-testid="history-name"
+          />
+          <button
+            type="submit"
+            className="of-button"
+            disabled={versionName(name) === null}
+            data-testid="history-name-save"
+          >
+            Save
+          </button>
+        </form>
+      )}
       {versions === 'loading' ? (
         <p className="of-mentions__where" role="status">
           Loading versions
@@ -175,7 +253,7 @@ export function VersionList({
       ) : (
         <ul className="of-mentions__list" data-testid="history-list">
           {versions.map((version) => (
-            <li key={version.id}>
+            <li key={version.id} className="of-history__row">
               <button
                 type="button"
                 className="of-history__version"
@@ -189,6 +267,19 @@ export function VersionList({
                   <span className="of-mentions__where">{versionTime(version.at)}</span>
                 )}
               </button>
+              {canEdit && version.kind === 'named' && (
+                <button
+                  type="button"
+                  className="of-button of-button--ghost of-history__delete"
+                  aria-label={`Delete ${version.name ?? versionTime(version.at)}`}
+                  data-testid="history-delete"
+                  onClick={() => {
+                    void forget(version)
+                  }}
+                >
+                  Delete
+                </button>
+              )}
             </li>
           ))}
         </ul>

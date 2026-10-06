@@ -1,7 +1,7 @@
 # ADR 0019 · Version history: whole snapshots, thinned, restored as an edit
 
-**Status:** Accepted · 2026-10-06 · the room's half built in the first PR; the
-browser's half, the history panel with restore, and named versions follow.
+**Status:** Accepted · 2026-10-06 · built in four PRs: the room's half, the
+browser's half, the history panel with restore, and named versions.
 Cites ADR 0013, ADR 0016 and rule 7.
 
 ## Context
@@ -79,9 +79,8 @@ two copies of these rules would drift.
 - **Reading.** `GET /room/:id/versions` lists the versions and
   `GET /room/:id/versions/:versionId` returns one. Both are allowed by
   `readDecision` in `access.ts`, which images now share: any valid link, the
-  password as a second factor, and the owner never asked for it. Nothing in
-  the room writes a version on a client's request yet; named versions add
-  that, for editors only.
+  password as a second factor, and the owner never asked for it. What a
+  client may write is in "Named versions" below.
 
 ### Restore: an edit, through the command layer (rule 3)
 
@@ -110,6 +109,34 @@ itself cannot be built, because the preview applies the same check. Rule 7:
 never write back a board that could not be fully read. Only editors may
 restore: viewers are offered no button, and the command is refused by the
 capabilities a viewer's session holds.
+
+### Named versions
+
+An editor can keep the board as it is now under a name, from the top of the
+History panel. A named version is taken whether or not anything has changed
+since the last one, because naming a moment is the point, and thinning never
+drops it. It counts as the board's latest version, so the next automatic one
+is due an interval after it.
+
+- **The name** is held to one rule, `versionName` in
+  `@openframe/core/history`: trimmed, 1–80 characters, no control characters.
+  The browser applies it before asking and the room applies it again
+  (`room-object.ts`), so neither keeps a name the other would refuse.
+- **In the room:**
+  - `POST /room/:id/versions` with `{ "name": … }` takes the version
+    (`RoomHistory.name`); without a body it keeps the board before a restore,
+    as before.
+  - `DELETE /room/:id/versions/:versionId` deletes one (`RoomHistory.forget`),
+    bytes first, then the record.
+  - Both are for editors and the owner (`keepVersionDecision`).
+- **In the browser:** the keeper writes the version (`keepNamed`), and
+  deleting drops its row. A row's key marks it as named, so thinning still
+  reads keys alone. The panel reads the names of the named rows only.
+- **Only a named version can be deleted.** An automatic one is retention's:
+  the room answers 409, and the panel offers no Delete. Otherwise an editor
+  could empty a board's history, and "a version every ten minutes" would stop
+  being true.
+- **Viewers** see the names and are offered neither the field nor Delete.
 
 ### Browsing: the version on the canvas
 

@@ -334,3 +334,37 @@ describe('keeping the board as it is now, before a restore', () => {
     expect(await history.keepNow()).toBe(false)
   })
 })
+
+describe('named versions', () => {
+  it('keeps the board as it is now under a name, changed or not', async () => {
+    const { history, clock } = setup()
+    clock.now = T0 + 1000
+    const named = await history.name('Kickoff')
+    expect(named).toMatchObject({ kind: 'named', name: 'Kickoff', at: T0 + 1000 })
+    expect((await history.list()).map((v) => v.name)).toEqual(['Kickoff'])
+  })
+
+  it('is never thinned, however old', async () => {
+    const { history, clock } = setup()
+    await history.name('Kickoff')
+    clock.now = T0 + 400 * DAY_MS
+    await history.alarm()
+    expect((await history.list()).map((v) => v.name)).toEqual(['Kickoff'])
+  })
+
+  it('can be deleted, bytes and record both; an automatic one cannot', async () => {
+    const { history, bucket, clock } = setup()
+    const named = await history.name('Kickoff')
+    await history.edited()
+    // The next automatic version comes an interval after the named one.
+    clock.now = T0 + MAX_INTERVAL_MS
+    await history.alarm()
+    const automatic = (await history.list()).find((v) => v.kind === 'auto')
+
+    expect(await history.forget(automatic?.id ?? '')).toBe('automatic')
+    expect(await history.forget(named?.id ?? '')).toBe('deleted')
+    expect(bucket.objects.has(versionKey(BOARD, named?.id ?? ''))).toBe(false)
+    expect((await history.list()).map((v) => v.kind)).toEqual(['auto'])
+    expect(await history.forget(named?.id ?? '')).toBe('missing')
+  })
+})

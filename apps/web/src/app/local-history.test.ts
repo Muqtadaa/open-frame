@@ -255,6 +255,45 @@ describe('a local board’s history', () => {
     expect(versions.rows.map((v) => v.title)).toEqual(['Older', 'Plans'])
   })
 
+  it('keeps a named version whether or not anything changed, and it outlives thinning', async () => {
+    const versions = new MemoryVersions()
+    await versions.put({
+      boardId: BOARD,
+      id: versionId(T0 - 60_000),
+      at: T0 - 60_000,
+      kind: 'auto',
+      title: 'Older',
+      payload: null,
+    })
+    const { history, advance, edit } = setup(versions)
+    await history.idle()
+    expect(await history.keepNamed('  Kickoff  ')).toBe(true)
+    // Nothing had changed: naming a moment is the point.
+    expect(versions.rows.map((v) => [v.kind, v.name])).toEqual([
+      ['auto', undefined],
+      ['named', 'Kickoff'],
+    ])
+    // A name the rule refuses is refused here, before anything is written.
+    expect(await history.keepNamed('   ')).toBe(false)
+    expect(versions.rows).toHaveLength(2)
+
+    // Long after the browser's fourteen days, an edit's version thins the rest.
+    await advance(T0 + 20 * DAY_MS)
+    edit()
+    await advance(T0 + 21 * DAY_MS)
+    expect(versions.rows.map((v) => v.kind)).toEqual(['named', 'auto'])
+  })
+
+  it('keeps no named version once disposed, even one asked for before', async () => {
+    const { history, versions } = setup()
+    // Queued behind the opening thinning, then disposed before its turn.
+    const kept = history.keepNamed('Too late')
+    history.dispose()
+    expect(await kept).toBe(false)
+    await history.idle()
+    expect(versions.rows).toHaveLength(0)
+  })
+
   it('stops for good once disposed', async () => {
     const { history, versions, edit, advance } = setup()
     await history.idle()

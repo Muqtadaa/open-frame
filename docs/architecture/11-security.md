@@ -172,13 +172,21 @@ record for each in its own storage.
   owner is never asked for the password. Viewers can therefore see what a
   board used to say. This is the decision as made: anyone who may open the
   board may see its past.
-- **One request writes a version, and only an editor's.** `POST
-/room/:id/versions` keeps the board as it is now, before a restore. It is
+- **Two requests write to the history, and only an editor's.** Both are
   allowed by `keepVersionDecision`: the edit link or the owner key, with the
-  password applied as for everything else. It only ever keeps the room's own
-  current document, never anything sent with the request. Every other version
-  is taken by the room itself, on its alarm (`apps/rooms/src/history.ts`).
-  Restoring is an editor's own edit, through the socket.
+  password applied as for everything else.
+  - `POST /room/:id/versions` keeps the board as it is now: before a restore,
+    or as a named version when the body is `{ "name": … }`. The name is held
+    to `versionName` (core): trimmed, 1–80 characters, no control
+    characters, otherwise 400. A body over 4 KB is refused unread (413). The
+    request only ever keeps the room's own current document, never anything
+    sent with it.
+  - `DELETE /room/:id/versions/:versionId` deletes a NAMED version, bytes
+    first, then the record. An automatic version answers 409: retention
+    decides what is kept, so an editor cannot empty a board's history.
+    Every other version is taken by the room itself, on its alarm
+    (`apps/rooms/src/history.ts`). Restoring is an editor's own edit, through
+    the socket.
 - **The room never reads a version.** Its contents are checked by the client
   that opens it, through `readRemoteObject`, as for any remote change
   (ADR 0016).

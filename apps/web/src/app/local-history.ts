@@ -4,7 +4,9 @@ import {
   VERSION_TIMING,
   versionDueAt,
   versionId,
+  versionName,
   versionsToDrop,
+  type VersionKind,
   type VersionTiming,
 } from '@openframe/core/history'
 
@@ -42,6 +44,12 @@ export interface LocalHistory {
    * Answers `false` when it could not be kept.
    */
   readonly keepNow: () => Promise<boolean>
+  /**
+   * Keeps the board as it is now as a named version, whether or not anything
+   * has changed: naming a moment is the point. Answers `false` for a name
+   * `versionName` refuses, or when it could not be kept.
+   */
+  readonly keepNamed: (name: string) => Promise<boolean>
   /** Resolves once whatever the keeper has started has finished. For tests. */
   readonly idle: () => Promise<void>
   readonly dispose: () => void
@@ -121,7 +129,7 @@ export function keepLocalHistory(deps: LocalHistoryDeps): LocalHistory {
   }
 
   /** Writes the board as it is now as a version, due or not. */
-  const write = async (): Promise<void> => {
+  const write = async (kind: VersionKind = 'auto', name?: string): Promise<void> => {
     const at = now()
     // Read together and synchronously: an edit after this is one the version missed.
     const seen = edits
@@ -130,7 +138,8 @@ export function keepLocalHistory(deps: LocalHistoryDeps): LocalHistory {
       boardId: deps.boardId,
       id: versionId(at, deps.random),
       at,
-      kind: 'auto',
+      kind,
+      ...(name === undefined ? {} : { name }),
       title: document.meta.title,
       payload: serializeBoard(document, at),
     })
@@ -177,7 +186,32 @@ export function keepLocalHistory(deps: LocalHistoryDeps): LocalHistory {
     arm()
   })
 
+  /** Runs `step` behind whatever is queued; answers what it did, or `false` if it failed. */
+  const settle = (step: () => Promise<boolean>): Promise<boolean> =>
+    new Promise<boolean>((resolve) => {
+      run(async () => {
+        try {
+          resolve(await step())
+        } catch (error) {
+          resolve(false)
+          throw error
+        }
+      })
+    })
+
   return {
+    keepNamed: (raw) => {
+      const name = versionName(raw)
+      if (name === null || disposed) return Promise.resolve(false)
+      return settle(async () => {
+        // Asked again at its turn: a keeper disposed while this waited behind
+        // other work must not write a board that is no longer on screen
+        // (Codex, on #85).
+        if (disposed) return false
+        await write('named', name)
+        return true
+      })
+    },
     keepNow: () =>
       new Promise<boolean>((resolve) => {
         run(async () => {

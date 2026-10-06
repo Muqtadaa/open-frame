@@ -41,6 +41,24 @@ export const VERSION_TIMING: VersionTiming = { settleMs: SETTLE_MS, intervalMs: 
 
 export type VersionKind = 'auto' | 'named'
 
+/** The longest name a version can be given. */
+export const MAX_VERSION_NAME = 80
+
+/**
+ * A version's name as it will be kept, or `null` for one that cannot be:
+ * trimmed, at least one character and at most `MAX_VERSION_NAME`, with no
+ * control characters (a name is shown on one line, in a list). The room and
+ * the browser both ask this, so a name one accepts the other does too.
+ */
+export function versionName(raw: unknown): string | null {
+  if (typeof raw !== 'string') return null
+  const name = raw.trim()
+  if (name.length === 0 || name.length > MAX_VERSION_NAME) return null
+  // eslint-disable-next-line no-control-regex
+  if (/[\u0000-\u001f\u007f]/.test(name)) return null
+  return name
+}
+
 /**
  * A version's id: the time it was taken, zero-padded so ids sort as times do,
  * and a random tail so two taken in the same millisecond do not collide. The
