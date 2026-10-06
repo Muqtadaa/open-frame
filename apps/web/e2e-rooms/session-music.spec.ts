@@ -56,10 +56,11 @@ test('two devices whose clocks disagree are at the same place in the same track'
   await alice.getByRole('radio', { name: 'Jazz lounge' }).click()
   await alice.getByTestId('music-play').click()
 
-  await expect(bob.getByTestId('music-button')).toHaveAttribute('data-state', 'playing')
+  // Bob did not press anything that opens audio, so the bar says so.
+  await expect(bob.getByTestId('music-button')).toHaveAttribute('data-state', 'unheard')
   await bob.getByTestId('music-button').click()
   await expect(bob.getByTestId('music-now')).toContainText('Late Set')
-  // Bob did not press anything that opens audio, so the sheet offers it.
+  // And so does the sheet.
   await expect(bob.getByTestId('music-listen')).toBeVisible()
 
   const [mine, theirs] = await Promise.all([secondsIn(alice), secondsIn(bob)])
@@ -95,9 +96,52 @@ test('two devices with different catalogues still play the same track', async ({
   await alice.getByRole('radio', { name: 'Jazz lounge' }).click()
   await alice.getByTestId('music-play').click()
 
-  await expect(bob.getByTestId('music-button')).toHaveAttribute('data-state', 'playing')
+  await expect(bob.getByTestId('music-button')).toHaveAttribute('data-state', 'unheard')
   await bob.getByTestId('music-button').click()
   await expect(bob.getByTestId('music-now')).toContainText('Late Set')
+})
+
+/*
+ * What a team found: the music started somewhere else and nobody here knew,
+ * because the one press that lets it in was inside a sheet nobody opened.
+ */
+test('somebody else starting the music is offered here, and one press lets it in', async ({
+  browser,
+}) => {
+  const room = newRoomId()
+  const tracks = [
+    { id: 'jazzy-1', genre: 'jazzhop', title: 'Late Set' },
+    { id: 'jazzy-2', genre: 'jazzhop', title: 'Encore' },
+  ] as const
+  const open = async (): Promise<Page> => {
+    const page = await (await browser.newContext()).newPage()
+    await library(page, tracks, ROOMS)
+    await page.goto(`/?room=${room}`)
+    await expect(page.getByTestId('room-status')).toHaveAttribute('data-status', 'connected', {
+      timeout: 20_000,
+    })
+    return page
+  }
+  const alice = await open()
+  const bob = await open()
+
+  await alice.getByTestId('music-button').click()
+  await alice.getByTestId('music-play').click()
+
+  await expect(bob.getByTestId('music-prompt')).toHaveText(/ started the music$/)
+  const fetched = bob.waitForRequest('**/music/track/jazzy-1')
+  await bob.getByTestId('music-prompt-listen').click()
+  await fetched
+  await expect(bob.getByTestId('music-button')).toHaveAttribute('data-state', 'playing')
+  await expect(bob.getByTestId('music-prompt')).toHaveCount(0)
+
+  // Alice skips; Bob follows, and is not asked again — it is the same music.
+  const next = bob.waitForRequest('**/music/track/jazzy-2')
+  await alice.getByRole('button', { name: 'Next track' }).click()
+  await next
+  await bob.getByTestId('music-button').click()
+  await expect(bob.getByTestId('music-now')).toContainText('Encore')
+  await expect(bob.getByTestId('music-prompt')).toHaveCount(0)
 })
 
 test('a viewer hears the music and cannot change it', async ({ browser }) => {
@@ -124,9 +168,12 @@ test('a viewer hears the music and cannot change it', async ({ browser }) => {
 
   await editor.getByTestId('music-button').click()
   await editor.getByTestId('music-play').click()
-  await expect(viewer.getByTestId('music-button')).toHaveAttribute('data-state', 'playing')
+  await expect(viewer.getByTestId('music-button')).toHaveAttribute('data-state', 'unheard')
+  // A viewer is asked to listen like anybody else, and has no skip.
+  await expect(viewer.getByTestId('music-prompt')).toBeVisible()
 
   await viewer.getByTestId('music-button').click()
+  await expect(viewer.getByRole('button', { name: 'Next track' })).toHaveCount(0)
   await expect(viewer.getByTestId('music-listen')).toBeVisible()
   await expect(viewer.getByTestId('music-play')).toHaveCount(0)
   await expect(viewer.getByTestId('music-pause')).toHaveCount(0)

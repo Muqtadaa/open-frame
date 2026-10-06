@@ -111,3 +111,33 @@
   min-width: 0;
   accent-color: var(--of-accent);
 }
+
+/*
+ * Music somebody else started that this device cannot hear yet. The button
+ * keeps saying so once the prompt is waved away: the accent edge, and a dot,
+ * because colour alone is not enough to notice from across the bar.
+ */
+.of-music__button[data-state='unheard'] {
+  position: relative;
+  color: var(--of-accent);
+  border-color: var(--of-accent);
+}
+
+.of-music__button[data-state='unheard']::after {
+  position: absolute;
+  top: 3px;
+  right: 3px;
+  width: 6px;
+  height: 6px;
+  content: '';
+  background: var(--of-accent);
+  border-radius: var(--of-radius-round);
+}
+
+/* The prompt is a notice, sized to what it says rather than to the bar. */
+.of-music__prompt {
+  gap: var(--of-space-8);
+  width: max-content;
+  max-width: min(360px, calc(100vw - 2 * var(--of-gutter)));
+  padding: var(--of-space-6) var(--of-space-6) var(--of-space-6) var(--of-space-12);
+}

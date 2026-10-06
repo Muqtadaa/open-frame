@@ -5,23 +5,26 @@ import {
   playlistOf,
   positionOf,
   setGenre,
+  skipMusic,
   stopMusic,
   stoppedMusic,
   type Catalogue,
   type MusicGenre,
   type SessionMusic as Music,
 } from '@openframe/core/facilitation'
-import { useEffect, useRef, useState, useSyncExternalStore } from 'react'
+import { useCallback, useEffect, useRef, useState, useSyncExternalStore } from 'react'
 
 import { AnchoredSurface } from '../controls/AnchoredSurface.js'
-import { MusicIcon } from '../controls/icons.js'
+import { CloseIcon, MusicIcon, NextTrackIcon, PreviousTrackIcon } from '../controls/icons.js'
 import { useAnchoredTo } from '../controls/use-anchor.js'
 import { useCanEdit } from '../hooks/use-can-edit.js'
 import { useMe } from '../hooks/use-me.js'
+import { useInteractionStore } from '../interaction/interaction-store.js'
 import { useOpenFrame } from '../runtime/context.js'
 import type { FacilitationChannel } from '../runtime/facilitation.js'
 import { useServices, type MusicService } from '../runtime/services.js'
 import { MusicPlayer, readListening, writeListening, type Listening } from './music-player.js'
+import { asksToListen, readAgreed, startedText, writeAgreed } from './music-listen.js'
 import { clockText, elapsedText } from './clock-text.js'
 import { useSheet } from './use-sheet.js'
 
@@ -88,6 +91,10 @@ function MusicControl({
   const sheet = useRef<HTMLDivElement>(null)
   const [listening, setListening] = useState<Listening>(readListening)
   const [joined, setJoined] = useState(false)
+  const [dismissedRun, setDismissedRun] = useState<number | null>(null)
+  const agreed = useRef(readAgreed())
+  const announced = useRef<number | null>(null)
+  const announce = useInteractionStore((state) => state.announce)
   const player = useRef<MusicPlayer | null>(null)
 
   const genres = MUSIC_GENRES.filter((genre) => playlistOf(catalogue, genre).length > 0)
@@ -100,7 +107,9 @@ function MusicControl({
 
   // One player for the life of the control, so the music outlives the sheet.
   useEffect(() => {
-    const created = new MusicPlayer()
+    const created = new MusicPlayer(() => {
+      setJoined(false)
+    })
     player.current = created
     return () => {
       created.destroy()
@@ -129,26 +138,75 @@ function MusicControl({
 
   useSheet({ open, placed: anchor !== null, setOpen, sheet, button })
 
-  const active = music.status !== 'stopped'
-  if (!canEdit && !active) return null
-
-  const join = (): void => {
+  const join = useCallback((): void => {
     player.current?.join()
     setJoined(true)
+  }, [])
+  /** A yes said out loud: this device listens, and this browser remembers it. */
+  const agree = (): void => {
+    agreed.current = true
+    writeAgreed()
+    join()
   }
+
+  /*
+   * Somebody else started the music and this device cannot hear it: a browser
+   * makes no sound until somebody here presses something. So it is offered
+   * here rather than inside a sheet nobody knows to open — and a browser that
+   * has said yes before joins on its own, or on the next press anywhere.
+   */
+  const unheard = music.status === 'playing' && !joined
+  const asking = asksToListen(music, joined, dismissedRun) && !open
+  const {
+    ref: promptRef,
+    anchor: promptAnchor,
+    surface: promptSurface,
+  } = useAnchoredTo<HTMLDivElement>(asking)
+
+  useEffect(() => {
+    if (!unheard || announced.current === music.run) return
+    announced.current = music.run
+    announce(startedText(music))
+  }, [unheard, music, announce])
+
+  useEffect(() => {
+    if (!unheard || !agreed.current) return
+    // A page that has been pressed already may make a sound: Chrome and
+    // Firefox say so. Where the browser still refuses, the player says so and
+    // the prompt comes back.
+    if ('userActivation' in navigator && navigator.userActivation.hasBeenActive) {
+      const soon = setTimeout(join, 0)
+      return () => {
+        clearTimeout(soon)
+      }
+    }
+    const onPress = (): void => {
+      join()
+    }
+    const options = { capture: true, once: true } as const
+    window.addEventListener('pointerdown', onPress, options)
+    window.addEventListener('keydown', onPress, options)
+    return () => {
+      window.removeEventListener('pointerdown', onPress, options)
+      window.removeEventListener('keydown', onPress, options)
+    }
+  }, [unheard, join])
+
+  const active = music.status !== 'stopped'
+  if (!canEdit && !active) return null
   const write = (change: (music: Music, now: number, by: string | null) => Music): void => {
     // Pressing play is also asking to hear it, and the press that opens audio.
-    join()
+    agree()
     channel.writeMusic(change(music, channel.now(), me?.name ?? null))
   }
   const state = music.status
   const label =
     state === 'stopped'
       ? 'Music'
-      : `Music, ${GENRE_NAMES[music.genre]}, ${state === 'playing' ? 'playing' : 'paused'}`
+      : `Music, ${GENRE_NAMES[music.genre]}, ${state === 'playing' ? 'playing' : 'paused'}${unheard ? ', not playing here' : ''}`
 
   return (
-    <div className="of-music">
+    <div className="of-music" ref={promptRef}>
       <button
         ref={button}
         type="button"
@@ -158,13 +216,48 @@ function MusicControl({
         aria-haspopup="dialog"
         data-tip={label}
         data-testid="music-button"
-        data-state={state}
+        data-state={unheard ? 'unheard' : state}
         onClick={() => {
           setOpen((current) => !current)
         }}
       >
         <MusicIcon />
       </button>
+
+      {asking && (
+        <AnchoredSurface
+          anchor={promptAnchor}
+          surface={promptSurface}
+          prefer={['below', 'above']}
+          testId="music-prompt-surface"
+        >
+          <div className="of-notice of-music__prompt" role="group" aria-label="Music">
+            <span className="of-notice__body" data-testid="music-prompt">
+              {startedText(music)}
+            </span>
+            <button
+              type="button"
+              className="of-button of-button--primary"
+              data-testid="music-prompt-listen"
+              onClick={agree}
+            >
+              Listen
+            </button>
+            <button
+              type="button"
+              className="of-icon-button"
+              aria-label="Dismiss"
+              data-tip="Dismiss"
+              data-testid="music-prompt-dismiss"
+              onClick={() => {
+                setDismissedRun(music.run)
+              }}
+            >
+              <CloseIcon />
+            </button>
+          </div>
+        </AnchoredSurface>
+      )}
 
       {open && (
         <AnchoredSurface
@@ -212,6 +305,21 @@ function MusicControl({
 
             {canEdit && (
               <div className="of-music__actions">
+                {active && (
+                  <button
+                    type="button"
+                    className="of-icon-button"
+                    aria-label="Previous track"
+                    data-tip="Previous track"
+                    data-testid="music-previous"
+                    disabled={!ready}
+                    onClick={() => {
+                      write((current, at, by) => skipMusic(current, at, by, -1))
+                    }}
+                  >
+                    <PreviousTrackIcon />
+                  </button>
+                )}
                 {state === 'playing' ? (
                   <button
                     type="button"
@@ -242,6 +350,21 @@ function MusicControl({
                 {active && (
                   <button
                     type="button"
+                    className="of-icon-button"
+                    aria-label="Next track"
+                    data-tip="Next track"
+                    data-testid="music-next"
+                    disabled={!ready}
+                    onClick={() => {
+                      write((current, at, by) => skipMusic(current, at, by, 1))
+                    }}
+                  >
+                    <NextTrackIcon />
+                  </button>
+                )}
+                {active && (
+                  <button
+                    type="button"
                     className="of-button of-button--ghost"
                     data-testid="music-stop"
                     disabled={!ready}
@@ -266,7 +389,7 @@ function MusicControl({
                   type="button"
                   className="of-button"
                   data-testid="music-listen"
-                  onClick={join}
+                  onClick={agree}
                 >
                   Listen here
                 </button>
