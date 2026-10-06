@@ -99,6 +99,7 @@ async function startedByAda(page: Page): Promise<void> {
         playlist: [{ id: 'jazzy-1', durationMs: 120_000 }],
         run: 1,
         by: 'Ada',
+        startedBy: 'Ada',
         at: now,
       }),
     )
@@ -202,4 +203,49 @@ test('moves to the next track and back, within the genre', async ({ page }) => {
   await expect(page.getByTestId('music-now')).toContainText('Encore')
   await expect(page.getByTestId('music-elapsed')).toHaveText('0:00 / 2:00')
   await expect(button(page)).toHaveAttribute('data-state', 'paused')
+})
+
+/*
+ * Managing somebody else's music is not asking to hear it: only Listen, Play
+ * and Resume are, so only they are remembered (Codex, on #87).
+ */
+test('stopping music this device was not hearing says no yes', async ({ page }) => {
+  await startedByAda(page)
+  await button(page).click()
+  await page.getByRole('button', { name: 'Next track' }).click()
+  await page.getByTestId('music-pause').click()
+  await page.getByTestId('music-stop').click()
+  expect(await page.evaluate(() => window.localStorage.getItem('openframe:music-join'))).toBeNull()
+})
+
+/*
+ * A browser that refuses the sound after all — an autoplay policy — is asked
+ * once and then left to the prompt: no retrying, over and over, behind it
+ * (Codex, on #87).
+ */
+test('a refused automatic join waits for a press instead of retrying', async ({ page }) => {
+  await page.addInitScript(() => {
+    window.localStorage.setItem('openframe:music-join', 'true')
+    const plays = { count: 0 }
+    Object.assign(window, { plays })
+    HTMLMediaElement.prototype.play = function play() {
+      plays.count += 1
+      return Promise.reject(new DOMException('refused', 'NotAllowedError'))
+    }
+  })
+  await startedByAda(page)
+  await expect(prompt(page)).toHaveText('Ada started the music')
+  // Long enough for a loop to show itself: several follow ticks.
+  await expect(button(page)).toHaveAttribute('data-state', 'unheard')
+  await page.waitForFunction(() => document.readyState === 'complete')
+  const settle = await page.evaluate(
+    () =>
+      new Promise<number>((resolve) => {
+        setTimeout(() => {
+          resolve((window as unknown as { plays: { count: number } }).plays.count)
+        }, 3000)
+      }),
+  )
+  expect(settle).toBeLessThanOrEqual(1)
+  await expect(prompt(page)).toBeVisible()
 })

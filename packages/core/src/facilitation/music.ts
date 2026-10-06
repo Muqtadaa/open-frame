@@ -134,7 +134,14 @@ export interface SessionMusic {
   readonly playlist: readonly PinnedTrack[]
   /** Which start from silence this is; pausing and resuming is the same run. */
   readonly run: number
+  /** Whoever last changed it — a pause, a skip, another genre. */
   readonly by: string | null
+  /**
+   * Who started this run from silence, kept through everything after it, so
+   * "Ada started the music" stays true once Charlie skips a track (Codex, on
+   * #87). `null` for a record written before this was kept.
+   */
+  readonly startedBy: string | null
   readonly at: number
 }
 
@@ -159,6 +166,7 @@ const MusicSchema = z
       .max(MAX_PLAYLIST),
     run: z.number().int().min(0),
     by: z.string().max(200).nullable(),
+    startedBy: z.string().max(200).nullable().optional(),
     at: z.number().finite(),
   })
   .refine((music) => (music.status === 'playing') === (music.anchor !== null))
@@ -166,7 +174,7 @@ const MusicSchema = z
 /** Music as this client can use it, or `null`. Any editor can write it (rule 8). */
 export function readMusic(value: unknown): SessionMusic | null {
   const parsed = MusicSchema.safeParse(value)
-  return parsed.success ? parsed.data : null
+  return parsed.success ? { ...parsed.data, startedBy: parsed.data.startedBy ?? null } : null
 }
 
 export function stoppedMusic(genre: MusicGenre = 'chillhop'): SessionMusic {
@@ -179,6 +187,7 @@ export function stoppedMusic(genre: MusicGenre = 'chillhop'): SessionMusic {
     playlist: [],
     run: 0,
     by: null,
+    startedBy: null,
     at: 0,
   }
 }
@@ -211,6 +220,7 @@ export function playMusic(
         playlist: pin(playlist),
         run: music.run + 1,
         by,
+        startedBy: by,
         at: now,
       }
   }

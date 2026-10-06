@@ -240,6 +240,23 @@ describe('skipping within a genre', () => {
     expect(positionOf(next, 99 * SECOND)).toMatchObject({ trackId: 'c', offsetMs: 0 })
   })
 
+  it('keeps who started the run, whoever changes it after', () => {
+    const music = playMusic(stoppedMusic('ambient-lofi'), 0, 'Alice', calm)
+    const skipped = skipMusic(music, 10 * SECOND, 'Charlie', 1)
+    const moved = setGenre(skipped, 'jazzhop', 11 * SECOND, 'Dee', calm)
+    const resumed = playMusic(pauseMusic(moved, 12 * SECOND, 'Eve'), 13 * SECOND, 'Fay', calm)
+    expect(resumed.by).toBe('Fay')
+    expect(resumed.startedBy).toBe('Alice')
+    const again = playMusic(stopMusic(resumed, 14 * SECOND, 'Gus'), 15 * SECOND, 'Hal', calm)
+    expect(again.startedBy).toBe('Hal')
+  })
+
+  it('reads a record from before anybody kept who started it', () => {
+    const music = playMusic(stoppedMusic('ambient-lofi'), 0, 'Alice', calm)
+    const { startedBy: _dropped, ...older } = music
+    expect(readMusic(structuredClone(older))?.startedBy).toBeNull()
+  })
+
   it('is the same run, so nobody is asked to listen again', () => {
     const music = playMusic(stoppedMusic('ambient-lofi'), 0, by, calm)
     expect(skipMusic(music, 10 * SECOND, by, 1).run).toBe(music.run)

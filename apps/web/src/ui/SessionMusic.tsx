@@ -92,6 +92,9 @@ function MusicControl({
   const [listening, setListening] = useState<Listening>(readListening)
   const [joined, setJoined] = useState(false)
   const [dismissedRun, setDismissedRun] = useState<number | null>(null)
+  // The run the browser refused to sound on its own; only a press tries again.
+  const [refusedRun, setRefusedRun] = useState<number | null>(null)
+  const runRef = useRef(0)
   const agreed = useRef(readAgreed())
   const announced = useRef<number | null>(null)
   const announce = useInteractionStore((state) => state.announce)
@@ -109,6 +112,7 @@ function MusicControl({
   useEffect(() => {
     const created = new MusicPlayer(() => {
       setJoined(false)
+      setRefusedRun(runRef.current)
     })
     player.current = created
     return () => {
@@ -164,17 +168,24 @@ function MusicControl({
   } = useAnchoredTo<HTMLDivElement>(asking)
 
   useEffect(() => {
+    runRef.current = music.run
+  }, [music.run])
+
+  useEffect(() => {
     if (!unheard || announced.current === music.run) return
     announced.current = music.run
     announce(startedText(music))
   }, [unheard, music, announce])
 
+  const refused = refusedRun === music.run
   useEffect(() => {
     if (!unheard || !agreed.current) return
     // A page that has been pressed already may make a sound: Chrome and
     // Firefox say so. Where the browser still refuses, the player says so and
-    // the prompt comes back.
-    if ('userActivation' in navigator && navigator.userActivation.hasBeenActive) {
+    // the prompt comes back — and this run is left to a press from then on,
+    // or a policy that always refuses would be asked again every tick
+    // (Codex, on #87).
+    if (!refused && 'userActivation' in navigator && navigator.userActivation.hasBeenActive) {
       const soon = setTimeout(join, 0)
       return () => {
         clearTimeout(soon)
@@ -190,14 +201,21 @@ function MusicControl({
       window.removeEventListener('pointerdown', onPress, options)
       window.removeEventListener('keydown', onPress, options)
     }
-  }, [unheard, join])
+  }, [unheard, refused, join])
 
   const active = music.status !== 'stopped'
   if (!canEdit && !active) return null
   const write = (change: (music: Music, now: number, by: string | null) => Music): void => {
-    // Pressing play is also asking to hear it, and the press that opens audio.
-    agree()
     channel.writeMusic(change(music, channel.now(), me?.name ?? null))
+  }
+  /*
+   * Play and Resume are asking to hear it, and the press that opens audio.
+   * Nothing else is: an editor who pauses, skips or stops somebody else's
+   * music has not said they want it in this browser (Codex, on #87).
+   */
+  const start = (): void => {
+    agree()
+    write((current, at, by) => playMusic(current, at, by, playlistOf(catalogue, current.genre)))
   }
   const state = music.status
   const label =
@@ -338,11 +356,7 @@ function MusicControl({
                     className="of-button of-button--primary"
                     data-testid="music-play"
                     disabled={!ready}
-                    onClick={() => {
-                      write((current, at, by) =>
-                        playMusic(current, at, by, playlistOf(catalogue, current.genre)),
-                      )
-                    }}
+                    onClick={start}
                   >
                     {state === 'paused' ? 'Resume' : 'Play'}
                   </button>

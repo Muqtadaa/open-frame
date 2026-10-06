@@ -1,4 +1,10 @@
-import { playMusic, stopMusic, stoppedMusic, pauseMusic } from '@openframe/core/facilitation'
+import {
+  pauseMusic,
+  playMusic,
+  skipMusic,
+  stopMusic,
+  stoppedMusic,
+} from '@openframe/core/facilitation'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 
 import { asksToListen, readAgreed, startedText, writeAgreed } from './music-listen.js'
@@ -27,8 +33,9 @@ describe('asking this device to listen', () => {
     expect(asksToListen(again, false, playing.run)).toBe(true)
   })
 
-  it('says who started it, when the record knows', () => {
+  it('says who started it, when the record knows — not whoever touched it last', () => {
     expect(startedText(playing)).toBe('Ada started the music')
+    expect(startedText(skipMusic(playing, 2000, 'Charlie', 1))).toBe('Ada started the music')
     expect(startedText(playMusic(stoppedMusic(), 0, null, playlist))).toBe('Music started')
   })
 })

@@ -232,6 +232,7 @@ for (const world of WORLDS) {
             playlist: [{ id: 'jazzy-1', durationMs: 120_000 }],
             run: 1,
             by: 'Ada',
+            startedBy: 'Ada',
             at: Date.now(),
           }),
         )

@@ -14,9 +14,9 @@ export function asksToListen(
   return music.status === 'playing' && !joined && dismissedRun !== music.run
 }
 
-/** What the prompt says: who started it, when the record knows. */
+/** What the prompt says: who started this run, when the record knows. */
 export function startedText(music: SessionMusic): string {
-  return music.by === null ? 'Music started' : `${music.by} started the music`
+  return music.startedBy === null ? 'Music started' : `${music.startedBy} started the music`
 }
 
 const AGREED_KEY = 'openframe:music-join'
