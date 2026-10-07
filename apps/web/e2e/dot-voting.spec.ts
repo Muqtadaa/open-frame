@@ -197,6 +197,32 @@ test('cancels a round that was never started, leaving nothing on the board', asy
   await expect(page.getByTestId('voting')).toHaveCount(0)
 })
 
+test('keeps the keyboard through setup, start, end, reopen and clear', async ({ page }) => {
+  await twoNotes(page)
+  await page.locator(CANVAS).click({ button: 'right', position: { x: 800, y: 600 } })
+  await page.getByRole('menuitem', { name: 'Start dot voting…' }).click()
+  await expect(page.getByTestId('voting-title')).toBeFocused()
+  // Escape from the board still closes the setup, and the keyboard goes back to the board.
+  await page.locator(CANVAS).focus()
+  await page.keyboard.press('Escape')
+  await expect(page.getByTestId('voting-setup')).toHaveCount(0)
+  await expect(page.locator(CANVAS)).toBeFocused()
+
+  await page.locator(CANVAS).click({ button: 'right', position: { x: 800, y: 600 } })
+  await page.getByRole('menuitem', { name: 'Start dot voting…' }).click()
+  await page.getByTestId('voting-start').press('Enter')
+  await expect(page.getByTestId('voting-vote')).toBeFocused()
+
+  await page.getByTestId('voting-end').press('Enter')
+  await expect(page.getByTestId('voting-reopen')).toBeFocused()
+  await page.keyboard.press('Enter')
+  await expect(page.getByTestId('voting-end')).toBeFocused()
+  await page.keyboard.press('Enter')
+  await page.getByTestId('voting-clear').press('Enter')
+  await expect(page.getByTestId('voting')).toHaveCount(0)
+  await expect(page.locator(CANVAS)).toBeFocused()
+})
+
 /*
  * What a room full of people actually does with the vote tool, none of which
  * the tests above did: double-click, right-click, vote on notes that sit in a
