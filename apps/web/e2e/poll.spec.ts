@@ -37,8 +37,8 @@ test('places a poll, asks the question, and answers it', { tag: '@smoke' }, asyn
 
   await option(page, 'o1').click()
   await expect(option(page, 'o1')).toHaveAttribute('aria-pressed', 'true')
-  await expect(option(page, 'o1')).toHaveAccessibleName('Option 1, 1 answer')
-  await expect(page.getByTestId('poll-state')).toHaveText('1 person')
+  await expect(option(page, 'o1')).toHaveAccessibleName('Option 1, 1 answer, 100%')
+  await expect(page.getByTestId('poll-state')).toHaveText('1 answer')
 
   // One answer each: picking the other moves it.
   await option(page, 'o2').click()
@@ -64,7 +64,7 @@ test('edits the options in the record panel, keeping the answers on them', async
   const second = page.getByRole('textbox', { name: 'Options 2' })
   await second.fill('Dogs, clearly')
   await second.press('Enter')
-  await expect(option(page, 'o2')).toHaveAccessibleName('Dogs, clearly, 1 answer')
+  await expect(option(page, 'o2')).toHaveAccessibleName('Dogs, clearly, 1 answer, 100%')
 
   await page.getByTestId('field-options-add').click()
   const options = page.getByTestId('poll-options').getByRole('button')
@@ -84,18 +84,19 @@ test('keeps the counts back until it closes, then shows them', async ({ page }) 
   await seeded(page, { hideResults: true }, true)
   await option(page, 'o1').click()
   await expect(option(page, 'o1')).toHaveAccessibleName('Option 1')
-  await expect(page.getByTestId('poll-state')).toHaveText('')
+  // How many have answered is said; what they answered is not.
+  await expect(page.getByTestId('poll-state')).toHaveText('2 answers · results when closed')
 
   await page.locator(CANVAS).click({ position: { x: AT.x, y: AT.y - 90 } })
   await page.getByTestId('field-closed').check()
-  await expect(page.getByTestId('poll-state')).toHaveText('Closed · 2 people')
-  await expect(option(page, 'o2')).toHaveAccessibleName('Option 2, 1 answer')
+  await expect(page.getByTestId('poll-state')).toHaveText('Closed · 2 answers')
+  await expect(option(page, 'o2')).toHaveAccessibleName('Option 2, 1 answer, 50%')
 })
 
 test('takes no answers once closed', async ({ page }) => {
   await seeded(page, { closed: true })
   await expect(option(page, 'o1')).toBeDisabled()
-  await expect(page.getByTestId('poll-state')).toHaveText('Closed · 0 people')
+  await expect(page.getByTestId('poll-state')).toHaveText('Closed · 0 answers')
 })
 
 test('keeps all ten options in reach on a card of the default size', async ({ page }) => {
@@ -114,7 +115,7 @@ test('keeps all ten options in reach on a card of the default size', async ({ pa
 
 test('follows an answer that changes in place', async ({ page }) => {
   await seeded(page, { multi: true }, true)
-  await expect(option(page, 'o2')).toHaveAccessibleName('Option 2, 1 answer')
+  await expect(option(page, 'o2')).toHaveAccessibleName('Option 2, 1 answer, 100%')
   // An agent, or a peer's edit, rewriting an answer it already holds.
   await page.evaluate(() => {
     const runtime = (
@@ -136,6 +137,39 @@ test('follows an answer that changes in place', async ({ page }) => {
       patch: { ...answer.data, option: 'o1' },
     })
   })
-  await expect(option(page, 'o1')).toHaveAccessibleName('Option 1, 1 answer')
-  await expect(option(page, 'o2')).toHaveAccessibleName('Option 2, 0 answers')
+  await expect(option(page, 'o1')).toHaveAccessibleName('Option 1, 1 answer, 100%')
+  await expect(option(page, 'o2')).toHaveAccessibleName('Option 2, 0 answers, 0%')
+})
+
+test('closes and reopens from the card, as one undo step each', async ({ page }) => {
+  await seeded(page, {}, true)
+  await page.getByTestId('poll-close').click()
+  await expect(page.getByTestId('poll-state')).toHaveText('Closed · 1 answer')
+  await expect(option(page, 'o1')).toBeDisabled()
+  await expect(page.getByTestId('poll-close')).toHaveText('Reopen')
+  await undo(page)
+  await expect(page.getByTestId('poll-state')).toHaveText('1 answer')
+  await expect(option(page, 'o1')).toBeEnabled()
+})
+
+test('a press between the options takes hold of the card', async ({ page }) => {
+  await seeded(page)
+  const first = await option(page, 'o1').boundingBox()
+  const second = await option(page, 'o2').boundingBox()
+  expect(first).not.toBeNull()
+  expect(second).not.toBeNull()
+  // Halfway down the gap between the two option buttons.
+  const x = (first?.x ?? 0) + (first?.width ?? 0) / 2
+  const y = ((first?.y ?? 0) + (first?.height ?? 0) + (second?.y ?? 0)) / 2
+  await page.mouse.click(x, y)
+  await expect(card(page)).toHaveAttribute('data-selected', 'true')
+  await expect(option(page, 'o1')).toHaveAttribute('aria-pressed', 'false')
+})
+
+test('a locked poll offers no Close, which could only be refused', async ({ page }) => {
+  await seeded(page)
+  await page.getByTestId('poll-question').click()
+  await page.keyboard.press('ControlOrMeta+Shift+L')
+  await expect(page.getByRole('button', { name: 'Unlock' }).first()).toBeVisible()
+  await expect(page.getByTestId('poll-close')).toHaveCount(0)
 })

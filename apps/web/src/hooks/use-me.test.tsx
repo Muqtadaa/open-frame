@@ -62,4 +62,25 @@ describe('me', () => {
     })
     expect(mounted.container.textContent).toMatch(/^g_[0-9a-f]{16}$/)
   })
+
+  /*
+   * A session that cannot be restored at all — the accounts module failed to
+   * load — is a guest, not somebody forever about to arrive. "Nobody yet"
+   * disabled voting and reacting for good, with no reason given.
+   */
+  it('is the guest when the account lookup fails', async () => {
+    mounted = await mountOnBoard(<Probe />, {
+      services: (built) => ({
+        ...built,
+        accounts: {
+          ...built.accounts,
+          enabled: true,
+          current: () => Promise.reject(new Error('offline')),
+          onChange: () => () => undefined,
+        },
+      }),
+    })
+    await mounted.settle()
+    expect(mounted.container.textContent).toMatch(/^g_[0-9a-f]{16}$/)
+  })
 })

@@ -352,6 +352,11 @@ export function useKeyboardShortcuts(setSpaceHeld: (held: boolean) => void): voi
             store.setCropping(null)
             return
           }
+          // Out of voting, the same way: the tool goes down, the selection stays.
+          if (store.tool === 'dot') {
+            store.setTool('select')
+            return
+          }
           store.setEditing(null)
           store.clearSelection()
           store.closeContextMenu()

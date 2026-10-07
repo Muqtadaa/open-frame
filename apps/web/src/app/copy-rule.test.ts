@@ -45,6 +45,8 @@ const NEEDED: readonly string[] = [
   'Too many attempts. Try again in',
   // What finishing a half-done delete takes, which nothing else would say.
   'Delete again to finish',
+  // How a dot comes back off a note: a held key, so nothing on screen shows it.
+  'Alt-click a dot to take it back',
 ]
 
 function sources(dir: string): string[] {

@@ -19,6 +19,7 @@ import type {
 } from '@openframe/core'
 import {
   assetsToCarry,
+  center,
   MAX_COLUMNS,
   MAX_ROWS,
   copyObjects,
@@ -45,7 +46,7 @@ import type { OutsidePaste } from './outside-paste.js'
 import { useOpenFrame } from '../runtime/context.js'
 import { useServices } from '../runtime/services.js'
 import { useInteractionStore } from '../interaction/interaction-store.js'
-import { objectsInMarquee } from '../scene/hit-testing.js'
+import { containerAt, objectsInMarquee } from '../scene/hit-testing.js'
 import { snapPoint } from '../scene/snapping.js'
 import { placeDerived } from '../scene/derived-placement.js'
 import { panToReveal } from '../scene/zoom.js'
@@ -194,10 +195,14 @@ export interface BoardCommands {
   toggleReaction(targets: readonly ObjectId[], glyph: string, by: MarkAuthor): void
   /** Starts the board's round of dot voting. */
   startVoting(round: VotingOptions, by: MarkAuthor): boolean
-  /** One of this person's dots on a note, or back off it. Says why when it cannot. */
-  vote(target: ObjectId, by: MarkAuthor, remove?: boolean): void
+  /**
+   * One of this person's dots on each note, or back off it, as ONE change —
+   * one undo step, and all or nothing, so running out of dots halfway through
+   * a selection takes none rather than some. Says why when it cannot.
+   */
+  vote(targets: ObjectId | readonly ObjectId[], by: MarkAuthor, remove?: boolean): void
   /** Reveals the counts, or ends the round. */
-  setVoting(change: { readonly hidden?: boolean; readonly status?: 'closed' }): void
+  setVoting(change: { readonly hidden?: boolean; readonly status?: 'open' | 'closed' }): void
   /** Takes the round off the board with every vote in it. */
   clearVoting(): void
   /**
@@ -362,6 +367,27 @@ export function useCommands(): BoardCommands {
       if (definition === undefined) return null
 
       const id = runtime.ids.objectId()
+      const doc = runtime.store.getDocument()
+      /*
+       * And something made INSIDE a frame belongs to it, as if it had been
+       * dragged in. It used to be left loose on the board under the frame, so
+       * it stayed behind when the frame moved and a round of voting on "this
+       * frame" refused it — a note plainly sitting in the frame.
+       *
+       * A frame, not a group: a group is chosen by selecting its members, and
+       * a note dropped beside them has not been chosen.
+       */
+      const parentId = definition.capabilities.canHaveChildren
+        ? null
+        : containerAt(
+            doc,
+            runtime.registry,
+            center(rect),
+            new Set(),
+            // Past a group to the frame it sits in (Codex, on #88).
+            (container) =>
+              runtime.registry.get(container.type)?.capabilities.selectsAsUnit === false,
+          )
       const spec = {
         type,
         id,
@@ -370,6 +396,7 @@ export function useCommands(): BoardCommands {
         width: rect.width,
         height: rect.height,
         ...(data === undefined ? {} : { data: { ...data } }),
+        ...(parentId === null ? {} : { parentId }),
       }
 
       /*
@@ -384,7 +411,6 @@ export function useCommands(): BoardCommands {
        * frame belongs to that frame, and a container that quietly stole
        * another's contents would be worse than one that adopted nothing.
        */
-      const doc = runtime.store.getDocument()
       const adopts = definition.capabilities.canHaveChildren
         ? objectsInMarquee(doc, runtime.registry, rect).filter(
             (other) => (doc.objects.get(other)?.parentId ?? null) === null,
@@ -978,16 +1004,19 @@ export function useCommands(): BoardCommands {
         return result.ok
       },
 
-      vote(target, by, remove = false) {
+      vote(targets, by, remove = false) {
         const round = currentVoteRound(runtime.store.getDocument())
         if (round === null) return
+        const kind = remove ? 'RemoveDotVote' : 'CastDotVote'
+        const each = (typeof targets === 'string' ? [targets] : [...targets]).map(
+          (target) => ({ kind, round: round.id, target, by }) as const,
+        )
+        const [only] = each
+        if (only === undefined) return
         sayWhyNot(
-          dispatcher.dispatch({
-            kind: remove ? 'RemoveDotVote' : 'CastDotVote',
-            round: round.id,
-            target,
-            by,
-          }),
+          each.length === 1
+            ? dispatcher.dispatch(only)
+            : dispatcher.transact(remove ? 'Remove votes' : 'Add votes', each),
         )
       },
 

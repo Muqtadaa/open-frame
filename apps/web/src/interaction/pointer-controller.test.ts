@@ -48,12 +48,17 @@ function ctx(
 describe('pointer down', () => {
   it('puts a dot on what the vote tool presses, takes one back with Alt, and ignores empty board', () => {
     expect(onPointerDown(ctx({ tool: 'dot', hitId: A }))).toEqual([
-      { kind: 'vote', on: A, remove: false },
+      { kind: 'begin-vote', on: A, remove: false },
     ])
     expect(onPointerDown(ctx({ tool: 'dot', hitId: A, altKey: true }))).toEqual([
-      { kind: 'vote', on: A, remove: true },
+      { kind: 'begin-vote', on: A, remove: true },
     ])
     expect(onPointerDown(ctx({ tool: 'dot' }))).toEqual([])
+  })
+
+  it('casts nothing on a right-click or a Mac Ctrl-click, which open the menu', () => {
+    expect(onPointerDown(ctx({ tool: 'dot', hitId: A, button: 2 }))).toEqual([])
+    expect(onPointerDown(ctx({ tool: 'dot', hitId: A, contextClick: true }))).toEqual([])
   })
 
   it('pans on middle button regardless of tool', () => {

@@ -257,13 +257,22 @@ export function ContextMenu() {
   const roundOpen = round?.data.status === 'open'
   const startable = canEdit && me !== null && !roundOpen
   const only = selected.length === 1 ? runtime.store.getObject(selected[0]!) : undefined
-  const container =
-    only !== undefined && runtime.registry.get(only.type)?.capabilities.canHaveChildren === true
+  /*
+   * A FRAME's round, asked of the capability that makes a frame a frame —
+   * `hollow` — and never of "can hold children": a group holds children too,
+   * and a round started on one was titled "this frame" and could take no
+   * votes at all, its notes resolving to the group (rule 18).
+   */
+  const frame = only !== undefined && runtime.registry.get(only.type)?.capabilities.hollow === true
   const votingScope: VoteScope | null = !hasSelection
     ? { kind: 'board' }
-    : container && only !== undefined
+    : frame && only !== undefined
       ? { kind: 'frame', frame: only.id }
-      : null
+      : // Several notes, chosen on purpose. Not one: a single note's menu
+        // already fills a laptop window, and a round of one note is no vote.
+        reactable && selected.length > 1
+        ? { kind: 'objects', ids: [...selected] }
+        : null
   const startVoting =
     startable && votingScope !== null
       ? [
@@ -292,13 +301,13 @@ export function ContextMenu() {
               {
                 label: 'Add vote',
                 run: () => {
-                  for (const id of selected) commands.vote(id, me)
+                  commands.vote(selected, me)
                 },
               },
               {
                 label: 'Remove vote',
                 run: () => {
-                  for (const id of selected) commands.vote(id, me, true)
+                  commands.vote(selected, me, true)
                 },
               },
             ],

@@ -2,6 +2,7 @@ import type { ObjectId } from '@openframe/core'
 
 import { useCanEdit } from '../hooks/use-can-edit.js'
 import { useCommands } from '../hooks/use-commands.js'
+import { useInteractionStore } from '../interaction/interaction-store.js'
 import { useMe } from '../hooks/use-me.js'
 import { useReactions, type ReactionGroup } from '../hooks/use-reactions.js'
 import { glyphFor } from '../scene/reaction-glyphs.js'
@@ -40,9 +41,16 @@ function Chips({
   const me = useMe()
   const commands = useCommands()
   const canEdit = useCanEdit()
+  // While voting, a press on a note's reactions is a vote on the note: the
+  // chips step aside rather than toggling somebody's reaction off.
+  const voting = useInteractionStore((state) => state.tool === 'dot')
 
   return (
-    <div className="of-reactions of-editor-chrome" data-testid="reactions">
+    <div
+      className={`of-reactions${voting ? '' : ' of-editor-chrome'}`}
+      data-testid="reactions"
+      style={voting ? { pointerEvents: 'none' } : undefined}
+    >
       {groups.map((group) => {
         const glyph = glyphFor(group.glyph)
         // Until it is known who "me" is, nothing is mine and nothing is pressable.

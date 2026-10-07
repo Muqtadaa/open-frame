@@ -51,7 +51,9 @@ test('two people answering at the same moment are both counted', async ({ browse
     bob.getByTestId('poll-option-o1').click(),
   ])
   for (const page of [alice, bob]) {
-    await expect(page.getByTestId('poll-option-o1')).toHaveAccessibleName('Option 1, 2 answers')
+    await expect(page.getByTestId('poll-option-o1')).toHaveAccessibleName(
+      'Option 1, 2 answers, 100%',
+    )
     await expect(page.getByTestId('poll-option-o1')).toHaveAttribute('aria-pressed', 'true')
   }
 })
@@ -71,6 +73,8 @@ test('a viewer sees the answers and cannot answer', async ({ browser }) => {
   await addPoll(editor)
   await editor.getByTestId('poll-option-o2').click()
 
-  await expect(viewer.getByTestId('poll-option-o2')).toHaveAccessibleName('Option 2, 1 answer')
+  await expect(viewer.getByTestId('poll-option-o2')).toHaveAccessibleName(
+    'Option 2, 1 answer, 100%',
+  )
   await expect(viewer.getByTestId('poll-option-o2')).toBeDisabled()
 })

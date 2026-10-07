@@ -233,3 +233,38 @@ describe('dot voting', () => {
     expect(count(h, note)).toBe(1)
   })
 })
+
+/*
+ * Undo takes back only what the person did: the round they started, not the
+ * dots other people put in it. Those were left on the board pointing at a
+ * round that no longer existed — and the next round on the board had the same
+ * id, so it picked them up again: somebody's allowance was spent before they
+ * had voted at all.
+ */
+describe('a round whose start was undone', () => {
+  let h: TestHarness
+  beforeEach(() => {
+    h = createTestHarness()
+  })
+
+  it('leaves nothing behind for the next round to pick up', () => {
+    const note = create(h, 'sticky')
+    const round = start(h, { perPerson: 2 })
+    // Heron's dots arrive from another device: not on this undo stack.
+    for (let i = 0; i < 2; i++) {
+      const result = h.dispatcher.dispatch(
+        { kind: 'CastDotVote', round, target: note, by: heron },
+        { skipUndo: true },
+      )
+      expect(result.ok).toBe(true)
+    }
+    h.dispatcher.undo()
+    expect(currentVoteRound(h.store.getDocument())).toBeNull()
+
+    const next = start(h, { perPerson: 2 })
+    expect(count(h, note)).toBe(0)
+    expect(cast(h, next, note, heron).ok).toBe(true)
+    expect(cast(h, next, note, heron).ok).toBe(true)
+    expect(count(h, note)).toBe(2)
+  })
+})

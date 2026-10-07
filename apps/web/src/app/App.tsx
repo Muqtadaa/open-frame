@@ -71,7 +71,12 @@ export function App() {
             <Canvas />
           </OpenFrameContext.Provider>
         </main>
-        <div className="of-overlay of-overlay--top">
+        {/*
+          Kept clear of: the voting banner and the notices along the top are
+          read while somebody works, so a selected note's reaction bar or
+          record panel must not land on top of Reveal and End.
+        */}
+        <div className="of-overlay of-overlay--top" data-keep-clear="top">
           <Toast />
         </div>
       </div>
@@ -113,7 +118,12 @@ export function App() {
           </div>
         </main>
 
-        <div className="of-overlay of-overlay--top">
+        {/*
+          Kept clear of: the voting banner and the notices along the top are
+          read while somebody works, so a selected note's reaction bar or
+          record panel must not land on top of Reveal and End.
+        */}
+        <div className="of-overlay of-overlay--top" data-keep-clear="top">
           <NoticeBanner notices={runtime.notices} />
           <VotingBanner />
           <ClusterReview />

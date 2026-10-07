@@ -91,6 +91,14 @@
   font-size: var(--of-type-record);
 }
 
+/* While the tool is armed: the one thing nothing on screen would teach. */
+.of-voting__hint {
+  flex-basis: 100%;
+  order: 1;
+  font-size: var(--of-type-record);
+  color: var(--of-ink-muted);
+}
+
 .of-voting__field {
   display: flex;
   flex: 1;
