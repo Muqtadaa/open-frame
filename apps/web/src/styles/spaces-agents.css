@@ -200,3 +200,9 @@
 .of-agent-changes__item[data-reverted='true'] .of-mentions__who {
   color: var(--of-ink-muted);
 }
+
+/* Not yet looked at: the same accent edge an unread mention carries. */
+.of-agent-changes__item--new {
+  padding-left: var(--of-space-6);
+  border-left: 2px solid var(--of-accent);
+}

@@ -15,7 +15,8 @@ import { MentionItems } from './Mentions.js'
  * They were two buttons side by side in the same style — "2 mentions",
  * "1 agent change" — two words of bar for one question, "is anything waiting
  * for me?". The count is the unread mentions plus the agent changes still on
- * the board; each section keeps its own list exactly as it was.
+ * the board that this browser has not yet been shown; each section keeps its
+ * own list exactly as it was.
  *
  * Absent while there is nothing in either: a control for something that has
  * never happened is a control people learn to ignore.
@@ -35,6 +36,22 @@ export function Inbox() {
   }, [button])
   useDismiss(sheet, button, close, open)
 
+  /*
+   * Looked at is read: once the sheet has been open, the agent changes in it
+   * are no longer news in this browser. Marked as it CLOSES, so what was new
+   * stays marked while somebody is reading it. A mention is read by following
+   * it, as before — it points somewhere; an agent change has already happened.
+   */
+  const wasOpen = useRef(false)
+  const { markSeen } = agents
+  useEffect(() => {
+    if (open) wasOpen.current = true
+    else if (wasOpen.current) {
+      wasOpen.current = false
+      markSeen()
+    }
+  }, [open, markSeen])
+
   // In once the sheet is PLACED, at its first link or Revert.
   const placed = anchor !== null
   useEffect(() => {
@@ -44,7 +61,7 @@ export function Inbox() {
 
   if (mentions.mentions.length === 0 && agents.changes.length === 0) return null
 
-  const waiting = mentions.unread + agents.pending
+  const waiting = mentions.unread + agents.unseen
   const name = waiting === 0 ? 'Inbox, nothing new' : `Inbox, ${String(waiting)} new`
 
   return (

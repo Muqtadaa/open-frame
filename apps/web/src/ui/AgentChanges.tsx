@@ -1,6 +1,6 @@
 import type { LoggedChange } from '@openframe/collab'
 import type { TransactionId } from '@openframe/core'
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 
 import { guestIdentity } from '../app/guest.js'
 
@@ -8,12 +8,19 @@ import { useCommands } from '../hooks/use-commands.js'
 import { useInteractionStore } from '../interaction/interaction-store.js'
 import { useOpenFrame } from '../runtime/context.js'
 import { Ago } from './Ago.js'
+import { readSeen, writeSeen } from './agent-seen.js'
 
 export interface AgentChangesState {
   /** Everything in the board's change log, newest first; empty off a room. */
   readonly changes: readonly LoggedChange[]
   /** How many are still on the board, not taken back. */
   readonly pending: number
+  /** Of those, how many this browser has not been shown: what the inbox counts. */
+  readonly unseen: number
+  /** Whether this browser has been shown a change. */
+  readonly isSeen: (change: LoggedChange) => boolean
+  /** Everything listed now has been looked at. */
+  readonly markSeen: () => void
   /** Whether this person may take a change back: not a viewer. */
   readonly editing: boolean
   readonly revert: (change: LoggedChange) => void
@@ -34,6 +41,7 @@ export function useAgentChanges(): AgentChangesState {
   const commands = useCommands()
   const [changes, setChanges] = useState<readonly LoggedChange[]>([])
   const [role, setRole] = useState(collaboration?.role ?? 'editor')
+  const [seenIds, setSeenIds] = useState(() => readSeen(runtime.boardId))
   /*
    * The changes already on the board when it opened. Those are history, not
    * news: toasting each of them on every reload would be a board that shouts
@@ -106,10 +114,25 @@ export function useAgentChanges(): AgentChangesState {
     })
   }, [collaboration, revert])
 
-  const present = collaboration === null || collaboration === undefined ? [] : changes
+  const present = useMemo(
+    () => (collaboration === null || collaboration === undefined ? [] : changes),
+    [collaboration, changes],
+  )
+  const markSeen = useCallback((): void => {
+    setSeenIds((was) => {
+      if (present.every((change) => was.has(change.id))) return was
+      const next = new Set([...was, ...present.map((change) => change.id)])
+      writeSeen(runtime.boardId, next)
+      return next
+    })
+  }, [present, runtime.boardId])
+  const waiting = present.filter((change) => change.reverted === null)
   return {
     changes: present,
-    pending: present.filter((change) => change.reverted === null).length,
+    pending: waiting.length,
+    unseen: waiting.filter((change) => !seenIds.has(change.id)).length,
+    isSeen: (change) => seenIds.has(change.id),
+    markSeen,
     editing: role !== 'viewer',
     revert,
   }
@@ -122,8 +145,13 @@ export function AgentChangeItems({ state }: { readonly state: AgentChangesState 
       {state.changes.map((change) => (
         <li
           key={change.id}
-          className="of-agent-changes__item"
+          className={
+            state.isSeen(change) || change.reverted !== null
+              ? 'of-agent-changes__item'
+              : 'of-agent-changes__item of-agent-changes__item--new'
+          }
           data-testid={`agent-change-${change.id}`}
+          data-unread={state.isSeen(change) || change.reverted !== null ? 'false' : 'true'}
           data-reverted={change.reverted === null ? 'false' : 'true'}
         >
           <span className="of-mentions__who">{change.label}</span>

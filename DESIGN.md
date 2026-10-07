@@ -960,8 +960,12 @@ count; the count opens everybody, you included. A face can be pressed to
 follow that person.
 
 **The Inbox** is one count for what is waiting for you — unread mentions plus
-agent changes still on the board — in the accent's wash while there is any,
-plain once there is not, and absent until there has been something. Its sheet
+agent changes this browser has not been shown yet — in the accent's wash while
+there is any, plain once there is not, and absent until there has been
+something. A mention is read by following it; an agent change is read by
+being looked at — closing the Inbox reads what was in it, so the count does
+not stay up for as long as the change is on the board. Read rows lose their
+accent edge but stay listed, with Revert, until they leave the log. Its sheet
 has a section each. A mention marks itself read and goes to its remark; an
 agent change has Revert ("Taken back by <name>" once it is), and a viewer
 sees the rows without it. A new agent change also arrives as a toast with

@@ -283,3 +283,45 @@ test('an agent groups two notes, and one Revert frees them', async ({ browser })
     await agent.context.close()
   }
 })
+
+/*
+ * Looked at is read. An agent change stayed "new" in the inbox for as long as
+ * it was on the board, so the count never went away once anybody's agent had
+ * done anything at all. Opening the inbox and closing it reads what was in
+ * it, in this browser; the change is still there, and still revertible.
+ */
+test('an agent change seen in the inbox is no longer new, after a reload too', async ({
+  browser,
+}) => {
+  const room = newRoomId()
+  const page = await join(browser, room)
+  const agent = agentOn(room)
+  try {
+    await threeNotes(agent, page)
+    await page.getByTestId('toast').getByRole('button', { name: 'Dismiss' }).click()
+    const inbox = page.getByTestId('inbox')
+    await expect(inbox).toHaveAccessibleName('Inbox, 1 new')
+
+    await inbox.click()
+    await expect(page.getByTestId('agent-changes-list').locator('li')).toHaveAttribute(
+      'data-unread',
+      'true',
+    )
+    await page.keyboard.press('Escape')
+    await expect(inbox).toHaveAccessibleName('Inbox, nothing new')
+
+    await page.reload()
+    await expect(page.getByTestId('save-state')).toHaveAttribute('data-room', 'connected', {
+      timeout: 20_000,
+    })
+    await expect(inbox).toHaveAccessibleName('Inbox, nothing new')
+    await inbox.click()
+    await expect(page.getByTestId('agent-change-revert')).toBeVisible()
+    await expect(page.getByTestId('agent-changes-list').locator('li')).toHaveAttribute(
+      'data-unread',
+      'false',
+    )
+  } finally {
+    await agent.context.close()
+  }
+})
