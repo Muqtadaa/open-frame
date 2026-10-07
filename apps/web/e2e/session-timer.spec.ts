@@ -109,6 +109,22 @@ test('opens and closes from the keyboard, and hands focus back', async ({ page }
   await expect(pill(page)).toBeFocused()
 })
 
+test('keeps the keyboard on the control it pressed, through start, pause, resume and reset', async ({
+  page,
+}) => {
+  await pill(page).focus()
+  await page.keyboard.press('Enter')
+  await expect(page.getByTestId('timer-start')).toBeFocused()
+  // The pressed control turns into the next one, so focus never falls to the page.
+  await page.keyboard.press('Enter')
+  await expect(page.getByTestId('timer-pause')).toBeFocused()
+  await page.keyboard.press('Enter')
+  await expect(page.getByTestId('timer-resume')).toBeFocused()
+  await page.getByTestId('timer-reset').focus()
+  await page.keyboard.press('Enter')
+  await expect(page.getByTestId('timer-start')).toBeFocused()
+})
+
 /*
  * One pill for the session. The timer and the music were two icons on the
  * bar with a sheet each; the pill names the session at rest and says what is
