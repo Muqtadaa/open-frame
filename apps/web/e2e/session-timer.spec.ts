@@ -125,6 +125,12 @@ test('keeps the keyboard on the control it pressed, through start, pause, resume
   await expect(page.getByTestId('timer-start')).toBeFocused()
 })
 
+test('keeps Tab inside the open sheet', async ({ page }) => {
+  await pill(page).click()
+  for (let press = 0; press < 12; press++) await page.keyboard.press('Tab')
+  await expect(sheet(page).locator(':focus')).toHaveCount(1)
+})
+
 /*
  * One pill for the session. The timer and the music were two icons on the
  * bar with a sheet each; the pill names the session at rest and says what is

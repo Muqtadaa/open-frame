@@ -108,4 +108,3 @@ export function VersionPreviewBar({ preview }: { readonly preview: Previewed }) 
     </nav>
   )
 }
-

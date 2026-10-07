@@ -12,6 +12,7 @@ import {
   type LibraryEmoji,
   type LibraryGroup,
 } from './emoji-library.js'
+import { wrapTab } from '../controls/wrap-tab.js'
 
 /** Emoji per row, which is also how far Up and Down move. */
 const COLUMNS = 8
@@ -106,6 +107,7 @@ function Picker({
   ]
 
   const onKeyDown = (event: KeyboardEvent<HTMLDivElement>): void => {
+    wrapTab(event)
     if (event.key === 'Escape') {
       event.preventDefault()
       event.stopPropagation()

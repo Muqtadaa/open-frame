@@ -11,6 +11,7 @@ import { formatKeys } from '../scene/shortcuts.js'
 import { ListenPrompt, MusicPanel, useCatalogue, useMusicSession } from './SessionMusic.js'
 import { TimerPanel, useTimerSession } from './SessionTimer.js'
 import { useSheet } from './use-sheet.js'
+import { wrapTab } from '../controls/wrap-tab.js'
 
 /**
  * The session: its timer and its music, as one pill beside the people.
@@ -142,6 +143,7 @@ function SessionControl({ channel }: { readonly channel: FacilitationChannel }) 
             role="dialog"
             aria-label="Session"
             tabIndex={-1}
+            onKeyDown={wrapTab}
           >
             {timer.shown && (
               <section className="of-session__section" aria-labelledby={timerHeading}>

@@ -1,7 +1,16 @@
 import type { KeyboardEvent } from 'react'
 
-const FOCUSABLE =
-  'a[href], button:not(:disabled), input:not(:disabled), select:not(:disabled), textarea:not(:disabled), [tabindex="0"]'
+/** What Tab stops at: never a control kept out of the order by a roving tabindex. */
+const FOCUSABLE = [
+  'a[href]',
+  'button:not(:disabled)',
+  'input:not(:disabled)',
+  'select:not(:disabled)',
+  'textarea:not(:disabled)',
+  '[tabindex="0"]',
+]
+  .map((selector) => `${selector}:not([tabindex="-1"])`)
+  .join(', ')
 
 /**
  * Tab goes round a panel rather than off its end.

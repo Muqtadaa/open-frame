@@ -137,6 +137,15 @@ test.describe('the whole emoji library', () => {
     await expect(chip(page, 'u-1f680')).toHaveAttribute('aria-pressed', 'true')
   })
 
+  test('keeps Tab inside while it is open', async ({ page }) => {
+    await oneNote(page)
+    await page.locator(CANVAS).click({ position: NOTE })
+    await page.getByTestId('react-more').click()
+    const picker = page.getByRole('dialog', { name: 'Emoji' })
+    for (let press = 0; press < 4; press++) await page.keyboard.press('Tab')
+    await expect(picker.locator(':focus')).toHaveCount(1)
+  })
+
   test('is reached from the keyboard, through the context menu', async ({ page }) => {
     await oneNote(page)
     await page.locator(CANVAS).click({ position: NOTE })

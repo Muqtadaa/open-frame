@@ -104,7 +104,9 @@ test.describe('looking back, and restoring', () => {
     await page.keyboard.press('Escape')
     await expect(page.getByTestId('version-preview')).toHaveCount(0)
     await expect(canvas(page)).toBeFocused()
-    await expect(page.getByTestId('board-announcer')).toContainText('Back to the board as it is now')
+    await expect(page.getByTestId('board-announcer')).toContainText(
+      'Back to the board as it is now',
+    )
   })
 
   test(

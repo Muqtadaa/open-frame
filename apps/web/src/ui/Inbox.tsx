@@ -7,6 +7,7 @@ import { useDismiss } from '../controls/use-dismiss.js'
 import { useMentions } from '../hooks/use-mentions.js'
 import { AgentChangeItems, useAgentChanges } from './AgentChanges.js'
 import { MentionItems } from './Mentions.js'
+import { wrapTab } from '../controls/wrap-tab.js'
 
 /**
  * What has happened that is for you: mentions, and what agents did to the
@@ -108,6 +109,7 @@ export function Inbox() {
             aria-label="Inbox"
             tabIndex={-1}
             onKeyDown={(event) => {
+              wrapTab(event)
               // Up and down everything in it, wrapping, as every list here does.
               if (event.key !== 'ArrowDown' && event.key !== 'ArrowUp') return
               event.preventDefault()
