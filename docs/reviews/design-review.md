@@ -1247,3 +1247,36 @@ frame that could not be reverted, "object(s)" in agent labels), then docking
 every surface to the edges below 520px, then the design fixes. Those design
 fixes: real dots on notes, results that open for everyone when a round ends,
 a poll only its asker closes, and cluster copies that say they are copies.
+
+### The fix passes (PR A #90, PR B #91, PR C)
+
+**PR A (keyboard, focus, announcements)** and **PR B (phone width)** are
+merged or under review. PR B also measured the tool rail as furniture rather
+than a stale 100px constant, put the docked record panel along the bottom as
+furniture too, and gave the board menu and the history sheet the paper every
+other surface has.
+
+**PR C** took the design list in order:
+
+- **Dot voting:** dots, not a badge — up to five on the note's edge, then a
+  number. Putting down the last vote lets go of the tool. Ending a round
+  opens the ranked results for everybody, with places and a wash for each
+  share. Reveal and Clear ask first.
+- **Poll:** it records who asked it (poll v2, migrated). Only the asker
+  closes it, and the record panel's Closed checkbox is gone. An answered
+  option is fixed. A closed poll looks closed, and your answer has a tick.
+  Booleans read as a box and then their whole label.
+- **Cluster:** it says that it adds copies and the originals stay. Signed
+  out, it offers Sign in. The first Escape in a field only leaves the field,
+  and the record panel steps aside.
+- **History:** a restore says the replaced board is kept. Deleting a name
+  takes two presses.
+- **Agent changes:** Show selects and frames what a change touched, and a
+  partial revert stays said on its row.
+- **Timer:** paused reads as paused, and Reset has an Undo reset in the
+  sheet.
+- **People:** following somebody is said along the top, with Stop.
+- **Overview:** it opens from both menus. A click on a frame visits it, and
+  the summary counts in words.
+- **Reactions:** the library keeps off the record panel, and chips are 24px
+  targets.

@@ -208,6 +208,16 @@
   min-height: var(--of-hit);
 }
 
+.of-field--check {
+  grid-template-columns: auto 1fr;
+  cursor: pointer;
+}
+
+.of-field__statement {
+  font-size: var(--of-type-record);
+  color: var(--of-ink);
+}
+
 .of-field__label {
   overflow: hidden;
   font-family: var(--of-mono);

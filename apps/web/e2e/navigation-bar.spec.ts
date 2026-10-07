@@ -117,6 +117,8 @@ test.describe('the board menu', () => {
     await page.keyboard.press('ArrowDown')
     await expect(page.getByRole('menuitem', { name: 'Version history…' })).toBeFocused()
     await page.keyboard.press('ArrowDown')
+    await expect(page.getByRole('menuitem', { name: /^Board overview/ })).toBeFocused()
+    await page.keyboard.press('ArrowDown')
     await expect(page.getByRole('menuitem', { name: 'Rename' })).toBeFocused()
     await page.keyboard.press('Escape')
     await expect(page.getByRole('menu')).toHaveCount(0)

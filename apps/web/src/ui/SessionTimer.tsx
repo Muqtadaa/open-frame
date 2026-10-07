@@ -119,7 +119,13 @@ export function useTimerSession(
     status: timer.status,
     time,
     // What the pill shows is in its name: "0:00" was drawn while "time's up" was said.
-    words: !active ? '' : done ? `${time}, time’s up` : `${time} left`,
+    words: !active
+      ? ''
+      : done
+        ? `${time}, time’s up`
+        : timer.status === 'paused'
+          ? `${time} left, paused`
+          : `${time} left`,
     panel: {
       timer,
       stored: stored !== null,
@@ -190,6 +196,33 @@ function TimerActions({
   readonly onWrite: (change: Change) => void
 }) {
   const minutes = timer.durationMs / MINUTE
+  /*
+   * The run a Reset threw away, until anything else is done to the timer. A
+   * reset is outside the board's undo — the timer is not board content (ADR
+   * 0017) — so the way back is offered here, where it was pressed: a toast
+   * would sit under this sheet.
+   */
+  const [undoable, setUndoable] = useState<Timer | null>(null)
+  /*
+   * And until the timer moves on without us: once somebody else sets a time,
+   * the run it would put back is stale, and pressing it wrote the old run over
+   * theirs (Codex, on #92). What the reset left is noted as it arrives, and
+   * anything after it ends the offer.
+   */
+  const leftByReset = useRef<string | null>(null)
+  useEffect(() => {
+    if (undoable === null) return
+    const now = JSON.stringify(timer)
+    if (leftByReset.current === null) {
+      if (timer.status === 'idle') leftByReset.current = now
+      return
+    }
+    if (now !== leftByReset.current) setUndoable(null)
+  }, [timer, undoable])
+  const write = (change: Change): void => {
+    setUndoable(null)
+    onWrite(change)
+  }
   const step = stepFor(timer, done)
   const stepRef = useRef<HTMLButtonElement>(null)
   const focusStep = useRef(false)
@@ -211,7 +244,7 @@ function TimerActions({
                 aria-pressed={minutes === preset}
                 aria-label={`${String(preset)} ${preset === 1 ? 'minute' : 'minutes'}`}
                 onClick={() => {
-                  onWrite((t, now, by) => setDuration(t, preset * MINUTE, now, by))
+                  write((t, now, by) => setDuration(t, preset * MINUTE, now, by))
                 }}
               >
                 {preset}
@@ -221,7 +254,7 @@ function TimerActions({
           <DurationField
             durationMs={timer.durationMs}
             onChange={(ms) => {
-              onWrite((t, now, by) => setDuration(t, ms, now, by))
+              write((t, now, by) => setDuration(t, ms, now, by))
             }}
           />
         </>
@@ -240,7 +273,7 @@ function TimerActions({
             data-testid={step.testid}
             disabled={!ready}
             onClick={() => {
-              onWrite(step.change)
+              write(step.change)
             }}
           >
             {step.words}
@@ -253,7 +286,7 @@ function TimerActions({
             data-testid="timer-add-minute"
             disabled={!ready}
             onClick={() => {
-              onWrite(addMinute)
+              write(addMinute)
             }}
           >
             +1 min
@@ -266,12 +299,30 @@ function TimerActions({
             data-testid="timer-reset"
             disabled={!ready}
             onClick={() => {
-              onWrite(resetTimer)
+              const before = timer
+              write(resetTimer)
+              leftByReset.current = null
+              setUndoable(before)
+              useInteractionStore.getState().announce('Timer reset')
               // Reset takes itself away; Start is where the keyboard goes next.
               focusStep.current = true
             }}
           >
             Reset
+          </button>
+        )}
+        {timer.status === 'idle' && undoable !== null && (
+          <button
+            type="button"
+            className="of-button of-button--ghost"
+            data-testid="timer-undo-reset"
+            disabled={!ready}
+            onClick={() => {
+              const before = undoable
+              write(() => before)
+            }}
+          >
+            Undo reset
           </button>
         )}
       </div>

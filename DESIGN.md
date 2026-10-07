@@ -937,8 +937,9 @@ not fit is shown whole in its tip. "All boards" is at the control size and 500;
 every readout stays a record, 12px mono and muted, bolded to 600 in full ink
 where it is a number.
 
-**The board's menu.** A chevron beside the name, outside the heading: Rename
-(the name also renames on a press) and Version history…. Where accounts are
+**The board's menu.** A chevron beside the name, outside the heading, on the
+menu's paper: Rename (the name also renames on a press), Version history… and
+Board overview (Alt+S, also in the menu on the empty board). Where accounts are
 switched off, so there is no account sheet, it also holds the After Hours
 theme.
 
@@ -957,7 +958,8 @@ moves it. It never reads "Shared" — the room's state is the readout's.
 
 **Faces** are the other people's: yours is the account's. Three at most and a
 count; the count opens everybody, you included. A face can be pressed to
-follow that person.
+follow that person, and while you follow somebody the board says so along its
+top — "Following Ada", in their colour — with Stop.
 
 **The Inbox** is one count for what is waiting for you — unread mentions plus
 agent changes this browser has not been shown yet — in the accent's wash while
@@ -967,8 +969,10 @@ being looked at — closing the Inbox reads what was in it, so the count does
 not stay up for as long as the change is on the board. Read rows lose their
 accent edge but stay listed, with Revert, until they leave the log. Its sheet
 has a section each. A mention marks itself read and goes to its remark; an
-agent change has Revert ("Taken back by <name>" once it is), and a viewer
-sees the rows without it. A new agent change also arrives as a toast with
+agent change has Show, which selects and frames what it touched and puts the
+sheet away, and Revert ("Taken back by <name>" once it is, with "2 objects
+kept, changed since" when a revert left some). A viewer sees the rows without
+Revert. A new agent change also arrives as a toast with
 Revert on it.
 
 **Your account** is quiet apparatus, never an outlined chip. Pressing your
@@ -1002,13 +1006,16 @@ One countdown for everybody at the board (ADR 0017), in the **Session pill**
 beside the people — it is about the session, not the board. The pill reads
 "Session" at rest; while the timer runs or is paused it shows the time in
 mono, tabular, so the digits do not jitter, with the control edge — and a note
-after it, "5:00 · ♪", while music plays. At zero it takes the accent's wash
+after it, "5:00 · ♪", while music plays. Paused, the clock gives way to two
+bars and the time goes muted, and its name says "paused". At zero it takes the accent's wash
 and edge, the Inbox's "look at me", and stays so until somebody resets it.
 Alt+T opens the pill's sheet at the timer.
 
 The sheet's Timer section holds a large readout, who last touched it ("Started by Ada"), and —
 for an editor — five presets in minutes, a duration field that takes minutes or
-`m:ss`, then Start, or Pause / Resume, +1 min and Reset. A viewer gets the
+`m:ss`, then Start, or Pause / Resume, +1 min and Reset. Reset is outside the
+board's undo, so the sheet offers Undo reset in its place until anything else
+is done to the timer. A viewer gets the
 readout alone, and no button on the bar until there is a timer to watch.
 
 The readout rounds UP, so it reads 0:00 only once time is up. "1 minute left"
@@ -1046,18 +1053,22 @@ until there is a timer to watch or music to hear.
 Made from the rail (Poll, P). It is drawn on the slip's stock and corner, white
 by default, with the question in semibold. Its options are rows that a press
 answers, each with a control edge. A picked row takes a ring in the card's own
-ink, and the count and its percentage sit in mono at the row's end. Each row's
+ink and a drawn tick before its label, and the count and its percentage sit in mono at the row's end. Each row's
 bar is that option's share of the people who answered, drawn behind the words
 in a wash of the card's ink so it reads on any paper, in either world. Only the
 rows are controls: a press between them takes hold of the card. Underneath, in
 mono: "Closed", how many have answered — always, results hidden or not — and
-"results when closed" while they are hidden; and, for whoever can edit, a quiet
-"Close poll" / "Reopen" on the card itself.
+"results when closed" while they are hidden; and, for the person who asked, a
+quiet "Close poll" / "Reopen" on the card itself. A poll records who asked it
+(a poll from before that knew nobody, and anyone may close it). Closed, its
+rows lose their solid edges and read as a result.
 
 One answer each by default, and picking another moves it. Several answers is a
-record field, as are hiding results until the poll closes and closing it. The
-options are edited in the record panel, as a list: each label commits when you
-leave it, and Add option and remove keep the poll between two and ten. A viewer
+record field, as is hiding results until the poll closes; each is its box and
+then its whole label, across the row. The options are edited in the record
+panel, as a list: each label commits when you leave it, and Add option and
+remove keep the poll between two and ten. An option somebody has answered is
+fixed — read-only, and not removable. A viewer
 sees the card and the counts, with the rows switched off. While results are
 hidden, each person sees which row is theirs, and nothing else.
 
@@ -1081,17 +1092,24 @@ dots and opens nothing; a right-click opens the menu and votes nothing. The
 tool reaches through a group to the note and past a selected note's handles.
 It is armed when a round starts, and put down by Escape or whenever there is no
 open round — ended, cleared, undone, or taken by somebody else. Whoever can edit
-also gets Reveal (while hidden) and End; once ended, Reopen and Clear. A viewer
+also gets Reveal (while hidden) and End; once ended, Reopen and Clear. Reveal
+and Clear ask in the bar first ("Show everyone the counts?"), with the keyboard
+on the answer that does it. Putting down the last vote lets go of the tool and
+the bar reads "All 5 votes placed". A viewer
 reads "Voting open · view only". The banner is furniture: a selection's floating
-apparatus keeps clear of it. Results lists the notes by dots, most first, each a row that
-selects and shows its note, with "Select top 3" (ties with third come too).
+apparatus keeps clear of it. Results lists the notes by dots, most first —
+each with its place (ties share one) and an ink wash for its share of the top
+count — each a row that selects and shows its note, with "Select top 3" (ties
+with third come too). Ending a round opens the results for everybody: they
+follow the round's status, not one person's press.
 The keyboard votes from the context menu — "Dot voting", holding Add vote and
 Remove vote — offered only while a round is open and only on notes it covers. On
 several notes it is one change and one undo step, and all or nothing when dots
 run short.
 
-On a note, its dots are a capsule in the top corner — an accent dot and the
-count, in mono — clear of the reactions along its bottom edge. While counts are
+On a note, its dots sit astride its top edge, clear of its text and of the
+reactions along its bottom edge: up to five accent dots drawn one by one, and
+past five one dot and the count in mono. While counts are
 hidden a person sees only their own; the capsule takes an accent edge when any
 of them are yours.
 
@@ -1109,15 +1127,18 @@ its first control:
 2. **While asking:** "Clustering 12 notes…" as a status. Cancel stops the
    request.
 3. **The proposal:** the title and each theme's label are fields. Under each
-   theme sit its summary and its notes' gists, then "Other" with a count. The
-   runs left today are in mono, to the right. Apply, Discard.
+   theme sit its summary and its notes' gists, then "Other" with a count, and
+   what Apply does: "Adds a frame with copies of 12 notes; the originals
+   stay". The runs left today are in mono, to the right. Apply, Discard.
 4. **A refusal:** the plain fact ("AI needs an account", "No AI runs left
-   today"), then Close.
+   today"), then Close — with Sign in beside it when the account is what is
+   missing.
 
 Apply lays the themes out beside the notes, never over them: one frame
 holding a frame per theme, with copies of the notes inside. The originals stay
 where they were. It is one undo step. Escape closes the panel at any stage and
-leaves nothing behind.
+leaves nothing behind — except that the first Escape in a field only leaves
+the field. The record panel steps aside while the panel is open.
 
 ### Zoom Cluster
 
@@ -1542,7 +1563,9 @@ handle's cursor turns with the object.
 puts it on the canvas with a bar in place of the navigation: "Viewing {time}",
 **Restore this version** for an editor, and **Back to now**. There are no tools
 and no rail, because nothing on it can be changed. Escape goes back to the board
-as it is now.
+as it is now. A restore says where the board it replaced went: kept in the
+history, one undo away. In the History sheet, deleting a named version asks on
+its own button — "Delete for good" — before it goes.
 
 **A frame is held by its title.** Its body passes presses through to the board,
 so working among a frame's contents never picks up the frame: a drag that

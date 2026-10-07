@@ -67,7 +67,7 @@ test('two people voting for one note at the same moment are both counted', async
     bob.locator(CANVAS).click({ position: NOTE }),
   ])
   for (const page of [alice, bob]) {
-    await expect(page.getByTestId('votes')).toHaveText('2')
+    await expect(page.getByTestId('votes')).toHaveAttribute('data-count', '2')
     await expect(page.getByTestId('voting-status')).toHaveText('4 of 5 votes left · 2 people voted')
   }
 
@@ -95,7 +95,7 @@ test('a viewer sees the round and the dots, and cannot vote', async ({ browser }
   await expect(viewer.getByTestId('voting-status')).toHaveText(
     'Voting open · view only · 1 person voted',
   )
-  await expect(viewer.getByTestId('votes')).toHaveText('1')
+  await expect(viewer.getByTestId('votes')).toHaveAttribute('data-count', '1')
   await expect(viewer.getByTestId('voting-vote')).toHaveCount(0)
   await expect(viewer.getByTestId('voting-end')).toHaveCount(0)
 })

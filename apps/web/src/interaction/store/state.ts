@@ -480,6 +480,12 @@ export interface ChromeSlice {
   /** Whether the Session sheet — timer and music — is open (Alt+T). */
   readonly sessionOpen: boolean
   /**
+   * Whether the account sheet — or, signed out, the sign-in sheet — is open.
+   * Here rather than in the control, so something that needs an account (AI)
+   * can open the way to one.
+   */
+  readonly accountOpen: boolean
+  /**
    * The full emoji library, open for reacting to `targets`, hung from `anchor`
    * (a SCREEN rectangle: the bar's More button, or the selection when it was
    * opened from the context menu). Null when closed.
@@ -496,6 +502,7 @@ export interface ChromeSlice {
   setSearchOpen(open: boolean): void
   setOverviewOpen(open: boolean): void
   setSessionOpen(open: boolean): void
+  setAccountOpen(open: boolean): void
   openReactionPicker(picker: NonNullable<ChromeSlice['reactionPicker']>): void
   closeReactionPicker(): void
   /**

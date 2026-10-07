@@ -19,7 +19,7 @@ import { useBoardDocument } from '../hooks/use-document-object.js'
 import { useInteractionStore } from '../interaction/interaction-store.js'
 import { useOpenFrame } from '../runtime/context.js'
 import { readingOrder } from '../scene/reading-order.js'
-import { typeNoun, typeTitle } from '../scene/type-noun.js'
+import { countOfType, typeTitle } from '../scene/type-noun.js'
 import { wrapTab } from '../controls/wrap-tab.js'
 
 /**
@@ -231,13 +231,13 @@ export function BoardOverview() {
     outline.total === 0
       ? 'Nothing on this board.'
       : `${String(outline.total)} ${outline.total === 1 ? 'object' : 'objects'}: ${outline.counts
-          .map(({ type, count }) => `${String(count)} ${typeNoun(type)}`)
+          .map(({ type, count }) => countOfType(type, count))
           .join(', ')}.`
   const grounds =
     outline.unsupported.length === 0
       ? null
       : `Citing nothing: ${outline.unsupported
-          .map(({ type, ids }) => `${String(ids.length)} ${typeNoun(type)}`)
+          .map(({ type, ids }) => countOfType(type, ids.length))
           .join(', ')}.`
 
   return (
@@ -341,14 +341,27 @@ export function BoardOverview() {
                 // The tree keeps the keyboard; the pointer drives the same rows.
                 event.preventDefault()
               }}
-              onClick={() => {
-                // A pointer opens what holds things; Enter on the same row goes to it.
-                if (row.expanded !== undefined) setExpanded((now) => toggled(now, row.key))
+              onClick={(event) => {
+                /*
+                 * The arrow opens what a row holds; the row itself goes there,
+                 * as Enter does. A click anywhere on a frame used to only open
+                 * it, so visiting a frame took a press and then a second one
+                 * on a row that had moved.
+                 */
+                const onArrow =
+                  event.target instanceof Element &&
+                  event.target.closest('.of-overview__twisty') !== null
+                if (onArrow && row.expanded !== undefined)
+                  setExpanded((now) => toggled(now, row.key))
                 else choose(row)
               }}
             >
               {row.expanded !== undefined && (
-                <span className="of-overview__twisty" aria-hidden="true">
+                <span
+                  className="of-overview__twisty"
+                  data-testid="overview-twisty"
+                  aria-hidden="true"
+                >
                   {row.expanded ? '▾' : '▸'}
                 </span>
               )}

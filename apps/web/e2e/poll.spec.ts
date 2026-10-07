@@ -1,6 +1,6 @@
 import type { Page } from '@playwright/test'
 
-import { CANVAS, expect, saved, seedBoard, test, undo } from './fixtures.js'
+import { boxOf, CANVAS, expect, saved, seedBoard, test, undo } from './fixtures.js'
 import { buildBoard } from './boards.js'
 
 test.use({ board: 'fresh' })
@@ -58,13 +58,16 @@ test('answers from the keyboard', async ({ page }) => {
   await expect(option(page, 'o2')).toHaveAttribute('aria-pressed', 'true')
 })
 
-test('edits the options in the record panel, keeping the answers on them', async ({ page }) => {
+test('edits the options in the record panel, keeping the answers where they are', async ({
+  page,
+}) => {
   await seeded(page, {}, true)
   await page.locator(CANVAS).click({ position: { x: AT.x, y: AT.y - 90 } })
-  const second = page.getByRole('textbox', { name: 'Options 2' })
-  await second.fill('Dogs, clearly')
-  await second.press('Enter')
-  await expect(option(page, 'o2')).toHaveAccessibleName('Dogs, clearly, 1 answer, 100%')
+  const first = page.getByRole('textbox', { name: 'Options 1' })
+  await first.fill('Cats, clearly')
+  await first.press('Enter')
+  await expect(option(page, 'o1')).toHaveAccessibleName('Cats, clearly, 0 answers, 0%')
+  await expect(option(page, 'o2')).toHaveAccessibleName('Option 2, 1 answer, 100%')
 
   await page.getByTestId('field-options-add').click()
   const options = page.getByTestId('poll-options').getByRole('button')
@@ -87,8 +90,7 @@ test('keeps the counts back until it closes, then shows them', async ({ page }) 
   // How many have answered is said; what they answered is not.
   await expect(page.getByTestId('poll-state')).toHaveText('2 answers · results when closed')
 
-  await page.locator(CANVAS).click({ position: { x: AT.x, y: AT.y - 90 } })
-  await page.getByTestId('field-closed').check()
+  await page.getByTestId('poll-close').click()
   await expect(page.getByTestId('poll-state')).toHaveText('Closed · 2 answers')
   await expect(option(page, 'o2')).toHaveAccessibleName('Option 2, 1 answer, 50%')
 })
@@ -172,4 +174,78 @@ test('a locked poll offers no Close, which could only be refused', async ({ page
   await page.keyboard.press('ControlOrMeta+Shift+L')
   await expect(page.getByRole('button', { name: 'Unlock' }).first()).toBeVisible()
   await expect(page.getByTestId('poll-close')).toHaveCount(0)
+})
+
+/*
+ * The asker closes it (PR 3 critique, 2026-10-07). Anybody with an edit link
+ * could close a poll, from the card or a checkbox in the record panel, so the
+ * person running the session had it closed under them by whoever reached it
+ * first.
+ */
+test('only the person who asked closes the poll', async ({ page }) => {
+  await seeded(page, { by: heron }, true)
+  await expect(page.getByTestId('poll-close')).toHaveCount(0)
+  await page.getByTestId('poll-question').click()
+  await expect(page.getByTestId('inspector')).toBeVisible()
+  await expect(page.getByTestId('field-closed')).toHaveCount(0)
+})
+
+test('a poll you put on the board is yours to close', async ({ page }) => {
+  await page.keyboard.press('p')
+  await page.locator(CANVAS).click({ position: AT })
+  await page.keyboard.press('Escape')
+  await expect(page.getByTestId('poll-close')).toHaveText('Close poll')
+})
+
+test('a closed poll looks closed, and your answer is marked as yours', async ({ page }) => {
+  await seeded(page)
+  await option(page, 'o2').click()
+  await expect(option(page, 'o2').getByTestId('poll-mine')).toBeVisible()
+  await expect(option(page, 'o1').getByTestId('poll-mine')).toHaveCount(0)
+  await page.getByTestId('poll-close').click()
+  await expect(card(page).locator('[data-closed="true"]')).toHaveCount(1)
+  // Still marked once it closes: closing is when people look for it.
+  await expect(option(page, 'o2').getByTestId('poll-mine')).toBeVisible()
+})
+
+/*
+ * An option somebody has answered is fixed (PR 3 critique, 2026-10-07).
+ * Rewording it kept their answer on it while changing what they had said yes
+ * to; removing it left the answer on the board, counted by nothing. The
+ * options nobody has picked can still be reworded and removed.
+ */
+test('an answered option can be neither reworded nor removed', async ({ page }) => {
+  // Three, so the one nobody picked is above the two a poll must keep.
+  const options = [
+    { id: 'o1', label: 'Option 1' },
+    { id: 'o2', label: 'Option 2' },
+    { id: 'o3', label: 'Option 3' },
+  ]
+  await seeded(page, { options }, true)
+  await page.getByTestId('poll-question').click()
+  const field = page.getByTestId('field-options')
+  await expect(field.getByRole('textbox', { name: 'Options 2' })).toHaveAttribute('readonly', '')
+  await expect(field.getByRole('button', { name: 'Remove Option 2' })).toBeDisabled()
+  await expect(field.getByRole('textbox', { name: 'Options 1' })).not.toHaveAttribute('readonly')
+  await expect(field.getByRole('button', { name: 'Remove Option 1' })).toBeEnabled()
+})
+
+/*
+ * A yes-or-no reads as a sentence with its box in front (PR 3 critique,
+ * 2026-10-07). It had the 82px label column every field has, so "Hide
+ * results until closed" was cut to "hide resu…" beside a lone checkbox.
+ */
+test('a yes-or-no field is its box, then its whole label', async ({ page }) => {
+  await seeded(page)
+  await page.getByTestId('poll-question').click()
+  const box = page.getByRole('checkbox', { name: 'Hide results until closed' })
+  const label = page.getByText('Hide results until closed', { exact: true })
+  await expect(label).toBeVisible()
+  const check = await boxOf(box)
+  const words = await boxOf(label)
+  expect(words.x).toBeGreaterThan(check.x + check.width - 1)
+  expect(await label.evaluate((element) => element.scrollWidth <= element.clientWidth)).toBe(true)
+  // The words are part of the control: pressing them ticks the box.
+  await label.click()
+  await expect(box).toBeChecked()
 })

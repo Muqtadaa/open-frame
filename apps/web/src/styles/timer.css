@@ -171,3 +171,16 @@
   gap: var(--of-space-6);
   justify-content: center;
 }
+
+/*
+ * PAUSED reads as paused: the clock gives way to two bars and the time goes
+ * quiet. A paused pill looked exactly like a running one, so a room could sit
+ * waiting on a countdown that was not counting.
+ */
+.of-session__paused {
+  display: inline-flex;
+}
+
+.of-session__pill[data-timer='paused'] .of-timer__time {
+  color: var(--of-ink-muted);
+}

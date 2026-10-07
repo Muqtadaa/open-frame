@@ -291,7 +291,7 @@ for (const world of WORLDS) {
       await page.getByTestId('voting-start').click()
       await page.locator('[data-testid="canvas"]').click({ position: { x: 520, y: 300 } })
       await page.locator('[data-testid="canvas"]').click({ position: { x: 520, y: 300 } })
-      await expect(page.getByTestId('votes')).toHaveText('2')
+      await expect(page.getByTestId('votes')).toHaveAttribute('data-count', '2')
       await page.getByTestId('voting-results').click()
       await snap(page, `${world}-dot-voting`)
     })

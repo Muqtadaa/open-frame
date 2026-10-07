@@ -263,3 +263,22 @@
   height: 14px;
   background: var(--of-panel-border);
 }
+
+/* Following somebody: said along the top, in their colour, with Stop. */
+.of-following {
+  display: flex;
+  gap: var(--of-space-8);
+  align-items: center;
+}
+
+.of-following__dot {
+  flex: none;
+  width: var(--of-space-8);
+  height: var(--of-space-8);
+  border-radius: var(--of-radius-round);
+}
+
+.of-following__who {
+  flex: 1;
+  font-size: var(--of-type-ui);
+}

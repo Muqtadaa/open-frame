@@ -1,7 +1,7 @@
 import { useEffect, useId, useRef } from 'react'
 
 import { AnchoredSurface } from '../controls/AnchoredSurface.js'
-import { MusicIcon, TimerIcon } from '../controls/icons.js'
+import { MusicIcon, TimerIcon, PauseIcon } from '../controls/icons.js'
 import { useAnchoredTo } from '../controls/use-anchor.js'
 import { useInteractionStore } from '../interaction/interaction-store.js'
 import { useOpenFrame } from '../runtime/context.js'
@@ -105,7 +105,13 @@ function SessionControl({ channel }: { readonly channel: FacilitationChannel }) 
         )}
         {timer.active && (
           <>
-            <TimerIcon className="of-session__clock" />
+            {timer.status === 'paused' && !timer.done ? (
+              <span className="of-session__paused" data-testid="session-paused">
+                <PauseIcon className="of-session__clock" />
+              </span>
+            ) : (
+              <TimerIcon className="of-session__clock" />
+            )}
             <span className="of-timer__time" data-testid="session-time">
               {timer.time}
             </span>

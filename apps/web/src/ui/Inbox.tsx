@@ -6,6 +6,7 @@ import { useAnchoredTo } from '../controls/use-anchor.js'
 import { useDismiss } from '../controls/use-dismiss.js'
 import { useMentions } from '../hooks/use-mentions.js'
 import { AgentChangeItems, useAgentChanges } from './AgentChanges.js'
+import { focusTheBoard } from './hand-back-focus.js'
 import { MentionItems } from './Mentions.js'
 import { wrapTab } from '../controls/wrap-tab.js'
 
@@ -139,7 +140,13 @@ export function Inbox() {
                 <h2 className="of-inbox__heading" id={agentsHeading}>
                   Agent changes
                 </h2>
-                <AgentChangeItems state={agents} />
+                <AgentChangeItems
+                  state={agents}
+                  onShown={() => {
+                    setOpen(false)
+                    focusTheBoard()
+                  }}
+                />
               </section>
             )}
           </div>

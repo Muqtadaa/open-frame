@@ -81,7 +81,10 @@ export function VersionPreviewBar({ preview }: { readonly preview: Previewed }) 
     versionPreview.show(null)
     focusTheBoard()
     useInteractionStore.getState().announce(`Restored the version from ${when}`)
-    useInteractionStore.getState().showToast(`Restored the version from ${when}`)
+    // Says where the board it replaced went: kept, and one undo away.
+    useInteractionStore
+      .getState()
+      .showToast(`Restored the version from ${when}; the board as it was is kept in the history`)
   }
 
   return (

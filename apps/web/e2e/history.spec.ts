@@ -120,6 +120,10 @@ test.describe('looking back, and restoring', () => {
       await page.getByTestId('version-restore').click()
 
       await expect(page.getByTestId('version-preview')).toHaveCount(0)
+      // It says where the board that was just replaced went.
+      await expect(page.getByTestId('toast-body')).toContainText(
+        'the board as it was is kept in the history',
+      )
       await expect(canvas(page)).toContainText('Kept for later')
       await expect(canvas(page)).not.toContainText('Written since')
       // The board as it was before the restore is a version of its own now.
@@ -160,7 +164,10 @@ test('names the board as it is, lists it, and deletes it', async ({ page }) => {
   await expect(field).toHaveValue('')
   await expect.poll(() => versionKeys(page)).toEqual([expect.stringMatching(/\|n$/) as unknown])
 
+  // Deleting a name cannot be undone, so the first press only asks.
   await page.getByRole('button', { name: 'Delete Before the workshop' }).click()
+  await expect(version).toHaveCount(1)
+  await page.getByRole('button', { name: 'Delete Before the workshop for good' }).click()
   await expect(version).toHaveCount(0)
   await expect.poll(() => versionKeys(page)).toEqual([])
 })

@@ -257,3 +257,30 @@ test.describe('the library’s grid', () => {
     expect(fits).toEqual({ list: true, inside: true, sideways: false })
   })
 })
+
+/*
+ * PR 3 critique, 2026-10-07: the emoji library opened over the record panel,
+ * taking its swatches; and a chip was 22px tall, under the 24px a target needs.
+ */
+test('the emoji library keeps off the record panel', async ({ page }) => {
+  await oneNote(page)
+  await page.locator(CANVAS).click({ position: NOTE })
+  await expect(page.getByTestId('inspector')).toBeVisible()
+  await page.getByTestId('react-more').click()
+  const picker = await boxOf(page.getByRole('dialog', { name: 'Emoji' }))
+  const panel = await boxOf(page.getByTestId('inspector'))
+  expect(overlaps(picker, panel)).toBe(false)
+})
+
+test('a reaction chip is a target a finger and a mouse can hit', async ({ page }) => {
+  await seedBoard(
+    page,
+    buildBoard((board) => {
+      const note = board.note('Hide the price until checkout', NOTE)
+      board.react(note, 'plus-one', { key: 'g_heron', name: 'Heron', hue: 200 })
+    }),
+  )
+  const chip = await boxOf(page.getByTestId('reaction-plus-one'))
+  expect(chip.height).toBeGreaterThanOrEqual(24)
+  expect(chip.width).toBeGreaterThanOrEqual(24)
+})

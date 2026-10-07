@@ -778,6 +778,15 @@ test.describe('follow-mode', () => {
       name.replace('Follow', 'Following'),
     )
 
+    // Said on the board as well as on a small face: who, and the way out
+    // (PR 3 critique, 2026-10-07).
+    const bar = bob.getByTestId('following-bar')
+    await expect(bar).toContainText(name.replace('Follow ', 'Following '))
+    await bar.getByRole('button', { name: 'Stop' }).click()
+    await expect(bar).toHaveCount(0)
+    await expect(face).toHaveAttribute('aria-pressed', 'false')
+    await face.click()
+
     // Alice zooms in. Bob's board should follow, though he touched nothing.
     await alice.locator('[data-testid="zoom-in"]').click()
     await alice.locator('[data-testid="zoom-in"]').click()

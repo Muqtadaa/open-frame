@@ -143,6 +143,26 @@
   box-shadow: inset 0 0 0 1px currentcolor;
 }
 
+/* Your answer: a tick before it, as well as the 2px of the ring above. */
+.of-poll__mine {
+  position: relative;
+  display: inline-flex;
+  flex: none;
+}
+
+.of-poll__mine svg {
+  width: 1em;
+  height: 1em;
+}
+
+/*
+ * CLOSED looks closed, not only says so in the foot: the options are done
+ * being pressed, so they lose their edges and read as a result.
+ */
+.of-poll[data-closed='true'] .of-poll__option {
+  border-style: dashed;
+}
+
 .of-poll__bar {
   position: absolute;
   inset: 0 auto 0 0;

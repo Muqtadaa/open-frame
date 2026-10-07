@@ -158,6 +158,7 @@ export function Inspector() {
   const dragKind = useInteractionStore((state) => state.drag.kind)
   const editingId = useInteractionStore((state) => state.editingId)
   const croppingId = useInteractionStore((state) => state.croppingId)
+  const clustering = useInteractionStore((state) => state.clusterReview !== null)
   const setCropping = useInteractionStore((state) => state.setCropping)
   const commands = useCommands()
   /*
@@ -448,6 +449,9 @@ export function Inspector() {
   // pointer is worse than no panel.
   if (objects.length === 0 || bounds === null) return null
   if (dragKind !== 'idle' || editingId !== null) return null
+  // Clustering has the selection: the panel would describe notes being
+  // grouped elsewhere, and lie over them.
+  if (clustering) return null
   if (objects.some((object) => object.locked)) return null
   // A type with fields or a trail but no style properties still has a panel
   // worth showing; one with none of the three has nothing to say.
@@ -649,6 +653,10 @@ export function Inspector() {
           <RecordFields
             object={only}
             fields={recordFields}
+            // What the marks on it name: a poll's answered options.
+            named={
+              new Set(runtime.registry.marksOn(document, only.id).map((link) => link.edge.value))
+            }
             onCommit={(id, patch) => {
               commands.updateData(id, patch)
             }}
