@@ -65,16 +65,29 @@ export function startVoteRound(
     existing === null ? [] : deleteObjects(doc, { kind: 'DeleteObjects', ids: [existing.id] }, ctx)
   const after = existing === null ? doc : withoutRemoved(doc, cleared)
 
+  /*
+   * And any dots still filed under this round's id from one whose start was
+   * UNDONE. Undo takes back the round, not other people's dots in it, and the
+   * id is deterministic (concurrent starts must write one round) — so without
+   * this the new round inherited them, allowance spent before anybody voted.
+   */
+  const id = asObjectId(voteRoundId(run))
+  const leftover = ctx.registry.marksWithin(after, id).map((link) => link.id)
+  const swept =
+    leftover.length === 0 ? [] : deleteObjects(after, { kind: 'DeleteObjects', ids: leftover }, ctx)
+  const fresh = swept.length === 0 ? after : withoutRemoved(after, swept)
+
   return [
     ...cleared,
+    ...swept,
     ...createObjects(
-      after,
+      fresh,
       {
         kind: 'CreateObjects',
         objects: [
           {
             type: VOTE_ROUND_TYPE,
-            id: asObjectId(voteRoundId(run)),
+            id,
             x: 0,
             y: 0,
             data: { ...data.data },
@@ -187,7 +200,8 @@ function votable(
 ): AnyOpenFrameObject {
   const target = requireObject(doc, id)
   if (ctx.registry.get(target.type)?.capabilities.markable !== true) {
-    throw new CommandError('invalid-input', `A ${target.type} cannot be voted on`)
+    // Never the type's id: "A journey-stage cannot be voted on" is not a sentence.
+    throw new CommandError('invalid-input', 'That cannot be voted on')
   }
   if (!inVoteScope(doc, round, target)) {
     throw new CommandError('invalid-input', 'That note is not part of this vote')

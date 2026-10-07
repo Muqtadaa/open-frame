@@ -3,6 +3,7 @@ import {
   unionAll,
   worldRectToScreen,
   type AnyOpenFrameObject,
+  type MarkAuthor,
   type ObjectId,
   type Point,
 } from '@openframe/core'
@@ -30,6 +31,7 @@ import {
   type PointerIntent,
 } from '../interaction/pointer-controller.js'
 import { hitTest, hitTestRaw } from '../scene/hit-testing.js'
+import { IS_MAC } from '../scene/platform.js'
 import { boundsOfAll } from '../scene/resize.js'
 import { beginConnectPointDrag } from './gestures/connect.js'
 import { beginCropDrag } from './gestures/crop.js'
@@ -71,6 +73,12 @@ export function useCanvasGestures(containerRef: RefObject<HTMLElement | null>) {
   // every handler below.
   const me = useMe()
   const meRef = useRef(me)
+  /** The dot a press is about to cast, handed from its intent to its gesture. */
+  const pendingVote = useRef<{
+    readonly on: ObjectId
+    readonly remove: boolean
+    readonly by: MarkAuthor
+  } | null>(null)
   useEffect(() => {
     meRef.current = me
   }, [me])
@@ -267,11 +275,12 @@ export function useCanvasGestures(containerRef: RefObject<HTMLElement | null>) {
         case 'begin-marquee':
           store.beginMarquee(worldPoint)
           return 'marquee'
-        case 'vote': {
-          // One command, and nothing to drag: a dot is placed by the press.
+        case 'begin-vote': {
+          // Cast on release, by the vote gesture, unless the press moves.
           const by = meRef.current
-          if (by !== null) commands.vote(intent.on, by, intent.remove)
-          return null
+          if (by === null) return null
+          pendingVote.current = { on: intent.on, remove: intent.remove, by }
+          return 'vote'
         }
         case 'begin-draw':
           store.beginDraw(intent.objectType, intent.at, intent.data)
@@ -394,7 +403,15 @@ export function useCanvasGestures(containerRef: RefObject<HTMLElement | null>) {
        */
       event.currentTarget.focus({ preventScroll: true })
 
-      const grabbed = handleUnderPointer(event.target)
+      /*
+       * Voting reaches past everything a press would otherwise grab: the
+       * selection's handles (a dot near a selected note's edge resized it)
+       * and a group around the note (rule 18: `hitTestRaw`, as a double-click
+       * does, or a grouped note could never be voted on).
+       */
+      const voting = store.tool === 'dot'
+      pendingVote.current = null
+      const grabbed = voting ? null : handleUnderPointer(event.target)
       /*
        * Remembered for the `dblclick` that may follow this press: by then the
        * handle can have moved out from under the pointer, and a double-click
@@ -428,10 +445,11 @@ export function useCanvasGestures(containerRef: RefObject<HTMLElement | null>) {
 
       const worldPoint = toWorld(event.clientX, event.clientY)
       const document = runtime.store.getDocument()
-      const hitId =
-        hollowChromeUnderPointer([event.target], isHollow) ??
-        hitTest(document, runtime.registry, worldPoint) ??
-        objectChromeUnderPointer(event.target)
+      const hitId = voting
+        ? hitTestRaw(document, runtime.registry, worldPoint)
+        : (hollowChromeUnderPointer([event.target], isHollow) ??
+          hitTest(document, runtime.registry, worldPoint) ??
+          objectChromeUnderPointer(event.target))
       const intents = decidePointerDown({
         tool: store.tool,
         worldPoint,
@@ -440,6 +458,7 @@ export function useCanvasGestures(containerRef: RefObject<HTMLElement | null>) {
         shiftKey: event.shiftKey,
         altKey: event.altKey,
         button: event.button,
+        contextClick: IS_MAC && event.ctrlKey,
         spaceHeld: spaceHeld.current,
         make: makeFor(store.tool, views.tools(), store.toolOptions),
         /*
@@ -489,6 +508,7 @@ export function useCanvasGestures(containerRef: RefObject<HTMLElement | null>) {
         endpointId: null,
         startAngle: 0,
         moved: false,
+        ...(pendingVote.current === null ? {} : { vote: pendingVote.current }),
       }
     },
     [abandon, applyIntent, beginPinch, canvasPoint, context, isHollow, runtime, toWorld, views],
@@ -589,6 +609,10 @@ export function useCanvasGestures(containerRef: RefObject<HTMLElement | null>) {
        * true, so that is what is remembered.
        */
       if (pressedHandle.current || claimsDoubleClick(handleAt(event.clientX, event.clientY))) return
+      // While voting, each press of a double-click is its own dot and the
+      // pair opens nothing: it used to open the note's editor, and every
+      // click after that went into the text instead of onto the note.
+      if (useInteractionStore.getState().tool === 'dot') return
       if (pressedChromeButton.current) return
 
       const worldPoint = toWorld(event.clientX, event.clientY)

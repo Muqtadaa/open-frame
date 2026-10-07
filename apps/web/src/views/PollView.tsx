@@ -27,8 +27,11 @@ function PollRenderer({ object, marks }: ObjectViewProps<PollData>) {
   const { text, options, closed, hideResults } = object.data
   const tally = tallyPoll(marks?.on ?? [], options, marks?.me?.key ?? null)
   const shown = marks !== undefined && (!hideResults || closed)
-  const most = Math.max(1, ...tally.options.map((option) => option.count))
+  // Bars are shares of the people who answered, so they read as proportions
+  // rather than as a race to the leader.
+  const of = Math.max(1, tally.people)
   const answerable = marks !== undefined && marks.canAct && marks.me !== null && !closed
+  const canClose = marks?.canAct === true
   const question = plainTextOf(text).trim()
 
   return (
@@ -46,18 +49,23 @@ function PollRenderer({ object, marks }: ObjectViewProps<PollData>) {
       <div className="of-poll__question" data-testid="poll-question">
         <RichTextView value={text} />
       </div>
-      <ul className="of-poll__options of-editor-chrome" data-testid="poll-options">
+      {/*
+        The BUTTONS are chrome, not the list: a press between two options,
+        or beside one, is a press on the card — so it selects and moves it like
+        any other object instead of doing nothing at all.
+      */}
+      <ul className="of-poll__options" data-testid="poll-options">
         {tally.options.map((option) => (
           <li key={option.id}>
             <button
               type="button"
-              className="of-poll__option"
+              className="of-poll__option of-editor-chrome"
               data-testid={`poll-option-${option.id}`}
               aria-pressed={option.mine}
               disabled={!answerable}
               aria-label={
                 shown
-                  ? `${option.label}, ${String(option.count)} ${option.count === 1 ? 'answer' : 'answers'}`
+                  ? `${option.label}, ${String(option.count)} ${option.count === 1 ? 'answer' : 'answers'}, ${String(Math.round((option.count / of) * 100))}%`
                   : option.label
               }
               onClick={() => {
@@ -70,27 +78,50 @@ function PollRenderer({ object, marks }: ObjectViewProps<PollData>) {
                 <span
                   className="of-poll__bar"
                   aria-hidden="true"
-                  style={{ width: `${String(Math.round((option.count / most) * 100))}%` }}
+                  style={{ width: `${String(Math.round((option.count / of) * 100))}%` }}
                 />
               )}
               <span className="of-poll__label">{option.label}</span>
               {shown && (
                 <span className="of-poll__count" aria-hidden="true">
                   {option.count}
+                  <span className="of-poll__share">{Math.round((option.count / of) * 100)}%</span>
                 </span>
               )}
             </button>
           </li>
         ))}
       </ul>
-      <p className="of-poll__state" data-testid="poll-state">
-        {[
-          closed ? 'Closed' : '',
-          shown ? `${String(tally.people)} ${tally.people === 1 ? 'person' : 'people'}` : '',
-        ]
-          .filter(Boolean)
-          .join(' · ')}
-      </p>
+      <div className="of-poll__foot">
+        {/*
+          How many have answered is always said, hidden results or not: it
+          gives away nothing about the answers, and it is how whoever asked
+          knows when the room is done.
+        */}
+        <p className="of-poll__state" data-testid="poll-state">
+          {[
+            closed ? 'Closed' : '',
+            marks === undefined
+              ? ''
+              : `${String(tally.people)} ${tally.people === 1 ? 'answer' : 'answers'}`,
+            !shown && marks !== undefined ? 'results when closed' : '',
+          ]
+            .filter(Boolean)
+            .join(' · ')}
+        </p>
+        {canClose && (
+          <button
+            type="button"
+            className="of-poll__close of-editor-chrome"
+            data-testid="poll-close"
+            onClick={() => {
+              marks?.act({ kind: 'UpdateObjectData', id: object.id, patch: { closed: !closed } })
+            }}
+          >
+            {closed ? 'Reopen' : 'Close poll'}
+          </button>
+        )}
+      </div>
     </div>
   )
 }

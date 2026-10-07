@@ -172,6 +172,37 @@
   margin: 0;
 }
 
+.of-poll__foot {
+  display: flex;
+  gap: var(--of-space-8);
+  align-items: center;
+  justify-content: space-between;
+}
+
+.of-poll__share {
+  margin-inline-start: var(--of-space-6);
+  opacity: 0.7;
+}
+
+/* A quiet text button on the card: closing is the asker's, not the room's. */
+.of-poll__close {
+  flex: none;
+  min-height: var(--of-hit-sm);
+  padding: 0 var(--of-space-6);
+  font: inherit;
+  font-family: var(--of-mono);
+  font-size: var(--of-type-record);
+  color: inherit;
+  cursor: pointer;
+  background: transparent;
+  border: 1px solid color-mix(in srgb, currentcolor 35%, transparent);
+  border-radius: var(--of-radius);
+}
+
+.of-poll__close:hover {
+  background: color-mix(in srgb, currentcolor 8%, transparent);
+}
+
 .of-poll__state:empty {
   display: none;
 }

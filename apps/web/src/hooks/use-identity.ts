@@ -33,9 +33,16 @@ export function useIdentityState(): {
 
     // The session is restored from storage asynchronously, so the first answer
     // arrives after the first render. Signed out until told otherwise.
-    void accounts.current().then((found) => {
-      if (live) setState({ identity: found, settled: true })
-    })
+    // A lookup that fails is a guest, not a wait that never ends: "not known
+    // yet" disables everything filed under a person, voting included.
+    accounts.current().then(
+      (found) => {
+        if (live) setState({ identity: found, settled: true })
+      },
+      () => {
+        if (live) setState({ identity: null, settled: true })
+      },
+    )
 
     const stop = accounts.onChange((next) => {
       if (live) setState({ identity: next, settled: true })

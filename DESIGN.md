@@ -1014,10 +1014,13 @@ bar until there is music to hear.
 Made from the rail (Poll, P). It is drawn on the slip's stock and corner, white
 by default, with the question in semibold. Its options are rows that a press
 answers, each with a control edge. A picked row takes a ring in the card's own
-ink, and the count sits in mono at the row's end. Each row's bar is the share
-of the most-picked option, drawn behind the words in a wash of the card's ink
-so it reads on any paper, in either world. Underneath, the state sits in mono:
-"Closed", and how many people have answered.
+ink, and the count and its percentage sit in mono at the row's end. Each row's
+bar is that option's share of the people who answered, drawn behind the words
+in a wash of the card's ink so it reads on any paper, in either world. Only the
+rows are controls: a press between them takes hold of the card. Underneath, in
+mono: "Closed", how many have answered — always, results hidden or not — and
+"results when closed" while they are hidden; and, for whoever can edit, a quiet
+"Close poll" / "Reopen" on the card itself.
 
 One answer each by default, and picking another moves it. Several answers is a
 record field, as are hiding results until the poll closes and closing it. The
@@ -1028,21 +1031,32 @@ hidden, each person sees which row is theirs, and nothing else.
 
 ### Dot Voting
 
-Started from the context menu: from empty board on the whole board, or from a
-frame's menu on what that frame holds. (A note's menu already fills a laptop
-window; it gains a row only while a round is open.) Its setup sits at the top of the
+Started from the context menu: from empty board on the whole board, from a
+frame's menu on what that frame holds, or from the menu of two or more selected
+notes on just those. (One note's menu already fills a laptop window; it gains a
+row only while a round is open.) A note made inside a frame belongs to it, so a
+frame's round covers everything plainly in it. Its setup sits at the top of the
 board, under the navigation bar, in the notice's panel stock: the scope in its
 heading, a title, votes each (5 by default, up to 20), "Hide counts until
 revealed", Start. Escape or Cancel leaves nothing behind.
 
 While a round runs, the same place holds it: the title, "3 of 5 votes left" in
-mono, and a pressed **Vote** toggle that arms the dot tool — a press on a note
-places a dot, Alt takes one back. It is armed when a round starts and put down
-when it ends. Whoever can edit also gets Reveal (while hidden) and End; once
-ended, Clear. Results lists the notes by dots, most first, each a row that
+mono with how many people have voted (never which notes), and a **Vote** toggle
+that arms the dot tool and reads "Voting" while pressed, with "Alt-click a dot
+to take it back" under it. A click on a note places a dot when the button comes
+up, so a drag or the first finger of a pinch places none; a double-click is two
+dots and opens nothing; a right-click opens the menu and votes nothing. The
+tool reaches through a group to the note and past a selected note's handles.
+It is armed when a round starts, and put down by Escape or whenever there is no
+open round — ended, cleared, undone, or taken by somebody else. Whoever can edit
+also gets Reveal (while hidden) and End; once ended, Reopen and Clear. A viewer
+reads "Voting open · view only". The banner is furniture: a selection's floating
+apparatus keeps clear of it. Results lists the notes by dots, most first, each a row that
 selects and shows its note, with "Select top 3" (ties with third come too).
 The keyboard votes from the context menu — "Dot voting", holding Add vote and
-Remove vote — offered only while a round is open and only on notes it covers.
+Remove vote — offered only while a round is open and only on notes it covers. On
+several notes it is one change and one undo step, and all or nothing when dots
+run short.
 
 On a note, its dots are a capsule in the top corner — an accent dot and the
 count, in mono — clear of the reactions along its bottom edge. While counts are

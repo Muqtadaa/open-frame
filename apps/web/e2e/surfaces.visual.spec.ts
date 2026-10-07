@@ -269,7 +269,7 @@ for (const world of WORLDS) {
         }),
       )
       await page.getByTestId('poll-option-o2').click()
-      await expect(page.getByTestId('poll-state')).toHaveText('2 people')
+      await expect(page.getByTestId('poll-state')).toHaveText('2 answers')
       await snap(page, `${world}-poll`)
     })
 

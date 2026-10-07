@@ -1,4 +1,10 @@
-import { VOTE_MARK, currentVoteRound, type ObjectId, type VoteRoundData } from '@openframe/core'
+import {
+  VOTE_MARK,
+  currentVoteRound,
+  type BoardDocument,
+  type ObjectId,
+  type VoteRoundData,
+} from '@openframe/core'
 import { createContext, useCallback, useContext, useMemo, useSyncExternalStore } from 'react'
 
 import { useOpenFrame } from '../runtime/context.js'
@@ -16,6 +22,24 @@ export interface VotingRound {
  * not a structural change) is seen as well. Asked by the few things that show
  * the round as a whole; a note asks `VotingContext`, never this (rule 10).
  */
+/**
+ * The round, found once per version of the board rather than once per read.
+ *
+ * `currentVoteRound` walks every object, and the snapshot is read on every
+ * render of everything that asks — the context menu included, which is always
+ * mounted (rule 10). A board version is immutable, so its answer never changes.
+ */
+const roundOf = new WeakMap<BoardDocument, string>()
+function roundSignature(doc: BoardDocument): string {
+  const known = roundOf.get(doc)
+  if (known !== undefined) return known
+  const round = currentVoteRound(doc)
+  // A string, so it compares by value (rule 9).
+  const signature = round === null ? '' : JSON.stringify({ id: round.id, data: round.data })
+  roundOf.set(doc, signature)
+  return signature
+}
+
 export function useVoteRound(): VotingRound | null {
   const { runtime } = useOpenFrame()
   const subscribe = useCallback(
@@ -39,11 +63,10 @@ export function useVoteRound(): VotingRound | null {
     },
     [runtime.store],
   )
-  const getSnapshot = useCallback(() => {
-    const round = currentVoteRound(runtime.store.getDocument())
-    // A string, so it compares by value (rule 9).
-    return round === null ? '' : JSON.stringify({ id: round.id, data: round.data })
-  }, [runtime.store])
+  const getSnapshot = useCallback(
+    () => roundSignature(runtime.store.getDocument()),
+    [runtime.store],
+  )
   const signature = useSyncExternalStore(subscribe, getSnapshot, getSnapshot)
   return useMemo(
     () => (signature === '' ? null : (JSON.parse(signature) as VotingRound)),

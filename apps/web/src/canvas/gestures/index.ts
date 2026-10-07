@@ -7,6 +7,7 @@ import { marquee } from './marquee.js'
 import { pan } from './pan.js'
 import { resize, rotate } from './transform.js'
 import { translate } from './translate.js'
+import { vote } from './vote.js'
 import type { ActiveMode, GestureHandler } from './types.js'
 
 /**
@@ -27,4 +28,5 @@ export const HANDLERS: Readonly<Record<ActiveMode, GestureHandler>> = {
   endpoint,
   divider,
   crop,
+  vote,
 }

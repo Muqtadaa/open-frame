@@ -54,6 +54,17 @@ export function VotingBanner() {
   useEffect(() => {
     if (roundOpen && setup !== null) closeSetup()
   }, [roundOpen, setup, closeSetup])
+  /*
+   * A vote tool with no open round to vote in is a trap: clicks do nothing and
+   * nothing on screen says why. Put down HERE, wherever the round went — ended,
+   * cleared, undone, or taken by a peer or a restored version — not in the
+   * round's own bar, which is gone by the time it matters.
+   */
+  const tool = useInteractionStore((state) => state.tool)
+  const setTool = useInteractionStore((state) => state.setTool)
+  useEffect(() => {
+    if (!roundOpen && tool === 'dot') setTool('select')
+  }, [roundOpen, tool, setTool])
   if (setup !== null && !roundOpen) return <VotingSetup scope={setup} />
   if (round === null) return null
   return <VotingRoundBar round={round} />
@@ -185,17 +196,20 @@ function VotingRoundBar({ round }: { readonly round: VotingRound }) {
   const mine = me === null ? 0 : votes.filter((vote) => vote.by === me.key).length
   const left = Math.max(0, round.data.perPerson - mine)
   const voting = tool === 'dot'
-
-  // A tool that does nothing once the round is over is a trap; put it down.
-  useEffect(() => {
-    if (!open && voting) setTool('select')
-  }, [open, voting, setTool])
+  /*
+   * How many PEOPLE have voted — never which notes — so whoever runs a hidden
+   * round knows when the room is done without the counts leaking early.
+   */
+  const people = new Set(votes.map((vote) => vote.by)).size
+  const turnout =
+    people === 0 ? '' : ` · ${String(people)} ${people === 1 ? 'person' : 'people'} voted`
 
   const status = !open
     ? 'Voting ended'
     : canEdit
-      ? `${String(left)} of ${String(round.data.perPerson)} votes left`
-      : 'Voting open'
+      ? `${String(left)} of ${String(round.data.perPerson)} votes left${turnout}`
+      : // Said, rather than a round nobody here can join and no reason why.
+        `Voting open · view only${turnout}`
 
   return (
     <section
@@ -221,8 +235,13 @@ function VotingRoundBar({ round }: { readonly round: VotingRound }) {
               setTool(voting ? 'select' : 'dot')
             }}
           >
-            Vote
+            {voting ? 'Voting' : 'Vote'}
           </button>
+        )}
+        {voting && (
+          <span className="of-voting__hint" data-testid="voting-hint">
+            Alt-click a dot to take it back
+          </span>
         )}
         {open && canEdit && round.data.hidden && (
           <button
@@ -259,6 +278,18 @@ function VotingRoundBar({ round }: { readonly round: VotingRound }) {
             }}
           >
             End
+          </button>
+        )}
+        {!open && canEdit && (
+          <button
+            type="button"
+            className="of-button"
+            data-testid="voting-reopen"
+            onClick={() => {
+              commands.setVoting({ status: 'open' })
+            }}
+          >
+            Reopen
           </button>
         )}
         {!open && canEdit && (

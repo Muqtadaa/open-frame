@@ -1,6 +1,8 @@
 import type { Page } from '@playwright/test'
 
-import { CANVAS, expect, saved, seedBoard, test, undo } from './fixtures.js'
+import { richFromPlain } from '@openframe/core'
+
+import { CANVAS, EDITOR, expect, saved, seedBoard, test, undo } from './fixtures.js'
 import { buildBoard } from './boards.js'
 
 test.use({ board: 'fresh' })
@@ -49,7 +51,7 @@ test(
     await page.locator(CANVAS).click({ position: FIRST })
     await page.locator(CANVAS).click({ position: FIRST })
     await expect(dots(page, 0)).toHaveText('2')
-    await expect(status).toHaveText('0 of 2 votes left')
+    await expect(status).toHaveText('0 of 2 votes left · 1 person voted')
 
     // A third is refused, and says why.
     await page.locator(CANVAS).click({ position: SECOND })
@@ -193,4 +195,160 @@ test('cancels a round that was never started, leaving nothing on the board', asy
   await page.keyboard.press('Escape')
   await expect(page.getByTestId('voting-setup')).toHaveCount(0)
   await expect(page.getByTestId('voting')).toHaveCount(0)
+})
+
+/*
+ * What a room full of people actually does with the vote tool, none of which
+ * the tests above did: double-click, right-click, vote on notes that sit in a
+ * group or were made inside a frame, and undo the start.
+ */
+async function armed(page: Page): Promise<void> {
+  await page.getByTestId('voting-vote').click()
+  await expect(page.getByTestId('voting-vote')).toHaveAttribute('aria-pressed', 'true')
+}
+
+test('a double-click while voting casts two dots and opens nothing', async ({ page }) => {
+  await seedBoard(
+    page,
+    buildBoard((board) => {
+      board.note('Show the price early', FIRST)
+      board.voting({})
+    }),
+  )
+  await armed(page)
+  await page.locator(CANVAS).dblclick({ position: FIRST })
+  await expect(dots(page, 0)).toHaveText('2')
+  await expect(page.locator(EDITOR)).toHaveCount(0)
+  // And the tool is still voting.
+  await page.locator(CANVAS).click({ position: FIRST })
+  await expect(dots(page, 0)).toHaveText('3')
+})
+
+test('a right-click while voting opens the menu and casts nothing', async ({ page }) => {
+  await seedBoard(
+    page,
+    buildBoard((board) => {
+      board.note('Show the price early', FIRST)
+      board.voting({})
+    }),
+  )
+  await armed(page)
+  await page.locator(CANVAS).click({ position: FIRST, button: 'right' })
+  await expect(page.getByRole('menu')).toBeVisible()
+  await expect(dots(page, 0)).toHaveCount(0)
+})
+
+test('votes on a note inside a group, not on the group', async ({ page }) => {
+  await seedBoard(
+    page,
+    buildBoard((board) => {
+      const group = board.add('group', { x: 0, y: 0 })
+      board.add('sticky', FIRST, { text: richFromPlain('Grouped') }, undefined, group)
+      board.add('sticky', SECOND, { text: richFromPlain('Also grouped') }, undefined, group)
+      board.voting({})
+    }),
+  )
+  await armed(page)
+  await page.locator(CANVAS).click({ position: SECOND })
+  await expect(dots(page, 1)).toHaveText('1')
+  await expect(page.getByTestId('toast-body')).toHaveCount(0)
+})
+
+test('a note made inside a frame counts in that frame’s round', async ({ page }) => {
+  await seedBoard(
+    page,
+    buildBoard((board) => {
+      board.add('frame', { x: 420, y: 340 })
+    }),
+  )
+  // Made inside the frame's body with the sticky tool, as people do.
+  await page.keyboard.press('s')
+  await page.locator(CANVAS).click({ position: { x: 420, y: 360 } })
+  await page.keyboard.press('Escape')
+  await page.keyboard.press('Escape')
+
+  await page.getByTestId('frame-title').click({ button: 'right' })
+  await page.getByRole('menuitem', { name: 'Start dot voting…' }).click()
+  await expect(page.getByTestId('voting-setup').getByRole('heading')).toHaveText(
+    'Dot voting · this frame',
+  )
+  await page.getByTestId('voting-start').click()
+  await page.locator(CANVAS).click({ position: { x: 420, y: 360 } })
+  await expect(dots(page, 0)).toHaveText('1')
+  await expect(page.getByTestId('toast-body')).toHaveCount(0)
+})
+
+test('undoing the start of a round puts the vote tool down', async ({ page }) => {
+  await twoNotes(page)
+  await page.locator(CANVAS).click({ button: 'right', position: { x: 800, y: 600 } })
+  await page.getByRole('menuitem', { name: 'Start dot voting…' }).click()
+  await page.getByTestId('voting-start').click()
+  await expect(page.getByTestId('voting-vote')).toHaveAttribute('aria-pressed', 'true')
+
+  await undo(page)
+  await expect(page.getByTestId('voting-status')).toHaveCount(0)
+  await expect(page.getByTestId('tool-select')).toHaveAttribute('aria-pressed', 'true')
+})
+
+test('Escape puts the vote tool down', async ({ page }) => {
+  await seedBoard(
+    page,
+    buildBoard((board) => {
+      board.note('Show the price early', FIRST)
+      board.voting({})
+    }),
+  )
+  await armed(page)
+  await page.locator(CANVAS).click({ position: { x: 800, y: 600 } })
+  await page.keyboard.press('Escape')
+  await expect(page.getByTestId('voting-vote')).toHaveAttribute('aria-pressed', 'false')
+  await page.locator(CANVAS).click({ position: FIRST })
+  await expect(dots(page, 0)).toHaveCount(0)
+})
+
+test('starts a round on the selected notes, and votes on them all as one step', async ({
+  page,
+}) => {
+  await twoNotes(page)
+  await page.locator(CANVAS).click({ position: FIRST })
+  await page.locator(CANVAS).click({ position: SECOND, modifiers: ['Shift'] })
+  await page.locator(CANVAS).click({ position: SECOND, button: 'right' })
+  await page.getByRole('menuitem', { name: 'Start dot voting…' }).click()
+  await expect(page.getByTestId('voting-setup').getByRole('heading')).toHaveText(
+    'Dot voting · 2 notes',
+  )
+  await page.getByTestId('voting-start').click()
+  await page.keyboard.press('Escape')
+
+  // Both still selected: one Add vote is a dot on each, and one undo takes both.
+  await page.locator(CANVAS).click({ position: SECOND, button: 'right' })
+  await page.getByRole('menuitem', { name: 'Dot voting' }).click()
+  await page.getByRole('menuitem', { name: 'Add vote' }).click()
+  await expect(dots(page, 0)).toHaveText('1')
+  await expect(dots(page, 1)).toHaveText('1')
+  await undo(page)
+  await expect(dots(page, 0)).toHaveCount(0)
+  await expect(dots(page, 1)).toHaveCount(0)
+})
+
+test('says how many people have voted, says how to take a dot back, and reopens', async ({
+  page,
+}) => {
+  await seedBoard(
+    page,
+    buildBoard((board) => {
+      const note = board.note('Show the price early', FIRST)
+      const round = board.voting({ hidden: true })
+      board.vote(round, note, heron)
+    }),
+  )
+  await expect(page.getByTestId('voting-status')).toHaveText('3 of 3 votes left · 1 person voted')
+  await armed(page)
+  await expect(page.getByTestId('voting-vote')).toHaveText('Voting')
+  await expect(page.getByTestId('voting-hint')).toHaveText('Alt-click a dot to take it back')
+
+  await page.getByTestId('voting-end').click()
+  await expect(page.getByTestId('voting-status')).toHaveText('Voting ended')
+  await page.getByTestId('voting-reopen').click()
+  await expect(page.getByTestId('voting-status')).toHaveText('3 of 3 votes left · 1 person voted')
 })
