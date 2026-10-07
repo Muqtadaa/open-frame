@@ -123,6 +123,38 @@ test.describe('the board menu', () => {
   })
 })
 
+/*
+ * Whether the work is safe, said once. "Saved" sat by the name while a
+ * "Shared" chip with a dot sat among the people — and that chip was also the
+ * share button, so one word named neither what it was nor what it did.
+ */
+test.describe('the safety readout', () => {
+  for (const width of [1280, 390]) {
+    test(`says the room is out of reach, beside what is saved, at ${String(width)}px`, async ({
+      page,
+    }) => {
+      await page.setViewportSize({ width, height: 720 })
+      await signedIn(page, [{ id: SHARED, title: 'Pricing research', role: 'owner' }])
+      // A room that hangs up on every attempt.
+      await page.routeWebSocket(/\/room\//, (socket) => {
+        void socket.close()
+      })
+      await page.goto(`/?room=${SHARED}&k=${'e'.repeat(32)}`)
+      const readout = page.getByTestId('save-state')
+      await expect(readout).toHaveText(/^(Offline|Reconnecting) · saved here$/)
+      await expect(readout).toBeVisible()
+      const share = page.getByTestId('share-board')
+      await expect(share).toHaveText('Share')
+      await expect(share).toHaveAccessibleName('Share')
+    })
+  }
+
+  test('says only Saved on a board of your own', async ({ page }) => {
+    await openBoard(page)
+    await expect(page.getByTestId('save-state')).toHaveText('Saved')
+  })
+})
+
 test('keeps an object’s panel clear of it, however high the object sits', async ({ page }) => {
   await openBoard(page)
   await page.keyboard.press('s')
@@ -417,7 +449,7 @@ test.describe('a narrow window', () => {
       await page.routeWebSocket(/\/room\//, () => undefined)
       await page.goto(`/?room=${SHARED}&k=${'e'.repeat(32)}`)
       await page.waitForSelector('[data-testid="status-bar"]')
-      await expect(page.getByTestId('room-status')).toBeVisible()
+      await expect(page.getByTestId('share-board')).toBeVisible()
       const escaped = await page.getByTestId('status-bar').evaluate((bar) => {
         const edge = Math.min(bar.getBoundingClientRect().right, window.innerWidth)
         return [...bar.querySelectorAll('[data-testid]')]

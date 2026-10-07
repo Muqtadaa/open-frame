@@ -111,7 +111,16 @@
  * somebody to do something.
  */
 .of-status__save {
+  display: inline-flex;
+  gap: var(--of-space-6);
+  align-items: center;
   min-width: 8ch;
+  white-space: nowrap;
+}
+
+/* The room out of reach changes what an edit means, so it is not muted. */
+.of-status__save--away {
+  color: var(--of-ink);
 }
 
 .of-status__save--failed {

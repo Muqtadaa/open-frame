@@ -3,7 +3,8 @@ import { useEffect, useRef, useSyncExternalStore } from 'react'
 import { useBoardDocument } from '../hooks/use-document-object.js'
 import { useInteractionStore } from '../interaction/interaction-store.js'
 import { useOpenFrame } from '../runtime/context.js'
-import type { SaveState } from '../runtime/context.js'
+import { useRoomStatus } from '../hooks/use-room-status.js'
+import { safetyWords } from './safety-words.js'
 import { BENCH_TOOLS_ENABLED } from '../app/bench-flag.js'
 import { AccountControl } from './AccountControl.js'
 import { BoardExit } from './BoardExit.js'
@@ -15,27 +16,6 @@ import { DevPanel } from './DevPanel.js'
 import { SessionMusic } from './SessionMusic.js'
 import { SessionTimer } from './SessionTimer.js'
 import { ShareControl } from './ShareControl.js'
-
-/**
- * What the bar says about the copy on this device, and what its tip adds.
- *
- * In the product's own words and nothing more: "Saved" is the whole of the
- * reassurance a local-first board owes somebody, and the tip says where. A
- * failed write says what to do, because it used to reach only the console.
- */
-const SAVE_WORDS: Readonly<Record<SaveState, { label: string; tip: string }>> = {
-  saved: { label: 'Saved', tip: 'Saved on this device' },
-  pending: { label: 'Saving…', tip: 'Saving on this device' },
-  saving: { label: 'Saving…', tip: 'Saving on this device' },
-  failed: {
-    label: 'Not saved',
-    tip: 'The last change was not saved on this device. Keep this tab open.',
-  },
-  'read-only': {
-    label: 'Read-only',
-    tip: 'This board could not be fully read, so changes are not saved',
-  },
-}
 
 /**
  * The board's navigation: the way out, the board's name, what has happened to
@@ -50,6 +30,8 @@ export function StatusBar() {
   const selection = useInteractionStore((state) => state.selection)
   const { runtime } = useOpenFrame()
   const save = useSyncExternalStore(runtime.saveStatus.subscribe, runtime.saveStatus.get)
+  const room = useRoomStatus()
+  const safety = safetyWords(save, room)
   const title = document.meta.title
   const rename = useRef<(() => void) | null>(null)
 
@@ -93,21 +75,24 @@ export function StatusBar() {
       <span className="of-status__rule" aria-hidden="true" />
 
       {/*
-       * Whether the work is safe, where a count of objects used to be. The
-       * count said nothing anybody acted on; this is the one fact a
-       * local-first board most needs to say, and a failed write used to
-       * reach only the console. Announced only when it fails: "Saving…" and
-       * "Saved" after every keystroke would be noise to a screen reader.
+       * Whether the work is safe: the copy on this device and, on a shared
+       * board, whether everybody else is getting it (safety-words.ts).
+       * Announced only when it fails: "Saving…" and "Saved" after every
+       * keystroke would be noise to a screen reader.
        */}
       <span
-        className={`of-status__save of-status__save--${save}`}
+        className={`of-status__save of-status__save--${save} of-status__save--${safety.tone}`}
         data-testid="save-state"
         data-state={save}
-        data-tip={SAVE_WORDS[save].tip}
-        aria-description={SAVE_WORDS[save].tip}
+        data-room={room ?? 'none'}
+        data-tip={safety.tip}
+        aria-description={safety.tip}
         aria-live={save === 'failed' ? 'assertive' : 'off'}
       >
-        {SAVE_WORDS[save].label}
+        {room !== null && (
+          <span className={`of-status__dot of-status__dot--${room}`} aria-hidden="true" />
+        )}
+        {safety.label}
       </span>
       {/*
        * A selection, when there is one. "0 selected" stood on the bar

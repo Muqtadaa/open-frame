@@ -877,7 +877,7 @@ describe('the stylesheet is well formed', () => {
  * phone-width window was the one place a failed save said nothing at all.
  */
 describe('a failed save survives a narrow window', () => {
-  it('hides the save state below 560px only when it has not failed', () => {
+  it('hides the save state below 560px only when it is quiet: never failed, never offline', () => {
     const css = readStyles()
     // The bar's own block at that width; other surfaces have theirs too.
     const narrow =
@@ -889,7 +889,11 @@ describe('a failed save survives a narrow window', () => {
       (m) => m[1] ?? '',
     )
     expect(hides.length).toBeGreaterThan(0)
-    for (const selector of hides) expect(selector).toContain(':not(.of-status__save--failed)')
+    // Only the quiet tone: a failure, or a room out of reach, is always said.
+    for (const selector of hides) {
+      const bare = selector.replace(/\/\*[\s\S]*?\*\//g, '').trim()
+      expect(bare).toBe('.of-status__save--quiet')
+    }
   })
 })
 

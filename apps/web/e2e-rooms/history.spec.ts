@@ -49,7 +49,7 @@ async function claimed(browser: Browser, room: string): Promise<Keys> {
 async function open(browser: Browser, room: string, key: string): Promise<Page> {
   const page = await (await browser.newContext()).newPage()
   await page.goto(`/?room=${room}&k=${key}`)
-  await expect(page.getByTestId('room-status')).toHaveAttribute('data-status', 'connected', {
+  await expect(page.getByTestId('save-state')).toHaveAttribute('data-room', 'connected', {
     timeout: 20_000,
   })
   return page

@@ -94,6 +94,15 @@ test('each window counts everyone in the room, including itself', async ({ brows
   const bob = await join(browser, room)
   await expect(alice.locator('[data-testid="room-people"]')).toHaveAttribute('data-count', '2')
   await expect(bob.locator('[data-testid="room-people"]')).toHaveAttribute('data-count', '2')
+  // Counted, but not drawn: your own face is the account's, not the room's.
+  await expect(alice.getByTestId('room-people').getByRole('img', { name: /\(you\)/ })).toHaveCount(
+    0,
+  )
+  await expect(
+    alice
+      .getByTestId('room-people')
+      .locator('[data-testid="room-person"], [data-testid^="follow-"]'),
+  ).toHaveCount(1)
 
   await bob.context().close()
   await expect(alice.locator('[data-testid="room-people"]')).toHaveAttribute('data-count', '1', {
@@ -113,9 +122,9 @@ test('each window counts everyone in the room, including itself', async ({ brows
 test('faces are targets, side by side, and a crowd is counted', async ({ browser }) => {
   const room = newRoomId()
   const pages = [await join(browser, room)]
-  for (let i = 0; i < 3; i++) pages.push(await join(browser, room))
+  for (let i = 0; i < 4; i++) pages.push(await join(browser, room))
   const me = defined(pages[0], 'the first page')
-  await expect(me.locator('[data-testid="room-people"]')).toHaveAttribute('data-count', '4', {
+  await expect(me.locator('[data-testid="room-people"]')).toHaveAttribute('data-count', '5', {
     timeout: 20_000,
   })
 
@@ -151,7 +160,8 @@ test('anyone behind the count can be followed, from the list it opens', async ({
     timeout: 20_000,
   })
   const more = me.getByTestId('room-more')
-  await expect(more).toHaveText('+2')
+  // Four others: three faces and one behind the count.
+  await expect(more).toHaveText('+1')
 
   await more.click()
   const sheet = me.getByTestId('people-sheet')
@@ -247,7 +257,7 @@ test('a board opened without a link does not join a room', async ({ browser }) =
   await page.goto(BOARD_URL)
   await page.waitForSelector('[data-testid="status-bar"]')
 
-  await expect(page.locator('[data-testid="room-status"]')).toHaveCount(0)
+  await expect(page.getByTestId('save-state')).toHaveAttribute('data-room', 'none')
   // Sharing takes an account now, so a guest is not offered it at all.
   await expect(page.locator('[data-testid="share-board"]')).toHaveCount(0)
 })
@@ -465,8 +475,8 @@ test.describe('two links', () => {
     const page = await context.newPage()
     await page.goto(`/?room=${room}&k=${key}`)
     await page.waitForSelector('[data-testid="status-bar"]')
-    await expect(page.locator('[data-testid="room-status"]')).toHaveAttribute(
-      'data-status',
+    await expect(page.locator('[data-testid="save-state"]')).toHaveAttribute(
+      'data-room',
       'connected',
       { timeout: 20_000 },
     )
@@ -539,8 +549,8 @@ test.describe('two links', () => {
     await page.waitForSelector('[data-testid="status-bar"]')
 
     // Refused at the upgrade, so the provider never reaches `connected`.
-    await expect(page.locator('[data-testid="room-status"]')).not.toHaveAttribute(
-      'data-status',
+    await expect(page.locator('[data-testid="save-state"]')).not.toHaveAttribute(
+      'data-room',
       'connected',
       { timeout: 10_000 },
     )
@@ -571,8 +581,8 @@ test('an offline edit made after a reload still reaches the room', async ({ brow
   const first = await context.newPage()
   await first.goto(`/?room=${room}`)
   await first.waitForSelector('[data-testid="status-bar"]')
-  await expect(first.locator('[data-testid="room-status"]')).toHaveAttribute(
-    'data-status',
+  await expect(first.locator('[data-testid="save-state"]')).toHaveAttribute(
+    'data-room',
     'connected',
     { timeout: 20_000 },
   )
@@ -636,8 +646,8 @@ test('an offline edit made after a reload still reaches the room', async ({ brow
   const third = await context.newPage()
   await third.goto(`/?room=${room}`)
   await third.waitForSelector('[data-testid="status-bar"]')
-  await expect(third.locator('[data-testid="room-status"]')).toHaveAttribute(
-    'data-status',
+  await expect(third.locator('[data-testid="save-state"]')).toHaveAttribute(
+    'data-room',
     'connected',
     { timeout: 20_000 },
   )

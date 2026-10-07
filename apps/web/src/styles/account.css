@@ -220,11 +220,12 @@
   }
 
   /*
-   * The word goes, but never a FAILURE: `display: none` also removes the live
-   * region, so a phone-width window would be the one place a failed save said
-   * nothing at all.
+   * The word goes, but only a quiet one. Never a FAILURE — `display: none`
+   * also removes the live region, so a phone-width window would be the one
+   * place a failed save said nothing at all — and never the room being out of
+   * reach, which changes what every edit means.
    */
-  .of-status__save:not(.of-status__save--failed) {
+  .of-status__save--quiet {
     display: none;
   }
 

@@ -35,7 +35,6 @@ import { handOver, takeHandedOver } from './share-handover.js'
 export function ShareControl() {
   const { runtime, collaboration } = useOpenFrame()
   const services = useServices()
-  const [status, setStatus] = useState(collaboration?.status ?? 'offline')
   const peers = usePeers()
   const following = useInteractionStore((state) => state.following)
   const setFollowing = useInteractionStore((state) => state.setFollowing)
@@ -76,11 +75,6 @@ export function ShareControl() {
     anchor: peopleAnchor,
     surface: peopleSurface,
   } = useAnchoredTo<HTMLButtonElement>(peopleOpen)
-
-  useEffect(() => {
-    if (collaboration === null || collaboration === undefined) return
-    return collaboration.onStatus(setStatus)
-  }, [collaboration])
 
   useEffect(() => {
     if (collaboration === null || collaboration === undefined || identity === null) return
@@ -212,14 +206,19 @@ export function ShareControl() {
    * whole room would push the bar's other controls off a narrow window. The
    * person you are following is always among the three, so the control that
    * stops following is never hidden behind "+2".
+   *
+   * Other people only. Your own face was here AND on the account chip a few
+   * pixels along, so a board with nobody else on it still showed a crowd of
+   * one. The whole room, you included, is in the list behind the count.
    */
   const MAX_FACES = 3
-  const followed = here.find((person) => person.clientId !== null && person.clientId === following)
+  const others = here.filter((person) => person.clientId !== null)
+  const followed = others.find((person) => person.clientId === following)
   const shown =
-    followed === undefined || here.indexOf(followed) < MAX_FACES
-      ? here.slice(0, MAX_FACES)
-      : [...here.slice(0, MAX_FACES - 1), followed]
-  const hidden = here.filter((person) => !shown.includes(person))
+    followed === undefined || others.indexOf(followed) < MAX_FACES
+      ? others.slice(0, MAX_FACES)
+      : [...others.slice(0, MAX_FACES - 1), followed]
+  const hidden = others.filter((person) => !shown.includes(person))
   const moreLabel = `Also here: ${hidden.map((person) => person.name).join(', ')}`
   /*
    * The list closes when the count goes — the room shrank to three while it
@@ -257,16 +256,15 @@ export function ShareControl() {
         ref={shareButton}
         type="button"
         className="of-status__share"
-        data-testid="room-status"
+        data-testid="share-board"
         aria-label={
           copyFailed
             ? 'Could not copy the link'
             : copied !== null
               ? `${copied === 'edit' ? 'Edit' : 'View'} link copied`
-              : roomLabel(status)
+              : 'Share'
         }
         aria-expanded={owned !== null ? links !== null : undefined}
-        data-status={status}
         data-tip={roomHint}
         aria-description={roomHint}
         onClick={() => {
@@ -295,14 +293,16 @@ export function ShareControl() {
             )
         }}
       >
-        <span className={`of-status__dot of-status__dot--${status}`} aria-hidden="true" />
-        <span className="of-status__share-label" data-testid="status-label">
-          {copyFailed
-            ? 'Could not copy'
-            : copied !== null
-              ? `${copied === 'edit' ? 'Edit' : 'View'} link copied`
-              : roomLabel(status)}
-        </span>
+        {/*
+         * A verb, not a state. It read "Shared" with a dot — whether the
+         * room was up — and handed out links when pressed, so the one word
+         * on it named neither. The room's state is in the safety readout.
+         */}
+        {copyFailed
+          ? 'Could not copy'
+          : copied !== null
+            ? `${copied === 'edit' ? 'Edit' : 'View'} link copied`
+            : 'Share'}
       </button>
 
       {/*
@@ -640,17 +640,6 @@ function SharePassword({
       )}
     </form>
   )
-}
-
-function roomLabel(status: string): string {
-  switch (status) {
-    case 'connected':
-      return 'Shared'
-    case 'connecting':
-      return 'Reconnecting…'
-    default:
-      return 'Offline'
-  }
 }
 
 /**

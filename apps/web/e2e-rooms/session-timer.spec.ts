@@ -27,7 +27,7 @@ async function joinSkewed(browser: Browser, room: string): Promise<Page> {
   }, SKEW_MS)
   const page = await context.newPage()
   await page.goto(`/?room=${room}`)
-  await expect(page.getByTestId('room-status')).toHaveAttribute('data-status', 'connected', {
+  await expect(page.getByTestId('save-state')).toHaveAttribute('data-room', 'connected', {
     timeout: 20_000,
   })
   return page
@@ -63,7 +63,7 @@ test('a viewer sees the timer and cannot run it', async ({ browser }) => {
   const open = async (key: string): Promise<Page> => {
     const page = await (await browser.newContext()).newPage()
     await page.goto(`/?room=${room}&k=${key}`)
-    await expect(page.getByTestId('room-status')).toHaveAttribute('data-status', 'connected', {
+    await expect(page.getByTestId('save-state')).toHaveAttribute('data-room', 'connected', {
       timeout: 20_000,
     })
     return page

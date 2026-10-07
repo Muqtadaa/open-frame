@@ -34,7 +34,7 @@ async function joinSkewed(browser: Browser, room: string): Promise<Page> {
   const page = await context.newPage()
   await library(page, TRACKS, ROOMS)
   await page.goto(`/?room=${room}`)
-  await expect(page.getByTestId('room-status')).toHaveAttribute('data-status', 'connected', {
+  await expect(page.getByTestId('save-state')).toHaveAttribute('data-room', 'connected', {
     timeout: 20_000,
   })
   return page
@@ -47,7 +47,7 @@ test('two devices whose clocks disagree are at the same place in the same track'
   const alice = await join(browser, room)
   await library(alice, TRACKS, ROOMS)
   await alice.reload()
-  await expect(alice.getByTestId('room-status')).toHaveAttribute('data-status', 'connected', {
+  await expect(alice.getByTestId('save-state')).toHaveAttribute('data-room', 'connected', {
     timeout: 20_000,
   })
   const bob = await joinSkewed(browser, room)
@@ -78,7 +78,7 @@ test('two devices with different catalogues still play the same track', async ({
   const alice = await join(browser, room)
   await library(alice, TRACKS, ROOMS)
   await alice.reload()
-  await expect(alice.getByTestId('room-status')).toHaveAttribute('data-status', 'connected', {
+  await expect(alice.getByTestId('save-state')).toHaveAttribute('data-room', 'connected', {
     timeout: 20_000,
   })
   const bob = await (await browser.newContext()).newPage()
@@ -88,7 +88,7 @@ test('two devices with different catalogues still play the same track', async ({
     ROOMS,
   )
   await bob.goto(`/?room=${room}`)
-  await expect(bob.getByTestId('room-status')).toHaveAttribute('data-status', 'connected', {
+  await expect(bob.getByTestId('save-state')).toHaveAttribute('data-room', 'connected', {
     timeout: 20_000,
   })
 
@@ -117,7 +117,7 @@ test('somebody else starting the music is offered here, and one press lets it in
     const page = await (await browser.newContext()).newPage()
     await library(page, tracks, ROOMS)
     await page.goto(`/?room=${room}`)
-    await expect(page.getByTestId('room-status')).toHaveAttribute('data-status', 'connected', {
+    await expect(page.getByTestId('save-state')).toHaveAttribute('data-room', 'connected', {
       timeout: 20_000,
     })
     return page
@@ -157,7 +157,7 @@ test('a viewer hears the music and cannot change it', async ({ browser }) => {
     const page = await (await browser.newContext()).newPage()
     await library(page, TRACKS, ROOMS)
     await page.goto(`/?room=${room}&k=${key}`)
-    await expect(page.getByTestId('room-status')).toHaveAttribute('data-status', 'connected', {
+    await expect(page.getByTestId('save-state')).toHaveAttribute('data-room', 'connected', {
       timeout: 20_000,
     })
     return page
