@@ -63,9 +63,21 @@ function ClusterPanel({ ids }: { readonly ids: readonly ObjectId[] }) {
    * board went to the keymap instead: the selection was cleared and the panel
    * stayed open, describing notes that were no longer selected.
    */
-  useEscapeToClose(close)
-  const headingId = useId()
   const panel = useRef<HTMLElement>(null)
+  /*
+   * But the first Escape in a FIELD only leaves the field: a title half
+   * retyped was thrown away, with the whole proposal, by the key people press
+   * to stop typing. The panel keeps the keyboard, and the next Escape closes.
+   */
+  useEscapeToClose(() => {
+    const active = window.document.activeElement
+    if (active instanceof HTMLInputElement && panel.current?.contains(active) === true) {
+      panel.current.focus()
+      return
+    }
+    close()
+  })
+  const headingId = useId()
   const asking = useRef<AbortController | null>(null)
 
   // Gathered once, when the panel opens: what is sent is what was selected then.
@@ -132,6 +144,7 @@ function ClusterPanel({ ids }: { readonly ids: readonly ObjectId[] }) {
   return (
     <section
       ref={panel}
+      tabIndex={-1}
       className="of-notice of-cluster"
       aria-labelledby={headingId}
       data-testid="cluster-review"
@@ -199,6 +212,20 @@ function ClusterPanel({ ids }: { readonly ids: readonly ObjectId[] }) {
             {REFUSED[stage.why]}
           </p>
           <div className="of-cluster__actions">
+            {stage.why === 'signed-out' && (
+              <button
+                type="button"
+                className="of-button of-button--primary"
+                data-testid="cluster-sign-in"
+                onClick={() => {
+                  // The way to an account, rather than only the news that one is needed.
+                  closePanel()
+                  useInteractionStore.getState().setAccountOpen(true)
+                }}
+              >
+                Sign in
+              </button>
+            )}
             <button type="button" className="of-button of-button--ghost" onClick={close}>
               Close
             </button>
@@ -299,6 +326,14 @@ function ProposalForm({
           </li>
         ))}
       </ol>
+      {/*
+        What Apply does, said before it is pressed: the AI's grouping is laid
+        out as COPIES, and people deleted their originals to tidy up after it.
+      */}
+      <p className="of-cluster__note" data-testid="cluster-copies">
+        Adds a frame with copies of {String(notes.size)} {notes.size === 1 ? 'note' : 'notes'}; the
+        originals stay
+      </p>
       {proposal.unassigned.length > 0 && (
         <p className="of-cluster__note" data-testid="cluster-other">
           Other · {String(proposal.unassigned.length)}{' '}

@@ -189,3 +189,45 @@ test('one Escape closes only the surface opened last, not the panel beneath it',
   await page.keyboard.press('Escape')
   await expect(page.getByTestId('cluster-review')).toHaveCount(0)
 })
+
+/*
+ * The review, made plain and kept out of the way (PR 3 critique, 2026-10-07).
+ */
+test('says the originals stay, and keeps the record panel off the notes', async ({ page }) => {
+  await signedIn(page, [])
+  await board(page)
+  await standIn(page)
+  await openCluster(page)
+  // The record panel described the selection the panel had taken over, and
+  // covered it.
+  await expect(page.getByTestId('inspector')).toHaveCount(0)
+  await page.getByTestId('cluster-ask').click()
+  await expect(page.getByTestId('cluster-copies')).toHaveText(
+    'Adds a frame with copies of 3 notes; the originals stay',
+  )
+})
+
+test('the first Escape in a field leaves the field, the second closes', async ({ page }) => {
+  await signedIn(page, [])
+  await board(page)
+  await standIn(page)
+  await openCluster(page)
+  await page.getByTestId('cluster-ask').click()
+  await page.getByTestId('cluster-title').fill('Money')
+  await page.keyboard.press('Escape')
+  // An edit half made is not thrown away by the key that leaves the field.
+  await expect(page.getByTestId('cluster-review')).toBeVisible()
+  await expect(page.getByTestId('cluster-title')).not.toBeFocused()
+  await expect(page.getByTestId('cluster-title')).toHaveValue('Money')
+  await page.keyboard.press('Escape')
+  await expect(page.getByTestId('cluster-review')).toHaveCount(0)
+})
+
+test('signed out, it offers the way to sign in', async ({ page }) => {
+  await board(page)
+  await openCluster(page)
+  await page.getByTestId('cluster-ask').click()
+  await page.getByTestId('cluster-sign-in').click()
+  await expect(page.getByTestId('cluster-review')).toHaveCount(0)
+  await expect(page.getByTestId('account-surface')).toBeVisible()
+})

@@ -1,9 +1,10 @@
-import { useCallback, useRef, useState, type RefObject } from 'react'
+import { useCallback, useRef, type RefObject } from 'react'
 
 import { AnchoredSurface } from '../controls/AnchoredSurface.js'
 import { useAnchoredTo } from '../controls/use-anchor.js'
 import { useDismiss, useFocusOnOpen } from '../controls/use-dismiss.js'
 import { useIdentity } from '../hooks/use-identity.js'
+import { useInteractionStore } from '../interaction/interaction-store.js'
 import { useServices } from '../runtime/services.js'
 import { AccountForm } from './AccountForm.js'
 import { WorldSwitch } from './WorldSwitch.js'
@@ -21,12 +22,13 @@ import type { Size } from '../scene/anchoring.js'
 export function AccountControl() {
   const { accounts } = useServices()
   const identity = useIdentity()
-  const [open, setOpen] = useState(false)
+  const open = useInteractionStore((state) => state.accountOpen)
+  const setOpen = useInteractionStore((state) => state.setAccountOpen)
   const { ref, anchor, surface } = useAnchoredTo<HTMLButtonElement>(open)
   const close = useCallback(() => {
     setOpen(false)
     ref.current?.focus()
-  }, [ref])
+  }, [ref, setOpen])
 
   if (!accounts.enabled) return null
 
@@ -48,7 +50,7 @@ export function AccountControl() {
           data-testid="account"
           data-tip="Your account"
           aria-description="Your account"
-          onClick={() => setOpen((was) => !was)}
+          onClick={() => setOpen(!open)}
         >
           <span
             className="of-status__person"
@@ -88,7 +90,7 @@ export function AccountControl() {
         data-testid="sign-in"
         aria-label="Sign in"
         aria-expanded={open}
-        onClick={() => setOpen((was) => !was)}
+        onClick={() => setOpen(!open)}
       >
         <span className="of-status__share-label" data-testid="status-label">
           Sign in
