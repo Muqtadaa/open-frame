@@ -6,7 +6,7 @@ import { signedIn } from './signed-in.js'
 /**
  * The board's navigation, along the top.
  *
- * The way out, the board's name, history and the rest of the record line sat
+ * The way out, the board's name and the rest of the record line sat
  * at the bottom of the window, where nothing reads as the page's own heading.
  * They are the page's navigation, so they sit where navigation is looked for,
  * and the name reads as the name of the page rather than as one more readout.
@@ -32,12 +32,27 @@ test('names the board in the interface’s own voice, not as a readout', async (
 
 test('opens its tips downward, into the window', async ({ page }) => {
   await openBoard(page)
-  await page.getByTestId('undo').focus()
-  const tip = await page.getByTestId('undo').evaluate((el) => {
+  await page.getByTestId('board-exit').focus()
+  const tip = await page.getByTestId('board-exit').evaluate((el) => {
     const after = getComputedStyle(el, '::after')
     return { top: after.top, bottom: after.bottom }
   })
   expect(Number.parseFloat(tip.top)).toBeGreaterThan(0)
+})
+
+/*
+ * Undo and redo are how the board is handled, not what it is called or whether
+ * it is safe, so they sit with zoom and snap rather than taking the bar's best
+ * place beside the name — where, on a fresh board, they were two disabled
+ * buttons.
+ */
+test('keeps undo and redo with zoom, not on the bar', async ({ page }) => {
+  await openBoard(page)
+  const cluster = page.getByTestId('zoom-control')
+  await expect(cluster.getByTestId('undo')).toBeVisible()
+  await expect(cluster.getByTestId('redo')).toBeVisible()
+  await expect(page.getByTestId('status-bar').getByTestId('undo')).toHaveCount(0)
+  await expect(cluster.getByRole('group', { name: 'History' })).toBeVisible()
 })
 
 test('keeps an object’s panel clear of it, however high the object sits', async ({ page }) => {

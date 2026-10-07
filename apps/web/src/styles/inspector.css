@@ -486,6 +486,17 @@ textarea.of-input {
   }
 }
 
+/*
+ * A phone has no wheel to describe, and undo and redo need the room: without
+ * this the cluster ran to the window's edge. The button keeps its icon, its
+ * name and its tip, so the setting is still there for a mouse.
+ */
+@media (width < 480px) {
+  .of-zoom__mode {
+    display: none;
+  }
+}
+
 /* Measurement controls ------------------------------------------------------ */
 
 /*

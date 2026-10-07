@@ -168,6 +168,21 @@ test.describe('a narrow window with a mouse', () => {
     await page.waitForSelector('[data-testid="home-boards"] li')
     expect(await overflow(page)).toBeLessThanOrEqual(0)
   })
+
+  /*
+   * Undo and redo joined the zoom cluster, and at this width it then ran to
+   * the window's edge: the gutter every other floating thing keeps was gone.
+   */
+  test('the zoom cluster keeps its gutter', async ({ page }) => {
+    await page.goto(BOARD_URL)
+    const cluster = page.getByTestId('zoom-control')
+    await expect(cluster.getByTestId('undo')).toBeVisible()
+    const box = await cluster.boundingBox()
+    expect(box?.x).toBeGreaterThanOrEqual(20)
+    expect((box?.x ?? 0) + (box?.width ?? 0)).toBeLessThanOrEqual(370)
+    // Named still, with its caption gone.
+    await expect(page.getByTestId('wheel-mode')).toHaveAccessibleName(/Scroll wheel/)
+  })
 })
 
 /*

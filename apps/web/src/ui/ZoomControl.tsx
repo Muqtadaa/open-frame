@@ -15,6 +15,7 @@ import {
 import { useInteractionStore } from '../interaction/interaction-store.js'
 import { FitIcon, MinusIcon, MouseIcon, PlusIcon, SnapIcon } from '../controls/icons.js'
 import { MOD_KEY } from '../interaction/keymap.js'
+import { HistoryButtons } from './HistoryButtons.js'
 
 const mod = MOD_KEY
 
@@ -101,6 +102,8 @@ export function ZoomControl() {
 
   return (
     <div className="of-zoom" data-testid="zoom-control">
+      <HistoryButtons />
+      <span className="of-zoom__sep" aria-hidden="true" />
       <button
         type="button"
         className="of-icon-button"

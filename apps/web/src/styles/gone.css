@@ -172,13 +172,8 @@
   pointer-events: none;
 }
 
-/*
- * A board of somebody else's that you have kept.
- *
- * A statement, not a control — the same register as "View only", which is the
- * other thing this line says about a board that is not yours.
- */
-.of-status__history {
+/* Undo and redo, at the head of the zoom cluster. */
+.of-zoom__history {
   display: flex;
   gap: var(--of-space-2);
 }
