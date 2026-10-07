@@ -517,3 +517,24 @@ test('only a dot put down now is inked in, not the ones already there', async ({
   await page.locator(CANVAS).click({ position: SECOND })
   await expect(dots(page, 1).getByTestId('vote-dot')).toHaveAttribute('data-fresh', 'true')
 })
+
+/*
+ * Revealing a hidden round is the moment the counts nobody could see arrive,
+ * so they are inked in then (Codex, on #93): the dots were already on the
+ * board, but nobody had seen them.
+ */
+test('revealing a hidden round inks in the dots nobody could see', async ({ page }) => {
+  await seedBoard(
+    page,
+    buildBoard((board) => {
+      const first = board.note('Show the price early', FIRST)
+      board.note('Free returns', SECOND)
+      const round = board.voting({ hidden: true })
+      board.vote(round, first, heron)
+    }),
+  )
+  await expect(dots(page, 0)).toHaveCount(0)
+  await page.getByTestId('voting-reveal').click()
+  await page.getByTestId('voting-confirm-yes').click()
+  await expect(dots(page, 0).getByTestId('vote-dot')).toHaveAttribute('data-fresh', 'true')
+})

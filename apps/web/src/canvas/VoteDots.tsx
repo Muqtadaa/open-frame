@@ -16,27 +16,28 @@ const DOTS_AT_MOST = 5
 
 export function VoteDots({ id }: { readonly id: ObjectId }) {
   const voters = useVoters(id)
-  /*
-   * The dots already on the note when it was drawn. Only one placed after
-   * that is new, and inked in: a board opening, or a note scrolled into view,
-   * must not set all of its dots popping at once (motion.css).
-   */
-  const [born] = useState(voters)
+  // Drawn with no dots at all, so the first to arrive is new.
+  const [bare] = useState(voters === '')
   // A note without a dot costs one index lookup and nothing else.
   if (voters === '') return null
-  return <Dots voters={voters} born={born} />
+  return <Dots voters={voters} bare={bare} />
 }
 
-function Dots({ voters, born }: { readonly voters: string; readonly born: string }) {
+function Dots({ voters, bare }: { readonly voters: string; readonly bare: boolean }) {
   const round = useVotingContext()
   const me = useMe()
-  if (round === null) return null
-  const { total, mine } = tallyVoters(voters, round.id, me?.key ?? null)
-  const shown = countsShown(round.data)
-  const count = shown ? total : mine
-  if (count === 0) return null
-  const before = tallyVoters(born, round.id, me?.key ?? null)
-  const counted = shown ? before.total : before.mine
+  const { total, mine } = tallyVoters(voters, round?.id ?? '', me?.key ?? null)
+  const shown = round !== null && countsShown(round.data)
+  const count = round === null ? 0 : shown ? total : mine
+  /*
+   * How many dots could be SEEN when the note was drawn. Only a dot past that
+   * is new, and inked in: a board opening, or a note scrolled into view, must
+   * not set all of its dots popping at once (motion.css). What could be seen,
+   * not what was there: revealing a hidden round is when everybody else's
+   * dots arrive for this person, and they are inked in then (Codex, on #93).
+   */
+  const [seen] = useState(bare ? 0 : count)
+  if (round === null || count === 0) return null
   const label = shown
     ? `${String(total)} ${total === 1 ? 'vote' : 'votes'}${mine > 0 ? `, ${String(mine)} yours` : ''}`
     : `${String(mine)} ${mine === 1 ? 'vote' : 'votes'} of yours`
@@ -58,7 +59,7 @@ function Dots({ voters, born }: { readonly voters: string; readonly born: string
           key={index}
           className="of-votes__dot"
           data-testid="vote-dot"
-          data-fresh={index >= counted}
+          data-fresh={index >= seen}
           aria-hidden="true"
         />
       ))}

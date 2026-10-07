@@ -303,4 +303,16 @@ test('only a reaction left now is inked in, not the ones already there', async (
   await page.getByTestId('reaction-bar').getByRole('button', { name: 'Love it' }).click()
   await expect(chip(page, 'heart')).toHaveAttribute('data-fresh', 'true')
   await expect(chip(page, 'plus-one')).toHaveAttribute('data-fresh', 'false')
+  await expect(chip(page, 'plus-one').getByTestId('reaction-count')).toHaveAttribute(
+    'data-fresh',
+    'false',
+  )
+
+  // Joining a reaction already there inks in its count (Codex, on #93).
+  await page.getByTestId('reaction-bar').getByRole('button', { name: 'Agree' }).click()
+  await expect(chip(page, 'plus-one')).toHaveText(/2/)
+  await expect(chip(page, 'plus-one').getByTestId('reaction-count')).toHaveAttribute(
+    'data-fresh',
+    'true',
+  )
 })

@@ -192,7 +192,8 @@
   animation: of-ink var(--of-settle) var(--of-ease) backwards;
 }
 
-.of-reaction[data-fresh='true'] {
+.of-reaction[data-fresh='true'],
+.of-reaction__count[data-fresh='true'] {
   animation: of-ink var(--of-quick) var(--of-ease) backwards;
 }
 
@@ -242,6 +243,7 @@
   .of-overview,
   .of-votes__dot,
   .of-reaction,
+  .of-reaction__count,
   .of-voting__list li,
   .of-voting__list .of-voting__bar {
     animation-name: of-fade;

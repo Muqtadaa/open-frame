@@ -291,6 +291,8 @@
 }
 
 .of-reaction__count {
+  /* A box of its own, so a new count can be inked in (motion.css). */
+  display: inline-block;
   font-family: var(--of-mono);
   font-variant-numeric: tabular-nums;
 }

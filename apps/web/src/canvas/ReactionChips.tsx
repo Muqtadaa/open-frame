@@ -27,7 +27,9 @@ export function ReactionChips({ id }: { readonly id: ObjectId }) {
    * arrives AFTER that is new, and inked in: opening a board, or scrolling a
    * note into view, must not set every chip on it popping (motion.css).
    */
-  const [born] = useState(() => new Set(groups.map((group) => group.glyph)))
+  const [born] = useState(
+    () => new Map(groups.map((group) => [group.glyph, group.people.length] as const)),
+  )
   /*
    * Split in two so a note nobody has reacted to costs one index lookup and
    * nothing else. Every visible note mounts this; asking who I am, what I may
@@ -45,7 +47,8 @@ function Chips({
 }: {
   readonly id: ObjectId
   readonly groups: readonly ReactionGroup[]
-  readonly born: ReadonlySet<string>
+  /** How many of each kind there were when the note was drawn. */
+  readonly born: ReadonlyMap<string, number>
 }) {
   const me = useMe()
   const commands = useCommands()
@@ -86,7 +89,19 @@ function Chips({
             }}
           >
             <span aria-hidden="true">{glyph.emoji}</span>
-            <span className="of-reaction__count">{group.people.length}</span>
+            {/*
+              Keyed by the count, so somebody joining a reaction already
+              there inks the new number in (Codex, on #93); only a count
+              above the one drawn at mount is new.
+            */}
+            <span
+              key={group.people.length}
+              className="of-reaction__count"
+              data-testid="reaction-count"
+              data-fresh={group.people.length > (born.get(group.glyph) ?? 0)}
+            >
+              {group.people.length}
+            </span>
           </button>
         )
       })}
