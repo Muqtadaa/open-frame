@@ -241,6 +241,16 @@ export function PollIcon({ className }: IconProps) {
   )
 }
 
+/** Held: a timer stopped where it is. */
+export function PauseIcon({ className }: IconProps) {
+  return (
+    <svg {...base} className={className}>
+      <path d="M9 6v12" />
+      <path d="M15 6v12" />
+    </svg>
+  )
+}
+
 /** Yours: an answer you picked. */
 export function CheckIcon({ className }: IconProps) {
   return (

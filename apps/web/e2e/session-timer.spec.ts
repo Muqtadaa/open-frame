@@ -166,3 +166,30 @@ test.describe('the session pill', () => {
     await expect(pill(page)).toBeFocused()
   })
 })
+
+/*
+ * Paused reads as paused, and Reset can be taken back (PR 3 critique,
+ * 2026-10-07). A paused pill looked exactly like a running one — the same
+ * clock, the same ink — and Reset threw the run away with no way back.
+ */
+test('a paused pill looks and says paused', async ({ page }) => {
+  await page.clock.install()
+  await startFor(page, '5:00')
+  await page.getByTestId('timer-pause').click()
+  await expect(pill(page).getByTestId('session-paused')).toBeVisible()
+  await expect(pill(page)).toHaveAccessibleName('Session, timer, 5:00 left, paused')
+  await page.getByTestId('timer-resume').click()
+  await expect(pill(page).getByTestId('session-paused')).toHaveCount(0)
+})
+
+test('Reset can be undone where it was pressed', async ({ page }) => {
+  await page.clock.install()
+  await startFor(page, '5:00')
+  await page.getByTestId('timer-pause').click()
+  await page.getByTestId('timer-reset').click()
+  await expect(pill(page)).toHaveAttribute('data-timer', 'idle')
+  await expect(page.getByTestId('board-announcer')).toContainText('Timer reset')
+  await page.getByTestId('timer-undo-reset').click()
+  await expect(pill(page)).toHaveAttribute('data-timer', 'paused')
+  await expect(pill(page)).toContainText('5:00')
+})
