@@ -1189,3 +1189,32 @@ a paragraph went; the instructions that are the only way to learn something
 by hand when the clipboard refuses, the search syntax, what each share link
 gives) stayed. `app/copy-rule.test.ts` reads every interface string and fails
 on coaching outside its listed exceptions — seen failing on the old copy.
+
+## The navigation bar, given a hierarchy (2026-10-07)
+
+Critique 23/40 (`apps/web/.impeccable/critique/2026-10-07T01-33-59Z__src-ui-statusbar-tsx.md`):
+eleven things on one row in four box styles, nothing grouped, the owner's face
+twice, a "Shared" chip that was both a status and the share button, two bells
+for one question, two session icons, and a bar that ran out of room at 560,
+640, 680 and 820px in turn as controls joined it. The owner chose every
+recommended direction:
+
+- **Undo and redo** moved to the zoom cluster; below 480px the wheel's word
+  goes so the cluster keeps its gutter.
+- **A board menu** beside the name (Rename, Version history…); the **theme** to
+  the account and sign-in sheets as Notebook / After Hours.
+- **One safety readout** ("Saved · Live", "Offline · saved here", "Not saved");
+  **Share** a plain verb; **faces** other people's only.
+- **One Inbox** for mentions and agent changes; **one Session pill** for the
+  timer and the music, Alt+T to open it.
+- **Three zones** (`role="group"`), and the breakpoints replaced by a measured
+  squeeze that gives up words for icons, in order, only as far as it has to.
+  The name's floor moved onto its heading — it was overlapping the control
+  beside it below about 940px.
+- **No link to the source** anywhere; the owner holds the copyright.
+
+Rule 23 along the way: the first version of the fullest-bar test measured only
+controls inside zones, so on the old bar — which had none — it measured
+nothing and passed; it counts every control now. And `scrollWidth` read every
+hidden tip's box as overflow, so the first squeeze gave up everything at
+1440px; it reads where each zone's contents end instead.
