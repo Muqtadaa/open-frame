@@ -52,11 +52,15 @@ export function Inbox() {
     }
   }, [open, markSeen])
 
-  // In once the sheet is PLACED, at its first link or Revert.
+  /*
+   * In once the sheet is PLACED: at its first mention, which only goes
+   * somewhere, or else at the sheet itself. Never at a Revert — opening the
+   * Inbox and pressing Enter twice took a change back.
+   */
   const placed = anchor !== null
   useEffect(() => {
     if (!open || !placed) return
-    ;(sheet.current?.querySelector<HTMLElement>('a, button') ?? sheet.current)?.focus()
+    ;(sheet.current?.querySelector<HTMLElement>('a') ?? sheet.current)?.focus()
   }, [open, placed])
 
   if (mentions.mentions.length === 0 && agents.changes.length === 0) return null

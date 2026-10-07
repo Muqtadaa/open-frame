@@ -127,12 +127,15 @@ test('the panel lists it after the toast has gone, and reverts from there', asyn
     // The count is said once: "Create 3 objects", not "… · 3 objects" again below it.
     await expect(page.getByTestId('agent-changes-list')).toContainText('Create 3 objects')
     await expect(page.getByTestId('agent-changes-list')).not.toContainText('· 3 objects')
+    // Opening it never puts the keyboard on Revert: two Enters would take a change back.
+    await expect(page.getByRole('dialog', { name: 'Inbox' })).toBeFocused()
     const revert = page.getByTestId('agent-change-revert')
-    await expect(revert).toBeFocused()
-    await revert.click()
+    await revert.press('Enter')
 
     await expect.poll(() => idsIn(page), { timeout: 20_000 }).toEqual([])
     await expect(page.getByTestId('agent-changes-list')).toContainText('Taken back')
+    // Revert leaves with its row's change; the keyboard stays on that row, not the page.
+    await expect(page.getByTestId('agent-changes-list').getByRole('listitem')).toBeFocused()
     await expect(button).toHaveAccessibleName('Inbox, nothing new')
 
     await page.keyboard.press('Escape')

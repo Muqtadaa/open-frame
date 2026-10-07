@@ -153,6 +153,7 @@ export function AgentChangeItems({ state }: { readonly state: AgentChangesState 
           data-testid={`agent-change-${change.id}`}
           data-unread={state.isSeen(change) || change.reverted !== null ? 'false' : 'true'}
           data-reverted={change.reverted === null ? 'false' : 'true'}
+          tabIndex={-1}
         >
           <span className="of-mentions__who">{change.label}</span>
           <span className="of-mentions__where">
@@ -177,8 +178,18 @@ export function AgentChangeItems({ state }: { readonly state: AgentChangesState 
                 className="of-button of-agent-changes__revert"
                 data-testid="agent-change-revert"
                 aria-label={`Revert “${change.label}”`}
-                onClick={() => {
+                onClick={(event) => {
+                  const row = event.currentTarget.closest('li')
                   state.revert(change)
+                  /*
+                   * The button leaves with what it took back, so the keyboard
+                   * stays on its row — which now says who took it back — rather
+                   * than falling to the page.
+                   */
+                  requestAnimationFrame(() => {
+                    if (row !== null && row.isConnected && !row.contains(document.activeElement))
+                      row.focus()
+                  })
                 }}
               >
                 Revert
