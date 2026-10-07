@@ -80,7 +80,8 @@ export function PeopleSheet({
                 type="button"
                 className="of-people__row of-people__choice"
                 aria-pressed={followed}
-                aria-label={followed ? `Stop following ${person.name}` : `Follow ${person.name}`}
+                // One name; whether it is on is what aria-pressed says.
+                aria-label={`Follow ${person.name}`}
                 data-testid={`people-follow-${person.key}`}
                 onClick={() => {
                   onFollow(followed ? null : clientId)

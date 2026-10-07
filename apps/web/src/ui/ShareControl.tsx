@@ -39,6 +39,7 @@ export function ShareControl() {
   const peers = usePeers()
   const following = useInteractionStore((state) => state.following)
   const setFollowing = useInteractionStore((state) => state.setFollowing)
+  useFollowSaid(following, peers)
   // With the other hooks, above every early return: a hook called
   // conditionally changes the order between renders.
   const identity = useIdentity()
@@ -353,7 +354,13 @@ export function ShareControl() {
               </span>
             )
           }
-          const label = isFollowed ? `Stop following ${person.name}` : `Follow ${person.name}`
+          /*
+           * The tip says what a press does now; the NAME stays put, and
+           * aria-pressed says whether it is on. Renaming it as well had a
+           * screen reader hear "Stop following Ash, pressed" — the state twice.
+           */
+          const tip = isFollowed ? `Stop following ${person.name}` : `Follow ${person.name}`
+          const label = `Follow ${person.name}`
           return (
             <button
               key={person.key}
@@ -362,7 +369,7 @@ export function ShareControl() {
                 isFollowed ? ' of-status__person--following' : ''
               }`}
               style={{ background: hueVar(person.hue) }}
-              data-tip={label}
+              data-tip={tip}
               aria-label={label}
               aria-pressed={isFollowed}
               data-testid={`follow-${person.key}`}
@@ -729,4 +736,28 @@ function ShareWord() {
       <span className="of-status__share-word">Share</span>
     </>
   )
+}
+
+/**
+ * Following someone moves the whole view, and it can end on its own — they
+ * leave, or the person scrolls. Neither was said, so somebody who could not
+ * see the board was moved around it, and stopped, without a word.
+ */
+function useFollowSaid(
+  following: number | null,
+  peers: readonly { readonly clientId: number; readonly name: string }[],
+): void {
+  const was = useRef<{ readonly id: number; readonly name: string } | null>(null)
+  useEffect(() => {
+    const announce = useInteractionStore.getState().announce
+    const now = following === null ? undefined : peers.find((peer) => peer.clientId === following)
+    const before = was.current
+    if (now !== undefined && before?.id !== now.clientId) {
+      announce(`Following ${now.name}`)
+      was.current = { id: now.clientId, name: now.name }
+    } else if (following === null && before !== null) {
+      announce(`Stopped following ${before.name}`)
+      was.current = null
+    }
+  }, [following, peers])
 }

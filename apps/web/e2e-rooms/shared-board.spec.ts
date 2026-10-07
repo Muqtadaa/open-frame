@@ -768,7 +768,15 @@ test.describe('follow-mode', () => {
     const bobStart = await drawnX(bob)
 
     // Bob takes alice's seat. Her face is the only one he can press.
-    await bob.locator('[data-testid="room-people"] button').first().click()
+    const face = bob.locator('[data-testid="room-people"] button').first()
+    const name = (await face.getAttribute('aria-label')) ?? ''
+    await face.click()
+    // Said, and the face keeps its name — pressed, not renamed "Stop following".
+    await expect(face).toHaveAttribute('aria-pressed', 'true')
+    await expect(face).toHaveAttribute('aria-label', name)
+    await expect(bob.getByTestId('board-announcer')).toContainText(
+      name.replace('Follow', 'Following'),
+    )
 
     // Alice zooms in. Bob's board should follow, though he touched nothing.
     await alice.locator('[data-testid="zoom-in"]').click()
