@@ -9,6 +9,7 @@ import { ClusterReview } from '../ui/ClusterReview.js'
 import { VotingBanner } from '../ui/VotingBanner.js'
 import { NoticeBanner } from '../ui/NoticeBanner.js'
 import { BoardOverview } from '../ui/BoardOverview.js'
+import { FollowingBar } from '../ui/FollowingBar.js'
 import { SearchPanel } from '../ui/SearchPanel.js'
 import { StatusBar } from '../ui/StatusBar.js'
 import { Toast } from '../ui/Toast.js'
@@ -125,6 +126,7 @@ export function App() {
         */}
         <div className="of-overlay of-overlay--top" data-keep-clear="top">
           <NoticeBanner notices={runtime.notices} />
+          <FollowingBar />
           <VotingBanner />
           <ClusterReview />
           <Toast />
