@@ -165,6 +165,9 @@ test('what a person wrote since is kept, and the board says so', async ({ browse
 
     await expect.poll(() => idsIn(page), { timeout: 20_000 }).toEqual([first])
     await expect(page.getByTestId('board-announcer')).toContainText('except 1 object changed since')
+    // And it stays said, on the change's row, after the announcement has gone.
+    await page.getByTestId('inbox').click()
+    await expect(page.getByTestId('agent-change-kept')).toHaveText('1 object kept, changed since')
   } finally {
     await agent.context.close()
   }
@@ -359,6 +362,26 @@ test('a frame the agent made is taken back from the board, though nobody touched
 
     await expect.poll(() => idsIn(page), { timeout: 20_000 }).toEqual([moved])
     await expect(page.getByTestId('board-announcer')).toContainText('Reverted')
+  } finally {
+    await agent.context.close()
+  }
+})
+
+/*
+ * Show: what a change touched, selected and framed (PR 3 critique, 2026-10-07).
+ * A row said "Make a frame · 3 objects" and gave no way to find them.
+ */
+test('Show selects and frames what the change touched', async ({ browser }) => {
+  const room = newRoomId()
+  const page = await join(browser, room)
+  const agent = agentOn(room)
+  try {
+    await threeNotes(agent, page)
+    await page.getByTestId('toast').getByRole('button', { name: 'Dismiss' }).click()
+    await page.getByTestId('inbox').click()
+    await page.getByTestId('agent-change-show').click()
+    await expect(page.getByRole('dialog', { name: 'Inbox' })).toHaveCount(0)
+    await expect(page.locator('[data-object-type="sticky"][data-selected="true"]')).toHaveCount(3)
   } finally {
     await agent.context.close()
   }

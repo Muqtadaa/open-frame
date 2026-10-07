@@ -220,7 +220,13 @@ export interface BoardCommands {
    * changed since is kept. The revert's own transaction, so an undo of it can
    * be recognised, or `null` when nothing could be taken back.
    */
-  revertChange(change: LoggedChange): TransactionId | null
+  /**
+   * Takes an agent's change back. Says what it did: the transaction, and how
+   * many of the objects it touched were kept because somebody changed them since.
+   */
+  revertChange(
+    change: LoggedChange,
+  ): { readonly transactionId: TransactionId; readonly kept: number } | null
 }
 
 /**
@@ -1083,7 +1089,7 @@ export function useCommands(): BoardCommands {
             ? `Reverted “${change.label}”.`
             : `Reverted “${change.label}”, except ${String(kept)} ${kept === 1 ? 'object' : 'objects'} changed since.`,
         )
-        return result.transactionId
+        return { transactionId: result.transactionId, kept }
       },
     }
   }, [dispatcher, runtime, collaboration, remoteBoards])

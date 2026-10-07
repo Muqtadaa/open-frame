@@ -174,7 +174,7 @@
 
 .of-agent-changes__item {
   display: grid;
-  grid-template-columns: 1fr auto;
+  grid-template-columns: 1fr auto auto;
   gap: 1px var(--of-space-8);
   align-items: center;
   padding: var(--of-space-8);
@@ -186,10 +186,20 @@
   grid-column: 1;
 }
 
-.of-agent-changes__revert,
-.of-agent-changes__done {
+.of-agent-changes__show {
   grid-column: 2;
   grid-row: 1 / span 2;
+}
+
+.of-agent-changes__revert,
+.of-agent-changes__done {
+  grid-column: 3;
+  grid-row: 1 / span 2;
+}
+
+/* What a revert left, under who took it back. */
+.of-agent-changes__kept {
+  display: block;
 }
 
 .of-agent-changes__done {

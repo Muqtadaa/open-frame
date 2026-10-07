@@ -7,6 +7,7 @@ import { guestIdentity } from '../app/guest.js'
 import { useCommands } from '../hooks/use-commands.js'
 import { useInteractionStore } from '../interaction/interaction-store.js'
 import { useOpenFrame } from '../runtime/context.js'
+import { fitToObjects } from '../scene/zoom.js'
 import { Ago } from './Ago.js'
 import { readSeen, writeSeen } from './agent-seen.js'
 
@@ -24,6 +25,14 @@ export interface AgentChangesState {
   /** Whether this person may take a change back: not a viewer. */
   readonly editing: boolean
   readonly revert: (change: LoggedChange) => void
+  /** Selects what the change touched that is still on the board, and frames it. */
+  readonly show: (change: LoggedChange) => void
+  /**
+   * How many of a change's objects were left because somebody had changed
+   * them since, for the reverts made here. Said on the row as well as aloud:
+   * an announcement is gone the moment it is made.
+   */
+  readonly kept: ReadonlyMap<string, number>
 }
 
 /**
@@ -57,12 +66,33 @@ export function useAgentChanges(): AgentChangesState {
    */
   const reverts = useRef(new Map<TransactionId, string>())
 
+  const [kept, setKept] = useState<ReadonlyMap<string, number>>(() => new Map())
   const revert = useCallback(
     (change: LoggedChange): void => {
       const done = commands.revertChange(change)
-      if (done !== null) reverts.current.set(done, change.id)
+      if (done === null) return
+      reverts.current.set(done.transactionId, change.id)
+      setKept((was) => new Map(was).set(change.id, done.kept))
     },
     [commands],
+  )
+
+  const show = useCallback(
+    (change: LoggedChange): void => {
+      const doc = runtime.store.getDocument()
+      const ids = change.affected.filter((id) => doc.objects.has(id))
+      const store = useInteractionStore.getState()
+      store.setSelection(ids)
+      const framed = fitToObjects(
+        doc,
+        runtime.registry,
+        ids,
+        store.canvasSize.width,
+        store.canvasSize.height,
+      )
+      if (framed !== null) store.setViewport(framed)
+    },
+    [runtime],
   )
 
   useEffect(() => {
@@ -135,11 +165,20 @@ export function useAgentChanges(): AgentChangesState {
     markSeen,
     editing: role !== 'viewer',
     revert,
+    show,
+    kept,
   }
 }
 
 /** The changes themselves, with Revert on each one still on the board. */
-export function AgentChangeItems({ state }: { readonly state: AgentChangesState }) {
+export function AgentChangeItems({
+  state,
+  onShown,
+}: {
+  readonly state: AgentChangesState
+  /** After Show: the sheet gets out of the way of what it showed. */
+  readonly onShown?: () => void
+}) {
   return (
     <ul className="of-mentions__list" data-testid="agent-changes-list">
       {state.changes.map((change) => (
@@ -167,9 +206,28 @@ export function AgentChangeItems({ state }: { readonly state: AgentChangesState 
               <span className="of-agent-changes__count"> · {objects(change.affected.length)}</span>
             )}
           </span>
+          {change.reverted === null && change.affected.length > 0 && (
+            <button
+              type="button"
+              className="of-button of-button--ghost of-agent-changes__show"
+              data-testid="agent-change-show"
+              aria-label={`Show what “${change.label}” changed`}
+              onClick={() => {
+                state.show(change)
+                onShown?.()
+              }}
+            >
+              Show
+            </button>
+          )}
           {change.reverted !== null ? (
             <span className="of-agent-changes__done">
               Taken back{change.reverted.by === null ? '' : ` by ${change.reverted.by}`}
+              {(state.kept.get(change.id) ?? 0) > 0 && (
+                <span className="of-agent-changes__kept" data-testid="agent-change-kept">
+                  {objects(state.kept.get(change.id) ?? 0)} kept, changed since
+                </span>
+              )}
             </span>
           ) : (
             state.editing && (
