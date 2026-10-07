@@ -10,8 +10,7 @@ import { AccountControl } from './AccountControl.js'
 import { BoardExit } from './BoardExit.js'
 import { BoardMenu } from './BoardMenu.js'
 import { BoardTitle } from './BoardTitle.js'
-import { AgentChanges } from './AgentChanges.js'
-import { Mentions } from './Mentions.js'
+import { Inbox } from './Inbox.js'
 import { DevPanel } from './DevPanel.js'
 import { SessionMusic } from './SessionMusic.js'
 import { SessionTimer } from './SessionTimer.js'
@@ -125,8 +124,7 @@ export function StatusBar() {
        * dashboard alone, which is the one screen you are not on while you
        * work — so a mention waited until you happened to go home.
        */}
-      <AgentChanges />
-      <Mentions />
+      <Inbox />
       <AccountControl />
 
       {/*

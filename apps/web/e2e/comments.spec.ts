@@ -505,10 +505,16 @@ test('carries the bell onto the board, not just the front door', async ({ page }
   })
   await openBoard(page)
 
-  const bell = page.getByTestId('mentions-button')
-  await expect(bell).toHaveText(/1 mention/)
+  const bell = page.getByTestId('inbox')
+  await expect(bell).toHaveAccessibleName('Inbox, 1 new')
 
   await bell.click()
+  // One sheet, a section per kind; a board no agent has touched has one.
+  const inbox = page.getByRole('dialog', { name: 'Inbox' })
+  await expect(inbox.getByRole('heading', { name: 'Mentions' })).toBeVisible()
+  await expect(inbox.getByRole('heading', { name: 'Agent changes' })).toHaveCount(0)
+  // And the board's bar has one inbox, not a bell per kind.
+  await expect(page.getByTestId('status-bar').getByTestId('mentions-button')).toHaveCount(0)
   const item = page.getByTestId('mention-cmt_elsewhere')
   await expect(item).toContainText('come and look')
   // A preview is a place a token would show through just as badly.
@@ -537,8 +543,8 @@ test('keeps the mentions list on screen when the bell is on the bottom edge', as
   })
   await openBoard(page)
 
-  const bell = page.getByTestId('mentions-button')
-  await expect(bell).toHaveText(/5 mentions/)
+  const bell = page.getByTestId('inbox')
+  await expect(bell).toHaveAccessibleName('Inbox, 5 new')
   await bell.click()
 
   const list = page.getByTestId('mentions-list')
@@ -747,8 +753,8 @@ test('reading a mention keeps it, quietened, rather than destroying it', async (
    * moment you had read everything — which is exactly when somebody goes
    * looking for the notification they followed ten minutes ago.
    */
-  const onBoard = page.getByTestId('mentions-button')
-  await expect(onBoard).toHaveText('Mentions')
+  const onBoard = page.getByTestId('inbox')
+  await expect(onBoard).toHaveAccessibleName('Inbox, nothing new')
   await onBoard.click()
   const kept = page.getByTestId('mention-cmt_kept')
   await expect(kept).toBeVisible()
@@ -842,7 +848,7 @@ test('a notification for this board goes to the remark without reloading', async
     ;(window as unknown as { __stillHere?: boolean }).__stillHere = true
   })
 
-  await page.getByTestId('mentions-button').click()
+  await page.getByTestId('inbox').click()
   const item = page.getByTestId(`mention-${commentId}`)
   await expect(item).toHaveAttribute('data-here', 'true')
   await item.click()
@@ -885,7 +891,7 @@ test('falls back to the link when the discussion is not loaded yet', async ({ pa
   await openBoard(page)
 
   // This board's discussion holds nothing, so there is nowhere to go in page.
-  await page.getByTestId('mentions-button').click()
+  await page.getByTestId('inbox').click()
   const item = page.getByTestId('mention-cmt_unknown')
   await expect(item).toHaveAttribute('data-here', 'true')
 
@@ -1256,7 +1262,7 @@ test.describe('the marks themselves', () => {
       ],
     })
     await openBoard(page)
-    const bell = page.getByTestId('mentions-button')
+    const bell = page.getByTestId('inbox')
     await expect(bell).toBeVisible()
     const box = await bell.boundingBox()
     expect(box?.height ?? 0).toBeGreaterThanOrEqual(30)

@@ -186,3 +186,67 @@
   text-overflow: ellipsis;
   white-space: nowrap;
 }
+
+/*
+ * The board's inbox: mentions and agent changes behind one count. The sheet
+ * is the panel; the two lists inside it give up their own, so it reads as
+ * one thing with two sections rather than two cards stacked.
+ */
+.of-inbox {
+  position: relative;
+}
+
+.of-inbox .of-mentions__bell {
+  display: inline-flex;
+  gap: var(--of-space-6);
+  align-items: center;
+}
+
+.of-inbox__count {
+  min-width: 18px;
+  padding: 0 var(--of-space-4);
+  font-variant-numeric: tabular-nums;
+  line-height: 18px;
+  color: var(--of-page);
+  text-align: center;
+  background: var(--of-accent);
+  border-radius: var(--of-radius-round);
+}
+
+.of-inbox__sheet {
+  width: 300px;
+  max-height: min(420px, calc(100dvh - 2 * var(--of-space-12)));
+  padding: var(--of-space-8);
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  background: var(--of-panel);
+  border: 1px solid var(--of-panel-border);
+  border-radius: var(--of-radius-surface);
+  box-shadow: var(--of-shadow);
+}
+
+.of-inbox__sheet .of-mentions__list {
+  width: auto;
+  max-height: none;
+  padding: 0;
+  overflow: visible;
+  background: none;
+  border: none;
+  box-shadow: none;
+}
+
+.of-inbox__sheet section + section {
+  padding-top: var(--of-space-8);
+  margin-top: var(--of-space-8);
+  border-top: 1px solid var(--of-panel-border);
+}
+
+.of-inbox__heading {
+  margin: 0 0 var(--of-space-4);
+  padding: 0 var(--of-space-4);
+  font-family: var(--of-mono);
+  font-size: var(--of-type-record);
+  font-weight: var(--of-weight-regular);
+  letter-spacing: 0.02em;
+  color: var(--of-ink-muted);
+}
