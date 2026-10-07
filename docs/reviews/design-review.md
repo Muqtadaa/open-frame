@@ -1218,3 +1218,32 @@ controls inside zones, so on the old bar — which had none — it measured
 nothing and passed; it counts every control now. And `scrollWidth` read every
 hidden tip's box as overflow, so the first squeeze gave up everything at
 1440px; it reads where each zone's contents end instead.
+
+## The newer surfaces, critiqued together (2026-10-07)
+
+Ten surfaces built during the facilitation programme had no critique or
+contract. Each was captured in both worlds at 1280 and 390 and reviewed by two
+isolated agents (design; detector, axe, measurements and a keyboard walk).
+Snapshots are in `apps/web/.impeccable/critique/2026-10-07T14-44-*`.
+
+| Surface                     | Score                | P1  |
+| --------------------------- | -------------------- | --- |
+| Agent changes in the Inbox  | 21/40                | 3   |
+| Board overview              | 22/36 (recovery n/a) | 2   |
+| Version history and preview | 25/40                | 2   |
+| AI cluster review           | 26/40                | 2   |
+| Dot voting                  | 26/40                | 3   |
+| Poll card                   | 26/40                | 2   |
+| People sheet                | 26/40                | 1   |
+| Session timer               | 26/40                | 1   |
+| Music and the listen prompt | 27/40                | 0   |
+| Reactions                   | 30/40                | 2   |
+
+Two patterns ran through nearly all of them. Focus fell to the page whenever
+the pressed control unmounted, and open sheets let Tab walk out while staying
+open. At phone width none of the surfaces had been designed. The owner chose
+to fix the cross-cutting faults first (keyboard, focus, announcements, an agent
+frame that could not be reverted, "object(s)" in agent labels), then docking
+every surface to the edges below 520px, then the design fixes. Those design
+fixes: real dots on notes, results that open for everyone when a round ends,
+a poll only its asker closes, and cluster copies that say they are copies.
