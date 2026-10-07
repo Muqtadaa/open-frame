@@ -34,7 +34,11 @@ import {
 import { createPortal } from 'react-dom'
 
 import { AnchoredSurface } from '../controls/AnchoredSurface.js'
-import { furnitureBands, watchFurnitureBands } from '../controls/screen-furniture.js'
+import {
+  FURNITURE_MOVED,
+  furnitureBands,
+  watchFurnitureBands,
+} from '../controls/screen-furniture.js'
 import { useCommands } from '../hooks/use-commands.js'
 import { useBoardDocument } from '../hooks/use-document-object.js'
 import { useInteractionStore } from '../interaction/interaction-store.js'
@@ -195,29 +199,23 @@ export function Inspector() {
    *
    * Once per selection, and never during a gesture. Pressing a note to drag it
    * selects it, and a camera that moved under the pointer then would carry the
-   * note somewhere nobody put it.
+   * note somewhere nobody put it. And only when the panel is DRAWN: a group
+   * has no record to show, and panning it out of the way of nothing moved the
+   * board for no reason (Codex, on #91) — so it is done by `RevealAboveDock`,
+   * which is mounted with the panel.
    */
   const revealed = useRef<string | null>(null)
   const selectionKey = [...selection].join(' ')
+  // A selection that goes, or a panel that undocks, is a fresh start.
   useEffect(() => {
-    if (!docked || selectionKey === '') {
-      revealed.current = null
-      return
-    }
-    if (dragKind !== 'idle' || revealed.current === selectionKey) return
-    revealed.current = selectionKey
-    const doc = runtime.store.getDocument()
-    const rects = [...selection].flatMap((id) => {
-      const object = doc.objects.get(id)
-      return object === undefined ? [] : [runtime.registry.boundsOf(object, doc)]
-    })
-    const box = unionAll(rects)
-    if (box === null) return
-    const state = useInteractionStore.getState()
-    const room = canvasSize.height - tallest - MARGIN_PX
-    if (room <= 0) return
-    state.setViewport(panToReveal(state.viewport, box, canvasSize.width, room, MARGIN_PX))
-  }, [docked, selectionKey, dragKind, selection, runtime, canvasSize, tallest])
+    if (!docked || selectionKey === '') revealed.current = null
+  }, [docked, selectionKey])
+  // True once per selection: the first ask for it, and never again.
+  const firstReveal = useCallback((key: string): boolean => {
+    if (revealed.current === key) return false
+    revealed.current = key
+    return true
+  }, [])
   /*
    * WHEN THE PANEL GOES, the keyboard goes back to the board. It unmounts
    * with the selection — Escape from a swatch, its own Delete — and took
@@ -584,6 +582,15 @@ export function Inspector() {
       margin={MARGIN_PX}
       testId="inspector-surface"
     >
+      {docked && (
+        <RevealAboveDock
+          selectionKey={selectionKey}
+          firstReveal={firstReveal}
+          bounds={bounds}
+          width={canvasSize.width}
+          room={canvasSize.height - tallest - MARGIN_PX}
+        />
+      )}
       <div
         ref={placePanel}
         className={`of-inspector of-surface${yielding || measuring ? ' of-inspector--yielding' : ''}${
@@ -969,14 +976,59 @@ function PanelPlace({
       : window.document.querySelector<HTMLElement>('[data-chrome-layer]')
   if (layer === null || surface.anchor === null) return null
   return createPortal(
+    /*
+     * Docked, the panel is furniture along the bottom, like the zoom cluster:
+     * what is anchored to the selection — the reaction bar, the format bar —
+     * keeps above it rather than being placed under half a screen of panel.
+     */
     <div
       className="of-chrome of-editor-chrome of-inspector-dock"
       data-testid={surface.testId ?? 'object-chrome'}
+      data-keep-clear="bottom"
     >
+      <SaysItMoved />
       {children}
     </div>,
     layer,
   )
+}
+
+/**
+ * Slides a selection the docked panel would cover up into the room above it,
+ * once per selection. Mounted with the panel, so a selection with no panel is
+ * never moved (see `revealed` in the Inspector).
+ */
+function RevealAboveDock({
+  selectionKey,
+  firstReveal,
+  bounds,
+  width,
+  room,
+}: {
+  readonly selectionKey: string
+  readonly firstReveal: (key: string) => boolean
+  readonly bounds: Rect
+  readonly width: number
+  readonly room: number
+}) {
+  useEffect(() => {
+    const state = useInteractionStore.getState()
+    if (room <= 0 || state.drag.kind !== 'idle' || !firstReveal(selectionKey)) return
+    state.setViewport(panToReveal(state.viewport, bounds, width, room, MARGIN_PX))
+  }, [selectionKey, firstReveal, bounds, width, room])
+  return null
+}
+
+/** Tells the furniture watchers when the docked panel comes and goes. */
+function SaysItMoved() {
+  useEffect(() => {
+    window.dispatchEvent(new Event(FURNITURE_MOVED))
+    return () => {
+      // After it has gone from the page, so it is not measured on the way out.
+      requestAnimationFrame(() => window.dispatchEvent(new Event(FURNITURE_MOVED)))
+    }
+  }, [])
+  return null
 }
 
 /** One record row: a mono label in the left column, the control in the right. */

@@ -29,6 +29,13 @@
  * clamped hard against that band, so two pixels became a sheet lying over
  * the rail's edge.
  */
+/**
+ * Said when furniture comes or goes without the window changing size: the
+ * record panel docking along the bottom of a phone, which a surface anchored
+ * to the selection has to keep above, mounts with the selection.
+ */
+export const FURNITURE_MOVED = 'openframe:furniture-moved'
+
 export interface Bands {
   /** How far down from the top of the window the furniture there reaches. */
   readonly top: number
@@ -96,14 +103,24 @@ export function watchFurnitureBands(changed: (bands: Bands) => void): () => void
       : new ResizeObserver(() => {
           tell()
         })
-  if (observer !== null) {
+  const observeAll = (): void => {
+    if (observer === null) return
+    observer.disconnect()
     for (const element of window.document.querySelectorAll('[data-keep-clear]')) {
       observer.observe(element)
     }
   }
+  observeAll()
+
+  const moved = (): void => {
+    observeAll()
+    tell()
+  }
+  window.addEventListener(FURNITURE_MOVED, moved)
 
   return () => {
     window.removeEventListener('resize', tell)
+    window.removeEventListener(FURNITURE_MOVED, moved)
     observer?.disconnect()
   }
 }

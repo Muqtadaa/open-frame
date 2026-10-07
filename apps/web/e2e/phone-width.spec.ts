@@ -1,4 +1,5 @@
 import { expect, test, type Page } from '@playwright/test'
+import { richFromPlain } from '@openframe/core'
 import { buildBoard } from './boards.js'
 import { boxOf, CANVAS, seedBoard } from './fixtures.js'
 
@@ -315,6 +316,19 @@ test.describe('surfaces at phone width', () => {
     const rail = await boxOf(page.getByRole('toolbar', { name: 'Board tools' }))
     expect(meets(box, rail), `${testId} over the rail`).toBe(false)
     expect(await overflow(page)).toBeLessThanOrEqual(0)
+    // Its CONTENTS too: a wrapper held to the room beside the rail said
+    // nothing about the 300px sheet inside it, which ran on regardless (Codex,
+    // on #91).
+    const furthest = await page
+      .getByTestId(testId)
+      .evaluate((element) =>
+        Math.max(
+          ...[element, ...element.querySelectorAll('*')].map(
+            (each) => each.getBoundingClientRect().right,
+          ),
+        ),
+      )
+    expect(furthest, `${testId} contents`).toBeLessThanOrEqual(390)
     return box
   }
 
@@ -350,6 +364,13 @@ test.describe('surfaces at phone width', () => {
     await docked(page, 'session-surface')
   })
 
+  test('the account sheet starts after the rail, and fits', async ({ page }) => {
+    await page.goto(BOARD_URL)
+    await page.waitForSelector('[data-testid="status-bar"]')
+    await page.getByTestId('sign-in').click()
+    await docked(page, 'account-surface')
+  })
+
   test('the reaction bar stays on the screen', async ({ page }) => {
     await seedBoard(
       page,
@@ -361,6 +382,23 @@ test.describe('surfaces at phone width', () => {
     const bar = await docked(page, 'reaction-bar')
     const panel = await boxOf(page.getByTestId('inspector'))
     expect(meets(bar, panel)).toBe(false)
+  })
+
+  test('a selection with no record panel is not moved', async ({ page }) => {
+    await seedBoard(
+      page,
+      buildBoard((board) => {
+        const group = board.add('group', { x: 0, y: 0 })
+        board.add('sticky', { x: 220, y: 700 }, { text: richFromPlain('Low') }, undefined, group)
+        board.add('sticky', { x: 300, y: 700 }, { text: richFromPlain('Down') }, undefined, group)
+      }),
+    )
+    const before = await boxOf(page.locator('[data-object-type="sticky"]').first())
+    await page.locator(CANVAS).click({ position: { x: 220, y: 700 } })
+    await expect(page.getByTestId('selection-overlay')).toBeVisible()
+    await expect(page.getByTestId('inspector')).toHaveCount(0)
+    const after = await boxOf(page.locator('[data-object-type="sticky"]').first())
+    expect(after.y).toBe(before.y)
   })
 
   test("the record panel leaves the poll's Close in reach", async ({ page }) => {

@@ -59,6 +59,16 @@
 }
 
 /*
+ * What it holds is never wider than it is. The shell is held to the room
+ * beside the rail on a phone (AnchoredSurface), and a sheet inside it with a
+ * width of its own — 300px, 320px — ran on past the screen's edge regardless,
+ * its right-hand controls out of reach (Codex, on #91).
+ */
+.of-chrome > * {
+  max-width: 100%;
+}
+
+/*
  * A panel that has stepped aside lets the pointer through its whole box —
  * the shell it is placed in as well as the panel itself.
  */
