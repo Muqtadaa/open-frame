@@ -38,16 +38,15 @@ const OPERABLE =
   'button, a[href], [role="menuitem"], [role="menuitemradio"], [role="menuitemcheckbox"], [role="gridcell"], [role="radio"], [role="option"], [role="tab"]'
 
 /**
- * Space and Enter PRESS a control that a keyboard has focused, and the board
- * must not take them first.
+ * Space and Enter PRESS a control, and the board must not take them first.
  *
  * The keymap claimed both — Space for the pan hold, Enter to edit the
  * selection — and prevented them, so no rail button could be pressed without
  * a mouse and the table size and image import had no keyboard route at all.
  *
- * Only when the KEYBOARD put focus there: a click leaves focus on the button
- * it pressed, and the Space held a moment later to pan the board is the
- * board's. `:focus-visible` cannot tell the two apart, because the browser
+ * Space only when the KEYBOARD put focus there: a click leaves focus on the
+ * button it pressed, and the Space held a moment later to pan the board is
+ * the board's. `:focus-visible` cannot tell the two apart, because the browser
  * turns it on for the clicked button the moment any key goes down.
  */
 /** How long a nudge's distances stay up with nothing else pressed. */
@@ -117,9 +116,15 @@ export function useKeyboardShortcuts(setSpaceHeld: (held: boolean) => void): voi
       }
 
       if (event.key === 'Tab') pointerLed = false
+      /*
+       * Enter on a control always presses it. Only SPACE asks how focus got
+       * there, because Space held after a click is the board's pan; Enter
+       * after a click was claimed for editing the selection, so a button the
+       * pointer had touched — the Inbox, the Session pill — could not then be
+       * pressed from the keyboard at all.
+       */
       if (
-        !pointerLed &&
-        (event.code === 'Space' || event.key === 'Enter') &&
+        (event.key === 'Enter' || (!pointerLed && event.code === 'Space')) &&
         isOperable(event.target)
       )
         return

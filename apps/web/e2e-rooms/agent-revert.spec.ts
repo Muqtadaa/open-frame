@@ -95,7 +95,7 @@ test('the change lands with Revert on it, and Revert takes all of it away', asyn
     await threeNotes(agent, page)
 
     const toast = page.getByTestId('toast')
-    await expect(toast).toContainText('Ada’s agent: Create 3 object(s)')
+    await expect(toast).toContainText('Ada’s agent: Create 3 objects')
     await toast.getByTestId('toast-action').click()
 
     await expect.poll(() => idsIn(page), { timeout: 20_000 }).toEqual([])
@@ -124,6 +124,9 @@ test('the panel lists it after the toast has gone, and reverts from there', asyn
     await expect(
       page.getByRole('dialog', { name: 'Inbox' }).getByRole('heading', { name: 'Agent changes' }),
     ).toBeVisible()
+    // The count is said once: "Create 3 objects", not "… · 3 objects" again below it.
+    await expect(page.getByTestId('agent-changes-list')).toContainText('Create 3 objects')
+    await expect(page.getByTestId('agent-changes-list')).not.toContainText('· 3 objects')
     const revert = page.getByTestId('agent-change-revert')
     await expect(revert).toBeFocused()
     await revert.click()
@@ -321,6 +324,38 @@ test('an agent change seen in the inbox is no longer new, after a reload too', a
       'data-unread',
       'false',
     )
+  } finally {
+    await agent.context.close()
+  }
+})
+
+test('a frame the agent made is taken back from the board, though nobody touched it', async ({
+  browser,
+}) => {
+  const room = newRoomId()
+  const page = await join(browser, room)
+  const agent = agentOn(room)
+  try {
+    await threeNotes(agent, page)
+    const [moved, gone, alsoGone] = await idsIn(page)
+    await agent.call('move_objects', { moves: [{ id: moved, x: 40, y: 600 }] })
+    await agent.call('delete_objects', { ids: [gone, alsoGone] })
+    await expect.poll(() => idsIn(page), { timeout: 20_000 }).toHaveLength(1)
+    await agent.call('create_frame', { name: 'Findings', x: 0, y: 900, width: 400, height: 300 })
+    await expect.poll(() => idsIn(page), { timeout: 20_000 }).toHaveLength(2)
+
+    await page.getByTestId('toast').getByRole('button', { name: 'Dismiss' }).click()
+    // Opening the frame's name and leaving it unchanged is not touching it.
+    await page.getByTestId('frame-title').dblclick()
+    await expect(page.getByRole('textbox', { name: 'Rename frame' })).toBeFocused()
+    await page.keyboard.press('Escape')
+    await expect(page.getByRole('textbox', { name: 'Rename frame' })).toHaveCount(0)
+    await page.getByTestId('inbox').focus()
+    await page.keyboard.press('Enter')
+    await page.getByRole('button', { name: 'Revert “Make a frame”' }).press('Space')
+
+    await expect.poll(() => idsIn(page), { timeout: 20_000 }).toEqual([moved])
+    await expect(page.getByTestId('board-announcer')).toContainText('Reverted')
   } finally {
     await agent.context.close()
   }

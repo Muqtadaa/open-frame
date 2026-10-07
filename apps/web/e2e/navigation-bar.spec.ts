@@ -263,6 +263,19 @@ test.describe('the keyboard on the bar', () => {
     await expect(page.getByTestId('redo')).toBeFocused()
   })
 
+  test('presses a button with Enter even when the pointer put focus there', async ({ page }) => {
+    await openBoard(page)
+    const session = page.getByTestId('session-button')
+    await session.click()
+    await expect(session).toHaveAttribute('aria-expanded', 'true')
+    await session.click()
+    await expect(session).toHaveAttribute('aria-expanded', 'false')
+    await expect(session).toBeFocused()
+    // Space after a click is the board's pan; Enter on a button only ever presses it.
+    await page.keyboard.press('Enter')
+    await expect(session).toHaveAttribute('aria-expanded', 'true')
+  })
+
   test('names each control by what it is, never by its tip', async ({ page }) => {
     await openBoard(page)
     await expect(page.getByRole('button', { name: 'Untitled board', exact: true })).toBeVisible()
