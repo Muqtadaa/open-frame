@@ -22,3 +22,16 @@ export function cameFrom(event: FocusEvent | React.FocusEvent): Element | null {
   if (!(related instanceof Element)) return null
   return within instanceof Element && within.contains(related) ? null : related
 }
+
+/**
+ * The keyboard to the board, once the surface that had it has gone and the
+ * board is back on screen. A frame later, so whatever the closing changed has
+ * rendered; and only if focus fell to the page, never taken from somewhere a
+ * person has since put it.
+ */
+export function focusTheBoard(): void {
+  requestAnimationFrame(() => {
+    if (document.activeElement !== null && document.activeElement !== document.body) return
+    document.querySelector<HTMLElement>('[data-testid="canvas"]')?.focus()
+  })
+}

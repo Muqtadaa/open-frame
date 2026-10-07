@@ -4,6 +4,7 @@ import { versionPreview, type Previewed } from '../app/version-preview.js'
 import { useCanEdit } from '../hooks/use-can-edit.js'
 import { useInteractionStore } from '../interaction/interaction-store.js'
 import { useOpenFrame } from '../runtime/context.js'
+import { focusTheBoard } from './hand-back-focus.js'
 import { versionTime } from './version-time.js'
 
 /**
@@ -36,7 +37,7 @@ export function VersionPreviewBar({ preview }: { readonly preview: Previewed }) 
   const back = (): void => {
     versionPreview.show(null)
     useInteractionStore.getState().announce('Back to the board as it is now')
-    toTheBoard()
+    focusTheBoard()
   }
 
   useEffect(() => {
@@ -78,7 +79,7 @@ export function VersionPreviewBar({ preview }: { readonly preview: Previewed }) 
       return
     }
     versionPreview.show(null)
-    toTheBoard()
+    focusTheBoard()
     useInteractionStore.getState().announce(`Restored the version from ${when}`)
     useInteractionStore.getState().showToast(`Restored the version from ${when}`)
   }
@@ -108,13 +109,3 @@ export function VersionPreviewBar({ preview }: { readonly preview: Previewed }) 
   )
 }
 
-/**
- * Once the live board is back on the canvas, the keyboard goes to it: the bar
- * that had focus is gone, and leaving focus on the page strands it.
- */
-function toTheBoard(): void {
-  requestAnimationFrame(() => {
-    if (document.activeElement !== null && document.activeElement !== document.body) return
-    document.querySelector<HTMLElement>('[data-testid="canvas"]')?.focus()
-  })
-}

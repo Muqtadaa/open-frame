@@ -5,11 +5,11 @@ import {
   useId,
   useRef,
   type FormEvent,
-  type KeyboardEvent,
   type ReactNode,
   type RefObject,
 } from 'react'
 
+import { wrapTab } from '../controls/wrap-tab.js'
 import { abandonSplash } from '../app/splash.js'
 
 interface Props {
@@ -106,32 +106,6 @@ export function Gate({
       </div>
     </div>
   )
-}
-
-const FOCUSABLE = 'a[href], button:not(:disabled), input:not(:disabled), [tabindex="0"]'
-
-/**
- * Tab goes round the panel rather than off its end.
- *
- * Inert takes the rest of the APP out of the order, but past the last control
- * lies the browser itself — the address bar, then back into the page at its
- * first element — so a panel that relied on inert alone still let the
- * keyboard out, one Tab at a time.
- */
-function wrapTab(event: KeyboardEvent<HTMLElement>): void {
-  if (event.key !== 'Tab') return
-  const stops = [...event.currentTarget.querySelectorAll<HTMLElement>(FOCUSABLE)]
-  const first = stops[0]
-  const last = stops[stops.length - 1]
-  if (first === undefined || last === undefined) return
-  const active = document.activeElement
-  if (event.shiftKey && (active === first || active === event.currentTarget)) {
-    event.preventDefault()
-    last.focus()
-  } else if (!event.shiftKey && active === last) {
-    event.preventDefault()
-    first.focus()
-  }
 }
 
 /** The paragraph a gate is described by: what happened, in a sentence. */
