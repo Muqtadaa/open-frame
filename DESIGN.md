@@ -1175,9 +1175,20 @@ contextual surface (10px, below).
 the selection, and past that it scrolls, with its rows kept at their own
 height rather than squeezed. Below 560px wide — or when no side of the
 selection has room for it — it docks as a sheet along the bottom, on the chrome
-layer, taking at most half the window, so the selection's handles stay in view
-above it. When it goes (Escape, Delete, a click away) and the keyboard was in
+layer, taking at most half the window. A newly selected thing the sheet would
+cover is slid up into the half above it — the smallest pan, never a zoom, and
+never mid-gesture — so a poll's own Close is not under the panel describing
+the poll. When it goes (Escape, Delete, a click away) and the keyboard was in
 it, the keyboard goes back to the board.
+
+**On a phone, surfaces dock to the edges.** Below 520px wide, everything that
+would float over the board's middle runs instead from the rail's edge to the
+gutter (`--of-rail-reach`): the voting banner and its setup, the cluster
+panel, Find, the board overview. Surfaces anchored to something — the sheets,
+the reaction bar — keep off the rail because the rail is measured furniture
+(`data-keep-clear="left"`) like the bar and the zoom cluster, and are never
+wider than the room beside it. The version bar wraps, its date above its two
+ways out.
 
 **Its head names the thing.** The type as a title in the interface's own
 voice (15px, 600, ink — "Evidence", "Journey stage") with what the object says

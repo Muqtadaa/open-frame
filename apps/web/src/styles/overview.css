@@ -17,6 +17,16 @@
   transform: translateX(-50%);
 }
 
+/* Docked beside the rail on a phone, as the top overlay is (shell.css). */
+@media (width < 520px) {
+  .of-overview {
+    left: var(--of-rail-reach);
+    right: var(--of-gutter);
+    width: auto;
+    transform: none;
+  }
+}
+
 .of-overview:has(.of-overview__tree:focus-visible) {
   outline: 2px solid var(--of-accent);
   outline-offset: 2px;

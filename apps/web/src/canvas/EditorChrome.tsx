@@ -7,7 +7,6 @@ import { useOpenFrame } from '../runtime/context.js'
 import { useBoardDocument } from '../hooks/use-document-object.js'
 
 import { useInteractionStore } from '../interaction/interaction-store.js'
-import { RAIL_CLEARANCE_PX } from '../scene/rail-footprint.js'
 import { type Side } from '../scene/anchoring.js'
 
 /**
@@ -76,7 +75,6 @@ export function ChromeSurface({
       }}
       surface={canvasSize}
       prefer={prefer}
-      keepClearLeft={RAIL_CLEARANCE_PX}
       avoid={avoid}
       testId={testId}
     >

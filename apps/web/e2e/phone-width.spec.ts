@@ -1,5 +1,7 @@
 import { expect, test, type Page } from '@playwright/test'
-import { boxOf } from './fixtures.js'
+import { richFromPlain } from '@openframe/core'
+import { buildBoard } from './boards.js'
+import { boxOf, CANVAS, seedBoard } from './fixtures.js'
 
 import { BOARD_URL, HOME_URL } from './routes.js'
 import { signedIn } from './signed-in.js'
@@ -183,6 +185,34 @@ test.describe('a narrow window with a mouse', () => {
     // Named still, with its caption gone.
     await expect(page.getByTestId('wheel-mode')).toHaveAccessibleName(/Scroll wheel/)
   })
+
+  /*
+   * Looking at an earlier version, the bar that says so held its date, Restore
+   * and Back to now on one line, and on a phone ran off the right edge with
+   * the way back on it.
+   */
+  test('the version bar wraps rather than running off the screen', async ({ page }) => {
+    await page.clock.install()
+    await page.goto(BOARD_URL)
+    await page.waitForSelector('[data-testid="status-bar"]')
+    // By hand: `place` clicks away at a point off a phone's screen.
+    await page.keyboard.press('s')
+    await page.locator(CANVAS).click({ position: { x: 240, y: 400 } })
+    await page.keyboard.type('Kept for later')
+    await page.keyboard.press('Escape')
+    await page.clock.runFor(121_000)
+    await page.getByTestId('board-menu').click()
+    await page.getByTestId('board-menu-history').click()
+    await page.getByTestId('history-version').first().click()
+    const bar = await boxOf(page.getByTestId('version-preview'))
+    expect(bar.x).toBeGreaterThanOrEqual(0)
+    expect(bar.x + bar.width).toBeLessThanOrEqual(390)
+    for (const id of ['version-restore', 'version-back']) {
+      const control = await boxOf(page.getByTestId(id))
+      expect(control.x + control.width, id).toBeLessThanOrEqual(390)
+    }
+    expect(await overflow(page)).toBeLessThanOrEqual(0)
+  })
 })
 
 /*
@@ -256,4 +286,136 @@ test('version history is in the board’s menu at phone width too', async ({ pag
   await expect(page.getByTestId('history-surface').getByRole('status')).toHaveText(
     'No earlier versions yet.',
   )
+})
+
+/*
+ * Every surface the newer features open, walked at 390 (PR 3 critique,
+ * 2026-10-07). Below 520 they dock to the edges: a surface is inside the
+ * screen, it never lies over the rail, and what it does not cover still takes
+ * a press. Measured before: the voting banner and its results blocked the
+ * notes under them, the rail lay over the overview and the sheets, the
+ * reaction bar ran off the right edge, the record panel covered the poll's
+ * Close, and the version bar overflowed.
+ */
+test.describe('surfaces at phone width', () => {
+  interface Box {
+    readonly x: number
+    readonly y: number
+    readonly width: number
+    readonly height: number
+  }
+
+  const meets = (a: Box, b: Box): boolean =>
+    a.x < b.x + b.width && b.x < a.x + a.width && a.y < b.y + b.height && b.y < a.y + a.height
+
+  async function docked(page: Page, testId: string): Promise<Box> {
+    const box = await boxOf(page.getByTestId(testId))
+    expect(box.x, `${testId} left`).toBeGreaterThanOrEqual(0)
+    expect(box.x + box.width, `${testId} right`).toBeLessThanOrEqual(390)
+    expect(box.y + box.height, `${testId} bottom`).toBeLessThanOrEqual(844)
+    const rail = await boxOf(page.getByRole('toolbar', { name: 'Board tools' }))
+    expect(meets(box, rail), `${testId} over the rail`).toBe(false)
+    expect(await overflow(page)).toBeLessThanOrEqual(0)
+    // Its CONTENTS too: a wrapper held to the room beside the rail said
+    // nothing about the 300px sheet inside it, which ran on regardless (Codex,
+    // on #91).
+    const furthest = await page
+      .getByTestId(testId)
+      .evaluate((element) =>
+        Math.max(
+          ...[element, ...element.querySelectorAll('*')].map(
+            (each) => each.getBoundingClientRect().right,
+          ),
+        ),
+      )
+    expect(furthest, `${testId} contents`).toBeLessThanOrEqual(390)
+    return box
+  }
+
+  const notes = buildBoard((board) => {
+    board.note('Show the price early', { x: 220, y: 420 })
+    board.note('Free returns', { x: 220, y: 640 })
+  })
+
+  test('the voting setup and banner sit beside the rail', async ({ page }) => {
+    await seedBoard(page, notes)
+    await page.locator(CANVAS).click({ button: 'right', position: { x: 360, y: 530 } })
+    await page.getByRole('menuitem', { name: 'Start dot voting…' }).click()
+    await docked(page, 'voting-setup')
+    await page.getByTestId('voting-start').click()
+    const banner = await docked(page, 'voting')
+    // The note under the top of the board still takes a vote.
+    const note = await boxOf(page.locator('[data-object-type="sticky"]').first())
+    expect(meets(banner, note)).toBe(false)
+  })
+
+  test('the board overview starts after the rail', async ({ page }) => {
+    await seedBoard(page, notes)
+    await page.locator(CANVAS).focus()
+    await page.keyboard.press('Alt+s')
+    await docked(page, 'board-overview')
+  })
+
+  test('the session sheet starts after the rail', async ({ page }) => {
+    await page.goto(BOARD_URL)
+    await page.waitForSelector('[data-testid="status-bar"]')
+    await page.getByTestId('session-button').click()
+    await expect(page.getByTestId('timer-start')).toBeVisible()
+    await docked(page, 'session-surface')
+  })
+
+  test('the account sheet starts after the rail, and fits', async ({ page }) => {
+    await page.goto(BOARD_URL)
+    await page.waitForSelector('[data-testid="status-bar"]')
+    await page.getByTestId('sign-in').click()
+    await docked(page, 'account-surface')
+  })
+
+  test('the reaction bar stays on the screen', async ({ page }) => {
+    await seedBoard(
+      page,
+      buildBoard((board) => {
+        board.note('Near the right edge', { x: 300, y: 420 })
+      }),
+    )
+    await page.locator(CANVAS).click({ position: { x: 300, y: 420 } })
+    const bar = await docked(page, 'reaction-bar')
+    const panel = await boxOf(page.getByTestId('inspector'))
+    expect(meets(bar, panel)).toBe(false)
+  })
+
+  test('a selection with no record panel is not moved', async ({ page }) => {
+    await seedBoard(
+      page,
+      buildBoard((board) => {
+        const group = board.add('group', { x: 0, y: 0 })
+        board.add('sticky', { x: 220, y: 700 }, { text: richFromPlain('Low') }, undefined, group)
+        board.add('sticky', { x: 300, y: 700 }, { text: richFromPlain('Down') }, undefined, group)
+      }),
+    )
+    const before = await boxOf(page.locator('[data-object-type="sticky"]').first())
+    await page.locator(CANVAS).click({ position: { x: 220, y: 700 } })
+    await expect(page.getByTestId('selection-overlay')).toBeVisible()
+    await expect(page.getByTestId('inspector')).toHaveCount(0)
+    const after = await boxOf(page.locator('[data-object-type="sticky"]').first())
+    expect(after.y).toBe(before.y)
+  })
+
+  test("the record panel leaves the poll's Close in reach", async ({ page }) => {
+    await seedBoard(
+      page,
+      buildBoard((board) => {
+        board.add('poll', { x: 220, y: 560 }, { text: [{ text: 'Cats or dogs?' }] })
+      }),
+    )
+    await page.locator('[data-object-type="poll"]').getByTestId('poll-question').click()
+    await expect(page.getByTestId('inspector')).toBeVisible()
+    const close = page.getByTestId('poll-close')
+    const box = await boxOf(close)
+    const hit = await page.evaluate(
+      ({ x, y }) => document.elementFromPoint(x, y)?.closest('[data-testid="poll-close"]') !== null,
+      { x: box.x + box.width / 2, y: box.y + box.height / 2 },
+    )
+    expect(hit).toBe(true)
+  })
 })

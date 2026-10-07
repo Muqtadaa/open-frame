@@ -58,3 +58,19 @@
   font-weight: var(--of-weight-semibold);
   white-space: nowrap;
 }
+
+/*
+ * On a phone the date and both ways out did not fit one line, and the bar ran
+ * off the right edge with "Back to now" on it. It wraps instead: the date on
+ * a line of its own, the two buttons under it.
+ */
+@media (width < 520px) {
+  .of-history-bar {
+    flex-wrap: wrap;
+  }
+
+  .of-history-bar__title {
+    flex-basis: 100%;
+    white-space: normal;
+  }
+}

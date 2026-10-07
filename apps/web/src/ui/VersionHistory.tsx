@@ -40,7 +40,13 @@ export function VersionHistorySheet({
       prefer={['below', 'above']}
       testId="history-surface"
     >
-      <div ref={sheet} role="dialog" aria-label="Version history" tabIndex={-1}>
+      <div
+        ref={sheet}
+        className="of-sheet"
+        role="dialog"
+        aria-label="Version history"
+        tabIndex={-1}
+      >
         <VersionList ready={anchor !== null} onChosen={onClose} />
       </div>
     </AnchoredSurface>

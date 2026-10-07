@@ -1,4 +1,4 @@
-import type { Page } from '@playwright/test'
+import type { Locator, Page } from '@playwright/test'
 
 import { CANVAS, expect, openBoard, test, boxOf } from './fixtures.js'
 import { signedIn } from './signed-in.js'
@@ -75,6 +75,39 @@ test.describe('the board menu', () => {
     await page.getByRole('menuitem', { name: 'Version history…' }).click()
     await expect(page.getByRole('dialog', { name: 'Version history' })).toBeVisible()
   })
+
+  /*
+   * On paper, in both worlds. The menu and the history sheet it opens were
+   * drawn straight onto the board, text over the grid and the notes beneath
+   * (owner, 10-07): neither carried the surface every other menu and sheet
+   * does.
+   */
+  for (const world of ['notebook', 'after-hours'] as const) {
+    test(`sits on paper, and so does the history it opens (${world})`, async ({ page }) => {
+      await page.addInitScript((theme) => {
+        if (theme === 'after-hours') localStorage.setItem('openframe:theme', theme)
+      }, world)
+      await openBoard(page)
+      const papered = (locator: Locator) =>
+        locator.evaluate((element) => {
+          const style = getComputedStyle(element)
+          return {
+            ground: style.backgroundColor,
+            shadow: style.boxShadow,
+          }
+        })
+
+      await page.getByTestId('board-menu').click()
+      const menu = await papered(page.getByRole('menu', { name: 'Board' }))
+      expect(menu.ground).not.toBe('rgba(0, 0, 0, 0)')
+      expect(menu.shadow).not.toBe('none')
+
+      await page.getByRole('menuitem', { name: 'Version history…' }).click()
+      const sheet = await papered(page.getByRole('dialog', { name: 'Version history' }))
+      expect(sheet.ground).not.toBe('rgba(0, 0, 0, 0)')
+      expect(sheet.shadow).not.toBe('none')
+    })
+  }
 
   test('is walked by the keyboard and hands it back', async ({ page }) => {
     await openBoard(page)

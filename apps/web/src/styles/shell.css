@@ -84,6 +84,22 @@
   max-width: min(720px, calc(100vw - 140px));
 }
 
+/*
+ * DOCKED TO THE EDGES on a phone. Centred, the voting banner and the cluster
+ * panel were wider than the room beside the rail, so they lay over it and
+ * over the notes at the top of the board, which then took no vote. Here they
+ * run from the rail's edge to the gutter, and their rows wrap.
+ */
+@media (width < 520px) {
+  .of-overlay--top {
+    left: var(--of-rail-reach);
+    right: var(--of-gutter);
+    max-width: none;
+    align-items: stretch;
+    transform: none;
+  }
+}
+
 .of-overlay--bottom-right {
   right: var(--of-gutter);
   bottom: var(--of-gutter);

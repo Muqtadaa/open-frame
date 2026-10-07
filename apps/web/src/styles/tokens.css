@@ -191,6 +191,17 @@
    * than a tool, and a step of air.
    */
   --of-nav-band: calc(var(--of-gutter) + var(--of-hit-lg) + var(--of-step));
+  /*
+   * How far in from the left the tool rail reaches, and a step of air: the
+   * gutter, its padding and border, its largest tool and the options strip.
+   * Where a phone docks surfaces to the edges, they start here rather than
+   * on top of the rail. The largest tool, so a shorter window's slimmer rail
+   * only leaves a little more air.
+   */
+  --of-rail-reach: calc(
+    var(--of-gutter) + var(--of-space-6) + var(--of-hit-lg) + var(--of-hit-min) + 2px +
+      var(--of-step)
+  );
 
   /*
    * THE SPACING SCALE, below the rule. The quadrille sets the big rhythm —
