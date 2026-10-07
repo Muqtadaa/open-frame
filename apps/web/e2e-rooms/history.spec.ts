@@ -254,7 +254,9 @@ test('an editor names a version and deletes it; a viewer only sees it', async ({
   expect(await ask(viewer, room, keys.viewer, { method: 'POST', body: { name: 'Mine' } })).toBe(403)
   expect(await ask(editor, room, keys.editor, { method: 'POST', body: { name: ' ' } })).toBe(400)
 
+  // The first press asks; the second deletes.
   await editor.getByRole('button', { name: 'Delete Before the workshop' }).click()
+  await editor.getByRole('button', { name: 'Delete Before the workshop for good' }).click()
   await expect(
     editor.getByTestId('history-version').filter({ hasText: 'Before the workshop' }),
   ).toHaveCount(0)
