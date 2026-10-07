@@ -1,4 +1,4 @@
-import { useEffect, useSyncExternalStore } from 'react'
+import { useEffect, useRef, useSyncExternalStore } from 'react'
 
 import { useBoardDocument } from '../hooks/use-document-object.js'
 import { useInteractionStore } from '../interaction/interaction-store.js'
@@ -7,15 +7,14 @@ import type { SaveState } from '../runtime/context.js'
 import { BENCH_TOOLS_ENABLED } from '../app/bench-flag.js'
 import { AccountControl } from './AccountControl.js'
 import { BoardExit } from './BoardExit.js'
+import { BoardMenu } from './BoardMenu.js'
 import { BoardTitle } from './BoardTitle.js'
 import { AgentChanges } from './AgentChanges.js'
-import { VersionHistory } from './VersionHistory.js'
 import { Mentions } from './Mentions.js'
 import { DevPanel } from './DevPanel.js'
 import { SessionMusic } from './SessionMusic.js'
 import { SessionTimer } from './SessionTimer.js'
 import { ShareControl } from './ShareControl.js'
-import { ThemeToggle } from './ThemeToggle.js'
 
 /**
  * What the bar says about the copy on this device, and what its tip adds.
@@ -52,6 +51,7 @@ export function StatusBar() {
   const { runtime } = useOpenFrame()
   const save = useSyncExternalStore(runtime.saveStatus.subscribe, runtime.saveStatus.get)
   const title = document.meta.title
+  const rename = useRef<(() => void) | null>(null)
 
   /*
    * The TAB carries the board's name too. Several boards open in one window,
@@ -78,8 +78,18 @@ export function StatusBar() {
       <span className="of-status__rule" aria-hidden="true" />
       {/* The board names itself before it accounts for itself. */}
       <h1 className="of-status__heading">
-        <BoardTitle title={title} />
+        <BoardTitle title={title} renameRef={rename} />
       </h1>
+      {/* Outside the heading, so the page is not named "Untitled board Board". */}
+      <BoardMenu
+        onRename={
+          runtime.readOnly
+            ? null
+            : () => {
+                rename.current?.()
+              }
+        }
+      />
       <span className="of-status__rule" aria-hidden="true" />
 
       {/*
@@ -121,11 +131,6 @@ export function StatusBar() {
 
       <span className="of-status__rule" aria-hidden="true" />
 
-      {/*
-       * Who else is here, and the way to invite them. Next to the source offer
-       * because it is the same kind of thing: not a record of the page, but
-       * something about the page you are reading.
-       */}
       {/* The session's clock, beside the session's people. */}
       <SessionTimer />
       <SessionMusic />
@@ -135,17 +140,9 @@ export function StatusBar() {
        * dashboard alone, which is the one screen you are not on while you
        * work — so a mention waited until you happened to go home.
        */}
-      <VersionHistory />
       <AgentChanges />
       <Mentions />
       <AccountControl />
-
-      {/*
-       * App-level apparatus sits at this end of the line, after the rule — the
-       * source offer established that, and a theme is the same kind of thing:
-       * not a record of the page, but something about the page you are reading.
-       */}
-      <ThemeToggle />
 
       {/*
        * Statically guarded, not runtime-guarded: the flag is replaced at build

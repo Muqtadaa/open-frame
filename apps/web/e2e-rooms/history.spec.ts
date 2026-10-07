@@ -171,7 +171,8 @@ test('an editor restores a version for everyone, and a viewer can only look', as
   await expect(viewer.getByTestId('canvas')).toContainText('Written since')
 
   // The viewer looks back, and is offered no restore.
-  await viewer.getByTestId('history-button').click()
+  await viewer.getByTestId('board-menu').click()
+  await viewer.getByTestId('board-menu-history').click()
   await viewer.getByTestId('history-version').last().click()
   await expect(viewer.getByTestId('version-preview')).toBeVisible()
   await expect(viewer.getByTestId('version-restore')).toHaveCount(0)
@@ -179,7 +180,8 @@ test('an editor restores a version for everyone, and a viewer can only look', as
   await viewer.getByTestId('version-back').click()
 
   // The oldest version is the one with only the first note on it.
-  await editor.getByTestId('history-button').click()
+  await editor.getByTestId('board-menu').click()
+  await editor.getByTestId('board-menu-history').click()
   await editor.getByTestId('history-version').last().click()
   await editor.getByTestId('version-restore').click()
   await expect(editor.getByTestId('version-preview')).toHaveCount(0)
@@ -227,14 +229,16 @@ test('an editor names a version and deletes it; a viewer only sees it', async ({
   const viewer = await open(browser, room, keys.viewer)
   await addNote(editor, 'Kickoff notes')
 
-  await editor.getByTestId('history-button').click()
+  await editor.getByTestId('board-menu').click()
+  await editor.getByTestId('board-menu-history').click()
   await editor.getByRole('textbox', { name: 'Version name' }).fill('Before the workshop')
   await editor.getByTestId('history-name-save').click()
   await expect(
     editor.getByTestId('history-version').filter({ hasText: 'Before the workshop' }),
   ).toHaveCount(1)
 
-  await viewer.getByTestId('history-button').click()
+  await viewer.getByTestId('board-menu').click()
+  await viewer.getByTestId('board-menu-history').click()
   await expect(
     viewer.getByTestId('history-version').filter({ hasText: 'Before the workshop' }),
   ).toHaveCount(1)

@@ -58,9 +58,25 @@
   margin-bottom: var(--of-space-12);
 }
 
-.of-sheet__history {
-  display: none;
-  margin-top: var(--of-space-12);
+/*
+ * The page's theme, at the foot of the account sheet: chosen once and kept,
+ * so it belongs with the person rather than on the board's bar.
+ */
+.of-theme-choice {
+  display: flex;
+  gap: var(--of-space-12);
+  align-items: center;
+  justify-content: space-between;
+  margin-top: var(--of-space-16);
+  padding-top: var(--of-space-12);
+  border-top: 1px solid var(--of-panel-border);
+}
+
+.of-theme-choice__label {
+  font-family: var(--of-mono);
+  font-size: var(--of-type-record);
+  letter-spacing: 0.02em;
+  color: var(--of-ink-muted);
 }
 
 /* What a field is for, kept beside it once somebody has started typing. */
@@ -214,21 +230,6 @@
 
   .of-status__rule {
     display: none;
-  }
-}
-
-/*
- * Version history moves into the account sheet
- * below 820: with its button, a shared board's bar ran out of room at 560
- * and at 390.
- */
-@media (width < 600px) {
-  .of-status__versions {
-    display: none;
-  }
-
-  .of-sheet__history {
-    display: block;
   }
 }
 

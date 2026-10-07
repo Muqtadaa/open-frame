@@ -224,14 +224,7 @@ test('a finger gets 40px targets on the board', async ({ page }) => {
   await page.locator('[data-testid="canvas"]').tap({ position: { x: 200, y: 220 } })
   await page.keyboard.press('Escape')
   await expect(page.getByTestId('inspector')).toBeVisible()
-  for (const id of [
-    'zoom-in',
-    'zoom-out',
-    'zoom-fit',
-    'undo',
-    'theme-toggle',
-    'inspector-delete',
-  ]) {
+  for (const id of ['zoom-in', 'zoom-out', 'zoom-fit', 'undo', 'board-menu', 'inspector-delete']) {
     const box = await page.getByTestId(id).boundingBox()
     expect(box?.width, id).toBeGreaterThanOrEqual(40)
     expect(box?.height, id).toBeGreaterThanOrEqual(40)
@@ -251,19 +244,16 @@ test('the workspace tabs are a target, not a label', async ({ page }) => {
 })
 
 /*
- * Version history has no room on a phone's bar, so it is offered from the
- * account sheet, as the source link is.
+ * Version history is in the menu beside the board's name at every width. It
+ * used to have a button of its own that a phone's bar had no room for, so
+ * there it moved into the account sheet — two places to look for one thing.
  */
-test('version history is in the account sheet when the bar has no room for it', async ({
-  page,
-}) => {
-  await signedIn(page, [])
+test('version history is in the board’s menu at phone width too', async ({ page }) => {
   await page.goto(BOARD_URL)
   await page.waitForSelector('[data-testid="status-bar"]')
-  await expect(page.getByTestId('history-button')).toBeHidden()
-  await page.getByTestId('account').click()
-  await page.getByTestId('sheet-history').click()
-  await expect(page.getByTestId('account-sheet').getByRole('status')).toHaveText(
+  await page.getByTestId('board-menu').click()
+  await page.getByTestId('board-menu-history').click()
+  await expect(page.getByTestId('history-surface').getByRole('status')).toHaveText(
     'No earlier versions yet.',
   )
 })

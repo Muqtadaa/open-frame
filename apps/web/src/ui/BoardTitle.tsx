@@ -1,4 +1,4 @@
-import { useEffect, useLayoutEffect, useRef, useState } from 'react'
+import { useEffect, useLayoutEffect, useRef, useState, type RefObject } from 'react'
 
 import { useCommands } from '../hooks/use-commands.js'
 import { useOpenFrame } from '../runtime/context.js'
@@ -18,7 +18,14 @@ import { useOpenFrame } from '../runtime/context.js'
  * Click to edit, the same interaction the zoom percentage already has, so the
  * bar has one way of turning a readout into an input rather than two.
  */
-export function BoardTitle({ title }: { readonly title: string }) {
+export function BoardTitle({
+  title,
+  renameRef,
+}: {
+  readonly title: string
+  /** Filled with this name's own way into renaming, for the board's menu to call. */
+  readonly renameRef?: RefObject<(() => void) | null>
+}) {
   const commands = useCommands()
   const { runtime } = useOpenFrame()
   const [editing, setEditing] = useState(false)
@@ -65,6 +72,10 @@ export function BoardTitle({ title }: { readonly title: string }) {
     setDraft(title)
     setEditing(true)
   }
+  useEffect(() => {
+    if (renameRef === undefined) return
+    renameRef.current = runtime.readOnly ? null : open
+  })
 
   const commit = (): void => {
     setEditing(false)

@@ -381,6 +381,15 @@ export function DisclosureIcon({ className }: IconProps) {
   )
 }
 
+/** A menu that opens downward, beside the thing it is about. */
+export function ExpandIcon({ className }: IconProps) {
+  return (
+    <svg {...base} className={className}>
+      <path d="M8 10l4 4 4-4" />
+    </svg>
+  )
+}
+
 /** One step along a sequence: the previous thing, or the next. */
 export function StepIcon({ className, direction }: IconProps & { direction: 'back' | 'on' }) {
   return (

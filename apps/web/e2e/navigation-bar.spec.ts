@@ -55,6 +55,74 @@ test('keeps undo and redo with zoom, not on the bar', async ({ page }) => {
   await expect(cluster.getByRole('group', { name: 'History' })).toBeVisible()
 })
 
+/*
+ * What is done to the board as a whole sits in one menu beside its name:
+ * Rename, and its history, which had a clock face of its own among the
+ * session's tools. The theme went to the account sheet: it is chosen once
+ * and kept, and on the bar it was an unlabelled moon.
+ */
+test.describe('the board menu', () => {
+  test('renames, and opens the history', async ({ page }) => {
+    await openBoard(page)
+    await page.getByTestId('board-menu').click()
+    await page.getByRole('menuitem', { name: 'Rename' }).click()
+    await expect(page.getByTestId('board-title-input')).toBeFocused()
+    await page.keyboard.press('Escape')
+
+    await page.getByTestId('board-menu').click()
+    await page.getByRole('menuitem', { name: 'Version history…' }).click()
+    await expect(page.getByRole('dialog', { name: 'Version history' })).toBeVisible()
+  })
+
+  test('is walked by the keyboard and hands it back', async ({ page }) => {
+    await openBoard(page)
+    await page.getByTestId('board-menu').focus()
+    await page.keyboard.press('Enter')
+    await expect(page.getByRole('menuitem', { name: 'Rename' })).toBeFocused()
+    await page.keyboard.press('ArrowDown')
+    await expect(page.getByRole('menuitem', { name: 'Version history…' })).toBeFocused()
+    await page.keyboard.press('ArrowDown')
+    await expect(page.getByRole('menuitem', { name: 'Rename' })).toBeFocused()
+    await page.keyboard.press('Escape')
+    await expect(page.getByRole('menu')).toHaveCount(0)
+    await expect(page.getByTestId('board-menu')).toBeFocused()
+  })
+
+  test('leaves the page named by the board alone', async ({ page }) => {
+    await openBoard(page)
+    await expect(page.getByRole('heading', { level: 1 })).toHaveAccessibleName('Untitled board')
+  })
+
+  test('takes the history and the theme off the bar', async ({ page }) => {
+    await openBoard(page)
+    const bar = page.getByTestId('status-bar')
+    await expect(bar.getByRole('button', { name: 'Version history' })).toHaveCount(0)
+    await expect(bar.getByRole('button', { name: 'After Hours theme' })).toHaveCount(0)
+    // Signed out, the theme is in the sign-in sheet.
+    await page.getByTestId('sign-in').click()
+    await page.getByTestId('theme-after-hours').click()
+    await expect(page.locator('html')).toHaveAttribute('data-theme', 'after-hours')
+    await expect(
+      page.getByRole('radiogroup', { name: 'Theme' }).getByRole('radio', { checked: true }),
+    ).toHaveText('After Hours')
+  })
+
+  test('the theme is in the account sheet when signed in', async ({ page }) => {
+    await signedIn(page, [])
+    await openBoard(page)
+    await page.getByTestId('account').click()
+    const sheet = page.getByTestId('account-sheet')
+    // The sheet takes the keyboard on arrival; the theme is one Tab on.
+    await expect(sheet.getByRole('button', { name: 'Sign out' })).toBeFocused()
+    await page.keyboard.press('Tab')
+    await expect(sheet.getByTestId('theme-notebook')).toBeFocused()
+    await page.keyboard.press('ArrowRight')
+    await expect(sheet.getByTestId('theme-after-hours')).toBeFocused()
+    await expect(sheet.getByTestId('theme-after-hours')).toHaveAttribute('aria-checked', 'true')
+    await expect(page.locator('html')).toHaveAttribute('data-theme', 'after-hours')
+  })
+})
+
 test('keeps an object’s panel clear of it, however high the object sits', async ({ page }) => {
   await openBoard(page)
   await page.keyboard.press('s')
@@ -169,8 +237,8 @@ test.describe('the keyboard on the bar', () => {
 
   test('gives every control a target a pointer can find', async ({ page }) => {
     await openBoard(page)
-    const theme = await page.getByTestId('theme-toggle').boundingBox()
-    expect(theme?.width ?? 0).toBeGreaterThanOrEqual(30)
+    const menu = await page.getByTestId('board-menu').boundingBox()
+    expect(menu?.width ?? 0).toBeGreaterThanOrEqual(30)
   })
 })
 

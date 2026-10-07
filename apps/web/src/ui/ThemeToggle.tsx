@@ -6,9 +6,10 @@ import { AfterHoursIcon } from '../controls/icons.js'
 /**
  * Which world the page is drawn in, as one pressed-or-not control.
  *
- * Shared by the board's bar and the front door. It lived on the board alone,
- * so the front door — the first thing anybody sees — was always the Notebook,
- * and somebody who works at night met a white page every time they went home.
+ * On the front door, where it is the head's one setting. It lived on the
+ * board alone once, so the front door — the first thing anybody sees — was
+ * always the Notebook. On a board the theme is in the account sheet
+ * (`WorldSwitch`), with the person rather than on the board's bar.
  */
 export function ThemeToggle({ className = 'of-icon-button' }: { readonly className?: string }) {
   const [theme, setTheme] = useState<Theme>(readTheme)
