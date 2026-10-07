@@ -11,6 +11,7 @@ import {
   zoomAtCentre,
 } from '../scene/zoom.js'
 import { useCommands } from '../hooks/use-commands.js'
+import { useMe } from '../hooks/use-me.js'
 import { expectPaste, keyCopied } from './clipboard-keys.js'
 import { useInteractionStore } from './interaction-store.js'
 import { resolveKeyAction } from './keymap.js'
@@ -71,6 +72,7 @@ function isOperable(target: EventTarget | null): boolean {
  */
 export function useKeyboardShortcuts(setSpaceHeld: (held: boolean) => void): void {
   const commands = useCommands()
+  const me = useMe()
   const { runtime, views } = useOpenFrame()
 
   /*
@@ -185,6 +187,19 @@ export function useKeyboardShortcuts(setSpaceHeld: (held: boolean) => void): voi
 
       const action = resolveKeyAction(event, views.tools())
       if (action === null) return
+
+      /*
+       * WITH THE VOTE TOOL UP, Enter votes on the selection and Backspace or
+       * Delete takes a dot back. A dot could only be placed with a pointer, or
+       * through two levels of context menu; and Backspace, the obvious key for
+       * taking one back, deleted the note being voted on.
+       */
+      if (store.tool === 'dot' && (action.kind === 'edit-selection' || action.kind === 'delete')) {
+        event.preventDefault()
+        if (me !== null && store.selection.size > 0)
+          commands.vote([...store.selection], me, action.kind === 'delete')
+        return
+      }
 
       /*
        * Left to the browser, which follows with its own clipboard event — the
@@ -505,5 +520,5 @@ export function useKeyboardShortcuts(setSpaceHeld: (held: boolean) => void): voi
       window.removeEventListener('keydown', onKeyDown)
       window.removeEventListener('keyup', onKeyUp)
     }
-  }, [commands, runtime.registry, runtime.store, setSpaceHeld, views])
+  }, [commands, me, runtime.registry, runtime.store, setSpaceHeld, views])
 }

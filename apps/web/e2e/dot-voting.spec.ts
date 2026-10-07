@@ -223,6 +223,29 @@ test('keeps the keyboard through setup, start, end, reopen and clear', async ({ 
   await expect(page.locator(CANVAS)).toBeFocused()
 })
 
+test('with the vote tool up, Enter votes on the selected note and Backspace takes a dot back', async ({
+  page,
+}) => {
+  await twoNotes(page)
+  await page.locator(CANVAS).click({ button: 'right', position: { x: 800, y: 600 } })
+  await page.getByRole('menuitem', { name: 'Start dot voting…' }).click()
+  await page.getByTestId('voting-start').click()
+  await expect(page.getByTestId('voting-vote')).toHaveAttribute('aria-pressed', 'true')
+
+  // Tab walks the board's notes from the keyboard; the first is selected.
+  await page.locator(CANVAS).focus()
+  await page.keyboard.press('Tab')
+  await page.keyboard.press('Enter')
+  await page.keyboard.press('Enter')
+  await expect(dots(page, 0)).toContainText('2')
+  await expect(page.locator(EDITOR)).toHaveCount(0)
+
+  // Backspace while voting is about dots, never about the note.
+  await page.keyboard.press('Backspace')
+  await expect(dots(page, 0)).toContainText('1')
+  await expect(page.locator('[data-object-type="sticky"]')).toHaveCount(2)
+})
+
 /*
  * What a room full of people actually does with the vote tool, none of which
  * the tests above did: double-click, right-click, vote on notes that sit in a
