@@ -371,6 +371,8 @@ export function ShareControl() {
               style={{ background: hueVar(person.hue) }}
               data-tip={tip}
               aria-label={label}
+              // Said only when it says more than the name: "Stop following Ash".
+              aria-description={tip === label ? undefined : tip}
               aria-pressed={isFollowed}
               data-testid={`follow-${person.key}`}
               onClick={() => {
