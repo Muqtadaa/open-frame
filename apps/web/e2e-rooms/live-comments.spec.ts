@@ -38,8 +38,8 @@ async function join(
   )
   await page.goto(`/?room=${room}`)
   await page.waitForSelector('[data-testid="status-bar"]')
-  await expect(page.locator('[data-testid="room-status"]')).toHaveAttribute(
-    'data-status',
+  await expect(page.locator('[data-testid="save-state"]')).toHaveAttribute(
+    'data-room',
     'connected',
     { timeout: 20_000 },
   )

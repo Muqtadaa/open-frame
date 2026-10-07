@@ -12,7 +12,7 @@ const SKEW_MS = 90_000
 
 /** Seconds left on a pill reading `m:ss`. */
 async function secondsLeft(page: Page): Promise<number> {
-  const text = (await page.getByTestId('timer-button').textContent()) ?? ''
+  const text = (await page.getByTestId('session-button').textContent()) ?? ''
   const match = /(\d+):(\d\d)/.exec(text)
   expect(match, `the pill reads a time, not “${text}”`).not.toBeNull()
   return Number(match?.[1]) * 60 + Number(match?.[2])
@@ -27,7 +27,7 @@ async function joinSkewed(browser: Browser, room: string): Promise<Page> {
   }, SKEW_MS)
   const page = await context.newPage()
   await page.goto(`/?room=${room}`)
-  await expect(page.getByTestId('room-status')).toHaveAttribute('data-status', 'connected', {
+  await expect(page.getByTestId('save-state')).toHaveAttribute('data-room', 'connected', {
     timeout: 20_000,
   })
   return page
@@ -41,10 +41,10 @@ test('two devices whose clocks disagree show the same time left', async ({ brows
   const apart = (await bob.evaluate(() => Date.now())) - (await alice.evaluate(() => Date.now()))
   expect(apart).toBeGreaterThan(SKEW_MS - 5000)
 
-  await alice.getByTestId('timer-button').click()
+  await alice.getByTestId('session-button').click()
   await alice.getByRole('button', { name: '5 minutes', exact: true }).click()
   await alice.getByTestId('timer-start').click()
-  await expect(bob.getByTestId('timer-button')).toHaveAttribute('data-state', 'running')
+  await expect(bob.getByTestId('session-button')).toHaveAttribute('data-timer', 'running')
 
   const [mine, theirs] = await Promise.all([secondsLeft(alice), secondsLeft(bob)])
   expect(Math.abs(mine - theirs)).toBeLessThanOrEqual(1)
@@ -63,7 +63,7 @@ test('a viewer sees the timer and cannot run it', async ({ browser }) => {
   const open = async (key: string): Promise<Page> => {
     const page = await (await browser.newContext()).newPage()
     await page.goto(`/?room=${room}&k=${key}`)
-    await expect(page.getByTestId('room-status')).toHaveAttribute('data-status', 'connected', {
+    await expect(page.getByTestId('save-state')).toHaveAttribute('data-room', 'connected', {
       timeout: 20_000,
     })
     return page
@@ -72,13 +72,13 @@ test('a viewer sees the timer and cannot run it', async ({ browser }) => {
   const viewer = await open(keys.viewer)
 
   // Nothing to watch yet, so nothing on the viewer's bar.
-  await expect(viewer.getByTestId('timer-button')).toHaveCount(0)
+  await expect(viewer.getByTestId('session-button')).toHaveCount(0)
 
-  await editor.getByTestId('timer-button').click()
+  await editor.getByTestId('session-button').click()
   await editor.getByTestId('timer-start').click()
-  await expect(viewer.getByTestId('timer-button')).toHaveAttribute('data-state', 'running')
+  await expect(viewer.getByTestId('session-button')).toHaveAttribute('data-timer', 'running')
 
-  await viewer.getByTestId('timer-button').click()
+  await viewer.getByTestId('session-button').click()
   await expect(viewer.getByTestId('timer-readout')).toBeVisible()
   await expect(viewer.getByTestId('timer-pause')).toHaveCount(0)
   await expect(viewer.getByTestId('timer-reset')).toHaveCount(0)

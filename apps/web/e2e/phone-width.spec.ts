@@ -107,9 +107,7 @@ test('a confirmation reads as a sentence, inside the screen', async ({ page }) =
   expect(await overflow(page)).toBeLessThanOrEqual(0)
 })
 
-test("the board's bar fits, with the account as a face and the source in its sheet", async ({
-  page,
-}) => {
+test("the board's bar fits, with the account as a face", async ({ page }) => {
   await signedIn(page, [])
   await page.goto(BOARD_URL)
   await page.waitForSelector('[data-testid="status-bar"]')
@@ -121,21 +119,14 @@ test("the board's bar fits, with the account as a face and the source in its she
   const chip = await boxOf(account)
   expect(chip.x + chip.width).toBeLessThanOrEqual(390)
   await expect(account.getByTestId('status-label')).toBeHidden()
-
-  // Reachable from inside the running app (AGPL §13), from the account.
-  await expect(page.getByTestId('source-link')).toBeHidden()
-  await account.click()
-  await expect(
-    page.getByTestId('account-sheet').getByRole('link', { name: 'Source' }),
-  ).toBeVisible()
 })
 
 /*
  * Signed out, the label IS the button (audit 2026-09-27). The rule that
  * shrinks the account to its face hid it here too, leaving a 16px invisible
- * button — and the source link, whose other home is that button's sheet.
+ * button.
  */
-test('signed out, the bar still says Sign in, and the source is behind it', async ({ page }) => {
+test('signed out, the bar still says Sign in', async ({ page }) => {
   await page.goto(BOARD_URL)
   await page.waitForSelector('[data-testid="status-bar"]')
   const signIn = page.getByTestId('sign-in')
@@ -144,11 +135,6 @@ test('signed out, the bar still says Sign in, and the source is behind it', asyn
   const box = await boxOf(signIn)
   expect(box.width).toBeGreaterThanOrEqual(30)
   expect(box.x + box.width).toBeLessThanOrEqual(390)
-
-  await signIn.click()
-  await expect(
-    page.getByTestId('account-dialog').getByRole('link', { name: 'Source' }),
-  ).toBeVisible()
 })
 
 test('the page can be zoomed', async ({ page }) => {
@@ -181,6 +167,21 @@ test.describe('a narrow window with a mouse', () => {
     await page.goto(HOME_URL)
     await page.waitForSelector('[data-testid="home-boards"] li')
     expect(await overflow(page)).toBeLessThanOrEqual(0)
+  })
+
+  /*
+   * Undo and redo joined the zoom cluster, and at this width it then ran to
+   * the window's edge: the gutter every other floating thing keeps was gone.
+   */
+  test('the zoom cluster keeps its gutter', async ({ page }) => {
+    await page.goto(BOARD_URL)
+    const cluster = page.getByTestId('zoom-control')
+    await expect(cluster.getByTestId('undo')).toBeVisible()
+    const box = await cluster.boundingBox()
+    expect(box?.x).toBeGreaterThanOrEqual(20)
+    expect((box?.x ?? 0) + (box?.width ?? 0)).toBeLessThanOrEqual(370)
+    // Named still, with its caption gone.
+    await expect(page.getByTestId('wheel-mode')).toHaveAccessibleName(/Scroll wheel/)
   })
 })
 
@@ -223,14 +224,7 @@ test('a finger gets 40px targets on the board', async ({ page }) => {
   await page.locator('[data-testid="canvas"]').tap({ position: { x: 200, y: 220 } })
   await page.keyboard.press('Escape')
   await expect(page.getByTestId('inspector')).toBeVisible()
-  for (const id of [
-    'zoom-in',
-    'zoom-out',
-    'zoom-fit',
-    'undo',
-    'theme-toggle',
-    'inspector-delete',
-  ]) {
+  for (const id of ['zoom-in', 'zoom-out', 'zoom-fit', 'undo', 'board-menu', 'inspector-delete']) {
     const box = await page.getByTestId(id).boundingBox()
     expect(box?.width, id).toBeGreaterThanOrEqual(40)
     expect(box?.height, id).toBeGreaterThanOrEqual(40)
@@ -250,19 +244,16 @@ test('the workspace tabs are a target, not a label', async ({ page }) => {
 })
 
 /*
- * Version history has no room on a phone's bar, so it is offered from the
- * account sheet, as the source link is.
+ * Version history is in the menu beside the board's name at every width. It
+ * used to have a button of its own that a phone's bar had no room for, so
+ * there it moved into the account sheet — two places to look for one thing.
  */
-test('version history is in the account sheet when the bar has no room for it', async ({
-  page,
-}) => {
-  await signedIn(page, [])
+test('version history is in the board’s menu at phone width too', async ({ page }) => {
   await page.goto(BOARD_URL)
   await page.waitForSelector('[data-testid="status-bar"]')
-  await expect(page.getByTestId('history-button')).toBeHidden()
-  await page.getByTestId('account').click()
-  await page.getByTestId('sheet-history').click()
-  await expect(page.getByTestId('account-sheet').getByRole('status')).toHaveText(
+  await page.getByTestId('board-menu').click()
+  await page.getByTestId('board-menu-history').click()
+  await expect(page.getByTestId('history-surface').getByRole('status')).toHaveText(
     'No earlier versions yet.',
   )
 })

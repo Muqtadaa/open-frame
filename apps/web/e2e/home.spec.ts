@@ -137,7 +137,9 @@ test.describe('the world, from the front door', () => {
 
     await page.goto(BOARD_URL)
     await expect(page.locator('html')).toHaveAttribute('data-theme', 'after-hours')
-    await expect(page.getByTestId('theme-toggle')).toHaveAttribute('aria-pressed', 'true')
+    // And the board's own switch, in the sign-in sheet, says so.
+    await page.getByTestId('sign-in').click()
+    await expect(page.getByTestId('theme-after-hours')).toHaveAttribute('aria-checked', 'true')
   })
 
   test('sits at the end of the head, clear of the account, at phone width too', async ({

@@ -118,16 +118,19 @@ test('the panel lists it after the toast has gone, and reverts from there', asyn
     await threeNotes(agent, page)
     await page.getByTestId('toast').getByRole('button', { name: 'Dismiss' }).click()
 
-    const button = page.getByTestId('agent-changes-button')
-    await expect(button).toHaveText('1 agent change')
+    const button = page.getByTestId('inbox')
+    await expect(button).toHaveAccessibleName('Inbox, 1 new')
     await button.click()
+    await expect(
+      page.getByRole('dialog', { name: 'Inbox' }).getByRole('heading', { name: 'Agent changes' }),
+    ).toBeVisible()
     const revert = page.getByTestId('agent-change-revert')
     await expect(revert).toBeFocused()
     await revert.click()
 
     await expect.poll(() => idsIn(page), { timeout: 20_000 }).toEqual([])
     await expect(page.getByTestId('agent-changes-list')).toContainText('Taken back')
-    await expect(button).toHaveText('Agent changes')
+    await expect(button).toHaveAccessibleName('Inbox, nothing new')
 
     await page.keyboard.press('Escape')
     await expect(button).toBeFocused()
@@ -179,8 +182,8 @@ test('undo after Revert puts the agent’s change back', async ({ browser }) => 
      * change was on the board (Codex, on #16): Revert was hidden, and the
      * agent refused it as already reverted.
      */
-    const button = page.getByTestId('agent-changes-button')
-    await expect(button).toHaveText('1 agent change')
+    const button = page.getByTestId('inbox')
+    await expect(button).toHaveAccessibleName('Inbox, 1 new')
     await button.click()
     await expect(page.getByTestId('agent-change-revert')).toBeVisible()
     await expect
@@ -192,7 +195,7 @@ test('undo after Revert puts the agent’s change back', async ({ browser }) => 
     await page.getByTestId('canvas').focus()
     await page.keyboard.press('ControlOrMeta+Shift+z')
     await expect.poll(() => idsIn(page), { timeout: 20_000 }).toEqual([])
-    await expect(button).toHaveText('Agent changes')
+    await expect(button).toHaveAccessibleName('Inbox, nothing new')
   } finally {
     await agent.context.close()
   }
@@ -208,7 +211,7 @@ test('the agent reverts its own change, and the browser sees it go', async ({ br
     await agent.call('revert_change', { change: id })
 
     await expect.poll(() => idsIn(page), { timeout: 20_000 }).toEqual([])
-    await page.getByTestId('agent-changes-button').click()
+    await page.getByTestId('inbox').click()
     await expect(page.getByTestId(`agent-change-${String(id)}`)).toContainText('Taken back by Ada')
   } finally {
     await agent.context.close()
@@ -232,7 +235,7 @@ test('somebody opening the board later is not told about old changes as news', a
 
     const later = await join(browser, room)
     await expect.poll(() => idsIn(later), { timeout: 20_000 }).toHaveLength(3)
-    await expect(later.getByTestId('agent-changes-button')).toHaveText('1 agent change')
+    await expect(later.getByTestId('inbox')).toHaveAccessibleName('Inbox, 1 new')
     await expect(later.getByTestId('toast')).toHaveCount(0)
   } finally {
     await agent.context.close()
@@ -276,6 +279,48 @@ test('an agent groups two notes, and one Revert frees them', async ({ browser })
     await toast.getByTestId('toast-action').click()
 
     await expect.poll(() => typesIn(page), { timeout: 20_000 }).toEqual(['sticky', 'sticky'])
+  } finally {
+    await agent.context.close()
+  }
+})
+
+/*
+ * Looked at is read. An agent change stayed "new" in the inbox for as long as
+ * it was on the board, so the count never went away once anybody's agent had
+ * done anything at all. Opening the inbox and closing it reads what was in
+ * it, in this browser; the change is still there, and still revertible.
+ */
+test('an agent change seen in the inbox is no longer new, after a reload too', async ({
+  browser,
+}) => {
+  const room = newRoomId()
+  const page = await join(browser, room)
+  const agent = agentOn(room)
+  try {
+    await threeNotes(agent, page)
+    await page.getByTestId('toast').getByRole('button', { name: 'Dismiss' }).click()
+    const inbox = page.getByTestId('inbox')
+    await expect(inbox).toHaveAccessibleName('Inbox, 1 new')
+
+    await inbox.click()
+    await expect(page.getByTestId('agent-changes-list').locator('li')).toHaveAttribute(
+      'data-unread',
+      'true',
+    )
+    await page.keyboard.press('Escape')
+    await expect(inbox).toHaveAccessibleName('Inbox, nothing new')
+
+    await page.reload()
+    await expect(page.getByTestId('save-state')).toHaveAttribute('data-room', 'connected', {
+      timeout: 20_000,
+    })
+    await expect(inbox).toHaveAccessibleName('Inbox, nothing new')
+    await inbox.click()
+    await expect(page.getByTestId('agent-change-revert')).toBeVisible()
+    await expect(page.getByTestId('agent-changes-list').locator('li')).toHaveAttribute(
+      'data-unread',
+      'false',
+    )
   } finally {
     await agent.context.close()
   }

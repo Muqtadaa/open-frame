@@ -63,8 +63,8 @@ test('a shared board works under the deployed policy, and the policy is real', a
   // catalogue is empty until tracks are approved.
   await library(page, TRACKS, 'http://127.0.0.1:8787')
   await page.reload()
-  await expect(page.locator('[data-testid="room-status"]')).toHaveAttribute(
-    'data-status',
+  await expect(page.locator('[data-testid="save-state"]')).toHaveAttribute(
+    'data-room',
     'connected',
     { timeout: 20_000 },
   )
@@ -82,7 +82,7 @@ test('a shared board works under the deployed policy, and the policy is real', a
     .toBe(2)
 
   // A track streams from the room server under the policy (`media-src`).
-  await page.getByTestId('music-button').click()
+  await page.getByTestId('session-button').click()
   // The request itself is the proof: a refused one is never made.
   const streamed = page.waitForRequest('**/music/track/*')
   await page.getByTestId('music-play').click()

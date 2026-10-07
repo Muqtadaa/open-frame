@@ -2,11 +2,13 @@ import type { Page } from '@playwright/test'
 
 import { CANVAS, expect, openBoard, test, boxOf } from './fixtures.js'
 import { signedIn } from './signed-in.js'
+import { library, TRACKS } from './music.js'
+import { BOARD_URL } from './routes.js'
 
 /**
  * The board's navigation, along the top.
  *
- * The way out, the board's name, history and the rest of the record line sat
+ * The way out, the board's name and the rest of the record line sat
  * at the bottom of the window, where nothing reads as the page's own heading.
  * They are the page's navigation, so they sit where navigation is looked for,
  * and the name reads as the name of the page rather than as one more readout.
@@ -32,12 +34,127 @@ test('names the board in the interface’s own voice, not as a readout', async (
 
 test('opens its tips downward, into the window', async ({ page }) => {
   await openBoard(page)
-  await page.getByTestId('undo').focus()
-  const tip = await page.getByTestId('undo').evaluate((el) => {
+  await page.getByTestId('board-exit').focus()
+  const tip = await page.getByTestId('board-exit').evaluate((el) => {
     const after = getComputedStyle(el, '::after')
     return { top: after.top, bottom: after.bottom }
   })
   expect(Number.parseFloat(tip.top)).toBeGreaterThan(0)
+})
+
+/*
+ * Undo and redo are how the board is handled, not what it is called or whether
+ * it is safe, so they sit with zoom and snap rather than taking the bar's best
+ * place beside the name — where, on a fresh board, they were two disabled
+ * buttons.
+ */
+test('keeps undo and redo with zoom, not on the bar', async ({ page }) => {
+  await openBoard(page)
+  const cluster = page.getByTestId('zoom-control')
+  await expect(cluster.getByTestId('undo')).toBeVisible()
+  await expect(cluster.getByTestId('redo')).toBeVisible()
+  await expect(page.getByTestId('status-bar').getByTestId('undo')).toHaveCount(0)
+  await expect(cluster.getByRole('group', { name: 'History' })).toBeVisible()
+})
+
+/*
+ * What is done to the board as a whole sits in one menu beside its name:
+ * Rename, and its history, which had a clock face of its own among the
+ * session's tools. The theme went to the account sheet: it is chosen once
+ * and kept, and on the bar it was an unlabelled moon.
+ */
+test.describe('the board menu', () => {
+  test('renames, and opens the history', async ({ page }) => {
+    await openBoard(page)
+    await page.getByTestId('board-menu').click()
+    await page.getByRole('menuitem', { name: 'Rename' }).click()
+    await expect(page.getByTestId('board-title-input')).toBeFocused()
+    await page.keyboard.press('Escape')
+
+    await page.getByTestId('board-menu').click()
+    await page.getByRole('menuitem', { name: 'Version history…' }).click()
+    await expect(page.getByRole('dialog', { name: 'Version history' })).toBeVisible()
+  })
+
+  test('is walked by the keyboard and hands it back', async ({ page }) => {
+    await openBoard(page)
+    await page.getByTestId('board-menu').focus()
+    await page.keyboard.press('Enter')
+    await expect(page.getByRole('menuitem', { name: 'Rename' })).toBeFocused()
+    await page.keyboard.press('ArrowDown')
+    await expect(page.getByRole('menuitem', { name: 'Version history…' })).toBeFocused()
+    await page.keyboard.press('ArrowDown')
+    await expect(page.getByRole('menuitem', { name: 'Rename' })).toBeFocused()
+    await page.keyboard.press('Escape')
+    await expect(page.getByRole('menu')).toHaveCount(0)
+    await expect(page.getByTestId('board-menu')).toBeFocused()
+  })
+
+  test('leaves the page named by the board alone', async ({ page }) => {
+    await openBoard(page)
+    await expect(page.getByRole('heading', { level: 1 })).toHaveAccessibleName('Untitled board')
+  })
+
+  test('takes the history and the theme off the bar', async ({ page }) => {
+    await openBoard(page)
+    const bar = page.getByTestId('status-bar')
+    await expect(bar.getByRole('button', { name: 'Version history' })).toHaveCount(0)
+    await expect(bar.getByRole('button', { name: 'After Hours theme' })).toHaveCount(0)
+    // Signed out, the theme is in the sign-in sheet.
+    await page.getByTestId('sign-in').click()
+    await page.getByTestId('theme-after-hours').click()
+    await expect(page.locator('html')).toHaveAttribute('data-theme', 'after-hours')
+    await expect(
+      page.getByRole('radiogroup', { name: 'Theme' }).getByRole('radio', { checked: true }),
+    ).toHaveText('After Hours')
+  })
+
+  test('the theme is in the account sheet when signed in', async ({ page }) => {
+    await signedIn(page, [])
+    await openBoard(page)
+    await page.getByTestId('account').click()
+    const sheet = page.getByTestId('account-sheet')
+    // The sheet takes the keyboard on arrival; the theme is one Tab on.
+    await expect(sheet.getByRole('button', { name: 'Sign out' })).toBeFocused()
+    await page.keyboard.press('Tab')
+    await expect(sheet.getByTestId('theme-notebook')).toBeFocused()
+    await page.keyboard.press('ArrowRight')
+    await expect(sheet.getByTestId('theme-after-hours')).toBeFocused()
+    await expect(sheet.getByTestId('theme-after-hours')).toHaveAttribute('aria-checked', 'true')
+    await expect(page.locator('html')).toHaveAttribute('data-theme', 'after-hours')
+  })
+})
+
+/*
+ * Whether the work is safe, said once. "Saved" sat by the name while a
+ * "Shared" chip with a dot sat among the people — and that chip was also the
+ * share button, so one word named neither what it was nor what it did.
+ */
+test.describe('the safety readout', () => {
+  for (const width of [1280, 390]) {
+    test(`says the room is out of reach, beside what is saved, at ${String(width)}px`, async ({
+      page,
+    }) => {
+      await page.setViewportSize({ width, height: 720 })
+      await signedIn(page, [{ id: SHARED, title: 'Pricing research', role: 'owner' }])
+      // A room that hangs up on every attempt.
+      await page.routeWebSocket(/\/room\//, (socket) => {
+        void socket.close()
+      })
+      await page.goto(`/?room=${SHARED}&k=${'e'.repeat(32)}`)
+      const readout = page.getByTestId('save-state')
+      await expect(readout).toHaveText('Offline · saved here')
+      await expect(readout).toBeVisible()
+      const share = page.getByTestId('share-board')
+      await expect(share).toHaveText('Share')
+      await expect(share).toHaveAccessibleName('Share')
+    })
+  }
+
+  test('says only Saved on a board of your own', async ({ page }) => {
+    await openBoard(page)
+    await expect(page.getByTestId('save-state')).toHaveText('Saved')
+  })
 })
 
 test('keeps an object’s panel clear of it, however high the object sits', async ({ page }) => {
@@ -154,10 +271,8 @@ test.describe('the keyboard on the bar', () => {
 
   test('gives every control a target a pointer can find', async ({ page }) => {
     await openBoard(page)
-    const theme = await page.getByTestId('theme-toggle').boundingBox()
-    const source = await page.getByTestId('source-link').boundingBox()
-    expect(theme?.width ?? 0).toBeGreaterThanOrEqual(30)
-    expect(source?.height ?? 0).toBeGreaterThanOrEqual(24)
+    const menu = await page.getByTestId('board-menu').boundingBox()
+    expect(menu?.width ?? 0).toBeGreaterThanOrEqual(30)
   })
 })
 
@@ -225,18 +340,6 @@ test.describe('what the bar carries', () => {
     await page.keyboard.press('v')
     await page.locator(CANVAS).click({ position: { x: 510, y: 410 } })
     await expect(page.getByTestId('selection-count')).toHaveText('1 selected')
-  })
-
-  test('sets the source link last, after the app’s own controls', async ({ page }) => {
-    await openBoard(page)
-    const order = await page
-      .getByTestId('status-bar')
-      .evaluate((bar) =>
-        [...bar.querySelectorAll('[data-testid]')].map((el) => el.getAttribute('data-testid')),
-      )
-    const source = order.indexOf('source-link')
-    expect(source).toBeGreaterThan(order.indexOf('theme-toggle'))
-    expect(source).toBeGreaterThan(order.indexOf('sign-in'))
   })
 
   test('closes the account sheet on Escape without touching the board', async ({ page }) => {
@@ -323,7 +426,8 @@ test.describe('a narrow window', () => {
       await openBoard(page)
       const escaped = await page.getByTestId('status-bar').evaluate((bar) => {
         const edge = bar.getBoundingClientRect().right
-        return [...bar.children]
+        // Inside the zones as well as beside them.
+        return [...bar.querySelectorAll(':scope > *, :scope > [role="group"] > *')]
           .filter((child) => child.getBoundingClientRect().width > 0)
           .filter((child) => child.getBoundingClientRect().right > edge + 0.5)
           .map((child) => child.getAttribute('data-testid') ?? child.className)
@@ -348,7 +452,7 @@ test.describe('a narrow window', () => {
       await page.routeWebSocket(/\/room\//, () => undefined)
       await page.goto(`/?room=${SHARED}&k=${'e'.repeat(32)}`)
       await page.waitForSelector('[data-testid="status-bar"]')
-      await expect(page.getByTestId('room-status')).toBeVisible()
+      await expect(page.getByTestId('share-board')).toBeVisible()
       const escaped = await page.getByTestId('status-bar').evaluate((bar) => {
         const edge = Math.min(bar.getBoundingClientRect().right, window.innerWidth)
         return [...bar.querySelectorAll('[data-testid]')]
@@ -367,4 +471,91 @@ test.describe('a narrow window', () => {
     const rail = await page.getByRole('toolbar', { name: 'Board tools' }).boundingBox()
     expect(Math.abs((bar?.x ?? 0) - (rail?.x ?? 0))).toBeLessThan(1)
   })
+})
+
+/*
+ * The bar at its fullest — signed in, mentions waiting, a selection, the
+ * timer and the music running, or a shared board whose room is out of reach
+ * — at every width from a wide screen to a phone. It used five breakpoints,
+ * each worked out for what the bar carried at the time; now it gives way by
+ * measurement, a word to its icon at a time (use-squeeze.ts). Every control
+ * stays on the bar, inside it, clear of its neighbours, and named.
+ */
+test.describe('the bar at its fullest', () => {
+  const MENTIONED = {
+    mentions: [1, 2].map((i) => ({
+      commentId: `cmt_${String(i)}`,
+      boardId: SHARED,
+      boardTitle: 'Pricing research',
+      authorName: 'Rowan',
+      body: 'look',
+    })),
+  }
+
+  async function fitted(page: Page, width: number): Promise<void> {
+    const bar = page.getByTestId('status-bar')
+    const report = await bar.evaluate((nav) => {
+      const box = nav.getBoundingClientRect()
+      // Every control, in a zone or not; never none, or this would pass vacuously.
+      // The bench panel is not the product, and clips by design.
+      const controls = [
+        ...nav.querySelectorAll(
+          ':scope > [role="group"] > *, :scope > :not([role="group"], [aria-hidden="true"], [data-testid="dev-panel"])',
+        ),
+      ]
+        .filter((child) => child.getBoundingClientRect().width > 0)
+        .map((child) => ({ name: child.className, box: child.getBoundingClientRect() }))
+      const outside = controls
+        .filter(({ box: own }) => own.left < box.left - 0.5 || own.right > box.right + 0.5)
+        .map(({ name }) => name)
+      const overlapping = controls
+        .slice(1)
+        .filter(({ box: own }, i) => own.left < (controls[i]?.box.right ?? 0) - 0.5)
+        .map(({ name }) => name)
+      return { count: controls.length, outside, overlapping, right: box.right }
+    })
+    expect(report.count).toBeGreaterThan(4)
+    expect(report.outside).toEqual([])
+    expect(report.overlapping).toEqual([])
+    expect(report.right).toBeLessThanOrEqual(width)
+  }
+
+  for (const width of [1440, 1024, 760, 600, 480, 390]) {
+    test(`fits a running session on a board of your own at ${String(width)}px`, async ({
+      page,
+    }) => {
+      await page.setViewportSize({ width, height: 800 })
+      await signedIn(page, [], 'Muqtadaa Miandara', MENTIONED)
+      await library(page, TRACKS)
+      await page.goto(BOARD_URL)
+      await page.getByTestId('session-button').click()
+      await page.getByTestId('timer-start').click()
+      await page.getByTestId('music-play').click()
+      await page.keyboard.press('Escape')
+      await page.keyboard.press('s')
+      await page.getByTestId('canvas').click({ position: { x: 300, y: 400 } })
+      await page.keyboard.press('Escape')
+      await expect(page.getByTestId('inbox')).toHaveAccessibleName('Inbox, 2 new')
+      await fitted(page, width)
+    })
+
+    test(`fits a shared board out of reach at ${String(width)}px`, async ({ page }) => {
+      await page.setViewportSize({ width, height: 800 })
+      await signedIn(
+        page,
+        [{ id: SHARED, title: 'Pricing research for the autumn launch', role: 'owner' }],
+        'Muqtadaa Miandara',
+        MENTIONED,
+      )
+      await page.routeWebSocket(/\/room\//, (socket) => {
+        void socket.close()
+      })
+      await page.goto(`/?room=${SHARED}&k=${'e'.repeat(32)}`)
+      await expect(page.getByTestId('save-state')).toContainText('Offline')
+      await expect(page.getByTestId('inbox')).toBeVisible()
+      await fitted(page, width)
+      // Squeezed or not, Share is still called Share.
+      await expect(page.getByTestId('share-board')).toHaveAccessibleName('Share')
+    })
+  }
 })

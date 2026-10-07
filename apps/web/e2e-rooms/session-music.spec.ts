@@ -34,7 +34,7 @@ async function joinSkewed(browser: Browser, room: string): Promise<Page> {
   const page = await context.newPage()
   await library(page, TRACKS, ROOMS)
   await page.goto(`/?room=${room}`)
-  await expect(page.getByTestId('room-status')).toHaveAttribute('data-status', 'connected', {
+  await expect(page.getByTestId('save-state')).toHaveAttribute('data-room', 'connected', {
     timeout: 20_000,
   })
   return page
@@ -47,18 +47,18 @@ test('two devices whose clocks disagree are at the same place in the same track'
   const alice = await join(browser, room)
   await library(alice, TRACKS, ROOMS)
   await alice.reload()
-  await expect(alice.getByTestId('room-status')).toHaveAttribute('data-status', 'connected', {
+  await expect(alice.getByTestId('save-state')).toHaveAttribute('data-room', 'connected', {
     timeout: 20_000,
   })
   const bob = await joinSkewed(browser, room)
 
-  await alice.getByTestId('music-button').click()
+  await alice.getByTestId('session-button').click()
   await alice.getByRole('radio', { name: 'Jazz lounge' }).click()
   await alice.getByTestId('music-play').click()
 
   // Bob did not press anything that opens audio, so the bar says so.
-  await expect(bob.getByTestId('music-button')).toHaveAttribute('data-state', 'unheard')
-  await bob.getByTestId('music-button').click()
+  await expect(bob.getByTestId('session-button')).toHaveAttribute('data-music', 'unheard')
+  await bob.getByTestId('session-button').click()
   await expect(bob.getByTestId('music-now')).toContainText('Late Set')
   // And so does the sheet.
   await expect(bob.getByTestId('music-listen')).toBeVisible()
@@ -78,7 +78,7 @@ test('two devices with different catalogues still play the same track', async ({
   const alice = await join(browser, room)
   await library(alice, TRACKS, ROOMS)
   await alice.reload()
-  await expect(alice.getByTestId('room-status')).toHaveAttribute('data-status', 'connected', {
+  await expect(alice.getByTestId('save-state')).toHaveAttribute('data-room', 'connected', {
     timeout: 20_000,
   })
   const bob = await (await browser.newContext()).newPage()
@@ -88,16 +88,16 @@ test('two devices with different catalogues still play the same track', async ({
     ROOMS,
   )
   await bob.goto(`/?room=${room}`)
-  await expect(bob.getByTestId('room-status')).toHaveAttribute('data-status', 'connected', {
+  await expect(bob.getByTestId('save-state')).toHaveAttribute('data-room', 'connected', {
     timeout: 20_000,
   })
 
-  await alice.getByTestId('music-button').click()
+  await alice.getByTestId('session-button').click()
   await alice.getByRole('radio', { name: 'Jazz lounge' }).click()
   await alice.getByTestId('music-play').click()
 
-  await expect(bob.getByTestId('music-button')).toHaveAttribute('data-state', 'unheard')
-  await bob.getByTestId('music-button').click()
+  await expect(bob.getByTestId('session-button')).toHaveAttribute('data-music', 'unheard')
+  await bob.getByTestId('session-button').click()
   await expect(bob.getByTestId('music-now')).toContainText('Late Set')
 })
 
@@ -117,7 +117,7 @@ test('somebody else starting the music is offered here, and one press lets it in
     const page = await (await browser.newContext()).newPage()
     await library(page, tracks, ROOMS)
     await page.goto(`/?room=${room}`)
-    await expect(page.getByTestId('room-status')).toHaveAttribute('data-status', 'connected', {
+    await expect(page.getByTestId('save-state')).toHaveAttribute('data-room', 'connected', {
       timeout: 20_000,
     })
     return page
@@ -125,21 +125,21 @@ test('somebody else starting the music is offered here, and one press lets it in
   const alice = await open()
   const bob = await open()
 
-  await alice.getByTestId('music-button').click()
+  await alice.getByTestId('session-button').click()
   await alice.getByTestId('music-play').click()
 
   await expect(bob.getByTestId('music-prompt')).toHaveText(/ started the music$/)
   const fetched = bob.waitForRequest('**/music/track/jazzy-1')
   await bob.getByTestId('music-prompt-listen').click()
   await fetched
-  await expect(bob.getByTestId('music-button')).toHaveAttribute('data-state', 'playing')
+  await expect(bob.getByTestId('session-button')).toHaveAttribute('data-music', 'playing')
   await expect(bob.getByTestId('music-prompt')).toHaveCount(0)
 
   // Alice skips; Bob follows, and is not asked again — it is the same music.
   const next = bob.waitForRequest('**/music/track/jazzy-2')
   await alice.getByRole('button', { name: 'Next track' }).click()
   await next
-  await bob.getByTestId('music-button').click()
+  await bob.getByTestId('session-button').click()
   await expect(bob.getByTestId('music-now')).toContainText('Encore')
   await expect(bob.getByTestId('music-prompt')).toHaveCount(0)
 })
@@ -157,22 +157,22 @@ test('a viewer hears the music and cannot change it', async ({ browser }) => {
     const page = await (await browser.newContext()).newPage()
     await library(page, TRACKS, ROOMS)
     await page.goto(`/?room=${room}&k=${key}`)
-    await expect(page.getByTestId('room-status')).toHaveAttribute('data-status', 'connected', {
+    await expect(page.getByTestId('save-state')).toHaveAttribute('data-room', 'connected', {
       timeout: 20_000,
     })
     return page
   }
   const editor = await open(keys.editor)
   const viewer = await open(keys.viewer)
-  await expect(viewer.getByTestId('music-button')).toHaveCount(0)
+  await expect(viewer.getByTestId('session-button')).toHaveCount(0)
 
-  await editor.getByTestId('music-button').click()
+  await editor.getByTestId('session-button').click()
   await editor.getByTestId('music-play').click()
-  await expect(viewer.getByTestId('music-button')).toHaveAttribute('data-state', 'unheard')
+  await expect(viewer.getByTestId('session-button')).toHaveAttribute('data-music', 'unheard')
   // A viewer is asked to listen like anybody else, and has no skip.
   await expect(viewer.getByTestId('music-prompt')).toBeVisible()
 
-  await viewer.getByTestId('music-button').click()
+  await viewer.getByTestId('session-button').click()
   await expect(viewer.getByRole('button', { name: 'Next track' })).toHaveCount(0)
   await expect(viewer.getByTestId('music-listen')).toBeVisible()
   await expect(viewer.getByTestId('music-play')).toHaveCount(0)

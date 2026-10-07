@@ -6,12 +6,13 @@
  */
 .of-status__title {
   /*
-   * Shrinks before anything else on the line gives — but not below a name you
-   * can still read. At 4ch it collapsed to "U…", which is a board title that
-   * has stopped being one.
+   * Shrinks before anything else on the line gives, down to the floor its
+   * HEADING holds (account.css). It held a floor of its own, 10ch in its own
+   * face, inside a heading allowed to shrink to 7ch in the bar's — so on a
+   * short bar the name ran out of its heading and over the control beside it.
    */
   flex: 0 1 auto;
-  min-width: 10ch;
+  min-width: 0;
   /*
    * The ROOM the bar has, up to a line you can read at a glance. It was 22
    * characters, with half the bar's width empty beside it: a heading that

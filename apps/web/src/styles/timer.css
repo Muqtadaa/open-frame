@@ -5,7 +5,7 @@
  * and edge — the mentions chip's "look at me" — and, where the chime could
  * not sound, pulses a few times instead.
  */
-.of-timer {
+.of-session {
   position: relative;
 }
 
@@ -71,15 +71,48 @@
   }
 }
 
-.of-timer__sheet {
+.of-session__sheet {
   display: grid;
   gap: var(--of-step);
-  width: 260px;
+  width: 300px;
+  max-height: calc(100dvh - 2 * var(--of-space-12));
   padding: var(--of-step);
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  accent-color: var(--of-accent);
   background: var(--of-panel);
   border: 1px solid var(--of-panel-border);
   border-radius: var(--of-radius-surface);
   box-shadow: var(--of-shadow);
+}
+
+/* The timer and the music, one above the other under a ruled heading each. */
+.of-session__section {
+  display: grid;
+  gap: var(--of-step);
+}
+
+.of-session__section + .of-session__section {
+  padding-top: var(--of-step);
+  border-top: 1px solid var(--of-panel-border);
+}
+
+.of-session__heading {
+  margin: 0;
+  font-family: var(--of-mono);
+  font-size: var(--of-type-record);
+  font-weight: var(--of-weight-regular);
+  letter-spacing: 0.02em;
+  color: var(--of-ink-muted);
+}
+
+/* The pill at rest names itself in the interface's face, not as a readout. */
+.of-session__word {
+  font-family: var(--of-font);
+}
+
+.of-session__dot {
+  color: var(--of-ink-muted);
 }
 
 .of-timer__readout {

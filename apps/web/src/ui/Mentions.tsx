@@ -11,10 +11,10 @@ import { useMentions } from '../hooks/use-mentions.js'
 /**
  * What somebody wanted you to see.
  *
- * On the front door AND in the board's status bar, because the whole point of
- * a mention is to reach you when you are not on the board it was left on —
- * which cuts both ways: most of the time you are on a DIFFERENT board, not at
- * home.
+ * On the front door as this bell, and on a board in the inbox (`Inbox`),
+ * because the whole point of a mention is to reach you when you are not on
+ * the board it was left on — which cuts both ways: most of the time you are
+ * on a DIFFERENT board, not at home.
  *
  * Reading one marks it read and takes you to the board. There is no separate
  * "mark all read": a list you can dismiss without looking is a list people
@@ -30,13 +30,6 @@ import { useMentions } from '../hooks/use-mentions.js'
 export function Mentions() {
   const { mentions, unread, keyFor, markRead } = useMentions()
   const [open, setOpen] = useState(false)
-  /*
-   * The board under this bell, and the way to go to a remark on it. Empty on
-   * the front door, where the context has no provider and answers "no
-   * discussion" rather than throwing — which is why this comes from here
-   * rather than from the runtime, and why the bell can be in both places.
-   */
-  const { boardId: here, focusComment } = useDiscussion()
   const { ref: bell, anchor, surface } = useAnchoredTo<HTMLButtonElement>(open)
   const list = useRef<HTMLDivElement>(null)
 
@@ -134,72 +127,100 @@ export function Mentions() {
               links[(at + step + links.length) % links.length]?.focus()
             }}
           >
-            <ul className="of-mentions__list" data-testid="mentions-list">
-              {mentions.map((mention) => (
-                <li key={mention.commentId}>
-                  <a
-                    className={
-                      mention.readAt === null ? 'of-mentions__item' : 'of-mentions__item is-read'
-                    }
-                    href={commentLink(
-                      mention.boardId,
-                      '',
-                      keyFor(mention.boardId),
-                      mention.commentId,
-                    )}
-                    data-testid={`mention-${mention.commentId}`}
-                    data-unread={mention.readAt === null ? 'true' : 'false'}
-                    data-here={mention.boardId === here ? 'true' : 'false'}
-                    onClick={(event) => {
-                      markRead(mention.commentId)
-                      /*
-                       * Already HERE: go to the remark instead of reloading the
-                       * board you are standing on. A full page load throws away
-                       * the socket, the document and the view for a board the
-                       * browser already has open, and the only thing it
-                       * achieves is arriving at the same place slower.
-                       *
-                       * A modified click is left alone — that is somebody
-                       * asking for a new tab, and the link still works there.
-                       */
-                      if (
-                        mention.boardId !== here ||
-                        event.metaKey ||
-                        event.ctrlKey ||
-                        event.shiftKey ||
-                        event.altKey ||
-                        event.button !== 0
-                      ) {
-                        return
-                      }
-                      /*
-                       * Only take the click if there is somewhere to take it
-                       * TO. The discussion loads asynchronously, so a click in
-                       * the first moment of a board finds nothing — and a
-                       * prevented click that then does nothing is worse than
-                       * the reload it was saving, because it looks like the
-                       * notification is broken. The link still works, and the
-                       * fresh page honours `?c=` on the way in.
-                       */
-                      if (!focusComment(mention.commentId)) return
-                      event.preventDefault()
-                      setOpen(false)
-                    }}
-                  >
-                    <span className="of-mentions__who">{mention.authorName}</span>
-                    <span className="of-mentions__where">
-                      {mention.boardTitle} · <Ago at={mention.createdAt} />
-                    </span>
-                    <span className="of-mentions__what">
-                      {plainMentionText(mention.body).slice(0, 120)}
-                    </span>
-                  </a>
-                </li>
-              ))}
-            </ul>
+            <MentionItems
+              mentions={mentions}
+              keyFor={keyFor}
+              markRead={markRead}
+              onFollowed={() => {
+                setOpen(false)
+              }}
+            />
           </div>
         </AnchoredSurface>
       )}
     </div>
+  )
+}
+
+/**
+ * The mentions themselves: each one marks itself read and goes to its remark,
+ * on this board without a reload when it is the board you are on.
+ */
+export function MentionItems({
+  mentions,
+  keyFor,
+  markRead,
+  onFollowed,
+}: {
+  readonly mentions: ReturnType<typeof useMentions>['mentions']
+  readonly keyFor: ReturnType<typeof useMentions>['keyFor']
+  readonly markRead: ReturnType<typeof useMentions>['markRead']
+  /** Called once a mention has been followed on this board, so its sheet can close. */
+  readonly onFollowed: () => void
+}) {
+  /*
+   * The board under this list, and the way to go to a remark on it. Empty on
+   * the front door, where the context has no provider and answers "no
+   * discussion" rather than throwing — which is why this comes from here
+   * rather than from the runtime, and why the list can be in both places.
+   */
+  const { boardId: here, focusComment } = useDiscussion()
+  return (
+    <ul className="of-mentions__list" data-testid="mentions-list">
+      {mentions.map((mention) => (
+        <li key={mention.commentId}>
+          <a
+            className={mention.readAt === null ? 'of-mentions__item' : 'of-mentions__item is-read'}
+            href={commentLink(mention.boardId, '', keyFor(mention.boardId), mention.commentId)}
+            data-testid={`mention-${mention.commentId}`}
+            data-unread={mention.readAt === null ? 'true' : 'false'}
+            data-here={mention.boardId === here ? 'true' : 'false'}
+            onClick={(event) => {
+              markRead(mention.commentId)
+              /*
+               * Already HERE: go to the remark instead of reloading the
+               * board you are standing on. A full page load throws away
+               * the socket, the document and the view for a board the
+               * browser already has open, and the only thing it
+               * achieves is arriving at the same place slower.
+               *
+               * A modified click is left alone — that is somebody
+               * asking for a new tab, and the link still works there.
+               */
+              if (
+                mention.boardId !== here ||
+                event.metaKey ||
+                event.ctrlKey ||
+                event.shiftKey ||
+                event.altKey ||
+                event.button !== 0
+              ) {
+                return
+              }
+              /*
+               * Only take the click if there is somewhere to take it
+               * TO. The discussion loads asynchronously, so a click in
+               * the first moment of a board finds nothing — and a
+               * prevented click that then does nothing is worse than
+               * the reload it was saving, because it looks like the
+               * notification is broken. The link still works, and the
+               * fresh page honours `?c=` on the way in.
+               */
+              if (!focusComment(mention.commentId)) return
+              event.preventDefault()
+              onFollowed()
+            }}
+          >
+            <span className="of-mentions__who">{mention.authorName}</span>
+            <span className="of-mentions__where">
+              {mention.boardTitle} · <Ago at={mention.createdAt} />
+            </span>
+            <span className="of-mentions__what">
+              {plainMentionText(mention.body).slice(0, 120)}
+            </span>
+          </a>
+        </li>
+      ))}
+    </ul>
   )
 }

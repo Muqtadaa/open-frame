@@ -405,6 +405,9 @@ export function useKeyboardShortcuts(setSpaceHeld: (held: boolean) => void): voi
         case 'overview':
           store.setOverviewOpen(true)
           return
+        case 'session':
+          store.setSessionOpen(true)
+          return
         case 'zoom-fit': {
           const next = fitToDocument(runtime.store.getDocument(), runtime.registry, width, height)
           if (next !== null) store.setViewport(next)

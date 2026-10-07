@@ -28,8 +28,8 @@ test("the owner's chip offers both links, and the password beside them", async (
   await signedIn(page, [{ id: MINE, title: 'Mine', role: 'owner' }])
   await page.goto(`/?room=${MINE}&k=${EDIT}`)
   // Mine once the account has said so; until then the chip is an editor's.
-  await expect(page.getByTestId('room-status')).toHaveAttribute('aria-description', /Both links/)
-  await page.getByTestId('room-status').click()
+  await expect(page.getByTestId('share-board')).toHaveAttribute('aria-description', /Both links/)
+  await page.getByTestId('share-board').click()
 
   const sheet = page.getByTestId('share-links')
   await expect(sheet).toBeVisible()
@@ -52,7 +52,7 @@ test("the owner's chip offers both links, and the password beside them", async (
 test("an editor's chip copies the edit link, and says so", async ({ page }) => {
   await signedIn(page, [{ id: THEIRS, title: 'Theirs', role: 'editor' }])
   await page.goto(`/?room=${THEIRS}&k=${EDIT}`)
-  const chip = page.getByTestId('room-status')
+  const chip = page.getByTestId('share-board')
   await expect(chip).toHaveAttribute('aria-description', /Copy edit link/)
   await chip.click()
   await expect(page.getByTestId('share-links')).toHaveCount(0)
@@ -64,8 +64,8 @@ test('an owner who arrived on the view link is still handed the edit link', asyn
   await signedIn(page, [{ id: MINE, title: 'Mine', role: 'owner' }])
   // The URL carries the VIEW key; the account knows this person owns the board.
   await page.goto(`/?room=${MINE}&k=${VIEW}`)
-  await expect(page.getByTestId('room-status')).toHaveAttribute('aria-description', /Both links/)
-  await page.getByTestId('room-status').click()
+  await expect(page.getByTestId('share-board')).toHaveAttribute('aria-description', /Both links/)
+  await page.getByTestId('share-board').click()
 
   await page.getByTestId('share-links').getByTestId('copy-edit').click()
   const copied = await page.evaluate(() => navigator.clipboard.readText())
@@ -78,8 +78,8 @@ test('the share sheet scrolls rather than clipping in a short window', async ({ 
   await page.setViewportSize({ width: 740, height: 360 })
   await signedIn(page, [{ id: MINE, title: 'Mine', role: 'owner' }])
   await page.goto(`/?room=${MINE}&k=${EDIT}`)
-  await expect(page.getByTestId('room-status')).toHaveAttribute('aria-description', /Both links/)
-  await page.getByTestId('room-status').click()
+  await expect(page.getByTestId('share-board')).toHaveAttribute('aria-description', /Both links/)
+  await page.getByTestId('share-board').click()
 
   const sheet = page.getByTestId('share-links')
   const done = sheet.getByRole('button', { name: 'Done' })

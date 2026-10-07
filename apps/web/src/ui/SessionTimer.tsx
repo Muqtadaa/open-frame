@@ -10,19 +10,14 @@ import {
   startTimer,
   type SessionTimer as Timer,
 } from '@openframe/core/facilitation'
-import { useEffect, useRef, useState, useSyncExternalStore } from 'react'
+import { useEffect, useRef, useState, useSyncExternalStore, type RefObject } from 'react'
 
-import { AnchoredSurface } from '../controls/AnchoredSurface.js'
-import { TimerIcon } from '../controls/icons.js'
-import { useAnchoredTo } from '../controls/use-anchor.js'
 import { useCanEdit } from '../hooks/use-can-edit.js'
 import { useMe } from '../hooks/use-me.js'
 import { useInteractionStore } from '../interaction/interaction-store.js'
-import { useOpenFrame } from '../runtime/context.js'
 import type { FacilitationChannel } from '../runtime/facilitation.js'
 import { chime, primeAudio } from './chime.js'
 import { clockText, parseClock } from './clock-text.js'
-import { useSheet } from './use-sheet.js'
 
 /** Minutes, because that is how an exercise is planned. */
 const PRESETS = [1, 3, 5, 10, 15] as const
@@ -30,32 +25,40 @@ const MINUTE = 60_000
 /** Often enough that the seconds never visibly stick; the clock itself is never this. */
 const TICK_MS = 250
 
-/**
- * The session timer: one countdown for everybody at the board (ADR 0017).
- *
- * On the bar, beside the people, because it is the same kind of thing — about
- * the session rather than the board. It reads the same on every device to the
- * second: a shared board's runs on the room's clock, and "done" is worked out
- * from that clock rather than stored.
- *
- * Absent for somebody who can only watch until there is something to watch: a
- * control a viewer cannot use, for a timer nobody has started, is noise.
- */
-export function SessionTimer() {
-  const { facilitation } = useOpenFrame()
-  if (facilitation === undefined) return null
-  return <TimerControl channel={facilitation} />
+export interface TimerSession {
+  /** Whether there is anything here for this person: an editor, or a timer to watch. */
+  readonly shown: boolean
+  /** Set, running or paused: something the pill should say. */
+  readonly active: boolean
+  readonly done: boolean
+  readonly status: Timer['status']
+  /** What is left, as the pill and the sheet print it. */
+  readonly time: string
+  /** What the pill says about the timer to a screen reader. */
+  readonly words: string
+  readonly panel: TimerPanelProps
 }
 
-function TimerControl({ channel }: { readonly channel: FacilitationChannel }) {
+/**
+ * The session timer: one countdown for everybody at the board (ADR 0017),
+ * in the Session pill (`Session`).
+ *
+ * It reads the same on every device to the second: a shared board's runs on
+ * the room's clock, and "done" is worked out from that clock rather than
+ * stored. Mounted for as long as the board is open, sheet or no sheet,
+ * because it is also what says "1 minute left" and chimes at the end.
+ *
+ * `flash` is what flashes where the chime cannot sound.
+ */
+export function useTimerSession(
+  channel: FacilitationChannel,
+  flash: RefObject<HTMLElement | null>,
+): TimerSession {
   const stored = useSyncExternalStore(channel.subscribe, channel.timer)
   const ready = useSyncExternalStore(channel.subscribe, channel.ready)
   const canEdit = useCanEdit()
   const me = useMe()
   const announce = useInteractionStore((s) => s.announce)
-  const [open, setOpen] = useState(false)
-  const { ref: button, anchor, surface } = useAnchoredTo<HTMLButtonElement>(open)
-  const sheet = useRef<HTMLDivElement>(null)
 
   const timer = stored ?? idleTimer()
   const now = useClock(channel.now, timer.status === 'running')
@@ -86,17 +89,17 @@ function TimerControl({ channel }: { readonly channel: FacilitationChannel }) {
     if (done && heard.current.finished !== timer.run) {
       heard.current.finished = timer.run
       announce('Time’s up')
-      // Where the chime cannot sound, the bar flashes in its place. On the
+      // Where the chime cannot sound, the pill flashes in its place. On the
       // element directly: it is a one-off effect, not state anything renders from.
-      if (!chime()) button.current?.classList.add('is-flashing')
+      if (!chime()) flash.current?.classList.add('is-flashing')
       return
     }
     if (lastMinute && heard.current.warned !== timer.run && timer.durationMs > MINUTE) {
       heard.current.warned = timer.run
       announce('1 minute left')
     }
-    if (!done) button.current?.classList.remove('is-flashing')
-  }, [timer.run, timer.durationMs, lastMinute, done, announce, button])
+    if (!done) flash.current?.classList.remove('is-flashing')
+  }, [timer.run, timer.durationMs, lastMinute, done, announce, flash])
 
   // Audio may only be opened by a press; any press on the page will do.
   useEffect(() => {
@@ -107,81 +110,57 @@ function TimerControl({ channel }: { readonly channel: FacilitationChannel }) {
     }
   }, [active])
 
-  useSheet({
-    open,
-    placed: anchor !== null,
-    setOpen,
-    sheet,
-    button,
-    first: '[data-testid="timer-start"]',
-  })
-
-  if (!canEdit && !active) return null
-
-  const write = (next: Timer): void => {
-    primeAudio()
-    if (next !== timer || stored === null) channel.writeTimer(next)
-  }
   const by = me?.name ?? null
   const time = clockText(left)
-  const label = !active ? 'Timer' : done ? 'Timer, time’s up' : `Timer, ${time} left`
+  return {
+    shown: canEdit || active,
+    active,
+    done,
+    status: timer.status,
+    time,
+    words: !active ? '' : done ? 'time’s up' : `${time} left`,
+    panel: {
+      timer,
+      stored: stored !== null,
+      done,
+      time,
+      ready,
+      canEdit,
+      onWrite: (change) => {
+        primeAudio()
+        const next = change(timer, channel.now(), by)
+        if (next !== timer || stored === null) channel.writeTimer(next)
+      },
+    },
+  }
+}
 
+interface TimerPanelProps {
+  readonly timer: Timer
+  /** Whether anybody has ever set it, so there is somebody to name. */
+  readonly stored: boolean
+  readonly done: boolean
+  readonly time: string
+  readonly ready: boolean
+  readonly canEdit: boolean
+  readonly onWrite: (change: Change) => void
+}
+
+/** The timer's part of the Session sheet. */
+export function TimerPanel({ panel }: { readonly panel: TimerPanelProps }) {
+  const { timer, stored, done, time, ready, canEdit, onWrite } = panel
   return (
-    <div className="of-timer">
-      <button
-        ref={button}
-        type="button"
-        className={['of-timer__button', active ? 'is-active' : '', done ? 'is-done' : ''].join(' ')}
-        aria-label={label}
-        aria-expanded={open}
-        aria-haspopup="dialog"
-        {...(active ? {} : { 'data-tip': label })}
-        data-testid="timer-button"
-        data-state={done ? 'done' : timer.status}
-        onClick={() => {
-          setOpen((current) => !current)
-        }}
-      >
-        <TimerIcon />
-        {active && <span className="of-timer__time">{time}</span>}
-      </button>
-
-      {open && (
-        <AnchoredSurface
-          anchor={anchor}
-          surface={surface}
-          prefer={['below', 'above']}
-          testId="timer-surface"
-        >
-          <div
-            ref={sheet}
-            className="of-timer__sheet"
-            role="dialog"
-            aria-label="Timer"
-            tabIndex={-1}
-          >
-            <output className="of-timer__readout" data-testid="timer-readout">
-              {done ? 'Time’s up' : time}
-            </output>
-            {timer.by !== null && stored !== null && (
-              <span className="of-timer__by" data-testid="timer-by">
-                {STATUS_WORDS[timer.status]} by {timer.by}
-              </span>
-            )}
-            {canEdit && (
-              <TimerActions
-                timer={timer}
-                done={done}
-                ready={ready}
-                onWrite={(change) => {
-                  write(change(timer, channel.now(), by))
-                }}
-              />
-            )}
-          </div>
-        </AnchoredSurface>
+    <>
+      <output className="of-timer__readout" data-testid="timer-readout">
+        {done ? 'Time’s up' : time}
+      </output>
+      {timer.by !== null && stored && (
+        <span className="of-timer__by" data-testid="timer-by">
+          {STATUS_WORDS[timer.status]} by {timer.by}
+        </span>
       )}
-    </div>
+      {canEdit && <TimerActions timer={timer} done={done} ready={ready} onWrite={onWrite} />}
+    </>
   )
 }
 

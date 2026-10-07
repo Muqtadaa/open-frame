@@ -71,7 +71,8 @@ test.describe('looking back, and restoring', () => {
   const canvas = (page: Page) => page.getByTestId('canvas')
 
   async function openFirstVersion(page: Page): Promise<void> {
-    await page.getByTestId('history-button').click()
+    await page.getByTestId('board-menu').click()
+    await page.getByTestId('board-menu-history').click()
     await page.getByTestId('history-version').first().click()
     await expect(page.getByTestId('version-preview')).toBeVisible()
   }
@@ -121,7 +122,8 @@ test('names the board as it is, lists it, and deletes it', async ({ page }) => {
   await page.waitForSelector('[data-testid="status-bar"]')
   await place(page, 's', { x: 500, y: 400 }, 'Kickoff notes')
 
-  await page.getByTestId('history-button').click()
+  await page.getByTestId('board-menu').click()
+  await page.getByTestId('board-menu-history').click()
   await expect(
     page.getByRole('status').filter({ hasText: 'No earlier versions yet.' }),
   ).toBeVisible()
@@ -152,7 +154,8 @@ test('offers no Delete for an automatic version', async ({ page }) => {
   await page.clock.runFor(SETTLE)
   await expect.poll(() => versionKeys(page)).toHaveLength(1)
 
-  await page.getByTestId('history-button').click()
+  await page.getByTestId('board-menu').click()
+  await page.getByTestId('board-menu-history').click()
   await expect(page.getByTestId('history-version')).toHaveCount(1)
   await expect(page.getByTestId('history-delete')).toHaveCount(0)
 })

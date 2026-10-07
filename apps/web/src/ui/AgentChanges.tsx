@@ -1,38 +1,47 @@
 import type { LoggedChange } from '@openframe/collab'
 import type { TransactionId } from '@openframe/core'
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 
 import { guestIdentity } from '../app/guest.js'
 
-import { AnchoredSurface } from '../controls/AnchoredSurface.js'
-import { useAnchoredTo } from '../controls/use-anchor.js'
 import { useCommands } from '../hooks/use-commands.js'
 import { useInteractionStore } from '../interaction/interaction-store.js'
 import { useOpenFrame } from '../runtime/context.js'
 import { Ago } from './Ago.js'
+import { readSeen, writeSeen } from './agent-seen.js'
+
+export interface AgentChangesState {
+  /** Everything in the board's change log, newest first; empty off a room. */
+  readonly changes: readonly LoggedChange[]
+  /** How many are still on the board, not taken back. */
+  readonly pending: number
+  /** Of those, how many this browser has not been shown: what the inbox counts. */
+  readonly unseen: number
+  /** Whether this browser has been shown a change. */
+  readonly isSeen: (change: LoggedChange) => boolean
+  /** Everything listed now has been looked at. */
+  readonly markSeen: () => void
+  /** Whether this person may take a change back: not a viewer. */
+  readonly editing: boolean
+  readonly revert: (change: LoggedChange) => void
+}
 
 /**
  * What agents have done to this board, and a way to take any of it back
- * (tracks A-2).
+ * (tracks A-2). Listed in the board's inbox (`Inbox`).
  *
  * An agent's change reached the board with nothing attached — no name, no
  * boundary, no undo — so a person could only watch it happen. The board's
  * change log carries all three now. This lists it, and says so the moment a
  * new change lands: a toast with Revert on it, because that is when somebody
- * is looking, and this panel for after the toast has gone.
- *
- * Absent on a board with no room, and on one nothing but people have touched:
- * a control for something that has never happened is a control people learn
- * to ignore.
+ * is looking, and the inbox for after the toast has gone.
  */
-export function AgentChanges() {
+export function useAgentChanges(): AgentChangesState {
   const { runtime, collaboration } = useOpenFrame()
   const commands = useCommands()
   const [changes, setChanges] = useState<readonly LoggedChange[]>([])
   const [role, setRole] = useState(collaboration?.role ?? 'editor')
-  const [open, setOpen] = useState(false)
-  const { ref: button, anchor, surface } = useAnchoredTo<HTMLButtonElement>(open)
-  const sheet = useRef<HTMLDivElement>(null)
+  const [seenIds, setSeenIds] = useState(() => readSeen(runtime.boardId))
   /*
    * The changes already on the board when it opened. Those are history, not
    * news: toasting each of them on every reload would be a board that shouts
@@ -105,113 +114,72 @@ export function AgentChanges() {
     })
   }, [collaboration, revert])
 
-  // A sheet like Mentions: the keyboard goes in, Escape or a press elsewhere
-  // closes it, and the keyboard goes back to the button.
-  useEffect(() => {
-    if (!open) return
-    const escape = (event: KeyboardEvent): void => {
-      if (event.key !== 'Escape') return
-      event.preventDefault()
-      event.stopPropagation()
-      setOpen(false)
-      button.current?.focus()
-    }
-    const outside = (event: Event): void => {
-      if (!(event.target instanceof Node)) return
-      if (sheet.current?.contains(event.target) === true) return
-      if (button.current?.contains(event.target) === true) return
-      setOpen(false)
-    }
-    window.addEventListener('keydown', escape, true)
-    window.addEventListener('pointerdown', outside, true)
-    return () => {
-      window.removeEventListener('keydown', escape, true)
-      window.removeEventListener('pointerdown', outside, true)
-    }
-  }, [open, button])
+  const present = useMemo(
+    () => (collaboration === null || collaboration === undefined ? [] : changes),
+    [collaboration, changes],
+  )
+  const markSeen = useCallback((): void => {
+    setSeenIds((was) => {
+      if (present.every((change) => was.has(change.id))) return was
+      const next = new Set([...was, ...present.map((change) => change.id)])
+      writeSeen(runtime.boardId, next)
+      return next
+    })
+  }, [present, runtime.boardId])
+  const waiting = present.filter((change) => change.reverted === null)
+  return {
+    changes: present,
+    pending: waiting.length,
+    unseen: waiting.filter((change) => !seenIds.has(change.id)).length,
+    isSeen: (change) => seenIds.has(change.id),
+    markSeen,
+    editing: role !== 'viewer',
+    revert,
+  }
+}
 
-  const placed = anchor !== null
-  useEffect(() => {
-    // The first Revert, or the sheet itself when there is nothing to press —
-    // a viewer's, or one where everything has been taken back already.
-    if (!open || !placed) return
-    ;(sheet.current?.querySelector<HTMLElement>('button') ?? sheet.current)?.focus()
-  }, [open, placed])
-
-  if (collaboration === null || collaboration === undefined || changes.length === 0) return null
-
-  const pending = changes.filter((change) => change.reverted === null).length
-  const editing = role !== 'viewer'
-
+/** The changes themselves, with Revert on each one still on the board. */
+export function AgentChangeItems({ state }: { readonly state: AgentChangesState }) {
   return (
-    <div className="of-agent-changes">
-      <button
-        ref={button}
-        type="button"
-        className={pending === 0 ? 'of-mentions__bell is-read' : 'of-mentions__bell'}
-        aria-expanded={open}
-        aria-haspopup="dialog"
-        aria-label={
-          pending === 0
-            ? `Agent changes, ${String(changes.length)} recent, all taken back`
-            : `Agent changes, ${String(pending)} not taken back`
-        }
-        data-testid="agent-changes-button"
-        onClick={() => {
-          setOpen((current) => !current)
-        }}
-      >
-        {pending === 0
-          ? 'Agent changes'
-          : `${String(pending)} agent ${pending === 1 ? 'change' : 'changes'}`}
-      </button>
-
-      {open && (
-        <AnchoredSurface
-          anchor={anchor}
-          surface={surface}
-          prefer={['below', 'above']}
-          testId="agent-changes-surface"
+    <ul className="of-mentions__list" data-testid="agent-changes-list">
+      {state.changes.map((change) => (
+        <li
+          key={change.id}
+          className={
+            state.isSeen(change) || change.reverted !== null
+              ? 'of-agent-changes__item'
+              : 'of-agent-changes__item of-agent-changes__item--new'
+          }
+          data-testid={`agent-change-${change.id}`}
+          data-unread={state.isSeen(change) || change.reverted !== null ? 'false' : 'true'}
+          data-reverted={change.reverted === null ? 'false' : 'true'}
         >
-          <div ref={sheet} role="dialog" aria-label="Agent changes" tabIndex={-1}>
-            <ul className="of-mentions__list" data-testid="agent-changes-list">
-              {changes.map((change) => (
-                <li
-                  key={change.id}
-                  className="of-agent-changes__item"
-                  data-testid={`agent-change-${change.id}`}
-                  data-reverted={change.reverted === null ? 'false' : 'true'}
-                >
-                  <span className="of-mentions__who">{change.label}</span>
-                  <span className="of-mentions__where">
-                    {whose(change)} · <Ago at={change.at} /> · {objects(change.affected.length)}
-                  </span>
-                  {change.reverted !== null ? (
-                    <span className="of-agent-changes__done">
-                      Taken back{change.reverted.by === null ? '' : ` by ${change.reverted.by}`}
-                    </span>
-                  ) : (
-                    editing && (
-                      <button
-                        type="button"
-                        className="of-button of-agent-changes__revert"
-                        data-testid="agent-change-revert"
-                        aria-label={`Revert “${change.label}”`}
-                        onClick={() => {
-                          revert(change)
-                        }}
-                      >
-                        Revert
-                      </button>
-                    )
-                  )}
-                </li>
-              ))}
-            </ul>
-          </div>
-        </AnchoredSurface>
-      )}
-    </div>
+          <span className="of-mentions__who">{change.label}</span>
+          <span className="of-mentions__where">
+            {whose(change)} · <Ago at={change.at} /> · {objects(change.affected.length)}
+          </span>
+          {change.reverted !== null ? (
+            <span className="of-agent-changes__done">
+              Taken back{change.reverted.by === null ? '' : ` by ${change.reverted.by}`}
+            </span>
+          ) : (
+            state.editing && (
+              <button
+                type="button"
+                className="of-button of-agent-changes__revert"
+                data-testid="agent-change-revert"
+                aria-label={`Revert “${change.label}”`}
+                onClick={() => {
+                  state.revert(change)
+                }}
+              >
+                Revert
+              </button>
+            )
+          )}
+        </li>
+      ))}
+    </ul>
   )
 }
 

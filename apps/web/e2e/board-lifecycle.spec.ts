@@ -119,18 +119,13 @@ test('deletes the selection and restores it with undo', { tag: '@smoke' }, async
   await expect(page.locator(STICKY)).toContainText('Temporary')
 })
 
-/**
- * The AGPL section 13 offer of source.
- *
- * OpenFrame is network-interactive software under the AGPL, so a hosted
- * modified version must offer its users the source. A test rather than a
- * comment, because this is a licence obligation that would otherwise be quietly
- * lost the first time the status bar is redesigned.
+/*
+ * The hosted app links to no source repository: the owner holds the
+ * copyright, so the AGPL's network clause binds people the code is licensed
+ * to, not this deployment. A fork that hosts it adds its own offer (README).
  */
-test('offers a link to the source, as the licence requires', async ({ page }) => {
-  const link = page.getByTestId('source-link')
-  await expect(link).toBeVisible()
-
-  const href = await link.getAttribute('href')
-  expect(href).toMatch(/^https:\/\//)
+test('links nowhere to a source repository', async ({ page }) => {
+  await expect(page.getByTestId('status-bar')).toBeVisible()
+  await expect(page.locator('a[href*="github.com"]')).toHaveCount(0)
+  await expect(page.getByRole('link', { name: 'Source' })).toHaveCount(0)
 })

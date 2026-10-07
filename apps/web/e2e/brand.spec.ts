@@ -1,4 +1,4 @@
-import { expect, test } from '@playwright/test'
+import { expect, test, type Page } from '@playwright/test'
 
 import { BOARD_URL } from './routes.js'
 
@@ -12,7 +12,22 @@ import { BOARD_URL } from './routes.js'
  */
 
 const STATUS_BAR = '[data-testid="status-bar"]'
-const TOGGLE = '[data-testid="theme-toggle"]'
+
+/*
+ * The world is chosen in the account sheet — here the sign-in sheet, since
+ * these pages are signed out — and the sheet is put away again after.
+ */
+async function chooseWorld(page: Page, world: 'notebook' | 'after-hours'): Promise<void> {
+  await page.getByTestId('sign-in').click()
+  await page.getByTestId(`theme-${world}`).click()
+  await page.keyboard.press('Escape')
+}
+
+async function worldChosen(page: Page, world: 'notebook' | 'after-hours'): Promise<void> {
+  await page.getByTestId('sign-in').click()
+  await expect(page.getByTestId(`theme-${world}`)).toHaveAttribute('aria-checked', 'true')
+  await page.keyboard.press('Escape')
+}
 
 test.describe('the boot splash', () => {
   test('covers the wait, then gets out of the way', async ({ page }) => {
@@ -105,16 +120,15 @@ test.describe('after hours', () => {
 
     const root = page.locator('html')
     await expect(root).not.toHaveAttribute('data-theme', /.*/)
-    await expect(page.locator(TOGGLE)).toHaveAttribute('aria-pressed', 'false')
+    await worldChosen(page, 'notebook')
 
-    await page.click(TOGGLE)
+    await chooseWorld(page, 'after-hours')
     await expect(root).toHaveAttribute('data-theme', 'after-hours')
-    await expect(page.locator(TOGGLE)).toHaveAttribute('aria-pressed', 'true')
 
     await page.reload()
     await page.waitForSelector(STATUS_BAR)
     await expect(root).toHaveAttribute('data-theme', 'after-hours')
-    await expect(page.locator(TOGGLE)).toHaveAttribute('aria-pressed', 'true')
+    await worldChosen(page, 'after-hours')
   })
 
   /*
@@ -130,7 +144,7 @@ test.describe('after hours', () => {
     const meta = page.locator('meta[name="theme-color"]')
     await expect(meta).toHaveAttribute('content', '#f7f9fb')
 
-    await page.click(TOGGLE)
+    await chooseWorld(page, 'after-hours')
     await expect(meta).toHaveAttribute('content', '#1b1033')
 
     await page.reload()
@@ -141,8 +155,8 @@ test.describe('after hours', () => {
   test('switches back, and the default world carries no attribute at all', async ({ page }) => {
     await page.goto(BOARD_URL)
     await page.waitForSelector(STATUS_BAR)
-    await page.click(TOGGLE)
-    await page.click(TOGGLE)
+    await chooseWorld(page, 'after-hours')
+    await chooseWorld(page, 'notebook')
 
     /*
      * Absent rather than `data-theme="notebook"`. The base `:root` block is what
@@ -163,7 +177,7 @@ test.describe('after hours', () => {
       page.evaluate(() => getComputedStyle(document.body).backgroundColor)
 
     const notebook = await pageColour()
-    await page.click(TOGGLE)
+    await chooseWorld(page, 'after-hours')
     const afterHours = await pageColour()
 
     expect(afterHours).not.toBe(notebook)

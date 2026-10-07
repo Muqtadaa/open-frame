@@ -632,7 +632,7 @@ on it, and the decade rule marks the line the user is aiming at.
 
 **Responsive.** Breakpoints are structural rather than cosmetic. Below
 **820px** the zoom cluster drops its slider, a coarse control the canvas itself
-already provides, and the account shrinks to its face with Source in its sheet.
+already provides, and the account shrinks to its face.
 The navigation bar gives way at 640px and 560px (see Navigation Bar) and never
 leaves the rail's 20px gutter; the controls with no other route always stay.
 Below **560px** the record panel and the comments panel become sheets along the
@@ -918,11 +918,18 @@ page's `nav` ("Board"), with the board's name as its `h1`. The tab carries the
 name too, as "<name> — OpenFrame": a board found again among several open
 tabs, or in the history a week later, is found by its name.
 
-**Order.** "All boards" and the name lead; then history (undo/redo); then the
-record — the save state and, only when something is selected, "N selected";
-then, after a rule, the app's own apparatus: sharing, agent changes,
-mentions, your account, the theme; and the AGPL source link last and quietest, underlined as text with
-a 3px offset.
+**Three zones**, each a named `group`, so a screen reader hears the same
+hierarchy a glance sees:
+
+1. **This board** — "All boards", the name, the board's menu (⌄), and the
+   safety readout; "N selected" only while something is.
+2. **Session** — one pill for the timer and the music.
+3. **People** — the other people's faces, Share, the Inbox, your account.
+
+Nothing else is on the bar. Undo and redo are with zoom at the foot of the
+board, because they are how the board is handled; the theme is in the
+account sheet, because it is chosen once and kept. There is no link to the
+source: the owner holds the copyright (PRODUCT.md, Brand Commitments).
 
 **Type.** The name is set in the interface's own voice, 15px sans at 600 in
 full ink, and takes the room the bar has up to 48ch. A name that still does
@@ -930,50 +937,76 @@ not fit is shown whole in its tip. "All boards" is at the control size and 500;
 every readout stays a record, 12px mono and muted, bolded to 600 in full ink
 where it is a number.
 
-**The save state.** "Saved", "Saving…", "Not saved" or "Read only", with the
-where in its tip ("Saved on this device"). It stands where a count of objects
-used to, because it is the one thing a local-first board most needs to say.
+**The board's menu.** A chevron beside the name, outside the heading: Rename
+(the name also renames on a press) and Version history…. Where accounts are
+switched off, so there is no account sheet, it also holds the After Hours
+theme.
+
+**The safety readout** says whether the work is safe, in one place: "Saved"
+on a board of your own; "Saved · Live" on a shared one, with a dot; "Offline ·
+saved here" while the room is out of reach (reconnecting or not — the dot's
+colour and the tip say which); "Not saved" when the write failed; "Read-only".
 Only a failure is inked, in the danger colour at 600, and only a failure is
-announced.
+announced. Being offline is never hidden for room, because it changes what
+every edit means.
 
-**Agent changes** appear only on a shared board an agent has touched. The
-control is the Mentions chip: "2 agent changes" in the accent's wash while
-anything is left to review, the plain "Agent changes" once everything has
-been taken back. Its sheet is the Mentions list. Each row gives what the
-change did, whose agent made it, when, and how many objects it touched, with
-Revert at the right, or "Taken back by <name>" in muted ink. A viewer sees
-the rows without Revert. Reverting is the person's own step, so undo puts
-the change back, and what stayed because somebody changed it since is
-announced.
+**Share is a verb.** A plain button. The owner gets both links and the
+password; anybody else gets the link they arrived on, copied, and the button
+says so ("Edit link copied"). Sharing a board of your own asks first, then
+moves it. It never reads "Shared" — the room's state is the readout's.
 
-**Your account** is quiet apparatus like the theme toggle, never an outlined
-chip. Pressing your name opens a sheet with who you are signed in as and "Sign
-out"; it never signs you out on the press.
+**Faces** are the other people's: yours is the account's. Three at most and a
+count; the count opens everybody, you included. A face can be pressed to
+follow that person.
+
+**The Inbox** is one count for what is waiting for you — unread mentions plus
+agent changes this browser has not been shown yet — in the accent's wash while
+there is any, plain once there is not, and absent until there has been
+something. A mention is read by following it; an agent change is read by
+being looked at — closing the Inbox reads what was in it, so the count does
+not stay up for as long as the change is on the board. Read rows lose their
+accent edge but stay listed, with Revert, until they leave the log. Its sheet
+has a section each. A mention marks itself read and goes to its remark; an
+agent change has Revert ("Taken back by <name>" once it is), and a viewer
+sees the rows without it. A new agent change also arrives as a toast with
+Revert on it.
+
+**Your account** is quiet apparatus, never an outlined chip. Pressing your
+name opens a sheet with who you are, "Sign out" (never on the press itself),
+and the theme as two named choices, Notebook and After Hours. Signed out,
+"Sign in" opens the sign-in sheet, which carries the theme too.
 
 **Keyboard.** Enter or Escape in the name or the zoom readout hands focus back
-to the control that opened it. The last undo moves focus to redo. Every tipped
-control names itself explicitly, because a tip drawn by `::after` is otherwise
-read into its name. Tips and sheets open downward. Shortcuts read "Ctrl+Z" off
-a Mac and "⌘Z" on one.
+to the control that opened it. Every sheet takes the keyboard on arrival and
+hands it back on Escape. Every tipped control names itself explicitly, because
+a tip drawn by `::after` is otherwise read into its name. Tips and sheets open
+downward. Shortcuts read "Ctrl+Z" off a Mac and "⌘Z" on one; Alt+T opens the
+Session.
 
-**Narrow windows.** The bar keeps the rail's 20px gutter at every width, and it
-gives up in order: the account's name below 820px (it keeps its face, and the
-source offer moves into the account and sign-in sheets, so it is still
-reachable from inside the running app); the selection count, the exit's words
-and a shared board's room label below 640px; then the save state's word and the
-rules below 560px. Signed out, "Sign in" stays a visible word at every width.
-Nothing ever runs out of the bar, on a local board or a shared one.
+**Narrow windows** are measured, not guessed at (use-squeeze.ts). The bar used
+five breakpoints, each worked out for what it carried at the time and each made
+wrong by the next control to join it. Now, whenever its size or its contents
+change, it steps through what it may give up only as far as it has to: the
+name shortens first; then the account becomes its face; the selection count
+goes; the exit keeps its arrow; the readout its first word ("Offline"); the
+session and the inbox keep their icons and counts; a running pill its time and
+its note; Share becomes its link; the gaps and rules tighten; the name gives a
+few more characters; and, last of all, on a phone's bar with the room out of
+reach, the readout is its dot, its word kept for a screen reader. Every control
+stays, inside the bar and clear of its neighbours, at every width; signed out,
+"Sign in" stays a word.
 
 ### Session Timer
 
-One countdown for everybody at the board (ADR 0017), on the navigation bar
-beside the people — it is about the session, not the board. At rest it is an
-icon button like the bar's others; once set running or paused it shows the time
-beside the icon in mono, tabular, so the digits do not jitter, with the control
-edge. At zero it takes the accent's wash and edge, the mentions chip's "look at
-me", and stays so until somebody resets it.
+One countdown for everybody at the board (ADR 0017), in the **Session pill**
+beside the people — it is about the session, not the board. The pill reads
+"Session" at rest; while the timer runs or is paused it shows the time in
+mono, tabular, so the digits do not jitter, with the control edge — and a note
+after it, "5:00 · ♪", while music plays. At zero it takes the accent's wash
+and edge, the Inbox's "look at me", and stays so until somebody resets it.
+Alt+T opens the pill's sheet at the timer.
 
-Its sheet holds a large readout, who last touched it ("Started by Ada"), and —
+The sheet's Timer section holds a large readout, who last touched it ("Started by Ada"), and —
 for an editor — five presets in minutes, a duration field that takes minutes or
 `m:ss`, then Start, or Pause / Resume, +1 min and Reset. A viewer gets the
 readout alone, and no button on the bar until there is a timer to watch.
@@ -986,12 +1019,11 @@ pulses in colour instead — colour, not movement, so reduced motion keeps it.
 
 ### Session Music
 
-Beside the timer on the navigation bar, and only where there is a library to
-play from: no room server, or nothing approved in it yet, and the button is
-not there. At rest an icon button; while music plays or is paused it takes the
-accent ink and the control edge.
+The Session pill's second section, and only where there is a library to play
+from: no room server, or nothing approved in it yet, and there is no Music
+section. While music plays or is paused the pill carries a note.
 
-Its sheet holds the genres that have tracks, as a row of pressed toggles —
+The section holds the genres that have tracks, as a row of pressed toggles —
 the one playing in the accent's wash — then what is playing: title, artist,
 "CC0", and the time into the track in mono. An editor gets Play, or Pause, and
 Stop. Everybody gets this device's sound: Mute and a volume slider, kept in
@@ -1001,13 +1033,13 @@ than three seconds into a track starts it again, as every player does.
 
 A browser makes no sound until somebody on that device presses something, so
 music somebody else starts is OFFERED rather than waited for: a notice under
-the music button, "Ada started the music", with Listen and a dismiss. It never
-takes focus, and it is announced once. Waved away, the button keeps saying so
+the Session pill, "Ada started the music", with Listen and a dismiss. It never
+takes focus, and it is announced once. Waved away, the pill keeps saying so
 — the accent edge and a dot, "not playing here" in its name — and the sheet
 keeps "Listen here". Once somebody in a browser has said yes, later music
 joins on its own, or on their next press anywhere where the browser insists on
-one. A viewer gets everything but the editor's buttons, and no button on the
-bar until there is music to hear.
+one. A viewer gets everything but the editor's buttons, and no pill on the bar
+until there is a timer to watch or music to hear.
 
 ### Poll Card
 
@@ -1090,10 +1122,18 @@ leaves nothing behind.
 ### Zoom Cluster
 
 Bottom-right, mono throughout. 30px buttons (`--of-hit-sm`) carrying 16px
-icons. Two settings come first, then a ruled separator, then zoom itself.
+icons. Undo and redo come first, then a rule, then two settings, then a rule,
+then zoom itself.
+
+- **History.** Undo and redo, named by what they would undo ("Undo move 2
+  objects"), with ⌘Z / Ctrl+Z in the tip. They are how the board is handled,
+  so they sit with zoom rather than taking the navigation bar's best place
+  beside the name. While a field is being edited they drive its own history.
 
 - **The settings.** "wheel: zoom" (or "wheel: pan") is set as a value in 12px
   mono beside its mouse icon; a bare "zoom" read as the cluster's heading.
+  Below 480px — a phone, with no wheel to describe — the value goes and the
+  icon keeps its name, so the cluster keeps its gutter.
   Snap is drawn as a square set down on a grid of points, never as grid lines,
   which were nearly the Frame tool's glyph. A pressed toggle carries a 2px
   accent bar along its foot as well as its wash, because the wash alone is not
@@ -1112,8 +1152,8 @@ icons. Two settings come first, then a ruled separator, then zoom itself.
 A glyph on no ground that takes a bed when you reach for it: 30px
 (`--of-hit-sm`) at its smallest, muted ink at rest, ink on the hover wash,
 accent on the accent wash when pressed (the state an active tool takes), and
-correction red on hover only when it removes something. The navigation bar's
-history, the zoom cluster, the arrange and format bars, the record panel's
+correction red on hover only when it removes something. The zoom
+cluster's history and settings, the arrange and format bars, the record panel's
 remove and the front door's row actions are all this one control; six private
 versions at 24, 26, 28 and 30px were folded into it, and the three under 30
 were under this world's own target.
@@ -1297,7 +1337,7 @@ sees. Ruling it and collapsing the panels into one sheet is what made it belong.
 ### Sharing
 
 Every board is born in a room, so sharing is not an event but a sheet the
-OWNER opens from the room chip: copy edit link, copy view link, each naming
+OWNER opens from the bar's Share button: copy edit link, copy view link, each naming
 what it gives away on its second line, at 50px (`--of-hit-lg`) — the largest
 target, because this is the one control where hitting the wrong one has a
 consequence. A copied link keeps its name and says "Copied" underneath.

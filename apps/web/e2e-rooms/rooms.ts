@@ -26,8 +26,8 @@ export async function join(browser: Browser, room: string): Promise<Page> {
   const page = await context.newPage()
   await page.goto(`/?room=${room}`)
   await page.waitForSelector('[data-testid="status-bar"]')
-  await expect(page.locator('[data-testid="room-status"]')).toHaveAttribute(
-    'data-status',
+  await expect(page.locator('[data-testid="save-state"]')).toHaveAttribute(
+    'data-room',
     'connected',
     { timeout: 20_000 },
   )
