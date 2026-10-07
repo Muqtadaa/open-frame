@@ -265,6 +265,9 @@
   display: inline-flex;
   gap: var(--of-space-4);
   align-items: center;
+  /* A target at 100%: it was 22px, under the 24 WCAG 2.5.8 asks. */
+  min-width: var(--of-hit-min);
+  min-height: var(--of-hit-min);
   padding: var(--of-space-2) var(--of-space-6);
   font-size: var(--of-type-record);
   line-height: 1.4;

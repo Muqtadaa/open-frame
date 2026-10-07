@@ -4,6 +4,7 @@ import { useEffect, useMemo, useRef, useState, type KeyboardEvent } from 'react'
 import { AnchoredSurface } from '../controls/AnchoredSurface.js'
 import { useCommands } from '../hooks/use-commands.js'
 import { useMe } from '../hooks/use-me.js'
+import { useOptionsPanelRect } from './options-panel.js'
 import { useInteractionStore } from '../interaction/interaction-store.js'
 import { emojiKey } from '../scene/reaction-glyphs.js'
 import {
@@ -41,6 +42,7 @@ function Picker({
   readonly targets: readonly ObjectId[]
   readonly anchor: { x: number; y: number; width: number; height: number }
 }) {
+  const panel = useOptionsPanelRect()
   const close = useInteractionStore((state) => state.closeReactionPicker)
   const canvasSize = useInteractionStore((state) => state.canvasSize)
   const commands = useCommands()
@@ -164,6 +166,8 @@ function Picker({
       surface={canvasSize}
       prefer={['below', 'above', 'right', 'left']}
       layer="menu"
+      // Off the record panel: it opened over the swatches beside the note.
+      avoid={panel}
       testId="reaction-picker"
     >
       <div
