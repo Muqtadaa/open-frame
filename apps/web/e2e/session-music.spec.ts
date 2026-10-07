@@ -59,6 +59,26 @@ test('offers only the genres the library has', async ({ page }) => {
   await expect(sheet(page).getByRole('radio')).toHaveText(['Jazz lounge', 'Ambient'])
 })
 
+test('is one stop for the genres, walked with the arrows', async ({ page }) => {
+  await withLibrary(page)
+  await button(page).click()
+  const jazz = sheet(page).getByRole('radio', { name: 'Jazz lounge' })
+  const ambient = sheet(page).getByRole('radio', { name: 'Ambient' })
+  await jazz.focus()
+  await page.keyboard.press('ArrowRight')
+  await expect(ambient).toBeFocused()
+  await expect(ambient).toHaveAttribute('aria-checked', 'true')
+  // One Tab stop for the group, as a radio group is: Tab leaves it.
+  await expect(jazz).toHaveAttribute('tabindex', '-1')
+})
+
+test('gives the volume a target a pointer can find', async ({ page }) => {
+  await withLibrary(page)
+  await button(page).click()
+  const box = await page.getByTestId('music-volume').boundingBox()
+  expect(box?.height ?? 0).toBeGreaterThanOrEqual(24)
+})
+
 test('keeps this device’s mute through a reload', async ({ page }) => {
   await withLibrary(page)
   await button(page).click()
@@ -135,6 +155,16 @@ test('waved away, the prompt goes and the button still says so', async ({ page }
   await expect(button(page)).toHaveAccessibleName(
     'Session, music, Jazz lounge, playing, not playing here',
   )
+})
+
+test('from the keyboard, Escape waves the prompt away and the keyboard goes to the pill', async ({
+  page,
+}) => {
+  await startedByAda(page)
+  await page.getByTestId('music-prompt-dismiss').focus()
+  await page.keyboard.press('Escape')
+  await expect(prompt(page)).toHaveCount(0)
+  await expect(button(page)).toBeFocused()
 })
 
 test('once this browser has said yes, the next press anywhere lets the music in', async ({

@@ -1,12 +1,15 @@
 import type { AnyOpenFrameObject, ObjectId } from '@openframe/core'
 import { MIN_CLUSTER_NOTES, type ClusterProposal } from '@openframe/core/ai'
-import { useEffect, useId, useMemo, useRef, useState } from 'react'
+import { useCallback, useEffect, useId, useMemo, useRef, useState } from 'react'
 
 import { gatherClusterNotes } from '../app/ai-cluster.js'
+import { wrapTab } from '../controls/wrap-tab.js'
 import { useCommands } from '../hooks/use-commands.js'
 import { useInteractionStore } from '../interaction/interaction-store.js'
 import { useOpenFrame } from '../runtime/context.js'
 import { useServices, type ClusterRefusal } from '../runtime/services.js'
+import { focusTheBoard } from './hand-back-focus.js'
+import { useEscapeToClose } from '../controls/escape-stack.js'
 
 /** What each refusal says. Facts, and the one thing that would change it. */
 const REFUSED: Readonly<Record<ClusterRefusal | 'too-few' | 'too-many', string>> = {
@@ -44,7 +47,23 @@ function ClusterPanel({ ids }: { readonly ids: readonly ObjectId[] }) {
   const { runtime } = useOpenFrame()
   const services = useServices()
   const commands = useCommands()
-  const close = useInteractionStore((state) => state.closeClusterReview)
+  const closePanel = useInteractionStore((state) => state.closeClusterReview)
+  /*
+   * Closing hands the keyboard to the board — the selection, or after Apply
+   * the new frame — rather than dropping it on the page with the panel.
+   */
+  const close = useCallback(() => {
+    closePanel()
+    focusTheBoard()
+  }, [closePanel])
+
+  /*
+   * Escape closes the panel from ANYWHERE while it is open, and only the
+   * panel. Heard only inside it, an Escape pressed once focus had moved to the
+   * board went to the keymap instead: the selection was cleared and the panel
+   * stayed open, describing notes that were no longer selected.
+   */
+  useEscapeToClose(close)
   const headingId = useId()
   const panel = useRef<HTMLElement>(null)
   const asking = useRef<AbortController | null>(null)
@@ -118,11 +137,7 @@ function ClusterPanel({ ids }: { readonly ids: readonly ObjectId[] }) {
       data-testid="cluster-review"
       data-stage={stage.kind}
       onKeyDown={(event) => {
-        if (event.key === 'Escape') {
-          event.preventDefault()
-          close()
-          return
-        }
+        wrapTab(event)
         /*
          * Enter and Space press the button the panel put focus on. The board's
          * keymap yields them to a control only when the KEYBOARD put focus

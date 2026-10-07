@@ -206,3 +206,8 @@
   padding-left: var(--of-space-6);
   border-left: 2px solid var(--of-accent);
 }
+
+/* "1 object" never breaks across lines beside the time. */
+.of-agent-changes__count {
+  white-space: nowrap;
+}

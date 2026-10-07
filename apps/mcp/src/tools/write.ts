@@ -171,21 +171,21 @@ export const createObjects: ToolDefinition = {
       if (refused !== null) return refused
     }
 
-    return commit(opened.peer, `Create ${String(asked.objects.length)} object(s)`, [
-      {
-        kind: 'CreateObjects',
-        objects: asked.objects.map((object) => ({
-          type: object.type,
-          x: object.x,
-          y: object.y,
-          ...(object.width === undefined ? {} : { width: object.width }),
-          ...(object.height === undefined ? {} : { height: object.height }),
-          ...(object.parentId === undefined ? {} : { parentId: asObjectId(object.parentId) }),
-          ...(object.data === undefined ? {} : { data: object.data }),
-          ...(object.style === undefined ? {} : { style: object.style }),
-        })),
-      },
-    ])
+    const command: Command = {
+      kind: 'CreateObjects',
+      objects: asked.objects.map((object) => ({
+        type: object.type,
+        x: object.x,
+        y: object.y,
+        ...(object.width === undefined ? {} : { width: object.width }),
+        ...(object.height === undefined ? {} : { height: object.height }),
+        ...(object.parentId === undefined ? {} : { parentId: asObjectId(object.parentId) }),
+        ...(object.data === undefined ? {} : { data: object.data }),
+        ...(object.style === undefined ? {} : { style: object.style }),
+      })),
+    }
+    // Core's wording, so the change log, the undo entry and the toast agree.
+    return commit(opened.peer, describeCommand(command), [command])
   },
 }
 
@@ -280,7 +280,7 @@ export const moveObjects: ToolDefinition = {
 
     return commit(
       opened.peer,
-      `Move ${String(moves.length)} object(s)`,
+      describeCommand({ kind: 'MoveObjects', moves }),
       [{ kind: 'MoveObjects', moves }],
       // Said rather than silently skipped: an agent that asked for six and got
       // five would otherwise have to diff the lists to find out which.
@@ -307,9 +307,8 @@ export const deleteObjects: ToolDefinition = {
     const opened = await onBoardEditing(input, context, deleteArguments)
     if (isResponse(opened)) return opened
     const asked = opened.input
-    return commit(opened.peer, `Delete ${String(asked.ids.length)} object(s)`, [
-      { kind: 'DeleteObjects', ids: asked.ids.map((id) => asObjectId(id)) },
-    ])
+    const command: Command = { kind: 'DeleteObjects', ids: asked.ids.map((id) => asObjectId(id)) }
+    return commit(opened.peer, describeCommand(command), [command])
   },
 }
 

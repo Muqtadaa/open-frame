@@ -7,6 +7,7 @@ import { useDismiss } from '../controls/use-dismiss.js'
 import { useMentions } from '../hooks/use-mentions.js'
 import { AgentChangeItems, useAgentChanges } from './AgentChanges.js'
 import { MentionItems } from './Mentions.js'
+import { wrapTab } from '../controls/wrap-tab.js'
 
 /**
  * What has happened that is for you: mentions, and what agents did to the
@@ -52,11 +53,15 @@ export function Inbox() {
     }
   }, [open, markSeen])
 
-  // In once the sheet is PLACED, at its first link or Revert.
+  /*
+   * In once the sheet is PLACED: at its first mention, which only goes
+   * somewhere, or else at the sheet itself. Never at a Revert — opening the
+   * Inbox and pressing Enter twice took a change back.
+   */
   const placed = anchor !== null
   useEffect(() => {
     if (!open || !placed) return
-    ;(sheet.current?.querySelector<HTMLElement>('a, button') ?? sheet.current)?.focus()
+    ;(sheet.current?.querySelector<HTMLElement>('a') ?? sheet.current)?.focus()
   }, [open, placed])
 
   if (mentions.mentions.length === 0 && agents.changes.length === 0) return null
@@ -104,6 +109,7 @@ export function Inbox() {
             aria-label="Inbox"
             tabIndex={-1}
             onKeyDown={(event) => {
+              wrapTab(event)
               // Up and down everything in it, wrapping, as every list here does.
               if (event.key !== 'ArrowDown' && event.key !== 'ArrowUp') return
               event.preventDefault()

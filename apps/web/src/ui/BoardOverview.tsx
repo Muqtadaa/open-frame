@@ -20,6 +20,7 @@ import { useInteractionStore } from '../interaction/interaction-store.js'
 import { useOpenFrame } from '../runtime/context.js'
 import { readingOrder } from '../scene/reading-order.js'
 import { typeNoun, typeTitle } from '../scene/type-noun.js'
+import { wrapTab } from '../controls/wrap-tab.js'
 
 /**
  * How many objects one level of the list shows before the rest are a single
@@ -247,8 +248,10 @@ export function BoardOverview() {
       role="dialog"
       aria-label="Board overview"
       aria-describedby="of-overview-summary"
+      aria-modal="true"
       tabIndex={-1}
       onKeyDown={(event) => {
+        wrapTab(event)
         if (event.key !== 'Escape') return
         event.stopPropagation()
         event.preventDefault()
@@ -278,6 +281,12 @@ export function BoardOverview() {
           onKeyDown={(event) => {
             // The board's own keys must not fire while reading the list.
             event.stopPropagation()
+            // The tree is the overview's only stop: Tab stays on it rather than
+            // walking out while the overview is open.
+            if (event.key === 'Tab') {
+              event.preventDefault()
+              return
+            }
             if (current === undefined) return
             const at = indexOf(current.key)
             switch (event.key) {

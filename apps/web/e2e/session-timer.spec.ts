@@ -33,6 +33,9 @@ test('runs down, and says when time is up', async ({ page }) => {
   await expect(pill(page)).toHaveAttribute('data-timer', 'done')
   await expect(readout(page)).toHaveText('Time’s up')
   await expect(page.getByTestId('board-announcer')).toContainText('Time’s up')
+  // Its name holds what it shows — "0:00" — and not only what that means.
+  await expect(pill(page)).toHaveAccessibleName('Session, timer, 0:00, time’s up')
+  await expect(page.getByTestId('timer-add-minute')).toHaveAccessibleName('+1 min')
 })
 
 test('says when one minute is left', async ({ page }) => {
@@ -107,6 +110,28 @@ test('opens and closes from the keyboard, and hands focus back', async ({ page }
   await page.keyboard.press('Escape')
   await expect(sheet(page)).toHaveCount(0)
   await expect(pill(page)).toBeFocused()
+})
+
+test('keeps the keyboard on the control it pressed, through start, pause, resume and reset', async ({
+  page,
+}) => {
+  await pill(page).focus()
+  await page.keyboard.press('Enter')
+  await expect(page.getByTestId('timer-start')).toBeFocused()
+  // The pressed control turns into the next one, so focus never falls to the page.
+  await page.keyboard.press('Enter')
+  await expect(page.getByTestId('timer-pause')).toBeFocused()
+  await page.keyboard.press('Enter')
+  await expect(page.getByTestId('timer-resume')).toBeFocused()
+  await page.getByTestId('timer-reset').focus()
+  await page.keyboard.press('Enter')
+  await expect(page.getByTestId('timer-start')).toBeFocused()
+})
+
+test('keeps Tab inside the open sheet', async ({ page }) => {
+  await pill(page).click()
+  for (let press = 0; press < 12; press++) await page.keyboard.press('Tab')
+  await expect(sheet(page).locator(':focus')).toHaveCount(1)
 })
 
 /*

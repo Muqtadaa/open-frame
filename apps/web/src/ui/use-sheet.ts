@@ -1,4 +1,5 @@
 import { useEffect, type RefObject } from 'react'
+import { useEscapeToClose } from '../controls/escape-stack.js'
 
 /**
  * A sheet off a bar button, like Mentions: the keyboard goes in, Escape or a
@@ -19,25 +20,22 @@ export function useSheet(options: {
 }): void {
   const { open, placed, setOpen, sheet, button, first } = options
 
+  // Escape closes this sheet only if it is the one opened last.
+  useEscapeToClose(() => {
+    setOpen(false)
+    button.current?.focus()
+  }, open)
+
   useEffect(() => {
     if (!open) return
-    const escape = (event: KeyboardEvent): void => {
-      if (event.key !== 'Escape') return
-      event.preventDefault()
-      event.stopPropagation()
-      setOpen(false)
-      button.current?.focus()
-    }
     const outside = (event: Event): void => {
       if (!(event.target instanceof Node)) return
       if (sheet.current?.contains(event.target) === true) return
       if (button.current?.contains(event.target) === true) return
       setOpen(false)
     }
-    window.addEventListener('keydown', escape, true)
     window.addEventListener('pointerdown', outside, true)
     return () => {
-      window.removeEventListener('keydown', escape, true)
       window.removeEventListener('pointerdown', outside, true)
     }
   }, [open, setOpen, sheet, button])

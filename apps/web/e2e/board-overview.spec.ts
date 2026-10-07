@@ -28,6 +28,17 @@ const tree = (page: Page) => page.getByRole('tree', { name: 'Objects' })
 const item = (page: Page, name: string | RegExp) => page.getByRole('treeitem', { name })
 
 test.describe('the board overview', () => {
+  test('keeps Tab inside while it is open', async ({ page }) => {
+    await seed(page, (board) => {
+      board.note('Pricing is hidden', { x: 1000, y: 300 })
+    })
+    await openOverview(page)
+    for (let press = 0; press < 3; press++) await page.keyboard.press('Tab')
+    await expect(
+      page.getByRole('dialog', { name: 'Board overview' }).locator(':focus'),
+    ).toHaveCount(1)
+  })
+
   test(
     'says what is on the board, and goes to what is chosen',
     { tag: '@smoke' },

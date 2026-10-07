@@ -1,4 +1,5 @@
 import { useEffect, type RefObject } from 'react'
+import { useEscapeToClose } from './escape-stack.js'
 
 /**
  * How every sheet lets go: Escape, or a press anywhere outside it.
@@ -22,6 +23,8 @@ export function useDismiss(
   onClose: () => void,
   active = true,
 ): void {
+  // Escape, through the one stack, so it closes only the sheet opened last.
+  useEscapeToClose(onClose, active)
   useEffect(() => {
     if (!active) return
     const outside = (event: Event): void => {
@@ -31,17 +34,9 @@ export function useDismiss(
       if (trigger.current?.contains(target) === true) return
       onClose()
     }
-    const escape = (event: KeyboardEvent): void => {
-      if (event.key !== 'Escape') return
-      event.preventDefault()
-      event.stopPropagation()
-      onClose()
-    }
     window.addEventListener('pointerdown', outside, true)
-    window.addEventListener('keydown', escape, true)
     return () => {
       window.removeEventListener('pointerdown', outside, true)
-      window.removeEventListener('keydown', escape, true)
     }
   }, [sheet, trigger, onClose, active])
 }

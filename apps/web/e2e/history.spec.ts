@@ -90,6 +90,25 @@ test.describe('looking back, and restoring', () => {
     await expect(canvas(page)).toContainText('Written since')
   })
 
+  test('takes the keyboard to the preview, says so, and gives it back to the board', async ({
+    page,
+  }) => {
+    await boardWithAVersion(page)
+    await page.getByTestId('board-menu').click()
+    await page.getByTestId('board-menu-history').click()
+    await page.getByTestId('history-version').first().press('Enter')
+    // In, on what is being looked at — not left on the page.
+    await expect(page.getByRole('heading', { name: /^Viewing / })).toBeFocused()
+    await expect(page.getByTestId('board-announcer')).toContainText('Viewing')
+
+    await page.keyboard.press('Escape')
+    await expect(page.getByTestId('version-preview')).toHaveCount(0)
+    await expect(canvas(page)).toBeFocused()
+    await expect(page.getByTestId('board-announcer')).toContainText(
+      'Back to the board as it is now',
+    )
+  })
+
   test(
     'restores it, keeps what it replaced, and undo brings that back',
     {

@@ -2,6 +2,7 @@ import { useRef, type RefObject } from 'react'
 
 import { useDismiss, useFocusOnOpen } from '../controls/use-dismiss.js'
 import { hueVar, initialOf } from '../scene/presence.js'
+import { wrapTab } from '../controls/wrap-tab.js'
 
 /** One person on the board, as the bar lists them. */
 export interface BoardPerson {
@@ -47,6 +48,7 @@ export function PeopleSheet({
       role="dialog"
       aria-label="People on this board"
       data-testid="people-sheet"
+      onKeyDown={wrapTab}
     >
       <ul className="of-people__list">
         {people.map((person) => {
@@ -78,7 +80,8 @@ export function PeopleSheet({
                 type="button"
                 className="of-people__row of-people__choice"
                 aria-pressed={followed}
-                aria-label={followed ? `Stop following ${person.name}` : `Follow ${person.name}`}
+                // One name; whether it is on is what aria-pressed says.
+                aria-label={`Follow ${person.name}`}
                 data-testid={`people-follow-${person.key}`}
                 onClick={() => {
                   onFollow(followed ? null : clientId)

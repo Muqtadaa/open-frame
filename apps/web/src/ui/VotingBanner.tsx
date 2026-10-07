@@ -15,6 +15,7 @@ import {
   useSyncExternalStore,
 } from 'react'
 
+import { wrapTab } from '../controls/wrap-tab.js'
 import { useCanEdit } from '../hooks/use-can-edit.js'
 import { useCommands } from '../hooks/use-commands.js'
 import { useMe } from '../hooks/use-me.js'
@@ -27,6 +28,8 @@ import {
 } from '../hooks/use-voting.js'
 import { useInteractionStore } from '../interaction/interaction-store.js'
 import { useOpenFrame } from '../runtime/context.js'
+import { focusTheBoard } from './hand-back-focus.js'
+import { useEscapeToClose } from '../controls/escape-stack.js'
 
 /** How many places "select the top" takes: what a session usually carries forward. */
 const TOP = 3
@@ -85,6 +88,18 @@ function VotingSetup({ scope }: { readonly scope: VoteScope }) {
     first.current?.focus()
   }, [])
 
+  /*
+   * Escape closes the setup from anywhere while it is open, and hands the
+   * keyboard back to the board (E1). Heard only inside the form, an Escape
+   * pressed after focus had moved left the setup open; and closing it dropped
+   * the keyboard on the page.
+   */
+  const cancel = useCallback(() => {
+    close()
+    focusTheBoard()
+  }, [close])
+  useEscapeToClose(cancel)
+
   const votes = Number(perPerson)
   const valid = Number.isInteger(votes) && votes >= 1 && votes <= MAX_VOTES_PER_PERSON
 
@@ -93,12 +108,7 @@ function VotingSetup({ scope }: { readonly scope: VoteScope }) {
       className="of-notice of-voting of-voting--setup"
       aria-labelledby={`${id}-heading`}
       data-testid="voting-setup"
-      onKeyDown={(event) => {
-        if (event.key === 'Escape') {
-          event.preventDefault()
-          close()
-        }
-      }}
+      onKeyDown={wrapTab}
       onSubmit={(event) => {
         event.preventDefault()
         if (!valid || me === null) return
@@ -164,7 +174,7 @@ function VotingSetup({ scope }: { readonly scope: VoteScope }) {
         >
           Start
         </button>
-        <button type="button" className="of-button of-button--ghost" onClick={close}>
+        <button type="button" className="of-button of-button--ghost" onClick={cancel}>
           Cancel
         </button>
       </div>
@@ -191,6 +201,36 @@ function VotingRoundBar({ round }: { readonly round: VotingRound }) {
   const setTool = useInteractionStore((state) => state.setTool)
   const votes = useRoundVotes(round.id)
   const [showing, setShowing] = useState(false)
+  const bar = useRef<HTMLElement>(null)
+  /*
+   * The control that takes the keyboard next. End, Reveal and Reopen each
+   * leave the bar as they take effect, and focus on a removed button falls to
+   * the page (E1); so a press names its successor, and the bar hands focus on
+   * once it has rendered.
+   */
+  const handTo = useRef<string | null>(null)
+  useEffect(() => {
+    const next = handTo.current
+    if (next === null) return
+    handTo.current = null
+    bar.current?.querySelector<HTMLElement>(`[data-testid="${next}"]`)?.focus()
+  })
+  /*
+   * A banner that arrives while the keyboard is nowhere — after Start — takes
+   * it, at Vote. Once who is voting is known: until then there is no Vote
+   * button, and the keyboard landed on Results.
+   */
+  const settled = me !== null || !canEdit
+  const arrived = useRef(false)
+  useEffect(() => {
+    if (!settled || arrived.current) return
+    arrived.current = true
+    if (document.activeElement !== null && document.activeElement !== document.body) return
+    ;(
+      bar.current?.querySelector<HTMLElement>('[data-testid="voting-vote"]') ??
+      bar.current?.querySelector<HTMLElement>('button')
+    )?.focus()
+  }, [settled])
   const open = round.data.status === 'open'
   const shown = countsShown(round.data)
   const mine = me === null ? 0 : votes.filter((vote) => vote.by === me.key).length
@@ -213,6 +253,7 @@ function VotingRoundBar({ round }: { readonly round: VotingRound }) {
 
   return (
     <section
+      ref={bar}
       className="of-notice of-voting"
       aria-label="Dot voting"
       data-testid="voting"
@@ -250,6 +291,7 @@ function VotingRoundBar({ round }: { readonly round: VotingRound }) {
             data-testid="voting-reveal"
             onClick={() => {
               commands.setVoting({ hidden: false })
+              handTo.current = 'voting-results'
             }}
           >
             Reveal
@@ -275,6 +317,7 @@ function VotingRoundBar({ round }: { readonly round: VotingRound }) {
             data-testid="voting-end"
             onClick={() => {
               commands.setVoting({ status: 'closed' })
+              handTo.current = 'voting-reopen'
             }}
           >
             End
@@ -287,6 +330,7 @@ function VotingRoundBar({ round }: { readonly round: VotingRound }) {
             data-testid="voting-reopen"
             onClick={() => {
               commands.setVoting({ status: 'open' })
+              handTo.current = 'voting-end'
             }}
           >
             Reopen
@@ -299,6 +343,8 @@ function VotingRoundBar({ round }: { readonly round: VotingRound }) {
             data-testid="voting-clear"
             onClick={() => {
               commands.clearVoting()
+              // The banner goes with the round.
+              focusTheBoard()
             }}
           >
             Clear

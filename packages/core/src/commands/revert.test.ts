@@ -102,6 +102,10 @@ describe('reverting a change somebody else made', () => {
 
     const result = h.dispatcher.revert(change)
     expect(result).toMatchObject({ ok: false, error: { code: 'stale-history' } })
+    // Named once, in one pair of quotes — not “Revert “Move a note””.
+    expect(result.ok ? '' : result.error.message).toBe(
+      '“Move a note” could not be reverted: somebody has changed, deleted or locked it since',
+    )
     expect(x(h, 'a')).toBe(80)
   })
 

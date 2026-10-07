@@ -118,7 +118,8 @@ export function useTimerSession(
     done,
     status: timer.status,
     time,
-    words: !active ? '' : done ? 'time’s up' : `${time} left`,
+    // What the pill shows is in its name: "0:00" was drawn while "time's up" was said.
+    words: !active ? '' : done ? `${time}, time’s up` : `${time} left`,
     panel: {
       timer,
       stored: stored !== null,
@@ -189,6 +190,14 @@ function TimerActions({
   readonly onWrite: (change: Change) => void
 }) {
   const minutes = timer.durationMs / MINUTE
+  const step = stepFor(timer, done)
+  const stepRef = useRef<HTMLButtonElement>(null)
+  const focusStep = useRef(false)
+  useEffect(() => {
+    if (!focusStep.current || stepRef.current === null) return
+    focusStep.current = false
+    stepRef.current.focus()
+  })
   return (
     <>
       {timer.status === 'idle' && (
@@ -218,43 +227,23 @@ function TimerActions({
         </>
       )}
       <div className="of-timer__actions">
-        {timer.status === 'idle' && (
+        {step !== null && (
+          /*
+           * ONE button that says what pressing it next will do. Start, Pause
+           * and Resume were three, so the one pressed left the page as it took
+           * effect and the keyboard landed on nothing.
+           */
           <button
+            ref={stepRef}
             type="button"
-            className="of-button of-button--primary"
-            data-testid="timer-start"
+            className={step.primary ? 'of-button of-button--primary' : 'of-button'}
+            data-testid={step.testid}
             disabled={!ready}
             onClick={() => {
-              onWrite(startTimer)
+              onWrite(step.change)
             }}
           >
-            Start
-          </button>
-        )}
-        {timer.status === 'running' && !done && (
-          <button
-            type="button"
-            className="of-button"
-            data-testid="timer-pause"
-            disabled={!ready}
-            onClick={() => {
-              onWrite(pauseTimer)
-            }}
-          >
-            Pause
-          </button>
-        )}
-        {timer.status === 'paused' && (
-          <button
-            type="button"
-            className="of-button of-button--primary"
-            data-testid="timer-resume"
-            disabled={!ready}
-            onClick={() => {
-              onWrite(resumeTimer)
-            }}
-          >
-            Resume
+            {step.words}
           </button>
         )}
         {timer.status !== 'idle' && (
@@ -263,7 +252,6 @@ function TimerActions({
             className="of-button"
             data-testid="timer-add-minute"
             disabled={!ready}
-            aria-label="Add a minute"
             onClick={() => {
               onWrite(addMinute)
             }}
@@ -279,6 +267,8 @@ function TimerActions({
             disabled={!ready}
             onClick={() => {
               onWrite(resetTimer)
+              // Reset takes itself away; Start is where the keyboard goes next.
+              focusStep.current = true
             }}
           >
             Reset
@@ -287,6 +277,23 @@ function TimerActions({
       </div>
     </>
   )
+}
+
+interface Step {
+  readonly words: string
+  readonly testid: string
+  readonly primary: boolean
+  readonly change: Change
+}
+
+/** What the one start/pause/resume button does now, or nothing once time is up. */
+function stepFor(timer: Timer, done: boolean): Step | null {
+  if (timer.status === 'idle')
+    return { words: 'Start', testid: 'timer-start', primary: true, change: startTimer }
+  if (timer.status === 'paused')
+    return { words: 'Resume', testid: 'timer-resume', primary: true, change: resumeTimer }
+  if (!done) return { words: 'Pause', testid: 'timer-pause', primary: false, change: pauseTimer }
+  return null
 }
 
 /**

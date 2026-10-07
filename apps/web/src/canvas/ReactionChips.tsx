@@ -63,8 +63,11 @@ function Chips({
             className="of-reaction"
             data-testid={`reaction-${group.glyph}`}
             aria-pressed={mine}
-            // Named for the reaction; the tip, who left it, is its description.
-            aria-label={glyph.label}
+            /*
+             * Named for the reaction AND its count, as it is drawn: the count
+             * was visible and unsaid. Who left it is the description.
+             */
+            aria-label={`${glyph.label}, ${String(group.people.length)}`}
             aria-description={who}
             data-tip={who}
             disabled={!canEdit || me === null}

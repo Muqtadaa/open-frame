@@ -269,8 +269,32 @@ interface ListenPromptProps {
 
 /** The offer to listen, under the pill: what a browser needs before it makes a sound. */
 export function ListenPrompt({ prompt }: { readonly prompt: ListenPromptProps }) {
+  /*
+   * The prompt never takes the keyboard, but somebody can Tab into it — and
+   * both its buttons take it away. So whatever is pressed there, the keyboard
+   * goes on to the pill it came from rather than falling to the page, and
+   * Escape in it waves it away like the ×.
+   */
+  const answered = (answer: () => void, from: EventTarget): void => {
+    const inside = from instanceof Element && from.contains(document.activeElement)
+    answer()
+    if (!inside) return
+    requestAnimationFrame(() => {
+      document.querySelector<HTMLElement>('[data-testid="session-button"]')?.focus()
+    })
+  }
   return (
-    <div className="of-notice of-music__prompt" role="group" aria-label="Music">
+    <div
+      className="of-notice of-music__prompt"
+      role="group"
+      aria-label="Music"
+      onKeyDown={(event) => {
+        if (event.key !== 'Escape') return
+        event.preventDefault()
+        event.stopPropagation()
+        answered(prompt.onDismiss, event.currentTarget)
+      }}
+    >
       <span className="of-notice__body" data-testid="music-prompt">
         {prompt.text}
       </span>
@@ -278,7 +302,9 @@ export function ListenPrompt({ prompt }: { readonly prompt: ListenPromptProps })
         type="button"
         className="of-button of-button--primary"
         data-testid="music-prompt-listen"
-        onClick={prompt.onListen}
+        onClick={(event) => {
+          answered(prompt.onListen, event.currentTarget)
+        }}
       >
         Listen
       </button>
@@ -288,7 +314,9 @@ export function ListenPrompt({ prompt }: { readonly prompt: ListenPromptProps })
         aria-label="Dismiss"
         data-tip="Dismiss"
         data-testid="music-prompt-dismiss"
-        onClick={prompt.onDismiss}
+        onClick={(event) => {
+          answered(prompt.onDismiss, event.currentTarget)
+        }}
       >
         <CloseIcon />
       </button>
@@ -332,21 +360,50 @@ export function MusicPanel({ panel }: { readonly panel: MusicPanelProps }) {
     agree,
   } = panel
   const state = music.status
+  const choose = (genre: (typeof genres)[number]): void => {
+    write((current, at, by) => setGenre(current, genre, at, by, playlistOf(catalogue, genre)))
+  }
   return (
     <>
-      <div className="of-music__genres" role="radiogroup" aria-label="Genre">
-        {genres.map((genre) => (
+      <div
+        className="of-music__genres"
+        role="radiogroup"
+        aria-label="Genre"
+        /*
+         * A radio group is ONE stop, walked with the arrows, which choose as
+         * they go — as the record panel's swatches are. Each genre was its
+         * own Tab stop and the arrows did nothing.
+         */
+        onKeyDown={(event) => {
+          const step =
+            event.key === 'ArrowRight' || event.key === 'ArrowDown'
+              ? 1
+              : event.key === 'ArrowLeft' || event.key === 'ArrowUp'
+                ? -1
+                : 0
+          if (step === 0) return
+          event.preventDefault()
+          const at = genres.indexOf(music.genre)
+          const next = genres[(at + step + genres.length) % genres.length]
+          if (next === undefined) return
+          choose(next)
+          event.currentTarget.querySelector<HTMLElement>(`[data-genre="${next}"]`)?.focus()
+        }}
+      >
+        {genres.map((genre, index) => (
           <button
             key={genre}
             type="button"
             role="radio"
             className="of-button of-music__genre"
+            data-genre={genre}
             aria-checked={music.genre === genre}
+            tabIndex={
+              music.genre === genre || (!genres.includes(music.genre) && index === 0) ? 0 : -1
+            }
             disabled={!canEdit || !ready}
             onClick={() => {
-              write((current, at, by) =>
-                setGenre(current, genre, at, by, playlistOf(catalogue, genre)),
-              )
+              choose(genre)
             }}
           >
             {GENRE_NAMES[genre]}

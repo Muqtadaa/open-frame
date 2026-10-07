@@ -123,6 +123,27 @@ test('works from the keyboard: Cluster, a new title, Enter applies', async ({ pa
   await page.keyboard.type('Checkout pains')
   await page.keyboard.press('Enter')
   await expect(page.getByTestId('frame-title').filter({ hasText: 'Checkout pains' })).toHaveCount(1)
+  // The panel leaves with Apply; the keyboard goes to the board, where the new frame is.
+  await expect(page.locator(CANVAS)).toBeFocused()
+})
+
+test('keeps the keyboard inside, and Escape closes it from anywhere without touching the selection', async ({
+  page,
+}) => {
+  await signedIn(page, [])
+  await board(page)
+  await standIn(page)
+  await openCluster(page)
+  const panel = page.getByTestId('cluster-review')
+  // Past its last control, Tab comes round to its first rather than leaving.
+  for (let press = 0; press < 4; press++) await page.keyboard.press('Tab')
+  await expect(panel.locator(':focus')).toHaveCount(1)
+
+  // Focus somewhere else — the board — and Escape still closes the panel, and only the panel.
+  await page.locator(CANVAS).focus()
+  await page.keyboard.press('Escape')
+  await expect(panel).toHaveCount(0)
+  await expect(page.getByTestId('selection-count')).toContainText('3')
 })
 
 test('somebody signed out is told AI needs an account, and nothing is sent', async ({ page }) => {
@@ -148,4 +169,23 @@ test('says why the server refused, and writes nothing', async ({ page }) => {
   await page.getByTestId('cluster-ask').click()
   await expect(page.getByTestId('cluster-refused')).toHaveText('No AI runs left today')
   await expect(viewOf(page, 'frame')).toHaveCount(0)
+})
+
+test('one Escape closes only the surface opened last, not the panel beneath it', async ({
+  page,
+}) => {
+  await signedIn(page, [])
+  await board(page)
+  await standIn(page)
+  await openCluster(page)
+  await page.getByTestId('session-button').click()
+  const session = page.getByRole('dialog', { name: 'Session' })
+  await expect(session).toBeVisible()
+
+  await page.keyboard.press('Escape')
+  await expect(session).toHaveCount(0)
+  await expect(page.getByTestId('cluster-review')).toBeVisible()
+
+  await page.keyboard.press('Escape')
+  await expect(page.getByTestId('cluster-review')).toHaveCount(0)
 })

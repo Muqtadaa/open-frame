@@ -1,9 +1,10 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 
 import { versionPreview, type Previewed } from '../app/version-preview.js'
 import { useCanEdit } from '../hooks/use-can-edit.js'
 import { useInteractionStore } from '../interaction/interaction-store.js'
 import { useOpenFrame } from '../runtime/context.js'
+import { focusTheBoard } from './hand-back-focus.js'
 import { versionTime } from './version-time.js'
 
 /**
@@ -20,8 +21,23 @@ export function VersionPreviewBar({ preview }: { readonly preview: Previewed }) 
   const canEdit = useCanEdit()
   const [busy, setBusy] = useState(false)
 
+  const heading = useRef<HTMLHeadingElement>(null)
+  const when = versionTime(preview.at)
+
+  /*
+   * The keyboard comes to what is being looked at, and the change is said.
+   * Choosing a version closed the sheet it was chosen from, so focus fell to
+   * the page and nothing told a screen reader the board had changed under it.
+   */
+  useEffect(() => {
+    heading.current?.focus()
+    useInteractionStore.getState().announce(`Viewing ${when}`)
+  }, [when])
+
   const back = (): void => {
     versionPreview.show(null)
+    useInteractionStore.getState().announce('Back to the board as it is now')
+    focusTheBoard()
   }
 
   useEffect(() => {
@@ -29,15 +45,13 @@ export function VersionPreviewBar({ preview }: { readonly preview: Previewed }) 
       if (event.key !== 'Escape') return
       event.preventDefault()
       event.stopPropagation()
-      versionPreview.show(null)
+      back()
     }
     window.addEventListener('keydown', escape, true)
     return () => {
       window.removeEventListener('keydown', escape, true)
     }
   }, [])
-
-  const when = versionTime(preview.at)
 
   const restore = async (): Promise<void> => {
     if (history === null || history === undefined) return
@@ -65,13 +79,16 @@ export function VersionPreviewBar({ preview }: { readonly preview: Previewed }) 
       return
     }
     versionPreview.show(null)
+    focusTheBoard()
     useInteractionStore.getState().announce(`Restored the version from ${when}`)
     useInteractionStore.getState().showToast(`Restored the version from ${when}`)
   }
 
   return (
     <nav className="of-status of-history-bar" aria-label="Version" data-testid="version-preview">
-      <h1 className="of-status__heading of-history-bar__title">Viewing {when}</h1>
+      <h1 ref={heading} tabIndex={-1} className="of-status__heading of-history-bar__title">
+        Viewing {when}
+      </h1>
       {canEdit && (
         <button
           type="button"
