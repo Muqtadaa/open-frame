@@ -91,20 +91,26 @@ function FieldRow({
     )
   }
 
+  /*
+   * A yes-or-no is its box and then its whole label, across the full row. In
+   * the label column every other field has, "Hide results until closed" was
+   * cut to "hide resu…" beside a lone checkbox; and the words are part of the
+   * control, so pressing them ticks the box.
+   */
   if (field.kind === 'boolean') {
     return (
-      <Row field={field}>
+      <label className="of-field of-field--check">
         <input
           type="checkbox"
           className="of-field__check"
           checked={stored === true}
-          aria-label={field.label}
           data-testid={`field-${field.key}`}
           onChange={(event) => {
             onCommit(event.target.checked)
           }}
         />
-      </Row>
+        <span className="of-field__statement">{field.label}</span>
+      </label>
     )
   }
 

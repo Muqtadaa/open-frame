@@ -1,6 +1,6 @@
 import type { Page } from '@playwright/test'
 
-import { CANVAS, expect, saved, seedBoard, test, undo } from './fixtures.js'
+import { boxOf, CANVAS, expect, saved, seedBoard, test, undo } from './fixtures.js'
 import { buildBoard } from './boards.js'
 
 test.use({ board: 'fresh' })
@@ -228,4 +228,24 @@ test('an answered option can be neither reworded nor removed', async ({ page }) 
   await expect(field.getByRole('button', { name: 'Remove Option 2' })).toBeDisabled()
   await expect(field.getByRole('textbox', { name: 'Options 1' })).not.toHaveAttribute('readonly')
   await expect(field.getByRole('button', { name: 'Remove Option 1' })).toBeEnabled()
+})
+
+/*
+ * A yes-or-no reads as a sentence with its box in front (PR 3 critique,
+ * 2026-10-07). It had the 82px label column every field has, so "Hide
+ * results until closed" was cut to "hide resu…" beside a lone checkbox.
+ */
+test('a yes-or-no field is its box, then its whole label', async ({ page }) => {
+  await seeded(page)
+  await page.getByTestId('poll-question').click()
+  const box = page.getByRole('checkbox', { name: 'Hide results until closed' })
+  const label = page.getByText('Hide results until closed', { exact: true })
+  await expect(label).toBeVisible()
+  const check = await boxOf(box)
+  const words = await boxOf(label)
+  expect(words.x).toBeGreaterThan(check.x + check.width - 1)
+  expect(await label.evaluate((element) => element.scrollWidth <= element.clientWidth)).toBe(true)
+  // The words are part of the control: pressing them ticks the box.
+  await label.click()
+  await expect(box).toBeChecked()
 })
