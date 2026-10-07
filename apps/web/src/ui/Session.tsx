@@ -1,4 +1,4 @@
-import { useId, useRef } from 'react'
+import { useEffect, useId, useRef } from 'react'
 
 import { AnchoredSurface } from '../controls/AnchoredSurface.js'
 import { MusicIcon, TimerIcon } from '../controls/icons.js'
@@ -25,6 +25,9 @@ import { useSheet } from './use-sheet.js'
  */
 export function Session() {
   const { facilitation } = useOpenFrame()
+  const asked = useInteractionStore((state) => state.sessionOpen)
+  const setOpen = useInteractionStore((state) => state.setSessionOpen)
+  useNotLeftAsked(facilitation === undefined && asked, setOpen)
   if (facilitation === undefined) return null
   return <SessionControl channel={facilitation} />
 }
@@ -59,7 +62,9 @@ function SessionControl({ channel }: { readonly channel: FacilitationChannel }) 
     first: '[data-testid="timer-start"]',
   })
 
-  if (!timer.shown && !music.shown) return null
+  const hidden = !timer.shown && !music.shown
+  useNotLeftAsked(hidden && open, setOpen)
+  if (hidden) return null
 
   const running = timer.active || music.active
   const said = [timer.active ? `timer, ${timer.words}` : '', music.words].filter(
@@ -159,4 +164,16 @@ function SessionControl({ channel }: { readonly channel: FacilitationChannel }) 
       )}
     </div>
   )
+}
+
+/**
+ * Alt+T asks for the sheet whether or not there is a pill to open it from. With
+ * none — a viewer with nothing running — the ask is put down at once rather
+ * than left in the store, where it opened the sheet and took the keyboard the
+ * moment somebody else started a timer (Codex, on #89).
+ */
+function useNotLeftAsked(stranded: boolean, setOpen: (open: boolean) => void): void {
+  useEffect(() => {
+    if (stranded) setOpen(false)
+  }, [stranded, setOpen])
 }

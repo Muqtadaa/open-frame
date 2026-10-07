@@ -42,7 +42,15 @@ export function HistoryButtons() {
   const undoButton = useRef<HTMLButtonElement>(null)
   const redoButton = useRef<HTMLButtonElement>(null)
   const history = (step: 'undo' | 'redo'): void => {
-    if (editingId !== null && window.document.execCommand(step)) return
+    /*
+     * The field and nothing else, even once its own history is spent: Ctrl+Z
+     * there stops at the start of the field, and a press that fell through to
+     * the board took back the very object being edited (Codex, on #89).
+     */
+    if (editingId !== null) {
+      window.document.execCommand(step)
+      return
+    }
     const self = step === 'undo' ? undoButton.current : redoButton.current
     const other = step === 'undo' ? redoButton.current : undoButton.current
     const pressedByKeyboard = window.document.activeElement === self

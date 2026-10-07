@@ -63,3 +63,24 @@ test('the undo button still undoes the board when nothing is being edited', asyn
   await page.getByTestId('undo').click()
   await expect(page.locator('[data-object-id]')).toHaveCount(0)
 })
+
+/*
+ * And past the field's own history it stops, as Ctrl+Z does there. A press
+ * with nothing left to undo in the field fell through to the BOARD and took
+ * back the block being edited (Codex, on #89).
+ */
+test('the undo button never reaches past the field into the board', async ({ page }) => {
+  await openBoard(page)
+  await page.getByTestId('tool-code').click()
+  await page.locator(CANVAS).click({ position: { x: 340, y: 240 } })
+
+  const input = page.getByTestId('code-input')
+  await input.fill('const a = 1')
+  const undo = page.getByTestId('undo')
+  await undo.click()
+  await undo.click()
+  await undo.click()
+
+  await expect(page.getByTestId('code-editor')).toBeVisible()
+  await expect(page.locator('[data-object-id]')).toHaveCount(1)
+})
