@@ -87,8 +87,7 @@ test('keeps the counts back until it closes, then shows them', async ({ page }) 
   // How many have answered is said; what they answered is not.
   await expect(page.getByTestId('poll-state')).toHaveText('2 answers · results when closed')
 
-  await page.locator(CANVAS).click({ position: { x: AT.x, y: AT.y - 90 } })
-  await page.getByTestId('field-closed').check()
+  await page.getByTestId('poll-close').click()
   await expect(page.getByTestId('poll-state')).toHaveText('Closed · 2 answers')
   await expect(option(page, 'o2')).toHaveAccessibleName('Option 2, 1 answer, 50%')
 })
@@ -172,4 +171,36 @@ test('a locked poll offers no Close, which could only be refused', async ({ page
   await page.keyboard.press('ControlOrMeta+Shift+L')
   await expect(page.getByRole('button', { name: 'Unlock' }).first()).toBeVisible()
   await expect(page.getByTestId('poll-close')).toHaveCount(0)
+})
+
+/*
+ * The asker closes it (PR 3 critique, 2026-10-07). Anybody with an edit link
+ * could close a poll, from the card or a checkbox in the record panel, so the
+ * person running the session had it closed under them by whoever reached it
+ * first.
+ */
+test('only the person who asked closes the poll', async ({ page }) => {
+  await seeded(page, { by: heron }, true)
+  await expect(page.getByTestId('poll-close')).toHaveCount(0)
+  await page.getByTestId('poll-question').click()
+  await expect(page.getByTestId('inspector')).toBeVisible()
+  await expect(page.getByTestId('field-closed')).toHaveCount(0)
+})
+
+test('a poll you put on the board is yours to close', async ({ page }) => {
+  await page.keyboard.press('p')
+  await page.locator(CANVAS).click({ position: AT })
+  await page.keyboard.press('Escape')
+  await expect(page.getByTestId('poll-close')).toHaveText('Close poll')
+})
+
+test('a closed poll looks closed, and your answer is marked as yours', async ({ page }) => {
+  await seeded(page)
+  await option(page, 'o2').click()
+  await expect(option(page, 'o2').getByTestId('poll-mine')).toBeVisible()
+  await expect(option(page, 'o1').getByTestId('poll-mine')).toHaveCount(0)
+  await page.getByTestId('poll-close').click()
+  await expect(card(page).locator('[data-closed="true"]')).toHaveCount(1)
+  // Still marked once it closes: closing is when people look for it.
+  await expect(option(page, 'o2').getByTestId('poll-mine')).toBeVisible()
 })

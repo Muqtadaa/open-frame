@@ -1,6 +1,6 @@
 import { isEmptyText, plainTextOf, type PollData } from '@openframe/core'
 
-import { PollIcon } from '../controls/icons.js'
+import { PollIcon, CheckIcon } from '../controls/icons.js'
 import { fontFamily, inkColor, readableInkOn, surfaceOf } from '../scene/style-tokens.js'
 import { RichTextEditor } from './RichTextEditor.js'
 import { RichTextView } from './RichTextView.js'
@@ -24,7 +24,7 @@ import {
  * objects on the board.
  */
 function PollRenderer({ object, marks }: ObjectViewProps<PollData>) {
-  const { text, options, closed, hideResults } = object.data
+  const { text, options, closed, hideResults, by } = object.data
   const tally = tallyPoll(marks?.on ?? [], options, marks?.me?.key ?? null)
   const shown = marks !== undefined && (!hideResults || closed)
   // Bars are shares of the people who answered, so they read as proportions
@@ -32,12 +32,16 @@ function PollRenderer({ object, marks }: ObjectViewProps<PollData>) {
   const of = Math.max(1, tally.people)
   const answerable = marks !== undefined && marks.canAct && marks.me !== null && !closed
   // Not on a locked poll: the command would only refuse it (Codex, on #88).
-  const canClose = marks?.canAct === true && !object.locked
+  // And only the asker's: closed under the person running the session by
+  // whoever reached the card first. A poll that knows nobody is anyone's.
+  const canClose =
+    marks?.canAct === true && !object.locked && (by === null || by.key === marks.me?.key)
   const question = plainTextOf(text).trim()
 
   return (
     <div
       className="of-poll"
+      data-closed={closed}
       style={{
         background: surfaceOf(object.style.color, 'white'),
         color: inkColor(object.style.textColor) ?? readableInkOn(object.style.color ?? 'white'),
@@ -81,6 +85,15 @@ function PollRenderer({ object, marks }: ObjectViewProps<PollData>) {
                   aria-hidden="true"
                   style={{ width: `${String(Math.round((option.count / of) * 100))}%` }}
                 />
+              )}
+              {/*
+                Yours, as a mark and not only a ring: a ring is a colour, and on
+                a card in somebody's own colour it was the only thing saying so.
+              */}
+              {option.mine && (
+                <span className="of-poll__mine" data-testid="poll-mine" aria-hidden="true">
+                  <CheckIcon />
+                </span>
               )}
               <span className="of-poll__label">{option.label}</span>
               {shown && (
@@ -151,6 +164,8 @@ const pollTool: ObjectTool = {
   keys: ['p'],
   order: 80,
   place: 'click',
+  // Kept on the poll, because closing it is the asker's.
+  data: (_options, maker) => ({ by: maker.me }),
   Icon: () => <PollIcon />,
   cursor: () => ({
     body: 'M5 3h14a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2z',

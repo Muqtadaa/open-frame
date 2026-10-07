@@ -460,7 +460,7 @@ export function useCanvasGestures(containerRef: RefObject<HTMLElement | null>) {
         button: event.button,
         contextClick: IS_MAC && event.ctrlKey,
         spaceHeld: spaceHeld.current,
-        make: makeFor(store.tool, views.tools(), store.toolOptions),
+        make: makeFor(store.tool, views.tools(), store.toolOptions, { me }),
         /*
          * Only what a press could actually move: the object under the pointer
          * and whatever is already selected. Walking the whole document to
@@ -511,7 +511,7 @@ export function useCanvasGestures(containerRef: RefObject<HTMLElement | null>) {
         ...(pendingVote.current === null ? {} : { vote: pendingVote.current }),
       }
     },
-    [abandon, applyIntent, beginPinch, canvasPoint, context, isHollow, runtime, toWorld, views],
+    [abandon, applyIntent, beginPinch, canvasPoint, context, isHollow, me, runtime, toWorld, views],
   )
 
   const onPointerMove = useCallback(

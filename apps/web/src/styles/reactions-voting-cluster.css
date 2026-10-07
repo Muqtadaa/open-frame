@@ -150,6 +150,7 @@
 }
 
 .of-voting__result {
+  position: relative;
   display: flex;
   gap: var(--of-space-8);
   align-items: center;
@@ -379,9 +380,6 @@
 }
 
 /* A row's place, in the margin, and its share of the top count as a wash. */
-.of-voting__result {
-  position: relative;
-}
 
 /* Over the wash, which comes first in the row and is painted first. */
 .of-voting__result > :not(.of-voting__bar) {

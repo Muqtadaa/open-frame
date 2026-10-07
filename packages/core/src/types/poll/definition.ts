@@ -1,5 +1,6 @@
 import { plainTextOf } from '../../domain/rich-text.js'
 import { defineObjectType } from '../../domain/registry.js'
+import { addAsker } from './add-asker.js'
 import { POLL_VERSION, PollDataSchema, type PollData } from './schema.js'
 
 export const POLL_TYPE = 'poll'
@@ -9,7 +10,7 @@ export const pollType = defineObjectType<typeof POLL_TYPE, PollData>({
 
   schema: PollDataSchema,
   currentVersion: POLL_VERSION,
-  migrations: {},
+  migrations: { 2: addAsker },
 
   create: (init) => ({
     data: {
@@ -21,6 +22,7 @@ export const pollType = defineObjectType<typeof POLL_TYPE, PollData>({
       multi: init?.multi ?? false,
       hideResults: init?.hideResults ?? false,
       closed: init?.closed ?? false,
+      by: init?.by ?? null,
     },
     frame: { width: 300, height: 240 },
   }),
@@ -40,11 +42,14 @@ export const pollType = defineObjectType<typeof POLL_TYPE, PollData>({
     styleProps: ['color', 'textColor', 'font', 'opacity'],
   },
 
+  /*
+   * Not `closed`: closing is the asker's, on the card (`by`), and a checkbox
+   * here would let anybody do it.
+   */
   fields: [
     { key: 'options', meaning: 'record', label: 'Options', kind: 'choices' },
     { key: 'multi', meaning: 'record', label: 'Several answers each', kind: 'boolean' },
     { key: 'hideResults', meaning: 'record', label: 'Hide results until closed', kind: 'boolean' },
-    { key: 'closed', meaning: 'record', label: 'Closed', kind: 'boolean' },
   ],
 
   describe: (object) => {

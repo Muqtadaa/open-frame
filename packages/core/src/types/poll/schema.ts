@@ -1,6 +1,7 @@
 import { type ZodType, z } from 'zod'
 
 import { RichTextSchema, type RichText } from '../../domain/rich-text.js'
+import { MarkAuthorSchema, type MarkAuthor } from '../reaction/schema.js'
 
 /**
  * One option on a poll. The id is what an answer names, so editing the label
@@ -31,9 +32,16 @@ export interface PollData {
   readonly hideResults: boolean
   /** No more answers. The counts stay. */
   readonly closed: boolean
+  /**
+   * Who asked, and so the one person who closes and reopens it: a poll that
+   * anybody could close was closed under the person running the session by
+   * whoever reached the card first. `null` on a poll made before it was kept,
+   * or by something with no person behind it, which anybody may close.
+   */
+  readonly by: MarkAuthor | null
 }
 
-export const POLL_VERSION = 1
+export const POLL_VERSION = 2
 export const MIN_POLL_OPTIONS = 2
 export const MAX_POLL_OPTIONS = 10
 /**
@@ -61,6 +69,7 @@ export const PollDataSchema: ZodType<PollData> = z
     multi: z.boolean(),
     hideResults: z.boolean(),
     closed: z.boolean(),
+    by: MarkAuthorSchema.nullable(),
   })
   .refine((data) => new Set(data.options.map((o) => o.id)).size === data.options.length, {
     message: 'Two options share an id',

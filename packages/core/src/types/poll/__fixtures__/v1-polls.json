@@ -1,0 +1,57 @@
+{
+  "format": "openframe.board",
+  "schemaVersion": 1,
+  "savedAt": 1700000000000,
+  "board": {
+    "id": "board_frozen_polls",
+    "meta": {
+      "title": "Before a poll knew who asked",
+      "createdAt": 1700000000000
+    },
+    "objects": [
+      {
+        "id": "obj_poll",
+        "type": "poll",
+        "dataVersion": 1,
+        "frame": {
+          "x": 0,
+          "y": 0,
+          "width": 300,
+          "height": 240,
+          "rotation": 0
+        },
+        "parentId": null,
+        "order": "a0",
+        "style": {},
+        "locked": false,
+        "hidden": false,
+        "data": {
+          "text": [
+            {
+              "text": "Cats or dogs?"
+            }
+          ],
+          "options": [
+            {
+              "id": "o1",
+              "label": "Cats"
+            },
+            {
+              "id": "o2",
+              "label": "Dogs"
+            }
+          ],
+          "multi": false,
+          "hideResults": false,
+          "closed": false
+        },
+        "meta": {
+          "createdAt": 1700000000000,
+          "createdBy": null,
+          "createdVia": "user"
+        }
+      }
+    ],
+    "assets": []
+  }
+}

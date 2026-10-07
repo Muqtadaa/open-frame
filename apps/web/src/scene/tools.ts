@@ -12,6 +12,8 @@
  * view's half.
  */
 
+import type { MarkAuthor } from '@openframe/core'
+
 /**
  * The modes that are not a type: getting around the board, talking about it,
  * and voting on it. They are the chrome's, and a closed list on purpose.
@@ -69,8 +71,12 @@ export interface ToolBehaviour<TOptions = unknown> {
   readonly place: Placement
   /** What a new tool starts with, before anybody chooses. */
   readonly initial?: TOptions
-  /** The data the object is created with, from the options chosen. */
-  readonly data?: (options: TOptions) => Readonly<Record<string, unknown>>
+  /**
+   * The data the object is created with, from the options chosen — and who is
+   * making it, for a type that keeps its maker (a poll, which only its asker
+   * closes).
+   */
+  readonly data?: (options: TOptions, maker: Maker) => Readonly<Record<string, unknown>>
   /**
    * A key that arms the tool on the first press and walks its options on
    * every press after — how one key reaches four shapes.
@@ -82,6 +88,13 @@ export interface ToolBehaviour<TOptions = unknown> {
 }
 
 /** A declared tool with the type it makes, as the callers want it. */
+/** Who is placing an object, when anybody is known to be. */
+export interface Maker {
+  readonly me: MarkAuthor | null
+}
+
+const NOBODY: Maker = { me: null }
+
 export interface DeclaredTool {
   readonly type: string
   readonly tool: ToolBehaviour
@@ -101,6 +114,7 @@ export function makeFor(
   tool: Tool,
   tools: readonly DeclaredTool[],
   chosen: Readonly<Record<string, unknown>>,
+  maker: Maker = NOBODY,
 ): {
   readonly type: string
   readonly place: Placement
@@ -112,5 +126,5 @@ export function makeFor(
   const { place, data } = declared.tool
   return data === undefined
     ? { type: tool, place }
-    : { type: tool, place, data: data(optionsOf(declared, chosen)) }
+    : { type: tool, place, data: data(optionsOf(declared, chosen), maker) }
 }
