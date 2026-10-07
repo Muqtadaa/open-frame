@@ -137,6 +137,16 @@ test('waved away, the prompt goes and the button still says so', async ({ page }
   )
 })
 
+test('from the keyboard, Escape waves the prompt away and the keyboard goes to the pill', async ({
+  page,
+}) => {
+  await startedByAda(page)
+  await page.getByTestId('music-prompt-dismiss').focus()
+  await page.keyboard.press('Escape')
+  await expect(prompt(page)).toHaveCount(0)
+  await expect(button(page)).toBeFocused()
+})
+
 test('once this browser has said yes, the next press anywhere lets the music in', async ({
   page,
   context,
