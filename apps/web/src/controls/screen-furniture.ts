@@ -20,23 +20,34 @@
  * nothing in the source says so.
  *
  * The attribute names the edge, because the next piece of furniture may not be
- * at the bottom and `data-keep-clear` alone would say it was. The tool rail is
- * deliberately not marked: `keepClearLeft` is already its band, and two answers
- * for one piece of chrome is one too many.
+ * at the bottom and `data-keep-clear` alone would say it was.
+ *
+ * The tool rail is measured too, as the band on the LEFT. It used to be a
+ * constant — 100px, "the gutter, a tool and the options strip" — which went
+ * stale when the strip grew to a full target and left the rail's last two
+ * pixels under every panel that trusted it. At phone width those panels are
+ * clamped hard against that band, so two pixels became a sheet lying over
+ * the rail's edge.
  */
 export interface Bands {
   /** How far down from the top of the window the furniture there reaches. */
   readonly top: number
   /** How far up from the bottom. */
   readonly bottom: number
+  /** How far in from the left edge, with a step of air: the tool rail's. */
+  readonly left: number
 }
 
-const NONE: Bands = { top: 0, bottom: 0 }
+const NONE: Bands = { top: 0, bottom: 0, left: 0 }
+
+/** The air kept between the rail and anything clamped beside it. */
+const STEP = 10
 
 export function furnitureBands(): Bands {
   if (typeof window === 'undefined') return NONE
   let top = 0
   let bottom = 0
+  let left = 0
   for (const element of window.document.querySelectorAll<HTMLElement>('[data-keep-clear]')) {
     const box = element.getBoundingClientRect()
     // An element with nothing in it measures zero AT its edge of the window,
@@ -45,8 +56,9 @@ export function furnitureBands(): Bands {
     if (element.dataset.keepClear === 'bottom')
       bottom = Math.max(bottom, window.innerHeight - box.top)
     if (element.dataset.keepClear === 'top') top = Math.max(top, box.bottom)
+    if (element.dataset.keepClear === 'left') left = Math.max(left, box.right + STEP)
   }
-  return { top, bottom }
+  return { top, bottom, left }
 }
 
 /**
@@ -67,7 +79,7 @@ export function watchFurnitureBands(changed: (bands: Bands) => void): () => void
   let last = furnitureBands()
   const tell = (): void => {
     const next = furnitureBands()
-    if (next.top === last.top && next.bottom === last.bottom) return
+    if (next.top === last.top && next.bottom === last.bottom && next.left === last.left) return
     last = next
     changed(next)
   }

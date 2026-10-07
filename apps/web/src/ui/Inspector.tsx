@@ -38,8 +38,8 @@ import { furnitureBands, watchFurnitureBands } from '../controls/screen-furnitur
 import { useCommands } from '../hooks/use-commands.js'
 import { useBoardDocument } from '../hooks/use-document-object.js'
 import { useInteractionStore } from '../interaction/interaction-store.js'
-import { RAIL_CLEARANCE_PX } from '../scene/rail-footprint.js'
 import { PANEL_CLEARANCE_PX } from '../scene/connect-points.js'
+import { panToReveal } from '../scene/zoom.js'
 import { selectionMakeup, typeTitle } from '../scene/type-noun.js'
 import { useOpenFrame } from '../runtime/context.js'
 import { Swatches, groundOf, type SwatchKind } from '../controls/Swatches.js'
@@ -186,6 +186,38 @@ export function Inspector() {
     ? Math.floor(canvasSize.height * DOCK_SHARE)
     : Math.max(120, canvasSize.height - bands.top - bands.bottom - 2 * MARGIN_PX)
   const panel = useRef<HTMLDivElement | null>(null)
+
+  /*
+   * DOCKED, the panel is the bottom half of the screen, and a selection low on
+   * the board was left underneath it — a poll's own Close covered by the panel
+   * describing the poll. So a new selection the sheet would cover is slid up
+   * into the half above it: the smallest pan, never a zoom (`panToReveal`).
+   *
+   * Once per selection, and never during a gesture. Pressing a note to drag it
+   * selects it, and a camera that moved under the pointer then would carry the
+   * note somewhere nobody put it.
+   */
+  const revealed = useRef<string | null>(null)
+  const selectionKey = [...selection].join(' ')
+  useEffect(() => {
+    if (!docked || selectionKey === '') {
+      revealed.current = null
+      return
+    }
+    if (dragKind !== 'idle' || revealed.current === selectionKey) return
+    revealed.current = selectionKey
+    const doc = runtime.store.getDocument()
+    const rects = [...selection].flatMap((id) => {
+      const object = doc.objects.get(id)
+      return object === undefined ? [] : [runtime.registry.boundsOf(object, doc)]
+    })
+    const box = unionAll(rects)
+    if (box === null) return
+    const state = useInteractionStore.getState()
+    const room = canvasSize.height - tallest - MARGIN_PX
+    if (room <= 0) return
+    state.setViewport(panToReveal(state.viewport, box, canvasSize.width, room, MARGIN_PX))
+  }, [docked, selectionKey, dragKind, selection, runtime, canvasSize, tallest])
   /*
    * WHEN THE PANEL GOES, the keyboard goes back to the board. It unmounts
    * with the selection — Escape from a swatch, its own Delete — and took
@@ -550,7 +582,6 @@ export function Inspector() {
       prefer={['right', 'left', 'below', 'above']}
       gap={GAP_PX}
       margin={MARGIN_PX}
-      keepClearLeft={RAIL_CLEARANCE_PX}
       testId="inspector-surface"
     >
       <div

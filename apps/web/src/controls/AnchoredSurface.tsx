@@ -157,6 +157,14 @@ export function AnchoredSurface({
       : window.document.querySelector<HTMLElement>('[data-chrome-layer]')
   if (target === null || anchor === null) return null
 
+  /*
+   * The rail is furniture too, measured like the rest. A menu is exempt for
+   * the reason below; everything else stays off it, which at phone width is
+   * the difference between a sheet beside the rail and one lying over it.
+   */
+  const clearLeft =
+    layer === 'menu' ? (keepClearLeft ?? 0) : Math.max(keepClearLeft ?? 0, band.left)
+
   const placed = placeAnchored({
     anchor,
     surface: size,
@@ -164,7 +172,7 @@ export function AnchoredSurface({
     prefer: prefer ?? ['above', 'below', 'right', 'left'],
     gap,
     margin,
-    keepClearLeft,
+    keepClearLeft: clearLeft,
     /*
      * A MENU is momentary and paints over everything, the furniture included,
      * so it keeps clear of nothing: made to dodge the navigation bar as well
@@ -191,7 +199,16 @@ export function AnchoredSurface({
       className={`of-chrome of-editor-chrome${layer === 'menu' ? ' of-chrome--menu' : ''}`}
       data-testid={testId ?? 'object-chrome'}
       data-side={placed.side}
-      style={{ transform: `translate(${String(placed.x)}px, ${String(placed.y)}px)` }}
+      style={{
+        transform: `translate(${String(placed.x)}px, ${String(placed.y)}px)`,
+        /*
+         * NEVER WIDER than the room between the rail and the far margin. A
+         * 300px sheet on a 390px phone has 266px beside the rail; clamped, it
+         * kept its width and its left edge, and its right third went off the
+         * screen. Narrowed, its rows wrap instead.
+         */
+        maxWidth: `${String(Math.max(0, within.width - Math.max(margin, clearLeft) - margin))}px`,
+      }}
     >
       {children}
     </div>,

@@ -109,7 +109,7 @@ export function App() {
         <main className="of-board-main" aria-label="Board">
           <Canvas />
 
-          <div className="of-overlay of-overlay--left">
+          <div className="of-overlay of-overlay--left" data-keep-clear="left">
             <Toolbar />
           </div>
 

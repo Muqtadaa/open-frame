@@ -17,6 +17,16 @@
   transform: translateX(-50%);
 }
 
+/* Docked beside the rail on a phone, as the top overlay is (shell.css). */
+@media (width < 520px) {
+  .of-search {
+    left: var(--of-rail-reach);
+    right: var(--of-gutter);
+    width: auto;
+    transform: none;
+  }
+}
+
 /*
  * The box's focus is the PANEL's ring. The input had `outline: none` and
  * nothing in its place — the one text field in the product with no sign it
