@@ -118,7 +118,8 @@ export function useTimerSession(
     done,
     status: timer.status,
     time,
-    words: !active ? '' : done ? 'time’s up' : `${time} left`,
+    // What the pill shows is in its name: "0:00" was drawn while "time's up" was said.
+    words: !active ? '' : done ? `${time}, time’s up` : `${time} left`,
     panel: {
       timer,
       stored: stored !== null,
@@ -251,7 +252,6 @@ function TimerActions({
             className="of-button"
             data-testid="timer-add-minute"
             disabled={!ready}
-            aria-label="Add a minute"
             onClick={() => {
               onWrite(addMinute)
             }}

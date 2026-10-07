@@ -33,6 +33,9 @@ test('runs down, and says when time is up', async ({ page }) => {
   await expect(pill(page)).toHaveAttribute('data-timer', 'done')
   await expect(readout(page)).toHaveText('Time’s up')
   await expect(page.getByTestId('board-announcer')).toContainText('Time’s up')
+  // Its name holds what it shows — "0:00" — and not only what that means.
+  await expect(pill(page)).toHaveAccessibleName('Session, timer, 0:00, time’s up')
+  await expect(page.getByTestId('timer-add-minute')).toHaveAccessibleName('+1 min')
 })
 
 test('says when one minute is left', async ({ page }) => {
