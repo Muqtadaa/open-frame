@@ -192,6 +192,7 @@ export class CommandDispatcher {
        * history and needs no such check.
        */
       untrusted: true,
+      refusal: `“${change.label}” could not be reverted`,
     })
     if (!result.ok) return result
     const after = this.#deps.store.getDocument()
@@ -368,7 +369,7 @@ export class CommandDispatcher {
         ok: false,
         error: new CommandError(
           'stale-history',
-          `“${label}” no longer applies: somebody has changed, deleted or locked it since`,
+          `${recorded.refusal ?? `“${label}” no longer applies`}: somebody has changed, deleted or locked it since`,
         ),
       }
     }
@@ -404,6 +405,11 @@ interface RecordedState {
   readonly locked: ReadonlySet<ObjectId> | undefined
   /** Recorded somewhere else, so every object it would put back is validated. */
   readonly untrusted?: boolean
+  /**
+   * How to say it could not be done. A revert's label already quotes the
+   * change ("Revert “Move a note”"), so quoting it again read “Revert “…””.
+   */
+  readonly refusal?: string
   /** The step being replayed, for an undo or a redo. */
   readonly replayed?: {
     readonly transactionId: TransactionId
