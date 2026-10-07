@@ -5,7 +5,9 @@ import { AnchoredSurface } from '../controls/AnchoredSurface.js'
 import { ExpandIcon } from '../controls/icons.js'
 import { useAnchoredTo } from '../controls/use-anchor.js'
 import { useDismiss } from '../controls/use-dismiss.js'
+import { useInteractionStore } from '../interaction/interaction-store.js'
 import { useOpenFrame } from '../runtime/context.js'
+import { formatKeys } from '../scene/shortcuts.js'
 import { useServices } from '../runtime/services.js'
 import { VersionHistorySheet } from './VersionHistory.js'
 
@@ -135,6 +137,23 @@ export function BoardMenu({ onRename }: { readonly onRename: (() => void) | null
                 Version history…
               </button>
             )}
+            <button
+              type="button"
+              role="menuitem"
+              tabIndex={-1}
+              className="of-menu__item"
+              data-testid="board-menu-overview"
+              onClick={() => {
+                // Not back to this button: the overview takes the keyboard.
+                setOpen(null)
+                useInteractionStore.getState().setOverviewOpen(true)
+              }}
+            >
+              Board overview
+              <span className="of-menu__shortcut" aria-hidden="true">
+                {formatKeys('Alt+S')}
+              </span>
+            </button>
             {worldHere && (
               <button
                 type="button"

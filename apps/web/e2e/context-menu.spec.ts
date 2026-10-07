@@ -234,6 +234,7 @@ test.describe('what it offers', () => {
       'Add a note here',
       'Select all',
       'Zoom to fit',
+      'Board overview',
       'Start dot voting…',
     ])
     await expect(item(page, 'Paste here')).toHaveAttribute('aria-disabled', 'true')

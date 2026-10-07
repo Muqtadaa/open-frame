@@ -56,7 +56,9 @@ test.describe('the board overview', () => {
       })
       await openOverview(page)
 
-      await expect(page.getByTestId('overview-summary')).toHaveText('3 objects: 2 sticky, 1 frame.')
+      await expect(page.getByTestId('overview-summary')).toHaveText(
+        '3 objects: 2 sticky notes, 1 frame.',
+      )
       await expect(tree(page)).toBeFocused()
       // A frame is listed closed, with how much it holds; its member is not shown yet.
       await expect(item(page, 'Frame: Interviews, 1 object')).toHaveAttribute(
@@ -143,5 +145,40 @@ test.describe('the board overview', () => {
     await page.keyboard.press('End')
     await page.keyboard.press('Enter')
     await expect(page.getByTestId('search-panel')).toBeVisible()
+  })
+})
+
+/*
+ * Easier to find, and a frame visited with one press (PR 3 critique,
+ * 2026-10-07): the overview was reachable only by Alt+S, a click on a frame
+ * only opened it, and the summary counted "2 sticky".
+ */
+test.describe('reaching the overview', () => {
+  test('opens from the board menu and from the board itself', async ({ page }) => {
+    await seed(page, (board) => {
+      board.note('Pricing is hidden', { x: 600, y: 300 })
+    })
+    await page.getByTestId('board-menu').click()
+    await page.getByRole('menuitem', { name: 'Board overview' }).click()
+    await expect(page.getByRole('dialog', { name: 'Board overview' })).toBeVisible()
+    await page.keyboard.press('Escape')
+
+    await page.locator(CANVAS).click({ button: 'right', position: { x: 1000, y: 600 } })
+    await page.getByRole('menuitem', { name: 'Board overview' }).click()
+    await expect(page.getByRole('dialog', { name: 'Board overview' })).toBeVisible()
+  })
+
+  test('a click on a frame goes to it; its arrow opens it', async ({ page }) => {
+    await seed(page, (board) => {
+      const frame = board.add('frame', { x: 500, y: 300 }, { name: richFromPlain('Interviews') })
+      board.add('sticky', { x: 480, y: 320 }, { text: richFromPlain('P07') }, undefined, frame)
+    })
+    await openOverview(page)
+    const frame = item(page, 'Frame: Interviews, 1 object')
+    await frame.getByTestId('overview-twisty').click()
+    await expect(frame).toHaveAttribute('aria-expanded', 'true')
+    await frame.getByText('Interviews').click()
+    await expect(page.getByRole('dialog', { name: 'Board overview' })).toHaveCount(0)
+    await expect(page.getByTestId('board-announcer')).toHaveText(/^Selected: .*Interviews/)
   })
 })

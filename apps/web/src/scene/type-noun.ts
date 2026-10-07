@@ -33,3 +33,24 @@ export function selectionMakeup(types: readonly string[]): string {
     .map(([type, count]) => (count === 1 ? typeNoun(type) : `${typeNoun(type)} ×${String(count)}`))
     .join(' · ')
 }
+
+/**
+ * Words for a type that its id does not give: "sticky" is what the code calls
+ * a sticky note, and nobody counts "2 sticky".
+ */
+const SPOKEN: Readonly<Record<string, string>> = { sticky: 'sticky note' }
+
+/** Nouns a person does not count with an s: "3 evidence", as "3 pieces of". */
+const UNCOUNTED = new Set(['evidence'])
+
+/** How many of a type, as said: "1 frame", "2 sticky notes", "3 evidence". */
+export function countOfType(type: string, count: number): string {
+  const noun = SPOKEN[type] ?? typeNoun(type)
+  if (count === 1 || UNCOUNTED.has(noun)) return `${String(count)} ${noun}`
+  const plural = /[^aeiou]y$/.test(noun)
+    ? `${noun.slice(0, -1)}ies`
+    : /(s|x|ch|sh)$/.test(noun)
+      ? `${noun}es`
+      : `${noun}s`
+  return `${String(count)} ${plural}`
+}

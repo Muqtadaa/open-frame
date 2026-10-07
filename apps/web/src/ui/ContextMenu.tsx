@@ -380,6 +380,14 @@ export function ContextMenu() {
           if (next !== null) store.setViewport(next)
         },
       },
+      // What is on the board, listed: reachable from where people look for it.
+      {
+        label: 'Board overview',
+        shortcut: 'Alt+S',
+        run: () => {
+          useInteractionStore.getState().setOverviewOpen(true)
+        },
+      },
     ],
     ...(startVoting.length === 0 ? [] : [startVoting]),
   ]
