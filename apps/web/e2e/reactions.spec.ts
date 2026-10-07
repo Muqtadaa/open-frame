@@ -284,3 +284,23 @@ test('a reaction chip is a target a finger and a mouse can hit', async ({ page }
   expect(chip.height).toBeGreaterThanOrEqual(24)
   expect(chip.width).toBeGreaterThanOrEqual(24)
 })
+
+/*
+ * A reaction is inked in when it is left, and only then (the motion pass,
+ * 2026-10-07): the chips already on a note when the board opens are drawn as
+ * they are, not all set popping at once.
+ */
+test('only a reaction left now is inked in, not the ones already there', async ({ page }) => {
+  await seedBoard(
+    page,
+    buildBoard((board) => {
+      const note = board.note('Hide the price until checkout', NOTE)
+      board.react(note, 'plus-one', { key: 'g_heron', name: 'Heron', hue: 200 })
+    }),
+  )
+  await expect(chip(page, 'plus-one')).toHaveAttribute('data-fresh', 'false')
+  await page.locator(CANVAS).click({ position: NOTE })
+  await page.getByTestId('reaction-bar').getByRole('button', { name: 'Love it' }).click()
+  await expect(chip(page, 'heart')).toHaveAttribute('data-fresh', 'true')
+  await expect(chip(page, 'plus-one')).toHaveAttribute('data-fresh', 'false')
+})

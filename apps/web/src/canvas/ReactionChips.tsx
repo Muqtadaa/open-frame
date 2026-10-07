@@ -1,4 +1,5 @@
 import type { ObjectId } from '@openframe/core'
+import { useState } from 'react'
 
 import { useCanEdit } from '../hooks/use-can-edit.js'
 import { useCommands } from '../hooks/use-commands.js'
@@ -22,21 +23,29 @@ import { glyphFor } from '../scene/reaction-glyphs.js'
 export function ReactionChips({ id }: { readonly id: ObjectId }) {
   const groups = useReactions(id)
   /*
+   * What was already here when the note was drawn. Only a reaction that
+   * arrives AFTER that is new, and inked in: opening a board, or scrolling a
+   * note into view, must not set every chip on it popping (motion.css).
+   */
+  const [born] = useState(() => new Set(groups.map((group) => group.glyph)))
+  /*
    * Split in two so a note nobody has reacted to costs one index lookup and
    * nothing else. Every visible note mounts this; asking who I am, what I may
    * do and building the command set for each of them would put an account
    * subscription on every note on screen.
    */
   if (groups.length === 0) return null
-  return <Chips id={id} groups={groups} />
+  return <Chips id={id} groups={groups} born={born} />
 }
 
 function Chips({
   id,
   groups,
+  born,
 }: {
   readonly id: ObjectId
   readonly groups: readonly ReactionGroup[]
+  readonly born: ReadonlySet<string>
 }) {
   const me = useMe()
   const commands = useCommands()
@@ -62,6 +71,7 @@ function Chips({
             type="button"
             className="of-reaction"
             data-testid={`reaction-${group.glyph}`}
+            data-fresh={!born.has(group.glyph)}
             aria-pressed={mine}
             /*
              * Named for the reaction AND its count, as it is drawn: the count

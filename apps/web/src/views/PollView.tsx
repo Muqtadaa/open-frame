@@ -83,7 +83,7 @@ function PollRenderer({ object, marks }: ObjectViewProps<PollData>) {
                 <span
                   className="of-poll__bar"
                   aria-hidden="true"
-                  style={{ width: `${String(Math.round((option.count / of) * 100))}%` }}
+                  style={{ transform: `scaleX(${String(option.count / of)})` }}
                 />
               )}
               {/*

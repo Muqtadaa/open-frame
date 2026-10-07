@@ -487,3 +487,33 @@ test('a few votes are dots on the corner; many are a number', async ({ page }) =
   const mark = await boxOf(dots(page, 0))
   expect(mark.y + mark.height / 2).toBeLessThanOrEqual(note.y + 1)
 })
+
+/*
+ * A dot is inked in when it is put down, and only then (the motion pass,
+ * 2026-10-07). The dots already on a board when it opens are drawn as they
+ * are: a board that set every one of them popping at once would be noise at
+ * the moment somebody is reading it.
+ */
+test('only a dot put down now is inked in, not the ones already there', async ({ page }) => {
+  await seedBoard(
+    page,
+    buildBoard((board) => {
+      const first = board.note('Show the price early', FIRST)
+      board.note('Free returns', SECOND)
+      const round = board.voting({ hidden: false })
+      board.vote(round, first, heron)
+    }),
+  )
+  const first = dots(page, 0).getByTestId('vote-dot')
+  await expect(first).toHaveCount(1)
+  await expect(first).toHaveAttribute('data-fresh', 'false')
+
+  await page.getByTestId('voting-vote').click()
+  await page.locator(CANVAS).click({ position: FIRST })
+  await expect(first).toHaveCount(2)
+  await expect(first.nth(0)).toHaveAttribute('data-fresh', 'false')
+  await expect(first.nth(1)).toHaveAttribute('data-fresh', 'true')
+  // A note's first dot is new too.
+  await page.locator(CANVAS).click({ position: SECOND })
+  await expect(dots(page, 1).getByTestId('vote-dot')).toHaveAttribute('data-fresh', 'true')
+})

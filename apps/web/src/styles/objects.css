@@ -165,7 +165,9 @@
 
 .of-poll__bar {
   position: absolute;
-  inset: 0 auto 0 0;
+  inset: 0;
+  /* Full width, scaled to its share, so a new answer moves it without layout. */
+  transform-origin: left;
   /* A wash of the card's own ink, so it stays under the words on any paper. */
   background: color-mix(in srgb, currentcolor 14%, transparent);
 }

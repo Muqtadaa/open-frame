@@ -13,6 +13,7 @@ import {
   useRef,
   useState,
   useSyncExternalStore,
+  type CSSProperties,
 } from 'react'
 
 import { wrapTab } from '../controls/wrap-tab.js'
@@ -514,7 +515,7 @@ function Results({
           const gist =
             object === undefined ? 'Removed' : runtime.registry.describeObject(object).gist.trim()
           return (
-            <li key={entry.id}>
+            <li key={entry.id} style={{ '--of-row': Math.min(index, 5) } as CSSProperties}>
               <button
                 type="button"
                 className="of-voting__result"
@@ -529,7 +530,7 @@ function Results({
                   data-testid="voting-bar"
                   data-share={share}
                   aria-hidden="true"
-                  style={{ inlineSize: `${String(share)}%` }}
+                  style={{ transform: `scaleX(${String(entry.count / most)})` }}
                 />
                 <span className="of-voting__rank" data-testid="voting-rank">
                   {place}
