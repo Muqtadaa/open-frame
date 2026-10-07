@@ -2,7 +2,7 @@ import type { Page } from '@playwright/test'
 
 import { richFromPlain } from '@openframe/core'
 
-import { CANVAS, EDITOR, expect, saved, seedBoard, test, undo } from './fixtures.js'
+import { boxOf, CANVAS, EDITOR, expect, saved, seedBoard, test, undo } from './fixtures.js'
 import { buildBoard } from './boards.js'
 
 test.use({ board: 'fresh' })
@@ -50,17 +50,24 @@ test(
 
     await page.locator(CANVAS).click({ position: FIRST })
     await page.locator(CANVAS).click({ position: FIRST })
-    await expect(dots(page, 0)).toHaveText('2')
-    await expect(status).toHaveText('0 of 2 votes left · 1 person voted')
+    await expect(dots(page, 0)).toHaveAttribute('data-count', '2')
+    // The last one put down is the end of voting for now: the tool lets go,
+    // so the next press selects instead of earning a refusal.
+    await expect(status).toHaveText('All 2 votes placed · 1 person voted')
+    await expect(page.getByTestId('voting-vote')).toHaveAttribute('aria-pressed', 'false')
+    await expect(page.getByTestId('board-announcer')).toHaveText('All 2 votes placed')
+    await page.locator(CANVAS).click({ position: SECOND })
+    await expect(page.getByTestId('toast-body')).toHaveCount(0)
+    await expect(dots(page, 1)).toHaveCount(0)
 
-    // A third is refused, and says why.
+    // Armed again with none left, a press is refused, and says why.
+    await page.getByTestId('voting-vote').click()
     await page.locator(CANVAS).click({ position: SECOND })
     await expect(page.getByTestId('toast-body')).toHaveText('No votes left')
-    await expect(dots(page, 1)).toHaveCount(0)
 
     // Alt takes one back.
     await page.locator(CANVAS).click({ position: FIRST, modifiers: ['Alt'] })
-    await expect(dots(page, 0)).toHaveText('1')
+    await expect(dots(page, 0)).toHaveAttribute('data-count', '1')
     await saved(page)
   },
 )
@@ -80,7 +87,7 @@ test('votes from the keyboard through the context menu, on the notes the round c
   await page.keyboard.press('Shift+F10')
   await page.getByRole('menuitem', { name: 'Dot voting' }).press('ArrowRight')
   await page.getByRole('menuitem', { name: 'Add vote' }).press('Enter')
-  await expect(dots(page, 1)).toHaveText('1')
+  await expect(dots(page, 1)).toHaveAttribute('data-count', '1')
 
   // The round holds the note it was started on, and nothing else.
   await page.keyboard.press('Escape')
@@ -108,8 +115,8 @@ test('hides other people’s dots until revealed, then ranks the notes', async (
   await expect(page.getByTestId('voting-results')).toHaveCount(0)
 
   await page.getByTestId('voting-reveal').click()
-  await expect(dots(page, 1)).toHaveText('2')
-  await expect(dots(page, 0)).toHaveText('1')
+  await expect(dots(page, 1)).toHaveAttribute('data-count', '2')
+  await expect(dots(page, 0)).toHaveAttribute('data-count', '1')
 
   await page.getByTestId('voting-results').click()
   const list = page.getByTestId('voting-list').getByRole('listitem')
@@ -155,7 +162,7 @@ test('ends a round, keeps the counts, and clears it with one undo to bring it ba
   )
   await page.getByTestId('voting-end').click()
   await expect(page.getByTestId('voting-status')).toHaveText('Voting ended')
-  await expect(dots(page, 0)).toHaveText('1')
+  await expect(dots(page, 0)).toHaveAttribute('data-count', '1')
   await expect(page.getByTestId('voting-vote')).toHaveCount(0)
 
   await page.getByTestId('voting-clear').click()
@@ -164,7 +171,7 @@ test('ends a round, keeps the counts, and clears it with one undo to bring it ba
 
   await undo(page)
   await expect(page.getByTestId('voting')).toBeVisible()
-  await expect(dots(page, 0)).toHaveText('1')
+  await expect(dots(page, 0)).toHaveAttribute('data-count', '1')
 })
 
 test('starts a round on what one frame holds, and only that', async ({ page }) => {
@@ -237,12 +244,12 @@ test('with the vote tool up, Enter votes on the selected note and Backspace take
   await page.keyboard.press('Tab')
   await page.keyboard.press('Enter')
   await page.keyboard.press('Enter')
-  await expect(dots(page, 0)).toContainText('2')
+  await expect(dots(page, 0)).toHaveAttribute('data-count', '2')
   await expect(page.locator(EDITOR)).toHaveCount(0)
 
   // Backspace while voting is about dots, never about the note.
   await page.keyboard.press('Backspace')
-  await expect(dots(page, 0)).toContainText('1')
+  await expect(dots(page, 0)).toHaveAttribute('data-count', '1')
   await expect(page.locator('[data-object-type="sticky"]')).toHaveCount(2)
 })
 
@@ -266,11 +273,11 @@ test('a double-click while voting casts two dots and opens nothing', async ({ pa
   )
   await armed(page)
   await page.locator(CANVAS).dblclick({ position: FIRST })
-  await expect(dots(page, 0)).toHaveText('2')
+  await expect(dots(page, 0)).toHaveAttribute('data-count', '2')
   await expect(page.locator(EDITOR)).toHaveCount(0)
   // And the tool is still voting.
   await page.locator(CANVAS).click({ position: FIRST })
-  await expect(dots(page, 0)).toHaveText('3')
+  await expect(dots(page, 0)).toHaveAttribute('data-count', '3')
 })
 
 test('a right-click while voting opens the menu and casts nothing', async ({ page }) => {
@@ -299,7 +306,7 @@ test('votes on a note inside a group, not on the group', async ({ page }) => {
   )
   await armed(page)
   await page.locator(CANVAS).click({ position: SECOND })
-  await expect(dots(page, 1)).toHaveText('1')
+  await expect(dots(page, 1)).toHaveAttribute('data-count', '1')
   await expect(page.getByTestId('toast-body')).toHaveCount(0)
 })
 
@@ -323,7 +330,7 @@ test('a note made inside a frame counts in that frame’s round', async ({ page 
   )
   await page.getByTestId('voting-start').click()
   await page.locator(CANVAS).click({ position: { x: 420, y: 360 } })
-  await expect(dots(page, 0)).toHaveText('1')
+  await expect(dots(page, 0)).toHaveAttribute('data-count', '1')
   await expect(page.getByTestId('toast-body')).toHaveCount(0)
 })
 
@@ -373,8 +380,8 @@ test('starts a round on the selected notes, and votes on them all as one step', 
   await page.locator(CANVAS).click({ position: SECOND, button: 'right' })
   await page.getByRole('menuitem', { name: 'Dot voting' }).click()
   await page.getByRole('menuitem', { name: 'Add vote' }).click()
-  await expect(dots(page, 0)).toHaveText('1')
-  await expect(dots(page, 1)).toHaveText('1')
+  await expect(dots(page, 0)).toHaveAttribute('data-count', '1')
+  await expect(dots(page, 1)).toHaveAttribute('data-count', '1')
   await undo(page)
   await expect(dots(page, 0)).toHaveCount(0)
   await expect(dots(page, 1)).toHaveCount(0)
@@ -423,5 +430,42 @@ test('a note made over a group inside a frame still joins the frame', async ({ p
   await page.getByTestId('voting-start').click()
   await page.locator(CANVAS).click({ position: { x: 420, y: 300 } })
   await expect(page.getByTestId('toast-body')).toHaveCount(0)
-  await expect(page.getByTestId('votes')).toHaveText('1')
+  await expect(page.getByTestId('votes')).toHaveAttribute('data-count', '1')
+})
+
+/*
+ * Dots, not a badge (PR 3 critique, 2026-10-07). The count sat in a capsule
+ * over the note's first line of text, one dot and a numeral whatever the
+ * number, so a board after a round read as a page of little labels rather
+ * than as notes with dots on them. Up to five are drawn as dots; past that, a
+ * dot and the number, because six dots in a row are counted, not seen.
+ */
+test('a few votes are dots on the corner; many are a number', async ({ page }) => {
+  const people = ['a', 'b', 'c', 'd', 'e', 'f'].map((key, index) => ({
+    key: `g_${key}`,
+    name: key,
+    hue: index * 40,
+  }))
+  await seedBoard(
+    page,
+    buildBoard((board) => {
+      const few = board.note('Show the price early', FIRST)
+      const many = board.note('Free returns', SECOND)
+      const round = board.voting({ hidden: false })
+      for (const person of people.slice(0, 3)) board.vote(round, few, person)
+      for (const person of people) board.vote(round, many, person)
+    }),
+  )
+  await expect(dots(page, 0)).toHaveAttribute('data-count', '3')
+  await expect(dots(page, 0).getByTestId('vote-dot')).toHaveCount(3)
+  await expect(dots(page, 0)).toHaveText('')
+  await expect(dots(page, 0)).toHaveAccessibleName('3 votes')
+
+  await expect(dots(page, 1).getByTestId('vote-dot')).toHaveCount(1)
+  await expect(dots(page, 1)).toHaveText('6')
+
+  // Clear of the text: the dots sit on the note's edge, not over its words.
+  const note = await boxOf(page.locator('[data-object-type="sticky"]').first())
+  const mark = await boxOf(dots(page, 0))
+  expect(mark.y + mark.height / 2).toBeLessThanOrEqual(note.y + 1)
 })

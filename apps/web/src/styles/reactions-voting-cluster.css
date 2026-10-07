@@ -17,17 +17,20 @@
 }
 
 /*
- * Dot voting. The dots sit in a note's top corner, clear of its reactions
- * along the bottom; they are read, not pressed — votes go on with the tool.
+ * Dot voting. The dots sit astride the note's top edge, clear of its
+ * reactions along the bottom; they are read, not pressed — votes go on with
+ * the tool. Astride rather than inside: a capsule in the corner sat over the
+ * first line of what the note says. Five or fewer are drawn one by one; past
+ * that, one dot and the number.
  */
 .of-votes {
   position: absolute;
-  top: var(--of-space-8);
-  right: var(--of-space-8);
+  top: 0;
+  right: var(--of-step);
   display: inline-flex;
-  gap: var(--of-space-4);
+  gap: var(--of-space-2);
   align-items: center;
-  padding: var(--of-space-2) var(--of-space-6);
+  padding: var(--of-space-2) var(--of-space-4);
   font-family: var(--of-mono);
   font-size: var(--of-type-record);
   line-height: 1.4;
@@ -35,7 +38,7 @@
   background: var(--of-panel);
   border: 1px solid var(--of-control-border);
   border-radius: var(--of-radius-capsule);
-  pointer-events: none;
+  transform: translateY(-50%);
 }
 
 .of-votes__dot {

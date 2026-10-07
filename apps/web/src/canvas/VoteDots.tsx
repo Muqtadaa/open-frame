@@ -9,6 +9,9 @@ import { countsShown, tallyVoters, useVoters, useVotingContext } from '../hooks/
  * While a round's counts are hidden a person sees only their own dots; once
  * revealed, or once it has ended, everybody sees the count.
  */
+/** How many dots are drawn before the count is written as a number. */
+const DOTS_AT_MOST = 5
+
 export function VoteDots({ id }: { readonly id: ObjectId }) {
   const voters = useVoters(id)
   // A note without a dot costs one index lookup and nothing else.
@@ -27,17 +30,27 @@ function Dots({ voters }: { readonly voters: string }) {
   const label = shown
     ? `${String(total)} ${total === 1 ? 'vote' : 'votes'}${mine > 0 ? `, ${String(mine)} yours` : ''}`
     : `${String(mine)} ${mine === 1 ? 'vote' : 'votes'} of yours`
+  // Five can be seen at a glance; six in a row are counted, so past five the
+  // number says it instead.
+  const drawn = count <= DOTS_AT_MOST ? count : 1
   return (
     <div
       className="of-votes"
       data-testid="votes"
       data-mine={mine > 0}
+      data-count={count}
       role="img"
       aria-label={label}
       data-tip={label}
     >
-      <span className="of-votes__dot" aria-hidden="true" />
-      <span className="of-votes__count">{count}</span>
+      {Array.from({ length: drawn }, (_, index) => (
+        <span key={index} className="of-votes__dot" data-testid="vote-dot" aria-hidden="true" />
+      ))}
+      {count > DOTS_AT_MOST && (
+        <span className="of-votes__count" aria-hidden="true">
+          {count}
+        </span>
+      )}
     </div>
   )
 }

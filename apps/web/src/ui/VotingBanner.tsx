@@ -237,6 +237,24 @@ function VotingRoundBar({ round }: { readonly round: VotingRound }) {
   const left = Math.max(0, round.data.perPerson - mine)
   const voting = tool === 'dot'
   /*
+   * PUTTING DOWN THE LAST VOTE lets go of the tool. Left armed, the next press
+   * on a note was refused with an error toast for doing the obvious thing;
+   * now it selects, and the bar says the allowance is spent. On the moment it
+   * runs out, not whenever it is out: arming again with none left is asked
+   * for, and is answered by the refusal.
+   */
+  const before = useRef<number | null>(null)
+  useEffect(() => {
+    // Not until who is voting is known: the count jumps from "all left" to
+    // the truth when it is, which is no vote being put down.
+    if (me === null) return
+    const was = before.current
+    before.current = left
+    if (!open || was === null || was === 0 || left !== 0) return
+    if (useInteractionStore.getState().tool === 'dot') setTool('select')
+    useInteractionStore.getState().announce(`All ${String(round.data.perPerson)} votes placed`)
+  }, [left, me, open, round.data.perPerson, setTool])
+  /*
    * How many PEOPLE have voted — never which notes — so whoever runs a hidden
    * round knows when the room is done without the counts leaking early.
    */
@@ -247,7 +265,9 @@ function VotingRoundBar({ round }: { readonly round: VotingRound }) {
   const status = !open
     ? 'Voting ended'
     : canEdit
-      ? `${String(left)} of ${String(round.data.perPerson)} votes left${turnout}`
+      ? left === 0
+        ? `All ${String(round.data.perPerson)} votes placed${turnout}`
+        : `${String(left)} of ${String(round.data.perPerson)} votes left${turnout}`
       : // Said, rather than a round nobody here can join and no reason why.
         `Voting open · view only${turnout}`
 
