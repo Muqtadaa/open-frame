@@ -58,13 +58,16 @@ test('answers from the keyboard', async ({ page }) => {
   await expect(option(page, 'o2')).toHaveAttribute('aria-pressed', 'true')
 })
 
-test('edits the options in the record panel, keeping the answers on them', async ({ page }) => {
+test('edits the options in the record panel, keeping the answers where they are', async ({
+  page,
+}) => {
   await seeded(page, {}, true)
   await page.locator(CANVAS).click({ position: { x: AT.x, y: AT.y - 90 } })
-  const second = page.getByRole('textbox', { name: 'Options 2' })
-  await second.fill('Dogs, clearly')
-  await second.press('Enter')
-  await expect(option(page, 'o2')).toHaveAccessibleName('Dogs, clearly, 1 answer, 100%')
+  const first = page.getByRole('textbox', { name: 'Options 1' })
+  await first.fill('Cats, clearly')
+  await first.press('Enter')
+  await expect(option(page, 'o1')).toHaveAccessibleName('Cats, clearly, 0 answers, 0%')
+  await expect(option(page, 'o2')).toHaveAccessibleName('Option 2, 1 answer, 100%')
 
   await page.getByTestId('field-options-add').click()
   const options = page.getByTestId('poll-options').getByRole('button')
@@ -203,4 +206,26 @@ test('a closed poll looks closed, and your answer is marked as yours', async ({ 
   await expect(card(page).locator('[data-closed="true"]')).toHaveCount(1)
   // Still marked once it closes: closing is when people look for it.
   await expect(option(page, 'o2').getByTestId('poll-mine')).toBeVisible()
+})
+
+/*
+ * An option somebody has answered is fixed (PR 3 critique, 2026-10-07).
+ * Rewording it kept their answer on it while changing what they had said yes
+ * to; removing it left the answer on the board, counted by nothing. The
+ * options nobody has picked can still be reworded and removed.
+ */
+test('an answered option can be neither reworded nor removed', async ({ page }) => {
+  // Three, so the one nobody picked is above the two a poll must keep.
+  const options = [
+    { id: 'o1', label: 'Option 1' },
+    { id: 'o2', label: 'Option 2' },
+    { id: 'o3', label: 'Option 3' },
+  ]
+  await seeded(page, { options }, true)
+  await page.getByTestId('poll-question').click()
+  const field = page.getByTestId('field-options')
+  await expect(field.getByRole('textbox', { name: 'Options 2' })).toHaveAttribute('readonly', '')
+  await expect(field.getByRole('button', { name: 'Remove Option 2' })).toBeDisabled()
+  await expect(field.getByRole('textbox', { name: 'Options 1' })).not.toHaveAttribute('readonly')
+  await expect(field.getByRole('button', { name: 'Remove Option 1' })).toBeEnabled()
 })

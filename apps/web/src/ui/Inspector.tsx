@@ -649,6 +649,10 @@ export function Inspector() {
           <RecordFields
             object={only}
             fields={recordFields}
+            // What the marks on it name: a poll's answered options.
+            named={
+              new Set(runtime.registry.marksOn(document, only.id).map((link) => link.edge.value))
+            }
             onCommit={(id, patch) => {
               commands.updateData(id, patch)
             }}

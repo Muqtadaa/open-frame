@@ -20,13 +20,22 @@ import { fromText, toText } from './record-text.js'
  * says, which is why the eight structured types are a two-file change rather
  * than eight edits to a panel (rule 21).
  */
+/** Nothing named: every value is free to change. */
+const NONE: ReadonlySet<string> = new Set()
+
 export function RecordFields({
   object,
   fields,
   onCommit,
+  named = NONE,
 }: {
   readonly object: AnyOpenFrameObject
   readonly fields: readonly FieldDefinition[]
+  /**
+   * The values something else on the board names — for a list of choices,
+   * the options somebody has answered. Those are fixed: see `Choices`.
+   */
+  readonly named?: ReadonlySet<string>
   readonly onCommit: (id: ObjectId, patch: Readonly<Record<string, unknown>>) => void
 }) {
   return (
@@ -36,6 +45,7 @@ export function RecordFields({
           key={field.key}
           field={field}
           object={object}
+          named={named}
           onCommit={(value) => {
             onCommit(object.id, { [field.key]: value })
           }}
@@ -49,10 +59,12 @@ function FieldRow({
   field,
   object,
   onCommit,
+  named,
 }: {
   readonly field: FieldDefinition
   readonly object: AnyOpenFrameObject
   readonly onCommit: (value: unknown) => void
+  readonly named: ReadonlySet<string>
 }) {
   const stored = (object.data as Record<string, unknown>)[field.key]
 
@@ -102,6 +114,7 @@ function FieldRow({
         <Choices
           field={field}
           stored={Array.isArray(stored) ? (stored as PollOption[]) : []}
+          named={named}
           onCommit={onCommit}
         />
       </Row>
@@ -120,17 +133,22 @@ function FieldRow({
  * it, as any other field does — the whole list in one write, so it is one undo
  * step.
  *
- * Ids are never edited and never reused: an answer names its option by id, so
- * rewording an option keeps everybody's answer on it, and a new option takes
- * an id nobody's answer has ever named.
+ * Ids are never edited and never reused: an answer names its option by id, and
+ * a new option takes an id nobody's answer has ever named.
+ *
+ * An option somebody has ANSWERED is fixed. Reworded, their answer stayed on
+ * it while what they had said yes to changed under them; removed, the answer
+ * stayed on the board counted by nothing.
  */
 function Choices({
   field,
   stored,
+  named,
   onCommit,
 }: {
   readonly field: FieldDefinition
   readonly stored: readonly PollOption[]
+  readonly named: ReadonlySet<string>
   readonly onCommit: (value: unknown) => void
 }) {
   const relabel = (id: string, label: string): void => {
@@ -147,6 +165,7 @@ function Choices({
             <ChoiceLabel
               label={option.label}
               name={`${field.label} ${String(index + 1)}`}
+              answered={named.has(option.id)}
               onCommit={(label) => {
                 relabel(option.id, label)
               }}
@@ -155,7 +174,7 @@ function Choices({
               type="button"
               className="of-icon-button"
               aria-label={`Remove ${option.label}`}
-              disabled={stored.length <= MIN_POLL_OPTIONS}
+              disabled={stored.length <= MIN_POLL_OPTIONS || named.has(option.id)}
               onClick={() => {
                 onCommit(stored.filter((other) => other.id !== option.id))
               }}
@@ -200,10 +219,12 @@ function newOptionId(taken: readonly PollOption[]): string {
 function ChoiceLabel({
   label,
   name,
+  answered,
   onCommit,
 }: {
   readonly label: string
   readonly name: string
+  readonly answered: boolean
   readonly onCommit: (label: string) => void
 }) {
   const [draft, setDraft] = useState(label)
@@ -228,6 +249,8 @@ function ChoiceLabel({
       value={draft}
       maxLength={80}
       aria-label={name}
+      readOnly={answered}
+      aria-description={answered ? 'Answered' : undefined}
       onChange={(event) => {
         setDraft(event.target.value)
       }}
