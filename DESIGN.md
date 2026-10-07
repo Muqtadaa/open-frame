@@ -632,7 +632,7 @@ on it, and the decade rule marks the line the user is aiming at.
 
 **Responsive.** Breakpoints are structural rather than cosmetic. Below
 **820px** the zoom cluster drops its slider, a coarse control the canvas itself
-already provides, and the account shrinks to its face with Source in its sheet.
+already provides, and the account shrinks to its face.
 The navigation bar gives way at 640px and 560px (see Navigation Bar) and never
 leaves the rail's 20px gutter; the controls with no other route always stay.
 Below **560px** the record panel and the comments panel become sheets along the
@@ -921,8 +921,8 @@ tabs, or in the history a week later, is found by its name.
 **Order.** "All boards" and the name lead; then history (undo/redo); then the
 record — the save state and, only when something is selected, "N selected";
 then, after a rule, the app's own apparatus: sharing, agent changes,
-mentions, your account, the theme; and the AGPL source link last and quietest, underlined as text with
-a 3px offset.
+mentions, your account, the theme. There is no link to the source: the owner
+holds the copyright (PRODUCT.md, Brand Commitments).
 
 **Type.** The name is set in the interface's own voice, 15px sans at 600 in
 full ink, and takes the room the bar has up to 48ch. A name that still does
@@ -957,9 +957,8 @@ read into its name. Tips and sheets open downward. Shortcuts read "Ctrl+Z" off
 a Mac and "⌘Z" on one.
 
 **Narrow windows.** The bar keeps the rail's 20px gutter at every width, and it
-gives up in order: the account's name below 820px (it keeps its face, and the
-source offer moves into the account and sign-in sheets, so it is still
-reachable from inside the running app); the selection count, the exit's words
+gives up in order: the account's name below 820px (it keeps its face); the
+selection count, the exit's words
 and a shared board's room label below 640px; then the save state's word and the
 rules below 560px. Signed out, "Sign in" stays a visible word at every width.
 Nothing ever runs out of the bar, on a local board or a shared one.

@@ -111,9 +111,10 @@ one room per board, held by a Durable Object
 ## Brand Commitments
 
 - The name is **OpenFrame**.
-- Licensed **AGPL-3.0**, with the section 13 offer of source reachable from
-  inside the running application. A fork that hosts a modified version must
-  point that link at its own source.
+- Licensed **AGPL-3.0**. The owner holds the copyright, so this deployment
+  carries no link to its source (decided 2026-10-07): section 13 binds the
+  people the code is licensed to, not its author. A fork that hosts a modified
+  version must make its own offer of source to its users.
 - The **logo, wordmark and hero artwork** were supplied by the project owner on
   2026-09-18: a neon synthwave lockup and a matching hero. Provenance and
   processing are recorded in `apps/web/src/assets/PROVENANCE.md`. No typeface

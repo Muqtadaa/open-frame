@@ -7,7 +7,6 @@ import { useInteractionStore } from '../interaction/interaction-store.js'
 import { useOpenFrame } from '../runtime/context.js'
 import type { SaveState } from '../runtime/context.js'
 import { BENCH_TOOLS_ENABLED } from '../app/bench-flag.js'
-import { SOURCE_URL } from '../app/source-link.js'
 import { AccountControl } from './AccountControl.js'
 import { BoardExit } from './BoardExit.js'
 import { BoardTitle } from './BoardTitle.js'
@@ -246,23 +245,6 @@ export function StatusBar() {
        * not a record of the page, but something about the page you are reading.
        */}
       <ThemeToggle />
-
-      {/*
-       * The AGPL section 13 offer of source. A hosted, modified version has to
-       * make this available to the people using it — see app/source-link.ts.
-       * LAST and quietest: it must stay reachable, and it is the one thing on
-       * the bar nobody reaches for while working. Run in among the account
-       * controls, it read to a researcher as "data source".
-       */}
-      <a
-        className="of-status__source"
-        href={SOURCE_URL}
-        target="_blank"
-        rel="noreferrer"
-        data-testid="source-link"
-      >
-        Source
-      </a>
 
       {/*
        * Statically guarded, not runtime-guarded: the flag is replaced at build

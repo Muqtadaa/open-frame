@@ -155,9 +155,7 @@ test.describe('the keyboard on the bar', () => {
   test('gives every control a target a pointer can find', async ({ page }) => {
     await openBoard(page)
     const theme = await page.getByTestId('theme-toggle').boundingBox()
-    const source = await page.getByTestId('source-link').boundingBox()
     expect(theme?.width ?? 0).toBeGreaterThanOrEqual(30)
-    expect(source?.height ?? 0).toBeGreaterThanOrEqual(24)
   })
 })
 
@@ -225,18 +223,6 @@ test.describe('what the bar carries', () => {
     await page.keyboard.press('v')
     await page.locator(CANVAS).click({ position: { x: 510, y: 410 } })
     await expect(page.getByTestId('selection-count')).toHaveText('1 selected')
-  })
-
-  test('sets the source link last, after the app’s own controls', async ({ page }) => {
-    await openBoard(page)
-    const order = await page
-      .getByTestId('status-bar')
-      .evaluate((bar) =>
-        [...bar.querySelectorAll('[data-testid]')].map((el) => el.getAttribute('data-testid')),
-      )
-    const source = order.indexOf('source-link')
-    expect(source).toBeGreaterThan(order.indexOf('theme-toggle'))
-    expect(source).toBeGreaterThan(order.indexOf('sign-in'))
   })
 
   test('closes the account sheet on Escape without touching the board', async ({ page }) => {

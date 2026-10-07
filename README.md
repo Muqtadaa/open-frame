@@ -125,6 +125,6 @@ not prevent that, it just requires the improvements to be published too. As sole
 copyright holder I can also grant commercial licences on different terms, which
 a permissive licence would have given away for free.
 
-This deployment therefore links to its source from the status bar, which is how
-section 13's offer is made. **If you fork and host it, that link is yours to
-keep pointing at your own source.**
+As the copyright holder I am not bound by my own licence, so this deployment
+carries no source link. **If you fork and host it, section 13 binds you: offer
+your users the source of your version — a link in the app is the usual way.**

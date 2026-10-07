@@ -107,9 +107,7 @@ test('a confirmation reads as a sentence, inside the screen', async ({ page }) =
   expect(await overflow(page)).toBeLessThanOrEqual(0)
 })
 
-test("the board's bar fits, with the account as a face and the source in its sheet", async ({
-  page,
-}) => {
+test("the board's bar fits, with the account as a face", async ({ page }) => {
   await signedIn(page, [])
   await page.goto(BOARD_URL)
   await page.waitForSelector('[data-testid="status-bar"]')
@@ -121,21 +119,14 @@ test("the board's bar fits, with the account as a face and the source in its she
   const chip = await boxOf(account)
   expect(chip.x + chip.width).toBeLessThanOrEqual(390)
   await expect(account.getByTestId('status-label')).toBeHidden()
-
-  // Reachable from inside the running app (AGPL §13), from the account.
-  await expect(page.getByTestId('source-link')).toBeHidden()
-  await account.click()
-  await expect(
-    page.getByTestId('account-sheet').getByRole('link', { name: 'Source' }),
-  ).toBeVisible()
 })
 
 /*
  * Signed out, the label IS the button (audit 2026-09-27). The rule that
  * shrinks the account to its face hid it here too, leaving a 16px invisible
- * button — and the source link, whose other home is that button's sheet.
+ * button.
  */
-test('signed out, the bar still says Sign in, and the source is behind it', async ({ page }) => {
+test('signed out, the bar still says Sign in', async ({ page }) => {
   await page.goto(BOARD_URL)
   await page.waitForSelector('[data-testid="status-bar"]')
   const signIn = page.getByTestId('sign-in')
@@ -144,11 +135,6 @@ test('signed out, the bar still says Sign in, and the source is behind it', asyn
   const box = await boxOf(signIn)
   expect(box.width).toBeGreaterThanOrEqual(30)
   expect(box.x + box.width).toBeLessThanOrEqual(390)
-
-  await signIn.click()
-  await expect(
-    page.getByTestId('account-dialog').getByRole('link', { name: 'Source' }),
-  ).toBeVisible()
 })
 
 test('the page can be zoomed', async ({ page }) => {

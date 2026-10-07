@@ -78,25 +78,6 @@
   margin-top: var(--of-space-8);
 }
 
-/*
- * A 12px word is a 15px-tall target, so the link keeps its size of type and
- * takes the bar's height to be pressed (WCAG 2.5.8). Underlined as TEXT, with
- * a set offset, rather than with a bottom border — a border sits at the foot
- * of the box, which is now the foot of the bar.
- */
-.of-status__source {
-  display: inline-flex;
-  align-items: center;
-  min-height: var(--of-hit-sm);
-  color: inherit;
-  text-decoration: underline 1px;
-  text-underline-offset: 3px;
-}
-
-.of-status__source:hover {
-  color: var(--of-accent);
-}
-
 .of-status {
   /* The dialog's positioning context. */
   position: relative;

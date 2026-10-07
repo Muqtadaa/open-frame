@@ -1,6 +1,5 @@
 import { useCallback, useContext, useRef, useState, type RefObject } from 'react'
 
-import { SOURCE_URL } from '../app/source-link.js'
 import { AnchoredSurface } from '../controls/AnchoredSurface.js'
 import { useAnchoredTo } from '../controls/use-anchor.js'
 import { useDismiss, useFocusOnOpen } from '../controls/use-dismiss.js'
@@ -145,7 +144,6 @@ function SignInSheet({
       >
         <AccountForm onDone={onClose} />
         <SheetHistory onChosen={onClose} />
-        <SheetSource />
       </div>
     </AnchoredSurface>
   )
@@ -216,7 +214,6 @@ export function AccountSheet({
           </button>
         </div>
         <SheetHistory onChosen={onClose} />
-        <SheetSource />
       </div>
     </AnchoredSurface>
   )
@@ -245,17 +242,5 @@ function SheetHistory({ onChosen }: { readonly onChosen: () => void }) {
       </button>
       {open && <VersionList onChosen={onChosen} />}
     </div>
-  )
-}
-
-/**
- * The source offer, for the width where the bar has no room for it. Shown by
- * the stylesheet only there; everywhere else the bar carries it.
- */
-function SheetSource() {
-  return (
-    <a className="of-sheet__source" href={SOURCE_URL} target="_blank" rel="noreferrer">
-      Source
-    </a>
   )
 }

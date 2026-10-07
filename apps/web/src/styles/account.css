@@ -58,20 +58,9 @@
   margin-bottom: var(--of-space-12);
 }
 
-/*
- * The source offer, repeated in the account and sign-in sheets for the one
- * width where the bar has no room for it. Hidden everywhere else.
- */
 .of-sheet__history {
   display: none;
   margin-top: var(--of-space-12);
-}
-
-.of-sheet__source {
-  display: none;
-  margin-top: var(--of-space-12);
-  font-size: var(--of-type-record);
-  color: var(--of-ink-muted);
 }
 
 /* What a field is for, kept beside it once somebody has started typing. */
@@ -229,7 +218,7 @@
 }
 
 /*
- * Version history moves into the account sheet, as the source link does
+ * Version history moves into the account sheet
  * below 820: with its button, a shared board's bar ran out of room at 560
  * and at 390.
  */
@@ -254,24 +243,13 @@
 }
 
 /*
- * The account shrinks to its face, and the source offer moves into the
- * account sheet: both ran off the right edge — a phone at first, and then
- * any window under about 820px once the bar carried a shared board's chip
- * and the people in it (audit 2026-09-27). The source link has to stay
- * reachable from inside the running app (AGPL §13), and the sheet is where
- * it goes.
- *
- * Only a signed-in account has a face to shrink to. Signed out, the label
- * is the whole button, so it stays — and with it the sheet that carries the
- * source link.
+ * The account shrinks to its face: it ran off the right edge — a phone at
+ * first, and then any window under about 820px once the bar carried a shared
+ * board's chip and the people in it (audit 2026-09-27). Only a signed-in
+ * account has a face to shrink to; signed out, the label is the whole button.
  */
 @media (width < 820px) {
-  .of-status__account:not([data-testid='sign-in']) .of-status__share-label,
-  .of-status__source {
+  .of-status__account:not([data-testid='sign-in']) .of-status__share-label {
     display: none;
-  }
-
-  .of-sheet__source {
-    display: block;
   }
 }
