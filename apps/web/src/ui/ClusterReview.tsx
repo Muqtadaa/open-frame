@@ -9,6 +9,7 @@ import { useInteractionStore } from '../interaction/interaction-store.js'
 import { useOpenFrame } from '../runtime/context.js'
 import { useServices, type ClusterRefusal } from '../runtime/services.js'
 import { focusTheBoard } from './hand-back-focus.js'
+import { useEscapeToClose } from '../controls/escape-stack.js'
 
 /** What each refusal says. Facts, and the one thing that would change it. */
 const REFUSED: Readonly<Record<ClusterRefusal | 'too-few' | 'too-many', string>> = {
@@ -62,18 +63,7 @@ function ClusterPanel({ ids }: { readonly ids: readonly ObjectId[] }) {
    * board went to the keymap instead: the selection was cleared and the panel
    * stayed open, describing notes that were no longer selected.
    */
-  useEffect(() => {
-    const escape = (event: KeyboardEvent): void => {
-      if (event.key !== 'Escape') return
-      event.preventDefault()
-      event.stopPropagation()
-      close()
-    }
-    window.addEventListener('keydown', escape, true)
-    return () => {
-      window.removeEventListener('keydown', escape, true)
-    }
-  }, [close])
+  useEscapeToClose(close)
   const headingId = useId()
   const panel = useRef<HTMLElement>(null)
   const asking = useRef<AbortController | null>(null)

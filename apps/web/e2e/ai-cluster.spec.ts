@@ -170,3 +170,22 @@ test('says why the server refused, and writes nothing', async ({ page }) => {
   await expect(page.getByTestId('cluster-refused')).toHaveText('No AI runs left today')
   await expect(viewOf(page, 'frame')).toHaveCount(0)
 })
+
+test('one Escape closes only the surface opened last, not the panel beneath it', async ({
+  page,
+}) => {
+  await signedIn(page, [])
+  await board(page)
+  await standIn(page)
+  await openCluster(page)
+  await page.getByTestId('session-button').click()
+  const session = page.getByRole('dialog', { name: 'Session' })
+  await expect(session).toBeVisible()
+
+  await page.keyboard.press('Escape')
+  await expect(session).toHaveCount(0)
+  await expect(page.getByTestId('cluster-review')).toBeVisible()
+
+  await page.keyboard.press('Escape')
+  await expect(page.getByTestId('cluster-review')).toHaveCount(0)
+})

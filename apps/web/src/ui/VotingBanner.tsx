@@ -29,6 +29,7 @@ import {
 import { useInteractionStore } from '../interaction/interaction-store.js'
 import { useOpenFrame } from '../runtime/context.js'
 import { focusTheBoard } from './hand-back-focus.js'
+import { useEscapeToClose } from '../controls/escape-stack.js'
 
 /** How many places "select the top" takes: what a session usually carries forward. */
 const TOP = 3
@@ -97,18 +98,7 @@ function VotingSetup({ scope }: { readonly scope: VoteScope }) {
     close()
     focusTheBoard()
   }, [close])
-  useEffect(() => {
-    const escape = (event: KeyboardEvent): void => {
-      if (event.key !== 'Escape') return
-      event.preventDefault()
-      event.stopPropagation()
-      cancel()
-    }
-    window.addEventListener('keydown', escape, true)
-    return () => {
-      window.removeEventListener('keydown', escape, true)
-    }
-  }, [cancel])
+  useEscapeToClose(cancel)
 
   const votes = Number(perPerson)
   const valid = Number.isInteger(votes) && votes >= 1 && votes <= MAX_VOTES_PER_PERSON
