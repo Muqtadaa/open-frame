@@ -114,7 +114,11 @@ test('hides other people’s dots until revealed, then ranks the notes', async (
   await expect(dots(page, 1)).toHaveCount(0)
   await expect(page.getByTestId('voting-results')).toHaveCount(0)
 
+  // Revealing cannot be taken back, so it asks first, in place.
   await page.getByTestId('voting-reveal').click()
+  await expect(page.getByTestId('voting-confirm')).toHaveText('Show everyone the counts?')
+  await expect(dots(page, 1)).toHaveCount(0)
+  await page.getByTestId('voting-confirm-yes').click()
   await expect(dots(page, 1)).toHaveAttribute('data-count', '2')
   await expect(dots(page, 0)).toHaveAttribute('data-count', '1')
 
@@ -165,7 +169,18 @@ test('ends a round, keeps the counts, and clears it with one undo to bring it ba
   await expect(dots(page, 0)).toHaveAttribute('data-count', '1')
   await expect(page.getByTestId('voting-vote')).toHaveCount(0)
 
+  // Ending a round is when people want the answer: the results open, ranked,
+  // each with a bar for its share of the top count.
+  const list = page.getByTestId('voting-list').getByRole('listitem')
+  await expect(list).toHaveCount(1)
+  await expect(list.first().getByTestId('voting-rank')).toHaveText('1')
+  await expect(list.first().getByTestId('voting-bar')).toHaveAttribute('data-share', '100')
+
+  // Clearing throws the round away, so it asks first.
   await page.getByTestId('voting-clear').click()
+  await expect(page.getByTestId('voting-confirm')).toHaveText('Clear every vote in this round?')
+  await expect(page.getByTestId('voting')).toBeVisible()
+  await page.getByTestId('voting-confirm-yes').click()
   await expect(page.getByTestId('voting')).toHaveCount(0)
   await expect(dots(page, 0)).toHaveCount(0)
 
@@ -226,6 +241,9 @@ test('keeps the keyboard through setup, start, end, reopen and clear', async ({ 
   await expect(page.getByTestId('voting-end')).toBeFocused()
   await page.keyboard.press('Enter')
   await page.getByTestId('voting-clear').press('Enter')
+  // The question takes the keyboard, on the answer that does it.
+  await expect(page.getByTestId('voting-confirm-yes')).toBeFocused()
+  await page.keyboard.press('Enter')
   await expect(page.getByTestId('voting')).toHaveCount(0)
   await expect(page.locator(CANVAS)).toBeFocused()
 })

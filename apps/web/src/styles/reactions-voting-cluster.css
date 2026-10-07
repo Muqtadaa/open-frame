@@ -367,3 +367,40 @@
   font-size: var(--of-type-ui-small);
   color: var(--of-ink-muted);
 }
+
+/* Reveal and Clear, asked in the bar before they happen. */
+.of-voting__confirm {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--of-space-8);
+  align-items: center;
+  margin-top: var(--of-space-8);
+  font-size: var(--of-type-record);
+}
+
+/* A row's place, in the margin, and its share of the top count as a wash. */
+.of-voting__result {
+  position: relative;
+}
+
+/* Over the wash, which comes first in the row and is painted first. */
+.of-voting__result > :not(.of-voting__bar) {
+  position: relative;
+}
+
+.of-voting__rank {
+  flex: none;
+  min-inline-size: 2ch;
+  font-family: var(--of-mono);
+  font-size: var(--of-type-record);
+  color: var(--of-ink-muted);
+  text-align: end;
+}
+
+.of-voting__bar {
+  position: absolute;
+  inset-block: var(--of-space-2);
+  inset-inline-start: 0;
+  background: color-mix(in srgb, currentcolor 10%, transparent);
+  border-radius: var(--of-radius);
+}

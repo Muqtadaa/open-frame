@@ -200,7 +200,21 @@ function VotingRoundBar({ round }: { readonly round: VotingRound }) {
   const tool = useInteractionStore((state) => state.tool)
   const setTool = useInteractionStore((state) => state.setTool)
   const votes = useRoundVotes(round.id)
-  const [showing, setShowing] = useState(false)
+  /*
+   * Whether the results are open: what the person last chose, or — until they
+   * choose — whether the round has ENDED. Ending is when a room wants the
+   * answer, and it opened only for whoever pressed Results, so everybody else
+   * watched the facilitator read out a list they could not see. From the
+   * round's status, which every peer has, rather than from a press, which
+   * only one does.
+   */
+  const [chosen, setChosen] = useState<boolean | null>(null)
+  /*
+   * Reveal and Clear cannot be taken back in the room — undo is one person's,
+   * and everybody has already seen the counts — so each asks first, in the
+   * bar, rather than in a dialog over the board people are looking at.
+   */
+  const [confirming, setConfirming] = useState<'reveal' | 'clear' | null>(null)
   const bar = useRef<HTMLElement>(null)
   /*
    * The control that takes the keyboard next. End, Reveal and Reopen each
@@ -233,6 +247,14 @@ function VotingRoundBar({ round }: { readonly round: VotingRound }) {
   }, [settled])
   const open = round.data.status === 'open'
   const shown = countsShown(round.data)
+  // A change of status puts the results back to following it.
+  const [seen, setSeen] = useState(round.data.status)
+  if (seen !== round.data.status) {
+    setSeen(round.data.status)
+    setChosen(null)
+    setConfirming(null)
+  }
+  const showing = chosen ?? !open
   const mine = me === null ? 0 : votes.filter((vote) => vote.by === me.key).length
   const left = Math.max(0, round.data.perPerson - mine)
   const voting = tool === 'dot'
@@ -310,8 +332,8 @@ function VotingRoundBar({ round }: { readonly round: VotingRound }) {
             className="of-button"
             data-testid="voting-reveal"
             onClick={() => {
-              commands.setVoting({ hidden: false })
-              handTo.current = 'voting-results'
+              setConfirming('reveal')
+              handTo.current = 'voting-confirm-yes'
             }}
           >
             Reveal
@@ -324,7 +346,7 @@ function VotingRoundBar({ round }: { readonly round: VotingRound }) {
             aria-expanded={showing}
             data-testid="voting-results"
             onClick={() => {
-              setShowing((current) => !current)
+              setChosen(!showing)
             }}
           >
             Results
@@ -362,15 +384,52 @@ function VotingRoundBar({ round }: { readonly round: VotingRound }) {
             className="of-button of-button--ghost"
             data-testid="voting-clear"
             onClick={() => {
-              commands.clearVoting()
-              // The banner goes with the round.
-              focusTheBoard()
+              setConfirming('clear')
+              handTo.current = 'voting-confirm-yes'
             }}
           >
             Clear
           </button>
         )}
       </div>
+      {confirming !== null && (
+        <div className="of-voting__confirm" role="group" aria-labelledby={`${round.id}-ask`}>
+          <span id={`${round.id}-ask`} data-testid="voting-confirm">
+            {confirming === 'reveal'
+              ? 'Show everyone the counts?'
+              : 'Clear every vote in this round?'}
+          </span>
+          <button
+            type="button"
+            className="of-button of-button--primary"
+            data-testid="voting-confirm-yes"
+            onClick={() => {
+              setConfirming(null)
+              if (confirming === 'reveal') {
+                commands.setVoting({ hidden: false })
+                handTo.current = 'voting-results'
+                return
+              }
+              commands.clearVoting()
+              // The banner goes with the round.
+              focusTheBoard()
+            }}
+          >
+            {confirming === 'reveal' ? 'Reveal' : 'Clear'}
+          </button>
+          <button
+            type="button"
+            className="of-button of-button--ghost"
+            data-testid="voting-confirm-no"
+            onClick={() => {
+              handTo.current = confirming === 'reveal' ? 'voting-reveal' : 'voting-clear'
+              setConfirming(null)
+            }}
+          >
+            Cancel
+          </button>
+        </div>
+      )}
       {shown && showing && <Results votes={votes} canSelect />}
     </section>
   )
@@ -440,10 +499,17 @@ function Results({
   }
 
   const doc = runtime.store.getDocument()
+  const most = ranked[0]?.count ?? 1
   return (
     <div className="of-voting__results">
       <ol className="of-voting__list" data-testid="voting-list">
-        {ranked.map((entry) => {
+        {ranked.map((entry, index) => {
+          // Tied notes share a place: 1, 2, 2, 4.
+          const place =
+            index > 0 && ranked[index - 1]?.count === entry.count
+              ? ranked.findIndex((other) => other.count === entry.count) + 1
+              : index + 1
+          const share = Math.round((entry.count / most) * 100)
           const object = doc.objects.get(entry.id)
           const gist =
             object === undefined ? 'Removed' : runtime.registry.describeObject(object).gist.trim()
@@ -457,6 +523,17 @@ function Results({
                   commands.reveal(entry.id)
                 }}
               >
+                {/* An ink wash under the row: its share of the most votes. */}
+                <span
+                  className="of-voting__bar"
+                  data-testid="voting-bar"
+                  data-share={share}
+                  aria-hidden="true"
+                  style={{ inlineSize: `${String(share)}%` }}
+                />
+                <span className="of-voting__rank" data-testid="voting-rank">
+                  {place}
+                </span>
                 <span className="of-voting__gist">{gist === '' ? 'Untitled' : gist}</span>
                 <span className="of-voting__count">{entry.count}</span>
               </button>
