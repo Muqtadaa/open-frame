@@ -149,12 +149,29 @@
  * readout holds its size — a count that has been compressed into its
  * neighbour has not degraded, it has broken.
  */
-.of-status > * {
+.of-status > *,
+.of-status__zone > * {
   flex: none;
   min-width: 0;
   white-space: nowrap;
 }
 
+/*
+ * The zones are rows of their own, spaced as the bar is — `inherit`, so a
+ * squeezed bar's tighter gap reaches inside them too. Only the board's zone
+ * may shrink, because the name in it is what gives way.
+ */
+.of-status__zone {
+  display: flex;
+  gap: inherit;
+  align-items: center;
+}
+
+.of-status__zone:empty {
+  display: none;
+}
+
+.of-status > .of-status__zone--board,
 .of-status__title,
 .of-status__heading {
   flex: 0 1 auto;
@@ -165,7 +182,7 @@
  * child shrink, which squeezed the theme toggle to 28 — under the target the
  * rest of the product keeps (DESIGN.md, Icon Buttons).
  */
-.of-status > .of-icon-button {
+.of-status .of-icon-button {
   min-width: var(--of-hit-sm);
 }
 
@@ -175,83 +192,105 @@
  */
 .of-status__heading {
   display: flex;
+  /*
+   * The name's floor, in the name's own face so a "ch" here is a character
+   * of the name: not below a name you can still read. At 4ch it collapsed to
+   * "U…", which is a board title that has stopped being one.
+   */
   min-width: 10ch;
   margin: 0;
-  font: inherit;
+  font-family: var(--of-font);
+  font-size: var(--of-type-ui);
+  font-weight: var(--of-weight-semibold);
 }
 
 /*
- * A NARROW window: what the bar gives up, in order, when it truly runs out of
- * room. The selection count first (the record panel says it too), then the
- * exit's words (its arrow stays: it is the one control with no other route),
- * then — on a phone-width window — the save state's word, leaving its state
- * to the tip. Nothing ever runs out of the bar.
- *
- * At 680 rather than 640 since the session timer joined the bar: a shared
- * board's ran out of it at exactly 640 by the width of that one button.
+ * What the bar gives up when it runs out of room, step by step, as far as it
+ * has to (use-squeeze.ts measures). Five breakpoints did this once, each
+ * worked out for what the bar carried at the time and each made wrong by the
+ * next control to join it. Every control stays: a word becomes its icon, a
+ * readout its short form.
  */
-@media (width < 680px) {
-  .of-status__counts {
-    display: none;
-  }
 
-  .of-status__exit-label {
-    display: none;
-  }
+/* The account shrinks to its face. Signed out, the label is the whole button. */
+.of-status[data-squeeze~='face']
+  .of-status__account:not([data-testid='sign-in'])
+  .of-status__share-label {
+  display: none;
+}
 
-  /*
-   * A shared board's chip keeps its dot — green, amber, grey say the same
-   * thing the word did — and its name and tip carry the rest.
-   */
-  .of-status__room .of-status__share-label {
-    display: none;
-  }
+.of-status[data-squeeze~='count'] .of-status__counts {
+  display: none;
+}
+
+.of-status[data-squeeze~='exit'] .of-status__exit-label {
+  display: none;
 }
 
 /*
- * The second step, at 560 rather than 480: between the two a shared board's
- * bar — the room chip, whoever is here — ran out of room with the full gaps
- * and the save word still standing (audit 2026-09-27).
+ * The readout's short form. The quiet words go altogether; a FAILURE never
+ * does — `display: none` would take its live region with it — and nor does
+ * the room being out of reach, which changes what every edit means: that
+ * keeps its first word, "Offline", and the tip says the rest.
  */
-@media (width < 560px) {
-  .of-status {
-    gap: var(--of-space-4);
-    padding: var(--of-space-6);
-  }
+.of-status[data-squeeze~='brief'] .of-status__save--quiet {
+  display: none;
+}
 
-  /*
-   * The word goes, but only a quiet one. Never a FAILURE — `display: none`
-   * also removes the live region, so a phone-width window would be the one
-   * place a failed save said nothing at all — and never the room being out of
-   * reach, which changes what every edit means.
-   */
-  .of-status__save--quiet {
-    display: none;
-  }
+.of-status[data-squeeze~='brief'] .of-status__save-more {
+  display: none;
+}
 
-  .of-status__rule {
-    display: none;
-  }
+.of-status[data-squeeze~='words'] .of-session__word,
+.of-status[data-squeeze~='words'] .of-inbox__word {
+  display: none;
+}
+
+.of-status[data-squeeze~='tight'] {
+  gap: var(--of-space-4);
+  padding: var(--of-space-6);
+}
+
+.of-status[data-squeeze~='tight'] .of-status__rule {
+  display: none;
+}
+
+/* A running pill keeps its time and its note; an inbox with news, its count. */
+.of-status[data-squeeze~='compact'] .of-session__clock,
+.of-status[data-squeeze~='compact'] .of-session__dot,
+.of-status[data-squeeze~='compact'] .of-inbox__icon--news {
+  display: none;
+}
+
+.of-status__share-icon {
+  display: none;
+  width: 18px;
+  height: 18px;
+}
+
+.of-status[data-squeeze~='icons'] .of-status__share-icon {
+  display: block;
+}
+
+.of-status[data-squeeze~='icons'] .of-status__share-word {
+  display: none;
 }
 
 /*
- * A phone: the name gives up a few characters before anything runs off the
- * edge. It ellipsises, and its full text is still its tip.
+ * The last step, reached only on a phone's bar with the room out of reach and
+ * everything else already given: the readout keeps its dot, and its word is
+ * hidden from sight but not from a screen reader — and never for a failure.
  */
-@media (width < 420px) {
-  .of-status__heading {
-    min-width: 7ch;
-  }
+.of-status[data-squeeze~='dot'] .of-status__save--away .of-status__save-lead {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
 }
 
-/*
- * The account shrinks to its face: it ran off the right edge — a phone at
- * first, and then any window under about 820px once the bar carried a shared
- * board's chip and the people in it (audit 2026-09-27). Only a signed-in
- * account has a face to shrink to; signed out, the label is the whole button.
- */
-@media (width < 820px) {
-  .of-status__account:not([data-testid='sign-in']) .of-status__share-label {
-    display: none;
-  }
+/* The name gives up a few characters before anything runs off the edge. */
+.of-status[data-squeeze~='name'] .of-status__heading {
+  min-width: 6ch;
 }

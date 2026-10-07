@@ -99,7 +99,7 @@ function SessionControl({ channel }: { readonly channel: FacilitationChannel }) 
         )}
         {timer.active && (
           <>
-            <TimerIcon />
+            <TimerIcon className="of-session__clock" />
             <span className="of-timer__time" data-testid="session-time">
               {timer.time}
             </span>

@@ -877,22 +877,16 @@ describe('the stylesheet is well formed', () => {
  * phone-width window was the one place a failed save said nothing at all.
  */
 describe('a failed save survives a narrow window', () => {
-  it('hides the save state below 560px only when it is quiet: never failed, never offline', () => {
-    const css = readStyles()
-    // The bar's own block at that width; other surfaces have theirs too.
-    const narrow =
-      [...css.matchAll(/@media \(width < 560px\)\s*\{([\s\S]*?)\n\}/g)]
-        .map((match) => match[1] ?? '')
-        .find((block) => block.includes('of-status__save')) ?? ''
-    expect(narrow, 'the narrow block is found, so this is not vacuous').toContain('of-status__save')
-    const hides = [...narrow.matchAll(/([^{}]*of-status__save[^{}]*)\{[^}]*display:\s*none/g)].map(
-      (m) => m[1] ?? '',
+  it('lets a short bar hide only the quiet readout, never a failure or an offline room', () => {
+    const css = readStyles().replace(/\/\*[\s\S]*?\*\//g, '')
+    // Every rule anywhere that hides part of the readout.
+    const hides = [...css.matchAll(/([^{}]*of-status__save[^{}]*)\{[^}]*display:\s*none/g)].map(
+      (m) => (m[1] ?? '').trim(),
     )
-    expect(hides.length).toBeGreaterThan(0)
-    // Only the quiet tone: a failure, or a room out of reach, is always said.
+    expect(hides.length, 'the rules are found, so this is not vacuous').toBeGreaterThan(0)
     for (const selector of hides) {
-      const bare = selector.replace(/\/\*[\s\S]*?\*\//g, '').trim()
-      expect(bare).toBe('.of-status__save--quiet')
+      // The quiet tone whole, or the second half of a reading — "· saved here".
+      expect(selector).toMatch(/\.of-status__save--quiet$|\.of-status__save-more$/)
     }
   })
 })

@@ -381,6 +381,15 @@ export function DisclosureIcon({ className }: IconProps) {
   )
 }
 
+/** A tray: where what is waiting for you is kept. */
+export function InboxIcon({ className }: IconProps) {
+  return (
+    <svg {...base} className={className}>
+      <path d="M4 13.5l2.5-7h11l2.5 7v4.5H4zM4 13.5h4.5l1 2h5l1-2H20" />
+    </svg>
+  )
+}
+
 /** A menu that opens downward, beside the thing it is about. */
 export function ExpandIcon({ className }: IconProps) {
   return (

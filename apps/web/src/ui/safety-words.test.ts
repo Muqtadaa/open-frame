@@ -16,7 +16,8 @@ describe('the safety readout', () => {
     const offline = safetyWords('saved', 'offline')
     expect(offline.label).toBe('Offline · saved here')
     expect(offline.tone).toBe('away')
-    expect(safetyWords('saved', 'connecting').label).toBe('Reconnecting · saved here')
+    expect(safetyWords('saved', 'connecting').label).toBe('Offline · saved here')
+    expect(safetyWords('saved', 'connecting').tip).toMatch(/^Reconnecting/)
     expect(safetyWords('pending', 'offline').label).toBe('Offline · saving…')
   })
 

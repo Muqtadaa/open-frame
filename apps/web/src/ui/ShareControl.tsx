@@ -17,6 +17,7 @@ import {
   type SharedBoard,
 } from '../runtime/services.js'
 import { canFollow, hueVar, initialOf } from '../scene/presence.js'
+import { LinkIcon } from '../controls/icons.js'
 import { Gate, GateActions, GateBody } from './Gate.js'
 import { PeopleSheet, type BoardPerson } from './PeopleSheet.js'
 import { handOver, takeHandedOver } from './share-handover.js'
@@ -125,7 +126,7 @@ export function ShareControl() {
             setAsking(true)
           }}
         >
-          Share
+          <ShareWord />
         </button>
         {asking && (
           <ShareConfirm
@@ -298,11 +299,13 @@ export function ShareControl() {
          * room was up — and handed out links when pressed, so the one word
          * on it named neither. The room's state is in the safety readout.
          */}
-        {copyFailed
-          ? 'Could not copy'
-          : copied !== null
-            ? `${copied === 'edit' ? 'Edit' : 'View'} link copied`
-            : 'Share'}
+        {copyFailed ? (
+          'Could not copy'
+        ) : copied !== null ? (
+          `${copied === 'edit' ? 'Edit' : 'View'} link copied`
+        ) : (
+          <ShareWord />
+        )}
       </button>
 
       {/*
@@ -715,5 +718,15 @@ function ShareConfirm({
       </GateActions>
     </Gate>,
     app,
+  )
+}
+
+/** "Share", which a short bar draws as its link instead. */
+function ShareWord() {
+  return (
+    <>
+      <LinkIcon className="of-status__share-icon" />
+      <span className="of-status__share-word">Share</span>
+    </>
   )
 }

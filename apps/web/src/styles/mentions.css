@@ -250,3 +250,8 @@
   letter-spacing: 0.02em;
   color: var(--of-ink-muted);
 }
+
+.of-inbox .of-mentions__bell svg {
+  width: 18px;
+  height: 18px;
+}

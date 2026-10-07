@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useId, useRef, useState } from 'react'
 
 import { AnchoredSurface } from '../controls/AnchoredSurface.js'
+import { InboxIcon } from '../controls/icons.js'
 import { useAnchoredTo } from '../controls/use-anchor.js'
 import { useDismiss } from '../controls/use-dismiss.js'
 import { useMentions } from '../hooks/use-mentions.js'
@@ -61,7 +62,10 @@ export function Inbox() {
           setOpen((current) => !current)
         }}
       >
-        Inbox
+        <InboxIcon
+          className={waiting > 0 ? 'of-inbox__icon of-inbox__icon--news' : 'of-inbox__icon'}
+        />
+        <span className="of-inbox__word">Inbox</span>
         {waiting > 0 && (
           <span className="of-inbox__count" aria-hidden="true">
             {waiting}

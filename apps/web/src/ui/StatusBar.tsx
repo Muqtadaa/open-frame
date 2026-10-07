@@ -1,4 +1,5 @@
 import { useEffect, useRef, useSyncExternalStore } from 'react'
+import { useSqueeze } from './use-squeeze.js'
 
 import { useBoardDocument } from '../hooks/use-document-object.js'
 import { useInteractionStore } from '../interaction/interaction-store.js'
@@ -32,6 +33,8 @@ export function StatusBar() {
   const safety = safetyWords(save, room)
   const title = document.meta.title
   const rename = useRef<(() => void) | null>(null)
+  const bar = useRef<HTMLElement>(null)
+  useSqueeze(bar)
 
   /*
    * The TAB carries the board's name too. Several boards open in one window,
@@ -52,78 +55,98 @@ export function StatusBar() {
      * The page's navigation, and the board's name as its heading, so a screen
      * reader can reach both by landmark and heading as it would on any page.
      */
-    <nav className="of-status" aria-label="Board" data-testid="status-bar">
-      {/* Which index this page is in, then which page it is. */}
-      <BoardExit />
-      <span className="of-status__rule" aria-hidden="true" />
-      {/* The board names itself before it accounts for itself. */}
-      <h1 className="of-status__heading">
-        <BoardTitle title={title} renameRef={rename} />
-      </h1>
-      {/* Outside the heading, so the page is not named "Untitled board Board". */}
-      <BoardMenu
-        onRename={
-          runtime.readOnly
-            ? null
-            : () => {
-                rename.current?.()
-              }
-        }
-      />
-      <span className="of-status__rule" aria-hidden="true" />
+    <nav className="of-status" aria-label="Board" data-testid="status-bar" ref={bar}>
+      {/*
+       * Three zones, said to a screen reader as well as drawn: where you are
+       * and whether it is safe, what the session is doing, and who is here.
+       * The bar used to be one row of eleven things in four different boxes.
+       */}
+      <div className="of-status__zone of-status__zone--board" role="group" aria-label="This board">
+        {/* Which index this page is in, then which page it is. */}
+        <BoardExit />
+        <span className="of-status__rule" aria-hidden="true" />
+        {/* The board names itself before it accounts for itself. */}
+        <h1 className="of-status__heading">
+          <BoardTitle title={title} renameRef={rename} />
+        </h1>
+        {/* Outside the heading, so the page is not named "Untitled board Board". */}
+        <BoardMenu
+          onRename={
+            runtime.readOnly
+              ? null
+              : () => {
+                  rename.current?.()
+                }
+          }
+        />
+        <span className="of-status__rule" aria-hidden="true" />
 
-      {/*
-       * Whether the work is safe: the copy on this device and, on a shared
-       * board, whether everybody else is getting it (safety-words.ts).
-       * Announced only when it fails: "Saving…" and "Saved" after every
-       * keystroke would be noise to a screen reader.
-       */}
-      <span
-        className={`of-status__save of-status__save--${save} of-status__save--${safety.tone}`}
-        data-testid="save-state"
-        data-state={save}
-        data-room={room ?? 'none'}
-        data-tip={safety.tip}
-        aria-description={safety.tip}
-        aria-live={save === 'failed' ? 'assertive' : 'off'}
-      >
-        {room !== null && (
-          <span className={`of-status__dot of-status__dot--${room}`} aria-hidden="true" />
-        )}
-        {safety.label}
-      </span>
-      {/*
-       * A selection, when there is one. "0 selected" stood on the bar
-       * permanently, repeating what the record panel shows — and saying
-       * nothing at all whenever nothing was chosen.
-       */}
-      {selection.size > 0 && (
-        <span className="of-status__counts" data-testid="selection-count">
-          <b>{selection.size}</b> selected
+        {/*
+         * Whether the work is safe: the copy on this device and, on a shared
+         * board, whether everybody else is getting it (safety-words.ts).
+         * Announced only when it fails: "Saving…" and "Saved" after every
+         * keystroke would be noise to a screen reader.
+         */}
+        <span
+          className={`of-status__save of-status__save--${save} of-status__save--${safety.tone}`}
+          data-testid="save-state"
+          data-state={save}
+          data-room={room ?? 'none'}
+          data-tip={safety.tip}
+          aria-description={safety.tip}
+          aria-live={save === 'failed' ? 'assertive' : 'off'}
+        >
+          {room !== null && (
+            <span className={`of-status__dot of-status__dot--${room}`} aria-hidden="true" />
+          )}
+          {/*
+           * The second half is what a short bar gives up first: "Offline"
+           * still says the room is out of reach, and the tip says the rest.
+           */}
+          <span className="of-status__save-lead">{safety.label.split(' · ')[0]}</span>
+          {safety.label.includes(' · ') && (
+            <span className="of-status__save-more">
+              {' · '}
+              {safety.label.split(' · ').slice(1).join(' · ')}
+            </span>
+          )}
         </span>
-      )}
+        {/*
+         * A selection, when there is one. "0 selected" stood on the bar
+         * permanently, repeating what the record panel shows — and saying
+         * nothing at all whenever nothing was chosen.
+         */}
+        {selection.size > 0 && (
+          <span className="of-status__counts" data-testid="selection-count">
+            <b>{selection.size}</b> selected
+          </span>
+        )}
 
-      {/*
-       * The zoom is NOT repeated here. It was in both bottom bars at once —
-       * the same number twice, a few hundred pixels apart — and the one in
-       * the zoom control is the one you can also type into and step with the
-       * slider beside it. A readout next to the control that changes it is a
-       * readout; the same figure on its own is a second thing to keep in
-       * agreement for no gain.
-       */}
-
+        {/*
+         * The zoom is NOT repeated here. It was in both bottom bars at once —
+         * the same number twice, a few hundred pixels apart — and the one in
+         * the zoom control is the one you can also type into and step with the
+         * slider beside it. A readout next to the control that changes it is a
+         * readout; the same figure on its own is a second thing to keep in
+         * agreement for no gain.
+         */}
+      </div>
       <span className="of-status__rule" aria-hidden="true" />
 
       {/* The session's clock, beside the session's people. */}
-      <Session />
-      <ShareControl />
-      {/*
-       * Being named somewhere else has to reach you HERE. The bell was on the
-       * dashboard alone, which is the one screen you are not on while you
-       * work — so a mention waited until you happened to go home.
-       */}
-      <Inbox />
-      <AccountControl />
+      <div className="of-status__zone" role="group" aria-label="Session">
+        <Session />
+      </div>
+      <div className="of-status__zone" role="group" aria-label="People">
+        <ShareControl />
+        {/*
+         * Being named somewhere else has to reach you HERE. The bell was on the
+         * dashboard alone, which is the one screen you are not on while you
+         * work — so a mention waited until you happened to go home.
+         */}
+        <Inbox />
+        <AccountControl />
+      </div>
 
       {/*
        * Statically guarded, not runtime-guarded: the flag is replaced at build

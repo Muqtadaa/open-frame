@@ -2,6 +2,8 @@ import type { Page } from '@playwright/test'
 
 import { CANVAS, expect, openBoard, test, boxOf } from './fixtures.js'
 import { signedIn } from './signed-in.js'
+import { library, TRACKS } from './music.js'
+import { BOARD_URL } from './routes.js'
 
 /**
  * The board's navigation, along the top.
@@ -141,7 +143,7 @@ test.describe('the safety readout', () => {
       })
       await page.goto(`/?room=${SHARED}&k=${'e'.repeat(32)}`)
       const readout = page.getByTestId('save-state')
-      await expect(readout).toHaveText(/^(Offline|Reconnecting) · saved here$/)
+      await expect(readout).toHaveText('Offline · saved here')
       await expect(readout).toBeVisible()
       const share = page.getByTestId('share-board')
       await expect(share).toHaveText('Share')
@@ -424,7 +426,8 @@ test.describe('a narrow window', () => {
       await openBoard(page)
       const escaped = await page.getByTestId('status-bar').evaluate((bar) => {
         const edge = bar.getBoundingClientRect().right
-        return [...bar.children]
+        // Inside the zones as well as beside them.
+        return [...bar.querySelectorAll(':scope > *, :scope > [role="group"] > *')]
           .filter((child) => child.getBoundingClientRect().width > 0)
           .filter((child) => child.getBoundingClientRect().right > edge + 0.5)
           .map((child) => child.getAttribute('data-testid') ?? child.className)
@@ -468,4 +471,91 @@ test.describe('a narrow window', () => {
     const rail = await page.getByRole('toolbar', { name: 'Board tools' }).boundingBox()
     expect(Math.abs((bar?.x ?? 0) - (rail?.x ?? 0))).toBeLessThan(1)
   })
+})
+
+/*
+ * The bar at its fullest — signed in, mentions waiting, a selection, the
+ * timer and the music running, or a shared board whose room is out of reach
+ * — at every width from a wide screen to a phone. It used five breakpoints,
+ * each worked out for what the bar carried at the time; now it gives way by
+ * measurement, a word to its icon at a time (use-squeeze.ts). Every control
+ * stays on the bar, inside it, clear of its neighbours, and named.
+ */
+test.describe('the bar at its fullest', () => {
+  const MENTIONED = {
+    mentions: [1, 2].map((i) => ({
+      commentId: `cmt_${String(i)}`,
+      boardId: SHARED,
+      boardTitle: 'Pricing research',
+      authorName: 'Rowan',
+      body: 'look',
+    })),
+  }
+
+  async function fitted(page: Page, width: number): Promise<void> {
+    const bar = page.getByTestId('status-bar')
+    const report = await bar.evaluate((nav) => {
+      const box = nav.getBoundingClientRect()
+      // Every control, in a zone or not; never none, or this would pass vacuously.
+      // The bench panel is not the product, and clips by design.
+      const controls = [
+        ...nav.querySelectorAll(
+          ':scope > [role="group"] > *, :scope > :not([role="group"], [aria-hidden="true"], [data-testid="dev-panel"])',
+        ),
+      ]
+        .filter((child) => child.getBoundingClientRect().width > 0)
+        .map((child) => ({ name: child.className, box: child.getBoundingClientRect() }))
+      const outside = controls
+        .filter(({ box: own }) => own.left < box.left - 0.5 || own.right > box.right + 0.5)
+        .map(({ name }) => name)
+      const overlapping = controls
+        .slice(1)
+        .filter(({ box: own }, i) => own.left < (controls[i]?.box.right ?? 0) - 0.5)
+        .map(({ name }) => name)
+      return { count: controls.length, outside, overlapping, right: box.right }
+    })
+    expect(report.count).toBeGreaterThan(4)
+    expect(report.outside).toEqual([])
+    expect(report.overlapping).toEqual([])
+    expect(report.right).toBeLessThanOrEqual(width)
+  }
+
+  for (const width of [1440, 1024, 760, 600, 480, 390]) {
+    test(`fits a running session on a board of your own at ${String(width)}px`, async ({
+      page,
+    }) => {
+      await page.setViewportSize({ width, height: 800 })
+      await signedIn(page, [], 'Muqtadaa Miandara', MENTIONED)
+      await library(page, TRACKS)
+      await page.goto(BOARD_URL)
+      await page.getByTestId('session-button').click()
+      await page.getByTestId('timer-start').click()
+      await page.getByTestId('music-play').click()
+      await page.keyboard.press('Escape')
+      await page.keyboard.press('s')
+      await page.getByTestId('canvas').click({ position: { x: 300, y: 400 } })
+      await page.keyboard.press('Escape')
+      await expect(page.getByTestId('inbox')).toHaveAccessibleName('Inbox, 2 new')
+      await fitted(page, width)
+    })
+
+    test(`fits a shared board out of reach at ${String(width)}px`, async ({ page }) => {
+      await page.setViewportSize({ width, height: 800 })
+      await signedIn(
+        page,
+        [{ id: SHARED, title: 'Pricing research for the autumn launch', role: 'owner' }],
+        'Muqtadaa Miandara',
+        MENTIONED,
+      )
+      await page.routeWebSocket(/\/room\//, (socket) => {
+        void socket.close()
+      })
+      await page.goto(`/?room=${SHARED}&k=${'e'.repeat(32)}`)
+      await expect(page.getByTestId('save-state')).toContainText('Offline')
+      await expect(page.getByTestId('inbox')).toBeVisible()
+      await fitted(page, width)
+      // Squeezed or not, Share is still called Share.
+      await expect(page.getByTestId('share-board')).toHaveAccessibleName('Share')
+    })
+  }
 })

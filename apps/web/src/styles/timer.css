@@ -171,10 +171,3 @@
   gap: var(--of-space-6);
   justify-content: center;
 }
-
-/* Short of room, the pill at rest is its clock; it is still named "Session". */
-@media (width < 600px) {
-  .of-session__word {
-    display: none;
-  }
-}

@@ -29,6 +29,8 @@ const LOCAL: Readonly<Record<SaveState, SafetyWords>> = {
 
 const AWAY_TIP =
   'The room is out of reach. Changes are kept on this device and sent when it answers.'
+const RECONNECTING_TIP =
+  'Reconnecting to the room. Changes are kept on this device and sent when it answers.'
 
 /**
  * Whether the work is safe, in one readout: the copy on this device and, on
@@ -52,10 +54,14 @@ export function safetyWords(save: SaveState, room: RoomStatus | null): SafetyWor
         }
       : LOCAL[save]
   }
-  const away = room === 'connecting' ? 'Reconnecting' : 'Offline'
+  /*
+   * Reconnecting and offline are one fact for the work — nobody else is
+   * getting it — so they read the same; the dot's colour and the tip say
+   * which. "Reconnecting" was also the widest word on a phone's bar.
+   */
   return {
-    label: settled ? `${away} · saved here` : `${away} · saving…`,
-    tip: AWAY_TIP,
+    label: settled ? 'Offline · saved here' : 'Offline · saving…',
+    tip: room === 'connecting' ? RECONNECTING_TIP : AWAY_TIP,
     tone: 'away',
   }
 }
