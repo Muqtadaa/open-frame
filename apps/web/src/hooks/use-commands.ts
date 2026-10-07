@@ -45,6 +45,7 @@ import { toClipboard, type ClipboardPayload } from '../interaction/clipboard-for
 import type { OutsidePaste } from './outside-paste.js'
 import { useOpenFrame } from '../runtime/context.js'
 import { useServices } from '../runtime/services.js'
+import { glyphFor } from '../scene/reaction-glyphs.js'
 import { useInteractionStore } from '../interaction/interaction-store.js'
 import { containerAt, objectsInMarquee } from '../scene/hit-testing.js'
 import { snapPoint } from '../scene/snapping.js'
@@ -990,12 +991,21 @@ export function useCommands(): BoardCommands {
          * reacted to loses your reaction, the rest gain it — which is what the
          * press means for each of them.
          */
-        report(
-          dispatcher.transact(
-            targets.length === 1 ? 'React' : `React to ${String(targets.length)} notes`,
-            targets.map((target) => ({ kind: 'ToggleReaction' as const, target, glyph, by })),
-          ),
+        const result = dispatcher.transact(
+          targets.length === 1 ? 'React' : `React to ${String(targets.length)} notes`,
+          targets.map((target) => ({ kind: 'ToggleReaction' as const, target, glyph, by })),
         )
+        report(result)
+        if (!result.ok) return
+        // Said, because a chip appearing or going is all there was to notice.
+        const added = result.patches.some((patch) => patch.op === 'add')
+        const removed = result.patches.some((patch) => patch.op === 'remove')
+        const name = glyphFor(glyph).label
+        useInteractionStore
+          .getState()
+          .announce(
+            added && removed ? `${name} changed` : added ? `${name} added` : `${name} taken back`,
+          )
       },
 
       startVoting(round, by) {

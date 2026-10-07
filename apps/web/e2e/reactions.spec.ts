@@ -34,11 +34,15 @@ test('reacts from the bar beside a selected note, and takes it back', async ({ p
 
   await expect(chip(page, 'plus-one')).toHaveText(/1/)
   await expect(chip(page, 'plus-one')).toHaveAttribute('aria-pressed', 'true')
+  // Named with its count, as it is drawn — not just "Agree".
+  await expect(chip(page, 'plus-one')).toHaveAccessibleName('Agree, 1')
+  await expect(page.getByTestId('board-announcer')).toHaveText('Agree added')
   await expect(bar.getByRole('button', { name: 'Agree' })).toHaveAttribute('aria-pressed', 'true')
 
   // The chip itself is a toggle for your own reaction.
   await chip(page, 'plus-one').click()
   await expect(chip(page, 'plus-one')).toHaveCount(0)
+  await expect(page.getByTestId('board-announcer')).toHaveText('Agree taken back')
 })
 
 test('reacts from the keyboard, through the context menu', async ({ page }) => {
@@ -201,8 +205,8 @@ test('a chip’s tip says who reacted, and nothing more', async ({ page }) => {
   await expect(chip(page, 'plus-one')).toHaveAttribute('data-tip', 'Heron')
   await chip(page, 'plus-one').click()
   await expect(chip(page, 'plus-one')).toHaveAttribute('data-tip', 'Heron and you')
-  // A screen reader also hears which reaction it is.
-  await expect(chip(page, 'plus-one')).toHaveAttribute('aria-label', 'Agree')
+  // A screen reader also hears which reaction it is, and how many.
+  await expect(chip(page, 'plus-one')).toHaveAttribute('aria-label', 'Agree, 2')
   await expect(chip(page, 'plus-one')).toHaveAttribute('aria-description', 'Heron and you')
 })
 
