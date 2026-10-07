@@ -75,6 +75,12 @@ export function VersionList({
   /** Bumped after a version is named or deleted, so the list is read again. */
   const [reads, setReads] = useState(0)
   const [busy, setBusy] = useState(false)
+  /*
+   * Deleting a NAME cannot be undone — the board is untouched, but the point
+   * it marked is gone — so the first press asks, on the same button, and the
+   * second does it.
+   */
+  const [doomed, setDoomed] = useState<string | null>(null)
   const list = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
@@ -148,6 +154,11 @@ export function VersionList({
 
   const forget = async (version: VersionListing): Promise<void> => {
     if (busy) return
+    if (doomed !== version.id) {
+      setDoomed(version.id)
+      return
+    }
+    setDoomed(null)
     setBusy(true)
     const forgotten = await history.forget(version.id)
     setBusy(false)
@@ -230,13 +241,19 @@ export function VersionList({
                 <button
                   type="button"
                   className="of-button of-button--ghost of-history__delete"
-                  aria-label={`Delete ${version.name ?? versionTime(version.at)}`}
+                  aria-label={`Delete ${version.name ?? versionTime(version.at)}${
+                    doomed === version.id ? ' for good' : ''
+                  }`}
                   data-testid="history-delete"
+                  data-asking={doomed === version.id}
                   onClick={() => {
                     void forget(version)
                   }}
+                  onBlur={() => {
+                    if (doomed === version.id) setDoomed(null)
+                  }}
                 >
-                  Delete
+                  {doomed === version.id ? 'Delete for good' : 'Delete'}
                 </button>
               )}
             </li>
