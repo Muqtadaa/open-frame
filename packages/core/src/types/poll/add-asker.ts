@@ -7,9 +7,7 @@
  * edited once shipped.
  */
 
-interface V1Data {
-  readonly [key: string]: unknown
-}
+type V1Data = Readonly<Record<string, unknown>>
 
 export function addAsker(data: unknown): unknown {
   if (typeof data !== 'object' || data === null) return data
