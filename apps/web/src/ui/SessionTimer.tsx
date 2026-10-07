@@ -203,6 +203,22 @@ function TimerActions({
    * would sit under this sheet.
    */
   const [undoable, setUndoable] = useState<Timer | null>(null)
+  /*
+   * And until the timer moves on without us: once somebody else sets a time,
+   * the run it would put back is stale, and pressing it wrote the old run over
+   * theirs (Codex, on #92). What the reset left is noted as it arrives, and
+   * anything after it ends the offer.
+   */
+  const leftByReset = useRef<string | null>(null)
+  useEffect(() => {
+    if (undoable === null) return
+    const now = JSON.stringify(timer)
+    if (leftByReset.current === null) {
+      if (timer.status === 'idle') leftByReset.current = now
+      return
+    }
+    if (now !== leftByReset.current) setUndoable(null)
+  }, [timer, undoable])
   const write = (change: Change): void => {
     setUndoable(null)
     onWrite(change)
@@ -285,6 +301,7 @@ function TimerActions({
             onClick={() => {
               const before = timer
               write(resetTimer)
+              leftByReset.current = null
               setUndoable(before)
               useInteractionStore.getState().announce('Timer reset')
               // Reset takes itself away; Start is where the keyboard goes next.

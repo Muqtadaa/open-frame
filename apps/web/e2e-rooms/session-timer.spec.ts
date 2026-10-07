@@ -83,3 +83,27 @@ test('a viewer sees the timer and cannot run it', async ({ browser }) => {
   await expect(viewer.getByTestId('timer-pause')).toHaveCount(0)
   await expect(viewer.getByTestId('timer-reset')).toHaveCount(0)
 })
+
+/*
+ * Undo reset is this device's way back to the run it threw away — until the
+ * timer has moved on. Somebody else setting a new time after the reset made
+ * it stale, and pressing it wrote the old run over theirs (Codex, on #92).
+ */
+test('Undo reset goes once somebody else has set the timer since', async ({ browser }) => {
+  const room = newRoomId()
+  const alice = await join(browser, room)
+  const bob = await join(browser, room)
+
+  await alice.getByTestId('session-button').click()
+  await alice.getByRole('button', { name: '5 minutes', exact: true }).click()
+  await alice.getByTestId('timer-start').click()
+  await alice.getByTestId('timer-pause').click()
+  await alice.getByTestId('timer-reset').click()
+  await expect(alice.getByTestId('timer-undo-reset')).toBeVisible()
+
+  await expect(bob.getByTestId('session-button')).toBeVisible()
+  await bob.getByTestId('session-button').click()
+  await bob.getByRole('button', { name: '3 minutes', exact: true }).click()
+
+  await expect(alice.getByTestId('timer-undo-reset')).toHaveCount(0)
+})

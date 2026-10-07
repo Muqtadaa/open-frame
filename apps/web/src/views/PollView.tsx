@@ -166,6 +166,7 @@ const pollTool: ObjectTool = {
   place: 'click',
   // Kept on the poll, because closing it is the asker's.
   data: (_options, maker) => ({ by: maker.me }),
+  needsMaker: true,
   Icon: () => <PollIcon />,
   cursor: () => ({
     body: 'M5 3h14a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2z',

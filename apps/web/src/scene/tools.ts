@@ -78,6 +78,12 @@ export interface ToolBehaviour<TOptions = unknown> {
    */
   readonly data?: (options: TOptions, maker: Maker) => Readonly<Record<string, unknown>>
   /**
+   * Places nothing until the maker is known. A poll placed while the account
+   * was still loading was kept as asked by nobody, which anyone may close
+   * (Codex, on #92); a press in that moment does what the select tool would.
+   */
+  readonly needsMaker?: boolean
+  /**
    * A key that arms the tool on the first press and walks its options on
    * every press after — how one key reaches four shapes.
    */
@@ -123,7 +129,8 @@ export function makeFor(
   if (isChromeTool(tool)) return null
   const declared = tools.find((entry) => entry.type === tool)
   if (declared === undefined) return null
-  const { place, data } = declared.tool
+  const { place, data, needsMaker } = declared.tool
+  if (needsMaker === true && maker.me === null) return null
   return data === undefined
     ? { type: tool, place }
     : { type: tool, place, data: data(optionsOf(declared, chosen), maker) }
