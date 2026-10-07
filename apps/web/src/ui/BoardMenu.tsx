@@ -98,7 +98,13 @@ export function BoardMenu({ onRename }: { readonly onRename: (() => void) | null
           prefer={['below', 'above']}
           testId="board-menu-surface"
         >
-          <div ref={menu} className="of-menu" role="menu" aria-label="Board" onKeyDown={step}>
+          <div
+            ref={menu}
+            className="of-menu of-surface"
+            role="menu"
+            aria-label="Board"
+            onKeyDown={step}
+          >
             {onRename !== null && (
               <button
                 type="button"
