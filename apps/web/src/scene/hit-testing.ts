@@ -4,6 +4,7 @@ import {
   contains,
   containsPoint,
   objectsInPaintOrder,
+  type AnyOpenFrameObject,
   type BoardDocument,
   type ObjectId,
   type ObjectTypeRegistry,
@@ -173,6 +174,8 @@ export function containerAt(
   registry: ObjectTypeRegistry,
   worldPoint: Point,
   exclude: ReadonlySet<ObjectId>,
+  /** Which containers count; one that does not is looked THROUGH, not stopped at. */
+  accepts: (object: AnyOpenFrameObject) => boolean = () => true,
 ): ObjectId | null {
   const painted = objectsInPaintOrder(doc)
   for (let i = painted.length - 1; i >= 0; i--) {
@@ -181,6 +184,7 @@ export function containerAt(
     if (exclude.has(object.id)) continue
     if (registry.get(object.type)?.capabilities.spatial === false) continue
     if (registry.get(object.type)?.capabilities.canHaveChildren !== true) continue
+    if (!accepts(object)) continue
     if (containsPoint(registry.boundsOf(object, doc), worldPoint)) return object.id
   }
   return null

@@ -352,3 +352,27 @@ test('says how many people have voted, says how to take a dot back, and reopens'
   await page.getByTestId('voting-reopen').click()
   await expect(page.getByTestId('voting-status')).toHaveText('3 of 3 votes left · 1 person voted')
 })
+
+test('a note made over a group inside a frame still joins the frame', async ({ page }) => {
+  await seedBoard(
+    page,
+    buildBoard((board) => {
+      const frame = board.add('frame', { x: 420, y: 340 })
+      const group = board.add('group', { x: 0, y: 0 }, undefined, undefined, frame)
+      board.add('sticky', { x: 260, y: 300 }, { text: richFromPlain('Left') }, undefined, group)
+      board.add('sticky', { x: 580, y: 300 }, { text: richFromPlain('Right') }, undefined, group)
+    }),
+  )
+  // Between the group's two notes: inside the group's extent, on no note.
+  await page.keyboard.press('s')
+  await page.locator(CANVAS).click({ position: { x: 420, y: 300 } })
+  await page.keyboard.press('Escape')
+  await page.keyboard.press('Escape')
+
+  await page.getByTestId('frame-title').click({ button: 'right' })
+  await page.getByRole('menuitem', { name: 'Start dot voting…' }).click()
+  await page.getByTestId('voting-start').click()
+  await page.locator(CANVAS).click({ position: { x: 420, y: 300 } })
+  await expect(page.getByTestId('toast-body')).toHaveCount(0)
+  await expect(page.getByTestId('votes')).toHaveText('1')
+})

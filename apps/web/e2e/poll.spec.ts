@@ -165,3 +165,11 @@ test('a press between the options takes hold of the card', async ({ page }) => {
   await expect(card(page)).toHaveAttribute('data-selected', 'true')
   await expect(option(page, 'o1')).toHaveAttribute('aria-pressed', 'false')
 })
+
+test('a locked poll offers no Close, which could only be refused', async ({ page }) => {
+  await seeded(page)
+  await page.getByTestId('poll-question').click()
+  await page.keyboard.press('ControlOrMeta+Shift+L')
+  await expect(page.getByRole('button', { name: 'Unlock' }).first()).toBeVisible()
+  await expect(page.getByTestId('poll-close')).toHaveCount(0)
+})

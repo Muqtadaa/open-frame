@@ -377,15 +377,17 @@ export function useCommands(): BoardCommands {
        * A frame, not a group: a group is chosen by selecting its members, and
        * a note dropped beside them has not been chosen.
        */
-      const into = definition.capabilities.canHaveChildren
+      const parentId = definition.capabilities.canHaveChildren
         ? null
-        : containerAt(doc, runtime.registry, center(rect), new Set())
-      const parentId =
-        into !== null &&
-        runtime.registry.get(doc.objects.get(into)?.type ?? '')?.capabilities.selectsAsUnit ===
-          false
-          ? into
-          : null
+        : containerAt(
+            doc,
+            runtime.registry,
+            center(rect),
+            new Set(),
+            // Past a group to the frame it sits in (Codex, on #88).
+            (container) =>
+              runtime.registry.get(container.type)?.capabilities.selectsAsUnit === false,
+          )
       const spec = {
         type,
         id,

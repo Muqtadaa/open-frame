@@ -31,7 +31,8 @@ function PollRenderer({ object, marks }: ObjectViewProps<PollData>) {
   // rather than as a race to the leader.
   const of = Math.max(1, tally.people)
   const answerable = marks !== undefined && marks.canAct && marks.me !== null && !closed
-  const canClose = marks?.canAct === true
+  // Not on a locked poll: the command would only refuse it (Codex, on #88).
+  const canClose = marks?.canAct === true && !object.locked
   const question = plainTextOf(text).trim()
 
   return (
