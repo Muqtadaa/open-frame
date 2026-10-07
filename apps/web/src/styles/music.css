@@ -65,6 +65,8 @@
 .of-music__volume input {
   flex: 1;
   min-width: 0;
+  /* The 24px target, however thin the track is drawn. */
+  min-height: 24px;
   accent-color: var(--of-accent);
 }
 

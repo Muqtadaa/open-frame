@@ -360,21 +360,50 @@ export function MusicPanel({ panel }: { readonly panel: MusicPanelProps }) {
     agree,
   } = panel
   const state = music.status
+  const choose = (genre: (typeof genres)[number]): void => {
+    write((current, at, by) => setGenre(current, genre, at, by, playlistOf(catalogue, genre)))
+  }
   return (
     <>
-      <div className="of-music__genres" role="radiogroup" aria-label="Genre">
-        {genres.map((genre) => (
+      <div
+        className="of-music__genres"
+        role="radiogroup"
+        aria-label="Genre"
+        /*
+         * A radio group is ONE stop, walked with the arrows, which choose as
+         * they go — as the record panel's swatches are. Each genre was its
+         * own Tab stop and the arrows did nothing.
+         */
+        onKeyDown={(event) => {
+          const step =
+            event.key === 'ArrowRight' || event.key === 'ArrowDown'
+              ? 1
+              : event.key === 'ArrowLeft' || event.key === 'ArrowUp'
+                ? -1
+                : 0
+          if (step === 0) return
+          event.preventDefault()
+          const at = genres.indexOf(music.genre)
+          const next = genres[(at + step + genres.length) % genres.length]
+          if (next === undefined) return
+          choose(next)
+          event.currentTarget.querySelector<HTMLElement>(`[data-genre="${next}"]`)?.focus()
+        }}
+      >
+        {genres.map((genre, index) => (
           <button
             key={genre}
             type="button"
             role="radio"
             className="of-button of-music__genre"
+            data-genre={genre}
             aria-checked={music.genre === genre}
+            tabIndex={
+              music.genre === genre || (!genres.includes(music.genre) && index === 0) ? 0 : -1
+            }
             disabled={!canEdit || !ready}
             onClick={() => {
-              write((current, at, by) =>
-                setGenre(current, genre, at, by, playlistOf(catalogue, genre)),
-              )
+              choose(genre)
             }}
           >
             {GENRE_NAMES[genre]}
