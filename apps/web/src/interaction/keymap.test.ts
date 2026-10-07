@@ -45,7 +45,11 @@ describe('tool shortcuts', () => {
   it('ignores tool keys held with a modifier, so Cmd+S is not "sticky"', () => {
     expect(resolveKeyAction(key('s', { metaKey: true }), TOOLS)).toBeNull()
     expect(resolveKeyAction(key('h', { ctrlKey: true }), TOOLS)).toBeNull()
-    expect(resolveKeyAction(key('t', { altKey: true }), TOOLS)).toBeNull()
+    // Alt+T is the session, never the text tool.
+    expect(resolveKeyAction(key('t', { altKey: true }), TOOLS)).not.toEqual({
+      kind: 'tool',
+      tool: 'text',
+    })
   })
 
   /** Mod+V is paste, not the select tool — the modifier decides. */
@@ -69,7 +73,20 @@ describe('the board overview', () => {
 
   it('leaves S alone, and Alt with anything else', () => {
     expect(resolveKeyAction(key('s'), TOOLS)).not.toEqual({ kind: 'overview' })
-    expect(resolveKeyAction(key('t', { altKey: true }), TOOLS)).toBeNull()
+    expect(resolveKeyAction(key('q', { altKey: true }), TOOLS)).toBeNull()
+  })
+})
+
+describe('the session', () => {
+  it('opens on Alt+T, and on Option+T, which types a dagger', () => {
+    expect(resolveKeyAction(key('t', { altKey: true }), TOOLS)).toEqual({ kind: 'session' })
+    expect(resolveKeyAction({ ...key('†', { altKey: true }), code: 'KeyT' }, TOOLS)).toEqual({
+      kind: 'session',
+    })
+  })
+
+  it('leaves T to the text tool', () => {
+    expect(resolveKeyAction(key('t'), TOOLS)).not.toEqual({ kind: 'session' })
   })
 })
 

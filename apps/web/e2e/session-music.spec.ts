@@ -12,8 +12,8 @@ import { BOARD_URL } from './routes.js'
 
 test.use({ board: 'fresh' })
 
-const button = (page: Page) => page.getByTestId('music-button')
-const sheet = (page: Page) => page.getByRole('dialog', { name: 'Music' })
+const button = (page: Page) => page.getByTestId('session-button')
+const sheet = (page: Page) => page.getByRole('dialog', { name: 'Session' })
 
 async function withLibrary(page: Page, tracks = TRACKS): Promise<void> {
   await library(page, tracks)
@@ -25,8 +25,10 @@ test('offers no music where there is no library to play from', async ({ page }) 
   await library(page, null)
   await page.reload()
   await page.waitForSelector('[data-testid="status-bar"]')
-  await expect(page.getByTestId('timer-button')).toBeVisible()
-  await expect(button(page)).toHaveCount(0)
+  // The session is still there for its timer; it has no music to offer.
+  await button(page).click()
+  await expect(sheet(page).getByRole('region', { name: 'Timer' })).toBeVisible()
+  await expect(sheet(page).getByRole('region', { name: 'Music' })).toHaveCount(0)
 })
 
 test('plays a genre, and pauses and stops it', async ({ page }) => {
@@ -41,14 +43,14 @@ test('plays a genre, and pauses and stops it', async ({ page }) => {
   const fetched = page.waitForRequest('**/music/track/jazzy-1')
   await page.getByTestId('music-play').click()
   await fetched
-  await expect(button(page)).toHaveAttribute('data-state', 'playing')
+  await expect(button(page)).toHaveAttribute('data-music', 'playing')
   await expect(page.getByTestId('music-now')).toContainText('Late Set')
   await expect(page.getByTestId('music-now')).toContainText('CC0')
 
   await page.getByTestId('music-pause').click()
-  await expect(button(page)).toHaveAttribute('data-state', 'paused')
+  await expect(button(page)).toHaveAttribute('data-music', 'paused')
   await page.getByTestId('music-stop').click()
-  await expect(button(page)).toHaveAttribute('data-state', 'stopped')
+  await expect(button(page)).toHaveAttribute('data-music', 'stopped')
 })
 
 test('offers only the genres the library has', async ({ page }) => {
@@ -73,7 +75,8 @@ test('opens and closes from the keyboard, and hands focus back', async ({ page }
   await withLibrary(page)
   await button(page).focus()
   await page.keyboard.press('Enter')
-  await expect(sheet(page).getByRole('radio').first()).toBeFocused()
+  // Into the sheet, at the timer that heads it.
+  await expect(page.getByTestId('timer-start')).toBeFocused()
   await page.keyboard.press('Escape')
   await expect(sheet(page)).toHaveCount(0)
   await expect(button(page)).toBeFocused()
@@ -113,7 +116,7 @@ const prompt = (page: Page) => page.getByTestId('music-prompt')
 test('says who started the music, and lets this device in with one press', async ({ page }) => {
   await startedByAda(page)
   await expect(prompt(page)).toHaveText('Ada started the music')
-  await expect(button(page)).toHaveAttribute('data-state', 'unheard')
+  await expect(button(page)).toHaveAttribute('data-music', 'unheard')
   // It asks; it does not take the keyboard from whatever had it.
   await expect(page.getByTestId('music-prompt-listen')).not.toBeFocused()
 
@@ -121,15 +124,17 @@ test('says who started the music, and lets this device in with one press', async
   await page.getByTestId('music-prompt-listen').click()
   await fetched
   await expect(prompt(page)).toHaveCount(0)
-  await expect(button(page)).toHaveAttribute('data-state', 'playing')
+  await expect(button(page)).toHaveAttribute('data-music', 'playing')
 })
 
 test('waved away, the prompt goes and the button still says so', async ({ page }) => {
   await startedByAda(page)
   await page.getByTestId('music-prompt-dismiss').click()
   await expect(prompt(page)).toHaveCount(0)
-  await expect(button(page)).toHaveAttribute('data-state', 'unheard')
-  await expect(button(page)).toHaveAccessibleName('Music, Jazz lounge, playing, not playing here')
+  await expect(button(page)).toHaveAttribute('data-music', 'unheard')
+  await expect(button(page)).toHaveAccessibleName(
+    'Session, music, Jazz lounge, playing, not playing here',
+  )
 })
 
 test('once this browser has said yes, the next press anywhere lets the music in', async ({
@@ -138,12 +143,12 @@ test('once this browser has said yes, the next press anywhere lets the music in'
 }) => {
   await startedByAda(page)
   await page.getByTestId('music-prompt-listen').click()
-  await expect(button(page)).toHaveAttribute('data-state', 'playing')
+  await expect(button(page)).toHaveAttribute('data-music', 'playing')
   // Chromium: the remembered yes needs no further press at all.
   const opened = await context.newPage()
   await library(opened, TRACKS)
   await opened.goto(BOARD_URL)
-  await expect(button(opened)).toHaveAttribute('data-state', 'playing')
+  await expect(button(opened)).toHaveAttribute('data-music', 'playing')
   await expect(prompt(opened)).toHaveCount(0)
 
   /*
@@ -160,11 +165,11 @@ test('once this browser has said yes, the next press anywhere lets the music in'
   await library(tab, TRACKS)
   await tab.goto(BOARD_URL)
   await tab.waitForSelector('[data-testid="status-bar"]')
-  await expect(button(tab)).toHaveAttribute('data-state', 'unheard')
+  await expect(button(tab)).toHaveAttribute('data-music', 'unheard')
   const fetched = tab.waitForRequest('**/music/track/jazzy-1')
   await tab.getByTestId('canvas').click({ position: { x: 400, y: 300 } })
   await fetched
-  await expect(button(tab)).toHaveAttribute('data-state', 'playing')
+  await expect(button(tab)).toHaveAttribute('data-music', 'playing')
   await expect(prompt(tab)).toHaveCount(0)
 })
 
@@ -174,7 +179,7 @@ test('a browser that has not said yes waits for the prompt, whatever else is pre
   await startedByAda(page)
   await expect(prompt(page)).toBeVisible()
   await page.getByTestId('canvas').click({ position: { x: 400, y: 300 } })
-  await expect(button(page)).toHaveAttribute('data-state', 'unheard')
+  await expect(button(page)).toHaveAttribute('data-music', 'unheard')
   await expect(prompt(page)).toBeVisible()
 })
 
@@ -192,7 +197,7 @@ test('moves to the next track and back, within the genre', async ({ page }) => {
   await next
   await expect(page.getByTestId('music-now')).toContainText('Encore')
   await expect(page.getByTestId('music-elapsed')).toHaveText(/^0:0\d \/ 2:00$/)
-  await expect(button(page)).toHaveAttribute('data-state', 'playing')
+  await expect(button(page)).toHaveAttribute('data-music', 'playing')
 
   await page.getByRole('button', { name: 'Previous track' }).click()
   await expect(page.getByTestId('music-now')).toContainText('Late Set')
@@ -202,7 +207,7 @@ test('moves to the next track and back, within the genre', async ({ page }) => {
   await page.getByRole('button', { name: 'Next track' }).click()
   await expect(page.getByTestId('music-now')).toContainText('Encore')
   await expect(page.getByTestId('music-elapsed')).toHaveText('0:00 / 2:00')
-  await expect(button(page)).toHaveAttribute('data-state', 'paused')
+  await expect(button(page)).toHaveAttribute('data-music', 'paused')
 })
 
 /*
@@ -236,7 +241,7 @@ test('a refused automatic join waits for a press instead of retrying', async ({ 
   await startedByAda(page)
   await expect(prompt(page)).toHaveText('Ada started the music')
   // Long enough for a loop to show itself: several follow ticks.
-  await expect(button(page)).toHaveAttribute('data-state', 'unheard')
+  await expect(button(page)).toHaveAttribute('data-music', 'unheard')
   await page.waitForFunction(() => document.readyState === 'complete')
   const settle = await page.evaluate(
     () =>

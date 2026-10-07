@@ -54,6 +54,8 @@ export type KeyAction =
   | { readonly kind: 'search' }
   /** The board told as a whole: what is on it and how it is organised. */
   | { readonly kind: 'overview' }
+  /** The session's timer and music. */
+  | { readonly kind: 'session' }
 
 const NUDGE = 1
 const NUDGE_COARSE = 10
@@ -180,6 +182,15 @@ export function resolveKeyAction(
    */
   if (ctx.altKey && !ctx.shiftKey && (ctx.code === 'KeyS' || key.toLowerCase() === 's')) {
     return { kind: 'overview' }
+  }
+
+  /*
+   * Alt+T, the session — its timer first. T alone is the text tool, so the
+   * timer takes the measuring key with it, matched on the physical key for
+   * the same reason as the overview: Option+T types "†".
+   */
+  if (ctx.altKey && !ctx.shiftKey && (ctx.code === 'KeyT' || key.toLowerCase() === 't')) {
+    return { kind: 'session' }
   }
 
   // Alt is the measuring key, and with an arrow it moves like the arrow alone.

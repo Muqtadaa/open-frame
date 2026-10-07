@@ -10,8 +10,8 @@ test.use({ board: 'fresh' })
  * clock and is kept in this browser, so the clock here is Playwright's.
  */
 
-const pill = (page: Page) => page.getByTestId('timer-button')
-const sheet = (page: Page) => page.getByRole('dialog', { name: 'Timer' })
+const pill = (page: Page) => page.getByTestId('session-button')
+const sheet = (page: Page) => page.getByRole('dialog', { name: 'Session' })
 const readout = (page: Page) => page.getByTestId('timer-readout')
 
 async function startFor(page: Page, typed: string): Promise<void> {
@@ -24,13 +24,13 @@ async function startFor(page: Page, typed: string): Promise<void> {
 test('runs down, and says when time is up', async ({ page }) => {
   await page.clock.install()
   await startFor(page, '0:05')
-  await expect(pill(page)).toHaveAttribute('data-state', 'running')
+  await expect(pill(page)).toHaveAttribute('data-timer', 'running')
 
   await page.clock.runFor(2000)
   await expect(pill(page)).toContainText('0:03')
 
   await page.clock.runFor(4000)
-  await expect(pill(page)).toHaveAttribute('data-state', 'done')
+  await expect(pill(page)).toHaveAttribute('data-timer', 'done')
   await expect(readout(page)).toHaveText('Time’s up')
   await expect(page.getByTestId('board-announcer')).toContainText('Time’s up')
 })
@@ -90,13 +90,13 @@ test('pauses where it is, resumes from there, takes a minute more, and resets', 
 
   await page.getByTestId('timer-reset').click()
   await expect(readout(page)).toHaveText('3:00')
-  await expect(pill(page)).toHaveAttribute('data-state', 'idle')
+  await expect(pill(page)).toHaveAttribute('data-timer', 'idle')
 })
 
 test('is still running after a reload', async ({ page }) => {
   await startFor(page, '5')
   await page.reload()
-  await expect(pill(page)).toHaveAttribute('data-state', 'running')
+  await expect(pill(page)).toHaveAttribute('data-timer', 'running')
   await expect(pill(page)).toContainText(/^4:5\d|^5:00/)
 })
 
@@ -107,4 +107,37 @@ test('opens and closes from the keyboard, and hands focus back', async ({ page }
   await page.keyboard.press('Escape')
   await expect(sheet(page)).toHaveCount(0)
   await expect(pill(page)).toBeFocused()
+})
+
+/*
+ * One pill for the session. The timer and the music were two icons on the
+ * bar with a sheet each; the pill names the session at rest and says what is
+ * running while it runs, and opens on a key.
+ */
+test.describe('the session pill', () => {
+  test('names the session at rest, and reads the time while it runs', async ({ page }) => {
+    await expect(pill(page)).toHaveText('Session')
+    await expect(pill(page)).toHaveAccessibleName('Session')
+    await startFor(page, '5')
+    await expect(pill(page)).toHaveText(/^\d:\d\d$/)
+    await expect(pill(page)).toHaveAccessibleName(/^Session, timer, \d:\d\d left$/)
+  })
+
+  test('holds the timer and the music in one sheet', async ({ page }) => {
+    await pill(page).click()
+    await expect(sheet(page).getByRole('heading', { name: 'Timer' })).toBeVisible()
+    // The bar has one session control, not a clock and a note.
+    await expect(page.getByTestId('timer-button')).toHaveCount(0)
+    await expect(page.getByTestId('music-button')).toHaveCount(0)
+  })
+
+  test('opens on Alt+T, at the timer, and hands the keyboard back', async ({ page }) => {
+    await page.getByTestId('canvas').focus()
+    await page.keyboard.press('Alt+t')
+    await expect(sheet(page)).toBeVisible()
+    await expect(page.getByTestId('timer-start')).toBeFocused()
+    await page.keyboard.press('Escape')
+    await expect(sheet(page)).toHaveCount(0)
+    await expect(pill(page)).toBeFocused()
+  })
 })
