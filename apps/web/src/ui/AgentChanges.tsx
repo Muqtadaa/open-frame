@@ -156,7 +156,15 @@ export function AgentChangeItems({ state }: { readonly state: AgentChangesState 
         >
           <span className="of-mentions__who">{change.label}</span>
           <span className="of-mentions__where">
-            {whose(change)} · <Ago at={change.at} /> · {objects(change.affected.length)}
+            {whose(change)} · <Ago at={change.at} />
+            {/*
+             * Only when the label does not already count: "Create 3 objects ·
+             * 3 objects" said it twice. "Make a frame" names no number, and how
+             * much it touched is worth knowing.
+             */}
+            {/\d/.test(change.label) ? null : (
+              <span className="of-agent-changes__count"> · {objects(change.affected.length)}</span>
+            )}
           </span>
           {change.reverted !== null ? (
             <span className="of-agent-changes__done">

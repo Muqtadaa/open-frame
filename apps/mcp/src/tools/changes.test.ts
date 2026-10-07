@@ -8,7 +8,7 @@ import { peerOn, settles, stubAccount, TEST_BOARD } from '../testing.js'
 import { toolContext } from './context.js'
 import { listChanges } from './read.js'
 import { FRAMING } from './respond.js'
-import { createObjects, revertChange } from './write.js'
+import { createFrame, createObjects, revertChange } from './write.js'
 
 /**
  * An agent's change, taken back from either side (tracks A-2).
@@ -77,7 +77,7 @@ describe('an agent’s change', () => {
     const [change] = payloadOf(listed.text).changes as Record<string, unknown>[]
     expect(change).toMatchObject({
       id: made.change,
-      did: 'Create 2 object(s)',
+      did: 'Create 2 objects',
       by: 'Someone',
       objects: made.objects,
       reverted: null,
@@ -121,6 +121,26 @@ describe('an agent’s change', () => {
     await settles()
     expect(ids(agent)).toEqual([first])
     expect(ids(person)).toEqual([first])
+    await context.close()
+  })
+
+  it('takes back a frame, from the person’s side too, when nobody has touched it', async () => {
+    const { agent, person, context } = await board()
+    const made = await createFrame.run(
+      { board: TEST_BOARD, name: 'Findings', x: 0, y: 0, width: 400, height: 300 },
+      context,
+    )
+    expect(made.isError, made.text).toBe(false)
+    await settles()
+    const change = payloadOf(made.text).change
+    const logged = person.changes().find((entry) => entry.id === change)
+    if (logged === undefined) throw new Error('the frame was not logged')
+
+    const reverted = person.dispatcher.revert(logged)
+    expect(reverted.ok, reverted.ok ? '' : reverted.error.message).toBe(true)
+    await settles()
+    expect(ids(person)).toHaveLength(0)
+    expect(ids(agent)).toHaveLength(0)
     await context.close()
   })
 
