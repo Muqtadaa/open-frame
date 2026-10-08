@@ -1280,3 +1280,24 @@ other surface has.
   the summary counts in words.
 - **Reactions:** the library keeps off the record panel, and chips are 24px
   targets.
+
+**The motion pass** carried "entries are set down on a page" onto the board
+while people work on it. A dot or reaction placed now is inked in. The ones
+already there when a note is drawn stay still, because the view marks
+`data-fresh` only for marks that arrive after it mounted.
+
+- **Results:** when a round ends or is revealed, the ranked results settle a
+  row at a time, like the ledger, and each wash is drawn out once its row has
+  landed.
+- **Bars:** poll and result bars are full width and scaled to their share, so
+  an arriving answer slides them along without re-laying the card.
+- **Entrances:** everything hanging from the top of the board drops out of
+  that edge. Menus only fade, because they are opened dozens of times a
+  session.
+- **Keyframes:** these now move with `translate` and `scale`, so they add to
+  an element's own transform. Written with `transform`, they would have slid
+  the centred overview in from the side.
+- **The guard:** `motion.test.ts` now covers transitions as well as
+  keyframes. It was seen failing first, on two real gaps: the record panel's
+  turning chevron and the exit's travelling arrow, which both moved under
+  reduced motion.

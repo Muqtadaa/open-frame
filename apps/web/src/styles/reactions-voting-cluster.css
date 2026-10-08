@@ -163,6 +163,8 @@
   background: none;
   border: 0;
   border-radius: var(--of-radius);
+  /* Rounds the wash's ends. Its own outline is drawn outside, and stays. */
+  overflow: hidden;
 }
 
 .of-voting__result:hover {
@@ -289,6 +291,8 @@
 }
 
 .of-reaction__count {
+  /* A box of its own, so a new count can be inked in (motion.css). */
+  display: inline-block;
   font-family: var(--of-mono);
   font-variant-numeric: tabular-nums;
 }
@@ -398,10 +402,14 @@
   text-align: end;
 }
 
+/*
+ * Full width, scaled to its share (motion.css draws it). Square, and rounded
+ * by the row it sits in: a radius scaled along one axis comes out oval.
+ */
 .of-voting__bar {
   position: absolute;
   inset-block: var(--of-space-2);
-  inset-inline-start: 0;
+  inset-inline: 0;
   background: color-mix(in srgb, currentcolor 10%, transparent);
-  border-radius: var(--of-radius);
+  transform-origin: left;
 }

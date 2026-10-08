@@ -698,9 +698,9 @@ settling in a row at a time as if inked. Nothing else there moves.
 
 Everything else is feedback or continuity, and there is not much of it:
 
-- **A sheet comes out of the line it belongs to.** The account and share sheets
-  rise 4px with `transform-origin: bottom left`, so they read as pulled from
-  the apparatus rather than pasted over the board.
+- **A sheet comes out of the line it belongs to.** The account, share and
+  session sheets drop 4px out of the top bar with `transform-origin: top left`,
+  so they read as pulled from the bar rather than pasted over the board.
 - **A copied link says so where the click landed.** A 600ms accent wash on the
   row, not a toast: the acknowledgement belongs where the action was, and this
   is a control somebody uses twice and never again that session.
@@ -711,6 +711,34 @@ Everything else is feedback or continuity, and there is not much of it:
   pulled from the swatch grid, the table's colour bar from the table's top
   edge. Both use the sheet's raise-and-fade, because a surface that simply
   appears beside a control leaves you to work out the relationship yourself.
+
+### The session
+
+The same thesis carries onto the board while people work on it: **a mark
+somebody makes is inked in, and a result is set down a row at a time.**
+
+- **A new dot or reaction is inked in** — from nothing at its own centre, with
+  no overshoot. Only a NEW one: the view marks a mark `data-fresh` when it
+  arrives after the note was drawn, so opening a board or scrolling a note into
+  view never sets every dot on it popping at once. Revealing a hidden round is
+  the exception that earns it: the counts nobody could see are inked in then.
+- **The results are the focal moment.** When a round ends or is revealed, the
+  ranked rows settle in like the ledger (same stagger, same cap of six) and
+  each row's wash is drawn out once its row has landed.
+- **A share moves, it does not jump.** Poll and result bars are full width and
+  SCALED to their share, so an answer arriving slides the bar along at
+  `--of-settle` without laying the card out again.
+- **What hangs from the top drops out of it.** Notices, toasts, the voting
+  banner, the cluster panel, the listen prompt, the following bar and the
+  overview drop 4px from the top edge at `--of-quick`.
+- **A menu does not travel.** The context, board and table menus and the emoji
+  library are opened dozens of times a session; they only fade, at the quickest
+  pace there is.
+
+The keyframes move with `translate` and `scale` rather than `transform`, so
+they add to an element's own transform instead of replacing it: the overview
+is centred with one and the vote capsule sits astride its note's edge with
+another, and a keyframe written in `transform` slid them in from the side.
 
 Timing is `--of-quick` (140ms) for feedback, `--of-settle` (240ms) for the
 ledger and `--of-hold` (600ms) for an acknowledgement that stays where the
@@ -727,7 +755,10 @@ and opacity that carry FEEDBACK stay. An interface that stops acknowledging a
 copied link under that setting has traded an accessibility preference for a
 loss of information. `motion.test.ts` asserts it against the real stylesheet —
 and reads every `prefers-reduced-motion` block, having first been written to
-read only the first one, which was the tool tip's.
+read only the first one, which was the tool tip's. A TRANSITION that moves
+something (`transform`, `translate`, `scale`, `rotate` or `all`) is held to the
+same rule: its selector is answered under the preference, which is how the
+record panel's turning chevron and the exit's travelling arrow were found.
 
 **Nothing loops.** There is no idle animation anywhere in this product.
 

@@ -1,4 +1,6 @@
 import type { ObjectId } from '@openframe/core'
+import { useState } from 'react'
+
 import { useMe } from '../hooks/use-me.js'
 import { countsShown, tallyVoters, useVoters, useVotingContext } from '../hooks/use-voting.js'
 
@@ -14,19 +16,28 @@ const DOTS_AT_MOST = 5
 
 export function VoteDots({ id }: { readonly id: ObjectId }) {
   const voters = useVoters(id)
+  // Drawn with no dots at all, so the first to arrive is new.
+  const [bare] = useState(voters === '')
   // A note without a dot costs one index lookup and nothing else.
   if (voters === '') return null
-  return <Dots voters={voters} />
+  return <Dots voters={voters} bare={bare} />
 }
 
-function Dots({ voters }: { readonly voters: string }) {
+function Dots({ voters, bare }: { readonly voters: string; readonly bare: boolean }) {
   const round = useVotingContext()
   const me = useMe()
-  if (round === null) return null
-  const { total, mine } = tallyVoters(voters, round.id, me?.key ?? null)
-  const shown = countsShown(round.data)
-  const count = shown ? total : mine
-  if (count === 0) return null
+  const { total, mine } = tallyVoters(voters, round?.id ?? '', me?.key ?? null)
+  const shown = round !== null && countsShown(round.data)
+  const count = round === null ? 0 : shown ? total : mine
+  /*
+   * How many dots could be SEEN when the note was drawn. Only a dot past that
+   * is new, and inked in: a board opening, or a note scrolled into view, must
+   * not set all of its dots popping at once (motion.css). What could be seen,
+   * not what was there: revealing a hidden round is when everybody else's
+   * dots arrive for this person, and they are inked in then (Codex, on #93).
+   */
+  const [seen] = useState(bare ? 0 : count)
+  if (round === null || count === 0) return null
   const label = shown
     ? `${String(total)} ${total === 1 ? 'vote' : 'votes'}${mine > 0 ? `, ${String(mine)} yours` : ''}`
     : `${String(mine)} ${mine === 1 ? 'vote' : 'votes'} of yours`
@@ -44,7 +55,13 @@ function Dots({ voters }: { readonly voters: string }) {
       data-tip={label}
     >
       {Array.from({ length: drawn }, (_, index) => (
-        <span key={index} className="of-votes__dot" data-testid="vote-dot" aria-hidden="true" />
+        <span
+          key={index}
+          className="of-votes__dot"
+          data-testid="vote-dot"
+          data-fresh={index >= seen}
+          aria-hidden="true"
+        />
       ))}
       {count > DOTS_AT_MOST && (
         <span className="of-votes__count" aria-hidden="true">

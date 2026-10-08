@@ -82,14 +82,36 @@ function ordinaryRules(): string {
   return out
 }
 
+/*
+ * What moves an element: `transform`, and the three properties that compose
+ * with it. The keyframes here use `translate` and `scale` so that they add to
+ * an element's own transform rather than replacing it — and a guard that only
+ * looked for `transform:` would have stopped seeing every one of them.
+ */
+const MOVES = /(?:^|[\s;{])(?:transform|translate|scale|rotate)\s*:/
+
 /** Keyframes whose body moves something, as opposed to fading or tinting it. */
 function movingKeyframes(): readonly string[] {
   const names: string[] = []
   for (const match of CSS.matchAll(/@keyframes\s+([\w-]+)\s*\{([\s\S]*?)\n\}/g)) {
     const [, name = '', body = ''] = match
-    if (body.includes('transform:')) names.push(name)
+    if (MOVES.test(body)) names.push(name)
   }
   return names
+}
+
+/** Selectors, outside the reduced-motion blocks, whose transition moves something. */
+function movingTransitions(): readonly string[] {
+  const found: string[] = []
+  for (const match of ordinaryRules().matchAll(/([^{}]+)\{([^{}]*)\}/g)) {
+    const [, selector = '', body = ''] = match
+    for (const declaration of body.matchAll(/transition(?:-property)?\s*:([^;]*)/g)) {
+      if (/\b(?:transform|translate|scale|rotate|all)\b/.test(declaration[1] ?? '')) {
+        for (const part of selector.split(',')) found.push(part.trim())
+      }
+    }
+  }
+  return found
 }
 
 /** The selectors that run a given animation, outside the reduced-motion block. */
@@ -129,6 +151,22 @@ describe('motion', () => {
     }
 
     expect(unhandled).toEqual([])
+  })
+
+  /**
+   * A transition moves things as surely as a keyframe does, and the guard
+   * above never looked at one: a chevron that turned, and the exit's arrow
+   * that travelled, both did so under the preference with nothing to say
+   * they should not. The selector itself must be answered under the
+   * preference — a transition switched off, or the movement taken out of it.
+   */
+  it('gives every moving transition a reduced-motion answer', () => {
+    const reduced = reducedMotionBlocks()
+    expect(movingTransitions().length).toBeGreaterThan(0)
+
+    const unanswered = movingTransitions().filter((selector) => !reduced.includes(selector))
+
+    expect(unanswered).toEqual([])
   })
 
   /**

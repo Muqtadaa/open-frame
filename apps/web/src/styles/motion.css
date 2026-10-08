@@ -28,10 +28,17 @@
   --of-dwell: 400ms;
 }
 
+/*
+ * The keyframes move with `translate` and `scale` rather than `transform`, so
+ * they ADD to whatever transform an element already has: the overview is
+ * centred with one, and the vote capsule sits astride its note's edge with
+ * another. A keyframe written in `transform` replaced it for the length of the
+ * animation, and the surface slid in from the side.
+ */
 @keyframes of-settle {
   from {
     opacity: 0;
-    transform: translateY(6px);
+    translate: 0 6px;
   }
 }
 
@@ -61,12 +68,14 @@
     color var(--of-quick) var(--of-ease);
 }
 
-.of-status__exit,
-.of-status__exit svg {
+.of-status__exit {
   transition:
     background-color var(--of-quick) var(--of-ease),
-    color var(--of-quick) var(--of-ease),
-    transform var(--of-quick) var(--of-ease);
+    color var(--of-quick) var(--of-ease);
+}
+
+.of-status__exit svg {
+  transition: transform var(--of-quick) var(--of-ease);
 }
 
 /*
@@ -77,7 +86,8 @@
 @keyframes of-raise {
   from {
     opacity: 0;
-    transform: translateY(4px) scale(0.985);
+    translate: 0 4px;
+    scale: 0.985;
   }
 }
 
@@ -90,7 +100,8 @@
 @keyframes of-drop {
   from {
     opacity: 0;
-    transform: translateY(-4px) scale(0.985);
+    translate: 0 -4px;
+    scale: 0.985;
   }
 }
 
@@ -130,6 +141,93 @@
 }
 
 /*
+ * The session. The same thesis, carried onto the board while people work on
+ * it: a mark somebody makes is inked in, and a result is set down a row at a
+ * time. Everything else here is continuity.
+ *
+ * What hangs from the top of the board (a notice, a toast, the voting banner,
+ * the cluster panel, the listen prompt, following) drops out of that edge, and
+ * so does the overview, which is a sheet in all but name. A menu does not
+ * travel: it is opened dozens of times a session, so it only fades, at the
+ * quickest pace there is.
+ */
+/*
+ * Without the sheet's scale: these hold controls people reach for the moment
+ * they arrive (Dismiss, Listen, Stop), and a scale makes every one of them a
+ * shade smaller than its 24px target while it lands.
+ */
+@keyframes of-hang {
+  from {
+    opacity: 0;
+    translate: 0 -4px;
+  }
+}
+
+.of-notice,
+.of-toast,
+.of-overview {
+  animation: of-hang var(--of-quick) var(--of-ease) backwards;
+}
+
+.of-menu,
+.of-emoji-picker {
+  animation: of-fade var(--of-quick) var(--of-ease) backwards;
+}
+
+/*
+ * A dot or a reaction that has just been placed is inked in: from nothing at
+ * its own centre, with no overshoot, because a mark on paper does not bounce.
+ * Only a NEW one — `data-fresh` is set by the view when a mark arrives after
+ * it mounted — so opening a board, or scrolling one into view, does not make
+ * every dot on it pop at once.
+ */
+@keyframes of-ink {
+  from {
+    opacity: 0;
+    scale: 0;
+  }
+}
+
+.of-votes__dot[data-fresh='true'] {
+  animation: of-ink var(--of-settle) var(--of-ease) backwards;
+}
+
+.of-reaction[data-fresh='true'],
+.of-reaction__count[data-fresh='true'] {
+  animation: of-ink var(--of-quick) var(--of-ease) backwards;
+}
+
+/*
+ * A count's share is drawn by scaling the bar rather than sizing it, so an
+ * answer that arrives moves the bar along without laying the card out again.
+ */
+.of-poll__bar,
+.of-voting__bar {
+  transition: transform var(--of-settle) var(--of-ease);
+}
+
+/*
+ * The results are the session's focal moment: set down a row at a time, as
+ * the ledger is, and each bar drawn out once its row has landed. Capped at six
+ * in the markup, like the ledger, so a long list is not a slow one.
+ */
+@keyframes of-draw {
+  from {
+    scale: 0 1;
+  }
+}
+
+.of-voting__list li {
+  animation: of-settle var(--of-settle) var(--of-ease) backwards;
+  animation-delay: calc(var(--of-row, 0) * var(--of-stagger));
+}
+
+.of-voting__list .of-voting__bar {
+  animation: of-draw var(--of-settle) var(--of-ease) backwards;
+  animation-delay: calc(var(--of-row, 0) * var(--of-stagger) + var(--of-quick));
+}
+
+/*
  * Reduced motion means fewer and gentler, not none: the fades and the colour
  * still carry the feedback, and only the movement goes. An interface that
  * stops acknowledging a copied link under this setting has traded an
@@ -139,8 +237,27 @@
   .of-home__list li,
   .of-sheet,
   .of-picker,
-  .of-cellbar {
+  .of-cellbar,
+  .of-notice,
+  .of-toast,
+  .of-overview,
+  .of-votes__dot,
+  .of-reaction,
+  .of-reaction__count,
+  .of-voting__list li,
+  .of-voting__list .of-voting__bar {
     animation-name: of-fade;
+  }
+
+  /*
+   * A bar that changes takes its new length at once, and a chevron that turns
+   * has turned: what they say is unchanged, only the travel goes.
+   */
+  .of-poll__bar,
+  .of-voting__bar,
+  .of-inspector__disclosure svg,
+  .of-status__exit svg {
+    transition: none;
   }
 
   .of-share__link[data-copied='yes'] {
