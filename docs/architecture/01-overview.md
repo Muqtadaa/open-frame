@@ -54,7 +54,8 @@ Inside `apps/web` the layers are the same as they always were:
 
 Every caller of the domain goes through the same dispatcher with a different
 origin: a person (`user`), a collaborator's merged edit (`remote`) and an agent
-over MCP (`mcp`). An HTTP API and in-app AI, when they come, join that list.
+over MCP (`mcp`), and in-app AI (`ai`), which applies a reviewed clustering as
+one change. An HTTP API, when it comes, joins that list.
 
 ## Package boundaries
 

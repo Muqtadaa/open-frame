@@ -10,33 +10,36 @@ work out which row it resembles before writing code.
 
 ## The matrix
 
-| State                           | Owner                         | Persistent? |      Collaborative?      | Example                                 |
-| ------------------------------- | ----------------------------- | :---------: | :----------------------: | --------------------------------------- |
-| Object geometry (`frame`)       | `core` DocumentStore          |     ✅      |       ✅ document        | Sticky at (120, 340)                    |
-| Object semantic `data`          | `core` DocumentStore          |     ✅      |       ✅ document        | `evidence.participant = "P07"`          |
-| Object `style` tokens           | `core` DocumentStore          |     ✅      |       ✅ document        | `color: "yellow"`                       |
-| Hierarchy (`parentId`, `order`) | `core` DocumentStore          |     ✅      |       ✅ document        | Sticky inside a frame                   |
-| Connector endpoints             | `core` DocumentStore          |     ✅      |       ✅ document        | `from: { object, anchor }`              |
-| Connector **path geometry**     | _derived, never stored_       |     ❌      |            ❌            | Recomputed from endpoints               |
-| `locked` / `hidden`             | `core` DocumentStore          |     ✅      |       ✅ document        | Locked background frame                 |
-| Creation provenance (`meta`)    | `core` DocumentStore          |     ✅      |       ✅ document        | `createdVia: 'ai'`                      |
-| Board schema version            | Persisted envelope            |     ✅      |           n/a            | `schemaVersion: 1`                      |
-| Asset **references**            | `core` DocumentStore          |     ✅      |       ✅ document        | `assetId: "ast_9f"`                     |
-| Asset **bytes**                 | AssetStore port               |     ✅      |            ❌            | PNG in IndexedDB → later object storage |
-| Active tool                     | `web` interaction store       |     ❌      |            ❌            | `"select"`                              |
-| Selection                       | `web` interaction store       |     ❌      | ➡️ projected to presence | `{obj_1, obj_7}`                        |
-| Hover target                    | `web` interaction store       |     ❌      |            ❌            | `obj_4`                                 |
-| **In-flight drag delta**        | `web` interaction store       |     ❌      | ➡️ projected to presence | `{ dx: 40, dy: -12 }`                   |
-| Marquee rectangle               | `web` interaction store       |     ❌      |            ❌            | Rubber band                             |
-| Text-editing buffer             | React local state             |     ❌      |     later: CRDT text     | Uncommitted keystrokes                  |
-| Local viewport                  | `web` interaction store       | 🟡 UX only  | ➡️ presence (follow-me)  | `{ x, y, zoom: 1.4 }`                   |
-| Open menus, banners             | React local state             |     ❌      |            ❌            | Dismissed notice                        |
-| Undo/redo stack                 | `core` UndoStack (per client) |     ❌      | ❌ (origin-scoped later) | 40 inverse-patch entries                |
-| Remote cursors                  | Presence adapter _(later)_    |     ❌      |       ✅ awareness       | Bob at (400, 200)                       |
-| Connected users                 | Presence adapter _(later)_    |     ❌      |       ✅ awareness       | 3 online                                |
-| Users, workspaces, permissions  | Server database _(later)_     |     ✅      |            ❌            | Membership row                          |
-| Board metadata, thumbnails      | Server database _(later)_     |     ✅      |            ❌            | "Q3 Research"                           |
-| Remote query cache              | TanStack Query _(later)_      |     ❌      |            ❌            | Board list                              |
+| State                           | Owner                                                                                   | Persistent? |      Collaborative?      | Example                                 |
+| ------------------------------- | --------------------------------------------------------------------------------------- | :---------: | :----------------------: | --------------------------------------- |
+| Object geometry (`frame`)       | `core` DocumentStore                                                                    |     ✅      |       ✅ document        | Sticky at (120, 340)                    |
+| Object semantic `data`          | `core` DocumentStore                                                                    |     ✅      |       ✅ document        | `evidence.participant = "P07"`          |
+| Object `style` tokens           | `core` DocumentStore                                                                    |     ✅      |       ✅ document        | `color: "yellow"`                       |
+| Hierarchy (`parentId`, `order`) | `core` DocumentStore                                                                    |     ✅      |       ✅ document        | Sticky inside a frame                   |
+| Connector endpoints             | `core` DocumentStore                                                                    |     ✅      |       ✅ document        | `from: { object, anchor }`              |
+| Connector **path geometry**     | _derived, never stored_                                                                 |     ❌      |            ❌            | Recomputed from endpoints               |
+| `locked` / `hidden`             | `core` DocumentStore                                                                    |     ✅      |       ✅ document        | Locked background frame                 |
+| Creation provenance (`meta`)    | `core` DocumentStore                                                                    |     ✅      |       ✅ document        | `createdVia: 'ai'`                      |
+| Board schema version            | Persisted envelope                                                                      |     ✅      |           n/a            | `schemaVersion: 1`                      |
+| Asset **references**            | `core` DocumentStore                                                                    |     ✅      |       ✅ document        | `assetId: "ast_9f"`                     |
+| Asset **bytes**                 | AssetStore port                                                                         |     ✅      |            ❌            | PNG in IndexedDB → later object storage |
+| Active tool                     | `web` interaction store                                                                 |     ❌      |            ❌            | `"select"`                              |
+| Selection                       | `web` interaction store                                                                 |     ❌      | ➡️ projected to presence | `{obj_1, obj_7}`                        |
+| Hover target                    | `web` interaction store                                                                 |     ❌      |            ❌            | `obj_4`                                 |
+| **In-flight drag delta**        | `web` interaction store                                                                 |     ❌      | ➡️ projected to presence | `{ dx: 40, dy: -12 }`                   |
+| Marquee rectangle               | `web` interaction store                                                                 |     ❌      |            ❌            | Rubber band                             |
+| Text-editing buffer             | React local state                                                                       |     ❌      |     later: CRDT text     | Uncommitted keystrokes                  |
+| Local viewport                  | `web` interaction store                                                                 | 🟡 UX only  | ➡️ presence (follow-me)  | `{ x, y, zoom: 1.4 }`                   |
+| Open menus, banners             | React local state                                                                       |     ❌      |            ❌            | Dismissed notice                        |
+| Undo/redo stack                 | `core` UndoStack (per client)                                                           |     ❌      |  ❌ (your changes only)  | 40 inverse-patch entries                |
+| Remote cursors                  | Yjs awareness (`collab`)                                                                |     ❌      |       ✅ awareness       | Bob at (400, 200)                       |
+| Connected users                 | Yjs awareness (`collab`)                                                                |     ❌      |       ✅ awareness       | 3 online                                |
+| Users, workspaces, permissions  | Supabase                                                                                |     ✅      |            ❌            | Membership row                          |
+| Board list, titles, comments    | Supabase                                                                                |     ✅      |            ❌            | "Q3 Research"                           |
+| Agents' changes (last 50)       | `changes` map in the room                                                               |     ✅      |         ✅ room          | "Create 3 objects"                      |
+| Timer and music                 | `facilitation` map ([ADR 0017](../adr/0017-facilitation-state-outside-the-document.md)) |     ✅      |         ✅ room          | 4:59 left, jazzy                        |
+| Versions                        | R2 and room storage ([ADR 0019](../adr/0019-version-history.md))                        |     ✅      |  ❌ fetched on request   | "Before the workshop"                   |
+| Remote query cache              | TanStack Query _(later)_                                                                |     ❌      |            ❌            | Board list                              |
 
 ---
 

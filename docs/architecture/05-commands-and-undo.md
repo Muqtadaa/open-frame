@@ -178,14 +178,18 @@ interface UndoEntry {
 }
 ```
 
-A local, linear stack. Deliberately the simple version: correct for a single
-editor, and explicitly **not** what multiplayer will use.
+A local, linear stack, and it stayed that way when collaboration landed: Yjs's
+`UndoManager` was never adopted. A collaborator's change arrives as
+`ApplyRemotePatches` with `skipUndo`, so undo reverts _your_ changes and never
+somebody else's. History is guarded: a step leaves out what was deleted or
+locked since, and anything somebody changed after you, so an undo never writes
+over a newer edit (`stale-history` when nothing is left to do).
 
-When collaboration lands, Yjs's `UndoManager` takes over and scopes history by
-origin, so that undo reverts _your_ changes rather than whatever happened most
-recently. That swap is an adapter change rather than a redesign because `origin`
-is already on every entry and every command already produces patches instead of
-mutating in place.
+An agent's change cannot sit on anybody's stack, so it is recorded instead. A
+change from `mcp`, `ai` or `api` goes into the room's `changes` map
+(`packages/collab/src/change-log.ts`) and is taken back by anyone with
+`CommandDispatcher.revert`, through the same guards. A revert is itself an
+ordinary undo entry for whoever pressed it.
 
 ### Text editing
 
