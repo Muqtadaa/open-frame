@@ -23,6 +23,8 @@ import {
   MAX_COLUMNS,
   MAX_ROWS,
   copyObjects,
+  gridFrom,
+  linesOf,
   readClipboard,
   richFromPlain,
   screenToWorld,
@@ -41,14 +43,19 @@ import { useMemo } from 'react'
 import type { LoggedChange } from '@openframe/collab'
 import { clusterObjects } from '../app/ai-cluster.js'
 import { guestIdentity } from '../app/guest.js'
-import { toClipboard, type ClipboardPayload } from '../interaction/clipboard-format.js'
-import type { OutsidePaste } from './outside-paste.js'
+import {
+  readSystemClipboard,
+  toClipboard,
+  type ClipboardPayload,
+} from '../interaction/clipboard-format.js'
+import { readWords, type OutsidePaste } from './outside-paste.js'
 import { useOpenFrame } from '../runtime/context.js'
 import { useServices } from '../runtime/services.js'
 import { glyphFor } from '../scene/reaction-glyphs.js'
 import { useInteractionStore } from '../interaction/interaction-store.js'
 import { containerAt, objectsInMarquee } from '../scene/hit-testing.js'
-import { snapPoint } from '../scene/snapping.js'
+import { GRID_SIZE, snapPoint } from '../scene/snapping.js'
+import { formatKeys } from '../scene/shortcuts.js'
 import { placeDerived } from '../scene/derived-placement.js'
 import { panToReveal } from '../scene/zoom.js'
 import { counted } from '../controls/counted.js'
@@ -60,6 +67,12 @@ export interface VotingOptions {
   readonly perPerson: number
   readonly hidden: boolean
 }
+
+/** What Paste special makes of the clipboard. */
+export type PasteAs = 'notes' | 'text' | 'table' | 'plain'
+
+/** A list longer than this is not a list somebody meant as notes, all at once. */
+const MAX_PASTED_NOTES = 200
 
 export interface BoardCommands {
   /** Creates any registered type. No per-type method — that is the registry's job. */
@@ -107,7 +120,14 @@ export interface BoardCommands {
    * shape selected, on a new line; otherwise a text box of their own, or a
    * table for a spreadsheet range.
    */
-  pasteOutside(pasted: OutsidePaste, at?: Point): void
+  pasteOutside(pasted: OutsidePaste, at?: Point, options?: { readonly alone?: boolean }): void
+  /**
+   * Paste special: the system clipboard made into what was asked for — a
+   * note per line, one text box, a table, or the words alone — rather than
+   * what Mod+V would guess. Reads the clipboard itself, which the browser may
+   * ask about or refuse; a refusal says how to paste instead.
+   */
+  pasteSpecial(as: PasteAs, at?: Point): Promise<void>
   selectAll(): void
   /** Renames the board. Returns false when the name was refused. */
   setBoardTitle(title: string): boolean
@@ -753,11 +773,11 @@ export function useCommands(): BoardCommands {
         }
       },
 
-      pasteOutside(pasted, at) {
+      pasteOutside(pasted, at, options) {
         const store = useInteractionStore.getState()
         const doc = runtime.store.getDocument()
 
-        if (pasted.kind === 'text' && store.selection.size === 1) {
+        if (pasted.kind === 'text' && options?.alone !== true && store.selection.size === 1) {
           const [id] = store.selection
           const target = id === undefined ? undefined : doc.objects.get(id)
           const data =
@@ -798,6 +818,75 @@ export function useCommands(): BoardCommands {
           store.showToast(
             `Only the first ${String(MAX_ROWS)} rows and ${String(MAX_COLUMNS)} columns fit in a table.`,
           )
+        }
+      },
+
+      async pasteSpecial(as, at) {
+        const store = useInteractionStore.getState()
+        const held = await readSystemClipboard()
+        if (held === null) {
+          // A way out of a failure, so it says how.
+          store.showToast(`The clipboard could not be read. Paste with ${formatKeys('Mod+V')}.`)
+          return
+        }
+        if (as === 'table') {
+          const grid = gridFrom(held.text)
+          if (grid === null) store.showToast('The clipboard holds no words.')
+          else
+            this.pasteOutside(
+              { kind: 'grid', rows: grid.map((row) => row.map(richFromPlain)) },
+              at,
+              {
+                alone: true,
+              },
+            )
+          return
+        }
+        if (as === 'text' || as === 'plain') {
+          const words = readWords(held.html, held.text, as === 'plain')
+          if (words === null) store.showToast('The clipboard holds no words.')
+          else this.pasteOutside({ kind: 'text', text: words }, at, { alone: true })
+          return
+        }
+
+        // A note per line, in a block centred where it was asked for.
+        const lines = linesOf(held.text)
+        const made = lines
+          .slice(0, MAX_PASTED_NOTES)
+          .flatMap((line) => runtime.registry.fromOutside({ note: richFromPlain(line) }) ?? [])
+        const [first] = made
+        if (first === undefined) {
+          store.showToast('The clipboard holds no words.')
+          return
+        }
+        const columns = Math.ceil(Math.sqrt(made.length))
+        const rows = Math.ceil(made.length / columns)
+        const gap = GRID_SIZE * 2
+        const { viewport, canvasSize } = store
+        const centre =
+          at ?? screenToWorld(viewport, { x: canvasSize.width / 2, y: canvasSize.height / 2 })
+        const corner = {
+          x: centre.x - (columns * (first.width + gap) - gap) / 2,
+          y: centre.y - (rows * (first.height + gap) - gap) / 2,
+        }
+        const origin = store.snapToGrid ? snapPoint(corner) : corner
+        const result = dispatcher.dispatch({
+          kind: 'CreateObjects',
+          objects: made.map((note, index) => ({
+            type: note.type,
+            x: origin.x + (index % columns) * (first.width + gap),
+            y: origin.y + Math.floor(index / columns) * (first.height + gap),
+            width: note.width,
+            height: note.height,
+            data: note.data,
+          })),
+        })
+        report(result)
+        if (!result.ok) return
+        store.setSelection(result.affected)
+        store.announce(`Pasted ${counted(made.length, 'note')}`)
+        if (lines.length > made.length) {
+          store.showToast(`Only the first ${String(MAX_PASTED_NOTES)} lines were pasted.`)
         }
       },
 

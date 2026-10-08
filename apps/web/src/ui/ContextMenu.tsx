@@ -15,7 +15,7 @@ import { AnchoredSurface } from '../controls/AnchoredSurface.js'
 import { DisclosureIcon } from '../controls/icons.js'
 import { useViewportSize } from '../controls/use-viewport-size.js'
 import { useCanEdit } from '../hooks/use-can-edit.js'
-import { useCommands } from '../hooks/use-commands.js'
+import { useCommands, type PasteAs } from '../hooks/use-commands.js'
 import { useExport } from '../hooks/use-export.js'
 import { useMe } from '../hooks/use-me.js'
 import { useVoteRound } from '../hooks/use-voting.js'
@@ -42,6 +42,13 @@ interface Item {
 }
 
 type Group = readonly Item[]
+
+const PASTE_AS: readonly (readonly [string, PasteAs])[] = [
+  ['As notes', 'notes'],
+  ['As a text box', 'text'],
+  ['As a table', 'table'],
+  ['As plain text', 'plain'],
+]
 
 /** The items a keyboard can land on in ONE menu, in order, disabled ones included. */
 function itemsIn(menu: HTMLElement | null): HTMLElement[] {
@@ -353,6 +360,22 @@ export function ContextMenu() {
         run: () => void commands.paste(at.world),
         disabled: !hasCopy,
       },
+      /*
+       * What another application copied, made into what somebody asks for
+       * rather than what Mod+V would guess from it. Only at a point: each
+       * makes something new there, so a selection's menu has no use for it.
+       */
+      ...(canEdit
+        ? [
+            {
+              label: 'Paste special',
+              submenu: PASTE_AS.map(([label, as]) => ({
+                label,
+                run: () => void commands.pasteSpecial(as, at.world),
+              })),
+            },
+          ]
+        : []),
       {
         label: 'Add a note here',
         run: () => {

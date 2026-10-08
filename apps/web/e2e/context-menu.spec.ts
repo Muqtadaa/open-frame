@@ -231,6 +231,7 @@ test.describe('what it offers', () => {
     await page.locator(CANVAS).click({ position: empty, button: 'right' })
     await expect(menu(page).locator('[role="menuitem"] > span:first-child')).toHaveText([
       'Paste here',
+      'Paste special',
       'Add a note here',
       'Select all',
       'Zoom to fit',
@@ -239,6 +240,8 @@ test.describe('what it offers', () => {
     ])
     await expect(item(page, 'Paste here')).toHaveAttribute('aria-disabled', 'true')
     // Focus skips to the first thing that can actually be done.
+    await expect(item(page, 'Paste special')).toBeFocused()
+    await page.keyboard.press('ArrowDown')
     await expect(item(page, 'Add a note here')).toBeFocused()
 
     await page.keyboard.press('Enter')

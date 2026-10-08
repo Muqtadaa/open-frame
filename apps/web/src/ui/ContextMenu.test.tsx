@@ -107,6 +107,8 @@ describe('the board’s menu, from the keyboard', () => {
   it('runs an item, closes, and leaves the board changed', () => {
     openMenu()
     ui.press(focused(), 'Home')
+    // Paste here, Paste special, then the note.
+    ui.press(focused(), 'ArrowDown')
     ui.press(focused(), 'ArrowDown')
     expect(focusedLabel()).toBe('Add a note here')
     ui.act(() => {

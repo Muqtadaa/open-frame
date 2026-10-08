@@ -282,11 +282,13 @@ export interface PastedObject<TData> {
 
 /**
  * The kinds of content from outside the board that become an object of their
- * own: words, and a grid copied out of a spreadsheet.
+ * own: words, a grid copied out of a spreadsheet, and — when somebody asks
+ * for notes (Paste special › As notes) — one item of a list, as a note.
  */
 export interface OutsidePaste<TData> {
   readonly text?: (text: RichText) => PastedObject<TData>
   readonly grid?: (rows: readonly PastedRow[]) => PastedObject<TData>
+  readonly note?: (text: RichText) => PastedObject<TData>
 }
 
 export interface ObjectCapabilities {
@@ -1346,13 +1348,18 @@ export class ObjectTypeRegistry {
    * home and what it makes of them. `null` when no registered type takes them.
    */
   fromOutside(
-    pasted: { readonly text: RichText } | { readonly grid: readonly PastedRow[] },
+    pasted:
+      | { readonly text: RichText }
+      | { readonly grid: readonly PastedRow[] }
+      | { readonly note: RichText },
   ): (PastedObject<Record<string, unknown>> & { readonly type: string }) | null {
     for (const definition of this.#definitions.values()) {
       const made =
         'text' in pasted
           ? definition.fromOutside?.text?.(pasted.text)
-          : definition.fromOutside?.grid?.(pasted.grid)
+          : 'grid' in pasted
+            ? definition.fromOutside?.grid?.(pasted.grid)
+            : definition.fromOutside?.note?.(pasted.note)
       if (made !== undefined) return { type: definition.type, ...made }
     }
     return null
