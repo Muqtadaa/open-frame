@@ -83,11 +83,12 @@
 
 .of-voting__status {
   /*
-   * A line of its own rather than a word or two per line: squeezed between
-   * the title and the controls on a phone it wrapped into a column
-   * (audit 2026-10-08).
+   * Never narrower than a few words: squeezed between the title and the
+   * controls on a phone it wrapped into a column, a word or two per line
+   * (audit 2026-10-08). Below that the controls wrap under it instead.
    */
   flex: 1 1 16ch;
+  min-width: 16ch;
   font-family: var(--of-mono);
   font-size: var(--of-type-record);
 }
