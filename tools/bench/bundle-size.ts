@@ -43,11 +43,19 @@ export function firstLoad(manifest: Manifest, from: readonly string[]): Set<stri
   return seen
 }
 
-/** The routes, as the source file each one starts from after the entry. */
-export const ROUTES = {
-  'front-door': 'src/ui/Home.tsx',
-  board: 'src/app/open-board.tsx',
-} as const
+/**
+ * The routes, as what each one loads after the entry before its first render.
+ *
+ * A shared board is its own route: it AWAITS the collaboration chunk before
+ * drawing anything, so leaving that out — as following static imports alone
+ * does — let a shared board grow by the whole of Yjs without a budget
+ * noticing (Codex, on #94).
+ */
+export const ROUTES: Readonly<Record<string, readonly string[]>> = {
+  'front-door': ['src/ui/Home.tsx'],
+  board: ['src/app/open-board.tsx'],
+  'shared-board': ['src/app/open-board.tsx', 'src/app/collaboration.ts'],
+}
 
 function main(): void {
   const dist = join(import.meta.dirname, '../../apps/web/dist')
@@ -66,9 +74,9 @@ function main(): void {
     return Math.round(bytes / 102.4) / 10
   }
 
-  const measurements: Measurement[] = Object.entries(ROUTES).map(([route, source]) => ({
+  const measurements: Measurement[] = Object.entries(ROUTES).map(([route, sources]) => ({
     metric: `bundle/${route}`,
-    value: kB(firstLoad(manifest, [entry, source])),
+    value: kB(firstLoad(manifest, [entry, ...sources])),
     unit: 'kB',
   }))
   for (const m of measurements) console.log(`${m.metric.padEnd(20)} ${m.value.toFixed(1)} kB gzip`)

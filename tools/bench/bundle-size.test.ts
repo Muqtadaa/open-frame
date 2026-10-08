@@ -25,6 +25,18 @@ void describe('first load', () => {
     assert.equal(board.has('src/ui/BoardOverview.tsx'), false)
   })
 
+  void it('counts a chunk a route awaits when the route names it', () => {
+    const shared = firstLoad(
+      {
+        ...manifest,
+        'src/app/collaboration.ts': { file: 'collab.js', imports: ['_yjs.js'] },
+        '_yjs.js': { file: 'yjs.js' },
+      },
+      ['index.html', 'src/app/open-board.tsx', 'src/app/collaboration.ts'],
+    )
+    assert.equal(shared.has('_yjs.js'), true)
+  })
+
   void it('refuses a chunk the manifest does not have, rather than measuring less', () => {
     assert.throws(() => firstLoad(manifest, ['src/renamed.tsx']), /no chunk/)
   })

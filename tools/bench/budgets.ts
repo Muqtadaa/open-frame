@@ -102,6 +102,12 @@ export const BUDGETS: readonly Budget[] = [
     unit: 'kB',
     why: 'brought to 259 by splitting the routes and the on-request surfaces',
   },
+  {
+    metric: 'bundle/shared-board',
+    max: 300,
+    unit: 'kB',
+    why: 'the board and the collaboration chunk it awaits before drawing (288 today)',
+  },
   ...['get_objects, first page', 'search_board, common word'].map((name): Budget => ({
     metric: `copies/board-mixed-10000/${name}`,
     max: 0,
