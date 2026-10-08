@@ -93,6 +93,22 @@ If you remember nothing else:
 
 [Index of all ADRs →](adr/README.md)
 
+### Reviews and operations — what was checked, and how to run it
+
+| Document                                                                   | Contents                                                   |
+| -------------------------------------------------------------------------- | ---------------------------------------------------------- |
+| [Audit · 2026-10-08](reviews/audit-2026-10-08.md)                          | The current audit: the newer surfaces, scored and fixed    |
+| [Design review log](reviews/design-review.md)                              | Every surface critiqued, what was decided and fixed        |
+| [Device and screen-reader validation](reviews/device-and-sr-validation.md) | What automation cannot check, as a checklist for people    |
+| [Parity matrix](product/parity-matrix.md)                                  | Where the product stands against Miro and FigJam           |
+| [Enabling facilitation](operations/enabling-facilitation.md)               | Switching on session music and AI for a deployment         |
+| [Music candidates](music/candidates.md)                                    | Where the session music comes from, and under what licence |
+
+Earlier reviews ([2026-09-27](reviews/audit-2026-09-27.md),
+[2026-10-02](reviews/audit-2026-10-02.md), the
+[review plan](reviews/review-plan.md) and
+[tracks A and B](reviews/tracks-ab-mcp.md)) are kept as records.
+
 ### Appendices — reference material
 
 | Appendix                                                         | Contents                                            |
@@ -111,11 +127,11 @@ If you remember nothing else:
 ```bash
 pnpm install
 pnpm dev        # http://localhost:5173
-pnpm verify     # typecheck + lint + boundaries + tests + build
+pnpm verify     # format + typecheck + lint + boundaries + tests + build + budgets
 ```
 
 See the [roadmap](phases/README.md) for what is built and what is next, and
-[the current audit](reviews/audit-2026-10-02.md) for what was most recently
+[the current audit](reviews/audit-2026-10-08.md) for what was most recently
 checked and fixed. What automation cannot check — real devices, real screen
 readers — is a checklist for people:
 [device and screen-reader validation](reviews/device-and-sr-validation.md).

@@ -1,6 +1,6 @@
 # Device and screen-reader validation
 
-← [Documentation index](../README.md) · [Current audit](audit-2026-10-02.md)
+← [Documentation index](../README.md) · [Current audit](audit-2026-10-08.md)
 
 A checklist for people to run on real hardware and real assistive technology.
 Automation cannot do this part: the browser suites drive Chromium, Firefox and

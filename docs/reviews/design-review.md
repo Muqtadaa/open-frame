@@ -1,6 +1,6 @@
 # Design review — surfaces and design language
 
-> **Historical record, frozen 2026-10-03.** This describes the repository as it was when written. For the current state see [audit-2026-10-02.md](audit-2026-10-02.md) and [docs/architecture](../architecture/).
+> **A running log.** Each section describes the repository as it was when that section was written. For the current state see [audit-2026-10-08.md](audit-2026-10-08.md) and [docs/architecture](../architecture/).
 
 ← [Review plan](review-plan.md) · Driven by the vendored `impeccable` skill ·
 Scope: **refine, with bolder chrome allowed** (the Notebook and After Hours
@@ -82,7 +82,7 @@ Found by looking at them:
   `max-width` reservation in `.of-status` does not hold once presence and the
   account chip join the line. (C3 #3.)
 
-## C2 — extract the system (in progress)
+## C2 — extract the system ✅
 
 ### Done
 
@@ -212,7 +212,7 @@ _(This file lost its backlog and C3 section in the C2.1 commit, when an edit
 kept the text before its insertion point and dropped everything after it;
 restored here from `358fea3`, with what C2 has learned since.)_
 
-## C3 — per-surface critique (in progress)
+## C3 — per-surface critique ✅
 
 Each: `/impeccable critique <surface>` (two isolated assessments + detector,
 browser evidence at desktop and narrow widths, both worlds) → surface contract
@@ -478,7 +478,7 @@ cluster, clarified.
   - Focus handed back by the keyboard takes Enter.
   - A new guard requires every tipped control to name itself; it found 13
     across the app.
-  - Theme toggle back to 30px; the Source link is a 30px target.
+  - Theme toggle back to 30px; the Source link is a 30px target (the link itself was removed in #89).
 - **Zoom readout** (`6d9737d`): an honest tip, 50/100/200% presets while the
   field is open, and a refused zoom says why.
 - **Contents** (`96d4d49`):
@@ -1251,7 +1251,7 @@ a poll only its asker closes, and cluster copies that say they are copies.
 ### The fix passes (PR A #90, PR B #91, PR C)
 
 **PR A (keyboard, focus, announcements)** and **PR B (phone width)** are
-merged or under review. PR B also measured the tool rail as furniture rather
+merged. PR B also measured the tool rail as furniture rather
 than a stale 100px constant, put the docked record panel along the bottom as
 furniture too, and gave the board menu and the history sheet the paper every
 other surface has.
