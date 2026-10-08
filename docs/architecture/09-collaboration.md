@@ -59,6 +59,21 @@ other people see the object move when it is dropped, as one change. Presence is
 validated on arrival like anything else from another browser
 (`apps/web/src/scene/presence.ts`), and the room never reads it.
 
+**What presence costs.** Every message is a request against the room server's
+daily allowance, and every one wakes the room, so presence is kept to what
+somebody can see (CLAUDE.md rule 29):
+
+- **Nothing is sent alone.** A cursor, a selection or a pan goes out only while
+  somebody else is in the room. When somebody arrives, this person's state is
+  published once.
+- **The cursor goes at most ten times a second** (`use-presence.ts`).
+- **A tab renews its presence once a minute, not every 15 seconds**, and a peer
+  unheard for two and a half minutes is forgotten (`startPresenceClock` in
+  `collab/src/protocol.ts`). A tab that closes properly is removed at once, by
+  the room.
+- **The room keeps no timer.** A Durable Object cannot hibernate while one is
+  pending, and is billed for every second it stays awake.
+
 ---
 
 ## The document

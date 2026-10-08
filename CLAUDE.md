@@ -577,6 +577,24 @@ worked out for 30px tools — let it overrun its own box between 493 and 603px
 tall, the last tools drawn out of reach. `rail-overflow.spec.ts` walks the
 heights with touch on for that reason.
 
+### 29. A room must be able to sleep
+
+The room server runs on the Workers Free plan, whose Durable Objects get a
+fixed daily allowance of awake time. An object idle on its hibernatable
+sockets is free, **unless anything keeps it awake**, and a pending
+`setTimeout`/`setInterval` does. The y-protocols awareness the room held ran
+one every three seconds, so every room with anybody in it was awake and billed
+the whole time: 90% of the day's allowance by 20:00 on 10-08.
+
+So nothing in the Durable Object, or the `BoardRoom` it hosts, keeps a timer.
+Work that has to happen later is an alarm. `room.test.ts` holds that a room,
+empty or occupied, keeps none.
+
+Every message wakes a room, so a client sends only what somebody can see:
+nothing alone, the cursor at most ten times a second, and presence renewed
+once a minute (`docs/architecture/09-collaboration.md`).
+`e2e-rooms/presence-cost.spec.ts` counts the frames.
+
 ---
 
 ## Conventions
