@@ -91,6 +91,15 @@ jobs:
         env:
           OPENFRAME_BENCH_JSON: ${{ github.workspace }}/bench-results/renderer.json
 
+      # What each route makes a browser download first. `pnpm verify` holds
+      # these on every change; measured here too, because a budget nothing
+      # measured fails (rule 10) — and these three failed the nightly from the
+      # day they were added (#94) until this step.
+      - name: First-load bundle sizes
+        run: |
+          pnpm build
+          pnpm bench:bundle --json bench-results/bundle.json
+
       - name: Hold the numbers to their budgets
         if: ${{ !cancelled() }}
         run: pnpm bench:check bench-results/*.json
