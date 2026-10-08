@@ -111,9 +111,10 @@ their text.
 
 **Explicitly undecided — do not invent answers:**
 
-- Export formats. The [parity matrix](docs/product/parity-matrix.md) ranks
-  taking a board out as the first replacement-critical gap, and needs this
-  answered before it can be built.
+- Export formats beyond the first. A board, a frame or a selection exports as
+  a Markdown readout that keeps its provenance
+  ([ADR 0020](docs/adr/0020-export-as-a-readout.md)); images, PDF, CSV and a
+  board file with import are still open.
 
 Collaboration transport and presence were on this list until they were decided:
 one room per board, held by a Durable Object
