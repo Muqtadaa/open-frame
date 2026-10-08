@@ -68,6 +68,8 @@ export interface PointerDownContext {
   readonly shiftKey: boolean
   /** Takes a vote back rather than casting one. */
   readonly altKey?: boolean
+  /** The vote tool is taking dots back: a press removes one, as Alt does. */
+  readonly takingBack?: boolean
   /** 0 = primary, 1 = middle, 2 = secondary. */
   readonly button: number
   /**
@@ -119,7 +121,8 @@ export function onPointerDown(ctx: PointerDownContext): readonly PointerIntent[]
   }
 
   /*
-   * A dot goes on whatever was pressed, and Alt takes one back. Pressing
+   * A dot goes on whatever was pressed, and Alt — or the tool's Take back
+   * mode, for a finger that has no Alt — takes one back. Pressing
    * empty board does nothing: there is nothing to vote for there, and
    * clearing the selection would only lose what somebody was looking at.
    * Whether the object can carry a vote is the command's to say.
@@ -128,7 +131,9 @@ export function onPointerDown(ctx: PointerDownContext): readonly PointerIntent[]
     // Only a primary click votes: a right-click is for the menu, which is
     // where somebody goes to take a vote BACK (Codex-free finding, 10-07).
     if (ctx.hitId === null || ctx.button !== 0 || ctx.contextClick === true) return []
-    return [{ kind: 'begin-vote', on: ctx.hitId, remove: ctx.altKey === true }]
+    return [
+      { kind: 'begin-vote', on: ctx.hitId, remove: ctx.altKey === true || ctx.takingBack === true },
+    ]
   }
 
   /*

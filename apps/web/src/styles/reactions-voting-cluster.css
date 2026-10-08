@@ -94,12 +94,10 @@
   font-size: var(--of-type-record);
 }
 
-/* While the tool is armed: the one thing nothing on screen would teach. */
-.of-voting__hint {
-  flex-basis: 100%;
-  order: 1;
-  font-size: var(--of-type-record);
-  color: var(--of-ink-muted);
+/* The vote tool's two modes, held together as one control. */
+.of-voting__modes {
+  display: flex;
+  gap: var(--of-space-4);
 }
 
 .of-voting__field {

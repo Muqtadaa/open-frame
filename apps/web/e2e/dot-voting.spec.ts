@@ -419,7 +419,7 @@ test('says how many people have voted, says how to take a dot back, and reopens'
   await expect(page.getByTestId('voting-status')).toHaveText('3 of 3 votes left · 1 person voted')
   await armed(page)
   await expect(page.getByTestId('voting-vote')).toHaveText('Voting')
-  await expect(page.getByTestId('voting-hint')).toHaveText('Alt-click a dot to take it back')
+  await expect(page.getByTestId('voting-take-back')).toHaveAttribute('aria-pressed', 'false')
 
   await page.getByTestId('voting-end').click()
   await expect(page.getByTestId('voting-status')).toHaveText('Voting ended')
@@ -537,4 +537,42 @@ test('revealing a hidden round inks in the dots nobody could see', async ({ page
   await page.getByTestId('voting-reveal').click()
   await page.getByTestId('voting-confirm-yes').click()
   await expect(dots(page, 0).getByTestId('vote-dot')).toHaveAttribute('data-fresh', 'true')
+})
+
+/*
+ * A finger has no Alt key (audit 2026-10-08). Taking a dot back needed
+ * Alt-click, so on a phone a misplaced vote could only be undone, and the
+ * banner told phone users to Alt-click. The tool has a Take back mode beside
+ * Vote, and a tap in it takes your dot back.
+ */
+test.describe('under a finger', () => {
+  test.use({ hasTouch: true })
+
+  test('takes a dot back with the tool’s Take back mode', async ({ page }) => {
+    await seedBoard(
+      page,
+      buildBoard((board) => {
+        board.note('Show the price early', FIRST)
+        board.voting({})
+      }),
+    )
+    await page.getByTestId('voting-vote').tap()
+    await page.locator(CANVAS).tap({ position: FIRST })
+    await page.locator(CANVAS).tap({ position: FIRST })
+    await expect(dots(page, 0)).toHaveAttribute('data-count', '2')
+
+    const takeBack = page.getByTestId('voting-take-back')
+    await takeBack.tap()
+    await expect(takeBack).toHaveAttribute('aria-pressed', 'true')
+    await expect(page.getByTestId('voting-vote')).toHaveAttribute('aria-pressed', 'false')
+    await page.locator(CANVAS).tap({ position: FIRST })
+    await expect(dots(page, 0)).toHaveAttribute('data-count', '1')
+
+    // Choosing another tool puts the vote tool back to adding.
+    await page.keyboard.press('v')
+    await page.getByTestId('voting-vote').tap()
+    await expect(takeBack).toHaveAttribute('aria-pressed', 'false')
+    await page.locator(CANVAS).tap({ position: FIRST })
+    await expect(dots(page, 0)).toHaveAttribute('data-count', '2')
+  })
 })

@@ -198,6 +198,8 @@ function VotingRoundBar({ round }: { readonly round: VotingRound }) {
   const canEdit = useCanEdit()
   const me = useMe()
   const commands = useCommands()
+  const takingBack = useInteractionStore((state) => state.takingBack)
+  const setTakingBack = useInteractionStore((state) => state.setTakingBack)
   const tool = useInteractionStore((state) => state.tool)
   const setTool = useInteractionStore((state) => state.setTool)
   const votes = useRoundVotes(round.id)
@@ -310,22 +312,47 @@ function VotingRoundBar({ round }: { readonly round: VotingRound }) {
           {status}
         </span>
         {open && canEdit && me !== null && (
-          <button
-            type="button"
-            className="of-button"
-            aria-pressed={voting}
-            data-testid="voting-vote"
-            onClick={() => {
-              setTool(voting ? 'select' : 'dot')
-            }}
-          >
-            {voting ? 'Voting' : 'Vote'}
-          </button>
-        )}
-        {voting && (
-          <span className="of-voting__hint" data-testid="voting-hint">
-            Alt-click a dot to take it back
-          </span>
+          /*
+           * Two modes of the one tool, side by side. Taking a dot back was
+           * Alt-click only, which a finger cannot do: on a phone a misplaced
+           * vote could only be undone (audit 2026-10-08). Alt still takes one
+           * back while adding; the mode is the way that needs no key.
+           */
+          <div className="of-voting__modes" role="group" aria-label="Vote tool">
+            <button
+              type="button"
+              className="of-button"
+              aria-pressed={voting && !takingBack}
+              data-testid="voting-vote"
+              onClick={() => {
+                if (voting && !takingBack) setTool('select')
+                else {
+                  setTool('dot')
+                  setTakingBack(false)
+                }
+              }}
+            >
+              {voting && !takingBack ? 'Voting' : 'Vote'}
+            </button>
+            <button
+              type="button"
+              className="of-button"
+              aria-pressed={voting && takingBack}
+              data-testid="voting-take-back"
+              aria-label="Take back"
+              aria-description="Alt-click also takes one back"
+              data-tip="Alt-click also takes one back"
+              onClick={() => {
+                if (voting && takingBack) setTool('select')
+                else {
+                  setTool('dot')
+                  setTakingBack(true)
+                }
+              }}
+            >
+              Take back
+            </button>
+          </div>
         )}
         {open && canEdit && round.data.hidden && (
           <button

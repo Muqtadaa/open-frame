@@ -220,12 +220,20 @@ export interface ToolsSlice {
    * it for the duration of a gesture without changing the preference.
    */
   readonly snapToGrid: boolean
+  /**
+   * With the vote tool up, whether a press takes one of your dots back rather
+   * than putting one down. A mode, not only Alt: a finger has no Alt key, and
+   * a misplaced dot on a phone could only be undone (audit 2026-10-08).
+   * Choosing any tool puts it back to adding.
+   */
+  readonly takingBack: boolean
 
   setTool(tool: Tool): void
   /** Remembers what was chosen for the tool that makes `type`. */
   setToolOptions(type: string, options: unknown): void
   setWheelMode(mode: WheelMode): void
   setSnapToGrid(enabled: boolean): void
+  setTakingBack(on: boolean): void
   toggleSnapToGrid(): void
   toggleWheelMode(): void
 }
