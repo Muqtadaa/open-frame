@@ -51,8 +51,8 @@
  * Placement is NOT here any more.
  *
  * `top: calc(100% + 6px)` opens downward, which was right under a header on
- * the front door and put the whole list under the bottom of the window once
- * the same bell appeared in the status bar. No single direction can be right
+ * the front door and put the whole list under the bottom of the window when
+ * the same bell also sat in the status bar (on a board it is the Inbox now). No single direction can be right
  * for both, which is the tell that a direction was the wrong thing to write
  * down — `AnchoredSurface` picks one and clamps it. What is left here is what
  * the list LOOKS like.
