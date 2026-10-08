@@ -71,6 +71,16 @@ export async function goto(
   await reachable(page)
 }
 
+/**
+ * Goes to `url` and does NOT wait for the page to take input — for a
+ * spec that photographs or measures the start-up itself, where the page
+ * is held before input on purpose (a stalled entry module, the splash).
+ * A spec that uses this for anything else is racing the splash.
+ */
+export async function gotoBeforeInput(page: Page, url: string): Promise<void> {
+  await page.goto(url)
+}
+
 /** Reloads, and waits until the page takes input. See `goto`. */
 export async function reload(page: Page): Promise<void> {
   await page.reload()

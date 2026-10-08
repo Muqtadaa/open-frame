@@ -3,7 +3,7 @@ import { MUSIC_GENRES } from '@openframe/core/facilitation'
 
 import { buildBoard } from './boards.js'
 import { library, TRACKS } from './music.js'
-import { goto, reload, seedBoard } from './fixtures.js'
+import { goto, gotoBeforeInput, reload, seedBoard } from './fixtures.js'
 import { seedLocalBoard } from './seed.js'
 import { BOARD_URL, HOME_URL } from './routes.js'
 import { signedIn } from './signed-in.js'
@@ -522,7 +522,7 @@ for (const world of WORLDS) {
      */
     test('the splash, first load in a tab', async ({ page }) => {
       await page.route('**/main.tsx*', (route) => route.abort())
-      await goto(page, BOARD_URL)
+      await gotoBeforeInput(page, BOARD_URL)
       await page.locator('#of-splash img[data-loaded="true"]').waitFor()
       await snap(page, `${world}-splash-artwork`)
     })
@@ -533,7 +533,7 @@ for (const world of WORLDS) {
       })
       await page.clock.install()
       await page.route('**/main.tsx*', (route) => route.abort())
-      await goto(page, BOARD_URL)
+      await gotoBeforeInput(page, BOARD_URL)
       await page.clock.fastForward(13_000)
       await page.locator('#of-splash button').waitFor()
       await snap(page, `${world}-splash-quiet-stalled`)
