@@ -56,6 +56,7 @@ export const experimentType = defineObjectType<typeof EXPERIMENT_TYPE, Experimen
     const text = plainTextOf(object.data.text)
     const { method, status } = object.data
     return {
+      body: object.data.text,
       searchText: [text, method, status].filter(Boolean).join(' '),
       summary: text.trim() === '' ? 'Empty experiment' : text.slice(0, 120),
       gist: text.trim().slice(0, 120),

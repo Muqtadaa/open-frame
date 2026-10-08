@@ -56,6 +56,7 @@ export const pollType = defineObjectType<typeof POLL_TYPE, PollData>({
     const text = plainTextOf(object.data.text)
     const labels = object.data.options.map((option) => option.label)
     return {
+      body: object.data.text,
       searchText: [text, ...labels].filter(Boolean).join(' '),
       summary: text.trim() === '' ? 'Empty poll' : text.slice(0, 120),
       gist: text.trim().slice(0, 120),

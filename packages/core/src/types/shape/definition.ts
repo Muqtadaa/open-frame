@@ -74,6 +74,7 @@ export const shapeType = defineObjectType<typeof SHAPE_TYPE, ShapeData>({
   describe: (object) => {
     const text = plainTextOf(object.data.text)
     return {
+      body: object.data.text,
       searchText: text,
       summary:
         text.trim() === ''

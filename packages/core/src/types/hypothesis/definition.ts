@@ -54,6 +54,7 @@ export const hypothesisType = defineObjectType<typeof HYPOTHESIS_TYPE, Hypothesi
     const text = plainTextOf(object.data.text)
     const { status } = object.data
     return {
+      body: object.data.text,
       searchText: [text, status].filter(Boolean).join(' '),
       summary: text.trim() === '' ? 'Empty hypothesis' : text.slice(0, 120),
       gist: text.trim().slice(0, 120),
