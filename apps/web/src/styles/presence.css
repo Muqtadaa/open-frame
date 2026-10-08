@@ -110,9 +110,9 @@
  */
 /*
  * YOUR account, signed in or not: the app's own apparatus, set as quietly as
- * the theme toggle beside it. It shared the share button's bordered chip, so
+ * the icon buttons beside it. It shared the share button's bordered chip, so
  * "Sign in" was the only outlined control on the bar and the second loudest
- * thing on it — louder than the board's own history.
+ * thing on it — louder than anything that was about the board.
  */
 .of-status__account {
   display: flex;

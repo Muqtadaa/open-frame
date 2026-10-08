@@ -2,7 +2,7 @@
 
 Everything else in a session works as soon as it is deployed: the timer,
 reactions, dot voting, polls. Two features need the owner to do something
-first. Until then each one stays out of the way: the music button is hidden,
+first. Until then each one stays out of the way: the Session pill has no Music section,
 and the AI panel says "AI is not set up".
 
 ## Already in place
@@ -50,8 +50,8 @@ not finish", and the Worker's log says why.
 
 ## Session music ([ADR 0017](../adr/0017-facilitation-state-outside-the-document.md))
 
-Done: the catalogue lists all of Open Lo-Fi (166 tracks), and the music button
-appears on every board. The steps below are for adding tracks from anywhere
+Done: the catalogue lists all of Open Lo-Fi (166 tracks), and the Music section
+appears in every board's Session pill. The steps below are for adding tracks from anywhere
 else. Every track must be **CC0 1.0**.
 
 1. **Choose tracks** from [the candidates](../music/candidates.md), or find
@@ -83,6 +83,7 @@ else. Every track must be **CC0 1.0**.
    - From a terminal instead: `pnpm music:upload <folder>`, with wrangler
      logged in.
 
-**To check it:** open any board. The music button appears beside the timer.
+**To check it:** open any board and open the Session pill (Alt+T). The Music
+section sits below the timer.
 Choose a genre, press play, and open the board on a second device: both hear
 the same track at the same place.

@@ -988,23 +988,11 @@ says so ("Edit link copied"). Sharing a board of your own asks first, then
 moves it. It never reads "Shared" — the room's state is the readout's.
 
 **Faces** are the other people's: yours is the account's. Three at most and a
-count; the count opens everybody, you included. A face can be pressed to
-follow that person, and while you follow somebody the board says so along its
-top — "Following Ada", in their colour — with Stop.
+count; the count opens everybody, you included (see People and Following,
+below).
 
 **The Inbox** is one count for what is waiting for you — unread mentions plus
-agent changes this browser has not been shown yet — in the accent's wash while
-there is any, plain once there is not, and absent until there has been
-something. A mention is read by following it; an agent change is read by
-being looked at — closing the Inbox reads what was in it, so the count does
-not stay up for as long as the change is on the board. Read rows lose their
-accent edge but stay listed, with Revert, until they leave the log. Its sheet
-has a section each. A mention marks itself read and goes to its remark; an
-agent change has Show, which selects and frames what it touched and puts the
-sheet away, and Revert ("Taken back by <name>" once it is, with "2 objects
-kept, changed since" when a revert left some). A viewer sees the rows without
-Revert. A new agent change also arrives as a toast with
-Revert on it.
+agent changes this browser has not been shown yet (see Inbox, below).
 
 **Your account** is quiet apparatus, never an outlined chip. Pressing your
 name opens a sheet with who you are, "Sign out" (never on the press itself),
@@ -1030,6 +1018,80 @@ few more characters; and, last of all, on a phone's bar with the room out of
 reach, the readout is its dot, its word kept for a screen reader. Every control
 stays, inside the bar and clear of its neighbours, at every width; signed out,
 "Sign in" stays a word.
+
+### Inbox
+
+The Inbox is one count for what is waiting for you — unread mentions plus
+agent changes this browser has not been shown yet — in the accent's wash while
+there is any, plain once there is not, and absent until there has been
+something. A mention is read by following it; an agent change is read by
+being looked at — closing the Inbox reads what was in it, so the count does
+not stay up for as long as the change is on the board. Read rows lose their
+accent edge but stay listed, with Revert, until they leave the log. Its sheet
+has a section each. A mention marks itself read and goes to its remark; an
+agent change has Show, which selects and frames what it touched and puts the
+sheet away, and Revert ("Taken back by <name>" once it is, with "2 objects
+kept, changed since" when a revert left some). A viewer sees the rows without
+Revert. A new agent change also arrives as a toast with
+Revert on it.
+
+On the front door, where there are no agent changes, mentions keep their own
+bell (Discussion and Presence).
+
+### Version History
+
+"Version history…" in the board's menu, on a local board (kept in this
+browser) and a shared one (kept by the room, ADR 0019). A 320px sheet on
+paper, hung from the menu. An editor gets "Name this version" and Save; then
+the versions, newest first, each a full-width row reading its name or its
+time — "14:05 today", "yesterday", "Wed, 7 Oct", the year only when it is
+not this one — with the time under a name. A named version has Delete, which
+asks again as "Delete for good"; an automatic one has none. "Loading
+versions", "No earlier versions yet." and a failure that names what failed
+are the only other things it ever says. The keyboard lands on the newest
+version and stays inside until Escape hands it back to the menu.
+
+Choosing a version shows it on the canvas, read-only, and the navigation bar
+gives way to the preview's own: "Viewing 14:05 today", "Restore this version"
+for an editor, and "Back to now". The heading takes the keyboard and is
+announced; Escape is Back to now, which puts the keyboard on the board. Below
+520px the bar wraps, the title on its own line. **Restore keeps first:** the
+board as it is now becomes a version before anything is replaced, the toast
+says so, and if it cannot be kept nothing is restored. A restore is one undo
+step.
+
+### Board Overview
+
+What is on the board, in words — for arriving at a board somebody else made,
+and for anybody who cannot scan the canvas by eye. Alt+S, the board's menu,
+or the empty board's menu open it at the top centre, 440px at most; below
+520px it starts after the rail. It is not offered in a preview or on a board
+that cannot be read.
+
+The board's title, then one sentence — "3 objects: 2 sticky notes, 1 frame."
+— and, when something claims without grounds, "Citing nothing: 1 insight."
+Then a tree in reading order, "Citing nothing" first: each row its type and
+gist ("Frame: Interviews"), a container's count in mono at the row's end and
+a drawn chevron that opens it. Two hundred rows a level, then "N more — find
+on board", which opens search. The tree walks as a tree does (arrows, Home and
+End, right opens, left closes); Enter or a press on a row selects that object
+and brings it into view, and the chevron only opens. It drops from the top
+like a notice.
+
+### People and Following
+
+On a shared board, the people zone's "+N" opens "People on this board":
+everybody, you first as "Ada (you)", each a face in their colour with their
+initial, their name, and either "Follow Ada" — a pressed toggle with one name,
+`aria-pressed` saying whether it is on — or why they cannot be followed
+("Following someone", "No view to follow"). Choosing closes the sheet. The
+person you follow is always among the three faces on the bar.
+
+While you follow somebody, the top of the board says so in the notice's look:
+a dot in their colour, "Following Ada", and Stop; below 520px it runs from the
+rail to the gutter. Your view rides theirs. It stops when you press Stop,
+move the board yourself, or when they leave or follow somebody else, and
+"Following Ada" and "Stopped following Ada" are announced either way.
 
 ### Session Timer
 
@@ -1350,8 +1412,9 @@ cannot push it off the screen, and clear of the rail and Find. Typing `@`
 makes the composer a combobox for the mention list: `aria-expanded` and
 `aria-controls` only while the list is there, and a count that is announced.
 
-The **mentions bell** is a quiet chip at control height — the accent's wash and
-a bold count while unread — and opens a sheet like account and share.
+On the front door the **mentions bell** is a quiet chip at control height — the
+accent's wash and a bold count while unread — and opens a sheet like account
+and share. On a board, mentions are a section of the Inbox (Navigation Bar).
 **Presence** names people, not colours: a tag rides each peer's cursor and
 selection, dashed for selected and solid for editing; the bar shows 24px faces
 side by side, three at most and "+N", initials in page or panel colour. "+N" is
@@ -1436,7 +1499,8 @@ next surface inherits automatically — it has to be applied.
 
 ### Sheets
 
-Account, sign-in, share and the mentions list are one kind of thing, and
+Account, sign-in, share, the Inbox, the Session and the people list are one
+kind of thing, and
 behave as one: they take the keyboard as they open (`useFocusOnOpen`), close
 on Escape or a press anywhere else (`useDismiss`, captured before the board's
 keymap can also read the key), and hand the keyboard back to the control

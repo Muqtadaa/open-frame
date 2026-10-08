@@ -1,6 +1,6 @@
 # OpenFrame — Review Programme Plan (Architecture · E2E/QA · Design)
 
-> **Historical record, frozen 2026-10-03.** This describes the repository as it was when written. For the current state see [audit-2026-10-02.md](audit-2026-10-02.md) and [docs/architecture](../architecture/).
+> **Historical record, frozen 2026-10-03.** This describes the repository as it was when written. For the current state see [audit-2026-10-08.md](audit-2026-10-08.md) and [docs/architecture](../architecture/).
 
 ## Context
 
@@ -20,7 +20,7 @@ The branch `claude/blissful-goldberg-qy0eks` is identical to `main`, so the revi
 - **Design scope: refine, plus bolder chrome.** Keep the visual identity: ruled ground, After Hours, palette. `/impeccable bolder` and `typeset` may strengthen hierarchy in the inspector, rail and record line. There is no new visual world, and DESIGN.md is not replaced.
 - **Order: correctness fixes first**, then the three review reports, then the tracks.
 
-### Now executing: Track C (design) — C1 ✅ done (see [design-review.md](design-review.md)), C2 next
+### Track C (design) — C1 and C2 done; C3 done surface by surface (see [design-review.md](design-review.md))
 
 Tracks A and B wait for MCP. Step 1 of the execution order below was "correctness fixes first". For now it is limited to the design-owned fix, the unstyled `.of-button`, which rides with C2. The other correctness fixes resume with Tracks A and B.
 
@@ -44,7 +44,7 @@ Design work happens on `claude/blissful-goldberg-qy0eks`, with one commit per ph
 4. **Baselines for design work:** axe scans and visual goldens (B4).
 5. **Design phases C1 → C2 → C3**, running alongside the Track A perf and structure work (A2.3–4).
 
-### 📌 TODO (user request): revise Tracks A and B once the MCP build lands, so the MCP work is covered in the architecture and E2E effort
+### ✅ Done: Tracks A and B revised for the MCP build — see [tracks-ab-mcp.md](tracks-ab-mcp.md)
 
 ### ⏸ On hold: waiting for the MCP server build (Phase 5a)
 

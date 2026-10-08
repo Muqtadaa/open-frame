@@ -24,9 +24,10 @@ import { counted } from '../controls/counted.js'
  *
  * The list goes through `AnchoredSurface` rather than placing itself. It used
  * to open downward from the bell with `top: calc(100% + 6px)`, which was right
- * beneath a header and put the entire list below the bottom of the window as
- * soon as the same bell appeared in the status bar. Neither direction is
- * correct in both places, so neither is written down.
+ * beneath a header and put the entire list below the bottom of the window
+ * when the same bell also sat in the status bar. Neither direction is correct
+ * in both places, so neither is written down. On a board, mentions are now a
+ * section of the Inbox (`Inbox.tsx`); this bell is the front door's.
  */
 export function Mentions() {
   const { mentions, unread, keyFor, markRead } = useMentions()

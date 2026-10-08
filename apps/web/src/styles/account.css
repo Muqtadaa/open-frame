@@ -179,8 +179,9 @@
 
 /*
  * An icon button keeps its 30px floor on the bar. The rule above lets every
- * child shrink, which squeezed the theme toggle to 28 — under the target the
- * rest of the product keeps (DESIGN.md, Icon Buttons).
+ * child shrink, which squeezed an icon button (the theme toggle, when it sat
+ * here) to 28 — under the target the rest of the product keeps (DESIGN.md,
+ * Icon Buttons).
  */
 .of-status .of-icon-button {
   min-width: var(--of-hit-sm);

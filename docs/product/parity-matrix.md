@@ -1,7 +1,7 @@
 # Parity matrix
 
 ← [Documentation index](../README.md) · [PRODUCT.md](../../PRODUCT.md) ·
-[Current audit](../reviews/audit-2026-10-02.md)
+[Current audit](../reviews/audit-2026-10-08.md)
 
 OpenFrame set against Miro, FigJam, Excalidraw and tldraw: where it falls short
 of what someone switching from one of them would expect, and where it is ahead.
@@ -18,7 +18,8 @@ something else".
 **How true it is.**
 
 - OpenFrame's column was read from the code on `main` at `a6c8ae1`
-  (2026-10-05), and each entry names where it lives: under `apps/web/src`
+  (2026-10-05); the session and notification rows were re-read on 2026-10-08
+  after the facilitation work. Each entry names where it lives: under `apps/web/src`
   unless the path starts with `core/`, `collab/` (under `packages/`) or
   `apps/`. "Absent" means a search of
   `apps/`, `packages/`, `tools/` and `supabase/` found nothing.
@@ -66,7 +67,7 @@ The tiers come from the audit:
 | **Present**                        | Follow somebody's viewport (`canvas/use-follow.ts`). A presentation mode is **absent**.                                                                                                                       | **Unverified** for each competitor.                                            | **M**: frames already exist to step through.                               | Step through the decisions, each with what it stands on.                                                                           | Focus and announcement must move with each step.                                                              | Follow already carries a viewport; presenting is everyone following one person.              |
 | **Run the session**                | **Built.** Timer and music shared through the room, dot voting, polls, emoji reactions (`ui/SessionTimer.tsx`, `ui/SessionMusic.tsx`, `ui/VotingBanner.tsx`, `views/PollView.tsx`, `canvas/ReactionBar.tsx`). | FigJam: timer with music, voting sessions, stamps and emotes.                  | Parity.                                                                    | Votes and reactions land on typed objects, so "the most-voted insight and its evidence" is a question the board can answer.        | Listed for checking in [the validation checklist](../reviews/device-and-sr-validation.md#the-newer-surfaces). | Built on the room.                                                                           |
 | **Let AI sort it**                 | **Built.** Cluster with AI, reviewed before it is applied, on the rooms server (`apps/rooms/src/ai/`, `ui/ClusterReview.tsx`). Summaries are **absent**.                                                      | FigJam: an AI co-pilot that clusters and summarises sticky notes.              | Summaries: **S–M** on the same route and quota.                            | A summary can be **of the evidence under an insight**, with citations back to it, rather than of whatever sticky notes are nearby. | The review step is the accessible part; it already exists.                                                    | An AI change goes through the change log like an agent's, and can be reverted by anyone.     |
-| **Be told when something happens** | In-app only: the mentions bell and live comment announcements (`ui/Mentions.tsx`). Email and push are **absent**.                                                                                             | **Unverified** for each competitor.                                            | **M**: a sender and preferences, outside the room.                         | "An insight you wrote lost its last piece of evidence."                                                                            | Email is the most accessible channel there is.                                                                | Outside the room; Supabase already knows who is on a board.                                  |
+| **Be told when something happens** | In-app only: the Inbox on a board (mentions and agents' changes, `ui/Inbox.tsx`), the mentions bell on the front door, and live comment announcements. Email and push are **absent**.                         | **Unverified** for each competitor.                                            | **M**: a sender and preferences, outside the room.                         | "An insight you wrote lost its last piece of evidence."                                                                            | Email is the most accessible channel there is.                                                                | Outside the room; Supabase already knows who is on a board.                                  |
 
 ## Ecosystem breadth
 
@@ -111,12 +112,11 @@ This is a recommendation for the user to decide on, not a decision.
    frame next. It needs the export-formats question in PRODUCT.md answered first.
 2. **Bring the material in.** Plain text pasted as notes is small; CSV into
    evidence is the semantic version of the same thing.
-3. **Get yesterday's board back.** The largest of the five, and the one whose
-   absence costs the most on the day it is needed. Restoring as a new board
-   keeps it out of the live room's way.
-4. **Understand a board without seeing it.** A board summary, and how big this
-   is should be measured by the
-   [device and screen-reader runs](../reviews/device-and-sr-validation.md)
+3. **Get yesterday's board back.** Shipped since: version history, with
+   preview and restore ([ADR 0019](../adr/0019-version-history.md)).
+4. **Understand a board without seeing it.** Shipped since: the board overview
+   (`ui/BoardOverview.tsx`). How well it serves should still be measured by
+   the [device and screen-reader runs](../reviews/device-and-sr-validation.md)
    rather than guessed at.
 5. **Copy between boards and apps.**
 

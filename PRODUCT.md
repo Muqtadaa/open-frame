@@ -82,6 +82,17 @@ board over MCP through the same command layer, and every edit it makes to the
 board is recorded and can be reverted. Comments it leaves sit beside the board,
 as anyone's do, and are not part of that record.
 
+**Running a session:** a shared timer and shared background music in one
+Session control; dot voting with a hidden-until-revealed round and ranked
+results; poll cards answered on the board; emoji reactions on notes; people
+can follow one another's view. AI clustering groups selected notes into named
+themes as copies, after a review, and is undone as one change.
+
+**Finding your way back:** version history keeps earlier states of a board to
+preview and restore; a board overview lists what a board holds by frame and
+type without having to see it; one Inbox on the board gathers mentions and the
+changes agents have made.
+
 **The structured half:** eight semantic types — evidence, insight, hypothesis,
 experiment, decision, task, journey stage, requirement — each editable through a
 record panel driven by the type's own declarations. A plain note is promoted
