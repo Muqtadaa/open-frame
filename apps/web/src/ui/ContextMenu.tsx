@@ -16,6 +16,7 @@ import { DisclosureIcon } from '../controls/icons.js'
 import { useViewportSize } from '../controls/use-viewport-size.js'
 import { useCanEdit } from '../hooks/use-can-edit.js'
 import { useCommands } from '../hooks/use-commands.js'
+import { useExport } from '../hooks/use-export.js'
 import { useMe } from '../hooks/use-me.js'
 import { useVoteRound } from '../hooks/use-voting.js'
 import { clusterableCount } from '../app/ai-cluster.js'
@@ -81,6 +82,7 @@ export function ContextMenu() {
   // A copy from any OpenFrame tab in this browser lands here too.
   const hasCopy = useInteractionStore((state) => state.clipboard !== null)
   const commands = useCommands()
+  const exportAs = useExport()
   const me = useMe()
   const round = useVoteRound()
   const canEdit = useCanEdit()
@@ -212,6 +214,18 @@ export function ContextMenu() {
     const type = runtime.store.getObject(id)?.type
     return type !== undefined && runtime.registry.get(type)?.capabilities.selectsAsUnit === true
   })
+
+  /*
+   * A readout is of something that HOLDS things — a frame, a group — or of
+   * several things at once. One note's menu already fills a laptop window,
+   * and a readout of one note is that note; the board's menu takes the whole.
+   */
+  const exportable =
+    selected.length > 1 ||
+    selected.some((id) => {
+      const type = runtime.store.getObject(id)?.type
+      return type !== undefined && runtime.registry.get(type)?.capabilities.canHaveChildren === true
+    })
 
   /*
    * Only what EVERY selected object can derive or become — the intersection
@@ -502,6 +516,18 @@ export function ContextMenu() {
         disabled: !hasCopy,
       },
       { label: 'Duplicate', shortcut: 'Mod+D', run: () => commands.duplicateSelection() },
+      /*
+       * A frame, or several things, as a readout (ADR 0020) — beside Copy,
+       * because it is the other way what is selected leaves the board.
+       */
+      ...(exportable
+        ? [
+            {
+              label: 'Export as Markdown',
+              run: () => exportAs({ kind: 'objects', ids: selected }),
+            },
+          ]
+        : []),
     ],
     [
       {

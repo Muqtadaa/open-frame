@@ -5,6 +5,7 @@ import { AnchoredSurface } from '../controls/AnchoredSurface.js'
 import { ExpandIcon } from '../controls/icons.js'
 import { useAnchoredTo } from '../controls/use-anchor.js'
 import { useDismiss } from '../controls/use-dismiss.js'
+import { useExport } from '../hooks/use-export.js'
 import { useInteractionStore } from '../interaction/interaction-store.js'
 import { useOpenFrame } from '../runtime/context.js'
 import { formatKeys } from '../scene/shortcuts.js'
@@ -15,10 +16,8 @@ import { useServices } from '../runtime/services.js'
  *
  * The name renames itself on a press, as it always has; this is the rest:
  * the board's history, which had a clock face of its own on the bar among
- * the session's tools, and — where there are no accounts to keep it in — the
- * page's theme. Offered only when there is something besides Rename, because
- * a menu holding one entry the name already does is a second way to the same
- * place.
+ * the session's tools; the overview; a readout of it to take away; and —
+ * where there are no accounts to keep it in — the page's theme.
  */
 // Loaded when it is first opened: most visits to a board never look back.
 const VersionHistorySheet = lazy(() =>
@@ -28,6 +27,7 @@ const VersionHistorySheet = lazy(() =>
 export function BoardMenu({ onRename }: { readonly onRename: (() => void) | null }) {
   const { history } = useOpenFrame()
   const { accounts } = useServices()
+  const exportAs = useExport()
   const [open, setOpen] = useState<'menu' | 'history' | null>(null)
   const { ref, anchor, surface } = useAnchoredTo<HTMLButtonElement>(open !== null)
   const menu = useRef<HTMLDivElement>(null)
@@ -46,7 +46,6 @@ export function BoardMenu({ onRename }: { readonly onRename: (() => void) | null
   const hasHistory = history !== null && history !== undefined
   // The theme lives in the account sheet; without accounts it lives here.
   const worldHere = !accounts.enabled
-  if (!hasHistory && !worldHere) return null
 
   const step = (event: KeyboardEvent<HTMLDivElement>): void => {
     if (event.key === 'Tab') {
@@ -157,6 +156,19 @@ export function BoardMenu({ onRename }: { readonly onRename: (() => void) | null
               <span className="of-menu__shortcut" aria-hidden="true">
                 {formatKeys('Alt+S')}
               </span>
+            </button>
+            <button
+              type="button"
+              role="menuitem"
+              tabIndex={-1}
+              className="of-menu__item"
+              data-testid="board-menu-export"
+              onClick={() => {
+                exportAs({ kind: 'board' })
+                close()
+              }}
+            >
+              Export as Markdown
             </button>
             {worldHere && (
               <button
