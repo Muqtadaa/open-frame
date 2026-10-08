@@ -1,6 +1,16 @@
 import type { Page } from '@playwright/test'
 
-import { boxOf, CANVAS, expect, overlaps, saved, seedBoard, test, undo } from './fixtures.js'
+import {
+  boxOf,
+  CANVAS,
+  overlaps,
+  reload,
+  saved,
+  seedBoard,
+  test,
+  undo,
+  expect,
+} from './fixtures.js'
 import { buildBoard } from './boards.js'
 
 test.use({ board: 'fresh' })
@@ -66,7 +76,7 @@ test('is one undo step, and survives a reload', async ({ page }) => {
 
   await page.getByTestId('reaction-bar').getByRole('button', { name: 'Love it' }).click()
   await saved(page)
-  await page.reload()
+  await reload(page)
   await expect(chip(page, 'heart')).toHaveText(/1/)
 })
 

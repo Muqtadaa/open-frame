@@ -1,5 +1,5 @@
 import { expect, test, type Page } from '@playwright/test'
-import { boxOf } from './fixtures.js'
+import { boxOf, goto } from './fixtures.js'
 
 import { BOARD_URL } from './routes.js'
 
@@ -13,7 +13,7 @@ import { BOARD_URL } from './routes.js'
  */
 // Local rather than the shared fixture: it waits for the splash to go, which `openBoard` does not.
 async function board(page: Page): Promise<void> {
-  await page.goto(BOARD_URL)
+  await goto(page, BOARD_URL)
   await expect(page.getByTestId('tool-select')).toBeVisible()
   /*
    * Drawn is not ready: a key pressed the moment the rail appears can arrive

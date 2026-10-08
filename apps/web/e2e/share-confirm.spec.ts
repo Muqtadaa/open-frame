@@ -2,6 +2,7 @@ import { expect, test } from '@playwright/test'
 
 import { BOARD_URL } from './routes.js'
 import { signedIn } from './signed-in.js'
+import { goto } from './fixtures.js'
 
 /**
  * Sharing a board that lives only in this browser MOVES it, so it asks first.
@@ -13,7 +14,7 @@ import { signedIn } from './signed-in.js'
  */
 test.beforeEach(async ({ page }) => {
   await signedIn(page, [])
-  await page.goto(BOARD_URL)
+  await goto(page, BOARD_URL)
   await page.waitForSelector('[data-testid="status-bar"]')
   await page.getByTestId('board-title').click()
   await page.getByTestId('board-title-input').fill('Still here')

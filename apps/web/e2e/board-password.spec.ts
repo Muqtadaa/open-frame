@@ -1,6 +1,7 @@
 import { expect, test, type Page } from '@playwright/test'
 
 import { signedIn } from './signed-in.js'
+import { goto } from './fixtures.js'
 
 const KEY = 'e'.repeat(32)
 const TOKEN = 'c'.repeat(32)
@@ -33,7 +34,7 @@ test('asks for the password instead of looking like a broken connection', async 
   await signedIn(page, [])
   await lockedRoom(page, { with: TOKEN })
 
-  await page.goto(`/?room=${BOARD}&k=${KEY}`)
+  await goto(page, `/?room=${BOARD}&k=${KEY}`)
 
   const locked = page.getByTestId('board-locked')
   await expect(locked).toBeVisible()
@@ -54,7 +55,7 @@ test('says the password was wrong, and keeps asking', async ({ page }) => {
     })
   })
 
-  await page.goto(`/?room=${BOARD}&k=${KEY}`)
+  await goto(page, `/?room=${BOARD}&k=${KEY}`)
   await expect(page.getByTestId('board-locked')).toBeVisible()
 
   await page.getByTestId('board-password').fill('not it')
@@ -88,7 +89,7 @@ test('remembers the token and reconnects with it', async ({ page }) => {
     })
   })
 
-  await page.goto(`/?room=${BOARD}&k=${KEY}`)
+  await goto(page, `/?room=${BOARD}&k=${KEY}`)
   await expect(page.getByTestId('board-locked')).toBeVisible()
 
   await page.getByTestId('board-password').fill('open sesame')
@@ -123,7 +124,7 @@ test('lets the owner straight in, without ever asking', async ({ page }) => {
   await signedIn(page, [{ id: BOARD, title: 'Mine', role: 'owner' }])
   const sockets = await lockedRoom(page, { with: TOKEN })
 
-  await page.goto(`/?room=${BOARD}&k=${KEY}`)
+  await goto(page, `/?room=${BOARD}&k=${KEY}`)
   await page.waitForSelector('[data-testid="status-bar"]')
 
   // `signed-in.ts` hands an owner 'd' * 32, exactly as `my_boards()` hands
@@ -147,7 +148,7 @@ test('never puts the owner key in the page URL', async ({ page }) => {
   await signedIn(page, [{ id: BOARD, title: 'Mine', role: 'owner' }])
   await lockedRoom(page, { with: TOKEN })
 
-  await page.goto(`/?room=${BOARD}&k=${KEY}`)
+  await goto(page, `/?room=${BOARD}&k=${KEY}`)
   await page.waitForSelector('[data-testid="status-bar"]')
   await expect(page.getByTestId('board-locked')).toHaveCount(0)
 
@@ -179,7 +180,7 @@ test('a gate that arrives during the brand hold still gets the keyboard', async 
   // needs, so the gate arrives under it whatever the machine's speed.
   await page.clock.install()
   await lockedRoom(page, { with: TOKEN })
-  await page.goto(`/?room=${BOARD}&k=${KEY}`)
+  await goto(page, `/?room=${BOARD}&k=${KEY}`)
   await expect(page.getByTestId('board-locked')).toBeVisible()
   await expect(page.getByTestId('board-password')).toBeFocused()
 })
@@ -195,7 +196,7 @@ test.describe('as a dialog', () => {
         body: JSON.stringify({ error: 'That is not the password' }),
       })
     })
-    await page.goto(`/?room=${BOARD}&k=${KEY}`)
+    await goto(page, `/?room=${BOARD}&k=${KEY}`)
     await expect(page.getByTestId('board-locked')).toBeVisible()
   })
 

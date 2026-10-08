@@ -1,6 +1,6 @@
 import { expect, test, type Page } from '@playwright/test'
 
-import { CANVAS, EDITOR, boxOf, saved, viewOf } from './fixtures.js'
+import { boxOf, CANVAS, EDITOR, goto, reload, saved, viewOf } from './fixtures.js'
 import { BOARD_URL } from './routes.js'
 
 /**
@@ -28,7 +28,7 @@ async function createSticky(page: Page, x: number, y: number, text: string): Pro
 }
 
 test.beforeEach(async ({ page }) => {
-  await page.goto(BOARD_URL)
+  await goto(page, BOARD_URL)
   // Each test starts from a clean local database.
   await page.evaluate(async () => {
     await new Promise<void>((resolve) => {
@@ -38,7 +38,7 @@ test.beforeEach(async ({ page }) => {
       request.onblocked = () => resolve()
     })
   })
-  await page.reload()
+  await reload(page)
   await expect(page.locator(CANVAS)).toBeVisible()
   /*
    * Also wait for the toolbar. A visible canvas only means React rendered;
@@ -62,7 +62,7 @@ test('persists across a reload', { tag: '@smoke' }, async ({ page }) => {
   await createSticky(page, 300, 250, 'Survives a reload')
 
   await saved(page)
-  await page.reload()
+  await reload(page)
 
   await expect(page.locator(STICKY)).toHaveCount(1)
   await expect(page.locator(STICKY)).toContainText('Survives a reload')

@@ -2,6 +2,7 @@ import { expect, test, type Page, type WebSocketRoute } from '@playwright/test'
 
 import { buildBoard } from './boards.js'
 import { signedIn } from './signed-in.js'
+import { goto } from './fixtures.js'
 
 const KEY = 'e'.repeat(32)
 const BOARD = 'brd_abcdefgh12345678'
@@ -44,7 +45,7 @@ test('says so, instead of freezing, when the owner deletes the board', async ({ 
   await signedIn(page, [])
   const deleteTheBoard = await roomThatCanBeDeleted(page)
 
-  await page.goto(`/?room=${BOARD}&k=${KEY}`)
+  await goto(page, `/?room=${BOARD}&k=${KEY}`)
   await page.waitForSelector('[data-testid="status-bar"]')
   await expect(page.getByTestId('board-gone')).toHaveCount(0)
 
@@ -71,7 +72,7 @@ test('says so, instead of freezing, when the owner deletes the board', async ({ 
 test('is named, takes the keyboard to Keep a copy, and holds it', async ({ page }) => {
   await signedIn(page, [])
   const deleteTheBoard = await roomThatCanBeDeleted(page)
-  await page.goto(`/?room=${BOARD}&k=${KEY}`)
+  await goto(page, `/?room=${BOARD}&k=${KEY}`)
   await page.waitForSelector('[data-testid="status-bar"]')
   await deleteTheBoard()
 
@@ -106,7 +107,7 @@ test('drops the local copy of a board that was deleted under you', async ({ page
   await signedIn(page, [])
   const deleteTheBoard = await roomThatCanBeDeleted(page)
 
-  await page.goto(`/?room=${BOARD}&k=${KEY}`)
+  await goto(page, `/?room=${BOARD}&k=${KEY}`)
   await page.waitForSelector('[data-testid="status-bar"]')
 
   // A board with something in it, WRITTEN. Autosave coalesces, so the document
@@ -139,7 +140,7 @@ test('drops the local copy of a board that was deleted under you', async ({ page
 test('keeps a copy of what was on screen as a board of your own', async ({ page }) => {
   await signedIn(page, [])
   const deleteTheBoard = await roomThatCanBeDeleted(page)
-  await page.goto(`/?room=${BOARD}&k=${KEY}`)
+  await goto(page, `/?room=${BOARD}&k=${KEY}`)
   await page.waitForSelector('[data-testid="status-bar"]')
 
   await page.keyboard.press('s')
@@ -177,7 +178,7 @@ test('keeps the pictures, including one nobody had scrolled to', async ({ page }
     fetched += 1
     return route.fulfill({ status: 200, contentType: 'image/png', body: PNG })
   })
-  await page.goto(`/?room=${BOARD}&k=${KEY}`)
+  await goto(page, `/?room=${BOARD}&k=${KEY}`)
   await page.waitForSelector('[data-testid="status-bar"]')
 
   const board = buildBoard((b) => {

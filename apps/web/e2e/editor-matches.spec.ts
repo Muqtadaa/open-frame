@@ -1,6 +1,6 @@
 import { expect, test, type Page } from '@playwright/test'
 
-import { CANVAS } from './fixtures.js'
+import { CANVAS, goto } from './fixtures.js'
 import { BOARD_URL } from './routes.js'
 
 /**
@@ -29,7 +29,7 @@ async function lines(page: Page, selector: string): Promise<{ font: string; line
 }
 
 test.beforeEach(async ({ page }) => {
-  await page.goto(BOARD_URL)
+  await goto(page, BOARD_URL)
   await expect(page.getByTestId('tool-select')).toBeVisible()
 })
 

@@ -1,5 +1,5 @@
 import { expect, test } from '@playwright/test'
-import { useClipboard } from './fixtures.js'
+import { goto, useClipboard } from './fixtures.js'
 
 import { BOARD_URL, HOME_URL } from './routes.js'
 import { signedIn } from './signed-in.js'
@@ -14,7 +14,7 @@ import { signedIn } from './signed-in.js'
  * to the page whichever way it was answered.
  */
 test('the sign-in sheet takes the keyboard and gives it back', async ({ page }) => {
-  await page.goto(BOARD_URL)
+  await goto(page, BOARD_URL)
   await page.waitForSelector('[data-testid="status-bar"]')
   const trigger = page.getByTestId('sign-in')
 
@@ -31,7 +31,7 @@ test('the sign-in sheet takes the keyboard and gives it back', async ({ page }) 
 
 test('the account sheet takes the keyboard', async ({ page }) => {
   await signedIn(page, [])
-  await page.goto(BOARD_URL)
+  await goto(page, BOARD_URL)
   await page.getByTestId('account').click()
   await expect(
     page.getByTestId('account-sheet').getByRole('button', { name: 'Sign out' }),
@@ -41,7 +41,7 @@ test('the account sheet takes the keyboard', async ({ page }) => {
 test('the share sheet closes on a press elsewhere', async ({ page, context }) => {
   await useClipboard(context)
   await signedIn(page, [{ id: 'brd_aaaaaaaa11111111', title: 'Mine', role: 'owner' }])
-  await page.goto(`/?room=brd_aaaaaaaa11111111&k=${'a'.repeat(32)}`)
+  await goto(page, `/?room=brd_aaaaaaaa11111111&k=${'a'.repeat(32)}`)
   // Mine once the account has said so; until then the chip is an editor's.
   await expect(page.getByTestId('share-board')).toHaveAttribute('aria-description', /Both links/)
   await page.getByTestId('share-board').click()
@@ -52,7 +52,7 @@ test('the share sheet closes on a press elsewhere', async ({ page, context }) =>
 
 test('a delete confirmation takes the keyboard, and Escape keeps the board', async ({ page }) => {
   await signedIn(page, [{ id: 'brd_aaaaaaaa11111111', title: 'Mine', role: 'owner' }])
-  await page.goto(HOME_URL)
+  await goto(page, HOME_URL)
   const row = page.getByTestId('home-boards').locator('li').first()
   const remove = row.getByTestId('delete-board')
   await remove.focus()
@@ -75,7 +75,7 @@ test('a delete confirmation takes the keyboard, and Escape keeps the board', asy
  * the page in a different register, and an error nothing pointed at.
  */
 test('the sign-in form says what is wrong, beside the field', async ({ page }) => {
-  await page.goto(HOME_URL)
+  await goto(page, HOME_URL)
   const email = page.getByLabel('Email')
   await email.fill('not-an-email')
   await page.getByLabel('Password').fill('secret12')
@@ -90,7 +90,7 @@ test('the sign-in form says what is wrong, beside the field', async ({ page }) =
 })
 
 test('the sign-up name says who sees it, and keeps saying so', async ({ page }) => {
-  await page.goto(HOME_URL)
+  await goto(page, HOME_URL)
   await page.getByRole('button', { name: 'Create an account' }).click()
   const name = page.getByLabel('Name')
   await name.fill('Sam')
@@ -104,7 +104,7 @@ test('the sign-up name says who sees it, and keeps saying so', async ({ page }) 
  */
 test('the front door account chip opens the account, it does not sign out', async ({ page }) => {
   await signedIn(page, [])
-  await page.goto(HOME_URL)
+  await goto(page, HOME_URL)
   const chip = page.getByTestId('home-account')
   await chip.click()
   const sheet = page.getByTestId('account-sheet')

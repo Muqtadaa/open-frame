@@ -1,7 +1,7 @@
 import { expect, test, type Page } from '@playwright/test'
 import { richFromPlain } from '@openframe/core'
 import { buildBoard } from './boards.js'
-import { boxOf, CANVAS, seedBoard } from './fixtures.js'
+import { boxOf, CANVAS, goto, reload, seedBoard } from './fixtures.js'
 import { library, TRACKS } from './music.js'
 
 import { BOARD_URL, HOME_URL } from './routes.js'
@@ -42,7 +42,7 @@ test('the front door does not scroll sideways', async ({ page }) => {
       },
     ],
   })
-  await page.goto(HOME_URL)
+  await goto(page, HOME_URL)
   await page.waitForSelector('[data-testid="home-boards"] li')
   expect(await overflow(page)).toBeLessThanOrEqual(0)
 })
@@ -54,7 +54,7 @@ test('a board is named in full and dated on one line', async ({ page }) => {
     ...BOARDS,
     { id: 'brd_cccccccccccccccc', title: 'Q4 roadmap', role: 'viewer' as const },
   ])
-  await page.goto(HOME_URL)
+  await goto(page, HOME_URL)
   await page.waitForSelector('[data-testid="home-boards"] li')
 
   const rows = await page.evaluate(() =>
@@ -101,7 +101,7 @@ test('a board is named in full and dated on one line', async ({ page }) => {
 
 test('a confirmation reads as a sentence, inside the screen', async ({ page }) => {
   await signedIn(page, BOARDS)
-  await page.goto(HOME_URL)
+  await goto(page, HOME_URL)
   const row = page.getByTestId('home-boards').locator('li').first()
   await row.getByTestId('delete-board').click()
   const what = row.getByTestId('board-confirm-what')
@@ -112,7 +112,7 @@ test('a confirmation reads as a sentence, inside the screen', async ({ page }) =
 
 test("the board's bar fits, with the account as a face", async ({ page }) => {
   await signedIn(page, [])
-  await page.goto(BOARD_URL)
+  await goto(page, BOARD_URL)
   await page.waitForSelector('[data-testid="status-bar"]')
   const bar = await boxOf(page.getByTestId('status-bar'))
   expect(bar.x).toBeGreaterThanOrEqual(0)
@@ -130,7 +130,7 @@ test("the board's bar fits, with the account as a face", async ({ page }) => {
  * button.
  */
 test('signed out, the bar still says Sign in', async ({ page }) => {
-  await page.goto(BOARD_URL)
+  await goto(page, BOARD_URL)
   await page.waitForSelector('[data-testid="status-bar"]')
   const signIn = page.getByTestId('sign-in')
   await expect(signIn).toHaveText('Sign in')
@@ -141,7 +141,7 @@ test('signed out, the bar still says Sign in', async ({ page }) => {
 })
 
 test('the page can be zoomed', async ({ page }) => {
-  await page.goto(HOME_URL)
+  await goto(page, HOME_URL)
   const viewport = await page.locator('meta[name="viewport"]').getAttribute('content')
   expect(viewport).not.toMatch(/user-scalable\s*=\s*no/)
   expect(viewport).not.toMatch(/maximum-scale\s*=\s*1(\.0)?\b/)
@@ -167,7 +167,7 @@ test.describe('a narrow window with a mouse', () => {
         },
       ],
     })
-    await page.goto(HOME_URL)
+    await goto(page, HOME_URL)
     await page.waitForSelector('[data-testid="home-boards"] li')
     expect(await overflow(page)).toBeLessThanOrEqual(0)
   })
@@ -177,7 +177,7 @@ test.describe('a narrow window with a mouse', () => {
    * the window's edge: the gutter every other floating thing keeps was gone.
    */
   test('the zoom cluster keeps its gutter', async ({ page }) => {
-    await page.goto(BOARD_URL)
+    await goto(page, BOARD_URL)
     const cluster = page.getByTestId('zoom-control')
     await expect(cluster.getByTestId('undo')).toBeVisible()
     const box = await cluster.boundingBox()
@@ -194,7 +194,7 @@ test.describe('a narrow window with a mouse', () => {
    */
   test('the version bar wraps rather than running off the screen', async ({ page }) => {
     await page.clock.install()
-    await page.goto(BOARD_URL)
+    await goto(page, BOARD_URL)
     await page.waitForSelector('[data-testid="status-bar"]')
     // By hand: `place` clicks away at a point off a phone's screen.
     await page.keyboard.press('s')
@@ -225,7 +225,7 @@ test.describe('a narrow window with a mouse', () => {
 test('the comments panel is a sheet along the bottom, clear of Find', async ({ page }) => {
   await signedIn(page, [{ id: 'brd_abcdefgh12345678', title: 'Shared', role: 'owner' }])
   await page.routeWebSocket(/\/room\//, () => undefined)
-  await page.goto(`/?room=brd_abcdefgh12345678&k=${'e'.repeat(32)}`)
+  await goto(page, `/?room=brd_abcdefgh12345678&k=${'e'.repeat(32)}`)
   await page.waitForSelector('[data-testid="status-bar"]')
   await page.getByTestId('tool-comment').click()
   const panel = page.getByTestId('comment-panel')
@@ -249,7 +249,7 @@ test('the comments panel is a sheet along the bottom, clear of Find', async ({ p
  * secondary floor is the product's operating size, 40.
  */
 test('a finger gets 40px targets on the board', async ({ page }) => {
-  await page.goto(BOARD_URL)
+  await goto(page, BOARD_URL)
   await page.waitForSelector('[data-testid="status-bar"]')
   await page.getByTestId('tool-sticky').tap()
   await page.locator('[data-testid="canvas"]').tap({ position: { x: 200, y: 220 } })
@@ -267,7 +267,7 @@ test('a finger gets 40px targets on the board', async ({ page }) => {
 
 test('the workspace tabs are a target, not a label', async ({ page }) => {
   await signedIn(page, BOARDS)
-  await page.goto(HOME_URL)
+  await goto(page, HOME_URL)
   const tab = page.getByTestId('workspace-all')
   await expect(tab).toBeVisible()
   const box = await tab.boundingBox()
@@ -280,7 +280,7 @@ test('the workspace tabs are a target, not a label', async ({ page }) => {
  * there it moved into the account sheet — two places to look for one thing.
  */
 test('version history is in the board’s menu at phone width too', async ({ page }) => {
-  await page.goto(BOARD_URL)
+  await goto(page, BOARD_URL)
   await page.waitForSelector('[data-testid="status-bar"]')
   await page.getByTestId('board-menu').click()
   await page.getByTestId('board-menu-history').click()
@@ -358,7 +358,7 @@ test.describe('surfaces at phone width', () => {
   })
 
   test('the session sheet starts after the rail', async ({ page }) => {
-    await page.goto(BOARD_URL)
+    await goto(page, BOARD_URL)
     await page.waitForSelector('[data-testid="status-bar"]')
     await page.getByTestId('session-button').click()
     await expect(page.getByTestId('timer-start')).toBeVisible()
@@ -366,7 +366,7 @@ test.describe('surfaces at phone width', () => {
   })
 
   test('the account sheet starts after the rail, and fits', async ({ page }) => {
-    await page.goto(BOARD_URL)
+    await goto(page, BOARD_URL)
     await page.waitForSelector('[data-testid="status-bar"]')
     await page.getByTestId('sign-in').click()
     await docked(page, 'account-surface')
@@ -443,7 +443,7 @@ for (const width of [390, 320]) {
       // Signed in, on a shared board: the bar at its fullest, with Share on it.
       await signedIn(page, [{ id: 'brd_abcdefgh12345678', title: 'Shared', role: 'owner' }])
       await page.routeWebSocket(/\/room\//, () => undefined)
-      await page.goto(`/?room=brd_abcdefgh12345678&k=${'e'.repeat(32)}`)
+      await goto(page, `/?room=brd_abcdefgh12345678&k=${'e'.repeat(32)}`)
       await page.waitForSelector('[data-testid="status-bar"]')
       for (const id of ['board-exit', 'share-board']) {
         const box = await boxOf(page.getByTestId(id))
@@ -453,7 +453,7 @@ for (const width of [390, 320]) {
     })
 
     test('undo and redo stay on screen', async ({ page }) => {
-      await page.goto(BOARD_URL)
+      await goto(page, BOARD_URL)
       await expect(page.getByTestId('undo')).toBeAttached()
       await onScreen(page, 'undo')
       await onScreen(page, 'redo')
@@ -461,7 +461,7 @@ for (const width of [390, 320]) {
     })
 
     test('every arrange control stays on screen', async ({ page }) => {
-      await page.goto(BOARD_URL)
+      await goto(page, BOARD_URL)
       await seedBoard(
         page,
         buildBoard((board) => {
@@ -478,7 +478,7 @@ for (const width of [390, 320]) {
     })
 
     test('the listen prompt stays on screen', async ({ page }) => {
-      await page.goto(BOARD_URL)
+      await goto(page, BOARD_URL)
       await library(page, TRACKS)
       await page.evaluate(() => {
         const now = Date.now()
@@ -498,7 +498,7 @@ for (const width of [390, 320]) {
           }),
         )
       })
-      await page.reload()
+      await reload(page)
       await expect(page.getByTestId('music-prompt')).toBeVisible()
       await onScreen(page, 'music-prompt-listen')
       await onScreen(page, 'music-prompt-dismiss')

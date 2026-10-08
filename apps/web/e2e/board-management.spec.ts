@@ -2,6 +2,7 @@ import { expect, test, type Page } from '@playwright/test'
 
 import { HOME_URL } from './routes.js'
 import { seedLocalBoard } from './seed.js'
+import { goto, reload } from './fixtures.js'
 
 /**
  * Managing boards from the list, which until now you could not do at all.
@@ -29,7 +30,7 @@ async function seedBoards(page: Page, names: readonly string[]): Promise<void> {
   for (const name of names) {
     await seedLocalBoard(page, name.replace(/[^a-z0-9]/g, ''), name)
   }
-  await page.goto(HOME_URL)
+  await goto(page, HOME_URL)
   await expect(page.getByTestId('home-boards').locator('li')).toHaveCount(names.length)
 }
 
@@ -43,7 +44,7 @@ test.describe('renaming', () => {
 
     await expect(page.getByTestId('home-boards')).toContainText('Pricing research')
 
-    await page.reload()
+    await reload(page)
     // The title in the list is a COPY of the document's. A rename that only
     // changed the row would be undone the moment the board was opened.
     await expect(page.getByTestId('home-boards')).toContainText('Pricing research')
@@ -88,7 +89,7 @@ test.describe('deleting', () => {
 
     await expect(page.getByTestId('home-boards').locator('li')).toHaveCount(1)
 
-    await page.reload()
+    await reload(page)
     await expect(page.getByTestId('home-boards').locator('li')).toHaveCount(1)
   })
 
@@ -121,7 +122,7 @@ test.describe('pinning', () => {
     await expect(rows.nth(0)).toContainText('oldest')
     await expect(rows.nth(0)).toHaveAttribute('data-pinned', 'yes')
 
-    await page.reload()
+    await reload(page)
     await expect(rows.nth(0)).toContainText('oldest')
   })
 

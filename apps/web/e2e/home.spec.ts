@@ -1,6 +1,6 @@
 import { expect, test } from '@playwright/test'
 
-import { boxOf, CANVAS, overlaps } from './fixtures.js'
+import { boxOf, CANVAS, goto, overlaps } from './fixtures.js'
 import { BOARD_URL, HOME_URL } from './routes.js'
 import { seedLocalBoard } from './seed.js'
 import { signedIn } from './signed-in.js'
@@ -17,7 +17,7 @@ const HOME = '[data-testid="home"]'
 
 test.describe('arriving with nothing', () => {
   test('lands on the front door rather than a board', async ({ page }) => {
-    await page.goto(HOME_URL)
+    await goto(page, HOME_URL)
 
     await expect(page.locator(HOME)).toBeVisible()
     await expect(page.locator(CANVAS)).toHaveCount(0)
@@ -34,7 +34,7 @@ test.describe('arriving with nothing', () => {
    * anybody — covered below, under "links that already exist".
    */
   test('offers signing in, and no way to start a board without doing so', async ({ page }) => {
-    await page.goto(HOME_URL)
+    await goto(page, HOME_URL)
 
     await expect(page.getByLabel('Email')).toBeVisible()
     await expect(page.getByLabel('Password')).toBeVisible()
@@ -50,7 +50,7 @@ test.describe('arriving with nothing', () => {
    * not an empty state, it is a gap.
    */
   test('shows no board list at all, rather than an empty one', async ({ page }) => {
-    await page.goto(HOME_URL)
+    await goto(page, HOME_URL)
 
     await expect(page.getByTestId('home-boards')).toHaveCount(0)
     await expect(page.getByTestId('home-empty')).toHaveCount(0)
@@ -73,7 +73,7 @@ test.describe('boards already in this browser', () => {
   test('opens by id and is listed when you come back', { tag: '@smoke' }, async ({ page }) => {
     await seedLocalBoard(page, 'one')
 
-    await page.goto(HOME_URL)
+    await goto(page, HOME_URL)
 
     const boards = page.getByTestId('home-boards')
     await expect(boards).toBeVisible()
@@ -84,7 +84,7 @@ test.describe('boards already in this browser', () => {
     await seedLocalBoard(page, 'one')
     await seedLocalBoard(page, 'two')
 
-    await page.goto(HOME_URL)
+    await goto(page, HOME_URL)
     await expect(page.getByTestId('home-boards').locator('li')).toHaveCount(2)
   })
 })
@@ -96,14 +96,14 @@ test.describe('links that already exist', () => {
    * exactly like the app working.
    */
   test('a room link still opens its board directly', async ({ page }) => {
-    await page.goto('/?room=brd_abcdefgh12345678')
+    await goto(page, '/?room=brd_abcdefgh12345678')
 
     await expect(page.locator(CANVAS)).toBeVisible({ timeout: 15_000 })
     await expect(page.locator(HOME)).toHaveCount(0)
   })
 
   test('a local board link opens its board directly', async ({ page }) => {
-    await page.goto(BOARD_URL)
+    await goto(page, BOARD_URL)
 
     await expect(page.locator(CANVAS)).toBeVisible({ timeout: 15_000 })
     await expect(page.locator(HOME)).toHaveCount(0)
@@ -114,7 +114,7 @@ test.describe('links that already exist', () => {
    * a person can recover from.
    */
   test('a mangled link lands on the front door instead of failing', async ({ page }) => {
-    await page.goto('/?board=not%20a%20board%20id')
+    await goto(page, '/?board=not%20a%20board%20id')
 
     await expect(page.locator(HOME)).toBeVisible()
   })
@@ -127,7 +127,7 @@ test.describe('links that already exist', () => {
  */
 test.describe('the world, from the front door', () => {
   test('is chosen here, and the board opens in it', async ({ page }) => {
-    await page.goto(HOME_URL)
+    await goto(page, HOME_URL)
     const toggle = page.getByRole('button', { name: 'After Hours theme' })
     await expect(toggle).toHaveAttribute('aria-pressed', 'false')
 
@@ -135,7 +135,7 @@ test.describe('the world, from the front door', () => {
     await expect(toggle).toHaveAttribute('aria-pressed', 'true')
     await expect(page.locator('html')).toHaveAttribute('data-theme', 'after-hours')
 
-    await page.goto(BOARD_URL)
+    await goto(page, BOARD_URL)
     await expect(page.locator('html')).toHaveAttribute('data-theme', 'after-hours')
     // And the board's own switch, in the sign-in sheet, says so.
     await page.getByTestId('sign-in').click()
@@ -148,7 +148,7 @@ test.describe('the world, from the front door', () => {
     await signedIn(page, [])
     for (const width of [1280, 390]) {
       await page.setViewportSize({ width, height: 800 })
-      await page.goto(HOME_URL)
+      await goto(page, HOME_URL)
       const toggle = await boxOf(page.getByRole('button', { name: 'After Hours theme' }))
       const account = await boxOf(page.getByTestId('home-account'))
       expect(overlaps(toggle, account)).toBe(false)
@@ -160,7 +160,7 @@ test.describe('the world, from the front door', () => {
 
   test('says what it is on screen, at the edge of a phone too', async ({ page }) => {
     await page.setViewportSize({ width: 390, height: 800 })
-    await page.goto(HOME_URL)
+    await goto(page, HOME_URL)
     const toggle = page.getByRole('button', { name: 'After Hours theme' })
     // Reached from the keyboard, which shows the tip at once. Forward and then
     // BACK, never the other way round: signed out, the toggle is the first

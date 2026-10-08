@@ -1,6 +1,7 @@
 import { expect, test } from '@playwright/test'
 
 import { BOARD_URL } from './routes.js'
+import { goto } from './fixtures.js'
 
 /**
  * The way out of a board.
@@ -13,7 +14,7 @@ import { BOARD_URL } from './routes.js'
  */
 
 test.beforeEach(async ({ page }) => {
-  await page.goto(BOARD_URL)
+  await goto(page, BOARD_URL)
   await page.waitForSelector('[data-testid="status-bar"]')
 })
 

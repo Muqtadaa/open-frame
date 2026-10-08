@@ -1,6 +1,6 @@
 import { expect, test, type Page } from '@playwright/test'
 
-import { place } from './fixtures.js'
+import { goto, place } from './fixtures.js'
 import { BOARD_URL } from './routes.js'
 
 /**
@@ -38,7 +38,7 @@ function versionKeys(page: Page): Promise<string[]> {
 
 test('a local board keeps a version once editing settles', async ({ page }) => {
   await page.clock.install()
-  await page.goto(BOARD_URL)
+  await goto(page, BOARD_URL)
   await page.waitForSelector('[data-testid="status-bar"]')
   expect(await versionKeys(page)).toEqual([])
 
@@ -60,7 +60,7 @@ test('a local board keeps a version once editing settles', async ({ page }) => {
 test.describe('looking back, and restoring', () => {
   async function boardWithAVersion(page: Page): Promise<void> {
     await page.clock.install()
-    await page.goto(BOARD_URL)
+    await goto(page, BOARD_URL)
     await page.waitForSelector('[data-testid="status-bar"]')
     await place(page, 's', { x: 400, y: 380 }, 'Kept for later')
     await page.clock.runFor(SETTLE)
@@ -141,7 +141,7 @@ test.describe('looking back, and restoring', () => {
  * Delete. That a name outlives the fortnight is `local-history.test.ts`'s.
  */
 test('names the board as it is, lists it, and deletes it', async ({ page }) => {
-  await page.goto(BOARD_URL)
+  await goto(page, BOARD_URL)
   await page.waitForSelector('[data-testid="status-bar"]')
   await place(page, 's', { x: 500, y: 400 }, 'Kickoff notes')
 
@@ -174,7 +174,7 @@ test('names the board as it is, lists it, and deletes it', async ({ page }) => {
 
 test('offers no Delete for an automatic version', async ({ page }) => {
   await page.clock.install()
-  await page.goto(BOARD_URL)
+  await goto(page, BOARD_URL)
   await page.waitForSelector('[data-testid="status-bar"]')
   await place(page, 's', { x: 500, y: 400 }, 'Kept for later')
   await page.clock.runFor(SETTLE)
@@ -188,7 +188,7 @@ test('offers no Delete for an automatic version', async ({ page }) => {
 
 // Tab stays in the sheet, as in every other sheet (audit 2026-10-08).
 test('keeps Tab inside the history sheet', async ({ page }) => {
-  await page.goto(BOARD_URL)
+  await goto(page, BOARD_URL)
   await page.waitForSelector('[data-testid="status-bar"]')
   await page.getByTestId('board-menu').click()
   await page.getByTestId('board-menu-history').click()

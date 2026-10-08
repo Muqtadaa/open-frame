@@ -1,6 +1,7 @@
 import { expect, test, type Page } from '@playwright/test'
 
 import { signedIn } from './signed-in.js'
+import { goto } from './fixtures.js'
 
 /**
  * The comment tool's keyboard, and the panel it opens.
@@ -15,7 +16,7 @@ const KEY = 'e'.repeat(32)
 // Local rather than the shared fixture: it opens a shared room, not the local board.
 async function openBoard(page: Page): Promise<void> {
   await page.routeWebSocket(/\/room\//, () => undefined)
-  await page.goto(`/?room=${BOARD}&k=${KEY}`)
+  await goto(page, `/?room=${BOARD}&k=${KEY}`)
   await page.waitForSelector('[data-testid="status-bar"]')
 }
 

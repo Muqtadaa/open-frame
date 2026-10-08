@@ -1,6 +1,7 @@
 import { expect, test } from '@playwright/test'
 
 import { BOARD_URL } from './routes.js'
+import { goto } from './fixtures.js'
 
 /**
  * A reader's text size reaches the interface, and never the board
@@ -11,7 +12,7 @@ import { BOARD_URL } from './routes.js'
  * world units, and must lay out the same for everybody looking at it.
  */
 test('a larger text size grows the interface and leaves the board alone', async ({ page }) => {
-  await page.goto(BOARD_URL)
+  await goto(page, BOARD_URL)
   await page.waitForSelector('[data-testid="status-bar"]')
   await page.keyboard.press('s')
   await page.locator('[data-testid="canvas"]').click({ position: { x: 400, y: 300 } })

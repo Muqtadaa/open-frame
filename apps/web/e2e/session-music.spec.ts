@@ -1,6 +1,6 @@
 import type { Page } from '@playwright/test'
 
-import { expect, test } from './fixtures.js'
+import { goto, reload, test, expect } from './fixtures.js'
 import { library, TRACKS } from './music.js'
 import { BOARD_URL } from './routes.js'
 
@@ -17,13 +17,13 @@ const sheet = (page: Page) => page.getByRole('dialog', { name: 'Session' })
 
 async function withLibrary(page: Page, tracks = TRACKS): Promise<void> {
   await library(page, tracks)
-  await page.reload()
+  await reload(page)
   await page.waitForSelector('[data-testid="status-bar"]')
 }
 
 test('offers no music where there is no library to play from', async ({ page }) => {
   await library(page, null)
-  await page.reload()
+  await reload(page)
   await page.waitForSelector('[data-testid="status-bar"]')
   // The session is still there for its timer; it has no music to offer.
   await button(page).click()
@@ -85,7 +85,7 @@ test('keeps this device’s mute through a reload', async ({ page }) => {
   await page.getByTestId('music-mute').click()
   await expect(page.getByTestId('music-mute')).toHaveAttribute('aria-pressed', 'true')
 
-  await page.reload()
+  await reload(page)
   await page.waitForSelector('[data-testid="status-bar"]')
   await button(page).click()
   await expect(page.getByTestId('music-mute')).toHaveAttribute('aria-pressed', 'true')
@@ -127,7 +127,7 @@ async function startedByAda(page: Page): Promise<void> {
       }),
     )
   })
-  await page.reload()
+  await reload(page)
   await page.waitForSelector('[data-testid="status-bar"]')
 }
 
@@ -177,7 +177,7 @@ test('once this browser has said yes, the next press anywhere lets the music in'
   // Chromium: the remembered yes needs no further press at all.
   const opened = await context.newPage()
   await library(opened, TRACKS)
-  await opened.goto(BOARD_URL)
+  await goto(opened, BOARD_URL)
   await expect(button(opened)).toHaveAttribute('data-music', 'playing')
   await expect(prompt(opened)).toHaveCount(0)
 
@@ -193,7 +193,7 @@ test('once this browser has said yes, the next press anywhere lets the music in'
     })
   })
   await library(tab, TRACKS)
-  await tab.goto(BOARD_URL)
+  await goto(tab, BOARD_URL)
   await tab.waitForSelector('[data-testid="status-bar"]')
   await expect(button(tab)).toHaveAttribute('data-music', 'unheard')
   const fetched = tab.waitForRequest('**/music/track/jazzy-1')

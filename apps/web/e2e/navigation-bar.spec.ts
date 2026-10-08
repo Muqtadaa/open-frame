@@ -1,6 +1,6 @@
 import type { Locator, Page } from '@playwright/test'
 
-import { CANVAS, expect, openBoard, test, boxOf } from './fixtures.js'
+import { boxOf, CANVAS, goto, openBoard, test, expect } from './fixtures.js'
 import { signedIn } from './signed-in.js'
 import { library, TRACKS } from './music.js'
 import { BOARD_URL } from './routes.js'
@@ -178,7 +178,7 @@ test.describe('the safety readout', () => {
       await page.routeWebSocket(/\/room\//, (socket) => {
         void socket.close()
       })
-      await page.goto(`/?room=${SHARED}&k=${'e'.repeat(32)}`)
+      await goto(page, `/?room=${SHARED}&k=${'e'.repeat(32)}`)
       const readout = page.getByTestId('save-state')
       await expect(readout).toHaveText('Offline · saved here')
       await expect(readout).toBeVisible()
@@ -500,7 +500,7 @@ test.describe('a narrow window', () => {
       await page.setViewportSize({ width, height: 720 })
       await signedIn(page, [{ id: SHARED, title: 'Pricing research', role: 'owner' }])
       await page.routeWebSocket(/\/room\//, () => undefined)
-      await page.goto(`/?room=${SHARED}&k=${'e'.repeat(32)}`)
+      await goto(page, `/?room=${SHARED}&k=${'e'.repeat(32)}`)
       await page.waitForSelector('[data-testid="status-bar"]')
       await expect(page.getByTestId('share-board')).toBeVisible()
       const escaped = await page.getByTestId('status-bar').evaluate((bar) => {
@@ -577,7 +577,7 @@ test.describe('the bar at its fullest', () => {
       await page.setViewportSize({ width, height: 800 })
       await signedIn(page, [], 'Muqtadaa Miandara', MENTIONED)
       await library(page, TRACKS)
-      await page.goto(BOARD_URL)
+      await goto(page, BOARD_URL)
       await page.getByTestId('session-button').click()
       await page.getByTestId('timer-start').click()
       await page.getByTestId('music-play').click()
@@ -600,7 +600,7 @@ test.describe('the bar at its fullest', () => {
       await page.routeWebSocket(/\/room\//, (socket) => {
         void socket.close()
       })
-      await page.goto(`/?room=${SHARED}&k=${'e'.repeat(32)}`)
+      await goto(page, `/?room=${SHARED}&k=${'e'.repeat(32)}`)
       await expect(page.getByTestId('save-state')).toContainText('Offline')
       await expect(page.getByTestId('inbox')).toBeVisible()
       await fitted(page, width)

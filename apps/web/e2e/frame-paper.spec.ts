@@ -1,6 +1,6 @@
 import { expect, test, type Page } from '@playwright/test'
 
-import { CANVAS, viewOf } from './fixtures.js'
+import { CANVAS, goto, viewOf } from './fixtures.js'
 import { BOARD_URL } from './routes.js'
 
 /**
@@ -14,7 +14,7 @@ import { BOARD_URL } from './routes.js'
 const EDITOR = '[contenteditable="true"]'
 
 async function placeFrame(page: Page): Promise<void> {
-  await page.goto(BOARD_URL)
+  await goto(page, BOARD_URL)
   await page.waitForSelector('[data-testid="status-bar"]')
   await page.keyboard.press('f')
   await page.locator(CANVAS).click({ position: { x: 500, y: 350 } })

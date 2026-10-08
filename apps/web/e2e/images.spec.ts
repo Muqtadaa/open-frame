@@ -2,7 +2,7 @@ import type { Page } from '@playwright/test'
 
 import { deflateSync } from 'node:zlib'
 
-import { CANVAS, expect, test, undo, boxOf, saved } from './fixtures.js'
+import { boxOf, CANVAS, reload, saved, test, undo, expect } from './fixtures.js'
 
 /**
  * Images: uploading, what gets rejected, and surviving a reload.
@@ -117,7 +117,7 @@ test.describe('images', () => {
     await expect(page.locator('[data-object-type="image"] img')).toBeVisible()
 
     await saved(page)
-    await page.reload()
+    await reload(page)
 
     const image = page.locator('[data-object-type="image"] img')
     await expect(image).toHaveCount(1)

@@ -1,6 +1,6 @@
 import { expect, test, type Page } from '@playwright/test'
 
-import { CANVAS, boxOf } from './fixtures.js'
+import { boxOf, CANVAS, goto, reload } from './fixtures.js'
 import { BOARD_URL } from './routes.js'
 
 /**
@@ -14,7 +14,7 @@ import { BOARD_URL } from './routes.js'
 const FILE_INPUT = 'input[type="file"]'
 
 async function boardWithAnUnknownObject(page: Page): Promise<void> {
-  await page.goto(BOARD_URL)
+  await goto(page, BOARD_URL)
   await expect(page.getByTestId('tool-select')).toBeVisible()
   /*
    * Drawn is not ready: a key pressed the moment the rail appears can arrive
@@ -52,7 +52,7 @@ async function boardWithAnUnknownObject(page: Page): Promise<void> {
     })
     db.close()
   })
-  await page.reload()
+  await reload(page)
   await expect(page.getByTestId('notice-banner')).toBeVisible()
 }
 
@@ -124,7 +124,7 @@ test.describe('an object this version cannot read', () => {
 
 test.describe('the toast', () => {
   test('has a close you can see and press', async ({ page }) => {
-    await page.goto(BOARD_URL)
+    await goto(page, BOARD_URL)
     await expect(page.getByTestId('tool-select')).toBeVisible()
     await rejectAnUpload(page)
     const close = page.getByTestId('toast').getByRole('button', { name: 'Dismiss' })
@@ -143,7 +143,7 @@ test.describe('the toast', () => {
 
   test('waits while it is being read', async ({ page }) => {
     await page.clock.install()
-    await page.goto(BOARD_URL)
+    await goto(page, BOARD_URL)
     await expect(page.getByTestId('tool-select')).toBeVisible()
     await rejectAnUpload(page)
     await page.getByTestId('toast').hover()

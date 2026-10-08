@@ -1,7 +1,7 @@
 import type { Page } from '@playwright/test'
 
 import { buildBoard } from './boards.js'
-import { CANVAS, boxOf, clickLine, expect, overlaps, seedBoard, test } from './fixtures.js'
+import { boxOf, CANVAS, clickLine, goto, overlaps, seedBoard, test, expect } from './fixtures.js'
 import { BOARD_URL } from './routes.js'
 
 /**
@@ -14,7 +14,7 @@ import { BOARD_URL } from './routes.js'
  */
 
 async function selectANote(page: Page, at: { x: number; y: number }): Promise<void> {
-  await page.goto(BOARD_URL)
+  await goto(page, BOARD_URL)
   await page.waitForSelector('[data-testid="status-bar"]')
   await page.keyboard.press('s')
   await page.locator(CANVAS).click({ position: at })
