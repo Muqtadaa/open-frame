@@ -44,11 +44,13 @@ export function gridFromText(
  */
 function csvFromText(text: string): string[][] | null {
   if (!text.includes(',')) return null
-  const rows = withoutTrailingRow(readRows(text, ','))
-  if (rows.length < 2) return null
+  // Read from the raw text, not the cells: a quoted cell may begin with a
+  // space on purpose, and no comma was followed by one (Codex, on #98).
+  const read = { spaced: false }
+  const rows = withoutTrailingRow(readRows(text, ',', read))
+  if (rows.length < 2 || read.spaced) return null
   const widths = new Set(rows.map((row) => row.length))
   if (widths.size > 1 || (rows[0]?.length ?? 0) < 2) return null
-  if (rows.some((row) => row.some((cell) => /^\s/.test(cell)))) return null
   return rows
 }
 
@@ -75,11 +77,20 @@ export function gridFrom(text: string): string[][] | null {
  * item — `-`, `*`, `•`, `1.`, `1)` — taken off, since the note is the item.
  */
 export function linesOf(text: string): string[] {
-  return text
-    .replace(/\r\n?/g, '\n')
-    .split('\n')
-    .map((line) => line.trim().replace(/^(?:[-*•–]|\d{1,3}[.)])\s+/, ''))
-    .filter((line) => line !== '')
+  return (
+    text
+      .replace(/\r\n?/g, '\n')
+      .split('\n')
+      // The marker comes off before the blank lines go, so an empty item —
+      // "- " — goes with them rather than becoming a note saying "-".
+      .map((line) =>
+        line
+          .trim()
+          .replace(/^(?:[-*•–]|\d{1,3}[.)])(?:\s+|$)/, '')
+          .trim(),
+      )
+      .filter((line) => line !== '')
+  )
 }
 
 /** The newline a spreadsheet ends its last row with is not an empty row. */
@@ -88,7 +99,15 @@ function withoutTrailingRow(rows: string[][]): string[][] {
   return rows
 }
 
-function readRows(text: string, separator: '\t' | ','): string[][] {
+/**
+ * `seen.spaced` is set when an unquoted cell begins with a space or tab
+ * straight after a separator — the space a sentence puts after its commas.
+ */
+function readRows(
+  text: string,
+  separator: '\t' | ',',
+  seen: { spaced: boolean } = { spaced: false },
+): string[][] {
   const rows: string[][] = []
   let row: string[] = []
   let cell = ''
@@ -120,6 +139,7 @@ function readRows(text: string, separator: '\t' | ','): string[][] {
       }
     }
     if (char === undefined || char === separator || char === '\n') {
+      if (char === separator && /[ \t]/.test(text[at + 1] ?? '')) seen.spaced = true
       row.push(cell)
       cell = ''
       if (char !== separator) {

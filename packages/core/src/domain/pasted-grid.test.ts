@@ -100,6 +100,14 @@ describe('comma-separated values pasted as they are', () => {
     expect(gridFromText('Red, green\nBlue, yellow')).toBeNull()
   })
 
+  // Codex, on #98: the space has to be AFTER A COMMA, not inside a quoted cell.
+  it('keeps a quoted cell that starts with a space, since no comma is followed by one', () => {
+    expect(gridFromText('name,note\nAda," starts indented"')).toEqual([
+      ['name', 'note'],
+      ['Ada', ' starts indented'],
+    ])
+  })
+
   it('stays words on a single line, however many commas it has', () => {
     expect(gridFromText('a,b,c')).toBeNull()
   })
@@ -139,6 +147,11 @@ describe('lines pasted as notes', () => {
       'Support',
       'Tone',
     ])
+  })
+
+  // Codex, on #98: an empty item is a blank line, not a note saying "-".
+  it('leaves out an empty list item', () => {
+    expect(linesOf('- one\n- \n1. \n* two\n2)')).toEqual(['one', 'two'])
   })
 
   it('keeps a number that is not a list marker', () => {
