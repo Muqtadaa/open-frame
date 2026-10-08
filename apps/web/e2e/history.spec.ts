@@ -185,3 +185,16 @@ test('offers no Delete for an automatic version', async ({ page }) => {
   await expect(page.getByTestId('history-version')).toHaveCount(1)
   await expect(page.getByTestId('history-delete')).toHaveCount(0)
 })
+
+// Tab stays in the sheet, as in every other sheet (audit 2026-10-08).
+test('keeps Tab inside the history sheet', async ({ page }) => {
+  await page.goto(BOARD_URL)
+  await page.waitForSelector('[data-testid="status-bar"]')
+  await page.getByTestId('board-menu').click()
+  await page.getByTestId('board-menu-history').click()
+  const sheet = page.getByRole('dialog', { name: 'Version history' })
+  await expect(sheet.getByRole('textbox', { name: 'Version name' })).toBeVisible()
+  await sheet.getByRole('textbox', { name: 'Version name' }).focus()
+  for (let press = 0; press < 6; press++) await page.keyboard.press('Tab')
+  await expect(sheet.locator(':focus')).toHaveCount(1)
+})
