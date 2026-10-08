@@ -72,13 +72,22 @@ function linked(spans: readonly TextSpan[]): string {
     let end = index + 1
     while (href !== undefined && end < spans.length && spans[end]?.link === href) end += 1
     const words = spans.slice(index, end).map(inline).join('')
-    out +=
-      href === undefined || words.trim() === ''
-        ? words
-        : `[${words}](${href.replace(/[\\()]/g, (char) => `\\${char}`)})`
+    out += href === undefined || words.trim() === '' ? words : `[${words}](${destination(href)})`
     index = end
   }
   return out
+}
+
+/**
+ * A target as an unbracketed Markdown destination. Parentheses and backslashes
+ * are escaped; `<` and `>` are percent-encoded instead, because an HTML-aware
+ * renderer reads `<…` as a tag, and encoded they are the same address.
+ */
+function destination(href: string): string {
+  return href
+    .replace(/[\\()]/g, (char) => `\\${char}`)
+    .replace(/</g, '%3C')
+    .replace(/>/g, '%3E')
 }
 
 function inline(span: TextSpan): string {

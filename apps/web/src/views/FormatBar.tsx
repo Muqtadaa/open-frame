@@ -68,6 +68,7 @@ export function FormatBar({
   onLeave,
   onLinkOpen,
   onLink,
+  linkScope,
 }: {
   readonly state: FormatState
   /**
@@ -92,10 +93,29 @@ export function FormatBar({
   readonly onLinkOpen?: (() => void) | undefined
   /** Links the selection to a safe address, or unlinks it (`undefined`). No link control without it. */
   readonly onLink?: ((href: string | undefined) => void) | undefined
+  /**
+   * Which text the link field belongs to, where the bar outlives it — a
+   * table's cell bar stays while the edit moves from cell to cell.
+   */
+  readonly linkScope?: string | undefined
 }) {
   const [linking, setLinking] = useState(false)
   const [address, setAddress] = useState('')
   const [refused, setRefused] = useState(false)
+  /*
+   * A field left open is put away when the text it was for goes: otherwise the
+   * next cell to be typed in opens with the last one's address, and Enter
+   * writes it in with no selection held. Adjusted during render, not in an
+   * effect, so the stale field is never drawn even once.
+   */
+  const scope = onLink === undefined ? null : (linkScope ?? '')
+  const [linkFor, setLinkFor] = useState(scope)
+  if (linkFor !== scope) {
+    setLinkFor(scope)
+    setLinking(false)
+    setAddress('')
+    setRefused(false)
+  }
   const active = state.marks
   const mixed = state.mixed ?? []
   const list = state.list

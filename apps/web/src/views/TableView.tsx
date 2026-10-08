@@ -1184,6 +1184,7 @@ function TableEditor({
               : {
                   onLinkOpen: () => field.current?.holdSelection(),
                   onLink: (href: string | undefined) => field.current?.setLink(href),
+                  linkScope: `${String(editing.cell.row)}:${String(editing.cell.col)}`,
                 })}
           />
           <div className="of-cellbar__head">

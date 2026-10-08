@@ -117,6 +117,15 @@ export const TextSpanSchema: ZodType<TextSpan> = z
       context.addIssue({ code: 'custom', message: 'a newline is never part of a link' })
     }
   })
+  /*
+   * What is stored is what `safeLink` gives: trimmed, its scheme lowercased,
+   * and within MAX_LINK. Checking the raw value and keeping it would let an
+   * address padded with millions of spaces through the length limit.
+   */
+  .transform((span): TextSpan => {
+    const link = span.link === undefined ? null : safeLink(span.link)
+    return link === null || link === span.link ? span : { ...span, link }
+  })
 
 /** The longest target kept: past this it is a payload, not an address. */
 export const MAX_LINK = 2048

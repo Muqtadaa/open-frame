@@ -45,6 +45,15 @@ describe('a link is a span’s target (ADR 0021)', () => {
     expect(RichTextSchema.safeParse([{ text: 'a\nb', link: HREF }]).success).toBe(false)
   })
 
+  it('stores what safeLink gives, so padding never smuggles past the limit', () => {
+    const stored = (link: string): string | undefined =>
+      RichTextSchema.parse([{ text: 'pricing', link }])[0]?.link
+    expect(stored(`  ${HREF}  `)).toBe(HREF)
+    expect(stored('HTTPS://Example.com/A')).toBe('https://Example.com/A')
+    const padding = ' '.repeat(3_000_000)
+    expect(stored(`${padding}${HREF}${padding}`)).toBe(HREF)
+  })
+
   it('links a range, and takes the link off again', () => {
     const text: RichText = [{ text: 'See the pricing page' }]
     const linked = applyLink(text, 8, 15, HREF)
@@ -91,6 +100,10 @@ describe('a link is a span’s target (ADR 0021)', () => {
     ).toBe(`See [the **pricing**](${HREF}) page`)
     expect(richTextToMarkdown([{ text: 'odd', link: 'https://example.com/a_(b)' }])).toBe(
       '[odd](https://example.com/a_\\(b\\))',
+    )
+    // `<` reads as a tag to an HTML-aware renderer; encoded, it is the same address.
+    expect(richTextToMarkdown([{ text: 'odd', link: 'https://example.com/a<b>' }])).toBe(
+      '[odd](https://example.com/a%3Cb%3E)',
     )
   })
 })

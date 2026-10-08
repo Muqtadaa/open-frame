@@ -203,3 +203,26 @@ test('a table cell takes a link while it is typed in', async ({ page }) => {
   await expect(page.getByTestId('table-editor')).toHaveCount(0)
   await expect(page.locator('[data-object-type="table"] a')).toHaveAttribute('href', HREF)
 })
+
+test('a link field left open in one cell does not follow into the next', async ({ page }) => {
+  await seedBoard(
+    page,
+    buildBoard((board) => {
+      board.add('table', { x: 340, y: 300 })
+    }),
+  )
+  await page.locator('[data-object-type="table"]').click()
+  await page.keyboard.press('Enter')
+  await page.keyboard.type('Pricing')
+  await page.keyboard.press('ControlOrMeta+a')
+  await page.keyboard.press(`${MOD}+k`)
+  await page.getByTestId('format-link-field').fill(HREF)
+  // The edit ends with the field still open: a press on another cell.
+  await page.getByTestId('table-cell-1').click()
+  await expect(page.getByTestId('table-editor')).toHaveAttribute('data-mode', 'navigate')
+  await page.keyboard.press('Enter')
+  await expect(page.getByTestId('table-editor')).toHaveAttribute('data-mode', 'edit')
+  await expect(page.getByTestId('format-link-field')).toHaveCount(0)
+  await page.keyboard.press('Enter')
+  await expect(page.getByTestId('table-cell-1')).not.toContainText('example.com')
+})
