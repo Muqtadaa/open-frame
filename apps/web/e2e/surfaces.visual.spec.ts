@@ -377,6 +377,32 @@ for (const world of WORLDS) {
       await snap(page, `${world}-note-lists`)
     })
 
+    // A link is the note's own ink underlined in the accent (ADR 0021), so
+    // what holds that it reads as a link in both worlds is a photograph.
+    test('a note with a link, and the link field', async ({ page }) => {
+      await seedBoard(
+        page,
+        buildBoard((board) => {
+          board.add(
+            'sticky',
+            { x: 520, y: 300 },
+            {
+              text: [
+                { text: 'See the ' },
+                { text: 'pricing page', link: 'https://example.com/pricing' },
+              ],
+            },
+          )
+        }),
+      )
+      await snap(page, `${world}-note-link`)
+      await page.locator('[data-object-type="sticky"]').click()
+      await page.keyboard.press('Enter')
+      await page.keyboard.press('ControlOrMeta+k')
+      await expect(page.getByTestId('format-link-field')).toBeFocused()
+      await snap(page, `${world}-link-field`)
+    })
+
     // No golden covered a table cell, which is how the cell bar's targets
     // came to overlap without anything noticing.
     test('table cell bar', async ({ page }) => {
