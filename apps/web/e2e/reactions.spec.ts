@@ -167,6 +167,18 @@ test.describe('the whole emoji library', () => {
     await expect(chip(page, 'u-1f680')).toHaveAttribute('aria-pressed', 'true')
   })
 
+  // Tab reaches the list, not only the arrows (axe, audit 2026-10-08).
+  test('takes Tab from the search field into the list', async ({ page }) => {
+    await oneNote(page)
+    await page.locator(CANVAS).click({ position: NOTE })
+    await page.getByTestId('react-more').click()
+    const picker = page.getByRole('dialog', { name: 'Emoji' })
+    await expect(picker.getByRole('searchbox', { name: 'Search emoji' })).toBeFocused()
+    await expect(picker.locator('[data-emoji-cell]').first()).toBeVisible()
+    await page.keyboard.press('Tab')
+    await expect(picker.locator('[data-emoji-cell]').first()).toBeFocused()
+  })
+
   test('keeps Tab inside while it is open', async ({ page }) => {
     await oneNote(page)
     await page.locator(CANVAS).click({ position: NOTE })

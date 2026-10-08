@@ -345,6 +345,16 @@
   overscroll-behavior: contain;
 }
 
+/*
+ * Nearly two thousand emoji, in groups. A group out of view is neither laid
+ * out nor painted until it scrolls in; the height it stands in with is about
+ * a group's, so the scrollbar does not jump as they arrive.
+ */
+.of-emoji-picker__group {
+  content-visibility: auto;
+  contain-intrinsic-size: auto 240px;
+}
+
 .of-emoji-picker__heading {
   margin: var(--of-space-6) 0 var(--of-space-2);
   font-family: var(--of-mono);
