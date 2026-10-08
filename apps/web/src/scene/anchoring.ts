@@ -255,28 +255,30 @@ export function placeAnchored(request: AnchorRequest): Placement {
    * The nearer of the two that stays inside the window wins.
    */
   const across = side === 'left' || side === 'right'
-  const options = across
-    ? [avoid.y - surface.height - request.gap, avoid.y + avoid.height + request.gap].map((y) => ({
-        ...placed,
-        y,
-      }))
-    : [avoid.x - surface.width - request.gap, avoid.x + avoid.width + request.gap].map((x) => ({
-        ...placed,
-        x,
-      }))
-  const slid = options
-    .filter((option) =>
-      across
-        ? option.y >= topBound && option.y <= bottomBound
-        : option.x >= leftBound && option.x <= rightBound,
-    )
-    .filter((option) => !overlaps(option, avoid))
-    .sort(
-      (a, b) =>
-        Math.abs(a.x - placed.x) +
-        Math.abs(a.y - placed.y) -
-        (Math.abs(b.x - placed.x) + Math.abs(b.y - placed.y)),
-    )[0]
+  const vertical = [avoid.y - surface.height - request.gap, avoid.y + avoid.height + request.gap]
+    .filter((y) => y >= topBound && y <= bottomBound)
+    .map((y) => ({ ...placed, y }))
+  const horizontal = [avoid.x - surface.width - request.gap, avoid.x + avoid.width + request.gap]
+    .filter((x) => x >= leftBound && x <= rightBound)
+    .map((x) => ({ ...placed, x }))
+  const nearest = (options: readonly Rect[]): Rect | undefined =>
+    options
+      .filter((option) => !overlaps(option, avoid))
+      .sort(
+        (a, b) =>
+          Math.abs(a.x - placed.x) +
+          Math.abs(a.y - placed.y) -
+          (Math.abs(b.x - placed.x) + Math.abs(b.y - placed.y)),
+      )[0]
+  /*
+   * Along the side first. Only when that cannot clear the panel does it slide
+   * ACROSS, over part of the selection: a phone held sideways puts the rail on
+   * the left, the panel on the right and nothing clear between, and covering a
+   * little of the note it is about beats vanishing under the panel
+   * (audit 2026-10-08).
+   */
+  const slid =
+    nearest(across ? vertical : horizontal) ?? nearest(across ? horizontal : vertical)
   const final = slid ?? placed
   return { x: final.x, y: final.y, side }
 }

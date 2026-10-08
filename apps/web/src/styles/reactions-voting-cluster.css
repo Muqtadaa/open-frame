@@ -310,6 +310,20 @@
   font-size: var(--of-type-ui);
 }
 
+/*
+ * A short window, such as a phone held sideways, leaves no room beside a note
+ * for both the record panel and a bar a whole row wide, and the bar landed
+ * under the panel with eight of its nine buttons hidden (audit 2026-10-08).
+ * Folded to rows of five, it fits beside the panel, over the top of the note
+ * it belongs to (anchoring.ts slides it there).
+ */
+@media (max-height: 480px) {
+  .of-reaction-bar {
+    display: grid;
+    grid-template-columns: repeat(5, auto);
+  }
+}
+
 .of-reaction-bar__button[aria-pressed='true'] {
   background: var(--of-accent-soft);
 }

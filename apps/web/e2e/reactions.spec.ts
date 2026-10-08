@@ -125,6 +125,32 @@ test('the bar never sits on the record panel', async ({ page }) => {
     .toBe(false)
 })
 
+/*
+ * A phone held sideways leaves room for the panel or the bar beside a note,
+ * not both (audit 2026-10-08): the panel sat over eight of the nine
+ * reactions, and a focused one was entirely hidden.
+ */
+test.describe('on a phone held sideways', () => {
+  test.use({ viewport: { width: 844, height: 390 }, hasTouch: true })
+
+  test('the bar is never under the record panel', async ({ page }) => {
+    const at = { x: 300, y: 200 }
+    await seedBoard(
+      page,
+      buildBoard((board) => {
+        board.note('Hide the price until checkout', at)
+      }),
+    )
+    await page.locator(CANVAS).click({ position: at })
+    const bar = page.getByTestId('reaction-bar')
+    await expect(bar.getByRole('button', { name: 'Agree' })).toBeVisible()
+    await expect(page.getByTestId('inspector')).toBeVisible()
+    await expect
+      .poll(async () => overlaps(await boxOf(bar), await boxOf(page.getByTestId('inspector'))))
+      .toBe(false)
+  })
+})
+
 test.describe('the whole emoji library', () => {
   test('is a search away from the bar, and reacts with what is picked', async ({ page }) => {
     await oneNote(page)
