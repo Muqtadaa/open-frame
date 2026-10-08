@@ -1301,3 +1301,24 @@ already there when a note is drawn stay still, because the view marks
   keyframes. It was seen failing first, on two real gaps: the record panel's
   turning chevron and the exit's travelling arrow, which both moved under
   reduced motion.
+
+## Step 6 — the docs say what is built, and every newer surface has a contract (2026-10-08)
+
+The last step of the programme (#88–#94). The docs had stopped at Phase 4: Phase
+5 read "Next" with clustering shipped, five reviews pointed at the 2026-10-02
+audit, and the parity matrix listed version history and the overview as open
+gaps. They now say what is built, and `tools/docs/links.test.ts` holds the
+pointers in `pnpm verify`. It fails on a relative link that resolves to nothing,
+and on a "current audit" that is not the newest; it failed on eleven stale
+pointers first.
+
+The ten surfaces critiqued on 2026-10-07 each have a direction contract in
+`apps/web/.impeccable/surfaces/`: dot voting, the poll card, AI clustering,
+version history, the board overview, people and following, agent changes, the
+session timer, session music and reactions. Each names the specs that hold it.
+Three name no golden, because none shows them yet: history, the overview and
+people. DESIGN.md gained sections for the Inbox, version history, the overview
+and people, which had been described only in passing inside the navigation bar.
+
+The design programme that started at C1 is closed. What stays open is in the
+[2026-10-08 audit's standing items](audit-2026-10-08.md).
