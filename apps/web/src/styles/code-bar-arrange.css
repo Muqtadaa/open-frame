@@ -25,7 +25,14 @@
  */
 .of-arrange {
   display: flex;
+  /*
+   * Wraps within its surface rather than running past it: on a phone the
+   * distribute pair sat beyond the window's edge, and at 320 half the bar did
+   * (audit 2026-10-08).
+   */
+  flex-wrap: wrap;
   gap: var(--of-space-2);
   align-items: center;
+  max-width: 100%;
   padding: var(--of-space-4);
 }

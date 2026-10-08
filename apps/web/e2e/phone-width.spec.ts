@@ -2,6 +2,7 @@ import { expect, test, type Page } from '@playwright/test'
 import { richFromPlain } from '@openframe/core'
 import { buildBoard } from './boards.js'
 import { boxOf, CANVAS, seedBoard } from './fixtures.js'
+import { library, TRACKS } from './music.js'
 
 import { BOARD_URL, HOME_URL } from './routes.js'
 import { signedIn } from './signed-in.js'
@@ -419,3 +420,75 @@ test.describe('surfaces at phone width', () => {
     expect(hit).toBe(true)
   })
 })
+
+/*
+ * Under a finger, where every control is 40px, on the two widths phones come
+ * in (audit 2026-10-08). Measured before: undo sat off the left edge at 390
+ * and undo and redo were both gone at 320; the arrange bar's distribute
+ * buttons ran past the window; the listen prompt's Dismiss was 15px on screen
+ * at 390 and none at 320. Nothing on a phone is reachable only by scrolling a
+ * window that does not scroll.
+ */
+for (const width of [390, 320]) {
+  test.describe(`under a finger, ${String(width)}px wide`, () => {
+    test.use({ viewport: { width, height: 760 }, hasTouch: true, isMobile: true })
+
+    async function onScreen(page: Page, testId: string): Promise<void> {
+      const box = await boxOf(page.getByTestId(testId))
+      expect(box.x, `${testId} left edge`).toBeGreaterThanOrEqual(0)
+      expect(box.x + box.width, `${testId} right edge`).toBeLessThanOrEqual(width)
+    }
+
+    test('undo and redo stay on screen', async ({ page }) => {
+      await page.goto(BOARD_URL)
+      await expect(page.getByTestId('undo')).toBeAttached()
+      await onScreen(page, 'undo')
+      await onScreen(page, 'redo')
+      await onScreen(page, 'zoom-control')
+    })
+
+    test('every arrange control stays on screen', async ({ page }) => {
+      await page.goto(BOARD_URL)
+      await seedBoard(
+        page,
+        buildBoard((board) => {
+          board.note('One', { x: 80, y: 300 })
+          board.note('Two', { x: 160, y: 420 })
+          board.note('Three', { x: 240, y: 540 })
+        }),
+      )
+      await page.locator(CANVAS).focus()
+      await page.keyboard.press('ControlOrMeta+a')
+      await expect(page.getByTestId('arrange-bar')).toBeVisible()
+      for (const axis of ['x', 'y']) await onScreen(page, `distribute-${axis}`)
+      await onScreen(page, 'arrange-bar')
+    })
+
+    test('the listen prompt stays on screen', async ({ page }) => {
+      await page.goto(BOARD_URL)
+      await library(page, TRACKS)
+      await page.evaluate(() => {
+        const now = Date.now()
+        window.localStorage.setItem(
+          'openframe:music:board_local',
+          JSON.stringify({
+            v: 1,
+            genre: 'jazzhop',
+            status: 'playing',
+            anchor: now,
+            pausedAtMs: 0,
+            playlist: [{ id: 'jazzy-1', durationMs: 120_000 }],
+            run: 1,
+            by: 'Ada',
+            startedBy: 'Ada',
+            at: now,
+          }),
+        )
+      })
+      await page.reload()
+      await expect(page.getByTestId('music-prompt')).toBeVisible()
+      await onScreen(page, 'music-prompt-listen')
+      await onScreen(page, 'music-prompt-dismiss')
+    })
+  })
+}

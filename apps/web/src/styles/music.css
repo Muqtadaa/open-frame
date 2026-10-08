@@ -96,6 +96,11 @@
 .of-music__prompt {
   gap: var(--of-space-8);
   width: max-content;
-  max-width: min(360px, calc(100vw - 2 * var(--of-gutter)));
+  /*
+   * Its surface's width, not the window's: the surface is already held clear
+   * of the rail and the edges, and a prompt sized to the window ran past it,
+   * with Dismiss off a 320px phone (audit 2026-10-08). The words wrap.
+   */
+  max-width: min(360px, 100%);
   padding: var(--of-space-6) var(--of-space-6) var(--of-space-6) var(--of-space-12);
 }
