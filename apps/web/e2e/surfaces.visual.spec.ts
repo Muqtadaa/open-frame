@@ -398,6 +398,9 @@ for (const world of WORLDS) {
       await snap(page, `${world}-note-link`)
       await page.locator('[data-object-type="sticky"]').click()
       await page.keyboard.press('Enter')
+      // The readout follows the selection, so it is settled before the field
+      // takes the keyboard away from the text.
+      await expect(page.getByTestId('format-size')).toHaveText('×1')
       await page.keyboard.press('ControlOrMeta+k')
       await expect(page.getByTestId('format-link-field')).toBeFocused()
       await snap(page, `${world}-link-field`)
