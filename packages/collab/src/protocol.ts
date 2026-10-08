@@ -134,9 +134,80 @@ function syncKind(message: Uint8Array): number {
   return decoding.readVarUint(decoder)
 }
 
-/** Creates the awareness state for a document. Re-exported so `yjs` stays quarantined. */
-export function createAwareness(doc: Y.Doc): Awareness {
-  return new awarenessProtocol.Awareness(doc)
+/**
+ * Creates the awareness state for a document. Re-exported so `yjs` stays
+ * quarantined.
+ *
+ * `timers: false` is the ROOM's: y-protocols starts an interval in the
+ * constructor, renewing a local state the room does not have and expiring
+ * peers the room already drops when their socket goes. A Durable Object cannot
+ * hibernate while any timer is pending and is billed for every second it stays
+ * awake, so that interval kept every occupied room awake, and billed, the whole
+ * time (CLAUDE.md rule 29). The room has no presence of its own either, so its
+ * local state is cleared rather than renewed.
+ */
+export function createAwareness(
+  doc: Y.Doc,
+  options: { readonly timers?: boolean } = {},
+): Awareness {
+  const awareness = new awarenessProtocol.Awareness(doc)
+  if (options.timers === false) {
+    stopAwarenessTimer(awareness)
+    awareness.setLocalState(null)
+  }
+  return awareness
+}
+
+/** How often a tab renews its presence when nothing about it has changed. */
+export const PRESENCE_RENEW_MS = 60_000
+/** How long a peer goes unheard before it is taken off the board. */
+export const PRESENCE_DROP_MS = 150_000
+
+/**
+ * A browser's presence, kept on its own slower clock (CLAUDE.md rule 29).
+ *
+ * y-protocols renews every 15 seconds and expires a silent peer after 30,
+ * both fixed. Every renewal is a message to the room, and every message wakes
+ * it: four a minute from each idle tab, all day. This renews once a minute and
+ * waits two and a half minutes before forgetting a peer, which still clears a
+ * tab that vanished without saying so — one that closes properly is taken off
+ * at once by the room. Returns the stop.
+ */
+export function startPresenceClock(
+  awareness: Awareness,
+  options: { readonly renewEvery?: number; readonly dropAfter?: number } = {},
+): () => void {
+  stopAwarenessTimer(awareness)
+  const renewEvery = options.renewEvery ?? PRESENCE_RENEW_MS
+  const dropAfter = options.dropAfter ?? PRESENCE_DROP_MS
+  const tick = setInterval(
+    () => {
+      const now = Date.now()
+      const own = awareness.getLocalState()
+      const mine = awareness.meta.get(awareness.clientID)
+      // A tick may land a moment short of the minute: within a tenth of it counts.
+      if (own !== null && mine !== undefined && now - mine.lastUpdated >= renewEvery * 0.9) {
+        awareness.setLocalState(own)
+      }
+      const gone: number[] = []
+      for (const [client, meta] of awareness.meta) {
+        if (client === awareness.clientID || !awareness.states.has(client)) continue
+        if (now - meta.lastUpdated >= dropAfter) gone.push(client)
+      }
+      if (gone.length > 0) awarenessProtocol.removeAwarenessStates(awareness, gone, 'timeout')
+    },
+    Math.min(renewEvery, dropAfter) / 4,
+  )
+  return () => {
+    clearInterval(tick)
+  }
+}
+
+/** The interval y-protocols starts in its constructor, which it exposes only by name. */
+function stopAwarenessTimer(awareness: Awareness): void {
+  clearInterval(
+    (awareness as unknown as { _checkInterval: ReturnType<typeof setInterval> })._checkInterval,
+  )
 }
 
 /**

@@ -104,7 +104,8 @@ export class BoardRoom {
   constructor(options: BoardRoomOptions = {}) {
     this.#doc = options.doc ?? new Y.Doc()
     this.#now = options.now ?? (() => Date.now())
-    this.#awareness = createAwareness(this.#doc)
+    // No timer: a room that keeps one can never sleep (rule 29).
+    this.#awareness = createAwareness(this.#doc, { timers: false })
     this.#onDocumentChanged = options.onDocumentChanged
 
     this.#onAwareness = (changes, origin) => {

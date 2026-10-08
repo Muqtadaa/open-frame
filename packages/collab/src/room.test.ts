@@ -1,5 +1,5 @@
 import { richFromPlain } from '@openframe/core'
-import { describe, expect, it } from 'vitest'
+import { afterEach, describe, expect, it, vi } from 'vitest'
 import * as Y from 'yjs'
 
 import { applyPatchesToDoc, objectsFromDoc } from './document-map.js'
@@ -429,5 +429,25 @@ describe('the time in the room', () => {
     const a = new Client('a')
     a.connect(room)
     expect(room.receive(a, new Uint8Array([3, 1, 2]))).toBe('malformed')
+  })
+})
+
+/*
+ * A Durable Object cannot hibernate while a timer is pending, and is billed for
+ * every second it stays awake. The awareness the room kept ran one every three
+ * seconds, so every room with anybody in it was awake, and billed, the whole
+ * time — 90% of a day's free allowance on 10-08 (CLAUDE.md rule 29).
+ */
+describe('a room that can sleep', () => {
+  afterEach(() => {
+    vi.useRealTimers()
+  })
+
+  it('keeps no timer, with nobody in it or with somebody', () => {
+    vi.useFakeTimers()
+    const room = new BoardRoom()
+    expect(vi.getTimerCount()).toBe(0)
+    room.join({ id: 'peer', role: 'editor', send: () => undefined })
+    expect(vi.getTimerCount()).toBe(0)
   })
 })
