@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 
-import { gridFromText } from './pasted-grid.js'
+import { gridFrom, gridFromText, linesOf } from './pasted-grid.js'
 
 /**
  * What a spreadsheet puts on the clipboard as plain text, and what of it is a
@@ -67,5 +67,81 @@ describe('words that are not a grid', () => {
       ['a', 'b', 'c'],
       ['d', 'e'],
     ])
+  })
+})
+
+/**
+ * Comma-separated text, which is how a CSV file and many exports copy. Prose
+ * has commas too, so a paste is only CSV when it is plainly a table: rows of
+ * the same width, and commas written the way a file writes them rather than
+ * the way a sentence does.
+ */
+describe('comma-separated values pasted as they are', () => {
+  it('is rows of cells when every row is the same width', () => {
+    expect(gridFromText('Who,What\nP07,Price\nP09,Shipping\n')).toEqual([
+      ['Who', 'What'],
+      ['P07', 'Price'],
+      ['P09', 'Shipping'],
+    ])
+  })
+
+  it('unwraps quoted cells, which may hold commas, quotes and newlines', () => {
+    expect(
+      gridFromText('Quote,Who\n"Cheap, but slow",P07\n"He said ""no""\nthen left",P09'),
+    ).toEqual([
+      ['Quote', 'Who'],
+      ['Cheap, but slow', 'P07'],
+      ['He said "no"\nthen left', 'P09'],
+    ])
+  })
+
+  it('stays words when it reads like sentences', () => {
+    expect(gridFromText('We met Ada, Grace and Alan.\nThen lunch, then home.')).toBeNull()
+    expect(gridFromText('Red, green\nBlue, yellow')).toBeNull()
+  })
+
+  it('stays words on a single line, however many commas it has', () => {
+    expect(gridFromText('a,b,c')).toBeNull()
+  })
+
+  it('stays words when the rows are not the same width', () => {
+    expect(gridFromText('a,b\nc,d,e')).toBeNull()
+  })
+})
+
+describe('a grid asked for by name', () => {
+  it('reads commas when there are no tabs, and pads a short row', () => {
+    expect(gridFrom('Red, green\nBlue')).toEqual([
+      ['Red', 'green'],
+      ['Blue', ''],
+    ])
+  })
+
+  it('reads tabs when there are any', () => {
+    expect(gridFrom('a, b\tc')).toEqual([['a, b', 'c']])
+  })
+
+  it('is one column when there is nothing to split on', () => {
+    expect(gridFrom('one\ntwo')).toEqual([['one'], ['two']])
+  })
+
+  it('is nothing for nothing', () => {
+    expect(gridFrom(' \n ')).toBeNull()
+  })
+})
+
+describe('lines pasted as notes', () => {
+  it('is a note per line, with list markers and blank lines left out', () => {
+    expect(linesOf('- Price\n\n* Shipping\n  3. Returns \n1) Support\n• Tone\n')).toEqual([
+      'Price',
+      'Shipping',
+      'Returns',
+      'Support',
+      'Tone',
+    ])
+  })
+
+  it('keeps a number that is not a list marker', () => {
+    expect(linesOf('2024 was slow\n10x faster')).toEqual(['2024 was slow', '10x faster'])
   })
 })

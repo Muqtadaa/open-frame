@@ -129,11 +129,12 @@ describe('object type registry contract', () => {
    * Content pasted from outside the board becomes one type's object: two types
    * answering would make which one depend on registration order.
    */
-  it('has exactly one home for pasted words and one for a pasted grid', () => {
-    const homes = (kind: 'text' | 'grid') =>
+  it('has exactly one home for pasted words, a pasted grid and a pasted note', () => {
+    const homes = (kind: 'text' | 'grid' | 'note') =>
       definitions.filter((d) => d.fromOutside?.[kind] !== undefined).map((d) => d.type)
     expect(homes('text')).toEqual(['text'])
     expect(homes('grid')).toEqual(['table'])
+    expect(homes('note')).toEqual(['sticky'])
     expect(
       definitions
         .filter((d) => d.appendText !== undefined)
@@ -148,7 +149,8 @@ describe('object type registry contract', () => {
     const grid = registry.fromOutside({
       grid: [[[{ text: 'a' }], [{ text: 'b' }]], [[{ text: 'c' }]]],
     })
-    for (const made of [words, grid]) {
+    const note = registry.fromOutside({ note: [{ text: 'Price is hidden' }] })
+    for (const made of [words, grid, note]) {
       if (made === null) throw new Error('expected a home')
       const definition = registry.require(made.type)
       expect(definition.validate(definition.create(made.data).data).ok).toBe(true)

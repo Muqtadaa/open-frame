@@ -25,6 +25,15 @@ export const stickyType = defineObjectType<typeof STICKY_TYPE, StickyData>({
   // Words pasted onto the note while it is selected go in on a new line.
   appendText: (data, text) => ({ ...data, text: appendParagraph(data.text, text) }),
 
+  /*
+   * One item of a pasted list, when somebody asks for notes (Paste special ›
+   * As notes): a sticky is the unit that gets clustered and counted, which is
+   * what a list of findings is about to become.
+   */
+  fromOutside: {
+    note: (text) => ({ data: { text }, width: 180, height: 180 }),
+  },
+
   capabilities: {
     resizable: true,
     rotatable: false,
