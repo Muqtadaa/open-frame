@@ -3,6 +3,7 @@ import { useState } from 'react'
 
 import { useMe } from '../hooks/use-me.js'
 import { countsShown, tallyVoters, useVoters, useVotingContext } from '../hooks/use-voting.js'
+import { counted } from '../controls/counted.js'
 
 /**
  * The dots on a note, drawn on the note — in the world, like its reactions,
@@ -31,8 +32,8 @@ function Dots({ voters, bare }: { readonly voters: string; readonly bare: boolea
   const count = round === null ? 0 : shown ? total : mine
   if (round === null) return null
   const label = shown
-    ? `${String(total)} ${total === 1 ? 'vote' : 'votes'}${mine > 0 ? `, ${String(mine)} yours` : ''}`
-    : `${String(mine)} ${mine === 1 ? 'vote' : 'votes'} of yours`
+    ? `${counted(total, 'vote')}${mine > 0 ? `, ${String(mine)} yours` : ''}`
+    : `${counted(mine, 'vote')} of yours`
   /*
    * Drawn again once it is known who "me" is. Until then a hidden round shows
    * none of this person's dots, and every one of them would count as new the

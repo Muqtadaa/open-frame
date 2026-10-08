@@ -20,6 +20,7 @@ import { useInteractionStore } from '../interaction/interaction-store.js'
 import type { FacilitationChannel } from '../runtime/facilitation.js'
 import { chime, primeAudio } from './chime.js'
 import { clockText, parseClock } from './clock-text.js'
+import { counted } from '../controls/counted.js'
 
 /** Minutes, because that is how an exercise is planned. */
 const PRESETS = [1, 3, 5, 10, 15] as const
@@ -255,7 +256,7 @@ function TimerActions({
                 type="button"
                 className="of-button of-timer__preset"
                 aria-pressed={minutes === preset}
-                aria-label={`${String(preset)} ${preset === 1 ? 'minute' : 'minutes'}`}
+                aria-label={`${counted(preset, 'minute')}`}
                 onClick={() => {
                   write((t, now, by) => setDuration(t, preset * MINUTE, now, by))
                 }}

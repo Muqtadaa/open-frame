@@ -22,6 +22,7 @@ import { useOpenFrame } from '../runtime/context.js'
 import { readingOrder } from '../scene/reading-order.js'
 import { countOfType, typeTitle } from '../scene/type-noun.js'
 import { wrapTab } from '../controls/wrap-tab.js'
+import { counted } from '../controls/counted.js'
 
 /**
  * How many objects one level of the list shows before the rest are a single
@@ -243,7 +244,7 @@ export function BoardOverview() {
   const summary =
     outline.total === 0
       ? 'Nothing on this board.'
-      : `${String(outline.total)} ${outline.total === 1 ? 'object' : 'objects'}: ${outline.counts
+      : `${counted(outline.total, 'object')}: ${outline.counts
           .map(({ type, count }) => countOfType(type, count))
           .join(', ')}.`
   const grounds =

@@ -5,6 +5,7 @@ import type { QuarantineReason } from '@openframe/core'
 import { useOpenFrame, type Quarantine } from '../runtime/context.js'
 import { copyOfRecord } from './download-copy.js'
 import { Gate, GateActions, GateBody } from './Gate.js'
+import { counted } from '../controls/counted.js'
 
 /**
  * Why a board would not open, as its owner would put it.
@@ -28,9 +29,7 @@ const WHY: Readonly<Record<QuarantineReason, string>> = {
 function describe(quarantine: Quarantine): string {
   const name = quarantine.title === null ? 'This board' : `“${quarantine.title}”`
   const size =
-    quarantine.objects === null
-      ? ''
-      : `, with ${String(quarantine.objects)} ${quarantine.objects === 1 ? 'object' : 'objects'} on it,`
+    quarantine.objects === null ? '' : `, with ${counted(quarantine.objects, 'object')} on it,`
   return `${name}${size} ${WHY[quarantine.reason]}`
 }
 

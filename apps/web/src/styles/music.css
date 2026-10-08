@@ -60,6 +60,13 @@
   accent-color: var(--of-accent);
 }
 
+/* And a finger's, under one (audit 2026-10-08). */
+@media (pointer: coarse) {
+  .of-music__volume input {
+    min-height: var(--of-hit-sm);
+  }
+}
+
 /*
  * Music somebody else started that this device cannot hear yet. The pill
  * keeps saying so once the prompt is waved away: the accent edge, and a dot,

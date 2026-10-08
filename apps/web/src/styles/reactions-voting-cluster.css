@@ -82,7 +82,12 @@
 }
 
 .of-voting__status {
-  flex: 1;
+  /*
+   * A line of its own rather than a word or two per line: squeezed between
+   * the title and the controls on a phone it wrapped into a column
+   * (audit 2026-10-08).
+   */
+  flex: 1 1 16ch;
   font-family: var(--of-mono);
   font-size: var(--of-type-record);
 }

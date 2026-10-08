@@ -31,6 +31,7 @@ import { useInteractionStore } from '../interaction/interaction-store.js'
 import { useOpenFrame } from '../runtime/context.js'
 import { focusTheBoard } from './hand-back-focus.js'
 import { useEscapeToClose } from '../controls/escape-stack.js'
+import { counted } from '../controls/counted.js'
 
 /** How many places "select the top" takes: what a session usually carries forward. */
 const TOP = 3
@@ -190,7 +191,7 @@ function scopeText(scope: VoteScope): string {
     case 'frame':
       return 'this frame'
     case 'objects':
-      return `${String(scope.ids.length)} ${scope.ids.length === 1 ? 'note' : 'notes'}`
+      return `${counted(scope.ids.length, 'note')}`
   }
 }
 
@@ -284,8 +285,7 @@ function VotingRoundBar({ round }: { readonly round: VotingRound }) {
    * round knows when the room is done without the counts leaking early.
    */
   const people = new Set(votes.map((vote) => vote.by)).size
-  const turnout =
-    people === 0 ? '' : ` · ${String(people)} ${people === 1 ? 'person' : 'people'} voted`
+  const turnout = people === 0 ? '' : ` · ${counted(people, 'person', 'people')} voted`
 
   const status = !open
     ? 'Voting ended'

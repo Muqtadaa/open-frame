@@ -439,6 +439,15 @@ for (const width of [390, 320]) {
       expect(box.x + box.width, `${testId} right edge`).toBeLessThanOrEqual(width)
     }
 
+    test('the bar’s way out and Share are a finger wide', async ({ page }) => {
+      await page.goto(BOARD_URL)
+      for (const id of ['board-exit', 'share-board']) {
+        const box = await boxOf(page.getByTestId(id))
+        expect(box.width, id).toBeGreaterThanOrEqual(40)
+        expect(box.height, id).toBeGreaterThanOrEqual(40)
+      }
+    })
+
     test('undo and redo stay on screen', async ({ page }) => {
       await page.goto(BOARD_URL)
       await expect(page.getByTestId('undo')).toBeAttached()

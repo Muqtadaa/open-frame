@@ -10,6 +10,7 @@ import { useOpenFrame } from '../runtime/context.js'
 import { fitToObjects } from '../scene/zoom.js'
 import { Ago } from './Ago.js'
 import { readSeen, writeSeen } from './agent-seen.js'
+import { counted } from '../controls/counted.js'
 
 export interface AgentChangesState {
   /** Everything in the board's change log, newest first; empty off a room. */
@@ -266,5 +267,5 @@ function whose(change: LoggedChange): string {
 }
 
 function objects(count: number): string {
-  return `${String(count)} ${count === 1 ? 'object' : 'objects'}`
+  return `${counted(count, 'object')}`
 }

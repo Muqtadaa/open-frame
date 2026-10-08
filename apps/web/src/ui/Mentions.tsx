@@ -7,6 +7,7 @@ import { Ago } from './Ago.js'
 import { plainMentionText } from '../hooks/use-comments.js'
 import { useAnchoredTo } from '../controls/use-anchor.js'
 import { useMentions } from '../hooks/use-mentions.js'
+import { counted } from '../controls/counted.js'
 
 /**
  * What somebody wanted you to see.
@@ -103,7 +104,7 @@ export function Mentions() {
           setOpen((current) => !current)
         }}
       >
-        {unread === 0 ? 'Mentions' : `${String(unread)} ${unread === 1 ? 'mention' : 'mentions'}`}
+        {unread === 0 ? 'Mentions' : `${counted(unread, 'mention')}`}
       </button>
 
       {open && (

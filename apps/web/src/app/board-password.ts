@@ -1,6 +1,7 @@
 import type { BoardId } from '@openframe/core'
 
 import type { RemoteBoard, RemoteBoardService, RoomService } from '../runtime/services.js'
+import { counted } from '../controls/counted.js'
 
 /** What a password needs from the outside world: the room, and your account's boards. */
 export interface PasswordDeps {
@@ -175,7 +176,7 @@ export async function unlockBoard(
     const seconds = unlocked.retryAfterSeconds
     return {
       ok: false,
-      reason: `Too many attempts. Try again in ${String(seconds)} ${seconds === 1 ? 'second' : 'seconds'}.`,
+      reason: `Too many attempts. Try again in ${counted(seconds, 'second')}.`,
     }
   }
   if (unlocked.reason === 'refused') {

@@ -112,6 +112,13 @@
     color var(--of-quick) var(--of-ease);
 }
 
+/* A finger's height under one: it was 26 (audit 2026-10-08). */
+@media (pointer: coarse) {
+  .of-spaces__new {
+    min-height: var(--of-hit-sm);
+  }
+}
+
 .of-spaces__new svg {
   width: 14px;
   height: 14px;

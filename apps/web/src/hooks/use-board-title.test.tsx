@@ -1,3 +1,4 @@
+import { useEffect } from 'react'
 import { afterEach, describe, expect, it } from 'vitest'
 
 import { mountOnBoard, type Mounted } from '../test-render.js'
@@ -10,8 +11,12 @@ import { useBoardTitle } from './use-document-object.js'
  */
 let renders = 0
 function Probe() {
-  renders += 1
-  return <output>{useBoardTitle()}</output>
+  const title = useBoardTitle()
+  // Counted after each commit: a render that committed nothing is no redraw.
+  useEffect(() => {
+    renders += 1
+  })
+  return <output>{title}</output>
 }
 
 let mounted: Mounted | null = null
