@@ -8,12 +8,6 @@
   gap: var(--of-space-4);
 }
 
-.of-music__genre[aria-checked='true'] {
-  color: var(--of-accent);
-  background: var(--of-accent-soft);
-  border-color: var(--of-accent);
-}
-
 .of-music__now {
   display: grid;
   gap: 1px;
@@ -43,10 +37,6 @@
   flex-wrap: wrap;
   gap: var(--of-space-6);
   align-items: center;
-}
-
-.of-music__device [aria-pressed='true'] {
-  color: var(--of-accent);
 }
 
 .of-music__volume {

@@ -77,13 +77,6 @@
   font-weight: var(--of-weight-semibold);
 }
 
-/* The vote tool, armed: the same pressed bed as the timer's chosen preset. */
-.of-voting [aria-pressed='true'] {
-  color: var(--of-accent);
-  background: var(--of-accent-soft);
-  border-color: var(--of-accent);
-}
-
 .of-voting__title {
   font-weight: var(--of-weight-semibold);
 }

@@ -1239,3 +1239,38 @@ describe.each(THEMES)("a poll's controls — $name", ({ token }) => {
     expect(faint).toEqual([])
   })
 })
+
+/*
+ * ONE PRESSED BUTTON (audit 2026-10-08). `.of-button` had no pressed state,
+ * so four surfaces made their own: the vote tool, the timer's presets, the
+ * music genres and Mute. Three were the all-round accent ring that the icon
+ * button gave up for a foot bar because a ring is what focus draws; Mute was
+ * its text colour alone, 1.14:1. The primitive carries the state now, and no
+ * surface paints pressed or chosen with a ring of its own.
+ */
+describe('one pressed button', () => {
+  it('marks a pressed or chosen button with an edge along its foot', () => {
+    const rule =
+      /\.of-button\[aria-pressed='true'\],\s*\.of-button\[aria-checked='true'\]\s*\{([^}]*)\}/.exec(
+        CSS,
+      )?.[1] ?? ''
+    expect(rule, 'the primitive marks pressed and chosen').not.toBe('')
+    const shadow = /box-shadow:([^;]*);/.exec(rule)?.[1] ?? ''
+    expect(shadow).toContain('inset')
+    expect(shadow).not.toMatch(/inset\s+0\s+0\s+0\s/)
+  })
+
+  it('leaves no surface its own ring for pressed or chosen', () => {
+    const rings = [...CSS.matchAll(/([^{}]+)\{([^{}]*)\}/g)]
+      .filter(([, selector = '']) => /\[aria-(pressed|checked)='true'\]/.test(selector))
+      .filter(([, , body = '']) => /border-color:\s*var\(--of-accent\)/.test(body))
+      .map(([, selector = '']) => selector.replace(/\/\*[\s\S]*?\*\//g, '').trim())
+      /*
+       * A reaction chip is a capsule on a note, in the world: its edge is the
+       * only boundary it has, and a bar under a pill reads as an underline.
+       * Focus is drawn outside it, so the two cannot be read for each other.
+       */
+      .filter((selector) => selector !== ".of-reaction[aria-pressed='true']")
+    expect(rings).toEqual([])
+  })
+})

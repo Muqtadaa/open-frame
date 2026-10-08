@@ -141,12 +141,6 @@
   font-family: var(--of-mono);
 }
 
-.of-timer__preset[aria-pressed='true'] {
-  color: var(--of-accent);
-  background: var(--of-accent-soft);
-  border-color: var(--of-accent);
-}
-
 .of-timer__field {
   display: grid;
   grid-template-columns: auto 1fr;
