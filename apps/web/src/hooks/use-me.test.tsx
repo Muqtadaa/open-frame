@@ -83,4 +83,43 @@ describe('me', () => {
     await mounted.settle()
     expect(mounted.container.textContent).toMatch(/^g_[0-9a-f]{16}$/)
   })
+
+  /*
+   * One answer for the page (audit 2026-10-08). Every mark on a note asks who
+   * "me" is, and each used to ask the account service itself: a lookup and a
+   * subscription per note with a dot or a reaction, each a profile query, and
+   * again for every note that culling remounted on a pan.
+   */
+  it('asks the account service once, however many places ask who I am', async () => {
+    let lookups = 0
+    let listeners = 0
+    mounted = await mountOnBoard(
+      <>
+        <Probe />
+        <Probe />
+        <Probe />
+      </>,
+      {
+        services: (built) => ({
+          ...built,
+          accounts: {
+            ...built.accounts,
+            enabled: true,
+            current: () => {
+              lookups += 1
+              return Promise.resolve(ACCOUNT)
+            },
+            onChange: () => {
+              listeners += 1
+              return () => undefined
+            },
+          },
+        }),
+      },
+    )
+    await mounted.settle()
+    expect(mounted.container.textContent).toMatch(/^(u_[0-9a-f]{16}){3}$/)
+    expect(lookups).toBe(1)
+    expect(listeners).toBe(1)
+  })
 })

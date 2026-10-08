@@ -691,7 +691,12 @@ describe('the twelve pixel floor', () => {
    */
   it('draws every interface size from the ramp', () => {
     const off = rules()
-      .filter(([, size]) => !/^var\(--of-type-[\w-]+\)$/.test(size) && !size.endsWith('em'))
+      /*
+       * `em`, not anything ending in it: `endsWith('em')` let `rem` through,
+       * and an interface size in rem off the ramp sat in the emoji library
+       * unnoticed (audit 2026-10-08).
+       */
+      .filter(([, size]) => !/^var\(--of-type-[\w-]+\)$/.test(size) && !/^[\d.]+em$/.test(size))
       .map(([selector, size]) => `${selector}: ${size}`)
     expect(off).toEqual([])
   })
@@ -1195,5 +1200,82 @@ describe('the front door’s targets', () => {
   it('"Create an account" is a whole target, not a 23px line of text', () => {
     const body = /\.of-account__switch\s*\{([^}]*)\}/.exec(CSS)?.[1] ?? ''
     expect(body).toMatch(/min-height:\s*var\(--of-hit-sm\)/)
+  })
+})
+
+/*
+ * A POLL'S CONTROLS are drawn on the card's own paper, in any colour the card
+ * is given, in either world (audit 2026-10-08). Their edges were a chrome
+ * token, `--of-control-border`, measured against the panel and never against
+ * a card: 2.26:1 on the default card After Hours and under 3:1 on seven card
+ * colours in the Notebook. An edge drawn from the card's own ink follows
+ * whatever paper it is on, and this measures it on every one.
+ *
+ * The share is read from the stylesheet, and the edge composited over the
+ * paper exactly as `color-mix(in srgb, currentcolor N%, transparent)` is.
+ */
+describe.each(THEMES)("a poll's controls — $name", ({ token }) => {
+  const share = (selector: string): number => {
+    const body = new RegExp(`\\.${selector}\\s*\\{([^}]*)\\}`).exec(CSS)?.[1] ?? ''
+    const found = /border:[^;]*color-mix\(in srgb, currentcolor (\d+)%, transparent\)/.exec(body)
+    expect(found, `${selector} draws its edge from the card's ink`).not.toBeNull()
+    return Number(found?.[1] ?? 0) / 100
+  }
+  const over = (ink: string, paper: string, amount: number): string => {
+    const [ir, ig, ib] = channels(ink)
+    const [pr, pg, pb] = channels(paper)
+    const mix = (i: number, p: number) => Math.round(i * amount + p * (1 - amount))
+    const hex = (n: number) => n.toString(16).padStart(2, '0')
+    return `#${hex(mix(ir, pr))}${hex(mix(ig, pg))}${hex(mix(ib, pb))}`
+  }
+  // The pairs the card can be drawn in: what `readableInkOn` gives a neutral
+  // card, and the board's ink on every hue.
+  const cards: readonly (readonly [string, string, string])[] = [
+    ['white', token('s-white'), token('c-black')],
+    ['black', token('s-black'), token('c-white')],
+    ...HUES.map((hue) => [hue, token(`s-${hue}`), token('ink')] as const),
+  ]
+
+  it.each(['of-poll__option', 'of-poll__close'])('%s shows on every card (3:1)', (selector) => {
+    const amount = share(selector)
+    const faint = cards
+      .map(([name, paper, ink]) => [name, contrast(over(ink, paper, amount), paper)] as const)
+      .filter(([, ratio]) => ratio < 3)
+    expect(faint).toEqual([])
+  })
+})
+
+/*
+ * ONE PRESSED BUTTON (audit 2026-10-08). `.of-button` had no pressed state,
+ * so four surfaces made their own: the vote tool, the timer's presets, the
+ * music genres and Mute. Three were the all-round accent ring that the icon
+ * button gave up for a foot bar because a ring is what focus draws; Mute was
+ * its text colour alone, 1.14:1. The primitive carries the state now, and no
+ * surface paints pressed or chosen with a ring of its own.
+ */
+describe('one pressed button', () => {
+  it('marks a pressed or chosen button with an edge along its foot', () => {
+    const rule =
+      /\.of-button\[aria-pressed='true'\],\s*\.of-button\[aria-checked='true'\]\s*\{([^}]*)\}/.exec(
+        CSS,
+      )?.[1] ?? ''
+    expect(rule, 'the primitive marks pressed and chosen').not.toBe('')
+    const shadow = /box-shadow:([^;]*);/.exec(rule)?.[1] ?? ''
+    expect(shadow).toContain('inset')
+    expect(shadow).not.toMatch(/inset\s+0\s+0\s+0\s/)
+  })
+
+  it('leaves no surface its own ring for pressed or chosen', () => {
+    const rings = [...CSS.matchAll(/([^{}]+)\{([^{}]*)\}/g)]
+      .filter(([, selector = '']) => /\[aria-(pressed|checked)='true'\]/.test(selector))
+      .filter(([, , body = '']) => /border-color:\s*var\(--of-accent\)/.test(body))
+      .map(([, selector = '']) => selector.replace(/\/\*[\s\S]*?\*\//g, '').trim())
+      /*
+       * A reaction chip is a capsule on a note, in the world: its edge is the
+       * only boundary it has, and a bar under a pill reads as an underline.
+       * Focus is drawn outside it, so the two cannot be read for each other.
+       */
+      .filter((selector) => selector !== ".of-reaction[aria-pressed='true']")
+    expect(rings).toEqual([])
   })
 })

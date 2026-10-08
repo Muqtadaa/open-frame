@@ -77,29 +77,26 @@
   font-weight: var(--of-weight-semibold);
 }
 
-/* The vote tool, armed: the same pressed bed as the timer's chosen preset. */
-.of-voting [aria-pressed='true'] {
-  color: var(--of-accent);
-  background: var(--of-accent-soft);
-  border-color: var(--of-accent);
-}
-
 .of-voting__title {
   font-weight: var(--of-weight-semibold);
 }
 
 .of-voting__status {
-  flex: 1;
+  /*
+   * Never narrower than a few words: squeezed between the title and the
+   * controls on a phone it wrapped into a column, a word or two per line
+   * (audit 2026-10-08). Below that the controls wrap under it instead.
+   */
+  flex: 1 1 16ch;
+  min-width: 16ch;
   font-family: var(--of-mono);
   font-size: var(--of-type-record);
 }
 
-/* While the tool is armed: the one thing nothing on screen would teach. */
-.of-voting__hint {
-  flex-basis: 100%;
-  order: 1;
-  font-size: var(--of-type-record);
-  color: var(--of-ink-muted);
+/* The vote tool's two modes, held together as one control. */
+.of-voting__modes {
+  display: flex;
+  gap: var(--of-space-4);
 }
 
 .of-voting__field {
@@ -310,6 +307,20 @@
   font-size: var(--of-type-ui);
 }
 
+/*
+ * A short window, such as a phone held sideways, leaves no room beside a note
+ * for both the record panel and a bar a whole row wide, and the bar landed
+ * under the panel with eight of its nine buttons hidden (audit 2026-10-08).
+ * Folded to rows of five, it fits beside the panel, over the top of the note
+ * it belongs to (anchoring.ts slides it there).
+ */
+@media (max-height: 480px) {
+  .of-reaction-bar {
+    display: grid;
+    grid-template-columns: repeat(5, auto);
+  }
+}
+
 .of-reaction-bar__button[aria-pressed='true'] {
   background: var(--of-accent-soft);
 }
@@ -340,6 +351,16 @@
   overscroll-behavior: contain;
 }
 
+/*
+ * Nearly two thousand emoji, in groups. A group out of view is neither laid
+ * out nor painted until it scrolls in; the height it stands in with is about
+ * a group's, so the scrollbar does not jump as they arrive.
+ */
+.of-emoji-picker__group {
+  content-visibility: auto;
+  contain-intrinsic-size: auto 240px;
+}
+
 .of-emoji-picker__heading {
   margin: var(--of-space-6) 0 var(--of-space-2);
   font-family: var(--of-mono);
@@ -357,7 +378,7 @@
   width: 100%;
   aspect-ratio: 1;
   padding: 0;
-  font-size: 1.25rem;
+  font-size: var(--of-type-glyph);
   line-height: 1;
   background: transparent;
   border: none;

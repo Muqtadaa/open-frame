@@ -146,5 +146,9 @@ export default defineConfig({
   define: { __OPENFRAME_BENCH__: JSON.stringify(benchEnabled) },
   server: { port: 5173 },
   preview: { headers: DEPLOYED_HEADERS },
-  build: { sourcemap: true },
+  /*
+   * The manifest is what `pnpm bench:bundle` reads to hold each route's first
+   * load to its budget (tools/bench/budgets.ts).
+   */
+  build: { sourcemap: true, manifest: true },
 })

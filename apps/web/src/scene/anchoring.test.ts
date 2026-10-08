@@ -199,6 +199,30 @@ describe('avoiding another surface', () => {
     expect(placed.x).toBeGreaterThanOrEqual(12)
   })
 
+  /*
+   * A phone held sideways (audit 2026-10-08): the rail takes the left, the
+   * panel the right, and the note sits between them with no side clear. The
+   * fallback side was 'right', which can only slide up or down, and the panel
+   * runs the window's height, so the bar stayed under it. It slides ACROSS
+   * as well, over part of the selected note: covering the thing it is about
+   * a little is better than vanishing under the panel.
+   */
+  it('slides across its side when sliding along cannot clear the panel', () => {
+    const sideways = {
+      anchor: { x: 210, y: 110, width: 180, height: 180 },
+      surface: { width: 216, height: 92 },
+      within: { width: 844, height: 390 },
+      prefer: ['below', 'above', 'right', 'left'] as const,
+      gap: 8,
+      margin: 12,
+      keepClearLeft: 102,
+    }
+    const panel = { x: 432, y: 86, width: 360, height: 218 }
+    const placed = placeAnchored({ ...sideways, avoid: panel })
+    expect(placed.x + 216).toBeLessThanOrEqual(panel.x)
+    expect(placed.x).toBeGreaterThanOrEqual(102)
+  })
+
   it('is unchanged by a null obstacle', () => {
     expect(placeAnchored({ ...request, avoid: null })).toEqual(placeAnchored(request))
   })

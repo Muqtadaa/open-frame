@@ -1115,9 +1115,12 @@ heading, a title, votes each (5 by default, up to 20), "Hide counts until
 revealed", Start. Escape or Cancel leaves nothing behind.
 
 While a round runs, the same place holds it: the title, "3 of 5 votes left" in
-mono with how many people have voted (never which notes), and a **Vote** toggle
-that arms the dot tool and reads "Voting" while pressed, with "Alt-click a dot
-to take it back" under it. A click on a note places a dot when the button comes
+mono with how many people have voted (never which notes), and the dot tool's
+two modes side by side: **Vote**, which reads "Voting" while pressed, and
+**Take back**, in which a press takes one of your dots off a note. A finger has
+no Alt key, so a misplaced dot on a phone could once only be undone; Alt-click
+still takes one back while adding, and the Take back tip says so. Choosing any
+tool returns the dot tool to adding. A click on a note places a dot when the button comes
 up, so a drag or the first finger of a pinch places none; a double-click is two
 dots and opens nothing; a right-click opens the menu and votes nothing. The
 tool reaches through a group to the note and past a selected note's handles.
@@ -1204,7 +1207,12 @@ then zoom itself.
 A glyph on no ground that takes a bed when you reach for it: 30px
 (`--of-hit-sm`) at its smallest, muted ink at rest, ink on the hover wash,
 accent on the accent wash when pressed (the state an active tool takes), and
-correction red on hover only when it removes something. The zoom
+correction red on hover only when it removes something. A text button
+(`.of-button`) that is pressed or chosen — the dot tool's modes, a timer
+preset, a music genre, Mute — takes the same mark: the accent wash with a bar
+along its foot, never an all-round ring, because a ring is what focus draws.
+Four surfaces had invented their own, Mute as text colour alone at 1.14:1
+(audit 2026-10-08); `design-tokens.test.ts` holds the one rule. The zoom
 cluster's history and settings, the arrange and format bars, the record panel's
 remove and the front door's row actions are all this one control; six private
 versions at 24, 26, 28 and 30px were folded into it, and the three under 30

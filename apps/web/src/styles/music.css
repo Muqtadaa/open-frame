@@ -8,12 +8,6 @@
   gap: var(--of-space-4);
 }
 
-.of-music__genre[aria-checked='true'] {
-  color: var(--of-accent);
-  background: var(--of-accent-soft);
-  border-color: var(--of-accent);
-}
-
 .of-music__now {
   display: grid;
   gap: 1px;
@@ -45,10 +39,6 @@
   align-items: center;
 }
 
-.of-music__device [aria-pressed='true'] {
-  color: var(--of-accent);
-}
-
 .of-music__volume {
   display: flex;
   flex: 1;
@@ -68,6 +58,13 @@
   /* The 24px target, however thin the track is drawn. */
   min-height: 24px;
   accent-color: var(--of-accent);
+}
+
+/* And a finger's, under one (audit 2026-10-08). */
+@media (pointer: coarse) {
+  .of-music__volume input {
+    min-height: var(--of-hit-sm);
+  }
 }
 
 /*
@@ -96,6 +93,11 @@
 .of-music__prompt {
   gap: var(--of-space-8);
   width: max-content;
-  max-width: min(360px, calc(100vw - 2 * var(--of-gutter)));
+  /*
+   * Its surface's width, not the window's: the surface is already held clear
+   * of the rail and the edges, and a prompt sized to the window ran past it,
+   * with Dismiss off a 320px phone (audit 2026-10-08). The words wrap.
+   */
+  max-width: min(360px, 100%);
   padding: var(--of-space-6) var(--of-space-6) var(--of-space-6) var(--of-space-12);
 }

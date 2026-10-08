@@ -27,6 +27,7 @@ import { BackIcon, StepIcon } from '../controls/icons.js'
 import { Ago } from './Ago.js'
 import { MentionPicker } from './MentionPicker.js'
 import { MentionText } from './MentionText.js'
+import { counted } from '../controls/counted.js'
 
 /**
  * Reading and writing one conversation.
@@ -659,9 +660,7 @@ export function CommentPanel({ author }: { readonly author: string | null }) {
            * is open, because a live region only speaks when its text CHANGES.
            */}
           <p className="of-visually-hidden" role="status" data-testid="mention-status">
-            {picking
-              ? `${String(candidates.length)} ${candidates.length === 1 ? 'match' : 'matches'}`
-              : ''}
+            {picking ? `${counted(candidates.length, 'match', 'matches')}` : ''}
           </p>
 
           {picking && (

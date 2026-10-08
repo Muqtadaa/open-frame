@@ -31,6 +31,7 @@ import { useInteractionStore } from '../interaction/interaction-store.js'
 import { useOpenFrame } from '../runtime/context.js'
 import { focusTheBoard } from './hand-back-focus.js'
 import { useEscapeToClose } from '../controls/escape-stack.js'
+import { counted } from '../controls/counted.js'
 
 /** How many places "select the top" takes: what a session usually carries forward. */
 const TOP = 3
@@ -190,7 +191,7 @@ function scopeText(scope: VoteScope): string {
     case 'frame':
       return 'this frame'
     case 'objects':
-      return `${String(scope.ids.length)} ${scope.ids.length === 1 ? 'note' : 'notes'}`
+      return `${counted(scope.ids.length, 'note')}`
   }
 }
 
@@ -198,6 +199,8 @@ function VotingRoundBar({ round }: { readonly round: VotingRound }) {
   const canEdit = useCanEdit()
   const me = useMe()
   const commands = useCommands()
+  const takingBack = useInteractionStore((state) => state.takingBack)
+  const setTakingBack = useInteractionStore((state) => state.setTakingBack)
   const tool = useInteractionStore((state) => state.tool)
   const setTool = useInteractionStore((state) => state.setTool)
   const votes = useRoundVotes(round.id)
@@ -282,8 +285,7 @@ function VotingRoundBar({ round }: { readonly round: VotingRound }) {
    * round knows when the room is done without the counts leaking early.
    */
   const people = new Set(votes.map((vote) => vote.by)).size
-  const turnout =
-    people === 0 ? '' : ` · ${String(people)} ${people === 1 ? 'person' : 'people'} voted`
+  const turnout = people === 0 ? '' : ` · ${counted(people, 'person', 'people')} voted`
 
   const status = !open
     ? 'Voting ended'
@@ -310,22 +312,47 @@ function VotingRoundBar({ round }: { readonly round: VotingRound }) {
           {status}
         </span>
         {open && canEdit && me !== null && (
-          <button
-            type="button"
-            className="of-button"
-            aria-pressed={voting}
-            data-testid="voting-vote"
-            onClick={() => {
-              setTool(voting ? 'select' : 'dot')
-            }}
-          >
-            {voting ? 'Voting' : 'Vote'}
-          </button>
-        )}
-        {voting && (
-          <span className="of-voting__hint" data-testid="voting-hint">
-            Alt-click a dot to take it back
-          </span>
+          /*
+           * Two modes of the one tool, side by side. Taking a dot back was
+           * Alt-click only, which a finger cannot do: on a phone a misplaced
+           * vote could only be undone (audit 2026-10-08). Alt still takes one
+           * back while adding; the mode is the way that needs no key.
+           */
+          <div className="of-voting__modes" role="group" aria-label="Vote tool">
+            <button
+              type="button"
+              className="of-button"
+              aria-pressed={voting && !takingBack}
+              data-testid="voting-vote"
+              onClick={() => {
+                if (voting && !takingBack) setTool('select')
+                else {
+                  setTool('dot')
+                  setTakingBack(false)
+                }
+              }}
+            >
+              {voting && !takingBack ? 'Voting' : 'Vote'}
+            </button>
+            <button
+              type="button"
+              className="of-button"
+              aria-pressed={voting && takingBack}
+              data-testid="voting-take-back"
+              aria-label="Take back"
+              aria-description="Alt-click also takes one back"
+              data-tip="Alt-click also takes one back"
+              onClick={() => {
+                if (voting && takingBack) setTool('select')
+                else {
+                  setTool('dot')
+                  setTakingBack(true)
+                }
+              }}
+            >
+              Take back
+            </button>
+          </div>
         )}
         {open && canEdit && round.data.hidden && (
           <button

@@ -143,6 +143,13 @@ function Picker({
     else all[Math.min(next, all.length - 1)]?.focus()
   }
 
+  /*
+   * The first emoji in view takes Tab, the rest are walked with the arrows.
+   * With every cell out of the tab order, Tab went from the search field
+   * straight past the list, and nothing in the scrolling region could be
+   * reached without knowing the arrows (axe, audit 2026-10-08).
+   */
+  const first = searching ? results[0]?.slug : library?.[0]?.emojis[0]?.slug
   const cell = (item: LibraryEmoji) => (
     <button
       key={item.slug}
@@ -151,7 +158,7 @@ function Picker({
       data-emoji-cell=""
       data-testid={`emoji-${item.slug}`}
       aria-label={item.name}
-      tabIndex={-1}
+      tabIndex={item.slug === first ? 0 : -1}
       onClick={() => {
         pick(item)
       }}

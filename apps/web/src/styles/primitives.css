@@ -67,6 +67,19 @@
   cursor: default;
 }
 
+/*
+ * Pressed (a toggle) or chosen (one of a set): the icon button's foot bar on
+ * the accent wash. The vote tool, the timer's presets, the music genres and
+ * Mute each made their own, three of them the all-round ring that focus
+ * draws and Mute its text colour alone, 1.14:1 (audit 2026-10-08).
+ */
+.of-button[aria-pressed='true'],
+.of-button[aria-checked='true'] {
+  color: var(--of-accent);
+  background: var(--of-accent-soft);
+  box-shadow: inset 0 -2px 0 var(--of-accent);
+}
+
 .of-button--primary {
   color: var(--of-panel);
   background: var(--of-accent);

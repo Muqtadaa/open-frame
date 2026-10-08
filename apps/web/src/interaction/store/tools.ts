@@ -49,12 +49,14 @@ export const toolsSlice: Slice<ToolsSlice> = (set) => ({
   toolOptions: NO_OPTIONS,
   wheelMode: readWheelMode(),
   snapToGrid: readSnap(),
+  takingBack: false,
 
   // Reaches across two slices: choosing a tool ends an edit (selection) and
   // may open the comments panel (discussion).
   setTool: (tool) =>
     set((state) => ({
       tool,
+      takingBack: false,
       editingId: null,
       // Choosing the comment tool opens the panel. Leaving the tool does NOT
       // close it: a thread you are reading should survive picking up select
@@ -68,6 +70,10 @@ export const toolsSlice: Slice<ToolsSlice> = (set) => ({
   setWheelMode: (wheelMode) => {
     writeWheelMode(wheelMode)
     set({ wheelMode })
+  },
+
+  setTakingBack: (takingBack) => {
+    set({ takingBack })
   },
 
   setSnapToGrid: (snapToGrid) => {

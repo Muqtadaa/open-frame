@@ -3,6 +3,7 @@ import { useEffect, useRef, useState, type RefObject } from 'react'
 
 import { previewRuntime, versionPreview } from '../app/version-preview.js'
 import { AnchoredSurface } from '../controls/AnchoredSurface.js'
+import { wrapTab } from '../controls/wrap-tab.js'
 import { useDismiss } from '../controls/use-dismiss.js'
 import { useCanEdit } from '../hooks/use-can-edit.js'
 import { useInteractionStore } from '../interaction/interaction-store.js'
@@ -46,6 +47,9 @@ export function VersionHistorySheet({
         role="dialog"
         aria-label="Version history"
         tabIndex={-1}
+        // Tab stays in the sheet while it is open, as in every other sheet;
+        // it walked out to the rail with this one still open (audit 2026-10-08).
+        onKeyDown={wrapTab}
       >
         <VersionList ready={anchor !== null} onChosen={onClose} />
       </div>

@@ -51,6 +51,7 @@ import { containerAt, objectsInMarquee } from '../scene/hit-testing.js'
 import { snapPoint } from '../scene/snapping.js'
 import { placeDerived } from '../scene/derived-placement.js'
 import { panToReveal } from '../scene/zoom.js'
+import { counted } from '../controls/counted.js'
 
 /** What a round of dot voting is started with. */
 export interface VotingOptions {
@@ -878,7 +879,7 @@ export function useCommands(): BoardCommands {
          * objects vanished, nothing said so, and nothing showed them again but
          * undo. The board's own menu shows them later, too.
          */
-        store.showToast(`${String(ids.length)} ${ids.length === 1 ? 'object' : 'objects'} hidden`, {
+        store.showToast(`${counted(ids.length, 'object')} hidden`, {
           label: 'Show',
           run: () => {
             showHidden(ids)
@@ -1087,7 +1088,7 @@ export function useCommands(): BoardCommands {
         store.announce(
           kept === 0
             ? `Reverted “${change.label}”.`
-            : `Reverted “${change.label}”, except ${String(kept)} ${kept === 1 ? 'object' : 'objects'} changed since.`,
+            : `Reverted “${change.label}”, except ${counted(kept, 'object')} changed since.`,
         )
         return { transactionId: result.transactionId, kept }
       },

@@ -17,6 +17,7 @@ import { useCallback, useEffect, useRef, useState, useSyncExternalStore } from '
 import { CloseIcon, NextTrackIcon, PreviousTrackIcon } from '../controls/icons.js'
 import { useCanEdit } from '../hooks/use-can-edit.js'
 import { useMe } from '../hooks/use-me.js'
+import { useTick } from '../hooks/use-tick.js'
 import { useInteractionStore } from '../interaction/interaction-store.js'
 import type { FacilitationChannel } from '../runtime/facilitation.js'
 import { useServices, type MusicService } from '../runtime/services.js'
@@ -110,7 +111,7 @@ export function useMusicSession(
       ? []
       : MUSIC_GENRES.filter((genre) => playlistOf(catalogue, genre).length > 0)
   const music = stored ?? stoppedMusic(genres[0] ?? 'ambient-lofi')
-  const now = useTick(channel.now, music.status === 'playing')
+  const now = useTick(channel.now, music.status === 'playing', FOLLOW_MS)
   const position = positionOf(music, now)
   const track =
     position === null || catalogue === null
@@ -535,19 +536,4 @@ export function MusicPanel({ panel }: { readonly panel: MusicPanelProps }) {
       </div>
     </>
   )
-}
-
-/** The room's time, re-read once a second while the music plays, and not at all otherwise. */
-function useTick(now: () => number, ticking: boolean): number {
-  const [, setTick] = useState(0)
-  useEffect(() => {
-    if (!ticking) return
-    const id = setInterval(() => {
-      setTick((tick) => tick + 1)
-    }, FOLLOW_MS)
-    return () => {
-      clearInterval(id)
-    }
-  }, [ticking])
-  return now()
 }

@@ -228,6 +228,17 @@
 }
 
 /*
+ * Down to its icon, a control is square at least: the way out was 34 by 40
+ * and Share 35 by 40 under a finger (audit 2026-10-08). Here rather than on
+ * the controls, because the bar lets every child shrink to nothing.
+ */
+.of-status[data-squeeze~='exit'] .of-status__exit,
+.of-status[data-squeeze~='icons'] .of-status__share {
+  justify-content: center;
+  min-width: var(--of-hit-sm);
+}
+
+/*
  * The readout's short form. The quiet words go altogether; a FAILURE never
  * does — `display: none` would take its live region with it — and nor does
  * the room being out of reach, which changes what every edit means: that

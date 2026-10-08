@@ -106,7 +106,7 @@ export function ZoomControl() {
       <span className="of-zoom__sep" aria-hidden="true" />
       <button
         type="button"
-        className="of-icon-button"
+        className="of-icon-button of-zoom__wheel"
         // A name, not an instruction: what the wheel does now.
         aria-label={`Scroll wheel ${wheelMode === 'zoom' ? 'zooms' : 'pans'}`}
         data-tip={`Scroll wheel ${wheelMode === 'zoom' ? 'zooms' : 'pans'}`}

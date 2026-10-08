@@ -130,7 +130,13 @@
   text-align: left;
   cursor: pointer;
   background: transparent;
-  border: 1px solid var(--of-control-border);
+  /*
+   * The card's own ink, not a chrome token: a poll is any colour, in either
+   * world, and `--of-control-border` was measured against the panel, never a
+   * card — under 3:1 on eight of them (audit 2026-10-08). 55% is the least
+   * that clears 3:1 on every card; design-tokens.test.ts measures each.
+   */
+  border: 1px solid color-mix(in srgb, currentcolor 55%, transparent);
   border-radius: var(--of-radius);
 }
 
@@ -217,7 +223,7 @@
   color: inherit;
   cursor: pointer;
   background: transparent;
-  border: 1px solid color-mix(in srgb, currentcolor 35%, transparent);
+  border: 1px solid color-mix(in srgb, currentcolor 55%, transparent);
   border-radius: var(--of-radius);
 }
 

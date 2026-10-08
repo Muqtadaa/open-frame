@@ -11,6 +11,7 @@ import {
   type ObjectTool,
   type ObjectViewProps,
 } from './registry.js'
+import { counted } from '../controls/counted.js'
 
 /**
  * A poll: the question, and its options as buttons that answer it.
@@ -70,7 +71,7 @@ function PollRenderer({ object, marks }: ObjectViewProps<PollData>) {
               disabled={!answerable}
               aria-label={
                 shown
-                  ? `${option.label}, ${String(option.count)} ${option.count === 1 ? 'answer' : 'answers'}, ${String(Math.round((option.count / of) * 100))}%`
+                  ? `${option.label}, ${counted(option.count, 'answer')}, ${String(Math.round((option.count / of) * 100))}%`
                   : option.label
               }
               onClick={() => {
@@ -115,9 +116,7 @@ function PollRenderer({ object, marks }: ObjectViewProps<PollData>) {
         <p className="of-poll__state" data-testid="poll-state">
           {[
             closed ? 'Closed' : '',
-            marks === undefined
-              ? ''
-              : `${String(tally.people)} ${tally.people === 1 ? 'answer' : 'answers'}`,
+            marks === undefined ? '' : `${counted(tally.people, 'answer')}`,
             !shown && marks !== undefined ? 'results when closed' : '',
           ]
             .filter(Boolean)

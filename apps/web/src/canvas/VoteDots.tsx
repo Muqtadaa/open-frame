@@ -3,6 +3,7 @@ import { useState } from 'react'
 
 import { useMe } from '../hooks/use-me.js'
 import { countsShown, tallyVoters, useVoters, useVotingContext } from '../hooks/use-voting.js'
+import { counted } from '../controls/counted.js'
 
 /**
  * The dots on a note, drawn on the note — in the world, like its reactions,
@@ -29,6 +30,38 @@ function Dots({ voters, bare }: { readonly voters: string; readonly bare: boolea
   const { total, mine } = tallyVoters(voters, round?.id ?? '', me?.key ?? null)
   const shown = round !== null && countsShown(round.data)
   const count = round === null ? 0 : shown ? total : mine
+  if (round === null) return null
+  const label = shown
+    ? `${counted(total, 'vote')}${mine > 0 ? `, ${String(mine)} yours` : ''}`
+    : `${counted(mine, 'vote')} of yours`
+  /*
+   * Drawn again once it is known who "me" is. Until then a hidden round shows
+   * none of this person's dots, and every one of them would count as new the
+   * moment the account landed — inked in on every open and every scroll
+   * (audit 2026-10-08).
+   */
+  return (
+    <Marks
+      key={me === null ? 'unknown' : 'known'}
+      count={count}
+      bare={bare}
+      mine={mine}
+      label={label}
+    />
+  )
+}
+
+function Marks({
+  count,
+  bare,
+  mine,
+  label,
+}: {
+  readonly count: number
+  readonly bare: boolean
+  readonly mine: number
+  readonly label: string
+}) {
   /*
    * How many dots could be SEEN when the note was drawn. Only a dot past that
    * is new, and inked in: a board opening, or a note scrolled into view, must
@@ -37,10 +70,9 @@ function Dots({ voters, bare }: { readonly voters: string; readonly bare: boolea
    * dots arrive for this person, and they are inked in then (Codex, on #93).
    */
   const [seen] = useState(bare ? 0 : count)
-  if (round === null || count === 0) return null
-  const label = shown
-    ? `${String(total)} ${total === 1 ? 'vote' : 'votes'}${mine > 0 ? `, ${String(mine)} yours` : ''}`
-    : `${String(mine)} ${mine === 1 ? 'vote' : 'votes'} of yours`
+  // Held up here, mounted while nothing shows: a hidden round's dots arrive
+  // for this person when it is revealed, and are counted as unseen until then.
+  if (count === 0) return null
   // Five can be seen at a glance; six in a row are counted, so past five the
   // number says it instead.
   const drawn = count <= DOTS_AT_MOST ? count : 1

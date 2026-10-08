@@ -505,6 +505,28 @@ textarea.of-input {
   .of-zoom__mode {
     display: none;
   }
+
+  /*
+   * Under a finger every control is 40px, and the cluster came to 390px: undo
+   * sat off the left edge of a 390 phone and undo and redo both left a 320
+   * one (audit 2026-10-08). It wraps upward within the window instead, so
+   * nothing in it is ever out of reach.
+   */
+  .of-zoom {
+    flex-wrap: wrap;
+    justify-content: flex-end;
+    max-width: calc(100vw - 2 * var(--of-gutter));
+  }
+}
+
+/*
+ * A phone with no mouse has no wheel to describe, so the wheel-mode setting
+ * is a control that does nothing there. A tablet with a mouse keeps it.
+ */
+@media (width < 480px) and (not (any-pointer: fine)) {
+  .of-zoom__wheel {
+    display: none;
+  }
 }
 
 /* Measurement controls ------------------------------------------------------ */

@@ -5,17 +5,17 @@ import { BoardLocked } from '../ui/BoardLocked.js'
 import { BoardUnreadable } from '../ui/BoardUnreadable.js'
 import { ContextMenu } from '../ui/ContextMenu.js'
 import { Inspector } from '../ui/Inspector.js'
-import { ClusterReview } from '../ui/ClusterReview.js'
 import { VotingBanner } from '../ui/VotingBanner.js'
 import { NoticeBanner } from '../ui/NoticeBanner.js'
-import { BoardOverview } from '../ui/BoardOverview.js'
 import { FollowingBar } from '../ui/FollowingBar.js'
 import { SearchPanel } from '../ui/SearchPanel.js'
 import { StatusBar } from '../ui/StatusBar.js'
 import { Toast } from '../ui/Toast.js'
 import { Toolbar } from '../ui/Toolbar.js'
 import { ZoomControl } from '../ui/ZoomControl.js'
-import { useContext, useSyncExternalStore } from 'react'
+import { lazy, Suspense, useContext, useSyncExternalStore } from 'react'
+
+import { useInteractionStore } from '../interaction/interaction-store.js'
 
 import { OpenFrameContext, useOpenFrame } from '../runtime/context.js'
 import { VersionPreviewBar } from '../ui/VersionPreviewBar.js'
@@ -31,10 +31,25 @@ import { versionPreview } from './version-preview.js'
  * If this file ever grows state, effects or geometry, something is in the wrong
  * place — see docs/architecture/01-overview.md.
  */
+/*
+ * Surfaces that open on request load when they first open, not with the
+ * board: each is code every board paid for and most boards never show
+ * (audit 2026-10-08). Gated here on the store, so a closed one costs neither
+ * a download nor, for the overview, a subscription to the whole document.
+ */
+const ClusterReview = lazy(() =>
+  import('../ui/ClusterReview.js').then((module) => ({ default: module.ClusterReview })),
+)
+const BoardOverview = lazy(() =>
+  import('../ui/BoardOverview.js').then((module) => ({ default: module.BoardOverview })),
+)
+
 export function App() {
   const { runtime } = useOpenFrame()
   const context = useContext(OpenFrameContext)
   const preview = useSyncExternalStore(versionPreview.subscribe, versionPreview.get)
+  const clusterOpen = useInteractionStore((state) => state.clusterReview !== null)
+  const overviewOpen = useInteractionStore((state) => state.overviewOpen)
   /*
    * A board this build could not read has nothing on it to work on, so it
    * gets the navigation bar and a sheet saying the work is safe — no rail, no
@@ -128,14 +143,22 @@ export function App() {
           <NoticeBanner notices={runtime.notices} />
           <FollowingBar />
           <VotingBanner />
-          <ClusterReview />
+          {clusterOpen && (
+            <Suspense fallback={null}>
+              <ClusterReview />
+            </Suspense>
+          )}
           <Toast />
         </div>
 
         <Inspector />
         <ContextMenu />
         <SearchPanel />
-        <BoardOverview />
+        {overviewOpen && (
+          <Suspense fallback={null}>
+            <BoardOverview />
+          </Suspense>
+        )}
         <Comments />
 
         {/*

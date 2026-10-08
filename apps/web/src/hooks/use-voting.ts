@@ -47,9 +47,11 @@ export function useVoteRound(): VotingRound | null {
       let unfollow = (): void => undefined
       const follow = (): void => {
         unfollow()
-        const round = currentVoteRound(runtime.store.getDocument())
-        unfollow =
-          round === null ? () => undefined : runtime.store.subscribeToObject(round.id, onChange)
+        // From the cache: three things follow the round, and each walked the
+        // whole board on every structural change (audit 2026-10-08).
+        const signature = roundSignature(runtime.store.getDocument())
+        const id = signature === '' ? null : (JSON.parse(signature) as VotingRound).id
+        unfollow = id === null ? () => undefined : runtime.store.subscribeToObject(id, onChange)
       }
       follow()
       const unstructure = runtime.store.subscribeToStructure(() => {

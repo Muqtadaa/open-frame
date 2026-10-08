@@ -123,6 +123,7 @@
   --of-type-ui: 0.9375rem; /* menus, notices, toasts, a sticky's body */
   --of-type-title: 1.0625rem; /* the title of a gate or a sheet */
   --of-type-headline: 1.1875rem; /* the wordmark on the front door */
+  --of-type-glyph: 1.25rem; /* an emoji picked from a grid: a picture, sized as one */
   /*
    * In px, unlike the rest: a text object's size is CONTENT, in world units,
    * and a board must lay out the same for everybody looking at it. The ramp

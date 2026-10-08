@@ -20,6 +20,7 @@ pnpm bench:fixtures   # generate 100/1k/5k/10k boards into tools/bench/fixtures/
 pnpm test:bench       # renderer scaling probe (needs the fixtures above)
 pnpm build:bench      # deployable build WITH the bench panel and fixtures
 pnpm bench:check <results.json…>   # hold bench results to tools/bench/budgets.ts (nightly)
+pnpm bench:bundle --check   # each route's first-load JS against its budget (in verify; after a build)
 pnpm music:upload <folder> [--local]   # put the catalogue's approved tracks in the music library
 ```
 

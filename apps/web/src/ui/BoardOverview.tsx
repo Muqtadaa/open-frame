@@ -14,6 +14,7 @@ import {
   type ReactNode,
 } from 'react'
 
+import { DisclosureIcon } from '../controls/icons.js'
 import { useCommands } from '../hooks/use-commands.js'
 import { useBoardDocument } from '../hooks/use-document-object.js'
 import { useInteractionStore } from '../interaction/interaction-store.js'
@@ -21,6 +22,7 @@ import { useOpenFrame } from '../runtime/context.js'
 import { readingOrder } from '../scene/reading-order.js'
 import { countOfType, typeTitle } from '../scene/type-noun.js'
 import { wrapTab } from '../controls/wrap-tab.js'
+import { counted } from '../controls/counted.js'
 
 /**
  * How many objects one level of the list shows before the rest are a single
@@ -78,7 +80,19 @@ export function BoardOverview() {
   useEffect(() => {
     if (!open) return
     const was = window.document.activeElement
-    returnTo.current = was instanceof HTMLElement && was !== window.document.body ? was : null
+    /*
+     * Never a place inside the panel. It mounts already open now that it
+     * loads on request, and an effect that runs twice on mount (StrictMode
+     * does it on purpose) found focus already in the tree the second time —
+     * so Escape handed the keyboard to an element that was about to go.
+     */
+    if (
+      was instanceof HTMLElement &&
+      was !== window.document.body &&
+      panelRef.current?.contains(was) !== true
+    ) {
+      returnTo.current = was
+    }
     // An empty board has no tree; the panel itself takes the keyboard then.
     ;(treeRef.current ?? panelRef.current)?.focus()
   }, [open])
@@ -230,7 +244,7 @@ export function BoardOverview() {
   const summary =
     outline.total === 0
       ? 'Nothing on this board.'
-      : `${String(outline.total)} ${outline.total === 1 ? 'object' : 'objects'}: ${outline.counts
+      : `${counted(outline.total, 'object')}: ${outline.counts
           .map(({ type, count }) => countOfType(type, count))
           .join(', ')}.`
   const grounds =
@@ -362,7 +376,12 @@ export function BoardOverview() {
                   data-testid="overview-twisty"
                   aria-hidden="true"
                 >
-                  {row.expanded ? '▾' : '▸'}
+                  {/*
+                    Drawn, not typed: the rest of the interface draws its
+                    disclosure, and a font's triangles sit at its own size and
+                    weight (audit 2026-10-08).
+                  */}
+                  <DisclosureIcon />
                 </span>
               )}
               {row.content}

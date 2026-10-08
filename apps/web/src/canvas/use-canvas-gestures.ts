@@ -457,6 +457,7 @@ export function useCanvasGestures(containerRef: RefObject<HTMLElement | null>) {
         selection: store.selection,
         shiftKey: event.shiftKey,
         altKey: event.altKey,
+        takingBack: store.takingBack,
         button: event.button,
         contextClick: IS_MAC && event.ctrlKey,
         spaceHeld: spaceHeld.current,

@@ -13,7 +13,7 @@ export interface Measurement {
   /** Stable across runs, so a trend can follow it: `cull/board-mixed-10000`. */
   readonly metric: string
   readonly value: number
-  readonly unit: 'ms' | 'copies' | 'nodes'
+  readonly unit: 'ms' | 'copies' | 'nodes' | 'kB'
 }
 
 /** The path after `--json`, if the script was asked for one. */
