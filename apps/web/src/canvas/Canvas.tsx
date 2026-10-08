@@ -175,6 +175,7 @@ export function Canvas() {
       tabIndex={0}
       aria-description={BOARD_KEYS}
       onPointerDown={gestures.onPointerDown}
+      onPointerDownCapture={gestures.onPointerDownCapture}
       onPointerMove={gestures.onPointerMove}
       onPointerUp={gestures.onPointerUp}
       onPointerCancel={gestures.onPointerCancel}
