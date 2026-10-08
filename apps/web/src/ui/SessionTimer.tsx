@@ -12,6 +12,8 @@ import {
 } from '@openframe/core/facilitation'
 import { useEffect, useRef, useState, useSyncExternalStore, type RefObject } from 'react'
 
+import { useTick } from '../hooks/use-tick.js'
+
 import { useCanEdit } from '../hooks/use-can-edit.js'
 import { useMe } from '../hooks/use-me.js'
 import { useInteractionStore } from '../interaction/interaction-store.js'
@@ -24,6 +26,11 @@ const PRESETS = [1, 3, 5, 10, 15] as const
 const MINUTE = 60_000
 /** Often enough that the seconds never visibly stick; the clock itself is never this. */
 const TICK_MS = 250
+
+/** Whether a timer has anything left to count down. */
+export function ticksAt(timer: Timer, now: number): boolean {
+  return timer.status === 'running' && !isDone(timer, now)
+}
 
 export interface TimerSession {
   /** Whether there is anything here for this person: an editor, or a timer to watch. */
@@ -61,7 +68,13 @@ export function useTimerSession(
   const announce = useInteractionStore((s) => s.announce)
 
   const timer = stored ?? idleTimer()
-  const now = useClock(channel.now, timer.status === 'running')
+  /*
+   * Only while there is time left to count. A run that has finished stays
+   * `running` until somebody resets it, and the tick went on re-rendering the
+   * whole Session control four times a second for as long as it sat at 0:00
+   * (audit 2026-10-08).
+   */
+  const now = useTick(channel.now, ticksAt(timer, channel.now()), TICK_MS)
   const left = remainingOf(timer, now)
   const done = isDone(timer, now)
   const active = timer.status !== 'idle'
@@ -386,23 +399,4 @@ function DurationField({
       />
     </label>
   )
-}
-
-/**
- * The time to show, re-read a few times a second while the timer runs and not
- * at all while it does not — a paused or idle timer has nothing to tick.
- */
-function useClock(now: () => number, ticking: boolean): number {
-  const [, setTick] = useState(0)
-  useEffect(() => {
-    if (!ticking) return
-    const id = setInterval(() => {
-      setTick((tick) => tick + 1)
-    }, TICK_MS)
-    return () => {
-      clearInterval(id)
-    }
-  }, [ticking])
-  // Read on every render: a change to the timer re-renders, and must not show a stale time.
-  return now()
 }
