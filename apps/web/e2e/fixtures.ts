@@ -54,8 +54,7 @@ export type BoardState = 'none' | 'open' | 'fresh'
  * themselves.
  */
 export async function reachable(page: Page): Promise<void> {
-  // And for it to take input (see `reachable`).
-  await reachable(page)
+  await expect(page.locator('#root')).not.toHaveAttribute('inert')
 }
 
 /**
@@ -87,14 +86,6 @@ async function waitForBoard(page: Page): Promise<void> {
    * dropped. That showed up as a rare, unexplained tool-selection failure.
    */
   await expect(page.getByTestId('tool-select')).toBeVisible()
-  /*
-   * And for the page to be REACHABLE. `#root` is inert until the splash
-   * leaves, two frames after the first render, and a visible element can
-   * still be inert: a spec that called `.focus()` on a control in that gap
-   * focused nothing, and the Enter it pressed next went to the page body.
-   * Chromium's frames nearly always beat the spec; WebKit's did not, and
-   * four keyboard specs failed there on their first full run.
-   */
   // And for it to take input (see `reachable`).
   await reachable(page)
 }
