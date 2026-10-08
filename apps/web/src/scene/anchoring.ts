@@ -277,8 +277,7 @@ export function placeAnchored(request: AnchorRequest): Placement {
    * little of the note it is about beats vanishing under the panel
    * (audit 2026-10-08).
    */
-  const slid =
-    nearest(across ? vertical : horizontal) ?? nearest(across ? horizontal : vertical)
+  const slid = nearest(across ? vertical : horizontal) ?? nearest(across ? horizontal : vertical)
   const final = slid ?? placed
   return { x: final.x, y: final.y, side }
 }
