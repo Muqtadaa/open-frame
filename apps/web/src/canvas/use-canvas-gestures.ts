@@ -65,6 +65,11 @@ import type { Gesture, GestureContext, GestureMode } from './gestures/types.js'
  * What stays here is what belongs to no mode: deciding what a press is,
  * touch and pinch, and putting a gesture back when it is interrupted.
  */
+/** The middle mouse button: a pan, wherever it is pressed. */
+function isMiddlePan(event: ReactPointerEvent<HTMLElement>): boolean {
+  return event.button === 1 && event.pointerType === 'mouse'
+}
+
 export function useCanvasGestures(containerRef: RefObject<HTMLElement | null>) {
   const { runtime, views } = useOpenFrame()
   const commands = useCommands()
@@ -329,13 +334,21 @@ export function useCanvasGestures(containerRef: RefObject<HTMLElement | null>) {
   const onPointerDown = useCallback(
     (event: ReactPointerEvent<HTMLElement>): void => {
       /*
+       * A middle-drag pans, whatever it starts on (see `onPointerDownCapture`):
+       * none of what follows — an open editor's claim on its own presses, a
+       * comment pin's, a handle's — gets to read it as theirs.
+       */
+      const panning = isMiddlePan(event)
+      /*
        * An inline editor lives INSIDE the canvas, so its pointer events bubble
        * up to here. Without this guard, clicking into a note to reposition the
        * caret would be read as a canvas gesture and close the editor.
        */
       pressedChromeButton.current =
-        event.target instanceof Element && event.target.closest(`${EDITOR_CHROME} button`) !== null
-      if (isTextEntry(event.target)) return
+        !panning &&
+        event.target instanceof Element &&
+        event.target.closest(`${EDITOR_CHROME} button`) !== null
+      if (!panning && isTextEntry(event.target)) return
 
       /*
        * A comment pin lives inside the world layer, so its events bubble here
@@ -348,7 +361,11 @@ export function useCanvasGestures(containerRef: RefObject<HTMLElement | null>) {
        * Found by a test that switched tools before clicking the pin. The
        * earlier ones passed because they never left comment mode.
        */
-      if (event.target instanceof Element && event.target.closest('.of-comments') !== null) {
+      if (
+        !panning &&
+        event.target instanceof Element &&
+        event.target.closest('.of-comments') !== null
+      ) {
         return
       }
 
@@ -393,7 +410,10 @@ export function useCanvasGestures(containerRef: RefObject<HTMLElement | null>) {
        * typed is the one unacceptable failure.
        */
       const active = window.document.activeElement
-      if (active instanceof HTMLElement && isTextEntry(active)) active.blur()
+      // Panning past an edit leaves it open: the view moved, not the work.
+      if (panning) {
+        // Nothing to commit, and the editor keeps the keyboard.
+      } else if (active instanceof HTMLElement && isTextEntry(active)) active.blur()
       else if (store.editingId !== null) store.setEditing(null)
       /*
        * And the board takes the keyboard, which `preventDefault` above stopped
@@ -401,7 +421,7 @@ export function useCanvasGestures(containerRef: RefObject<HTMLElement | null>) {
        * page. Anything opened by this gesture — a note's editor — focuses
        * itself afterwards, so this never takes the caret away from it.
        */
-      event.currentTarget.focus({ preventScroll: true })
+      if (!panning) event.currentTarget.focus({ preventScroll: true })
 
       /*
        * Voting reaches past everything a press would otherwise grab: the
@@ -411,7 +431,7 @@ export function useCanvasGestures(containerRef: RefObject<HTMLElement | null>) {
        */
       const voting = store.tool === 'dot'
       pendingVote.current = null
-      const grabbed = voting ? null : handleUnderPointer(event.target)
+      const grabbed = voting || panning ? null : handleUnderPointer(event.target)
       /*
        * Remembered for the `dblclick` that may follow this press: by then the
        * handle can have moved out from under the pointer, and a double-click
@@ -513,6 +533,25 @@ export function useCanvasGestures(containerRef: RefObject<HTMLElement | null>) {
       }
     },
     [abandon, applyIntent, beginPinch, canvasPoint, context, isHollow, me, runtime, toWorld, views],
+  )
+
+  /*
+   * The middle button is claimed before anything under it hears the press.
+   * Everything on the board that takes presses of its own — a selection's
+   * resize and rotate handles, a line's ends and legs, a table's cells and
+   * grips, a crop's corners, comment pins — used to take a middle press too,
+   * and a pan begun over any of them bent, resized or selected instead (the
+   * owner's report, 10-08). Stopped here, in the capture phase, the press
+   * never reaches them, and `onPointerDown` starts the pan as it would over
+   * empty board.
+   */
+  const onPointerDownCapture = useCallback(
+    (event: ReactPointerEvent<HTMLElement>): void => {
+      if (!isMiddlePan(event)) return
+      event.stopPropagation()
+      onPointerDown(event)
+    },
+    [onPointerDown],
   )
 
   const onPointerMove = useCallback(
@@ -813,6 +852,7 @@ export function useCanvasGestures(containerRef: RefObject<HTMLElement | null>) {
 
   return {
     onPointerDown,
+    onPointerDownCapture,
     onPointerMove,
     onPointerUp,
     onPointerCancel,
