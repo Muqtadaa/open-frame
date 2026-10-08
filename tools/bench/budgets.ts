@@ -83,6 +83,25 @@ export const BUDGETS: readonly Budget[] = [
     unit: 'copies',
     why: 'what a remote batch costs today; one more per peer is a regression',
   },
+  /*
+   * Script a browser downloads before a route shows anything, compressed.
+   * Bytes do not vary with the machine, so these are held close to what the
+   * build does, as copies are: the entry grew a quarter in a month without
+   * anything noticing (audit 2026-10-08), and a surface that adds to every
+   * first load should have to say why rather than load on request.
+   */
+  {
+    metric: 'bundle/front-door',
+    max: 170,
+    unit: 'kB',
+    why: 'a list of boards; the usual first-load budget for a mid-range phone',
+  },
+  {
+    metric: 'bundle/board',
+    max: 270,
+    unit: 'kB',
+    why: 'brought to 259 by splitting the routes and the on-request surfaces',
+  },
   ...['get_objects, first page', 'search_board, common word'].map((name): Budget => ({
     metric: `copies/board-mixed-10000/${name}`,
     max: 0,

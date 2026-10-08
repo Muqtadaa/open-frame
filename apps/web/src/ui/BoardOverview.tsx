@@ -78,7 +78,19 @@ export function BoardOverview() {
   useEffect(() => {
     if (!open) return
     const was = window.document.activeElement
-    returnTo.current = was instanceof HTMLElement && was !== window.document.body ? was : null
+    /*
+     * Never a place inside the panel. It mounts already open now that it
+     * loads on request, and an effect that runs twice on mount (StrictMode
+     * does it on purpose) found focus already in the tree the second time —
+     * so Escape handed the keyboard to an element that was about to go.
+     */
+    if (
+      was instanceof HTMLElement &&
+      was !== window.document.body &&
+      panelRef.current?.contains(was) !== true
+    ) {
+      returnTo.current = was
+    }
     // An empty board has no tree; the panel itself takes the keyboard then.
     ;(treeRef.current ?? panelRef.current)?.focus()
   }, [open])

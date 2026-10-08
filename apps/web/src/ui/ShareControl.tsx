@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, type RefObject } from 'react'
+import { Suspense, lazy, useEffect, useRef, useState, type RefObject } from 'react'
 import { createPortal } from 'react-dom'
 
 import { AnchoredSurface } from '../controls/AnchoredSurface.js'
@@ -19,7 +19,7 @@ import {
 import { canFollow, hueVar, initialOf } from '../scene/presence.js'
 import { LinkIcon } from '../controls/icons.js'
 import { Gate, GateActions, GateBody } from './Gate.js'
-import { PeopleSheet, type BoardPerson } from './PeopleSheet.js'
+import type { BoardPerson } from './PeopleSheet.js'
 import { handOver, takeHandedOver } from './share-handover.js'
 
 /**
@@ -33,6 +33,11 @@ import { handOver, takeHandedOver } from './share-handover.js'
  * Absent entirely when the build has no room server. A control that cannot work
  * is worse than a missing one: it invites the click and then explains.
  */
+// Loaded when it is first opened: it lists the people a board has too many of to show.
+const PeopleSheet = lazy(() =>
+  import('./PeopleSheet.js').then((module) => ({ default: module.PeopleSheet })),
+)
+
 export function ShareControl() {
   const { runtime, collaboration } = useOpenFrame()
   const services = useServices()
@@ -414,16 +419,18 @@ export function ShareControl() {
           prefer={['below', 'above']}
           testId="people-surface"
         >
-          <PeopleSheet
-            people={here}
-            following={following}
-            trigger={moreButton}
-            onFollow={setFollowing}
-            onClose={() => {
-              setPeopleOpen(false)
-              moreButton.current?.focus()
-            }}
-          />
+          <Suspense fallback={null}>
+            <PeopleSheet
+              people={here}
+              following={following}
+              trigger={moreButton}
+              onFollow={setFollowing}
+              onClose={() => {
+                setPeopleOpen(false)
+                moreButton.current?.focus()
+              }}
+            />
+          </Suspense>
         </AnchoredSurface>
       )}
       {links !== null && (

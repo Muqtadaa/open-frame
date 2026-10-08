@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState, type KeyboardEvent } from 'react'
+import { lazy, Suspense, useCallback, useEffect, useRef, useState, type KeyboardEvent } from 'react'
 
 import { applyTheme, readTheme } from '../app/theme.js'
 import { AnchoredSurface } from '../controls/AnchoredSurface.js'
@@ -9,7 +9,6 @@ import { useInteractionStore } from '../interaction/interaction-store.js'
 import { useOpenFrame } from '../runtime/context.js'
 import { formatKeys } from '../scene/shortcuts.js'
 import { useServices } from '../runtime/services.js'
-import { VersionHistorySheet } from './VersionHistory.js'
 
 /**
  * What can be done to the board as a whole, from beside its name.
@@ -21,6 +20,11 @@ import { VersionHistorySheet } from './VersionHistory.js'
  * a menu holding one entry the name already does is a second way to the same
  * place.
  */
+// Loaded when it is first opened: most visits to a board never look back.
+const VersionHistorySheet = lazy(() =>
+  import('./VersionHistory.js').then((module) => ({ default: module.VersionHistorySheet })),
+)
+
 export function BoardMenu({ onRename }: { readonly onRename: (() => void) | null }) {
   const { history } = useOpenFrame()
   const { accounts } = useServices()
@@ -178,7 +182,9 @@ export function BoardMenu({ onRename }: { readonly onRename: (() => void) | null
       )}
 
       {open === 'history' && (
-        <VersionHistorySheet anchor={anchor} surface={surface} trigger={ref} onClose={close} />
+        <Suspense fallback={null}>
+          <VersionHistorySheet anchor={anchor} surface={surface} trigger={ref} onClose={close} />
+        </Suspense>
       )}
     </>
   )

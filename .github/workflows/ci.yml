@@ -75,6 +75,11 @@ jobs:
       - name: Build
         run: pnpm build
 
+      # What each route downloads before it shows anything, held to its
+      # budget. Bytes do not vary with the runner, so this gates every PR.
+      - name: First-load budgets
+        run: pnpm bench:bundle --check
+
   rooms:
     name: Shared boards, against a real Durable Object
     needs: e2e-browsers
