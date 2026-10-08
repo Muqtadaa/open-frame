@@ -61,6 +61,8 @@ export function RichTextEditor({
           onResize={(by) => field.current?.resize(by)}
           onList={(kind) => field.current?.toggleList(kind)}
           onReturn={() => field.current?.focus()}
+          onLinkOpen={() => field.current?.holdSelection()}
+          onLink={(href) => field.current?.setLink(href)}
           // Out of the bar and not back to the text: the edit is over.
           onLeave={(to) => {
             if ((to?.closest('[contenteditable="true"]') ?? null) === null) commit()

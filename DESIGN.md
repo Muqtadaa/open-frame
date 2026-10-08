@@ -876,6 +876,13 @@ list as you type, Tab nests an item and Enter on an empty one ends the list.
 Lists are drawn by the stylesheet — •, ◦, ▪ and 1., a., i. by depth — never
 typed.
 
+Last comes **Link** (Mod+K). It opens an address field in the bar itself,
+holding the current target; Enter links the selection, an address the board
+may not hold is refused in place, and "Remove link" takes it off. Pasting an
+address over words links them. On the board a link is the text's own ink
+underlined in the accent; a plain click still selects, Mod+click opens it in a
+new tab (ADR 0021).
+
 Between A− and A+ sits the size, in 12px mono: the multiple of the object's
 own size (×1, ×1.4 … ×7.6), from the same ladder the `.of-size` rules draw. The
 ends switch their button off. It is a toolbar a keyboard reaches: Alt+F10 from

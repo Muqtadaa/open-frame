@@ -91,7 +91,7 @@ test('Alt+F10 goes into the bar, the arrows move, and Escape comes back', async 
   await page.keyboard.press('ArrowLeft')
   await page.keyboard.press('ArrowLeft')
   // Wraps from the first to the last.
-  await expect(page.getByTestId('format-number')).toBeFocused()
+  await expect(page.getByTestId('format-link')).toBeFocused()
 
   await page.keyboard.press('Escape')
   await expect(page.locator(EDITOR)).toBeFocused()

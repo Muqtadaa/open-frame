@@ -3,6 +3,7 @@ import {
   SIZE_TOKENS,
   normaliseText,
   paragraphsOf,
+  safeLink,
   textFromParagraphs,
   type Indent,
   type ListKind,
@@ -76,6 +77,23 @@ function sizeOn(node: Node, root: Element): SizeToken | undefined {
 }
 
 /**
+ * Where a run goes: the nearest `<a href>` around it, if its target is one a
+ * board may hold (ADR 0021). Pasted markup carries every kind of link, and a
+ * `javascript:` one is read as words with no target, never stored.
+ */
+function linkOn(node: Node, root: Element): string | undefined {
+  let current: Node | null = node
+  while (current !== null && current !== root) {
+    if (current instanceof HTMLElement && current.tagName === 'A') {
+      const href = current.getAttribute('href')
+      return href === null ? undefined : (safeLink(href) ?? undefined)
+    }
+    current = current.parentNode
+  }
+  return undefined
+}
+
+/**
  * Elements that start a new paragraph. Everything else is inline.
  *
  * Our own markup uses `div.of-p`; the rest are what a browser's contenteditable
@@ -116,6 +134,7 @@ interface SpanDraft {
   text: string
   marks?: readonly Mark[]
   size?: SizeToken
+  link?: string
 }
 interface Block {
   list?: ListKind
@@ -184,6 +203,7 @@ function read(root: Element): Reading {
       if (text === '') return
       const marks = marksOn(node, root)
       const size = sizeOn(node, root)
+      const link = linkOn(node, root)
       // A newline in a text node is a paragraph break — how `pre-wrap` text
       // written before paragraphs existed, and pasted plain text, spell one.
       text.split('\n').forEach((piece, index) => {
@@ -195,6 +215,7 @@ function read(root: Element): Reading {
           text: piece,
           ...(marks.length === 0 ? {} : { marks }),
           ...(size === undefined ? {} : { size }),
+          ...(link === undefined ? {} : { link }),
         })
         at += piece.length
       })
@@ -410,6 +431,7 @@ function inlineNode(owner: Document, span: TextSpan): Node {
     wrapper.append(node)
     node = wrapper
   }
+  if (span.link !== undefined) node = anchor(owner, span.link, node)
   if (span.size !== undefined) {
     const sized = owner.createElement('span')
     sized.className = `of-size of-size--${span.size}`
@@ -418,6 +440,21 @@ function inlineNode(owner: Document, span: TextSpan): Node {
     node = sized
   }
   return node
+}
+
+/**
+ * A run's target as an anchor. Never opened by the browser on a plain click —
+ * the board takes that for selecting — and never handed the board's window
+ * or address when it is followed.
+ */
+function anchor(owner: Document, href: string, inner: Node): HTMLAnchorElement {
+  const link = owner.createElement('a')
+  link.href = href
+  link.rel = 'noopener noreferrer'
+  link.target = '_blank'
+  link.className = 'of-link'
+  link.append(inner)
+  return link
 }
 
 /**

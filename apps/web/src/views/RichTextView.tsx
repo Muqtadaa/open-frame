@@ -80,6 +80,16 @@ function Span({ span }: { span: TextSpan }) {
     node = <Wrapper>{node}</Wrapper>
   }
 
+  if (span.link !== undefined) {
+    // Followed with Mod+click or from assistive tech, never by a plain click,
+    // which selects the object it is in (canvas/use-follow-link.ts).
+    node = (
+      <a className="of-link" href={span.link} rel="noopener noreferrer" target="_blank">
+        {node}
+      </a>
+    )
+  }
+
   return span.size === undefined ? (
     <>{node}</>
   ) : (
