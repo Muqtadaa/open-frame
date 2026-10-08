@@ -65,6 +65,12 @@ export interface TextSpan {
   readonly list?: ListKind | undefined
   /** Only with `list`. */
   readonly indent?: Indent | undefined
+  /**
+   * Where the run goes when somebody follows it (ADR 0021). A target, not a
+   * mark: two runs that go to different places are different formatting.
+   * Never on a newline, and always something `safeLink` lets through.
+   */
+  readonly link?: string | undefined
 }
 
 /**
@@ -84,6 +90,7 @@ export const TextSpanSchema: ZodType<TextSpan> = z
     size: z.enum(SIZE_TOKENS).optional(),
     list: z.enum(LIST_KINDS).optional(),
     indent: z.union([z.literal(1), z.literal(2), z.literal(3)]).optional(),
+    link: z.string().optional(),
   })
   .strict()
   .superRefine((span, context) => {
@@ -98,7 +105,41 @@ export const TextSpanSchema: ZodType<TextSpan> = z
     if (span.indent !== undefined && span.list === undefined) {
       context.addIssue({ code: 'custom', message: "indent is a list item's, and needs `list`" })
     }
+    /*
+     * The one place a link is checked on the way in (rule 8): a target that
+     * reached a document could be drawn as an `<a href>` on every peer's
+     * board, so `javascript:` must never get that far.
+     */
+    if (span.link !== undefined && safeLink(span.link) === null) {
+      context.addIssue({ code: 'custom', message: 'a link goes to the web or to an address' })
+    }
+    if (span.link !== undefined && span.text.includes('\n')) {
+      context.addIssue({ code: 'custom', message: 'a newline is never part of a link' })
+    }
   })
+
+/** The longest target kept: past this it is a payload, not an address. */
+export const MAX_LINK = 2048
+
+const WEB = /^(https?):\/\/([^/?#]+)(.*)$/i
+const MAIL = /^mailto:(.+)$/i
+
+/**
+ * A link target fit to store and to draw, or `null` (ADR 0021).
+ *
+ * Only the web and mail: a scheme a browser would RUN (`javascript:`,
+ * `data:`) is refused rather than escaped, and so is anything relative,
+ * which would resolve against whichever page happened to draw it. The scheme
+ * is lowercased so one address has one spelling; the rest is kept as given.
+ */
+export function safeLink(raw: string): string | null {
+  const href = raw.trim()
+  if (href === '' || href.length > MAX_LINK || /[\s\p{Cc}]/u.test(href)) return null
+  const web = WEB.exec(href)
+  if (web !== null) return `${(web[1] ?? '').toLowerCase()}://${web[2] ?? ''}${web[3] ?? ''}`
+  const mail = MAIL.exec(href)
+  return mail === null ? null : `mailto:${mail[1] ?? ''}`
+}
 
 /**
  * At least one span, always.
@@ -148,6 +189,7 @@ function sameFormatting(a: TextSpan, b: TextSpan): boolean {
    */
   if (a.list !== undefined || b.list !== undefined) return false
   if (a.size !== b.size) return false
+  if (a.link !== b.link) return false
   const marksA = [...(a.marks ?? [])].sort()
   const marksB = [...(b.marks ?? [])].sort()
   return marksA.length === marksB.length && marksA.every((m, i) => m === marksB[i])
@@ -200,8 +242,12 @@ function withMark(span: TextSpan, mark: Mark, on: boolean): TextSpan {
   // The key is omitted rather than set to `[]`, so an unformatted span has one
   // representation and documents do not carry empty arrays forever.
   return next.length === 0
-    ? { text: span.text, ...sizeOf(span), ...blockOf(span) }
+    ? { text: span.text, ...sizeOf(span), ...blockOf(span), ...linkPart(span) }
     : { ...span, marks: next }
+}
+
+function linkPart(span: TextSpan): { link?: string } {
+  return span.link === undefined ? {} : { link: span.link }
 }
 
 function sizeOf(span: TextSpan): { size?: SizeToken } {
@@ -262,10 +308,62 @@ export function applySize(
             text: span.text,
             ...(span.marks === undefined ? {} : { marks: span.marks }),
             ...blockOf(span),
+            ...linkPart(span),
           }
         : { ...span, size }
     }),
   )
+}
+
+/**
+ * Links a plain-text range to `href`, or takes the link off it when `href` is
+ * `undefined`. Newlines inside the range stay unlinked, so a link chosen
+ * across two paragraphs becomes two links rather than one that swallows the
+ * break between them. `href` is the caller's to have made safe.
+ */
+export function applyLink(
+  rich: RichText,
+  from: number,
+  to: number,
+  href: string | undefined,
+): RichText {
+  if (to <= from) return rich
+  const split = splitAt(splitAt(rich, from), to)
+  let seen = 0
+  return normaliseText(
+    split.flatMap((span) => {
+      const start = seen
+      seen += span.text.length
+      if (start < from || start >= to) return [span]
+      return span.text.split(/(\n)/).map((piece): TextSpan => {
+        const { link: _drop, ...rest } = span
+        return piece === '\n' || href === undefined
+          ? { ...rest, text: piece }
+          : { ...rest, text: piece, link: href }
+      })
+    }),
+  )
+}
+
+/**
+ * The one target a range goes to, or `undefined` when any of it goes nowhere
+ * or somewhere else — what the link field shows, so editing it can never
+ * quietly retarget words that were going somewhere different. A caret
+ * (`from === to`) is inside a link when the characters either side of it are.
+ */
+export function linkOf(rich: RichText, from: number, to: number): string | undefined {
+  if (to <= from) return from === 0 ? undefined : linkOf(rich, from - 1, from + 1)
+  let found: string | undefined
+  let seen = 0
+  for (const span of rich) {
+    const start = seen
+    const end = seen + span.text.length
+    seen = end
+    if (end <= from || start >= to || span.text === '') continue
+    if (span.link === undefined || (found !== undefined && found !== span.link)) return undefined
+    found = span.link
+  }
+  return found
 }
 
 /**
