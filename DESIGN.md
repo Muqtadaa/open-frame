@@ -1407,7 +1407,16 @@ clipboard — with Export as Markdown beside Copy for a frame, a group or
 several things, never for one note, whose menu already fills a laptop window —
 grouping with the stacking order folded into "Arrange ›", lock and hide, and
 Delete alone, which turns danger when aimed at. Empty board gets its
-own: Paste here, Add a note here, Select all, Zoom to fit. It is an ARIA menu:
+own: Paste here, Paste special ›, Add a note here, Select all, Zoom to fit.
+**Paste special** makes what another application copied into what is asked
+for, rather than what Mod+V would guess: As notes (one sticky per line, list
+markers dropped, laid out in a block at the point, one undo step), As a text
+box (formatting kept), As a table (tabs, else commas, even prose) and As plain
+text. It reads the system clipboard itself, so the browser may ask; when it
+refuses, a toast says to paste with Mod+V instead. Mod+V reads a CSV as a
+table only when it is plainly one — two or more rows of the same width, no
+spaces after the commas — so a sentence with commas stays a text box. It is an
+ARIA menu:
 focus goes in, the arrows walk it, Escape closes only it and hands focus back,
 unavailable items stay reachable. From the keyboard (Shift+F10) it hangs from
 the selection.

@@ -53,3 +53,22 @@ describe('a paste from another application', () => {
     expect(readOutside('<p> </p>', '  \n', false)).toBeNull()
   })
 })
+
+describe('comma-separated values from another application', () => {
+  it('is a table when it is plainly one', () => {
+    expect(readOutside('', 'Who,What\nP07,Price\n', false)).toEqual({
+      kind: 'grid',
+      rows: [
+        [[{ text: 'Who' }], [{ text: 'What' }]],
+        [[{ text: 'P07' }], [{ text: 'Price' }]],
+      ],
+    })
+  })
+
+  it('stays words when it reads like sentences', () => {
+    expect(readOutside('', 'Red, green\nBlue, yellow', false)).toEqual({
+      kind: 'text',
+      text: [{ text: 'Red, green\nBlue, yellow' }],
+    })
+  })
+})

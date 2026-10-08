@@ -154,3 +154,41 @@ export async function writeSystemClipboard(payload: ClipboardPayload): Promise<b
   if (mine !== copies) return false
   return write({ 'text/plain': text, 'text/html': html })
 }
+
+/**
+ * What the system clipboard holds, read on request — Paste special, which a
+ * menu press asks for rather than a paste event delivers. The browser may ask
+ * the person first, and may refuse; `null` then, so the board can say how to
+ * paste instead.
+ *
+ * `read()` where it exists, for the HTML a document copies with its words;
+ * `readText()` where only that does, or where reading the HTML was refused.
+ */
+export async function readSystemClipboard(): Promise<{ html: string; text: string } | null> {
+  const clipboard = typeof navigator === 'undefined' ? undefined : navigator.clipboard
+  if (clipboard === undefined) return null
+  if (typeof clipboard.read === 'function') {
+    try {
+      const items = await clipboard.read()
+      let html = ''
+      let text = ''
+      for (const item of items) {
+        if (html === '' && item.types.includes('text/html')) {
+          html = await (await item.getType('text/html')).text()
+        }
+        if (text === '' && item.types.includes('text/plain')) {
+          text = await (await item.getType('text/plain')).text()
+        }
+      }
+      return { html, text }
+    } catch {
+      // Refused, or not for this content: the words alone may still be read.
+    }
+  }
+  if (typeof clipboard.readText !== 'function') return null
+  try {
+    return { html: '', text: await clipboard.readText() }
+  } catch {
+    return null
+  }
+}

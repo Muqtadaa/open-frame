@@ -24,9 +24,11 @@ const NOT_FUNCTIONAL = ['**/*.bench.spec.ts', '**/*.visual.spec.ts']
  * pages through the real system clipboard, which only Chromium lets a test
  * grant (`clipboard-read`); elsewhere `useClipboard` can only stand in for
  * `writeText` and `readText`, and a native paste would read nothing.
- * Excluded here, with the reason, rather than skipped inside the spec.
+ * `paste-special.spec.ts` puts several kinds on the clipboard at once with
+ * `navigator.clipboard.write`, and reads them back with `read()`, for the
+ * same reason. Excluded here, with the reason, rather than skipped inside the spec.
  */
-const CHROMIUM_ONLY = ['**/touch.spec.ts', '**/clipboard.spec.ts']
+const CHROMIUM_ONLY = ['**/touch.spec.ts', '**/clipboard.spec.ts', '**/paste-special.spec.ts']
 
 /**
  * Specs that emulate a phone (`isMobile`), which Playwright cannot do in
