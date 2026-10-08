@@ -134,9 +134,35 @@ function syncKind(message: Uint8Array): number {
   return decoding.readVarUint(decoder)
 }
 
-/** Creates the awareness state for a document. Re-exported so `yjs` stays quarantined. */
-export function createAwareness(doc: Y.Doc): Awareness {
-  return new awarenessProtocol.Awareness(doc)
+/**
+ * Creates the awareness state for a document. Re-exported so `yjs` stays
+ * quarantined.
+ *
+ * `timers: false` is the ROOM's: y-protocols starts an interval in the
+ * constructor, renewing a local state the room does not have and expiring
+ * peers the room already drops when their socket goes. A Durable Object cannot
+ * hibernate while any timer is pending and is billed for every second it stays
+ * awake, so that interval kept every occupied room awake, and billed, the whole
+ * time (CLAUDE.md rule 29). The room has no presence of its own either, so its
+ * local state is cleared rather than renewed.
+ */
+export function createAwareness(
+  doc: Y.Doc,
+  options: { readonly timers?: boolean } = {},
+): Awareness {
+  const awareness = new awarenessProtocol.Awareness(doc)
+  if (options.timers === false) {
+    stopAwarenessTimer(awareness)
+    awareness.setLocalState(null)
+  }
+  return awareness
+}
+
+/** The interval y-protocols starts in its constructor, which it exposes only by name. */
+function stopAwarenessTimer(awareness: Awareness): void {
+  clearInterval(
+    (awareness as unknown as { _checkInterval: ReturnType<typeof setInterval> })._checkInterval,
+  )
 }
 
 /**
