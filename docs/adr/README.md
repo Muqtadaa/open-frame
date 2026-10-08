@@ -29,6 +29,7 @@ Format: Status · Context · Decision · Alternatives considered · Consequences
 | [0017](0017-facilitation-state-outside-the-document.md) | **Facilitation state is outside the document**                      | Accepted           |
 | [0018](0018-ai-clustering-on-the-room-server.md)        | **AI clustering runs on the room server, and proposes copies**      | Accepted           |
 | [0019](0019-version-history.md)                         | **Version history: whole snapshots, thinned, restored as an edit**  | Accepted           |
+| [0020](0020-export-as-a-readout.md)                     | **Export is a readout first: Markdown, with provenance**            | Accepted           |
 
 ## Writing a new one
 

@@ -69,6 +69,7 @@ export const insightType = defineObjectType<typeof INSIGHT_TYPE, InsightData>({
     const { confidence } = object.data
     const text = plainTextOf(object.data.text)
     return {
+      body: object.data.text,
       searchText: text,
       summary: text.trim() === '' ? 'Empty insight' : text.slice(0, 120),
       gist: text.trim().slice(0, 120),

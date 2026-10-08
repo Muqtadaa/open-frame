@@ -365,6 +365,13 @@ export interface ObjectDescription {
   /** Named semantic fields, for structured consumers. */
   readonly fields: Readonly<Record<string, string | number | readonly string[]>>
   /**
+   * What the object says, WITH its formatting — its paragraphs, lists and
+   * marks — for a consumer that keeps them: a readout exported as Markdown
+   * (ADR 0020). Absent for a type whose words are not rich text; such a
+   * consumer falls back to the plain fields.
+   */
+  readonly body?: RichText
+  /**
    * Why this object cannot be opened for editing, in a sentence, for a type
    * that can never be. Said when somebody double-clicks it — the gesture that
    * opens everything else, and which otherwise did nothing at all.

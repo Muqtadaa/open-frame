@@ -75,6 +75,7 @@ export const evidenceType = defineObjectType<typeof EVIDENCE_TYPE, EvidenceData>
     const { source, participant, tags } = object.data
     const text = plainTextOf(object.data.text)
     return {
+      body: object.data.text,
       // Everything a user might search for, flattened — including the source,
       // which is how "what did we learn in the September study?" is answered
       // without any query language existing yet.

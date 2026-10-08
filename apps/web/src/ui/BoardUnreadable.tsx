@@ -3,6 +3,7 @@ import { useRef, useState } from 'react'
 import type { QuarantineReason } from '@openframe/core'
 
 import { useOpenFrame, type Quarantine } from '../runtime/context.js'
+import { downloadText, fileNameFor } from '../controls/download.js'
 import { copyOfRecord } from './download-copy.js'
 import { Gate, GateActions, GateBody } from './Gate.js'
 import { counted } from '../controls/counted.js'
@@ -33,15 +34,6 @@ function describe(quarantine: Quarantine): string {
   return `${name}${size} ${WHY[quarantine.reason]}`
 }
 
-/** A file name somebody would recognise in their downloads. */
-function fileName(title: string | null): string {
-  const slug = (title ?? 'board')
-    .toLowerCase()
-    .replace(/[^a-z0-9]+/g, '-')
-    .replace(/^-|-$/g, '')
-  return `${slug === '' ? 'board' : slug}.openframe.json`
-}
-
 /**
  * A board this build could not read (rule 7).
  *
@@ -64,16 +56,7 @@ export function BoardUnreadable() {
   const save = (): void => {
     const copy = copyOfRecord(quarantine.raw)
     setInexact(!copy.exact)
-    const blob = new Blob([copy.text], { type: 'application/json' })
-    const url = URL.createObjectURL(blob)
-    const link = document.createElement('a')
-    link.href = url
-    link.download = fileName(quarantine.title)
-    link.click()
-    // After the click has been handed to the browser, not before.
-    setTimeout(() => {
-      URL.revokeObjectURL(url)
-    }, 0)
+    downloadText(fileNameFor([quarantine.title], 'openframe.json'), copy.text, 'application/json')
   }
 
   return (

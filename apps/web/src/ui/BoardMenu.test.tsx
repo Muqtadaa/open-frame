@@ -7,7 +7,7 @@ import { BoardMenu } from './BoardMenu.js'
 /**
  * The menu beside the board's name holds what is not the name itself. Where
  * there are no accounts, the theme has no account sheet to live in, so it
- * lives here — and where there is nothing but Rename, there is no menu.
+ * lives here. Export is always in it, so it is always there.
  */
 let ui: Mounted | null = null
 
@@ -43,10 +43,20 @@ describe('the board menu', () => {
     expect(document.documentElement.dataset.theme).toBe('after-hours')
   })
 
-  it('is not offered when Rename would be all it held', async () => {
+  /*
+   * It used to be held back when Rename was all it had. Export is always
+   * there now, so the menu always is — on a board with accounts, where the
+   * theme lives elsewhere, as much as anywhere.
+   */
+  it('always offers the board as a readout, so it is always there', async () => {
     ui = await mountOnBoard(<BoardMenu onRename={() => undefined} />, {
       services: accounts(true),
     })
-    expect(find('board-menu')).toBeNull()
+    const trigger = find('board-menu')
+    expect(trigger).not.toBeNull()
+    ui.act(() => {
+      trigger?.click()
+    })
+    expect(find('board-menu-export')?.textContent).toBe('Export as Markdown')
   })
 })

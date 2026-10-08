@@ -40,6 +40,15 @@ export function selectionMakeup(types: readonly string[]): string {
  */
 const SPOKEN: Readonly<Record<string, string>> = { sticky: 'sticky note' }
 
+/**
+ * The type as a person names one of it, capitalised: "Sticky note", "Journey
+ * stage". What a readout puts in front of each thing it lists.
+ */
+export function typeLabel(type: string): string {
+  const noun = SPOKEN[type] ?? typeNoun(type)
+  return noun.charAt(0).toUpperCase() + noun.slice(1)
+}
+
 /** Nouns a person does not count with an s: "3 evidence", as "3 pieces of". */
 const UNCOUNTED = new Set(['evidence'])
 

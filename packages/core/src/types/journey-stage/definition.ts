@@ -51,6 +51,7 @@ export const journeystageType = defineObjectType<typeof JOURNEY_STAGE_TYPE, Jour
     const text = plainTextOf(object.data.text)
     const { sentiment } = object.data
     return {
+      body: object.data.text,
       searchText: [text, sentiment].filter(Boolean).join(' '),
       summary: text.trim() === '' ? 'Empty journey stage' : text.slice(0, 120),
       gist: text.trim().slice(0, 120),

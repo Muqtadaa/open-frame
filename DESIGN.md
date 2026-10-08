@@ -969,8 +969,9 @@ every readout stays a record, 12px mono and muted, bolded to 600 in full ink
 where it is a number.
 
 **The board's menu.** A chevron beside the name, outside the heading, on the
-menu's paper: Rename (the name also renames on a press), Version history… and
-Board overview (Alt+S, also in the menu on the empty board). Where accounts are
+menu's paper: Rename (the name also renames on a press), Version history…,
+Board overview (Alt+S, also in the menu on the empty board) and Export as
+Markdown (see Export). It is always there now. Where accounts are
 switched off, so there is no account sheet, it also holds the After Hours
 theme.
 
@@ -1077,6 +1078,18 @@ on board", which opens search. The tree walks as a tree does (arrows, Home and
 End, right opens, left closes); Enter or a press on a row selects that object
 and brings it into view, and the chevron only opens. It drops from the top
 like a notice.
+
+### Export
+
+A board, a frame or a selection leaves as a **Markdown readout**
+([ADR 0020](docs/adr/0020-export-as-a-readout.md)), to the browser's downloads,
+named for the board and the part ("pricing-study-interviews.md"); the board
+says "Exported pricing-study-interviews.md". It is a readout, not a picture:
+loose things first, then each frame as a heading; every object its type and
+its words with their lists and marks; a record's fields under its own labels;
+and what each thing stands on and what stands on it, so an insight leaves with
+its evidence. A board's readout ends with what cites nothing. A bare shape or
+line is counted, not listed. Nothing is written, so a viewer can export.
 
 ### People and Following
 
@@ -1390,8 +1403,10 @@ keyboard focus, with shortcuts at 12px mono in muted ink, one notation per
 platform. Groups are separated by a hairline margin rule.
 
 A selection's menu leads with what it can become — Derive, Promote — then
-clipboard, grouping with the stacking order folded into "Arrange ›", lock and
-hide, and Delete alone, which turns danger when aimed at. Empty board gets its
+clipboard — with Export as Markdown beside Copy for a frame, a group or
+several things, never for one note, whose menu already fills a laptop window —
+grouping with the stacking order folded into "Arrange ›", lock and hide, and
+Delete alone, which turns danger when aimed at. Empty board gets its
 own: Paste here, Add a note here, Select all, Zoom to fit. It is an ARIA menu:
 focus goes in, the arrows walk it, Escape closes only it and hands focus back,
 unavailable items stay reachable. From the keyboard (Shift+F10) it hangs from

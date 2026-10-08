@@ -21,7 +21,9 @@ heading), the safety readout, "N selected" only while something is.
 "Session": one pill. "People": other people's faces, Share, Inbox, account.
 The tab reads "<name> — OpenFrame". Nothing else is on the bar: no undo/redo
 (zoom cluster), no theme (account sheet), no version history button (board
-menu), no source link (the owner holds the copyright).
+menu), no source link (the owner holds the copyright). The board's menu holds
+Rename, Version history…, Board overview and Export as Markdown (ADR 0020), so
+it is always there.
 
 NAME: 15px sans 600 in full ink, taking the bar's free width up to 48ch; a name
 that still does not fit is shown whole in its tip. Click to rename; Enter and
