@@ -372,7 +372,7 @@
   width: 100%;
   aspect-ratio: 1;
   padding: 0;
-  font-size: 1.25rem;
+  font-size: var(--of-type-glyph);
   line-height: 1;
   background: transparent;
   border: none;

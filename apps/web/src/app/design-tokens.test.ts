@@ -691,7 +691,12 @@ describe('the twelve pixel floor', () => {
    */
   it('draws every interface size from the ramp', () => {
     const off = rules()
-      .filter(([, size]) => !/^var\(--of-type-[\w-]+\)$/.test(size) && !size.endsWith('em'))
+      /*
+       * `em`, not anything ending in it: `endsWith('em')` let `rem` through,
+       * and an interface size in rem off the ramp sat in the emoji library
+       * unnoticed (audit 2026-10-08).
+       */
+      .filter(([, size]) => !/^var\(--of-type-[\w-]+\)$/.test(size) && !/^[\d.]+em$/.test(size))
       .map(([selector, size]) => `${selector}: ${size}`)
     expect(off).toEqual([])
   })

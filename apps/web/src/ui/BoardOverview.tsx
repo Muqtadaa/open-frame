@@ -14,6 +14,7 @@ import {
   type ReactNode,
 } from 'react'
 
+import { DisclosureIcon } from '../controls/icons.js'
 import { useCommands } from '../hooks/use-commands.js'
 import { useBoardDocument } from '../hooks/use-document-object.js'
 import { useInteractionStore } from '../interaction/interaction-store.js'
@@ -374,7 +375,12 @@ export function BoardOverview() {
                   data-testid="overview-twisty"
                   aria-hidden="true"
                 >
-                  {row.expanded ? '▾' : '▸'}
+                  {/*
+                    Drawn, not typed: the rest of the interface draws its
+                    disclosure, and a font's triangles sit at its own size and
+                    weight (audit 2026-10-08).
+                  */}
+                  <DisclosureIcon />
                 </span>
               )}
               {row.content}
