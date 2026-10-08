@@ -2,20 +2,21 @@ import type { Page } from '@playwright/test'
 import { richFromPlain } from '@openframe/core'
 
 import {
-  CANVAS,
-  drag,
-  EDITOR,
-  expect,
-  place,
-  test,
-  undo,
-  boxOf,
-  saved,
+  pairs,
   alongTheLine,
+  boxOf,
+  CANVAS,
   clickLine,
   defined,
-  pairs,
+  EDITOR,
+  drag,
+  place,
+  reload,
+  saved,
   seedBoard,
+  test,
+  undo,
+  expect,
 } from './fixtures.js'
 import { buildBoard } from './boards.js'
 
@@ -178,7 +179,7 @@ test('survives a reload', async ({ page }) => {
   // this test's claim is about a line that was saved.
   await drawnPair(page)
   await saved(page)
-  await page.reload()
+  await reload(page)
   await expect(page.locator('[data-object-type="connector"]')).toHaveCount(1)
   await expect(page.getByTestId('connector-line')).toBeVisible()
 })

@@ -1,6 +1,6 @@
 import type { Page } from '@playwright/test'
 
-import { CANVAS, expect, test, undo, saved, viewOf, seedBoard } from './fixtures.js'
+import { CANVAS, reload, saved, seedBoard, test, undo, viewOf, expect } from './fixtures.js'
 import { buildBoard } from './boards.js'
 
 /**
@@ -229,7 +229,7 @@ test.describe('formatting selected text', () => {
     await expect(viewOf(page, 'sticky').locator('strong')).toHaveText('Pricing')
 
     await saved(page)
-    await page.reload()
+    await reload(page)
     await expect(viewOf(page, 'sticky').locator('strong')).toHaveText('Pricing')
   })
 
@@ -397,7 +397,7 @@ test.describe('lists', () => {
     const drawn = page.locator('[data-object-type="sticky"] [role="list"] [role="listitem"]')
     await expect(drawn).toHaveText(['alpha', 'beta'])
     await saved(page)
-    await page.reload()
+    await reload(page)
     await expect(drawn).toHaveText(['alpha', 'beta'])
   })
 })

@@ -2,17 +2,18 @@ import type { Page } from '@playwright/test'
 import { richFromPlain } from '@openframe/core'
 
 import {
+  boxOf,
   CANVAS,
   defined,
-  drag,
   EDITOR,
-  expect,
+  drag,
   place,
+  reload,
+  seedBoard,
   test,
   undo,
-  boxOf,
   viewOf,
-  seedBoard,
+  expect,
 } from './fixtures.js'
 import { buildBoard, type BoardBuilder } from './boards.js'
 
@@ -513,7 +514,7 @@ test.describe('snap to grid', () => {
     const after = await boxOf(note)
     expect(Math.round(after.x - before.x)).toBe(37)
 
-    await page.reload()
+    await reload(page)
     await expect(page.getByTestId('snap-toggle')).toHaveAttribute('data-snap', 'off')
   })
 

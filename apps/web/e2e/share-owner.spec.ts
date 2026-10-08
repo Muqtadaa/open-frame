@@ -1,5 +1,5 @@
 import { expect, test } from '@playwright/test'
-import { useClipboard } from './fixtures.js'
+import { goto, useClipboard } from './fixtures.js'
 
 import { signedIn } from './signed-in.js'
 
@@ -26,7 +26,7 @@ test.beforeEach(async ({ context }) => {
 
 test("the owner's chip offers both links, and the password beside them", async ({ page }) => {
   await signedIn(page, [{ id: MINE, title: 'Mine', role: 'owner' }])
-  await page.goto(`/?room=${MINE}&k=${EDIT}`)
+  await goto(page, `/?room=${MINE}&k=${EDIT}`)
   // Mine once the account has said so; until then the chip is an editor's.
   await expect(page.getByTestId('share-board')).toHaveAttribute('aria-description', /Both links/)
   await page.getByTestId('share-board').click()
@@ -51,7 +51,7 @@ test("the owner's chip offers both links, and the password beside them", async (
 
 test("an editor's chip copies the edit link, and says so", async ({ page }) => {
   await signedIn(page, [{ id: THEIRS, title: 'Theirs', role: 'editor' }])
-  await page.goto(`/?room=${THEIRS}&k=${EDIT}`)
+  await goto(page, `/?room=${THEIRS}&k=${EDIT}`)
   const chip = page.getByTestId('share-board')
   await expect(chip).toHaveAttribute('aria-description', /Copy edit link/)
   await chip.click()
@@ -63,7 +63,7 @@ test("an editor's chip copies the edit link, and says so", async ({ page }) => {
 test('an owner who arrived on the view link is still handed the edit link', async ({ page }) => {
   await signedIn(page, [{ id: MINE, title: 'Mine', role: 'owner' }])
   // The URL carries the VIEW key; the account knows this person owns the board.
-  await page.goto(`/?room=${MINE}&k=${VIEW}`)
+  await goto(page, `/?room=${MINE}&k=${VIEW}`)
   await expect(page.getByTestId('share-board')).toHaveAttribute('aria-description', /Both links/)
   await page.getByTestId('share-board').click()
 
@@ -77,7 +77,7 @@ test('the share sheet scrolls rather than clipping in a short window', async ({ 
   // A phone on its side: the links and the password form do not fit.
   await page.setViewportSize({ width: 740, height: 360 })
   await signedIn(page, [{ id: MINE, title: 'Mine', role: 'owner' }])
-  await page.goto(`/?room=${MINE}&k=${EDIT}`)
+  await goto(page, `/?room=${MINE}&k=${EDIT}`)
   await expect(page.getByTestId('share-board')).toHaveAttribute('aria-description', /Both links/)
   await page.getByTestId('share-board').click()
 

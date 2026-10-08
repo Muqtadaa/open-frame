@@ -1,6 +1,7 @@
 import { expect, test } from '@playwright/test'
 
 import { BOARD_URL } from './routes.js'
+import { goto } from './fixtures.js'
 
 /**
  * The board page has landmarks a screen reader can jump between, in the order
@@ -12,7 +13,7 @@ import { BOARD_URL } from './routes.js'
  * was read before the page's own h1.
  */
 test.beforeEach(async ({ page }) => {
-  await page.goto(BOARD_URL)
+  await goto(page, BOARD_URL)
   await page.waitForSelector('[data-testid="status-bar"]')
 })
 

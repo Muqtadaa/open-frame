@@ -1,5 +1,5 @@
 import { expect, test, type CDPSession, type Page } from '@playwright/test'
-import { boxOf } from './fixtures.js'
+import { boxOf, goto } from './fixtures.js'
 
 import { BOARD_URL } from './routes.js'
 
@@ -36,7 +36,7 @@ async function touch(
 
 // Local rather than the shared fixture: it hands back a CDP session to send touches through.
 async function board(page: Page): Promise<CDPSession> {
-  await page.goto(BOARD_URL)
+  await goto(page, BOARD_URL)
   await page.waitForSelector('[data-testid="status-bar"]')
   return page.context().newCDPSession(page)
 }

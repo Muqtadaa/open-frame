@@ -195,7 +195,13 @@ function Picker({
             setQuery(event.target.value)
           }}
         />
-        <div className="of-emoji-picker__list" data-scroll="">
+        {/*
+         * Scrolls, so Firefox puts it in the Tab order on its own, and Tab
+         * from the search field landed on the list rather than on the first
+         * emoji — one more stop than anybody wants. Its cells are how it is
+         * reached; the wheel and the arrows still scroll it.
+         */}
+        <div className="of-emoji-picker__list" data-scroll="" tabIndex={-1}>
           {failed ? (
             <p className="of-emoji-picker__note">The emoji could not be loaded.</p>
           ) : library === null ? (

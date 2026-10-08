@@ -2,6 +2,7 @@ import { expect, test } from '@playwright/test'
 
 import { HOME_URL } from './routes.js'
 import { PERSONAL_WORKSPACE, SHARED_WORKSPACE, signedIn } from './signed-in.js'
+import { goto } from './fixtures.js'
 
 /**
  * Workspaces on the front door.
@@ -18,7 +19,7 @@ test('narrows the board list to one workspace, and back', async ({ page }) => {
     { id: MINE, title: 'My own board', role: 'owner' },
     { id: OURS, title: 'A shared board', role: 'owner', workspaceId: SHARED_WORKSPACE },
   ])
-  await page.goto(HOME_URL)
+  await goto(page, HOME_URL)
 
   /*
    * Asserted against the LIST rather than the page: a board's title appears in
@@ -43,7 +44,7 @@ test('narrows the board list to one workspace, and back', async ({ page }) => {
 
 test('makes a workspace and shows it straight away', async ({ page }) => {
   await signedIn(page, [{ id: MINE, title: 'My own board', role: 'owner' }])
-  await page.goto(HOME_URL)
+  await goto(page, HOME_URL)
 
   await page.getByTestId('workspace-new').click()
   await page.getByTestId('workspace-name').fill('Research')
@@ -66,7 +67,7 @@ test('offers an invite link for a shared workspace, and never for a personal one
   await signedIn(page, [
     { id: OURS, title: 'A shared board', role: 'owner', workspaceId: SHARED_WORKSPACE },
   ])
-  await page.goto(HOME_URL)
+  await goto(page, HOME_URL)
 
   // A personal workspace is nobody else's business, so it is not shareable.
   await page.getByTestId(`workspace-${PERSONAL_WORKSPACE}`).click()
@@ -98,7 +99,7 @@ test('keeps an invitation until there is an account to accept it', async ({ page
     window.localStorage.setItem('openframe:splash-hold', 'off')
   })
 
-  await page.goto(`/?workspace=${SHARED_WORKSPACE}&wk=${'e'.repeat(32)}`)
+  await goto(page, `/?workspace=${SHARED_WORKSPACE}&wk=${'e'.repeat(32)}`)
 
   /*
    * Waited for the board list to SETTLE before asserting, or this test proves
@@ -117,7 +118,7 @@ test('keeps an invitation until there is an account to accept it', async ({ page
 
 test('accepts an invitation once signed in, and takes the key out of the URL', async ({ page }) => {
   await signedIn(page, [{ id: MINE, title: 'My own board', role: 'owner' }])
-  await page.goto(`/?workspace=${SHARED_WORKSPACE}&wk=${'e'.repeat(32)}`)
+  await goto(page, `/?workspace=${SHARED_WORKSPACE}&wk=${'e'.repeat(32)}`)
 
   await expect(page.getByTestId('workspace-invited')).toContainText('editor')
 

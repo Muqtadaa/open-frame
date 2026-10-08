@@ -1,6 +1,6 @@
 import { expect, test, type Page } from '@playwright/test'
 
-import { CANVAS, undo } from './fixtures.js'
+import { CANVAS, goto, reload, undo } from './fixtures.js'
 import { BOARD_URL } from './routes.js'
 
 /**
@@ -13,7 +13,7 @@ import { BOARD_URL } from './routes.js'
  */
 
 async function boardWithNotes(page: Page): Promise<void> {
-  await page.goto(BOARD_URL)
+  await goto(page, BOARD_URL)
   await expect(page.getByTestId('tool-select')).toBeVisible()
   for (const [x, y, text] of [
     [340, 260, 'Pricing page confuses'],
@@ -74,7 +74,7 @@ async function fromTheFuture(page: Page, withBigInt = false): Promise<void> {
     })
     db.close()
   }, withBigInt)
-  await page.reload()
+  await reload(page)
 }
 
 test.beforeEach(async ({ page }) => {
@@ -131,7 +131,7 @@ test('is never written back, whatever happens on the page', async ({ page }) => 
   await page.mouse.dblclick(400, 400)
   await page.keyboard.type('anything')
   await undo(page)
-  await page.reload()
+  await reload(page)
   await expect(page.getByTestId('board-unreadable')).toBeVisible()
   expect(await storedRecord(page)).toBe(before)
 })

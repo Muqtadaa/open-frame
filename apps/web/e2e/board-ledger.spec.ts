@@ -1,5 +1,5 @@
 import { expect, test } from '@playwright/test'
-import { boxOf, useClipboard } from './fixtures.js'
+import { boxOf, goto, useClipboard } from './fixtures.js'
 
 import { HOME_URL } from './routes.js'
 import { seedLocalBoard } from './seed.js'
@@ -19,7 +19,7 @@ test('lists a board that lives only in this browser exactly once', async ({ page
   await signedIn(page, [{ id: 'brd_aaaaaaaa11111111', title: 'Pricing research', role: 'owner' }])
   await seedLocalBoard(page, 'strayone', 'Competitor teardown')
 
-  await page.goto(HOME_URL)
+  await goto(page, HOME_URL)
   await expect(page.getByTestId('claim-local')).toBeVisible()
 
   /*
@@ -40,7 +40,7 @@ test('keeps the columns in line down the page', async ({ page }) => {
     { id: 'brd_cccccccc33333333', title: 'Checkout readout', role: 'viewer' },
   ])
 
-  await page.goto(HOME_URL)
+  await goto(page, HOME_URL)
   await expect(page.getByTestId('home-boards').locator('li')).toHaveCount(3)
 
   const lefts = await page.evaluate(() =>
@@ -72,7 +72,7 @@ test('keeps the columns in line down the page', async ({ page }) => {
 test('shows a board name in full when there is room for it', async ({ page }) => {
   await signedIn(page, [{ id: 'brd_aaaaaaaa11111111', title: LONG, role: 'owner' }])
 
-  await page.goto(HOME_URL)
+  await goto(page, HOME_URL)
   const title = page.getByTestId('board-title-text').first()
   await expect(title).toHaveText(LONG)
 
@@ -85,7 +85,7 @@ test('stacks the row on a narrow screen instead of crushing the name', async ({ 
   await page.setViewportSize({ width: 420, height: 900 })
   await signedIn(page, [{ id: 'brd_aaaaaaaa11111111', title: LONG, role: 'owner' }])
 
-  await page.goto(HOME_URL)
+  await goto(page, HOME_URL)
   const title = page.getByTestId('board-title-text').first()
   await expect(title).toHaveText(LONG)
 
@@ -127,7 +127,7 @@ test('keeps a shared board on arrival, and leaves no phantom row', async ({ page
   })
 
   const key = 'e'.repeat(32)
-  await page.goto(`/?room=brd_abcdefgh12345678&k=${key}`)
+  await goto(page, `/?room=brd_abcdefgh12345678&k=${key}`)
   await page.waitForSelector('[data-testid="status-bar"]')
   await expect.poll(() => joined.id).toBe('brd_abcdefgh12345678')
   expect(joined.key).toBe(key)
@@ -168,7 +168,7 @@ test('offers the view-only link for a board you own, and for nobody else’s', a
     { id: 'brd_bbbbbbbb22222222', title: 'Theirs', role: 'editor' },
   ])
 
-  await page.goto(HOME_URL)
+  await goto(page, HOME_URL)
   const rows = page.getByTestId('home-boards').locator('li')
   await expect(rows).toHaveCount(2)
 
@@ -208,7 +208,7 @@ test('keeps a row’s actions inside the space reserved for them', async ({ page
     { id: 'brd_aaaaaaaa11111111', title: 'Mine', role: 'owner' },
   ])
 
-  await page.goto(HOME_URL)
+  await goto(page, HOME_URL)
   await expect(page.getByTestId('home-boards').locator('li')).toHaveCount(1)
 
   const overflow = await page.evaluate(() => {
@@ -234,7 +234,7 @@ test('a row action’s tip stays on its own row', async ({ page }) => {
     { id: 'brd_aaaaaaaa11111111', title: 'Pricing research', role: 'owner' },
     { id: 'brd_bbbbbbbb22222222', title: 'Onboarding drop-off', role: 'owner' },
   ])
-  await page.goto(HOME_URL)
+  await goto(page, HOME_URL)
   const rows = page.getByTestId('home-boards').locator('li')
   await expect(rows).toHaveCount(2)
 
@@ -287,7 +287,7 @@ test('says which boards ask for a password, and nothing when it cannot tell', as
       body: JSON.stringify({ password: board === 'brd_locked0000000001' }),
     })
   })
-  await page.goto(HOME_URL)
+  await goto(page, HOME_URL)
 
   const row = (title: string) =>
     page

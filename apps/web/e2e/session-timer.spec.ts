@@ -1,6 +1,6 @@
 import type { Page } from '@playwright/test'
 
-import { expect, test } from './fixtures.js'
+import { reload, test, expect } from './fixtures.js'
 
 test.use({ board: 'fresh' })
 
@@ -98,7 +98,7 @@ test('pauses where it is, resumes from there, takes a minute more, and resets', 
 
 test('is still running after a reload', async ({ page }) => {
   await startFor(page, '5')
-  await page.reload()
+  await reload(page)
   await expect(pill(page)).toHaveAttribute('data-timer', 'running')
   await expect(pill(page)).toContainText(/^4:5\d|^5:00/)
 })

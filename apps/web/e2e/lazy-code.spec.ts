@@ -1,6 +1,7 @@
 import { expect, test, type Page } from '@playwright/test'
 
 import { BOARD_URL, HOME_URL } from './routes.js'
+import { goto } from './fixtures.js'
 
 /**
  * Code a page does not use is not downloaded (audit 2026-09-27).
@@ -27,7 +28,7 @@ test('a local board loads neither the identity client nor the collaboration code
   page,
 }) => {
   const seen = loaded(page)
-  await page.goto(BOARD_URL)
+  await goto(page, BOARD_URL)
   await page.waitForSelector('[data-testid="status-bar"]')
   await expect(page.locator('#of-splash')).toHaveCount(0)
   expect(seen.filter((url) => url.includes(SUPABASE))).toEqual([])
@@ -36,7 +37,7 @@ test('a local board loads neither the identity client nor the collaboration code
 
 test('the signed-out front door does not load the collaboration code', async ({ page }) => {
   const seen = loaded(page)
-  await page.goto(HOME_URL)
+  await goto(page, HOME_URL)
   await page.waitForSelector('[data-testid="home"]')
   expect(seen.filter((url) => YJS.test(url))).toEqual([])
 })
@@ -44,7 +45,7 @@ test('the signed-out front door does not load the collaboration code', async ({ 
 test('a shared board still loads the collaboration code it needs', async ({ page }) => {
   const seen = loaded(page)
   await page.routeWebSocket(/\/room\//, () => undefined)
-  await page.goto(`/?room=brd_abcdefgh12345678&k=${'e'.repeat(32)}`)
+  await goto(page, `/?room=brd_abcdefgh12345678&k=${'e'.repeat(32)}`)
   await page.waitForSelector('[data-testid="status-bar"]')
   expect(seen.filter((url) => YJS.test(url)).length).toBeGreaterThan(0)
 })

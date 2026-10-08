@@ -1,6 +1,6 @@
 import { expect, test, type Locator, type Page } from '@playwright/test'
 
-import { CANVAS, undo } from './fixtures.js'
+import { CANVAS, goto, undo } from './fixtures.js'
 import { BOARD_URL } from './routes.js'
 
 /**
@@ -15,7 +15,7 @@ const AWAY = { x: 1100, y: 640 }
 const drawn = (page: Page): Locator => page.locator('[role="table"] [data-row]')
 
 async function tableWith(page: Page, values: readonly string[]): Promise<void> {
-  await page.goto(BOARD_URL)
+  await goto(page, BOARD_URL)
   await expect(page.getByTestId('tool-select')).toBeVisible()
   await page.getByTestId('tool-table').click()
   await page.locator(CANVAS).click({ position: { x: 340, y: 300 } })

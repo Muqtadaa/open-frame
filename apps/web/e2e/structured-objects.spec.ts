@@ -1,6 +1,17 @@
 import type { Page } from '@playwright/test'
 
-import { CANVAS, EDITOR, expect, place, test, undo, boxOf, saved, seedBoard } from './fixtures.js'
+import {
+  boxOf,
+  CANVAS,
+  EDITOR,
+  place,
+  reload,
+  saved,
+  seedBoard,
+  test,
+  undo,
+  expect,
+} from './fixtures.js'
 import { buildBoard } from './boards.js'
 
 /**
@@ -226,7 +237,7 @@ test.describe('structured objects', () => {
 
     // And it is in the DOCUMENT, not just on screen.
     await saved(page)
-    await page.reload()
+    await reload(page)
     await expect(page.locator(CANVAS)).toContainText('September usability study')
   })
 

@@ -1,6 +1,6 @@
 import type { Page } from '@playwright/test'
 
-import { boxOf, CANVAS, EDITOR, expect, test, undo, saved, seedBoard } from './fixtures.js'
+import { boxOf, CANVAS, EDITOR, reload, saved, seedBoard, test, undo, expect } from './fixtures.js'
 import { buildBoard } from './boards.js'
 
 /**
@@ -133,7 +133,7 @@ test.describe('grouping', () => {
   test('survives a reload', async ({ page }) => {
     await groupBoth(page)
     await saved(page)
-    await page.reload()
+    await reload(page)
 
     await expect(page.locator('[data-object-type="group"]')).toHaveCount(1)
     await page.locator(CANVAS).click({ position: A })

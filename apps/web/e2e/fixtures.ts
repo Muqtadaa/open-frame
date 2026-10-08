@@ -44,6 +44,49 @@ export interface Point {
  */
 export type BoardState = 'none' | 'open' | 'fresh'
 
+/**
+ * Waits until the page takes input. `#root` is inert until the splash leaves,
+ * two frames after the first render, and a visible element can still be
+ * inert: a spec that called `.focus()` on a control in that gap focused
+ * nothing, and the Enter it pressed next went to the page body. Chromium's
+ * frames nearly always beat the spec; WebKit's and Firefox's did not, and the
+ * nightly failed on it for four nights running in specs that navigated by
+ * themselves.
+ */
+export async function reachable(page: Page): Promise<void> {
+  await expect(page.locator('#root')).not.toHaveAttribute('inert')
+}
+
+/**
+ * Goes to `url` and waits until the page takes input. Every navigation in a
+ * spec goes through here, or through `reload` (`e2e-navigation.test.ts`); a
+ * spec whose subject IS the moment before the page takes input says so there.
+ */
+export async function goto(
+  page: Page,
+  url: string,
+  options?: Parameters<Page['goto']>[1],
+): Promise<void> {
+  await page.goto(url, options)
+  await reachable(page)
+}
+
+/**
+ * Goes to `url` and does NOT wait for the page to take input — for a
+ * spec that photographs or measures the start-up itself, where the page
+ * is held before input on purpose (a stalled entry module, the splash).
+ * A spec that uses this for anything else is racing the splash.
+ */
+export async function gotoBeforeInput(page: Page, url: string): Promise<void> {
+  await page.goto(url)
+}
+
+/** Reloads, and waits until the page takes input. See `goto`. */
+export async function reload(page: Page): Promise<void> {
+  await page.reload()
+  await reachable(page)
+}
+
 async function waitForBoard(page: Page): Promise<void> {
   await expect(page.locator(CANVAS)).toBeVisible()
   /*
@@ -53,20 +96,13 @@ async function waitForBoard(page: Page): Promise<void> {
    * dropped. That showed up as a rare, unexplained tool-selection failure.
    */
   await expect(page.getByTestId('tool-select')).toBeVisible()
-  /*
-   * And for the page to be REACHABLE. `#root` is inert until the splash
-   * leaves, two frames after the first render, and a visible element can
-   * still be inert: a spec that called `.focus()` on a control in that gap
-   * focused nothing, and the Enter it pressed next went to the page body.
-   * Chromium's frames nearly always beat the spec; WebKit's did not, and
-   * four keyboard specs failed there on their first full run.
-   */
-  await expect(page.locator('#root')).not.toHaveAttribute('inert')
+  // And for it to take input (see `reachable`).
+  await reachable(page)
 }
 
 /** Opens the local board as it was left. */
 export async function openBoard(page: Page): Promise<void> {
-  await page.goto(BOARD_URL)
+  await goto(page, BOARD_URL)
   await waitForBoard(page)
 }
 

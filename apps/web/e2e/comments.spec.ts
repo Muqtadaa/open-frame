@@ -1,5 +1,5 @@
 import { expect, test, type Page } from '@playwright/test'
-import { boxOf, viewportOf, useClipboard } from './fixtures.js'
+import { boxOf, goto, reload, useClipboard, viewportOf } from './fixtures.js'
 
 import { HOME_URL } from './routes.js'
 import { BOB, signedIn, type StubbedServer } from './signed-in.js'
@@ -20,7 +20,7 @@ async function openBoard(page: Page): Promise<void> {
   // A room the app believes in, refused quietly, so the board opens offline
   // and the test is about comments rather than about sockets.
   await page.routeWebSocket(/\/room\//, () => undefined)
-  await page.goto(`/?room=${BOARD}&k=${KEY}`)
+  await goto(page, `/?room=${BOARD}&k=${KEY}`)
   await page.waitForSelector('[data-testid="status-bar"]')
 }
 
@@ -169,7 +169,7 @@ test('shows a mention on the board list, and links to the board it names', async
       ],
     },
   )
-  await page.goto(HOME_URL)
+  await goto(page, HOME_URL)
 
   const bell = page.getByTestId('mentions-button')
   await expect(bell).toHaveText(/1 mention/)
@@ -195,7 +195,7 @@ test('shows a mention on the board list, and links to the board it names', async
 
 test('says nothing when nobody has mentioned you', async ({ page }) => {
   await signedIn(page, [{ id: BOARD, title: 'Shared', role: 'owner' }])
-  await page.goto(HOME_URL)
+  await goto(page, HOME_URL)
 
   // The board list is up, so this is an absent bell rather than an empty page.
   await expect(page.getByText('Shared').first()).toBeVisible()
@@ -575,7 +575,7 @@ test('still opens the mentions list on the front door', async ({ page }) => {
       },
     ],
   })
-  await page.goto(HOME_URL)
+  await goto(page, HOME_URL)
 
   await page.getByTestId('mentions-button').click()
 
@@ -646,7 +646,7 @@ test('a mention link opens the thread it names, not just the board', async ({ pa
   expect(commentId).not.toBe('')
 
   // Arrive as somebody following the notification would.
-  await page.goto(`/?room=${BOARD}&k=${KEY}&c=${commentId}`)
+  await goto(page, `/?room=${BOARD}&k=${KEY}&c=${commentId}`)
   await page.waitForSelector('[data-testid="status-bar"]')
 
   const panel = page.getByTestId('comment-panel')
@@ -664,7 +664,7 @@ test('a mention link opens the thread it names, not just the board', async ({ pa
 test('a mention link for a remark that is gone still opens the board', async ({ page }) => {
   await signedIn(page, [{ id: BOARD, title: 'Shared', role: 'owner' }])
   await page.routeWebSocket(/\/room\//, () => undefined)
-  await page.goto(`/?room=${BOARD}&k=${KEY}&c=cmt_nothing`)
+  await goto(page, `/?room=${BOARD}&k=${KEY}&c=cmt_nothing`)
 
   // The board is open, which is most of what was asked for. A notice about a
   // remark nobody can see any more is not worth the interruption.
@@ -703,13 +703,13 @@ test('opening the link a mention gives marks it read, however it was opened', as
       ],
     },
   )
-  await page.goto(HOME_URL)
+  await goto(page, HOME_URL)
   await page.getByTestId('mentions-button').click()
   const href = await page.getByTestId('mention-cmt_arrived').getAttribute('href')
   expect(href).toContain('c=cmt_arrived')
 
   // Not clicked: followed, the way a new tab or a pasted link arrives.
-  await page.goto(href ?? '')
+  await goto(page, href ?? '')
   await page.waitForSelector('[data-testid="status-bar"]')
   await expect.poll(() => account.read).toContain('cmt_arrived')
 })
@@ -731,7 +731,7 @@ test('reading a mention keeps it, quietened, rather than destroying it', async (
       ],
     },
   )
-  await page.goto(HOME_URL)
+  await goto(page, HOME_URL)
 
   const bell = page.getByTestId('mentions-button')
   await expect(bell).toHaveText('1 mention')
@@ -790,7 +790,7 @@ test('arriving from a link puts the remark in the middle, not at the edge', asyn
   await expect(pin).toBeVisible()
   const commentId = ((await pin.getAttribute('data-testid')) ?? '').replace('comment-pin-', '')
 
-  await page.goto(`/?room=${BOARD}&k=${KEY}&c=${commentId}`)
+  await goto(page, `/?room=${BOARD}&k=${KEY}&c=${commentId}`)
   await page.waitForSelector('[data-testid="status-bar"]')
   await expect(page.getByTestId('comment-panel')).toBeVisible()
 
@@ -840,7 +840,7 @@ test('a notification for this board goes to the remark without reloading', async
     body: 'the one you were sent',
   })
   await page.getByTestId('comment-close').click()
-  await page.reload()
+  await reload(page)
   await page.waitForSelector('[data-testid="status-bar"]')
 
   // A mark this page load owns. It does not survive a navigation.
@@ -1132,7 +1132,7 @@ test.describe('by keyboard', () => {
         },
       ],
     })
-    await page.goto(HOME_URL)
+    await goto(page, HOME_URL)
     const bell = page.getByTestId('mentions-button')
     await bell.focus()
     await page.keyboard.press('Enter')
@@ -1480,7 +1480,7 @@ test.describe('changing what you said', () => {
     await openBoard(page)
     const id = await postThread(page, 'mine')
     remark(account.server, 'cmt_reply', 'Rowan replies', id)
-    await page.reload()
+    await reload(page)
     await page.waitForSelector('[data-testid="status-bar"]')
     await page.getByTestId(`comment-pin-${id}`).click()
 

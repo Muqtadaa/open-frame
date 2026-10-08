@@ -1,6 +1,7 @@
 import { expect, type Page } from '@playwright/test'
 
 import { localBoardUrl } from './routes.js'
+import { goto } from './fixtures.js'
 
 /**
  * Puts a board in this browser, the way a board gets there.
@@ -16,7 +17,7 @@ import { localBoardUrl } from './routes.js'
  * helper only navigated, and every list it produced was empty.
  */
 export async function seedLocalBoard(page: Page, name: string, title?: string): Promise<void> {
-  await page.goto(localBoardUrl(name))
+  await goto(page, localBoardUrl(name))
   await page.waitForSelector('[data-testid="status-bar"]')
 
   // A sticky, placed through the real tool: one command, one autosave.

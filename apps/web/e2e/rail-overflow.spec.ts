@@ -1,6 +1,7 @@
 import { expect, test, type Page } from '@playwright/test'
 
 import { BOARD_URL } from './routes.js'
+import { goto } from './fixtures.js'
 
 /**
  * A rail too long for its window says there is more of it (audit 2026-09-27).
@@ -11,7 +12,7 @@ import { BOARD_URL } from './routes.js'
  */
 // Local rather than the shared fixture: it waits for the status bar, not the canvas and rail.
 async function open(page: Page): Promise<void> {
-  await page.goto(BOARD_URL)
+  await goto(page, BOARD_URL)
   await page.waitForSelector('[data-testid="status-bar"]')
 }
 

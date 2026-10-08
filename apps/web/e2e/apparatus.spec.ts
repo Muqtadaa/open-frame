@@ -1,6 +1,6 @@
 import { expect, test, type Page } from '@playwright/test'
 
-import { CANVAS } from './fixtures.js'
+import { CANVAS, goto } from './fixtures.js'
 import { BOARD_URL } from './routes.js'
 
 /**
@@ -85,7 +85,7 @@ async function zoomTo(page: Page, key: string, target: string): Promise<void> {
 
 test.describe('apparatus is measured in screen pixels', () => {
   test('every grip is the same size at 5% as at 1600%', async ({ page }) => {
-    await page.goto(BOARD_URL)
+    await goto(page, BOARD_URL)
     await expect(page.locator(CANVAS)).toBeVisible()
 
     /*
@@ -124,7 +124,7 @@ test.describe('apparatus is measured in screen pixels', () => {
    * object's, because an outline has no box of its own to ask about.
    */
   test('the selection outline stays a hairline', async ({ page }) => {
-    await page.goto(BOARD_URL)
+    await goto(page, BOARD_URL)
     await expect(page.locator(CANVAS)).toBeVisible()
 
     await drawShape(page)
@@ -161,7 +161,7 @@ test.describe('apparatus is measured in screen pixels', () => {
    * one WORLD pixel and painted sixteen on screen beside the selection line.
    */
   test("a frame's edge stays a hairline at 1600%", async ({ page }) => {
-    await page.goto(BOARD_URL)
+    await goto(page, BOARD_URL)
     await expect(page.locator(CANVAS)).toBeVisible()
     await page.getByTestId('tool-frame').click()
     await page.mouse.move(340, 220)

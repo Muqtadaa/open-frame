@@ -3,7 +3,7 @@ import { MUSIC_GENRES } from '@openframe/core/facilitation'
 
 import { buildBoard } from './boards.js'
 import { library, TRACKS } from './music.js'
-import { seedBoard } from './fixtures.js'
+import { goto, gotoBeforeInput, reload, seedBoard } from './fixtures.js'
 import { seedLocalBoard } from './seed.js'
 import { BOARD_URL, HOME_URL } from './routes.js'
 import { signedIn } from './signed-in.js'
@@ -41,7 +41,7 @@ async function inWorld(page: Page, world: (typeof WORLDS)[number]): Promise<void
 }
 
 async function openLocalBoard(page: Page): Promise<void> {
-  await page.goto(BOARD_URL)
+  await goto(page, BOARD_URL)
   await page.waitForSelector('[data-testid="status-bar"]')
 }
 
@@ -49,7 +49,7 @@ async function openLocalBoard(page: Page): Promise<void> {
 async function openSharedBoard(page: Page): Promise<void> {
   await signedIn(page, [{ id: BOARD, title: 'Pricing research', role: 'owner' }])
   await page.routeWebSocket(/\/room\//, () => undefined)
-  await page.goto(`/?room=${BOARD}&k=${KEY}`)
+  await goto(page, `/?room=${BOARD}&k=${KEY}`)
   await page.waitForSelector('[data-testid="status-bar"]')
 }
 
@@ -119,7 +119,7 @@ async function rewriteStoredBoard(page: Page, how: 'newer' | 'unknown-object'): 
     })
     db.close()
   }, how)
-  await page.reload()
+  await reload(page)
   await page.waitForSelector('[data-testid="status-bar"]')
 }
 
@@ -131,7 +131,7 @@ for (const world of WORLDS) {
 
     test('front door with a board in the ledger', async ({ page }) => {
       await seedLocalBoard(page, 'visual', 'Pricing research')
-      await page.goto(HOME_URL)
+      await goto(page, HOME_URL)
       await page.waitForSelector('[data-testid="home"]')
       await snap(page, `${world}-home`)
     })
@@ -445,7 +445,7 @@ for (const world of WORLDS) {
       await page.routeWebSocket(/\/room\//, (ws) => {
         void ws.close({ code: 4003, reason: 'This board needs its password' })
       })
-      await page.goto(`/?room=${BOARD}&k=${KEY}`)
+      await goto(page, `/?room=${BOARD}&k=${KEY}`)
       await expect(page.getByTestId('board-locked')).toBeVisible()
       await snap(page, `${world}-board-locked`)
     })
@@ -470,7 +470,7 @@ for (const world of WORLDS) {
       await page.routeWebSocket(/\/room\//, (ws) => {
         room = ws
       })
-      await page.goto(`/?room=${BOARD}&k=${KEY}`)
+      await goto(page, `/?room=${BOARD}&k=${KEY}`)
       await page.waitForSelector('[data-testid="status-bar"]')
       await expect.poll(() => room !== null).toBe(true)
       await (room as WebSocketRoute | null)?.close({ code: 4004, reason: 'This board was deleted' })
@@ -509,7 +509,7 @@ for (const world of WORLDS) {
           },
         })
       })
-      await page.goto(BOARD_URL)
+      await goto(page, BOARD_URL)
       await expect(page.getByTestId('start-failed')).toBeVisible()
       await snap(page, `${world}-start-failed`)
     })
@@ -522,7 +522,7 @@ for (const world of WORLDS) {
      */
     test('the splash, first load in a tab', async ({ page }) => {
       await page.route('**/main.tsx*', (route) => route.abort())
-      await page.goto(BOARD_URL)
+      await gotoBeforeInput(page, BOARD_URL)
       await page.locator('#of-splash img[data-loaded="true"]').waitFor()
       await snap(page, `${world}-splash-artwork`)
     })
@@ -533,7 +533,7 @@ for (const world of WORLDS) {
       })
       await page.clock.install()
       await page.route('**/main.tsx*', (route) => route.abort())
-      await page.goto(BOARD_URL)
+      await gotoBeforeInput(page, BOARD_URL)
       await page.clock.fastForward(13_000)
       await page.locator('#of-splash button').waitFor()
       await snap(page, `${world}-splash-quiet-stalled`)

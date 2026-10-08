@@ -90,6 +90,23 @@ function specFiles(
   return found
 }
 
+/**
+ * A navigation a spec makes by itself, rather than through `goto` or `reload`
+ * in `e2e/fixtures.ts`, which wait until the page takes input. The nightly's
+ * WebKit and Firefox jobs failed four nights running on specs that navigated,
+ * then focused a control while `#root` was still inert.
+ */
+const OWN_NAVIGATION = /\b\w+\.(goto|reload)\(/g
+
+/** Specs whose subject is the page BEFORE it takes input: they navigate by hand. */
+const BEFORE_INPUT: Readonly<Record<string, string>> = {
+  'e2e/brand.spec.ts': 'the splash itself, held and leaving',
+  'e2e/splash.spec.ts': 'the splash itself, and what is shown while it stalls',
+  'e2e/start-failed.spec.ts': 'start-up that fails, where the page may never take input',
+  'e2e/keys-at-load.spec.ts': 'keys pressed while the page is still loading',
+  'e2e/fixtures.ts': 'where goto and reload are defined',
+}
+
 describe('the browser suites', () => {
   it('has specs in both of them, so this test cannot pass by finding nothing', () => {
     const bySuite = new Map<string, number>()
@@ -107,6 +124,19 @@ describe('the browser suites', () => {
 
     // `/` is the front door. A spec that wants a board names one — `BOARD_URL`
     // — and a spec that wants the door says `HOME_URL`.
+    expect(offenders).toEqual([])
+  })
+
+  it('navigates through goto and reload, which wait until the page takes input', () => {
+    const offenders: string[] = []
+    for (const file of specFiles('.ts')) {
+      if (!file.name.startsWith('e2e/') || file.name in BEFORE_INPUT) continue
+      file.source.split('\n').forEach((line, index) => {
+        for (const match of line.matchAll(OWN_NAVIGATION)) {
+          offenders.push(`${file.name}:${String(index + 1)} ${match[0]}`)
+        }
+      })
+    }
     expect(offenders).toEqual([])
   })
 

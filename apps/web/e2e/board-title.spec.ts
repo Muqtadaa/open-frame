@@ -1,5 +1,5 @@
 import { expect, test, type Page } from '@playwright/test'
-import { boxOf, saved } from './fixtures.js'
+import { boxOf, goto, reload, saved } from './fixtures.js'
 
 import { BOARD_URL, HOME_URL } from './routes.js'
 
@@ -22,7 +22,7 @@ async function rename(page: Page, to: string): Promise<void> {
 }
 
 test.beforeEach(async ({ page }) => {
-  await page.goto(BOARD_URL)
+  await goto(page, BOARD_URL)
   await page.waitForSelector('[data-testid="status-bar"]')
 })
 
@@ -39,7 +39,7 @@ test.describe('the board name', () => {
     await rename(page, 'Pricing research')
 
     await saved(page)
-    await page.reload()
+    await reload(page)
     await page.waitForSelector('[data-testid="status-bar"]')
 
     await expect(page.locator(TITLE)).toHaveText('Pricing research')
@@ -108,7 +108,7 @@ test.describe('the board name', () => {
     await rename(page, 'Pricing research')
 
     await saved(page)
-    await page.goto(HOME_URL)
+    await goto(page, HOME_URL)
 
     await expect(page.getByTestId('home-boards')).toContainText('Pricing research')
   })
