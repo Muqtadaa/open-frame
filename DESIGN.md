@@ -1350,8 +1350,9 @@ cannot push it off the screen, and clear of the rail and Find. Typing `@`
 makes the composer a combobox for the mention list: `aria-expanded` and
 `aria-controls` only while the list is there, and a count that is announced.
 
-The **mentions bell** is a quiet chip at control height — the accent's wash and
-a bold count while unread — and opens a sheet like account and share.
+On the front door the **mentions bell** is a quiet chip at control height — the
+accent's wash and a bold count while unread — and opens a sheet like account
+and share. On a board, mentions are a section of the Inbox (Navigation Bar).
 **Presence** names people, not colours: a tag rides each peer's cursor and
 selection, dashed for selected and solid for editing; the bar shows 24px faces
 side by side, three at most and "+N", initials in page or panel colour. "+N" is
@@ -1436,7 +1437,8 @@ next surface inherits automatically — it has to be applied.
 
 ### Sheets
 
-Account, sign-in, share and the mentions list are one kind of thing, and
+Account, sign-in, share, the Inbox, the Session and the people list are one
+kind of thing, and
 behave as one: they take the keyboard as they open (`useFocusOnOpen`), close
 on Escape or a press anywhere else (`useDismiss`, captured before the board's
 keymap can also read the key), and hand the keyboard back to the control
