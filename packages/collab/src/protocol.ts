@@ -158,6 +158,51 @@ export function createAwareness(
   return awareness
 }
 
+/** How often a tab renews its presence when nothing about it has changed. */
+export const PRESENCE_RENEW_MS = 60_000
+/** How long a peer goes unheard before it is taken off the board. */
+export const PRESENCE_DROP_MS = 150_000
+
+/**
+ * A browser's presence, kept on its own slower clock (CLAUDE.md rule 29).
+ *
+ * y-protocols renews every 15 seconds and expires a silent peer after 30,
+ * both fixed. Every renewal is a message to the room, and every message wakes
+ * it: four a minute from each idle tab, all day. This renews once a minute and
+ * waits two and a half minutes before forgetting a peer, which still clears a
+ * tab that vanished without saying so — one that closes properly is taken off
+ * at once by the room. Returns the stop.
+ */
+export function startPresenceClock(
+  awareness: Awareness,
+  options: { readonly renewEvery?: number; readonly dropAfter?: number } = {},
+): () => void {
+  stopAwarenessTimer(awareness)
+  const renewEvery = options.renewEvery ?? PRESENCE_RENEW_MS
+  const dropAfter = options.dropAfter ?? PRESENCE_DROP_MS
+  const tick = setInterval(
+    () => {
+      const now = Date.now()
+      const own = awareness.getLocalState()
+      const mine = awareness.meta.get(awareness.clientID)
+      // A tick may land a moment short of the minute: within a tenth of it counts.
+      if (own !== null && mine !== undefined && now - mine.lastUpdated >= renewEvery * 0.9) {
+        awareness.setLocalState(own)
+      }
+      const gone: number[] = []
+      for (const [client, meta] of awareness.meta) {
+        if (client === awareness.clientID || !awareness.states.has(client)) continue
+        if (now - meta.lastUpdated >= dropAfter) gone.push(client)
+      }
+      if (gone.length > 0) awarenessProtocol.removeAwarenessStates(awareness, gone, 'timeout')
+    },
+    Math.min(renewEvery, dropAfter) / 4,
+  )
+  return () => {
+    clearInterval(tick)
+  }
+}
+
 /** The interval y-protocols starts in its constructor, which it exposes only by name. */
 function stopAwarenessTimer(awareness: Awareness): void {
   clearInterval(

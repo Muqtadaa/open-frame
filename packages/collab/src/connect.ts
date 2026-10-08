@@ -17,7 +17,7 @@ import {
   writeTimer,
   type Facilitation,
 } from './facilitation.js'
-import { createAwareness, type RoomRole } from './protocol.js'
+import { createAwareness, startPresenceClock, type RoomRole } from './protocol.js'
 import { RoomProvider, type ConnectionStatus, type RoomSocket } from './provider.js'
 import { CollabSession } from './session.js'
 
@@ -168,6 +168,8 @@ export async function connectBoard(options: ConnectBoardOptions): Promise<BoardC
   if (stored !== null) Y.applyUpdate(doc, stored)
 
   const awareness = createAwareness(doc)
+  // Once a minute rather than y-protocols' every fifteen seconds (rule 29).
+  const stopPresenceClock = startPresenceClock(awareness)
 
   /*
    * Seeding is now a QUESTION ABOUT STORAGE rather than a flag somebody has to
@@ -362,6 +364,7 @@ export async function connectBoard(options: ConnectBoardOptions): Promise<BoardC
       roleListeners.clear()
       provider.destroy()
       session.stop()
+      stopPresenceClock()
       awareness.destroy()
       doc.destroy()
     },
