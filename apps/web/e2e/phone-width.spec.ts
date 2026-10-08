@@ -440,7 +440,11 @@ for (const width of [390, 320]) {
     }
 
     test('the bar’s way out and Share are a finger wide', async ({ page }) => {
-      await page.goto(BOARD_URL)
+      // Signed in, on a shared board: the bar at its fullest, with Share on it.
+      await signedIn(page, [{ id: 'brd_abcdefgh12345678', title: 'Shared', role: 'owner' }])
+      await page.routeWebSocket(/\/room\//, () => undefined)
+      await page.goto(`/?room=brd_abcdefgh12345678&k=${'e'.repeat(32)}`)
+      await page.waitForSelector('[data-testid="status-bar"]')
       for (const id of ['board-exit', 'share-board']) {
         const box = await boxOf(page.getByTestId(id))
         expect(box.width, id).toBeGreaterThanOrEqual(40)
