@@ -1,6 +1,9 @@
 # Phase 5 · AI and MCP
 
-**Status: Planned** · ← [Roadmap](README.md)
+**Status: In progress** — the MCP server (stages 1–4 of
+[5a](phase-5a-mcp-server.md)) and AI clustering
+([ADR 0018](../adr/0018-ai-clustering-on-the-room-server.md)) are built; the other AI commands and
+remote MCP are not · ← [Roadmap](README.md)
 
 Agents as first-class participants on the board — through exactly the same door
 as a human.
@@ -49,9 +52,13 @@ like one from a click.
 6. Preview large or destructive changes.
 7. Execute through the dispatcher.
 
-**Candidate commands:** summarise selected notes, cluster ideas, name clusters,
-find duplicates, reorganise a section, turn evidence into insights, turn insights
-into experiment hypotheses, extract action items, generate a diagram.
+**Built:** cluster ideas and name the clusters — "Cluster with AI…" on three or
+more notes, reviewed before it is applied, and applied as copies so the
+originals stay ([ADR 0018](../adr/0018-ai-clustering-on-the-room-server.md)).
+
+**Candidate commands:** summarise selected notes, find duplicates, reorganise a
+section, turn evidence into insights, turn insights into experiment hypotheses,
+extract action items, generate a diagram.
 
 Notice that most of these are only meaningful **after Phase 3**. "Turn evidence
 into insights" requires evidence and insights to exist. Running this phase
@@ -67,9 +74,14 @@ unit.
 
 `apps/mcp`, depending on `packages/core` and never on `apps/web`.
 
-Tools: `get_board`, `get_objects`, `search_board`, `create_object`,
-`create_objects`, `update_object`, `move_object`, `delete_object`,
-`create_connector`, `create_frame`, `add_comment`.
+Built, as a stdio server ([5a](phase-5a-mcp-server.md)). Its nineteen tools:
+
+- **Read:** `list_boards`, `get_board`, `get_objects`, `search_board`,
+  `list_changes`.
+- **Write:** `create_objects`, `update_object`, `move_objects`,
+  `delete_objects`, `create_connector`, `create_frame`, `group_objects`,
+  `ungroup_objects`, `align_objects`, `distribute_objects`,
+  `duplicate_objects`, `derive_object`, `add_comment`, `revert_change`.
 
 Each is a thin validator that builds a `CommandEnvelope` with `origin: 'mcp'` and
 calls the dispatcher. The read tools serve `describe()` output. There is no

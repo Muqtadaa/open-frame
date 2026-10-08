@@ -35,14 +35,18 @@ filtered, linked and reasoned about.
 - **Agents.** An MCP server lets an agent read and edit a board through the same
   command layer people use. Every edit it makes to the board is recorded and
   can be reverted; a comment it leaves is a comment, like anyone's.
+- **Running a session.** A shared timer and music, dot voting, polls,
+  reactions, following someone's view, and AI clustering of notes into themes.
+- **Finding your way back.** Version history with preview and restore, a board
+  overview by frame and type, and one Inbox for mentions and agents' changes.
 
 [ADR 0002](docs/adr/0002-canvas-engine-custom-dom-svg.md) asked whether a custom
 DOM/SVG renderer could carry this. It can: DOM node count stays flat from 100 to
 10,000 objects, and a cull pass on a 10,000-object mixed board costs about 3ms.
 
-Next is [Phase 5 · AI and MCP](docs/phases/phase-5-ai-and-mcp.md). The MCP server
-([Phase 5a](docs/phases/phase-5a-mcp-server.md)) has finished stages 1–4; stage 5,
-a remote transport, is next.
+[Phase 5 · AI and MCP](docs/phases/phase-5-ai-and-mcp.md) is in progress: the
+MCP server ([Phase 5a](docs/phases/phase-5a-mcp-server.md)) has finished stages
+1–4 and AI clustering is built; stage 5, a remote transport, is next.
 
 ---
 

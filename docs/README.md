@@ -86,7 +86,7 @@ If you remember nothing else:
 | [Phase 2 · Core canvas](phases/phase-2-core-canvas.md)               | **Done**                      |
 | [Phase 3 · Structured objects](phases/phase-3-structured-objects.md) | **Done**                      |
 | [Phase 4 · Collaboration](phases/phase-4-collaboration.md)           | **Done**                      |
-| [Phase 5 · AI and MCP](phases/phase-5-ai-and-mcp.md)                 | Next                          |
+| [Phase 5 · AI and MCP](phases/phase-5-ai-and-mcp.md)                 | In progress                   |
 | [Phase 5a · MCP server](phases/phase-5a-mcp-server.md)               | Stages 1–4 done; stage 5 next |
 
 ### Decision records — why things are the way they are
