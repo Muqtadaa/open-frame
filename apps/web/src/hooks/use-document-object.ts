@@ -48,6 +48,21 @@ export function useBoardDocument(): BoardDocument {
   return useSyncExternalStore(subscribe, getSnapshot, getSnapshot)
 }
 
+/**
+ * The board's title, and nothing else: re-renders when the title changes,
+ * not on every edit. The bar read the whole document for this and redrew,
+ * with everything in it, on each committed change (audit 2026-10-08).
+ */
+export function useBoardTitle(): string {
+  const { runtime } = useOpenFrame()
+  const subscribe = useCallback(
+    (onChange: () => void) => runtime.store.subscribeToDocument(onChange),
+    [runtime.store],
+  )
+  const getSnapshot = useCallback(() => runtime.store.getDocument().meta.title, [runtime.store])
+  return useSyncExternalStore(subscribe, getSnapshot, getSnapshot)
+}
+
 export function useUndoState(): { canUndo: boolean; canRedo: boolean; undoLabel: string | null } {
   const { runtime } = useOpenFrame()
   const stack = runtime.dispatcher.undoStack

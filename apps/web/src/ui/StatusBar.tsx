@@ -1,7 +1,7 @@
 import { useEffect, useRef, useSyncExternalStore } from 'react'
 import { useSqueeze } from './use-squeeze.js'
 
-import { useBoardDocument } from '../hooks/use-document-object.js'
+import { useBoardTitle } from '../hooks/use-document-object.js'
 import { useInteractionStore } from '../interaction/interaction-store.js'
 import { useOpenFrame } from '../runtime/context.js'
 import { useRoomStatus } from '../hooks/use-room-status.js'
@@ -25,13 +25,13 @@ import { ShareControl } from './ShareControl.js'
  * the bar reflowing.
  */
 export function StatusBar() {
-  const document = useBoardDocument()
-  const selection = useInteractionStore((state) => state.selection)
+  const title = useBoardTitle()
+  // A number, so the bar redraws when the count changes and not on every selection.
+  const selected = useInteractionStore((state) => state.selection.size)
   const { runtime } = useOpenFrame()
   const save = useSyncExternalStore(runtime.saveStatus.subscribe, runtime.saveStatus.get)
   const room = useRoomStatus()
   const safety = safetyWords(save, room)
-  const title = document.meta.title
   const rename = useRef<(() => void) | null>(null)
   const bar = useRef<HTMLElement>(null)
   useSqueeze(bar)
@@ -116,9 +116,9 @@ export function StatusBar() {
          * permanently, repeating what the record panel shows — and saying
          * nothing at all whenever nothing was chosen.
          */}
-        {selection.size > 0 && (
+        {selected > 0 && (
           <span className="of-status__counts" data-testid="selection-count">
-            <b>{selection.size}</b> selected
+            <b>{selected}</b> selected
           </span>
         )}
 
