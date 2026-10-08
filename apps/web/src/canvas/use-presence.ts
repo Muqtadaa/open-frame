@@ -1,4 +1,4 @@
-import { useEffect, type RefObject } from 'react'
+import { useEffect, useRef, type RefObject } from 'react'
 
 import { screenToWorld } from '@openframe/core'
 
@@ -23,11 +23,12 @@ import { useMe } from '../hooks/use-me.js'
 /**
  * Cursor updates, at most this often.
  *
- * A pointermove fires far faster than anyone can see, and each one is a message
- * to every other client in the room. Twenty a second is smooth to watch and an
- * order of magnitude below what the socket would otherwise carry.
+ * A pointermove fires far faster than anyone can see, and each one is a
+ * message to the room — a request against its daily allowance, and a wake
+ * (CLAUDE.md rule 29). Ten a second still reads as a hand moving; twenty
+ * doubled the cost for a smoothness nobody watching could name.
  */
-const CURSOR_INTERVAL_MS = 50
+const CURSOR_INTERVAL_MS = 100
 
 export function usePresence(containerRef: RefObject<HTMLDivElement | null>): void {
   const { collaboration } = useOpenFrame()
@@ -40,6 +41,22 @@ export function usePresence(containerRef: RefObject<HTMLDivElement | null>): voi
    */
   const me = useMe()
   const peers = usePeers()
+  /*
+   * Whether anybody else is here to see this person move. Alone on a board,
+   * a cursor, a selection or a pan is a message to nobody — and it was most of
+   * what an open board sent. Read through a ref so the effect below is not
+   * torn down (and this person's presence cleared) every time somebody comes
+   * or goes; `company` below publishes once when they arrive.
+   */
+  const company = peers.length > 0
+  const companyRef = useRef(company)
+  const publishRef = useRef<(() => void) | null>(null)
+  useEffect(() => {
+    const arrived = company && !companyRef.current
+    companyRef.current = company
+    // Somebody new sees where this person is now, not where they last moved.
+    if (arrived) publishRef.current?.()
+  }, [company])
   const locked = useLockedByOthers(peers)
   const setLockedByOthers = useInteractionStore((state) => state.setLockedByOthers)
 
@@ -97,8 +114,10 @@ export function usePresence(containerRef: RefObject<HTMLDivElement | null>): voi
       })
     }
 
+    publishRef.current = publish
+
     const schedule = (): void => {
-      if (pending !== null) return
+      if (!companyRef.current || pending !== null) return
       const wait = Math.max(0, CURSOR_INTERVAL_MS - (Date.now() - lastSent))
       pending = setTimeout(publish, wait)
     }
@@ -117,7 +136,7 @@ export function usePresence(containerRef: RefObject<HTMLDivElement | null>): voi
       // Otherwise a cursor stays frozen at the edge of the board for as long as
       // its owner is looking at another window.
       cursor = null
-      publish()
+      if (companyRef.current) publish()
     }
 
     window.addEventListener('pointermove', onPointerMove, { passive: true })
@@ -130,6 +149,8 @@ export function usePresence(containerRef: RefObject<HTMLDivElement | null>): voi
      * people can both believe they have the note.
      */
     const unsubscribe = useInteractionStore.subscribe((state, previous) => {
+      // Nobody to tell; whoever arrives is told everything at once.
+      if (!companyRef.current) return
       if (state.selection !== previous.selection || state.editingId !== previous.editingId) {
         publish()
         return
@@ -178,6 +199,7 @@ export function usePresence(containerRef: RefObject<HTMLDivElement | null>): voi
       document.removeEventListener('pointerleave', onPointerLeave)
       unsubscribe()
       if (pending !== null) clearTimeout(pending)
+      publishRef.current = null
       collaboration.setPresence(null)
     }
   }, [collaboration, containerRef, me])
