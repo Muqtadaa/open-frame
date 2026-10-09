@@ -39,11 +39,11 @@
 }
 
 /*
- * The same for the top while a panel there is being WORKED in. Clustering is
+ * The same for the top while a panel there is being WORKED in. An AI sheet is
  * opened on a selection of several notes, whose arrange bar floats above it on
  * the apparatus layer and took the panel's first click.
  */
-.of-overlay--top:has(.of-cluster),
+.of-overlay--top:has(.of-ai-sheet),
 .of-overlay--top:focus-within {
   z-index: var(--of-z-reached);
 }

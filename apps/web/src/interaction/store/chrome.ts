@@ -16,6 +16,7 @@ export const chromeSlice: Slice<ChromeSlice> = (set) => ({
   reactionPicker: null,
   votingSetup: null,
   clusterReview: null,
+  summaryReview: null,
 
   showToast: (toast, action) => set({ toast, toastAction: action ?? null }),
   announce: (text) =>
@@ -32,6 +33,9 @@ export const chromeSlice: Slice<ChromeSlice> = (set) => ({
   closeReactionPicker: () => set({ reactionPicker: null }),
   openVotingSetup: (votingSetup) => set({ votingSetup }),
   closeVotingSetup: () => set({ votingSetup: null }),
-  openClusterReview: (ids) => set({ clusterReview: [...ids] }),
+  // One AI sheet at a time: they sit in the same place, about the same notes.
+  openClusterReview: (ids) => set({ clusterReview: [...ids], summaryReview: null }),
   closeClusterReview: () => set({ clusterReview: null }),
+  openSummaryReview: (ids) => set({ summaryReview: [...ids], clusterReview: null }),
+  closeSummaryReview: () => set({ summaryReview: null }),
 })

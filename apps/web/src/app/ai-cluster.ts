@@ -31,7 +31,10 @@ import { placeDerived } from '../scene/derived-placement.js'
  * children, not a line, and saying something. Asked of the registry, never of
  * a type name (rule 5).
  */
-function noteTextOf(object: AnyOpenFrameObject, registry: ObjectTypeRegistry): string | null {
+export function noteTextOf(
+  object: AnyOpenFrameObject,
+  registry: ObjectTypeRegistry,
+): string | null {
   const definition = registry.get(object.type)
   if (definition === undefined) return null
   if (definition.capabilities.spatial === false) return null

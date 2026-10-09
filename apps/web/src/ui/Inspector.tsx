@@ -170,7 +170,10 @@ export function Inspector() {
   const dragKind = useInteractionStore((state) => state.drag.kind)
   const editingId = useInteractionStore((state) => state.editingId)
   const croppingId = useInteractionStore((state) => state.croppingId)
-  const clustering = useInteractionStore((state) => state.clusterReview !== null)
+  // Either AI sheet sits where the panel would, and is about the same notes.
+  const clustering = useInteractionStore(
+    (state) => state.clusterReview !== null || state.summaryReview !== null,
+  )
   const setCropping = useInteractionStore((state) => state.setCropping)
   const commands = useCommands()
   /*

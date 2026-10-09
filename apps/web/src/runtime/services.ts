@@ -2,7 +2,7 @@ import { createContext, useContext } from 'react'
 
 import type { BoardDocument, BoardId, BoardRepository, ObjectId } from '@openframe/core'
 import type { Catalogue } from '@openframe/core/facilitation'
-import type { ClusterProposal, ClusterRequest } from '@openframe/core/ai'
+import type { ClusterProposal, ClusterRequest, Summary, SummaryRequest } from '@openframe/core/ai'
 
 import type { OpenFrameRuntime } from './context.js'
 
@@ -424,8 +424,8 @@ export interface MusicService {
   readonly trackUrl: (trackId: string) => string
 }
 
-/** Why a request to cluster notes came back without a proposal. */
-export type ClusterRefusal =
+/** Why a request to the AI came back with nothing to look over. */
+export type AiRefusal =
   | 'signed-out'
   | 'unconfigured'
   | 'too-large'
@@ -437,13 +437,18 @@ export type ClusterRefusal =
 
 export type ClusterOutcome =
   | { readonly kind: 'proposal'; readonly proposal: ClusterProposal; readonly remaining: number }
-  | { readonly kind: 'refused'; readonly why: ClusterRefusal }
+  | { readonly kind: 'refused'; readonly why: AiRefusal }
+
+export type SummaryOutcome =
+  | { readonly kind: 'summary'; readonly summary: Summary; readonly remaining: number }
+  | { readonly kind: 'refused'; readonly why: AiRefusal }
 
 /**
- * Clustering notes into themes (ADR 0018). The model is called by the room
- * server, which holds the key; this port sends the notes' text and a bearer
- * token, and receives a proposal it checks again against what it sent. A
- * deployment with no room server has no AI, and nothing offers it.
+ * Clustering notes into themes (ADR 0018) and summarising them (ADR 0022). The
+ * model is called by the room server, which holds the key; this port sends the
+ * notes' text and a bearer token, and receives an answer it checks again
+ * against what it sent. A deployment with no room server has no AI, and
+ * nothing offers it.
  */
 export interface AiService {
   readonly enabled: boolean
@@ -452,6 +457,11 @@ export interface AiService {
     accessToken: string,
     signal?: AbortSignal,
   ) => Promise<ClusterOutcome>
+  readonly summarise: (
+    request: SummaryRequest,
+    accessToken: string,
+    signal?: AbortSignal,
+  ) => Promise<SummaryOutcome>
 }
 
 export interface Services {

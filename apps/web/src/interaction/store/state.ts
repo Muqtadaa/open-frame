@@ -528,6 +528,14 @@ export interface ChromeSlice {
   readonly clusterReview: readonly ObjectId[] | null
   openClusterReview(ids: readonly ObjectId[]): void
   closeClusterReview(): void
+  /**
+   * What is being summarised with AI — the selection, or a frame standing for
+   * everything in it — held as the ids chosen when it opened, for the same
+   * reason. Null otherwise.
+   */
+  readonly summaryReview: readonly ObjectId[] | null
+  openSummaryReview(ids: readonly ObjectId[]): void
+  closeSummaryReview(): void
 }
 
 /**

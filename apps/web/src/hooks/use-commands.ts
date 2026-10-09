@@ -37,11 +37,12 @@ import {
   type DistributeAxis,
   type ImageCrop,
 } from '@openframe/core'
-import type { ClusterProposal } from '@openframe/core/ai'
+import type { ClusterProposal, Summary } from '@openframe/core/ai'
 import { useMemo } from 'react'
 
 import type { LoggedChange } from '@openframe/collab'
 import { clusterObjects } from '../app/ai-cluster.js'
+import { summaryObjects } from '../app/ai-summary.js'
 import { guestIdentity } from '../app/guest.js'
 import {
   readSystemClipboard,
@@ -201,6 +202,17 @@ export interface BoardCommands {
   applyClusterProposal(
     proposal: ClusterProposal,
     notes: ReadonlyMap<string, AnyOpenFrameObject>,
+  ): ObjectId | null
+  /**
+   * Lays an AI summary out beside what was summarised — the selection, or the
+   * frame — as one text box citing the notes its points rest on, in ONE change
+   * marked as the AI's (ADR 0022). Nothing summarised is touched. Returns the
+   * text box, revealed and selected.
+   */
+  applySummary(
+    summary: Summary,
+    notes: ReadonlyMap<string, AnyOpenFrameObject>,
+    from: readonly ObjectId[],
   ): ObjectId | null
   /**
    * Selects an object and pans the minimum needed to see it.
@@ -566,6 +578,48 @@ export function useCommands(): BoardCommands {
         if (!result.ok) return null
         revealObject(outer)
         return outer
+      },
+
+      applySummary(summary, sent, from) {
+        const doc = runtime.store.getDocument()
+        // As the notes are NOW: a citation of a note deleted meanwhile would be refused.
+        const notes = new Map<string, AnyOpenFrameObject>()
+        for (const [ref, note] of sent) {
+          const current = doc.objects.get(note.id)
+          if (current !== undefined) notes.set(ref, current)
+        }
+        // Beside what was chosen: the frame, when a frame was summarised.
+        const chosen = from
+          .map((id) => doc.objects.get(id))
+          .filter((object) => object !== undefined)
+        const source = unionAll(
+          (chosen.length > 0 ? chosen : [...notes.values()]).map((object) =>
+            runtime.registry.boundsOf(object, doc),
+          ),
+        )
+        if (source === null || notes.size === 0) {
+          useInteractionStore.getState().showToast('The notes are gone')
+          return null
+        }
+        const { occupied, view, snap } = placementSpace()
+        const { objects, box } = summaryObjects({
+          summary,
+          notes,
+          source,
+          occupied,
+          view,
+          ids: () => runtime.ids.objectId(),
+          ...(snap === undefined ? {} : { snap }),
+        })
+        const result = dispatcher.transact(
+          'Summarise with AI',
+          [{ kind: 'CreateObjects', objects }],
+          { origin: 'ai' },
+        )
+        report(result)
+        if (!result.ok) return null
+        revealObject(box)
+        return box
       },
 
       derive(toType, predicate) {

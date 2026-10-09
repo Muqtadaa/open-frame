@@ -5,6 +5,7 @@ import type {
   AccountService,
   AiService,
   ClusterOutcome,
+  SummaryOutcome,
   Identity,
   MusicService,
   RemoteBoardService,
@@ -75,9 +76,13 @@ export function fakeMusic(catalogue: Catalogue | null = null): MusicService {
 }
 
 /** An AI that answers with the given outcome, for a test that needs one. */
-export function fakeAi(outcome: ClusterOutcome = { kind: 'refused', why: 'unconfigured' }) {
+export function fakeAi(
+  outcome: ClusterOutcome = { kind: 'refused', why: 'unconfigured' },
+  summary: SummaryOutcome = { kind: 'refused', why: 'unconfigured' },
+) {
   return {
     enabled: true,
     cluster: vi.fn<AiService['cluster']>(() => Promise.resolve(outcome)),
+    summarise: vi.fn<AiService['summarise']>(() => Promise.resolve(summary)),
   } satisfies AiService
 }

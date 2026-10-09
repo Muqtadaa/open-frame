@@ -9,7 +9,7 @@ import {
 } from 'react'
 
 import { inVoteScope, type VoteScope } from '@openframe/core'
-import { MIN_CLUSTER_NOTES } from '@openframe/core/ai'
+import { MIN_CLUSTER_NOTES, MIN_SUMMARY_NOTES } from '@openframe/core/ai'
 
 import { AnchoredSurface } from '../controls/AnchoredSurface.js'
 import { DisclosureIcon } from '../controls/icons.js'
@@ -20,6 +20,7 @@ import { useExport } from '../hooks/use-export.js'
 import { useMe } from '../hooks/use-me.js'
 import { useVoteRound } from '../hooks/use-voting.js'
 import { clusterableCount } from '../app/ai-cluster.js'
+import { summarisableCount } from '../app/ai-summary.js'
 import { useOpenFrame } from '../runtime/context.js'
 import { useServices } from '../runtime/services.js'
 import { useInteractionStore, type ContextMenuAt } from '../interaction/interaction-store.js'
@@ -430,20 +431,33 @@ export function ContextMenu() {
   ]
 
   /*
-   * Clustering with AI: offered where it can act — a room server that has the
-   * AI, a board this person may change, and enough notes with something to
-   * sort. Whether they are signed in is said by the panel it opens, which can
-   * also say why AI needs an account; a greyed row could say neither.
+   * Clustering and summarising with AI: offered where they can act — a room
+   * server that has the AI, a board this person may change, and enough notes
+   * with something to say. Whether they are signed in is said by the panel
+   * each opens, which can also say why AI needs an account; a greyed row could
+   * say neither. A summary also takes a frame, standing for what is in it.
    */
+  const aiReady = ai.enabled && canEdit
   const clusterItems =
-    ai.enabled &&
-    canEdit &&
+    aiReady &&
     clusterableCount(runtime.store.getDocument(), runtime.registry, selected) >= MIN_CLUSTER_NOTES
       ? [
           {
             label: 'Cluster with AI…',
             run: () => {
               useInteractionStore.getState().openClusterReview(selected)
+            },
+          },
+        ]
+      : []
+  const summaryItems =
+    aiReady &&
+    summarisableCount(runtime.store.getDocument(), runtime.registry, selected) >= MIN_SUMMARY_NOTES
+      ? [
+          {
+            label: 'Summarise with AI…',
+            run: () => {
+              useInteractionStore.getState().openSummaryReview(selected)
             },
           },
         ]
@@ -468,6 +482,7 @@ export function ContextMenu() {
         },
       })),
       ...clusterItems,
+      ...summaryItems,
       /*
        * "Promote", not "Convert": the note turns out to have BEEN evidence.
        * One entry however many a type offers — flat, the third target pushed
