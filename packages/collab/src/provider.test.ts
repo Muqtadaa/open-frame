@@ -10,7 +10,8 @@ import {
   RoomProvider,
   type RoomSocket,
 } from './provider.js'
-import { BoardRoom, type RoomPeer } from './room.js'
+import { FRAGMENT_BYTES } from './parts.js'
+import { BoardRoom, MAX_MESSAGE_BYTES, type RoomPeer } from './room.js'
 
 /**
  * The client provider against a real `BoardRoom`, joined by fake sockets.
@@ -30,11 +31,14 @@ class Wire {
   #peer: RoomPeer | null = null
   /** Messages the client sent while the socket was not up. */
   delivered = 0
+  /** The largest frame either side put on this wire. */
+  largest = 0
 
   readonly client: RoomSocket = {
     send: (data) => {
       if (!this.#open || this.#room === null || this.#peer === null) return
       this.delivered++
+      this.largest = Math.max(this.largest, data.byteLength)
       this.#room.receive(this.#peer, data)
     },
     close: () => {
@@ -53,6 +57,7 @@ class Wire {
       id,
       role,
       send: (data) => {
+        this.largest = Math.max(this.largest, data.byteLength)
         for (const listener of this.#messageListeners) listener(data)
       },
     }
@@ -362,5 +367,32 @@ describe('a client learning the room’s time', () => {
     expect(a.provider.status).toBe('connected')
     expect(a.provider.clockSynced).toBe(false)
     expect(a.provider.serverNow()).toBe(42)
+  })
+})
+
+/*
+ * A board too large for one frame. The platform drops a frame over 32 MiB, so
+ * a board past it could be published by nobody and opened by nobody; sent in
+ * parts, both work, and no frame on the wire is larger than a part.
+ */
+describe('a board larger than any one frame', () => {
+  const size = MAX_MESSAGE_BYTES + 1024
+
+  it('is published by one client and opened by the next, in parts both ways', async () => {
+    const room = new BoardRoom()
+    const a = client(room, 'a')
+    a.provider.start()
+    await settle()
+    a.doc.getMap('board').set('seeded', 'x'.repeat(size))
+    await settle()
+    expect(room.doc.getMap('board').get('seeded')).toHaveLength(size)
+
+    const b = client(room, 'b')
+    b.provider.start()
+    await settle()
+    expect(b.doc.getMap('board').get('seeded')).toHaveLength(size)
+    for (const wire of [...a.wires, ...b.wires]) {
+      expect(wire.largest).toBeLessThanOrEqual(FRAGMENT_BYTES + 32)
+    }
   })
 })

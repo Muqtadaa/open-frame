@@ -12,6 +12,7 @@ import {
   type Awareness,
   type RoomRole,
 } from './protocol.js'
+import { Assembler, Splitter } from './parts.js'
 
 /**
  * The client half of a room: a socket, a `Y.Doc` and an awareness state.
@@ -125,6 +126,8 @@ export class RoomProvider {
   readonly #now: () => number
   readonly #clock = new ServerClock()
   readonly #clockListeners = new Set<() => void>()
+  /** A board too large for one frame goes, and comes, in parts (`parts.ts`). */
+  readonly #splitter = new Splitter()
 
   #socket: RoomSocket | null = null
   #status: ConnectionStatus = 'offline'
@@ -208,6 +211,11 @@ export class RoomProvider {
 
     const socket = this.#connect()
     this.#socket = socket
+    // One per connection: parts never span a reconnect.
+    const assembler = new Assembler()
+    const send = (message: Uint8Array): void => {
+      for (const frame of this.#splitter.split(message)) socket.send(frame)
+    }
 
     socket.onOpen(() => {
       this.#setStatus('connected')
@@ -220,16 +228,24 @@ export class RoomProvider {
        * answers the room's sits on an empty board while the room holds the real
        * one. Two tests in room.test.ts failed exactly that way.
        */
-      socket.send(encodeSyncStep1(this.#doc))
+      send(encodeSyncStep1(this.#doc))
 
       // And announce ourselves, so the people already here see a cursor.
       const local = this.#awareness.getLocalState()
-      if (local !== null) socket.send(encodeAwareness(this.#awareness, [this.#doc.clientID]))
+      if (local !== null) send(encodeAwareness(this.#awareness, [this.#doc.clientID]))
 
       for (let asked = 0; asked < CLOCK_QUESTIONS_ON_OPEN; asked += 1) this.syncClock()
     })
 
-    socket.onMessage((data) => {
+    socket.onMessage((frame) => {
+      const heard = assembler.receive(frame)
+      if (heard.kind === 'part') return
+      if (heard.kind === 'bad') {
+        // Lost its place in a message from the room: start the connection again.
+        this.#dropped()
+        return
+      }
+      const data = heard.message
       const role = decodeRole(data)
       if (role !== null) {
         this.#role = role
@@ -251,7 +267,7 @@ export class RoomProvider {
        * refused what the room sent it would be refusing the board.
        */
       const { reply, content } = readMessage(this.#doc, this.#awareness, data, FROM_ROOM, true)
-      if (reply !== null) socket.send(reply)
+      if (reply !== null) send(reply)
 
       /*
        * `content` rather than `broadcast`: presence fans out too, and a room
@@ -322,7 +338,7 @@ export class RoomProvider {
   #send(message: Uint8Array): void {
     if (this.#socket === null || this.#status !== 'connected') return
     try {
-      this.#socket.send(message)
+      for (const frame of this.#splitter.split(message)) this.#socket.send(frame)
     } catch {
       // The close handler owns reconnection; a failed send is just an early
       // symptom of a connection that has already gone.
