@@ -1,7 +1,7 @@
 import type { Page } from '@playwright/test'
 
 import { buildBoard } from './boards.js'
-import { CANVAS, expect, seedBoard, test } from './fixtures.js'
+import { boxOf, CANVAS, expect, seedBoard, test } from './fixtures.js'
 
 /**
  * One Escape closes the surface opened LAST, and only that one.
@@ -70,4 +70,33 @@ test('the colour picker is closed before the sheet opened after it', async ({ pa
   await expect(page.getByTestId('color-picker')).toBeVisible()
   await page.keyboard.press('Escape')
   await expect(page.getByTestId('color-picker')).toHaveCount(0)
+})
+
+/*
+ * A drag in flight is the nearest thing to the hand, so Escape puts it back
+ * and goes no further. The gesture's own listener stopped only the board's
+ * keymap, not the stack's beside it on the window: with search opened mid-drag
+ * one press put the drag back AND closed search (Codex, on #108).
+ */
+test('Escape mid-drag puts the drag back and leaves search open', async ({ page }) => {
+  await seedBoard(
+    page,
+    buildBoard((board) => {
+      board.note('Note', { x: 340, y: 260 })
+    }),
+  )
+  const note = page.locator('[data-object-type="sticky"]')
+  const before = await boxOf(note)
+  await page.mouse.move(before.x + before.width / 2, before.y + before.height / 2)
+  await page.mouse.down()
+  await page.mouse.move(before.x + before.width / 2 + 120, before.y + before.height / 2, {
+    steps: 6,
+  })
+  await page.keyboard.press('ControlOrMeta+f')
+  await expect(page.getByRole('combobox')).toBeVisible()
+
+  await page.keyboard.press('Escape')
+  await page.mouse.up()
+  expect((await boxOf(note)).x).toBeCloseTo(before.x, 0)
+  await expect(page.getByRole('combobox')).toBeVisible()
 })

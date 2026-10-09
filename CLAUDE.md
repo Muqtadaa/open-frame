@@ -659,7 +659,8 @@ override, a hidden double-click, a way out of a failure) and add it to
 surface opened LAST and nothing else. A window listener of its own fires
 alongside the stack's and closes two; one on its own element fires after it,
 by which time the surface underneath has gone. An editor or a field keeps its
-own Escape, because there it takes an edit back rather than closing anything.
+own Escape, because there it takes an edit back rather than closing anything,
+and a drag in flight takes the press before any surface, and stops it there.
 `escape-guard.test.ts` lists every keydown listener on the window, with why.
 
 **Comments** — explain _why_, especially where a non-obvious choice prevents a
