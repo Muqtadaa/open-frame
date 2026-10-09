@@ -10,46 +10,12 @@ import {
   versionId,
   versionKey,
   type HistoryBucket,
-  type HistoryStorage,
   type VersionRecord,
 } from './history.js'
+import { MemoryStorage } from './test-storage.js'
 
 const T0 = Date.UTC(2026, 9, 6, 9, 0, 0)
 const BOARD = 'brd_one'
-
-class MemoryStorage implements HistoryStorage {
-  readonly values = new Map<string, unknown>()
-  alarm: number | null = null
-
-  readonly get = <T>(key: string): Promise<T | undefined> =>
-    Promise.resolve(structuredClone(this.values.get(key)) as T | undefined)
-  readonly put = <T>(key: string, value: T): Promise<void> => {
-    this.values.set(key, structuredClone(value))
-    return Promise.resolve()
-  }
-  readonly delete = (keys: string[]): Promise<number> => {
-    if (keys.length > 128) throw new Error('more than 128 keys in one delete')
-    let n = 0
-    for (const key of keys) if (this.values.delete(key)) n++
-    return Promise.resolve(n)
-  }
-  readonly list = <T>(options: { prefix: string }): Promise<Map<string, T>> => {
-    const out = new Map<string, T>()
-    for (const key of [...this.values.keys()].sort()) {
-      if (key.startsWith(options.prefix)) out.set(key, structuredClone(this.values.get(key)) as T)
-    }
-    return Promise.resolve(out)
-  }
-  readonly getAlarm = (): Promise<number | null> => Promise.resolve(this.alarm)
-  readonly setAlarm = (at: number): Promise<void> => {
-    this.alarm = at
-    return Promise.resolve()
-  }
-  readonly deleteAlarm = (): Promise<void> => {
-    this.alarm = null
-    return Promise.resolve()
-  }
-}
 
 class MemoryBucket implements HistoryBucket {
   readonly objects = new Map<string, Uint8Array>()

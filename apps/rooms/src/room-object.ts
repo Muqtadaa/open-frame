@@ -35,6 +35,7 @@ import {
 } from './password.js'
 import { assetDecision, assetKey, checkUpload, purgeBoardAssets } from './assets.js'
 import { readBounded } from './body.js'
+import { DocumentStore } from './document-store.js'
 import { RoomHistory, timingFrom } from './history.js'
 import { InFlight } from './in-flight.js'
 import type { Env } from './env.js'
@@ -51,19 +52,6 @@ import type { Env } from './env.js'
  * connections open and evicts this object from memory, then rebuilds it when
  * the next message arrives. Everything below follows from that one fact.
  */
-
-/** A merged snapshot of the whole document. */
-const SNAPSHOT = 'snapshot'
-/** `u:<seq>` — a change since the last snapshot, newest last. */
-const UPDATE_PREFIX = 'u:'
-/**
- * How many loose updates are allowed before they are merged back into one.
- *
- * Every one of them is read on wake, so the ceiling is really "how much work is
- * a cold start allowed to be". Sixty-four keeps that trivial while making
- * compaction rare.
- */
-const COMPACT_AFTER = 64
 
 /**
  * Where a claimed board's two keys live. Absent means a LEGACY room — one
@@ -123,7 +111,8 @@ const CORS = {
 
 export class BoardRoomObject extends DurableObject<Env> {
   #room!: BoardRoom
-  #sequence = 0
+  /** Where the board is kept, in values the platform will hold (`document-store.ts`). */
+  readonly #document: DocumentStore
   /** Uploads admitted and not yet in R2, which a destroy waits for. */
   readonly #uploads = new InFlight()
   /** The board's earlier versions (ADR 0019). */
@@ -132,6 +121,7 @@ export class BoardRoomObject extends DurableObject<Env> {
 
   constructor(ctx: DurableObjectState, env: Env) {
     super(ctx, env)
+    this.#document = new DocumentStore(ctx.storage, () => this.#room.snapshot())
 
     /*
      * `blockConcurrencyWhile` is load-bearing, not caution: without it a
@@ -151,7 +141,7 @@ export class BoardRoomObject extends DurableObject<Env> {
 
     void ctx.blockConcurrencyWhile(async () => {
       this.#room = new BoardRoom({
-        doc: documentFromSnapshot(await this.#load()),
+        doc: documentFromSnapshot(await this.#document.load()),
         onDocumentChanged: (update) => {
           void this.#persist(update)
         },
@@ -538,10 +528,7 @@ export class BoardRoomObject extends DurableObject<Env> {
   /** Storage and a response around `claimDecision`, which is where the rule is. */
   async #claim(): Promise<Response> {
     const keys = await this.ctx.storage.get<AccessKeys>(KEYS)
-    const snapshot = await this.ctx.storage.get<ArrayBuffer>(SNAPSHOT)
-    const updates = await this.ctx.storage.list<ArrayBuffer>({ prefix: UPDATE_PREFIX, limit: 1 })
-
-    const decision = claimDecision(keys, snapshot !== undefined || updates.size > 0)
+    const decision = claimDecision(keys, await this.#document.holdsBoard())
     if (!decision.ok) {
       return Response.json({ error: decision.error }, { status: decision.status, headers: CORS })
     }
@@ -614,22 +601,6 @@ export class BoardRoomObject extends DurableObject<Env> {
     await this.ctx.storage.put(DESTROYED, true)
 
     return Response.json({ destroyed: true }, { headers: CORS })
-  }
-
-  async #load(): Promise<Uint8Array[]> {
-    const snapshot = await this.ctx.storage.get<ArrayBuffer>(SNAPSHOT)
-    const updates = await this.ctx.storage.list<ArrayBuffer>({ prefix: UPDATE_PREFIX })
-    this.#sequence = updates.size
-
-    /*
-     * Replayed in key order, which is why the sequence is zero-padded: `u:10`
-     * sorts before `u:9` as a string, and a board rebuilt out of order is a
-     * corrupted one.
-     */
-    const parts: Uint8Array[] = []
-    if (snapshot !== undefined) parts.push(new Uint8Array(snapshot))
-    for (const value of updates.values()) parts.push(new Uint8Array(value))
-    return parts
   }
 
   /**
@@ -821,21 +792,19 @@ export class BoardRoomObject extends DurableObject<Env> {
   }
 
   async #persist(update: Uint8Array): Promise<void> {
-    const key = `${UPDATE_PREFIX}${String(this.#sequence++).padStart(8, '0')}`
-    await this.ctx.storage.put(key, bufferOf(update))
-    if (this.#sequence >= COMPACT_AFTER) await this.#compact()
+    try {
+      await this.#document.persist(update)
+    } catch (error) {
+      /*
+       * Said, rather than lost in a rejection nobody awaits: the people in the
+       * room still have the change, so nothing on screen would ever show that
+       * the room failed to keep it.
+       */
+      console.error(`[room] ${this.#knownBoardId ?? 'unnamed'} could not keep a change`, error)
+      return
+    }
     // After the change is safe: history is a copy, and the copy can wait.
     await this.#history.edited()
-  }
-
-  /** Folds the loose updates back into one snapshot, so a cold start stays cheap. */
-  async #compact(): Promise<void> {
-    const merged = this.#room.snapshot()
-    await this.ctx.storage.put(SNAPSHOT, bufferOf(merged))
-    await this.ctx.storage.delete([
-      ...(await this.ctx.storage.list({ prefix: UPDATE_PREFIX })).keys(),
-    ])
-    this.#sequence = 0
   }
 }
 
@@ -907,8 +876,4 @@ async function readKey(request: Request): Promise<string | null> {
   } catch {
     return null
   }
-}
-
-function bufferOf(bytes: Uint8Array): ArrayBuffer {
-  return bytes.buffer.slice(bytes.byteOffset, bytes.byteOffset + bytes.byteLength) as ArrayBuffer
 }
