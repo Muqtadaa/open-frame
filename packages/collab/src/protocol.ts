@@ -54,6 +54,58 @@ export const MESSAGE_ROLE = 2
  */
 export const MESSAGE_TIME = 3
 
+/**
+ * Who this connection is: its link, the board's password token and the owner's
+ * key, if it has them. Client to room, once, as the very first message.
+ *
+ * In the first message rather than the socket's address. A URL is written down
+ * by every log between a browser and the room — the platform's own included —
+ * and these three are bearer secrets: whoever reads one has what it grants. A
+ * browser cannot put a header on a WebSocket, so the message is the one place
+ * that is the room's alone. The room admits a socket only once it has read
+ * this, and the client sends nothing else until it is told its role.
+ *
+ * Type 4 is `MESSAGE_PART` (`parts.ts`).
+ */
+export const MESSAGE_HELLO = 5
+
+/** What a connection claims about itself. Each part is absent or a string. */
+export interface RoomCredentials {
+  /** Which link this is. Absent for a room claimed before keys existed. */
+  readonly key?: string | null | undefined
+  /** Redeems the board's password, for a board that has one. */
+  readonly token?: string | null | undefined
+  /** The owner's key, for the person whose board it is. */
+  readonly ownerKey?: string | null | undefined
+}
+
+export interface Hello {
+  readonly key: string | null
+  readonly token: string | null
+  readonly ownerKey: string | null
+}
+
+export function encodeHello(credentials: RoomCredentials): Uint8Array {
+  const encoder = encoding.createEncoder()
+  encoding.writeVarUint(encoder, MESSAGE_HELLO)
+  // Empty for absent: no credential is ever the empty string.
+  encoding.writeVarString(encoder, credentials.key ?? '')
+  encoding.writeVarString(encoder, credentials.token ?? '')
+  encoding.writeVarString(encoder, credentials.ownerKey ?? '')
+  return encoding.toUint8Array(encoder)
+}
+
+/** The hello in a message, or `null` if it is not one. Throws on one it cannot read. */
+export function decodeHello(message: Uint8Array): Hello | null {
+  const decoder = decoding.createDecoder(message)
+  if (decoding.readVarUint(decoder) !== MESSAGE_HELLO) return null
+  const read = (): string | null => {
+    const value = decoding.readVarString(decoder)
+    return value === '' ? null : value
+  }
+  return { key: read(), token: read(), ownerKey: read() }
+}
+
 /** What a connection may do. Decided by the room, never by the client. */
 export type RoomRole = 'editor' | 'viewer'
 

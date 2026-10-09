@@ -21,11 +21,23 @@ test('a bad frame closes its own socket and leaves the room working', async ({ p
     const claimed = await fetch(`${base}/claim`, { method: 'POST' })
     const keys = (await claimed.json()) as { editor: string }
 
+    // A hello carrying the edit link: [5, length, key…, 0, 0] (`MESSAGE_HELLO`).
+    const hello = new Uint8Array([
+      5,
+      keys.editor.length,
+      ...new TextEncoder().encode(keys.editor),
+      0,
+      0,
+    ])
+    // Open, introduced, and admitted: the room's first answer is the role.
     const open = () =>
       new Promise<WebSocket>((resolve, reject) => {
-        const socket = new WebSocket(`ws://127.0.0.1:8787/room/${id}?k=${keys.editor}`)
+        const socket = new WebSocket(`ws://127.0.0.1:8787/room/${id}`)
         socket.binaryType = 'arraybuffer'
-        socket.onopen = () => resolve(socket)
+        socket.onopen = () => {
+          socket.addEventListener('message', () => resolve(socket), { once: true })
+          socket.send(hello)
+        }
         socket.onerror = () => reject(new Error('socket failed to open'))
       })
     const closeCode = (socket: WebSocket) =>

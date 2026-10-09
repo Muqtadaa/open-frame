@@ -2,7 +2,9 @@ import {
   BoardRoom,
   CLOSE_BOARD_DELETED,
   CLOSE_PASSWORD_REQUIRED,
+  decodeHello,
   documentFromSnapshot,
+  type Hello,
   type RoomPeer,
   type RoomRole,
 } from '@openframe/collab'
@@ -21,6 +23,8 @@ import {
   mintKey,
   mintKeys,
   roleForKey,
+  admittedRole,
+  pendingTooLong,
   roleFromAttachment,
   type AccessKeys,
 } from './access.js'
@@ -153,7 +157,21 @@ export class BoardRoomObject extends DurableObject<Env> {
        * are re-joined here — which re-runs the handshake and costs one round
        * trip per socket per wake.
        */
-      for (const socket of ctx.getWebSockets()) this.#room.join(this.#peer(socket))
+      for (const socket of ctx.getWebSockets()) {
+        /*
+         * A socket that has not said who it is is not re-joined: joining sends
+         * the board. One that has waited longer than any client would is
+         * closed here rather than by a timer, which would keep the room awake
+         * (rule 29).
+         */
+        if (this.#pending(socket)) {
+          if (pendingTooLong(socket.deserializeAttachment())) {
+            socket.close(1008, 'Introduce yourself first')
+          }
+          continue
+        }
+        this.#room.join(this.#peer(socket))
+      }
     })
   }
 
@@ -187,77 +205,116 @@ export class BoardRoomObject extends DurableObject<Env> {
       return new Response('This endpoint speaks WebSocket', { status: 426 })
     }
 
-    const role = await this.#roleFor(url.searchParams.get('k'))
-    if (role === null) {
-      // The same answer for a wrong key and a missing one. Distinguishing them
-      // tells somebody probing which half of the guess to keep.
-      return new Response('That link does not open this board', { status: 403 })
+    /*
+     * An address carrying a credential is an older client. The Worker refuses
+     * it before it gets here (`route.ts`); this is the same refusal for a
+     * request that reached the object some other way.
+     */
+    if (['k', 't', 'o'].some((param) => url.searchParams.has(param))) {
+      return new Response('Update this page to open the board', { status: 400 })
     }
-
-    /*
-     * THE SECOND FACTOR, if this board has one. Checked after the link, so a
-     * request without a valid key learns nothing about whether the board is
-     * protected — it gets the same 403 either way.
-     *
-     * Refused by ACCEPTING the socket and closing it with a code, rather than
-     * by refusing the upgrade. A failed upgrade reaches the browser as a
-     * generic error and close code 1006, which is indistinguishable from a
-     * network that dropped — and "your wifi blinked" is exactly the wrong
-     * thing to tell somebody who needs to type a password. The same lesson as
-     * 4004, which is why that distinction exists at all.
-     */
-    const verifier = await this.ctx.storage.get<PasswordVerifier>(PASSWORD)
-    /*
-     * THE OWNER IS NEVER ASKED. They are the one who set the password, and a
-     * board that locks out the person whose board it is — on a new machine, or
-     * after they have forgotten it — is a board they have lost.
-     *
-     * Read from `o`, never from `k`. The owner key is not a link: it lives in
-     * a column only its owner can read and travels beside the edit link on the
-     * socket. Were it accepted as `k` it would sit in the page URL, and a URL
-     * copied from the address bar would carry the board's password with it.
-     */
-    const owner = isOwnerKey(
-      await this.ctx.storage.get<AccessKeys>(KEYS),
-      url.searchParams.get('o'),
-    )
-    if (!owner && !tokenAdmits(verifier, url.searchParams.get('t'))) {
-      const refused = new WebSocketPair()
-      // `accept()` rather than `acceptWebSocket()` on purpose: this socket is
-      // closed in the same breath, so there is no hibernation to preserve and
-      // nothing to register against the room.
-      refused[1].accept()
-      refused[1].close(CLOSE_PASSWORD_REQUIRED, 'This board needs its password')
-      return new Response(null, { status: 101, webSocket: refused[0] })
-    }
-
-    /*
-     * Only once somebody who can change the board is let in: an edit is what
-     * a version needs the id for, and writing it on any request would let
-     * anyone leave a row in a room by naming one.
-     */
-    if (role === 'editor') await this.#rememberBoardId(url)
 
     const pair = new WebSocketPair()
     const client = pair[0]
     const server = pair[1]
 
     /*
-     * The peer id is attached to the SOCKET, not held in a field. A field would
-     * not survive the next eviction, and the room would then be unable to say
-     * whose cursor to remove when this connection closes.
+     * ACCEPTED, NOT ADMITTED. The socket says who it is in its first message
+     * (`MESSAGE_HELLO`), because its address is written down by every log on
+     * the way here; until then it is a connection that has been told nothing
+     * and can do nothing. `#admit` decides, from the hello, exactly what this
+     * used to decide from the query string.
+     *
+     * The peer id and the board's name are attached to the SOCKET, not held
+     * in a field, so both survive an eviction between the upgrade and the
+     * hello. `at` lets a wake close one that never said anything.
      */
-    server.serializeAttachment({ id: crypto.randomUUID(), role })
+    server.serializeAttachment({
+      id: crypto.randomUUID(),
+      pending: true,
+      at: Date.now(),
+      board: this.#boardId(url),
+    })
     // `acceptWebSocket`, never `server.accept()`: the latter opts out of
     // hibernation and keeps the room in memory for as long as anyone is
     // connected, which is the whole cost this was chosen to avoid.
     this.ctx.acceptWebSocket(server)
-    this.#room.join(this.#peer(server))
 
     return new Response(null, { status: 101, webSocket: client })
   }
 
-  override webSocketMessage(socket: WebSocket, message: ArrayBuffer | string): void {
+  /**
+   * A socket's first message: who it is. Checked in the order the upgrade
+   * used to check the address — the link, then the password — with the same
+   * answers, given now as close codes on a socket that is already open.
+   */
+  async #admit(socket: WebSocket, message: ArrayBuffer | string): Promise<void> {
+    let hello: Hello | null = null
+    if (typeof message !== 'string') {
+      try {
+        hello = decodeHello(new Uint8Array(message))
+      } catch {
+        hello = null
+      }
+    }
+    // Anything but a hello first is a client that does not speak this protocol.
+    if (hello === null) {
+      socket.close(1008, 'Introduce yourself first')
+      return
+    }
+
+    if (
+      (await this.ctx.storage.get<boolean>(DESTROYED)) === true ||
+      (await this.ctx.storage.get<boolean>(DELETING)) === true
+    ) {
+      socket.close(CLOSE_BOARD_DELETED, 'This board was deleted')
+      return
+    }
+
+    const role = await this.#roleFor(hello.key)
+    if (role === null) {
+      // The same answer for a wrong key and a missing one. Distinguishing them
+      // tells somebody probing which half of the guess to keep. Not terminal:
+      // the client retries, as it did after the 403 this used to be.
+      socket.close(1008, 'That link does not open this board')
+      return
+    }
+
+    /*
+     * THE SECOND FACTOR, if this board has one. Checked after the link, so a
+     * connection without a valid key learns nothing about whether the board is
+     * protected.
+     *
+     * THE OWNER IS NEVER ASKED. They are the one who set the password, and a
+     * board that locks out the person whose board it is — on a new machine, or
+     * after they have forgotten it — is a board they have lost.
+     */
+    const verifier = await this.ctx.storage.get<PasswordVerifier>(PASSWORD)
+    const owner = isOwnerKey(await this.ctx.storage.get<AccessKeys>(KEYS), hello.ownerKey)
+    if (!owner && !tokenAdmits(verifier, hello.token)) {
+      socket.close(CLOSE_PASSWORD_REQUIRED, 'This board needs its password')
+      return
+    }
+
+    const attached = socket.deserializeAttachment() as { id?: string; board?: string } | null
+    /*
+     * Only once somebody who can change the board is let in: an edit is what
+     * a version needs the id for, and writing it on any request would let
+     * anyone leave a row in a room by naming one.
+     */
+    if (role === 'editor' && typeof attached?.board === 'string') {
+      await this.#rememberBoardId(new URL(`https://room/room/${attached.board}`))
+    }
+    socket.serializeAttachment({ id: attached?.id ?? crypto.randomUUID(), role })
+    this.#room.join(this.#peer(socket))
+  }
+
+  override async webSocketMessage(socket: WebSocket, message: ArrayBuffer | string): Promise<void> {
+    // Not yet admitted: this is its hello, or it is closed.
+    if (this.#pending(socket)) {
+      await this.#admit(socket, message)
+      return
+    }
     // Text frames are not part of this protocol. Ignored rather than fatal:
     // a proxy or a stray client should not be able to close a room.
     if (typeof message === 'string') return
@@ -281,6 +338,11 @@ export class BoardRoomObject extends DurableObject<Env> {
 
   override webSocketError(socket: WebSocket): void {
     this.#room.leave(this.#peer(socket))
+  }
+
+  /** Whether a socket has yet to say who it is. */
+  #pending(socket: WebSocket): boolean {
+    return admittedRole(socket.deserializeAttachment() as { pending?: unknown } | null) === null
   }
 
   /** Identity that survives eviction, because it lives on the connection. */

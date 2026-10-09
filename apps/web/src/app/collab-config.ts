@@ -202,18 +202,13 @@ function httpBase(): string {
   return COLLAB_URL.replace(/^ws/, 'http')
 }
 
-export function roomSocketUrl(
-  boardId: BoardId,
-  key?: string | null,
-  /** The token redeeming this board's password, for a board that has one. */
-  token?: string | null,
-  /** The owner's key, for the person whose board it is. */
-  ownerKey?: string | null,
-): string {
-  // The query itself is `@openframe/collab`'s, because the MCP server opens
-  // the same rooms with the same credentials; what stays here is where this
-  // build's server is and the conversion the platform forces.
-  return roomUrl(socketBase(), boardId, { key, token, ownerKey })
+/**
+ * A board's socket. Its address names the board and nothing else: the link,
+ * the token and the owner's key are the connection's first message
+ * (`MESSAGE_HELLO`), because an address is written down by every log it passes.
+ */
+export function roomSocketUrl(boardId: BoardId): string {
+  return roomUrl(socketBase(), boardId)
 }
 
 /** Where one of a board's images is read or written. */

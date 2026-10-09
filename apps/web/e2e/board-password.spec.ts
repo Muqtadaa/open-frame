@@ -1,3 +1,4 @@
+import { decodeHello, encodeRole, type Hello } from '@openframe/collab'
 import { expect, test, type Page } from '@playwright/test'
 
 import { signedIn } from './signed-in.js'
@@ -15,19 +16,27 @@ const BOARD = 'brd_abcdefgh12345678'
  * cannot be told apart from a dropped connection, and "your wifi blinked" is
  * the wrong thing to tell somebody who needs to type a password.
  */
-async function lockedRoom(page: Page, opens: { with: string }): Promise<string[]> {
-  const sockets: string[] = []
+async function lockedRoom(page: Page, opens: { with: string }): Promise<Hello[]> {
+  const hellos: Hello[] = []
   await page.routeWebSocket(/\/room\//, (ws) => {
-    const url = ws.url()
-    sockets.push(url)
-    // Turned away without the token OR the owner key, exactly as the room is:
-    // the owner is never challenged on their own board.
-    const owner = url.includes(`o=${'d'.repeat(32)}`)
-    if (!owner && !url.includes(`t=${opens.with}`)) {
-      void ws.close({ code: 4003, reason: 'This board needs its password' })
-    }
+    // The address names the board and nothing else: every credential is in the hello.
+    expect(new URL(ws.url()).search).toBe('')
+    ws.onMessage((message) => {
+      if (typeof message === 'string') return
+      const hello = decodeHello(new Uint8Array(message))
+      if (hello === null) return
+      hellos.push(hello)
+      // Turned away without the token OR the owner key, exactly as the room is:
+      // the owner is never challenged on their own board.
+      const owner = hello.ownerKey === 'd'.repeat(32)
+      if (!owner && hello.token !== opens.with) {
+        void ws.close({ code: 4003, reason: 'This board needs its password' })
+        return
+      }
+      ws.send(Buffer.from(encodeRole('editor')))
+    })
   })
-  return sockets
+  return hellos
 }
 
 test('asks for the password instead of looking like a broken connection', async ({ page }) => {
@@ -77,7 +86,7 @@ test('says the password was wrong, and keeps asking', async ({ page }) => {
  */
 test('remembers the token and reconnects with it', async ({ page }) => {
   await signedIn(page, [])
-  const sockets = await lockedRoom(page, { with: TOKEN })
+  const hellos = await lockedRoom(page, { with: TOKEN })
 
   let asked: unknown = null
   await page.route('**/room/*/unlock', async (route) => {
@@ -103,7 +112,7 @@ test('remembers the token and reconnects with it', async ({ page }) => {
   // protected.
   expect(asked).toEqual({ key: KEY, password: 'open sesame' })
 
-  await expect.poll(() => sockets.some((url) => url.includes(`t=${TOKEN}`))).toBe(true)
+  await expect.poll(() => hellos.some((hello) => hello.token === TOKEN)).toBe(true)
   await expect(page.getByTestId('board-locked')).toHaveCount(0)
 })
 
@@ -122,14 +131,16 @@ test('remembers the token and reconnects with it', async ({ page }) => {
  */
 test('lets the owner straight in, without ever asking', async ({ page }) => {
   await signedIn(page, [{ id: BOARD, title: 'Mine', role: 'owner' }])
-  const sockets = await lockedRoom(page, { with: TOKEN })
+  const hellos = await lockedRoom(page, { with: TOKEN })
 
   await goto(page, `/?room=${BOARD}&k=${KEY}`)
   await page.waitForSelector('[data-testid="status-bar"]')
 
   // `signed-in.ts` hands an owner 'd' * 32, exactly as `my_boards()` hands
   // back the column for an owner and null for everybody else.
-  await expect.poll(() => sockets.some((url) => url.includes(`o=${'d'.repeat(32)}`))).toBe(true)
+  await expect.poll(() => hellos.some((hello) => hello.ownerKey === 'd'.repeat(32))).toBe(true)
+  // The link travels the same way, never in the socket's address.
+  expect(hellos.every((hello) => hello.key === KEY)).toBe(true)
 
   // Never asked. Not a prompt that appears and is dismissed — one that is
   // never shown, because the board opens instead.

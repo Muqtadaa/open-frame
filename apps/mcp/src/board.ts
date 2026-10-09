@@ -142,7 +142,9 @@ export async function openBoard(options: OpenBoardOptions): Promise<BoardPeer> {
     dispatcher,
     seed: false,
     by: options.by ?? null,
-    connect: () => open(roomSocketUrl(options.server, boardId, options.credentials ?? {})),
+    connect: () => open(roomSocketUrl(options.server, boardId)),
+    // In the first message, never the address (`MESSAGE_HELLO`): a URL is logged.
+    credentials: () => options.credentials ?? {},
     onError: options.onError ?? (() => undefined),
   })
   /*

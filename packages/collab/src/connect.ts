@@ -17,7 +17,12 @@ import {
   writeTimer,
   type Facilitation,
 } from './facilitation.js'
-import { createAwareness, startPresenceClock, type RoomRole } from './protocol.js'
+import {
+  createAwareness,
+  startPresenceClock,
+  type RoomCredentials,
+  type RoomRole,
+} from './protocol.js'
 import { RoomProvider, type ConnectionStatus, type RoomSocket } from './provider.js'
 import { CollabSession } from './session.js'
 
@@ -119,6 +124,8 @@ export interface ConnectBoardOptions {
   readonly store: DocumentStore
   readonly dispatcher: CommandDispatcher
   readonly connect: () => RoomSocket
+  /** Who this connection is, sent as its first message; read again on every attempt. */
+  readonly credentials?: () => RoomCredentials
   readonly onError: (error: CommandError) => void
   /**
    * Where the CRDT lives between page loads. Omitted, the board still works —
@@ -221,6 +228,7 @@ export async function connectBoard(options: ConnectBoardOptions): Promise<BoardC
     doc,
     awareness,
     connect: options.connect,
+    ...(options.credentials === undefined ? {} : { credentials: options.credentials }),
     onStatus: (status) => {
       for (const listener of [...statusListeners]) listener(status)
     },

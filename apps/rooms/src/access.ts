@@ -203,6 +203,21 @@ export function roleFromAttachment(attached: { readonly role?: unknown } | null)
   return attached?.role === 'editor' ? 'editor' : 'viewer'
 }
 
+/**
+ * The role of a socket that has said who it is, or `null` for one that has not.
+ *
+ * A socket is accepted before its first message and can outlive the room's
+ * eviction like any other, so it is read back from its attachment. A pending
+ * one must not fall through to `roleFromAttachment`, which reads anything it
+ * does not recognise as a viewer — and a viewer is sent the whole board.
+ */
+export function admittedRole(
+  attached: { readonly id?: unknown; readonly pending?: unknown; readonly role?: unknown } | null,
+): RoomRole | null {
+  if (attached === null || attached.pending === true) return null
+  return roleFromAttachment(attached)
+}
+
 export type PasswordDecision =
   { readonly ok: true } | { readonly ok: false; readonly status: number; readonly error: string }
 
@@ -347,4 +362,17 @@ export function keepVersionDecision(request: ReadRequest): KeepVersionDecision {
     return { ok: false, status: 403, reason: 'That link cannot change this board' }
   }
   return { ok: true }
+}
+
+/**
+ * How long a socket may stay open without saying who it is. A client sends its
+ * hello the moment the socket opens, so this is far beyond any real one — it
+ * only clears connections that never will.
+ */
+export const PENDING_MS = 30_000
+
+/** Whether a socket accepted at `attached.at` has waited past `PENDING_MS` without a hello. */
+export function pendingTooLong(attached: unknown, now: number = Date.now()): boolean {
+  const at = (attached as { at?: unknown } | null)?.at
+  return typeof at !== 'number' || now - at > PENDING_MS
 }
