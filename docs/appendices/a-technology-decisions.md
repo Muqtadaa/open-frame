@@ -78,18 +78,18 @@ every change, which is O(objects) per pointer-up.
 
 ## Deliberately not used
 
-| Not used                | Why                                                     | When to revisit                              |
-| ----------------------- | ------------------------------------------------------- | -------------------------------------------- |
-| Any canvas SDK          | [ADR 0002](../adr/0002-canvas-engine-custom-dom-svg.md) | If Phase 2 shows interaction work dominating |
-| `next`                  | No SSR value; couples app to framework                  | If server rendering becomes valuable         |
-| `tailwindcss`           | Not enough UI to justify a system                       | When style duplication becomes real          |
-| Any component library   | Premature design system                                 | ~20 distinct components exist                |
-| `immer`                 | Patches already produce structurally-shared copies      | If manual copying becomes error-prone        |
-| `idb`                   | Four operations; one `promisify` helper covers it       | If IndexedDB usage grows substantially       |
-| `@tanstack/react-query` | No server to query                                      | First server data fetch                      |
-| `yjs`                   | [ADR 0007](../adr/0007-collaboration-yjs-deferred.md)   | Phase 4                                      |
-| `rbush` / `flatbush`    | Linear culling is adequate; the port exists             | When profiling says so                       |
-| `nanoid`                | 12 lines using the platform CSPRNG                      | Never, realistically                         |
+| Not used                | Why                                                                                                              | When to revisit                                                    |
+| ----------------------- | ---------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------ |
+| Any canvas SDK          | [ADR 0002](../adr/0002-canvas-engine-custom-dom-svg.md)                                                          | If Phase 2 shows interaction work dominating                       |
+| `next`                  | No SSR value; couples app to framework                                                                           | If server rendering becomes valuable                               |
+| `tailwindcss`           | Not enough UI to justify a system                                                                                | When style duplication becomes real                                |
+| Any component library   | Decided 10-09: our own primitives in `controls/`, consolidated ([d-deferred-decisions](d-deferred-decisions.md)) | A widget class we don't have, or menu/dialog regressions recurring |
+| `immer`                 | Patches already produce structurally-shared copies                                                               | If manual copying becomes error-prone                              |
+| `idb`                   | Four operations; one `promisify` helper covers it                                                                | If IndexedDB usage grows substantially                             |
+| `@tanstack/react-query` | No server to query                                                                                               | First server data fetch                                            |
+| `yjs`                   | [ADR 0007](../adr/0007-collaboration-yjs-deferred.md)                                                            | Phase 4                                                            |
+| `rbush` / `flatbush`    | Linear culling is adequate; the port exists                                                                      | When profiling says so                                             |
+| `nanoid`                | 12 lines using the platform CSPRNG                                                                               | Never, realistically                                               |
 
 ---
 
