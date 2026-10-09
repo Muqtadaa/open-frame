@@ -38,26 +38,36 @@ test('a board of several megabytes is published in one change and opened on anot
   test.setTimeout(120_000)
   const room = newRoomId()
   const first = await join(browser, room)
+  /*
+   * Closed when the test ends, whatever happens. Contexts a test opens itself
+   * outlive it, and two pages drawing two thousand notes each starved every
+   * spec after this one of the machine — the next share took over 20 seconds.
+   */
+  const opened = [first.context()]
+  try {
+    await first.evaluate(
+      ({ notes, text }) => {
+        const objects = Array.from({ length: notes }, (_, n) => ({
+          type: 'sticky',
+          x: (n % 50) * 200,
+          y: Math.floor(n / 50) * 200,
+          data: { text: [{ text: `${String(n)} ${text}` }] },
+        }))
+        const result = (window as unknown as DebugWindow).__openframe.runtime.dispatcher.dispatch({
+          kind: 'CreateObjects',
+          objects,
+        })
+        if (!result.ok) throw new Error(result.error?.message ?? 'the command was refused')
+      },
+      { notes: NOTES, text: TEXT },
+    )
+    await expect.poll(() => count(first)).toBe(NOTES)
 
-  await first.evaluate(
-    ({ notes, text }) => {
-      const objects = Array.from({ length: notes }, (_, n) => ({
-        type: 'sticky',
-        x: (n % 50) * 200,
-        y: Math.floor(n / 50) * 200,
-        data: { text: [{ text: `${String(n)} ${text}` }] },
-      }))
-      const result = (window as unknown as DebugWindow).__openframe.runtime.dispatcher.dispatch({
-        kind: 'CreateObjects',
-        objects,
-      })
-      if (!result.ok) throw new Error(result.error?.message ?? 'the command was refused')
-    },
-    { notes: NOTES, text: TEXT },
-  )
-  await expect.poll(() => count(first)).toBe(NOTES)
-
-  // A new device: the whole board arrives from the room, in parts.
-  const second = await join(browser, room)
-  await expect.poll(() => count(second), { timeout: 60_000 }).toBe(NOTES)
+    // A new device: the whole board arrives from the room, in parts.
+    const second = await join(browser, room)
+    opened.push(second.context())
+    await expect.poll(() => count(second), { timeout: 60_000 }).toBe(NOTES)
+  } finally {
+    await Promise.all(opened.map((context) => context.close()))
+  }
 })
