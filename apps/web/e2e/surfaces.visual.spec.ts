@@ -173,6 +173,24 @@ async function rewriteStoredBoard(page: Page, how: 'newer' | 'unknown-object'): 
   await page.waitForSelector('[data-testid="status-bar"]')
 }
 
+/** Three notes in a row, for the AI sheets. */
+function aiBoard() {
+  return buildBoard((board) => {
+    ;['Price is hidden', 'Shipping cost surprises', 'Returns are hard'].forEach((text, index) =>
+      board.note(text, { x: 300 + index * 220, y: 420 }),
+    )
+  })
+}
+
+async function openAiSheet(page: Page, item: string): Promise<void> {
+  await page.locator('[data-testid="canvas"]').click({ position: { x: 1100, y: 650 } })
+  await page.keyboard.press('ControlOrMeta+a')
+  await page
+    .locator('[data-testid="canvas"]')
+    .click({ position: { x: 300, y: 420 }, button: 'right' })
+  await page.getByRole('menuitem', { name: item }).click()
+}
+
 for (const world of WORLDS) {
   test.describe(`surfaces — ${world}`, () => {
     test.beforeEach(async ({ page }) => {
@@ -396,6 +414,57 @@ for (const world of WORLDS) {
     })
 
     // An uncoloured frame on the world's paper, with a note laid on it.
+    // The AI sheets at the stage people spend longest in: the answer, to look over.
+    test('the cluster review', async ({ page }) => {
+      await signedIn(page, [])
+      await seedBoard(page, aiBoard())
+      await page.route('**/ai/cluster', (route) =>
+        route.fulfill({
+          status: 200,
+          contentType: 'application/json',
+          body: JSON.stringify({
+            proposal: {
+              title: 'Checkout',
+              clusters: [
+                { label: 'What it costs', summary: 'Money at the till.', refs: ['n1', 'n2'] },
+              ],
+              unassigned: ['n3'],
+            },
+            remaining: 19,
+          }),
+        }),
+      )
+      await openAiSheet(page, 'Cluster with AI…')
+      await page.getByTestId('cluster-ask').click()
+      await expect(page.getByTestId('cluster-review')).toHaveAttribute('data-stage', 'review')
+      await snap(page, `${world}-cluster-review`)
+    })
+
+    test('the summary review', async ({ page }) => {
+      await signedIn(page, [])
+      await seedBoard(page, aiBoard())
+      await page.route('**/ai/summary', (route) =>
+        route.fulfill({
+          status: 200,
+          contentType: 'application/json',
+          body: JSON.stringify({
+            summary: {
+              title: 'What we heard',
+              points: [
+                { text: 'Costs arrive too late, at the till.', refs: ['n1', 'n2'] },
+                { text: 'Returns put people off buying.', refs: ['n3'] },
+              ],
+            },
+            remaining: 18,
+          }),
+        }),
+      )
+      await openAiSheet(page, 'Summarise with AI…')
+      await page.getByTestId('summary-ask').click()
+      await expect(page.getByTestId('summary-review')).toHaveAttribute('data-stage', 'review')
+      await snap(page, `${world}-summary-review`)
+    })
+
     test('a frame holding a note', async ({ page }) => {
       await openLocalBoard(page)
       await page.keyboard.press('f')

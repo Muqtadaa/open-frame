@@ -42,5 +42,7 @@ an error code for a refusal; a panel that leaves something behind on Discard.
 FINISH: `ai-cluster.spec.ts` holds discard, the keyboard path, containment and
 Escape, the signed-out and refused states, the copy line and the record panel
 stepping aside; `app/ai-cluster.test.ts` holds one transaction with origin
-`ai` that leaves the originals as they were. Critique 2026-10-07: 26/40.
-DESIGN.md: Cluster with AI. ADR 0018.
+`ai` that leaves the originals as they were. Goldens: `*-cluster-review` in
+both worlds. The stages, keyboard and refusals live in `ui/ai-sheet.tsx`,
+shared with Summarise with AI (ADR 0022), so a change to one is a change to
+both. Critique 2026-10-07: 26/40. DESIGN.md: Cluster with AI. ADR 0018.

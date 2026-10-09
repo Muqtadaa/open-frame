@@ -20,9 +20,10 @@ and the AI panel says "AI is not set up".
   dashboard: every deploy replaces the dashboard's plain variables with that
   file's.
 
-## AI clustering ([ADR 0018](../adr/0018-ai-clustering-on-the-room-server.md))
+## AI clustering and summaries ([ADR 0018](../adr/0018-ai-clustering-on-the-room-server.md), [ADR 0022](../adr/0022-ai-summaries.md))
 
-One secret, set once. Secrets survive deploys.
+One secret, set once, switches both on. Secrets survive deploys. The limits
+below are one allowance per person across both features.
 
 ```sh
 cd apps/rooms
@@ -46,7 +47,8 @@ Optional, in `[vars]` of `apps/rooms/wrangler.toml`, through a PR:
 **To check it:** sign in on the live site, select three or more notes with
 text, right-click, choose **Cluster with AI…**, then **Cluster**. If the
 key is missing the panel says "AI is not set up"; if it is wrong, "The AI did
-not finish", and the Worker's log says why.
+not finish", and the Worker's log says why. Summaries check the same way:
+two or more notes, or a frame, then **Summarise with AI…**.
 
 ## Session music ([ADR 0017](../adr/0017-facilitation-state-outside-the-document.md))
 
