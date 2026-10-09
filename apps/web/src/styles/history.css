@@ -1,6 +1,42 @@
 /* ---------- version history (ADR 0019) ---------- */
 
 /*
+ * The list, its own: it used to borrow the mentions list's classes, so a
+ * change to the inbox would have moved the history with it.
+ */
+.of-history__list {
+  width: 280px;
+  max-height: 320px;
+  padding: var(--of-space-4);
+  margin: 0;
+  overflow-y: auto;
+  list-style: none;
+  background: var(--of-panel);
+  border: 1px solid var(--of-panel-border);
+  border-radius: var(--of-radius-surface);
+  box-shadow: var(--of-shadow);
+}
+
+.of-history__label {
+  font-size: var(--of-type-record);
+  font-weight: var(--of-weight-semibold);
+  color: var(--of-ink);
+}
+
+.of-history__when,
+.of-history__status {
+  font-size: var(--of-type-record);
+  color: var(--of-ink-muted);
+}
+
+/* The rest of a long history, a page at a time, below what is shown. */
+.of-history__more {
+  display: flex;
+  justify-content: center;
+  padding-block: var(--of-space-4);
+}
+
+/*
  * One version in the list: a row you choose, like a search result. The row
  * is the whole target, so it spans the sheet.
  */

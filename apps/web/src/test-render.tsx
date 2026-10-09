@@ -6,6 +6,8 @@ import { createRuntime } from './app/composition-root.js'
 import { createServices } from './app/services.js'
 import type { BoardConnection } from '@openframe/collab'
 
+import type { BoardHistory } from './runtime/board-history.js'
+
 import { OpenFrameContext, type OpenFrameRuntime } from './runtime/context.js'
 import { ServicesContext, type Services } from './runtime/services.js'
 import { createDefaultViewRegistry } from './views/index.js'
@@ -46,6 +48,8 @@ export async function mountOnBoard(
     readonly services?: (built: Services) => Services
     /** A room for the component to be in; a local board has none. */
     readonly collaboration?: BoardConnection
+    /** The board's earlier versions, for a component that lists them. */
+    readonly history?: BoardHistory
   } = {},
 ): Promise<Mounted> {
   const repository = new IndexedDbBoardRepository()
@@ -73,6 +77,7 @@ export async function mountOnBoard(
             runtime,
             views: createDefaultViewRegistry(),
             collaboration: options.collaboration ?? null,
+            history: options.history ?? null,
           }}
         >
           {ui}
