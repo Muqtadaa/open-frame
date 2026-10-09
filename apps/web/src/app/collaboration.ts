@@ -52,8 +52,12 @@ export async function startCollaboration(
      * writes the token and then reconnects, and a closure holding the value
      * from before would reconnect without it forever.
      */
-    connect: () =>
-      browserRoomSocket(roomSocketUrl(boardId, key, heldToken(boardId), heldOwnerKey(boardId))),
+    connect: () => browserRoomSocket(roomSocketUrl(boardId)),
+    credentials: () => ({
+      key,
+      token: heldToken(boardId),
+      ownerKey: heldOwnerKey(boardId),
+    }),
     onError,
     persistence: indexedDbCrdtStore(boardId),
     // Only a board this device really holds is offered to an empty room;
@@ -105,8 +109,12 @@ export async function renameInRoom(
     store,
     dispatcher,
     seed: false,
-    connect: () =>
-      browserRoomSocket(roomSocketUrl(boardId, key, heldToken(boardId), heldOwnerKey(boardId))),
+    connect: () => browserRoomSocket(roomSocketUrl(boardId)),
+    credentials: () => ({
+      key,
+      token: heldToken(boardId),
+      ownerKey: heldOwnerKey(boardId),
+    }),
     onError: () => undefined,
     persistence: indexedDbCrdtStore(boardId),
   })

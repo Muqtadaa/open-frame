@@ -105,10 +105,23 @@ The rules are pure functions in `apps/rooms/src/access.ts`, tested in Node.
   forwards every request to the board's object by name and makes no
   authorization decision. ADR 0013 originally put authorization in the Worker;
   see its addendum.
-- **Admission** (`room-object.ts:175-233`):
-  1. Key check, with the same 403 for a missing or wrong key.
-  2. The password, as a second factor. The owner key (`?o=`) or a valid token (`?t=`) passes. Otherwise the socket is accepted and closed with 4003, so the client can tell "needs a password" from a dropped network.
-  3. The role is fixed on the socket for its lifetime, and survives hibernation (`roleFromAttachment` reads anything unknown as viewer).
+- **Admission** (`room-object.ts`, `#admit`). A socket's address names the
+  board and nothing else; an address carrying `k`, `t` or `o` is refused with
+  400 (`route.ts`). The socket is accepted **pending** and is sent nothing until
+  its first message, a hello (`MESSAGE_HELLO`), says who it is:
+  1. Key check, with the same answer (close 1008) for a missing or wrong key.
+     Anything but a hello first is closed with 1008 too.
+  2. The password, as a second factor. The owner key or a valid token in the
+     hello passes. Otherwise the socket is closed with 4003, so the client can
+     tell "needs a password" from a dropped network.
+  3. The role is fixed on the socket for its lifetime, and survives hibernation.
+     A pending socket is never read as a viewer (`admittedRole`), is not
+     re-joined on wake, and is closed on a wake after 30 s (`pendingTooLong`).
+     A room people are using never wakes, so every new connection also
+     sweeps them at the door: the stale are closed, and while 32 fresh ones
+     wait (`MAX_PENDING`) a newcomer is answered 503. That holds silent
+     sockets to a number without a timer (rule 29).
+     The client sends nothing but the hello until its role arrives.
 - **Messages:** a frame over 32 MiB, the platform's own limit, is refused before it is read
   (`MAX_MESSAGE_BYTES`, `collab/src/room.ts`). A message over 32 MiB travels in
   4 MiB parts (`collab/src/parts.ts`), and the room holds at most 64 MiB of one while
@@ -325,9 +338,11 @@ consequences.
   `javascript:` and `data:` never reach a document — and again before
   `window.open`. Drawn with `rel="noopener noreferrer"`; followed only by
   Mod+click or keyboard activation, in a new tab. The CSP is unchanged.
-- **Links in URLs:** the page URL carries the link (`?k=`). The socket URL
-  carries the link, the token and the owner key (`collab/src/room-url.ts:62-76`).
-  HTTP endpoints take credentials in the body or headers instead.
+- **Links in URLs:** the page URL carries the link (`?k=`), because a link is
+  a thing people paste. The socket URL carries nothing: the link, the token
+  and the owner key are its first message (`MESSAGE_HELLO`), since every log
+  on the way records an address. HTTP endpoints take credentials in the body or
+  headers.
 
 ## AI prompt injection
 
@@ -368,7 +383,7 @@ with it and said why.
 | A pre-owner-key board's owner key goes to whoever adopts first                                                                                  | `#adoptOwner`                         | **Accepted.** The owner's client adopts at first need                                                                |
 | `claim` is unauthenticated (first come, empty rooms only)                                                                                       | `claimDecision` `access.ts:108-120`   | **Accepted.** Board ids are minted client-side and unguessable; a claimed room cannot be re-claimed                  |
 | Password rationing is per board, so a guesser makes other link holders wait (≤5 min)                                                            | `password.ts:121-126`                 | **Accepted.** The room cannot tell link holders apart; the owner is never affected                                   |
-| Owner key and token travel in the WebSocket URL                                                                                                 | `room-url.ts:62-76`                   | **Revisit.** Browsers cannot set headers on a WebSocket; move to a first-message handshake if logs ever capture them |
+| The share link carries the board's key in the page URL (`?k=`), which reaches the web host's request logs                                       | `collab-config.ts` `shareLink`        | **Accepted** for now (owner, 2026-10-09). The socket no longer carries any credential; moving links to `#k=` is open |
 | MCP cannot open password-protected boards                                                                                                       | `tools/context.ts:47`                 | **Accepted.** It fails closed; supporting it means the agent holding the token or owner key                          |
 | The page's policy allows inline styles                                                                                                          | `content-security-policy.ts`          | **Accepted.** React positions every object with a `style` attribute; scripts stay hash-only                          |
 | `CodeView` trusts highlight.js to escape                                                                                                        | `CodeView.tsx:87`                     | **Accepted.** Pin the version, and add a test with markup in a code block before upgrading                           |

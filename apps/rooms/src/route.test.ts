@@ -7,11 +7,11 @@ const at = (path: string, upgrade: string | null = 'websocket') =>
 
 describe('routing a request to a board', () => {
   it('sends a websocket upgrade to the named board', () => {
-    expect(at('/room/brd_abc123')).toEqual({ kind: 'room', boardId: 'brd_abc123', key: null })
+    expect(at('/room/brd_abc123')).toEqual({ kind: 'room', boardId: 'brd_abc123' })
   })
 
   it('tolerates a trailing slash', () => {
-    expect(at('/room/brd_abc123/')).toEqual({ kind: 'room', boardId: 'brd_abc123', key: null })
+    expect(at('/room/brd_abc123/')).toEqual({ kind: 'room', boardId: 'brd_abc123' })
   })
 
   it('answers a health check without a socket', () => {
@@ -28,7 +28,6 @@ describe('routing a request to a board', () => {
     expect(at('/room/brd_abc123', 'WebSocket')).toEqual({
       kind: 'room',
       boardId: 'brd_abc123',
-      key: null,
     })
   })
 
@@ -60,37 +59,26 @@ describe('board ids that must not reach a Durable Object', () => {
   })
 })
 
-describe('the access key on a link', () => {
+describe('a socket to a room', () => {
   const ws = 'websocket'
 
-  it('is carried through to the room', () => {
-    const key = 'a'.repeat(32)
-    expect(routeRequest(new URL(`https://r.dev/room/brd_one?k=${key}`), ws)).toEqual({
-      kind: 'room',
-      boardId: 'brd_one',
-      key,
-    })
-  })
-
-  it('is absent for a link that has none, which only a legacy room accepts', () => {
+  it('names the board and nothing else', () => {
     expect(routeRequest(new URL('https://r.dev/room/brd_one'), ws)).toEqual({
       kind: 'room',
       boardId: 'brd_one',
-      key: null,
     })
   })
 
-  /**
-   * Dropped rather than refused. A 400 for a malformed key tells somebody
-   * probing the endpoint that the SHAPE of their guess was wrong, which is a
-   * hint they have no business getting; reaching the room as "no key" gets
-   * them the same answer as an ordinary link without one.
+  /*
+   * The link, the token and the owner's key travel in the connection's first
+   * message. An address carrying one is refused, not ignored: it is an older
+   * client, and a secret in an address has already been written to a log.
    */
-  it('is dropped, not refused, when it is the wrong shape', () => {
-    for (const bad of ['short', '../etc/passwd', 'a'.repeat(200), '']) {
+  it('is refused when its address carries a credential', () => {
+    for (const param of ['k', 't', 'o']) {
       expect(
-        routeRequest(new URL(`https://r.dev/room/brd_one?k=${encodeURIComponent(bad)}`), ws),
-      ).toEqual({ kind: 'room', boardId: 'brd_one', key: null })
+        routeRequest(new URL(`https://r.dev/room/brd_one?${param}=${'a'.repeat(32)}`), ws),
+      ).toMatchObject({ kind: 'refuse', status: 400 })
     }
   })
 })

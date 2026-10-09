@@ -40,13 +40,6 @@ const ASSET_PATH = /^\/room\/([^/]+)\/asset\/([A-Za-z0-9_-]{1,64})\/?$/
 const VERSIONS_PATH = /^\/room\/([^/]+)\/versions\/?$/
 const VERSION_PATH = /^\/room\/([^/]+)\/versions\/([0-9]{16}-[0-9a-f]{8})\/?$/
 
-/**
- * The shape of an access key.
- *
- * A key is the whole of a link's authority, so the only thing this check does
- * is keep a malformed one from reaching storage comparison — the LENGTH is
- * what makes it unguessable, and that is decided where keys are minted.
- */
 /** The music library: the same for every board, so no board in the path (ADR 0017). */
 const CATALOGUE_PATH = /^\/music\/catalogue\/?$/
 const TRACK_PATH = /^\/music\/track\/([a-z0-9-]{1,48})\/?$/
@@ -56,21 +49,19 @@ const AI_CLUSTER_PATH = /^\/ai\/cluster\/?$/
 /** A summary of a set of notes, from Claude (ADR 0022). Names no board. */
 const AI_SUMMARY_PATH = /^\/ai\/summary\/?$/
 
-const ACCESS_KEY = /^[A-Za-z0-9_-]{16,64}$/
-
-/** `?k=<key>` — which link this connection arrived on. */
-export const KEY_PARAM = 'k'
+/**
+ * What an older client put in a socket's address: the link, the password
+ * token and the owner's key. They travel in the connection's first message now
+ * (`MESSAGE_HELLO`), and an address carrying one is refused.
+ */
+const CREDENTIAL_PARAMS = ['k', 't', 'o'] as const
 
 export type Route =
   | { readonly kind: 'health' }
   | { readonly kind: 'ai-cluster' }
   | { readonly kind: 'ai-summary' }
-  | {
-      readonly kind: 'room'
-      readonly boardId: string
-      /** `null` means the link carried no key, which only a legacy room accepts. */
-      readonly key: string | null
-    }
+  /** A socket. Who it is comes in its first message, never its address. */
+  | { readonly kind: 'room'; readonly boardId: string }
   /** Minting a board's keys — its two links and its owner key — once. */
   | { readonly kind: 'claim'; readonly boardId: string }
   /**
@@ -238,13 +229,14 @@ export function routeRequest(url: URL, upgradeHeader: string | null, method = 'G
   }
 
   /*
-   * A malformed key is dropped rather than refused, so it reaches the room as
-   * "no key" and gets the same answer as a link without one. Refusing here
-   * would tell somebody probing the endpoint that the SHAPE of their guess was
-   * wrong, which is a hint they have no business getting.
+   * Refused, not ignored. A credential in the address is an older client —
+   * the owner chose to tell it so at once rather than keep accepting what
+   * every log on the way has already written down — and a socket the room
+   * ignored the address of would wait for a hello that client never sends.
    */
-  const rawKey = url.searchParams.get(KEY_PARAM)
-  const key = rawKey !== null && ACCESS_KEY.test(rawKey) ? rawKey : null
+  if (CREDENTIAL_PARAMS.some((param) => url.searchParams.has(param))) {
+    return { kind: 'refuse', status: 400, reason: 'Update this page to open the board' }
+  }
 
-  return { kind: 'room', boardId, key }
+  return { kind: 'room', boardId }
 }

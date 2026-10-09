@@ -203,6 +203,21 @@ export function roleFromAttachment(attached: { readonly role?: unknown } | null)
   return attached?.role === 'editor' ? 'editor' : 'viewer'
 }
 
+/**
+ * The role of a socket that has said who it is, or `null` for one that has not.
+ *
+ * A socket is accepted before its first message and can outlive the room's
+ * eviction like any other, so it is read back from its attachment. A pending
+ * one must not fall through to `roleFromAttachment`, which reads anything it
+ * does not recognise as a viewer — and a viewer is sent the whole board.
+ */
+export function admittedRole(
+  attached: { readonly id?: unknown; readonly pending?: unknown; readonly role?: unknown } | null,
+): RoomRole | null {
+  if (attached === null || attached.pending === true) return null
+  return roleFromAttachment(attached)
+}
+
 export type PasswordDecision =
   { readonly ok: true } | { readonly ok: false; readonly status: number; readonly error: string }
 
@@ -347,4 +362,44 @@ export function keepVersionDecision(request: ReadRequest): KeepVersionDecision {
     return { ok: false, status: 403, reason: 'That link cannot change this board' }
   }
   return { ok: true }
+}
+
+/**
+ * How long a socket may stay open without saying who it is. A client sends its
+ * hello the moment the socket opens, so this is far beyond any real one — it
+ * only clears connections that never will.
+ */
+export const PENDING_MS = 30_000
+
+/** Whether a socket accepted at `attached.at` has waited past `PENDING_MS` without a hello. */
+export function pendingTooLong(attached: unknown, now: number = Date.now()): boolean {
+  const at = (attached as { at?: unknown } | null)?.at
+  return typeof at !== 'number' || now - at > PENDING_MS
+}
+
+/**
+ * The most connections a room keeps waiting for a hello at once. Far more
+ * than people open a board at the same moment, and far fewer than the
+ * platform's limit on a room's sockets.
+ */
+export const MAX_PENDING = 32
+
+/**
+ * What a new connection finds among those still waiting to say who they are:
+ * the ones past `PENDING_MS`, to close, and whether there is room for it.
+ *
+ * Run on every arrival, because a wake is not enough. A room people are using
+ * stays in memory, so the constructor that closes the stale never runs, and a
+ * stranger with nothing but a board id could open silent sockets until the
+ * room had none left for its members (Codex, on #105). A timer would close
+ * them on time, and keep the room awake to do it (rule 29). Counting at the
+ * door bounds them instead, whether the room sleeps or not.
+ */
+export function sweepPending<T>(
+  waiting: readonly T[],
+  attachmentOf: (socket: T) => unknown,
+  now: number = Date.now(),
+): { readonly expired: readonly T[]; readonly roomForAnother: boolean } {
+  const expired = waiting.filter((socket) => pendingTooLong(attachmentOf(socket), now))
+  return { expired, roomForAnother: waiting.length - expired.length < MAX_PENDING }
 }

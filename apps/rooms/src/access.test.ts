@@ -12,6 +12,11 @@ import {
   mintKey,
   mintKeys,
   roleForKey,
+  admittedRole,
+  MAX_PENDING,
+  pendingTooLong,
+  PENDING_MS,
+  sweepPending,
   roleFromAttachment,
   type AccessKeys,
 } from './access.js'
@@ -116,6 +121,49 @@ describe('the keys themselves', () => {
       bytes.set([0, 1, 15, 16, 127, 128, 254, 255, 0, 0, 0, 0, 0, 0, 0, 0])
     }
     expect(mintKey(fixed)).toBe('00010f107f80feff0000000000000000')
+  })
+})
+
+/*
+ * A socket is accepted before it has said who it is, and read back after the
+ * room was evicted like any other. Read as a viewer, as an unknown attachment
+ * otherwise is, it would be handed the board without having proved anything.
+ */
+describe('a socket that has not introduced itself', () => {
+  it('is admitted as nothing, whatever else its attachment says', () => {
+    expect(admittedRole({ id: 'a', pending: true })).toBeNull()
+    expect(admittedRole({ id: 'a', pending: true, role: 'editor' })).toBeNull()
+  })
+
+  it('is closed on a wake once it has waited longer than any client would', () => {
+    expect(pendingTooLong({ at: 1000 }, 1000 + PENDING_MS)).toBe(false)
+    expect(pendingTooLong({ at: 1000 }, 1001 + PENDING_MS)).toBe(true)
+    // An attachment this version cannot read has waited too long.
+    expect(pendingTooLong({}, 0)).toBe(true)
+  })
+
+  it('is swept by every new arrival, so a room kept awake still closes the silent', () => {
+    const now = 100_000
+    const stale = { at: now - PENDING_MS - 1 }
+    const fresh = { at: now - 1 }
+    const swept = sweepPending([stale, fresh, stale], (attached) => attached, now)
+    expect(swept.expired).toEqual([stale, stale])
+    expect(swept.roomForAnother).toBe(true)
+  })
+
+  it('turns a newcomer away once too many are waiting to say who they are', () => {
+    const now = 100_000
+    const fresh = Array.from({ length: MAX_PENDING }, () => ({ at: now }))
+    expect(sweepPending(fresh, (attached) => attached, now).roomForAnother).toBe(false)
+    expect(sweepPending(fresh.slice(1), (attached) => attached, now).roomForAnother).toBe(true)
+    // The stale ones do not count against it: they are about to be closed.
+    const stale = Array.from({ length: MAX_PENDING }, () => ({ at: now - PENDING_MS - 1 }))
+    expect(sweepPending(stale, (attached) => attached, now).roomForAnother).toBe(true)
+  })
+
+  it('is what was decided once it has', () => {
+    expect(admittedRole({ id: 'a', role: 'editor' })).toBe('editor')
+    expect(admittedRole({ id: 'a', role: 'viewer' })).toBe('viewer')
   })
 })
 

@@ -45,8 +45,13 @@ export {
   MESSAGE_ROLE,
   MESSAGE_SYNC,
   MESSAGE_TIME,
+  MESSAGE_HELLO,
+  encodeHello,
+  decodeHello,
   type Awareness,
   type Handled,
+  type Hello,
+  type RoomCredentials,
   type RoomRole,
 } from './protocol.js'
 export {
@@ -94,10 +99,4 @@ export {
   LOGGED_ORIGINS,
   type LoggedChange,
 } from './change-log.js'
-export {
-  roomSocketUrl,
-  KEY_PARAM,
-  OWNER_PARAM,
-  TOKEN_PARAM,
-  type RoomCredentials,
-} from './room-url.js'
+export { roomSocketUrl, KEY_PARAM } from './room-url.js'

@@ -51,9 +51,15 @@ describe('addressing the room server', () => {
     expect(claim.host).toBe(socket.host)
   })
 
-  it('carries the key on the socket, where the room reads it', () => {
-    expect(roomSocketUrl(BOARD, 'a'.repeat(32))).toContain(`?k=${'a'.repeat(32)}`)
-    expect(roomSocketUrl(BOARD, null)).not.toContain('?k=')
+  /*
+   * The socket's address names the board and nothing else. The link, the
+   * token and the owner's key go in the connection's first message, because an
+   * address is written down by every log on the way to the room.
+   */
+  it('puts no credential on the socket', () => {
+    const url = new URL(roomSocketUrl(BOARD))
+    expect(url.search).toBe('')
+    expect(url.pathname).toBe(`/room/${BOARD}`)
   })
 
   it('carries the key on a share link, where a person pastes it', () => {

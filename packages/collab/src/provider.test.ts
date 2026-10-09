@@ -3,7 +3,7 @@ import { describe, expect, it } from 'vitest'
 import * as Y from 'yjs'
 
 import { applyPatchesToDoc, objectsFromDoc } from './document-map.js'
-import { createAwareness, type RoomRole } from './protocol.js'
+import { createAwareness, decodeHello, type RoomRole } from './protocol.js'
 import {
   CLOSE_BOARD_DELETED,
   CLOSE_PASSWORD_REQUIRED,
@@ -33,9 +33,12 @@ class Wire {
   delivered = 0
   /** The largest frame either side put on this wire. */
   largest = 0
+  /** Every frame the client sent, in order, including those before it was admitted. */
+  readonly sent: Uint8Array[] = []
 
   readonly client: RoomSocket = {
     send: (data) => {
+      this.sent.push(data)
       if (!this.#open || this.#room === null || this.#peer === null) return
       this.delivered++
       this.largest = Math.max(this.largest, data.byteLength)
@@ -50,8 +53,23 @@ class Wire {
     onError: () => undefined,
   }
 
+  /**
+   * Opens the socket without admitting it, as the room does until it has read
+   * the hello: the client is connected and has been told nothing.
+   */
+  openOnly(): void {
+    this.#open = true
+    for (const listener of this.#openListeners) listener()
+  }
+
   /** Completes the connection, as a server accepting the upgrade would. */
   connectTo(room: BoardRoom, id: string, role: RoomRole = 'editor'): void {
+    this.openOnly()
+    this.admit(room, id, role)
+  }
+
+  /** The room, having read the hello, joins the socket. */
+  admit(room: BoardRoom, id: string, role: RoomRole = 'editor'): void {
     this.#room = room
     this.#peer = {
       id,
@@ -61,8 +79,6 @@ class Wire {
         for (const listener of this.#messageListeners) listener(data)
       },
     }
-    this.#open = true
-    for (const listener of this.#openListeners) listener()
     room.join(this.#peer)
   }
 
@@ -394,5 +410,70 @@ describe('a board larger than any one frame', () => {
     for (const wire of [...a.wires, ...b.wires]) {
       expect(wire.largest).toBeLessThanOrEqual(FRAGMENT_BYTES + 32)
     }
+  })
+})
+
+/*
+ * Credentials travel in the first message, never in the socket's address: a
+ * URL is written down by every log between the browser and the room.
+ */
+describe('a client introducing itself', () => {
+  it('sends its credentials first, then nothing until the room says what it may do', async () => {
+    const room = new BoardRoom()
+    const doc = new Y.Doc()
+    const wire = new Wire()
+    const provider = new RoomProvider({
+      doc,
+      awareness: createAwareness(doc),
+      credentials: () => ({ key: 'k'.repeat(32), token: 't'.repeat(32) }),
+      connect: () => wire.client,
+      setTimer: () => null,
+      clearTimer: () => undefined,
+    })
+    provider.start()
+    wire.openOnly()
+    await settle()
+    expect(wire.sent).toHaveLength(1)
+    expect(decodeHello(wire.sent[0]!)).toEqual({
+      key: 'k'.repeat(32),
+      token: 't'.repeat(32),
+      ownerKey: null,
+    })
+
+    // Admitted: only now does the client ask for the board.
+    wire.admit(room, 'a')
+    await settle()
+    expect(wire.sent.length).toBeGreaterThan(1)
+  })
+
+  it('reads its credentials again for every connection, so an unlock is sent next time', async () => {
+    const room = new BoardRoom()
+    const doc = new Y.Doc()
+    let token: string | null = null
+    const wires: Wire[] = []
+    const provider = new RoomProvider({
+      doc,
+      awareness: createAwareness(doc),
+      credentials: () => ({ key: 'k'.repeat(32), token }),
+      connect: () => {
+        const wire = new Wire()
+        wires.push(wire)
+        queueMicrotask(() => {
+          wire.connectTo(room, `a-${String(wires.length)}`)
+        })
+        return wire.client
+      },
+      setTimer: (run) => {
+        queueMicrotask(run)
+        return null
+      },
+      clearTimer: () => undefined,
+    })
+    provider.start()
+    await settle()
+    token = 't'.repeat(32)
+    wires[0]!.drop()
+    await settle()
+    expect(decodeHello(wires[1]!.sent[0]!)?.token).toBe('t'.repeat(32))
   })
 })

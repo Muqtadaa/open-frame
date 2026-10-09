@@ -162,3 +162,6 @@ Two of the predictions above did not come true. The rest stand.
 - **The auth provider is Supabase Auth.** It decides which keys an account is
   given; the room itself knows only keys
   ([11 · Security](../architecture/11-security.md)).
+- **Keys arrive in the first message, not the address** (2026-10-09). A socket
+  is accepted pending and admitted from its hello (`MESSAGE_HELLO`); an address
+  carrying a key is refused. The room still decides, from the same rules.

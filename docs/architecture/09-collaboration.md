@@ -228,16 +228,20 @@ document, and anybody who reads it can count them.
 
 ## Joining, losing and refusing a connection
 
-`RoomProvider` (`collab/src/provider.ts`) opens the socket, runs the Yjs
-handshake from both sides and reconnects with a backoff that doubles to 30
-seconds. A few close codes mean "do not retry":
+`RoomProvider` (`collab/src/provider.ts`) opens the socket and sends one
+message: a hello (`MESSAGE_HELLO`) carrying the link, the password token and
+the owner key, which never go in the socket's address. The room admits it and
+answers with a role; only then does the client report itself connected and run
+the Yjs handshake from both sides. It reconnects with a backoff that doubles to
+30 seconds. A few close codes mean "do not retry":
 
-| Code | Meaning                                     | The client                       |
-| ---- | ------------------------------------------- | -------------------------------- |
-| 4003 | The board has a password and none was given | stops and asks for it (`locked`) |
-| 4004 | The board was deleted                       | stops for good (`gone`)          |
-| 1007 | A message the room could not read           | reconnects as usual              |
-| 1009 | A frame over the room's 32 MiB limit        | reconnects as usual              |
+| Code | Meaning                                                 | The client                       |
+| ---- | ------------------------------------------------------- | -------------------------------- |
+| 4003 | The board has a password and none was given             | stops and asks for it (`locked`) |
+| 4004 | The board was deleted                                   | stops for good (`gone`)          |
+| 1007 | A message the room could not read                       | reconnects as usual              |
+| 1008 | No hello first, or a link that does not open this board | reconnects as usual              |
+| 1009 | A frame over the room's 32 MiB limit                    | reconnects as usual              |
 
 A viewer's socket is accepted and its edits are dropped by the room before they
 are read; the role is sent to the client first, so the interface never invites

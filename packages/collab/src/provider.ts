@@ -5,11 +5,13 @@ import {
   decodeRole,
   decodeTimeReply,
   encodeAwareness,
+  encodeHello,
   encodeSyncStep1,
   encodeTimeRequest,
   encodeUpdate,
   readMessage,
   type Awareness,
+  type RoomCredentials,
   type RoomRole,
 } from './protocol.js'
 import { Assembler, Splitter } from './parts.js'
@@ -72,6 +74,11 @@ export interface RoomProviderOptions {
   readonly awareness: Awareness
   /** Opens a new socket. Called again on every reconnection attempt. */
   readonly connect: () => RoomSocket
+  /**
+   * Who this connection is, sent as its first message (`MESSAGE_HELLO`). Read
+   * again for every attempt, so a password unlocked meanwhile is sent next time.
+   */
+  readonly credentials?: () => RoomCredentials
   readonly onStatus?: (status: ConnectionStatus) => void
   /**
    * What the room decided this connection may do.
@@ -118,6 +125,7 @@ export class RoomProvider {
   readonly #doc: Y.Doc
   readonly #awareness: Awareness
   readonly #connect: () => RoomSocket
+  readonly #credentials: () => RoomCredentials
   readonly #onStatus: (status: ConnectionStatus) => void
   readonly #onRole: (role: RoomRole) => void
   readonly #onSynced: () => void
@@ -153,6 +161,7 @@ export class RoomProvider {
     this.#doc = options.doc
     this.#awareness = options.awareness
     this.#connect = options.connect
+    this.#credentials = options.credentials ?? (() => ({}))
     this.#onStatus = options.onStatus ?? noop
     this.#onRole = options.onRole ?? noop
     this.#onSynced = options.onSynced ?? noop
@@ -217,7 +226,20 @@ export class RoomProvider {
       for (const frame of this.#splitter.split(message)) socket.send(frame)
     }
 
+    /*
+     * The hello first, and nothing else until the room answers with a role.
+     * The room admits a socket only once it has read the credentials, and
+     * anything else sent before then would close it. Waiting for the answer
+     * rather than counting on the room to read in order means no message is
+     * ever sent that the room must ignore.
+     */
     socket.onOpen(() => {
+      socket.send(encodeHello(this.#credentials()))
+    })
+
+    let admitted = false
+    const admit = (): void => {
+      admitted = true
       this.#setStatus('connected')
       this.#retryMs = FIRST_RETRY_MS
 
@@ -235,7 +257,7 @@ export class RoomProvider {
       if (local !== null) send(encodeAwareness(this.#awareness, [this.#doc.clientID]))
 
       for (let asked = 0; asked < CLOCK_QUESTIONS_ON_OPEN; asked += 1) this.syncClock()
-    })
+    }
 
     socket.onMessage((frame) => {
       const heard = assembler.receive(frame)
@@ -250,6 +272,8 @@ export class RoomProvider {
       if (role !== null) {
         this.#role = role
         this.#onRole(role)
+        // The role is the room saying it read the hello and let us in.
+        if (!admitted) admit()
         return
       }
 
