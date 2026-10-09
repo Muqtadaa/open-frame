@@ -46,10 +46,16 @@ async function openLocalBoard(page: Page): Promise<void> {
   await page.waitForSelector('[data-testid="status-bar"]')
 }
 
-/** A room the app believes in, refused quietly: a shared board, offline. */
+/**
+ * A room that lets the app in and says nothing else: a shared board, live and
+ * empty. It answers the hello with the role, because a client reports itself
+ * connected only once it has been admitted.
+ */
 async function openSharedBoard(page: Page): Promise<void> {
   await signedIn(page, [{ id: BOARD, title: 'Pricing research', role: 'owner' }])
-  await page.routeWebSocket(/\/room\//, () => undefined)
+  await page.routeWebSocket(/\/room\//, (ws) => {
+    ws.send(Buffer.from(encodeRole('editor')))
+  })
   await goto(page, `/?room=${BOARD}&k=${KEY}`)
   await page.waitForSelector('[data-testid="status-bar"]')
 }
