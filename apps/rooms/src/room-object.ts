@@ -26,6 +26,7 @@ import {
   admittedRole,
   pendingTooLong,
   roleFromAttachment,
+  sweepPending,
   type AccessKeys,
 } from './access.js'
 import {
@@ -212,6 +213,21 @@ export class BoardRoomObject extends DurableObject<Env> {
      */
     if (['k', 't', 'o'].some((param) => url.searchParams.has(param))) {
       return new Response('Update this page to open the board', { status: 400 })
+    }
+
+    /*
+     * Those still waiting to say who they are are counted at the door: the
+     * stale are closed, and a newcomer is turned away while too many fresh
+     * ones wait. A wake alone would not do it, since a busy room never sleeps.
+     */
+    const waiting = this.ctx.getWebSockets().filter((socket) => this.#pending(socket))
+    const swept = sweepPending(waiting, (socket) => socket.deserializeAttachment())
+    for (const socket of swept.expired) socket.close(1008, 'Introduce yourself first')
+    if (!swept.roomForAnother) {
+      return new Response('Too many connections are waiting to join this board', {
+        status: 503,
+        headers: { 'Retry-After': '5' },
+      })
     }
 
     const pair = new WebSocketPair()

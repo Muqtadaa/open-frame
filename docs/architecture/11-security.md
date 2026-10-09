@@ -117,6 +117,10 @@ The rules are pure functions in `apps/rooms/src/access.ts`, tested in Node.
   3. The role is fixed on the socket for its lifetime, and survives hibernation.
      A pending socket is never read as a viewer (`admittedRole`), is not
      re-joined on wake, and is closed on a wake after 30 s (`pendingTooLong`).
+     A room people are using never wakes, so every new connection also
+     sweeps them at the door: the stale are closed, and while 32 fresh ones
+     wait (`MAX_PENDING`) a newcomer is answered 503. That holds silent
+     sockets to a number without a timer (rule 29).
      The client sends nothing but the hello until its role arrives.
 - **Messages:** a frame over 32 MiB, the platform's own limit, is refused before it is read
   (`MAX_MESSAGE_BYTES`, `collab/src/room.ts`). A message over 32 MiB travels in

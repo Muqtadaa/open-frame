@@ -13,8 +13,10 @@ import {
   mintKeys,
   roleForKey,
   admittedRole,
+  MAX_PENDING,
   pendingTooLong,
   PENDING_MS,
+  sweepPending,
   roleFromAttachment,
   type AccessKeys,
 } from './access.js'
@@ -138,6 +140,25 @@ describe('a socket that has not introduced itself', () => {
     expect(pendingTooLong({ at: 1000 }, 1001 + PENDING_MS)).toBe(true)
     // An attachment this version cannot read has waited too long.
     expect(pendingTooLong({}, 0)).toBe(true)
+  })
+
+  it('is swept by every new arrival, so a room kept awake still closes the silent', () => {
+    const now = 100_000
+    const stale = { at: now - PENDING_MS - 1 }
+    const fresh = { at: now - 1 }
+    const swept = sweepPending([stale, fresh, stale], (attached) => attached, now)
+    expect(swept.expired).toEqual([stale, stale])
+    expect(swept.roomForAnother).toBe(true)
+  })
+
+  it('turns a newcomer away once too many are waiting to say who they are', () => {
+    const now = 100_000
+    const fresh = Array.from({ length: MAX_PENDING }, () => ({ at: now }))
+    expect(sweepPending(fresh, (attached) => attached, now).roomForAnother).toBe(false)
+    expect(sweepPending(fresh.slice(1), (attached) => attached, now).roomForAnother).toBe(true)
+    // The stale ones do not count against it: they are about to be closed.
+    const stale = Array.from({ length: MAX_PENDING }, () => ({ at: now - PENDING_MS - 1 }))
+    expect(sweepPending(stale, (attached) => attached, now).roomForAnother).toBe(true)
   })
 
   it('is what was decided once it has', () => {

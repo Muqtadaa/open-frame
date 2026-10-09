@@ -83,3 +83,36 @@ test('a socket is admitted by its hello, and sent nothing before it', async ({ p
   expect(outcome.stranger).toBe(1008)
   expect(outcome.silent).toBe(1008)
 })
+
+/*
+ * Counted at the door, because a room in use never sleeps: the wake that
+ * closes the silent would not come, and a stranger with a board id could
+ * otherwise hold every socket the room has (Codex, on #105).
+ */
+test('turns a newcomer away while too many are waiting to say who they are', async ({ page }) => {
+  const room = newRoomId()
+  await page.goto(BOARD_URL)
+
+  const outcome = await page.evaluate(
+    async ({ id, waiting }) => {
+      const socketTo = () =>
+        new Promise<WebSocket | 'refused'>((resolve) => {
+          const socket = new WebSocket(`ws://127.0.0.1:8787/room/${id}`)
+          socket.onopen = () => resolve(socket)
+          socket.onerror = () => resolve('refused')
+        })
+      const silent: (WebSocket | 'refused')[] = []
+      for (let n = 0; n < waiting; n++) silent.push(await socketTo())
+      const oneMore = await socketTo()
+      for (const socket of silent) if (socket !== 'refused') socket.close()
+      return {
+        opened: silent.filter((socket) => socket !== 'refused').length,
+        oneMoreRefused: oneMore === 'refused',
+      }
+    },
+    { id: room, waiting: 32 },
+  )
+
+  expect(outcome.opened).toBe(32)
+  expect(outcome.oneMoreRefused).toBe(true)
+})
