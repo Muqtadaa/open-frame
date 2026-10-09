@@ -1,12 +1,18 @@
 import {
   ClusterRequestSchema,
+  SummaryRequestSchema,
   validateClusterProposal,
+  validateSummary,
   type ClusterProposal,
   type ClusterRequest,
+  type Summary,
+  type SummaryRequest,
 } from '@openframe/core/ai'
 
 /**
- * `POST /ai/cluster`: themes for a set of notes, from Claude.
+ * `POST /ai/cluster` and `POST /ai/summary`: themes for a set of notes, or a
+ * summary of them, from Claude (ADR 0018, ADR 0022). One path for both, so a
+ * second AI feature cannot loosen a check the first one held.
  *
  * The route never reads a room or its document (ADR 0018). It sees only the
  * note text the browser sends, answers with a proposal, and the browser
@@ -37,13 +43,61 @@ export type Asked =
   /** It ran out of room before it finished, or the provider failed. */
   | { readonly kind: 'failed' }
 
-export interface ClusterDeps {
+export interface AiDeps<Request> {
   /** False when the worker has no key or no way to check who is asking. */
   readonly configured: boolean
   readonly verify: (token: string) => Promise<Verified>
+  /** One allowance a day for every AI feature together (ADR 0022). */
   readonly reserve: (userId: string) => Promise<Reserved>
   readonly refund: (userId: string, day: string) => Promise<void>
-  readonly ask: (request: ClusterRequest) => Promise<Asked>
+  readonly ask: (request: Request) => Promise<Asked>
+}
+
+export type ClusterDeps = AiDeps<ClusterRequest>
+export type SummaryDeps = AiDeps<SummaryRequest>
+
+/** What one AI feature brings to the shared path: its request, its check, and its words. */
+interface AiFeature<Request, Result> {
+  /** Its request's shape, as core defines it; only the parse is needed here. */
+  readonly schema: {
+    readonly safeParse: (
+      value: unknown,
+    ) => { readonly success: true; readonly data: Request } | { readonly success: false }
+  }
+  readonly validate: (
+    answer: unknown,
+    request: Request,
+  ) =>
+    { readonly ok: true; readonly value: Result } | { readonly ok: false; readonly reason: string }
+  /** The key the result is answered under. */
+  readonly field: string
+  readonly tooMuch: string
+  readonly notThis: string
+  readonly declined: string
+}
+
+const CLUSTERING: AiFeature<ClusterRequest, ClusterProposal> = {
+  schema: ClusterRequestSchema,
+  validate: (answer, request) => {
+    const checked = validateClusterProposal(answer, request)
+    return checked.ok ? { ok: true, value: checked.proposal } : checked
+  },
+  field: 'proposal',
+  tooMuch: 'Too much to cluster at once',
+  notThis: 'That is not a request to cluster notes',
+  declined: 'The AI declined to cluster these notes',
+}
+
+const SUMMARISING: AiFeature<SummaryRequest, Summary> = {
+  schema: SummaryRequestSchema,
+  validate: (answer, request) => {
+    const checked = validateSummary(answer, request)
+    return checked.ok ? { ok: true, value: checked.summary } : checked
+  },
+  field: 'summary',
+  tooMuch: 'Too much to summarise at once',
+  notThis: 'That is not a request to summarise notes',
+  declined: 'The AI declined to summarise these notes',
 }
 
 export type ClusterOutcome =
@@ -56,9 +110,21 @@ export type ClusterOutcome =
   | 'declined'
   | 'failed'
 
-export async function handleCluster(request: Request, deps: ClusterDeps): Promise<Response> {
+export function handleCluster(request: Request, deps: ClusterDeps): Promise<Response> {
+  return handleAi(request, deps, CLUSTERING)
+}
+
+export function handleSummary(request: Request, deps: SummaryDeps): Promise<Response> {
+  return handleAi(request, deps, SUMMARISING)
+}
+
+async function handleAi<Req, Result>(
+  request: Request,
+  deps: AiDeps<Req>,
+  feature: AiFeature<Req, Result>,
+): Promise<Response> {
   const declared = Number(request.headers.get('content-length') ?? '0')
-  if (declared > MAX_BODY_BYTES) return refuse(413, 'too-large', 'Too much to cluster at once')
+  if (declared > MAX_BODY_BYTES) return refuse(413, 'too-large', feature.tooMuch)
 
   if (!deps.configured) return refuse(503, 'unconfigured', 'AI is not set up on this server')
 
@@ -67,15 +133,15 @@ export async function handleCluster(request: Request, deps: ClusterDeps): Promis
 
   // Read as text, so a body that lied about its length is still held to the limit.
   const raw = await request.text()
-  if (raw.length > MAX_BODY_BYTES) return refuse(413, 'too-large', 'Too much to cluster at once')
+  if (raw.length > MAX_BODY_BYTES) return refuse(413, 'too-large', feature.tooMuch)
   let body: unknown
   try {
     body = JSON.parse(raw)
   } catch {
-    return refuse(400, 'invalid', 'That is not a request to cluster notes')
+    return refuse(400, 'invalid', feature.notThis)
   }
-  const parsed = ClusterRequestSchema.safeParse(body)
-  if (!parsed.success) return refuse(400, 'invalid', 'That is not a request to cluster notes')
+  const parsed = feature.schema.safeParse(body)
+  if (!parsed.success) return refuse(400, 'invalid', feature.notThis)
 
   const who = await deps.verify(token)
   if (who === 'refused') return refuse(401, 'signed-out', 'Sign in to use AI')
@@ -99,19 +165,24 @@ export async function handleCluster(request: Request, deps: ClusterDeps): Promis
   if (asked.kind !== 'answer') {
     await deps.refund(who.userId, slot.day)
     return asked.kind === 'declined'
-      ? refuse(422, 'declined', 'The AI declined to cluster these notes')
+      ? refuse(422, 'declined', feature.declined)
       : refuse(502, 'failed', 'The AI did not finish')
   }
-  const checked = validateClusterProposal(asked.answer, parsed.data)
+  const checked = feature.validate(asked.answer, parsed.data)
   if (!checked.ok) {
     await deps.refund(who.userId, slot.day)
     return refuse(422, 'invalid', checked.reason)
   }
-  return json(200, { proposal: checked.proposal, remaining: slot.remaining })
+  return json(200, { [feature.field]: checked.value, remaining: slot.remaining })
 }
 
 export interface ClusterSuccess {
   readonly proposal: ClusterProposal
+  readonly remaining: number
+}
+
+export interface SummarySuccess {
+  readonly summary: Summary
   readonly remaining: number
 }
 

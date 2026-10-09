@@ -1,6 +1,6 @@
 import type { Env } from '../env.js'
-import { askClaude } from './claude.js'
-import type { ClusterDeps } from './handler.js'
+import { askClaude, askClaudeToSummarise } from './claude.js'
+import type { AiDeps, ClusterDeps, SummaryDeps } from './handler.js'
 import { verifyWithSupabase } from './supabase.js'
 
 const limit = (value: string | undefined, fallback: number): number => {
@@ -8,8 +8,18 @@ const limit = (value: string | undefined, fallback: number): number => {
   return Number.isInteger(parsed) && parsed >= 0 ? parsed : fallback
 }
 
-/** The real dependencies, from the worker's bindings, secret and variables. */
-export function clusterDeps(env: Env): ClusterDeps {
+type Ask<Request> = AiDeps<Request>['ask']
+type Asker<Request> = (options: Parameters<typeof askClaude>[0]) => Ask<Request>
+
+/**
+ * The real dependencies, from the worker's bindings, secret and variables.
+ *
+ * Every feature reserves against the SAME quota object with the same limits, so
+ * a person has one daily allowance of AI runs whatever they spend it on
+ * (ADR 0022). A quota per feature would quietly double what the owner agreed to
+ * pay for each time a feature was added.
+ */
+function aiDeps<Request>(env: Env, asker: Asker<Request>): AiDeps<Request> {
   const key = env.ANTHROPIC_API_KEY ?? ''
   const url = env.SUPABASE_URL ?? ''
   const publishable = env.SUPABASE_PUBLISHABLE_KEY ?? ''
@@ -24,7 +34,7 @@ export function clusterDeps(env: Env): ClusterDeps {
     verify: verifyWithSupabase({ url, publishableKey: publishable, fetch: fetcher }),
     reserve: (userId) => quota().reserve(userId, limits),
     refund: (userId, day) => quota().refund(userId, day),
-    ask: askClaude({
+    ask: asker({
       apiKey: key,
       ...(env.AI_MODEL === undefined ? {} : { model: env.AI_MODEL }),
       ...(env.AI_EFFORT === undefined ? {} : { effort: env.AI_EFFORT }),
@@ -33,3 +43,6 @@ export function clusterDeps(env: Env): ClusterDeps {
     }),
   }
 }
+
+export const clusterDeps = (env: Env): ClusterDeps => aiDeps(env, askClaude)
+export const summaryDeps = (env: Env): SummaryDeps => aiDeps(env, askClaudeToSummarise)

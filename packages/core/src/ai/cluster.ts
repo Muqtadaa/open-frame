@@ -18,14 +18,15 @@ export const MAX_CLUSTERS = 12
 
 const NOTE_REF = /^n[1-9]\d{0,3}$/
 
-const ClusterNoteSchema = z.strictObject({
+/** One note as it leaves the board, for every AI feature: a ref and its words. */
+export const AiNoteSchema = z.strictObject({
   ref: z.string().regex(NOTE_REF),
   text: z.string().trim().min(1).max(MAX_NOTE_CHARS),
 })
 
 export const ClusterRequestSchema = z
   .strictObject({
-    notes: z.array(ClusterNoteSchema).min(MIN_CLUSTER_NOTES).max(MAX_CLUSTER_NOTES),
+    notes: z.array(AiNoteSchema).min(MIN_CLUSTER_NOTES).max(MAX_CLUSTER_NOTES),
   })
   .refine((request) => new Set(request.notes.map((n) => n.ref)).size === request.notes.length, {
     message: 'Two notes share a ref',
@@ -73,7 +74,8 @@ export type ProposalCheck =
   | { readonly ok: true; readonly proposal: ClusterProposal }
   | { readonly ok: false; readonly reason: string }
 
-const clip = (text: string, max: number): string => {
+/** Text from the model made safe to show and store: no control characters, at most `max`. */
+export const clip = (text: string, max: number): string => {
   const flat = text.replace(/\p{Cc}+/gu, ' ').trim()
   return flat.length <= max ? flat : `${flat.slice(0, max - 1).trimEnd()}…`
 }
@@ -140,12 +142,21 @@ export function validateClusterProposal(answer: unknown, request: ClusterRequest
  * prompt injection).
  */
 export function clusterPrompt(request: ClusterRequest): string {
-  const escape = (text: string): string =>
-    text.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
-  const notes = request.notes
-    .map((note) => `<note ref="${note.ref}">${escape(note.text)}</note>`)
+  return fenceNotes(request.notes)
+}
+
+/** Text escaped so it cannot close the fence it is written inside. */
+export const escapeFenced = (text: string): string =>
+  text.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+
+/** Notes as data inside `<notes>`, one escaped `<note ref>` each: every AI feature's fence. */
+export function fenceNotes(
+  notes: readonly { readonly ref: string; readonly text: string }[],
+): string {
+  const fenced = notes
+    .map((note) => `<note ref="${note.ref}">${escapeFenced(note.text)}</note>`)
     .join('\n')
-  return `<notes>\n${notes}\n</notes>`
+  return `<notes>\n${fenced}\n</notes>`
 }
 
 export const CLUSTER_SYSTEM_PROMPT = [
