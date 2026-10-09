@@ -270,7 +270,12 @@
   padding: 0 0 0 var(--of-step);
   margin: 0;
   font-size: var(--of-type-record);
-  list-style: disc;
+  /*
+    Inside, because each item clips its overflow to end in an ellipsis: an
+    outside marker sits in the item's margin and was clipped away with it,
+    so the gists had no bullets at all.
+  */
+  list-style: disc inside;
 }
 
 .of-ai-sheet__gist {
