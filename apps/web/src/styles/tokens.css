@@ -193,6 +193,14 @@
    */
   --of-nav-band: calc(var(--of-gutter) + var(--of-hit-lg) + var(--of-step));
   /*
+   * How far up the zoom cluster reaches, the same way: the gutter, its padding
+   * and edge around one row of controls, and a step of air. Where the record
+   * panel docks down the side of a short window, it stops here.
+   */
+  --of-zoom-band: calc(
+    var(--of-gutter) + var(--of-hit-sm) + 2 * var(--of-space-6) + 2px + var(--of-step)
+  );
+  /*
    * How far in from the left the tool rail reaches, and a step of air: the
    * gutter, its padding and border, its largest tool and the options strip.
    * Where a phone docks surfaces to the edges, they start here rather than

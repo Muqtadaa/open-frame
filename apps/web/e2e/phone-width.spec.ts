@@ -532,3 +532,36 @@ for (const width of [390, 320]) {
     })
   })
 }
+
+/*
+ * A phone held sideways (owner, 10-09): too short for the panel to float
+ * beside a selection, which it then lay on. It docks down the right edge
+ * instead, and a selection it would cover slides left into the room beside
+ * it, once — as portrait docks along the bottom and slides up.
+ */
+test.describe('a phone held sideways', () => {
+  test.use({ viewport: { width: 844, height: 390 }, hasTouch: true, isMobile: true })
+
+  test("the record panel docks at the side and leaves a poll's answers in reach", async ({
+    page,
+  }) => {
+    await seedBoard(
+      page,
+      buildBoard((board) => {
+        board.add('poll', { x: 620, y: 220 }, { text: [{ text: 'Cats or dogs?' }] })
+      }),
+    )
+    await page.locator('[data-object-type="poll"]').getByTestId('poll-question').click()
+    const panel = await boxOf(page.getByTestId('inspector'))
+    expect(panel.x + panel.width).toBeGreaterThanOrEqual(844 - 1)
+    for (const testId of ['poll-option-o1', 'poll-option-o2', 'poll-close']) {
+      const box = await boxOf(page.getByTestId(testId))
+      const hit = await page.evaluate(
+        ({ x, y, id }) =>
+          document.elementFromPoint(x, y)?.closest(`[data-testid="${id}"]`) !== null,
+        { x: box.x + box.width / 2, y: box.y + box.height / 2, id: testId },
+      )
+      expect(hit, `${testId} under the panel`).toBe(true)
+    }
+  })
+})

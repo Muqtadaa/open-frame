@@ -41,6 +41,23 @@
   bottom: 0;
 }
 
+/*
+ * Down the right edge of a short window — a phone held sideways — between
+ * the bars at the top and the bottom; top and bottom are set from them.
+ */
+.of-inspector-dock--side {
+  top: var(--of-nav-band);
+  right: 0;
+  bottom: var(--of-zoom-band);
+  left: auto;
+}
+
+.of-inspector--side {
+  height: 100%;
+  border-right: none;
+  border-radius: var(--of-radius-surface) 0 0 var(--of-radius-surface);
+}
+
 .of-inspector--docked {
   border-bottom: none;
   border-right: none;
