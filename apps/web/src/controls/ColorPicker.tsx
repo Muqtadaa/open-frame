@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState, type PointerEvent as ReactPointer
 import { parseHexColor, type ColorValue, type HexColor } from '@openframe/core'
 
 import { contrastRatio, hexToHsv, hsvToHex, type Hsv } from '../scene/color.js'
+import { useEscapeToClose } from './escape-stack.js'
 import { DropperIcon } from './icons.js'
 
 /**
@@ -114,23 +115,16 @@ export function ColorPicker({ current, against, onPick, onPreview, onClose }: Co
   const hex = hsvToHex(hsv)
   const ratio = against === null ? null : contrastRatio(hex, against)
 
-  // Escape closes without applying anything further, the convention every
-  // other transient surface in this app follows.
-  useEffect(() => {
-    const onKey = (event: KeyboardEvent): void => {
-      if (event.key === 'Escape') {
-        // Escape is the one way out that takes the preview back.
-        event.stopPropagation()
-        pending.current = null
-        onPreview?.(null)
-        onClose()
-      }
-    }
-    window.addEventListener('keydown', onKey, true)
-    return () => {
-      window.removeEventListener('keydown', onKey, true)
-    }
-  }, [onClose, onPreview])
+  /*
+   * Escape closes without applying anything further, and is the one way out
+   * that takes the preview back. Through the one stack: a listener of its own
+   * also fired when a sheet had been opened over the picker, and closed both.
+   */
+  useEscapeToClose(() => {
+    pending.current = null
+    onPreview?.(null)
+    onClose()
+  })
 
   const aim = (next: Hsv): void => {
     setHsv(next)
