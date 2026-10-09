@@ -3,6 +3,7 @@ import { useEffect, useRef, useState } from 'react'
 import { commentLink } from '../app/collab-config.js'
 import { useDiscussion } from '../app/comments-context.js'
 import { AnchoredSurface } from '../controls/AnchoredSurface.js'
+import { useEscapeToClose } from '../controls/escape-stack.js'
 import { Ago } from './Ago.js'
 import { plainMentionText } from '../hooks/use-comments.js'
 import { useAnchoredTo } from '../controls/use-anchor.js'
@@ -42,30 +43,23 @@ export function Mentions() {
    * on the bell, eleven Tabs from its first item on the front door, and
    * nothing but the bell itself would close it.
    */
+  // Escape through the one stack, which also keeps it from the board's keymap
+  // (Escape there clears the selection). A listener of its own closed any
+  // sheet opened after the list as well.
+  useEscapeToClose(() => {
+    setOpen(false)
+    bell.current?.focus()
+  }, open)
   useEffect(() => {
     if (!open) return
-    const shut = (): void => {
-      setOpen(false)
-      bell.current?.focus()
-    }
-    const escape = (event: KeyboardEvent): void => {
-      if (event.key !== 'Escape') return
-      // Taken in the capture phase and stopped: the board's keymap reads
-      // Escape as "clear the selection" and would act on the same press.
-      event.preventDefault()
-      event.stopPropagation()
-      shut()
-    }
     const outside = (event: Event): void => {
       if (!(event.target instanceof Node)) return
       if (list.current?.contains(event.target) === true) return
       if (bell.current?.contains(event.target) === true) return
       setOpen(false)
     }
-    window.addEventListener('keydown', escape, true)
     window.addEventListener('pointerdown', outside, true)
     return () => {
-      window.removeEventListener('keydown', escape, true)
       window.removeEventListener('pointerdown', outside, true)
     }
   }, [open, bell])

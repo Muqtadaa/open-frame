@@ -12,6 +12,7 @@ import { inVoteScope, type VoteScope } from '@openframe/core'
 import { MIN_CLUSTER_NOTES, MIN_SUMMARY_NOTES } from '@openframe/core/ai'
 
 import { AnchoredSurface } from '../controls/AnchoredSurface.js'
+import { useEscapeToClose } from '../controls/escape-stack.js'
 import { DisclosureIcon } from '../controls/icons.js'
 import { useViewportSize } from '../controls/use-viewport-size.js'
 import { useCanEdit } from '../hooks/use-can-edit.js'
@@ -163,6 +164,25 @@ export function ContextMenu() {
     close()
     returnTo.current?.focus()
   }
+
+  // Back to the item that opened it, as the menu pattern does.
+  const closeSubmenu = (): void => {
+    const parent =
+      open === null
+        ? null
+        : ref.current?.querySelector<HTMLElement>(`[data-testid="${testIdOf(open.label)}"]`)
+    setOpen(null)
+    parent?.focus()
+  }
+
+  /*
+   * Escape through the one stack: the submenu, opened after the menu, closes
+   * first and hands back to its item; the next Escape closes the menu. Read in
+   * the list's own keydown it came after the stack, which had already closed
+   * whatever was open beneath the menu.
+   */
+  useEscapeToClose(dismiss, at !== null)
+  useEscapeToClose(closeSubmenu, at !== null && open !== null)
 
   /*
    * Tab closes the menu AND moves on, from where the menu was opened — the
@@ -661,14 +681,7 @@ export function ContextMenu() {
             onHover={() => undefined}
             onRun={dismiss}
             onTab={tabAway}
-            onClose={() => {
-              // Back to the item that opened it, as the menu pattern does.
-              const parent = ref.current?.querySelector<HTMLElement>(
-                `[data-testid="${testIdOf(open.label)}"]`,
-              )
-              setOpen(null)
-              parent?.focus()
-            }}
+            onClose={closeSubmenu}
             closeOnLeft
           />
         </AnchoredSurface>
@@ -749,10 +762,6 @@ function MenuList({
           event.preventDefault()
           onClose()
         }
-        return
-      case 'Escape':
-        event.preventDefault()
-        onClose()
         return
       case 'Tab':
         event.preventDefault()
