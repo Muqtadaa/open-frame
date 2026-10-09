@@ -14,6 +14,7 @@ import {
   readMessage,
   type RoomRole,
 } from './protocol.js'
+import { Assembler, FRAGMENT_BYTES, Splitter } from './parts.js'
 import { BoardRoom, documentFromSnapshot, MAX_MESSAGE_BYTES, type RoomPeer } from './room.js'
 
 /**
@@ -29,6 +30,7 @@ class Client implements RoomPeer {
   readonly doc = new Y.Doc()
   readonly awareness = createAwareness(this.doc)
   readonly received: Uint8Array[] = []
+  readonly #assembler = new Assembler()
   #room: BoardRoom | null = null
 
   /**
@@ -64,8 +66,12 @@ class Client implements RoomPeer {
     room.receive(this, encodeSyncStep1(this.doc))
   }
 
-  send(message: Uint8Array): void {
-    this.received.push(message)
+  send(frame: Uint8Array): void {
+    this.received.push(frame)
+    // A real client puts a board sent in parts back together before reading it.
+    const heard = this.#assembler.receive(frame)
+    if (heard.kind !== 'whole') return
+    const message = heard.message
     // Applied with a 'room' origin so the observer above does not send the
     // room's own news back to it.
     // `true`: this side's peer is the room, and a client that refused what the
@@ -357,6 +363,34 @@ describe('a message the room will not read', () => {
 
     expect(room.receive(a, step2)).toBe('accepted')
     expect(room.doc.getMap('board').get('seeded')).toHaveLength(5 * 1024 * 1024)
+  })
+
+  /*
+   * Larger than any one frame may be: the platform drops a frame over 32 MiB
+   * before the room sees it, so a board past that could neither be published
+   * nor opened. Sent in parts, size is a matter of memory, not of frames.
+   */
+  it('takes a board larger than any one frame, sent in parts', () => {
+    const room = new BoardRoom()
+    const a = new Client('a')
+    a.connect(room)
+    const board = new Y.Doc()
+    board.getMap('board').set('seeded', 'x'.repeat(MAX_MESSAGE_BYTES + 1024))
+    const frames = new Splitter().split(encodeSyncStep2(board, Y.encodeStateVector(room.doc)))
+    expect(frames.length).toBeGreaterThan(1)
+    for (const frame of frames) expect(room.receive(a, frame)).toBe('accepted')
+    expect(room.doc.getMap('board').get('seeded')).toHaveLength(MAX_MESSAGE_BYTES + 1024)
+  })
+
+  it('sends a newcomer a board larger than any one frame, in parts', () => {
+    const doc = new Y.Doc()
+    doc.getMap('board').set('seeded', 'x'.repeat(MAX_MESSAGE_BYTES + 1024))
+    const room = new BoardRoom({ doc })
+    const c = new Client('c')
+    c.connect(room)
+    for (const frame of c.received)
+      expect(frame.byteLength).toBeLessThanOrEqual(FRAGMENT_BYTES + 32)
+    expect(c.doc.getMap('board').get('seeded')).toHaveLength(MAX_MESSAGE_BYTES + 1024)
   })
 
   it('still reads a large message that fits', () => {

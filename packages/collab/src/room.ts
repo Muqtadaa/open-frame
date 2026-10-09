@@ -13,6 +13,7 @@ import {
   type Awareness,
   type RoomRole,
 } from './protocol.js'
+import { Assembler, Splitter } from './parts.js'
 
 /**
  * A board room, with no idea it is running inside a Durable Object.
@@ -96,6 +97,14 @@ export class BoardRoom {
    * drops is to remember what that socket told us about.
    */
   readonly #controlled = new Map<string, Set<number>>()
+  /**
+   * Each peer's message in progress, when one arrives in parts. Held in memory
+   * only: a room evicted mid-message loses the parts, the next one is out of
+   * order, and the sender, reconnecting, sends the whole message again.
+   */
+  readonly #assemblers = new Map<string, Assembler>()
+  /** Everything the room sends goes through this, so a board too large for a frame is sent in parts. */
+  readonly #splitter = new Splitter()
   readonly #onDocumentChanged: ((update: Uint8Array) => void) | undefined
   readonly #onAwareness: (changes: AwarenessChanges, origin: unknown) => void
   readonly #onUpdate: (update: Uint8Array) => void
@@ -154,16 +163,17 @@ export class BoardRoom {
   join(peer: RoomPeer): void {
     this.#peers.set(peer.id, peer)
     this.#controlled.set(peer.id, new Set())
+    this.#assemblers.set(peer.id, new Assembler())
 
     /*
      * The role first, before any document bytes. A client that learned it was
      * read-only only after the board arrived would have a window in which its
      * interface invited an edit it was going to drop.
      */
-    peer.send(encodeRole(peer.role))
-    peer.send(encodeSyncStep1(this.#doc))
+    this.#send(peer, encodeRole(peer.role))
+    this.#send(peer, encodeSyncStep1(this.#doc))
     const presence = encodeAllAwareness(this.#awareness)
-    if (presence !== null) peer.send(presence)
+    if (presence !== null) this.#send(peer, presence)
   }
 
   /**
@@ -174,9 +184,25 @@ export class BoardRoom {
    * handler — one client's bad frame costing everyone in the room, rather than
    * that client (ADR 0016, hardening).
    */
-  receive(peer: RoomPeer, message: Uint8Array): Received {
+  receive(peer: RoomPeer, frame: Uint8Array): Received {
     // Before decoding, which is the expensive part and the part being guarded.
-    if (message.byteLength > MAX_MESSAGE_BYTES) return 'too-large'
+    if (frame.byteLength > MAX_MESSAGE_BYTES) return 'too-large'
+
+    /*
+     * A part of a larger message is held until the rest arrives, then read as
+     * if it had come whole. Out of order — including a room that woke from
+     * eviction in the middle of one — it is a bad frame, and the sender starts
+     * again from the beginning.
+     */
+    let assembler = this.#assemblers.get(peer.id)
+    if (assembler === undefined) {
+      assembler = new Assembler()
+      this.#assemblers.set(peer.id, assembler)
+    }
+    const heard = assembler.receive(frame)
+    if (heard.kind === 'bad') return 'malformed'
+    if (heard.kind === 'part') return 'accepted'
+    const message = heard.message
 
     /*
      * A question about the time is answered here, to the asker alone, and
@@ -190,7 +216,7 @@ export class BoardRoom {
       return 'malformed'
     }
     if (asked !== null) {
-      peer.send(encodeTimeReply(asked, this.#now()))
+      this.#send(peer, encodeTimeReply(asked, this.#now()))
       return 'accepted'
     }
 
@@ -205,7 +231,7 @@ export class BoardRoom {
     if (handled.unreadable) return 'malformed'
     // Outside the try: a peer whose socket fails on send is a transport
     // problem, and calling it a malformed message would close the wrong one.
-    if (handled.reply !== null) peer.send(handled.reply)
+    if (handled.reply !== null) this.#send(peer, handled.reply)
     if (handled.broadcast !== null) this.#broadcast(handled.broadcast, peer.id)
     return 'accepted'
   }
@@ -219,6 +245,7 @@ export class BoardRoom {
    */
   leave(peer: RoomPeer): void {
     this.#peers.delete(peer.id)
+    this.#assemblers.delete(peer.id)
     const owned = this.#controlled.get(peer.id)
     this.#controlled.delete(peer.id)
     if (owned === undefined || owned.size === 0) return
@@ -239,9 +266,17 @@ export class BoardRoom {
     this.#awareness.off('update', this.#onAwareness)
     this.#peers.clear()
     this.#controlled.clear()
+    this.#assemblers.clear()
+  }
+
+  /** One message to one peer, in parts if it is too large for a frame. */
+  #send(peer: RoomPeer, message: Uint8Array): void {
+    for (const frame of this.#splitter.split(message)) peer.send(frame)
   }
 
   #broadcast(message: Uint8Array, exceptPeerId: string): void {
+    // Split once for everybody: the parts are the same bytes whoever hears them.
+    const frames = this.#splitter.split(message)
     for (const [id, peer] of this.#peers) {
       if (id === exceptPeerId) continue
       /*
@@ -250,7 +285,7 @@ export class BoardRoom {
        * message arriving and this loop reaching it, which is ordinary.
        */
       try {
-        peer.send(message)
+        for (const frame of frames) peer.send(frame)
       } catch {
         // The close handler removes it; nothing useful to do here.
       }

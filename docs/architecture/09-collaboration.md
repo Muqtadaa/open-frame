@@ -237,7 +237,7 @@ seconds. A few close codes mean "do not retry":
 | 4003 | The board has a password and none was given | stops and asks for it (`locked`) |
 | 4004 | The board was deleted                       | stops for good (`gone`)          |
 | 1007 | A message the room could not read           | reconnects as usual              |
-| 1009 | A message over the room's 32 MiB limit      | reconnects as usual              |
+| 1009 | A frame over the room's 32 MiB limit        | reconnects as usual              |
 
 A viewer's socket is accepted and its edits are dropped by the room before they
 are read; the role is sent to the client first, so the interface never invites
@@ -277,12 +277,24 @@ prevent. The session runs `RepairParentage` on any merged batch that could have
 caused one, and the invariant checker breaks cycles the same way on every
 client (the lowest `ObjectId` detaches to the root).
 
-### A board must fit in one message
+### A large board travels, and is kept, in parts
 
-Publishing a board sends its whole state in one frame, and the room accepts
-frames up to the platform's 32 MiB. A board whose state approaches that cannot
-be published until the handshake is chunked. A ten-thousand-object board is a
-few megabytes.
+Publishing a board sends its whole state as one message, and so does the
+room's answer to somebody opening it. The platform drops a frame over 32 MiB,
+so a message over that is cut into 4 MiB parts (`MESSAGE_PART`, `parts.ts`)
+and put back together on the other side — at most 64 MiB of one, which is
+memory the room can afford. Parts arrive in order on one socket; one out of
+order (a room evicted mid-message loses the parts before it) closes the
+connection with 1007, and the sender reconnects and sends the whole message
+again. Anything up to 32 MiB is sent whole, exactly as before, because a peer
+still on the previous version drops a part as a type it has never met: split
+lower, a board it could open would never arrive in a tab that had not reloaded.
+
+The room keeps the board the same way. A Durable Object value holds at most
+2 MB, so the snapshot is written as 1 MiB parts under a manifest, in one
+atomic write, and a change too large for one value is folded straight into a
+new snapshot rather than stored as one (`apps/rooms/src/document-store.ts`).
+Before, a board over about 2 MB was relayed to everyone and never saved.
 
 Reconnecting is cheaper. Each side sends only a state vector, and the answer
 holds only what the other lacks, so what has to fit is what changed while

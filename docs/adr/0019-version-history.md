@@ -189,7 +189,8 @@ board is deleted, so a restored version's pictures are still there.
 ## Rejected
 
 - **Durable Object storage for the bytes.** It is the board's live document
-  and update log. Its values are capped at 2 MB. And versions would multiply
+  and update log. Its values are capped at 2 MB (the live document itself is
+  kept in 1 MiB parts for that reason, since 2026-10-09). And versions would multiply
   what every compaction and cold start pays for. R2 has neither problem, and
   the board's prefix already gives deletion for free.
 - **A separate R2 prefix such as `history/<boardId>/`.** Board ids are
