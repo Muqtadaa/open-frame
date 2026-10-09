@@ -9,13 +9,20 @@ import * as encoding from 'lib0/encoding'
  * step 2) and a board being published. Past that size a board could neither be
  * opened nor shared. Split, its size is a question of memory, not of frames.
  *
- * `[4, seq, index, count, bytes]`. Only messages over `FRAGMENT_BYTES` are
- * split, so everything an ordinary session sends is byte-for-byte what it was:
- * an older peer meets a part only on a board that was already beyond it.
+ * `[4, seq, index, count, bytes]`. Only a message over `SPLIT_ABOVE` — the
+ * old 32 MiB limit — is split, so everything a peer on the previous version
+ * could read is still sent whole. That version drops a part as a type it has
+ * never met: split any lower, a board it could open would never arrive in a tab
+ * that had not reloaded, and one published from such a tab would be lost
+ * (Codex, on #104). An older peer only meets a part on a board it could never
+ * have opened anyway.
  */
 export const MESSAGE_PART = 4
 
-/** The largest message sent whole, and the size of each part of a larger one. */
+/** The largest message sent whole: the old limit, which every peer can read. */
+export const SPLIT_ABOVE = 32 * 1024 * 1024
+
+/** The size of each part of a message over `SPLIT_ABOVE`. */
 export const FRAGMENT_BYTES = 4 * 1024 * 1024
 
 /**
@@ -27,6 +34,14 @@ export const MAX_ASSEMBLED_BYTES = 64 * 1024 * 1024
 /** Cuts a message into parts. One per sender, so each message has its own number. */
 export class Splitter {
   #seq = 0
+  readonly #splitAbove: number
+  readonly #partBytes: number
+
+  /** The sizes are fixed in production; a test passes small ones to stay fast. */
+  constructor(sizes: { readonly splitAbove?: number; readonly partBytes?: number } = {}) {
+    this.#splitAbove = sizes.splitAbove ?? SPLIT_ABOVE
+    this.#partBytes = sizes.partBytes ?? FRAGMENT_BYTES
+  }
 
   /** One frame of a split message. Exposed for tests that need a malformed one. */
   static frame(seq: number, index: number, count: number, bytes: Uint8Array): Uint8Array {
@@ -41,13 +56,14 @@ export class Splitter {
 
   /** The frames to send: the message itself when it is small enough. */
   split(message: Uint8Array): Uint8Array[] {
-    if (message.byteLength <= FRAGMENT_BYTES) return [message]
+    if (message.byteLength <= this.#splitAbove) return [message]
     const seq = this.#seq++
-    const count = Math.ceil(message.byteLength / FRAGMENT_BYTES)
+    const size = this.#partBytes
+    const count = Math.ceil(message.byteLength / size)
     const frames: Uint8Array[] = []
     for (let index = 0; index < count; index++) {
-      const at = index * FRAGMENT_BYTES
-      frames.push(Splitter.frame(seq, index, count, message.subarray(at, at + FRAGMENT_BYTES)))
+      const at = index * size
+      frames.push(Splitter.frame(seq, index, count, message.subarray(at, at + size)))
     }
     return frames
   }

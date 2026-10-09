@@ -281,12 +281,14 @@ client (the lowest `ObjectId` detaches to the root).
 
 Publishing a board sends its whole state as one message, and so does the
 room's answer to somebody opening it. The platform drops a frame over 32 MiB,
-so a message over 4 MiB is cut into parts (`MESSAGE_PART`, `parts.ts`) and put
-back together on the other side — at most 64 MiB of one, which is memory the
-room can afford. Parts arrive in order on one socket; one out of order (a room
-evicted mid-message loses the parts before it) closes the connection with 1007,
-and the sender reconnects and sends the whole message again. Anything under
-4 MiB, which is every ordinary edit, is sent exactly as before.
+so a message over that is cut into 4 MiB parts (`MESSAGE_PART`, `parts.ts`)
+and put back together on the other side — at most 64 MiB of one, which is
+memory the room can afford. Parts arrive in order on one socket; one out of
+order (a room evicted mid-message loses the parts before it) closes the
+connection with 1007, and the sender reconnects and sends the whole message
+again. Anything up to 32 MiB is sent whole, exactly as before, because a peer
+still on the previous version drops a part as a type it has never met: split
+lower, a board it could open would never arrive in a tab that had not reloaded.
 
 The room keeps the board the same way. A Durable Object value holds at most
 2 MB, so the snapshot is written as 1 MiB parts under a manifest, in one

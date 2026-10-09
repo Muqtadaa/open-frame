@@ -110,8 +110,8 @@ The rules are pure functions in `apps/rooms/src/access.ts`, tested in Node.
   2. The password, as a second factor. The owner key (`?o=`) or a valid token (`?t=`) passes. Otherwise the socket is accepted and closed with 4003, so the client can tell "needs a password" from a dropped network.
   3. The role is fixed on the socket for its lifetime, and survives hibernation (`roleFromAttachment` reads anything unknown as viewer).
 - **Messages:** a frame over 32 MiB, the platform's own limit, is refused before it is read
-  (`MAX_MESSAGE_BYTES`, `collab/src/room.ts`). A message over 4 MiB travels in
-  parts (`collab/src/parts.ts`), and the room holds at most 64 MiB of one while
+  (`MAX_MESSAGE_BYTES`, `collab/src/room.ts`). A message over 32 MiB travels in
+  4 MiB parts (`collab/src/parts.ts`), and the room holds at most 64 MiB of one while
   it is put back together; a part out of order is a frame that fails to decode.
   A frame that fails to decode,
   or carries an update that fails to apply, is refused too. Either way the

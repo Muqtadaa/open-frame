@@ -113,7 +113,7 @@ change:
 - **Bound a socket message's size, and isolate decode failures.** _Done
   2026-10-03._ `BoardRoom.receive` refuses a message over `MAX_MESSAGE_BYTES`
   (32 MiB, the platform's own limit) before decoding it. _Since 2026-10-09 a
-  message over 4 MiB travels in parts, held to 64 MiB while reassembled
+  message over 32 MiB travels in 4 MiB parts, held to 64 MiB while reassembled
   (`parts.ts`)._ The cap cannot be lower:
   publishing a board sends its whole state in one frame, and resyncing after
   offline work sends everything the room lacks in one. It catches a frame that fails to decode, and it also refuses an update
