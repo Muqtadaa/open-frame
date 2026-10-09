@@ -224,10 +224,11 @@ sends only a state vector, and the answer holds only what the other lacks, so
 what has to fit is what changed while offline, not the whole board. A client
 whose offline changes exceed the limit would be refused on every reconnect.
 
-**Mitigation.** None yet; it is a **Revisit** row in the security model's known
-gaps ([11 · Security](../architecture/11-security.md)). 10,000 objects is a few
-MB, so the headroom is large. The fix is chunking the handshake, not raising
-the cap.
+**Mitigation.** Done 2026-10-09: a message over 4 MiB travels in parts
+(`packages/collab/src/parts.ts`), up to 64 MiB, and the room stores the board in
+1 MiB parts (`apps/rooms/src/document-store.ts`). The same work found the
+sharper edge: the room stored the board as one storage value, capped at 2 MB,
+so a board over that was relayed and never saved.
 
 **Relevant:** when a board approaches 32 MiB, which images stored in R2 rather
 than in the document make unlikely.
