@@ -93,6 +93,38 @@
   font-size: var(--of-type-record);
 }
 
+/*
+ * On a phone the round is one line (owner, 10-09): the title gives way first,
+ * then the status, and nothing wraps — wrapped over three rows the banner
+ * covered the top of the board, and a tap there voted on nothing.
+ */
+.of-voting--compact .of-voting__row {
+  flex-wrap: nowrap;
+  gap: var(--of-space-6);
+}
+
+.of-voting--compact .of-voting__title,
+.of-voting--compact .of-voting__status {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.of-voting--compact .of-voting__title {
+  flex: 0 1 auto;
+  max-width: 12ch;
+}
+
+.of-voting--compact .of-voting__status {
+  flex: 1 1 0;
+}
+
+.of-voting--compact .of-voting__modes,
+.of-voting__more {
+  flex: none;
+}
+
 /* The vote tool's two modes, held together as one control. */
 .of-voting__modes {
   display: flex;

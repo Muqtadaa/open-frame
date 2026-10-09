@@ -4,6 +4,7 @@ import { applyTheme, readTheme } from '../app/theme.js'
 import { AnchoredSurface } from '../controls/AnchoredSurface.js'
 import { ExpandIcon } from '../controls/icons.js'
 import { useAnchoredTo } from '../controls/use-anchor.js'
+import { stepMenu } from '../controls/menu-keys.js'
 import { useDismiss } from '../controls/use-dismiss.js'
 import { useExport } from '../hooks/use-export.js'
 import { useInteractionStore } from '../interaction/interaction-store.js'
@@ -48,32 +49,7 @@ export function BoardMenu({ onRename }: { readonly onRename: (() => void) | null
   const worldHere = !accounts.enabled
 
   const step = (event: KeyboardEvent<HTMLDivElement>): void => {
-    if (event.key === 'Tab') {
-      event.preventDefault()
-      close()
-      return
-    }
-    const items = [...event.currentTarget.querySelectorAll<HTMLElement>('[role^="menuitem"]')]
-    const at = items.indexOf(document.activeElement as HTMLElement)
-    const last = items.length - 1
-    const next =
-      event.key === 'ArrowDown'
-        ? at >= last
-          ? 0
-          : at + 1
-        : event.key === 'ArrowUp'
-          ? at <= 0
-            ? last
-            : at - 1
-          : event.key === 'Home'
-            ? 0
-            : event.key === 'End'
-              ? last
-              : null
-    if (next === null) return
-    event.preventDefault()
-    event.stopPropagation()
-    items[next]?.focus()
+    stepMenu(event, close)
   }
 
   const afterHours = readTheme() === 'after-hours'

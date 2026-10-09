@@ -350,6 +350,33 @@ test.describe('surfaces at phone width', () => {
     expect(meets(banner, note)).toBe(false)
   })
 
+  /*
+   * One line on a phone (owner, 10-09): the round's title, what you have
+   * left and the Vote switch, with Reveal, Results, End and Clear in a menu.
+   * Wrapped over three rows it covered the top of the board, and a tap there
+   * landed on the banner rather than on a note.
+   */
+  test('the voting banner is one line, with the rest in its menu', async ({ page }) => {
+    await seedBoard(page, notes)
+    await page.locator(CANVAS).click({ button: 'right', position: { x: 360, y: 530 } })
+    await page.getByRole('menuitem', { name: 'Start dot voting…' }).click()
+    await page.getByTestId('voting-hidden').check()
+    await page.getByTestId('voting-start').click()
+    // One line: no taller than one row of finger-sized controls and its edge.
+    const row = (await boxOf(page.getByTestId('voting-vote'))).height
+    expect((await docked(page, 'voting')).height).toBeLessThan(2 * row)
+    await expect(page.getByTestId('voting-end')).toHaveCount(0)
+    await expect(page.getByTestId('voting-status')).toHaveText('5 of 5 left')
+    await page.getByTestId('voting-more').click()
+    await expect(page.getByTestId('voting-more-heading')).toHaveText('Dot voting')
+    await expect(page.getByRole('menuitemcheckbox', { name: 'Take back dots' })).toBeVisible()
+    await expect(page.getByRole('menuitem', { name: 'Reveal' })).toBeVisible()
+    await page.getByRole('menuitem', { name: 'End' }).click()
+    await expect(page.getByTestId('voting-status')).toHaveText('Voting ended')
+    await expect(page.getByTestId('voting-more')).toBeFocused()
+    expect((await docked(page, 'voting')).height).toBeLessThan(2 * row)
+  })
+
   test('the board overview starts after the rail', async ({ page }) => {
     await seedBoard(page, notes)
     await page.locator(CANVAS).focus()
