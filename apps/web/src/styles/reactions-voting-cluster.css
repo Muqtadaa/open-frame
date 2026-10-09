@@ -217,8 +217,8 @@
   font-size: var(--of-type-record);
 }
 
-/* Clustering with AI: a notice along the top, like dot voting's setup. */
-.of-cluster {
+/* The AI sheets — clustering, summarising: a notice along the top, like dot voting's setup. */
+.of-ai-sheet {
   flex-direction: column;
   gap: var(--of-space-8);
   align-items: stretch;
@@ -226,32 +226,32 @@
   overflow-y: auto;
 }
 
-.of-cluster__heading {
+.of-ai-sheet__heading {
   margin: 0;
   font-size: var(--of-type-ui);
   font-weight: var(--of-weight-semibold);
 }
 
-.of-cluster__note,
-.of-cluster__summary {
+.of-ai-sheet__note,
+.of-ai-sheet__detail {
   margin: 0;
   font-size: var(--of-type-record);
 }
 
-.of-cluster__form {
+.of-ai-sheet__form {
   display: flex;
   flex-direction: column;
   gap: var(--of-space-8);
 }
 
-.of-cluster__field {
+.of-ai-sheet__field {
   display: flex;
   flex-direction: column;
   gap: var(--of-space-4);
   font-size: var(--of-type-record);
 }
 
-.of-cluster__themes {
+.of-ai-sheet__items {
   display: flex;
   flex-direction: column;
   gap: var(--of-step);
@@ -260,33 +260,33 @@
   list-style: none;
 }
 
-.of-cluster__theme {
+.of-ai-sheet__item {
   display: flex;
   flex-direction: column;
   gap: var(--of-space-4);
 }
 
-.of-cluster__notes {
+.of-ai-sheet__notes {
   padding: 0 0 0 var(--of-step);
   margin: 0;
   font-size: var(--of-type-record);
   list-style: disc;
 }
 
-.of-cluster__gist {
+.of-ai-sheet__gist {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 
-.of-cluster__actions {
+.of-ai-sheet__actions {
   display: flex;
   flex-wrap: wrap;
   gap: var(--of-space-8);
   align-items: center;
 }
 
-.of-cluster__remaining {
+.of-ai-sheet__remaining {
   margin-left: auto;
   font-family: var(--of-mono);
   font-size: var(--of-type-record);

@@ -76,4 +76,5 @@ preview UX" in the deferred decisions):
 
 - The AI writes to a board without a person applying it.
 - The route starts reading a room's document (ADR 0016).
-- A second AI feature arrives, and the quota should be shared or per feature.
+- A second AI feature arrives, and the quota should be shared or per feature. Revisited
+  by [ADR 0022](0022-ai-summaries.md): summaries share the allowance.

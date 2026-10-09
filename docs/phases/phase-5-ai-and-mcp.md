@@ -1,8 +1,9 @@
 # Phase 5 · AI and MCP
 
 **Status: In progress** — the MCP server (stages 1–4 of
-[5a](phase-5a-mcp-server.md)) and AI clustering
-([ADR 0018](../adr/0018-ai-clustering-on-the-room-server.md)) are built; the other AI commands and
+[5a](phase-5a-mcp-server.md)), AI clustering
+([ADR 0018](../adr/0018-ai-clustering-on-the-room-server.md)) and AI summaries
+([ADR 0022](../adr/0022-ai-summaries.md)) are built; the other AI commands and
 remote MCP are not · ← [Roadmap](README.md)
 
 Agents as first-class participants on the board — through exactly the same door
@@ -56,7 +57,12 @@ like one from a click.
 more notes, reviewed before it is applied, and applied as copies so the
 originals stay ([ADR 0018](../adr/0018-ai-clustering-on-the-room-server.md)).
 
-**Candidate commands:** summarise selected notes, find duplicates, reorganise a
+**Built:** summarise selected notes, or a frame and everything in it —
+"Summarise with AI…" on two or more notes, reviewed before it is applied, and
+applied as one text box citing the notes each point rests on
+([ADR 0022](../adr/0022-ai-summaries.md)). Same route checks and one allowance.
+
+**Candidate commands:** find duplicates, reorganise a
 section, turn evidence into insights, turn insights into experiment hypotheses,
 extract action items, generate a diagram.
 

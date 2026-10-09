@@ -1346,3 +1346,14 @@ with a test seen failing first:
 
 Standing still, by decision: reaction chips and the flyout chevrons pass the
 24px minimum and scale with the board.
+
+## AI summaries (2026-10-09)
+
+Summarise with AI joins Cluster with AI (ADR 0022). The owner chose a
+selection or a frame as the scope, a text box with a heading as the result,
+and citations linked on the board. The two sheets are now one component
+(`ui/ai-sheet.tsx`), so the stages, keyboard and refusal copy that the cluster
+sheet earned in the 2026-10-07 critique hold for both, and its classes moved
+from `of-cluster` to `of-ai-sheet` without a pixel moving. New goldens: the
+cluster review (it had none) and the summary review, in both worlds. Contract:
+`apps-web-src-ui-summaryreview-tsx.md`.

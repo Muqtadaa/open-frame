@@ -1,7 +1,7 @@
 import { readCatalogue } from '@openframe/core/facilitation'
 
-import { clusterDeps } from './ai/deps.js'
-import { handleCluster } from './ai/handler.js'
+import { clusterDeps, summaryDeps } from './ai/deps.js'
+import { handleCluster, handleSummary } from './ai/handler.js'
 import type { Env } from './env.js'
 import shipped from './library/catalogue.json' with { type: 'json' }
 import { serveCatalogue, serveTrack } from './music.js'
@@ -71,6 +71,8 @@ export default {
       // Names no board and reads none (ADR 0018), so no room is woken for it.
       case 'ai-cluster':
         return handleCluster(request, clusterDeps(env))
+      case 'ai-summary':
+        return handleSummary(request, summaryDeps(env))
 
       // The music library names no board, so no room is woken for it.
       case 'catalogue':

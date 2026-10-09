@@ -2,9 +2,11 @@ import { describe, expect, it, vi } from 'vitest'
 
 import {
   handleCluster,
+  handleSummary,
   type Asked,
   type ClusterDeps,
   type Reserved,
+  type SummaryDeps,
   type Verified,
 } from './handler.js'
 
@@ -142,5 +144,72 @@ describe('POST /ai/cluster', () => {
     })
     await handleCluster(post({ notes }), d)
     expect(order).toEqual(['verify', 'reserve', 'ask'])
+  })
+})
+
+describe('POST /ai/summary', () => {
+  const summary = {
+    title: 'Checkout friction',
+    points: [{ text: 'Costs appear too late.', refs: ['n1', 'n2'] }],
+  }
+  const summaryDeps = (overrides: Partial<SummaryDeps> = {}) => ({
+    ...deps(),
+    ask: vi.fn<SummaryDeps['ask']>(() =>
+      Promise.resolve<Asked>({ kind: 'answer', answer: summary }),
+    ),
+    ...overrides,
+  })
+  const ask = (body: unknown, headers?: Record<string, string>) => {
+    const request = post(body, headers)
+    return new Request('https://rooms.example/ai/summary', request)
+  }
+
+  it('answers a summary held to the notes sent, with the frame it came from', async () => {
+    const d = summaryDeps()
+    const response = await handleSummary(ask({ notes: notes.slice(0, 2), frame: 'Interviews' }), d)
+    expect(response.status).toBe(200)
+    const body = await response.json<{ summary: { title: string }; remaining: number }>()
+    expect(body.summary.title).toBe('Checkout friction')
+    expect(body.remaining).toBe(19)
+    expect(d.ask).toHaveBeenCalledWith({ notes: notes.slice(0, 2), frame: 'Interviews' })
+  })
+
+  it('never reaches the model unsigned, or with a body that is not a summary request', async () => {
+    for (const [request, status] of [
+      [ask({ notes }, {}), 401],
+      [ask({ notes: notes.slice(0, 1) }), 400],
+      [ask({ notes, extra: 1 }), 400],
+    ] as const) {
+      const d = summaryDeps()
+      const response = await handleSummary(request, d)
+      expect(response.status).toBe(status)
+      expect(d.ask).not.toHaveBeenCalled()
+      expect(d.reserve).not.toHaveBeenCalled()
+    }
+  })
+
+  it('gives the run back when the model declines, fails, or cites a note it was not sent', async () => {
+    for (const [asked, status, why] of [
+      [{ kind: 'declined' }, 422, 'declined'],
+      [{ kind: 'failed' }, 502, 'failed'],
+      [
+        { kind: 'answer', answer: { title: 'T', points: [{ text: 'x', refs: ['n9'] }] } },
+        422,
+        'invalid',
+      ],
+    ] as const) {
+      const d = summaryDeps({ ask: () => Promise.resolve(asked as Asked) })
+      const response = await handleSummary(ask({ notes }), d)
+      expect([response.status, await outcome(response)]).toEqual([status, why])
+      expect(d.refund).toHaveBeenCalledWith('u1', '2026-10-04')
+    }
+  })
+
+  it('says "summarise" when it refuses, not "cluster"', async () => {
+    const d = summaryDeps({ ask: () => Promise.resolve<Asked>({ kind: 'declined' }) })
+    const response = await handleSummary(ask({ notes }), d)
+    const body = await response.json<{ message: string }>()
+    expect(body.message).toMatch(/summar/i)
+    expect(body.message).not.toMatch(/cluster/i)
   })
 })

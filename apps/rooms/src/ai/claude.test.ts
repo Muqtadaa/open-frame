@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 
-import { askClaude } from './claude.js'
+import { askClaude, askClaudeToSummarise } from './claude.js'
 
 const request = {
   notes: [
@@ -74,5 +74,31 @@ describe('askClaude', () => {
     const down: typeof globalThis.fetch = () =>
       Promise.resolve(new Response('{"type":"error"}', { status: 400 }))
     expect(await askClaude({ apiKey: 'k', fetch: down })(request)).toEqual({ kind: 'failed' })
+  })
+})
+
+describe('askClaudeToSummarise', () => {
+  const summary = JSON.stringify({ title: 'T', points: [{ text: 'P', refs: ['n1'] }] })
+
+  it('asks for a summary, with its own prompt, schema and a smaller budget', async () => {
+    const { fetch, seen } = upstream('end_turn', summary)
+    const ask = askClaudeToSummarise({ apiKey: 'k', fetch })
+    expect(await ask({ notes: request.notes.slice(0, 2), frame: 'Interviews' })).toEqual({
+      kind: 'answer',
+      answer: JSON.parse(summary),
+    })
+    const body = seen[0]!.body
+    expect(body.max_tokens).toBe(4000)
+    expect(body.fallbacks).toBe('default')
+    expect(String(body.system)).toMatch(/summar/i)
+    expect(JSON.stringify(body.messages)).toContain('<frame>Interviews</frame>')
+    const schema = JSON.stringify((body.output_config as { format: unknown }).format)
+    expect(schema).toContain('points')
+    expect(schema).not.toContain('clusters')
+  })
+
+  it('treats a refusal as declined, never parsing it', async () => {
+    const ask = askClaudeToSummarise({ apiKey: 'k', fetch: upstream('refusal', '').fetch })
+    expect(await ask({ notes: request.notes.slice(0, 2) })).toEqual({ kind: 'declined' })
   })
 })

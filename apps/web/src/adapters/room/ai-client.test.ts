@@ -76,3 +76,50 @@ describe('the AI client', () => {
     ).toEqual({ kind: 'refused', why: 'unreachable' })
   })
 })
+
+describe('the AI client, summarising', () => {
+  const two = { notes: request.notes.slice(0, 2), frame: 'Interviews' }
+  const summary = { title: 'T', points: [{ text: 'P', refs: ['n1', 'n1'] }] }
+
+  it('posts to /ai/summary and checks the summary against the notes it sent', async () => {
+    let asked: Request | null = null
+    const ai = client((input, init) => {
+      asked = new Request(input, init)
+      return answering(200, { summary, remaining: 3 })(input, init)
+    })
+    const outcome = await ai.summarise(two, 'tok')
+    expect(asked!.url).toBe('https://rooms.test/ai/summary')
+    expect(asked!.headers.get('authorization')).toBe('Bearer tok')
+    expect(await asked!.json()).toEqual(two)
+    expect(outcome).toEqual({
+      kind: 'summary',
+      summary: { title: 'T', points: [{ text: 'P', refs: ['n1'] }] },
+      remaining: 3,
+    })
+  })
+
+  it('refuses a summary citing a note it never sent, and passes on the server’s refusal', async () => {
+    const stranger = answering(200, {
+      summary: { title: 'T', points: [{ text: 'P', refs: ['n9'] }] },
+      remaining: 1,
+    })
+    expect(await client(stranger).summarise(two, 't')).toEqual({ kind: 'refused', why: 'invalid' })
+    expect(await client(answering(429, { outcome: 'limit' })).summarise(two, 't')).toEqual({
+      kind: 'refused',
+      why: 'limit',
+    })
+  })
+
+  it('never sends one note: the server would refuse it the same way', async () => {
+    let sent = false
+    const ai = client(() => {
+      sent = true
+      return answering(200, {})('', {})
+    })
+    expect(await ai.summarise({ notes: request.notes.slice(0, 1) }, 't')).toEqual({
+      kind: 'refused',
+      why: 'too-large',
+    })
+    expect(sent).toBe(false)
+  })
+})

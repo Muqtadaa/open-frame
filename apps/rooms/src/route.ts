@@ -53,6 +53,8 @@ const TRACK_PATH = /^\/music\/track\/([a-z0-9-]{1,48})\/?$/
 
 /** Themes for a set of notes, from Claude (ADR 0018). Names no board. */
 const AI_CLUSTER_PATH = /^\/ai\/cluster\/?$/
+/** A summary of a set of notes, from Claude (ADR 0022). Names no board. */
+const AI_SUMMARY_PATH = /^\/ai\/summary\/?$/
 
 const ACCESS_KEY = /^[A-Za-z0-9_-]{16,64}$/
 
@@ -62,6 +64,7 @@ export const KEY_PARAM = 'k'
 export type Route =
   | { readonly kind: 'health' }
   | { readonly kind: 'ai-cluster' }
+  | { readonly kind: 'ai-summary' }
   | {
       readonly kind: 'room'
       readonly boardId: string
@@ -155,6 +158,12 @@ export function routeRequest(url: URL, upgradeHeader: string | null, method = 'G
     if (method === 'OPTIONS') return { kind: 'preflight' }
     if (method !== 'POST') return { kind: 'refuse', status: 405, reason: 'Clustering is a POST' }
     return { kind: 'ai-cluster' }
+  }
+
+  if (AI_SUMMARY_PATH.test(url.pathname)) {
+    if (method === 'OPTIONS') return { kind: 'preflight' }
+    if (method !== 'POST') return { kind: 'refuse', status: 405, reason: 'Summarising is a POST' }
+    return { kind: 'ai-summary' }
   }
 
   if (CATALOGUE_PATH.test(url.pathname)) {

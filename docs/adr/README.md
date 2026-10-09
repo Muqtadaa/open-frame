@@ -31,6 +31,7 @@ Format: Status · Context · Decision · Alternatives considered · Consequences
 | [0019](0019-version-history.md)                         | **Version history: whole snapshots, thinned, restored as an edit**  | Accepted           |
 | [0020](0020-export-as-a-readout.md)                     | **Export is a readout first: Markdown, with provenance**            | Accepted           |
 | [0021](0021-links-in-text.md)                           | **A link is a span's target, not a mark**                           | Accepted           |
+| [0022](0022-ai-summaries.md)                            | **An AI summary is a text box that cites its notes**                | Accepted           |
 
 ## Writing a new one
 

@@ -21,7 +21,7 @@ Last reconciled with the code on 2026-10-03.
     │                             │
  MCP agent (stdio, on the user's machine) ── joins the same room as a peer
 
- browser ── POST /ai/cluster (bearer) ──► rooms Worker ──► Supabase /auth/v1/user
+ browser ── POST /ai/cluster, /ai/summary (bearer) ──► rooms Worker ──► Supabase /auth/v1/user
                                               ├──► AiQuotaObject (runs per day)
                                               └──► Anthropic (ANTHROPIC_API_KEY, a secret)
 ```
@@ -214,9 +214,11 @@ record for each in its own storage.
   (`media-src`), checked against the deployed policy in
   `e2e-rooms/content-security.spec.ts`.
 
-## AI clustering (`/ai/cluster`)
+## AI clustering and summaries (`/ai/cluster`, `/ai/summary`)
 
-[ADR 0018](../adr/0018-ai-clustering-on-the-room-server.md).
+[ADR 0018](../adr/0018-ai-clustering-on-the-room-server.md),
+[ADR 0022](../adr/0022-ai-summaries.md). Both routes run one handler,
+generalised over the feature, so everything below holds for each.
 
 - **The key is a Worker secret** (`wrangler secret put ANTHROPIC_API_KEY`).
   Nothing in the browser can reach it. The SDK cannot be imported outside
@@ -229,7 +231,8 @@ record for each in its own storage.
   4. the request against the core contract (400);
   5. who the token belongs to, asked of Supabase (401, or 503 if Supabase
      cannot be reached);
-  6. a run reserved in `AiQuotaObject` (429).
+  6. a run reserved in `AiQuotaObject` (429) — one allowance per person
+     across both features (`deps.test.ts`).
 
   `handler.test.ts` holds that order, and was broken once to watch it fail.
 
@@ -238,7 +241,8 @@ record for each in its own storage.
 - **The answer is untrusted** even though our Worker relays it. It is held to
   a schema by the API, then by the Worker, then by the browser. It can name
   only refs it was sent, and it becomes copies a person applies, which are
-  revertible.
+  revertible. A summary can cite only refs it was sent; one naming any other
+  is refused whole.
 
 ## Collaboration: what the room trusts
 
@@ -339,9 +343,11 @@ The architecture already helps in two ways:
 Neither of these is a complete defence, and they bound the damage rather than
 prevent it.
 
-Clustering adds a third. The notes are escaped and fenced in `<notes>` as data
-the model is told never to follow (`clusterPrompt`). The answer can only sort
-the refs it was given, and a person reads it before any of it is applied.
+The AI features add a third. The notes are escaped and fenced in `<notes>` as
+data the model is told never to follow (`fenceNotes`, shared by `clusterPrompt`
+and `summaryPrompt`; a summarised frame's name is escaped the same way). The
+answer can only sort or cite the refs it was given, and a person reads it
+before any of it is applied.
 
 ---
 
@@ -363,7 +369,7 @@ with it and said why.
 | MCP cannot open password-protected boards                                                                                                       | `tools/context.ts:47`                 | **Accepted.** It fails closed; supporting it means the agent holding the token or owner key                          |
 | The page's policy allows inline styles                                                                                                          | `content-security-policy.ts`          | **Accepted.** React positions every object with a `style` attribute; scripts stay hash-only                          |
 | `CodeView` trusts highlight.js to escape                                                                                                        | `CodeView.tsx:87`                     | **Accepted.** Pin the version, and add a test with markup in a code block before upgrading                           |
-| Selected notes' text is sent to Anthropic when somebody clusters                                                                                | `ai/claude.ts`                        | **Accepted** with ADR 0018. Said in the panel before anything is sent                                                |
+| Selected notes' text is sent to Anthropic when somebody clusters or summarises                                                                  | `ai/claude.ts`                        | **Accepted** with ADR 0018 and 0022. Said in the sheet before anything is sent                                       |
 | AI spend is capped per day (20 a person, 1,000 for everybody), not per month                                                                    | `ai/quota.ts`, `wrangler.toml`        | **Accepted.** Both are Worker variables; a failed run is given back                                                  |
 
 ---

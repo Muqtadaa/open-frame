@@ -51,10 +51,11 @@ const NO_MUSIC: MusicService = {
   trackUrl: () => '',
 }
 
-/** No room server, no AI: nothing offers to cluster. */
+/** No room server, no AI: nothing offers to cluster or summarise. */
 const NO_AI: AiService = {
   enabled: false,
   cluster: () => Promise.resolve({ kind: 'refused', why: 'unconfigured' }),
+  summarise: () => Promise.resolve({ kind: 'refused', why: 'unconfigured' }),
 }
 
 /**

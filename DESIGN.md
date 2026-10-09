@@ -1262,6 +1262,30 @@ where they were. It is one undo step. Escape closes the panel at any stage and
 leaves nothing behind — except that the first Escape in a field only leaves
 the field. The record panel steps aside while the panel is open.
 
+### Summarise with AI
+
+The same sheet as Cluster with AI — one component, `ui/ai-sheet.tsx`, so the
+stages, keyboard and refusals cannot drift apart — offered beside it for two
+or more notes with text, or for a frame, which stands for every note inside
+it. Opening one AI sheet closes the other.
+
+1. **Before anything is sent:** the note count, and the line saying the notes'
+   text goes to Anthropic. Summarise, Cancel.
+2. **While asking:** "Summarising 12 notes of Interviews…" when it is a frame.
+3. **The summary:** the title, then each point as a two-line field headed
+   "Point 2 · cites 3 notes", with the gists of the notes it cites beneath.
+   Emptying a point takes it out — the one way to drop what the AI got wrong,
+   without a remove button on every row. What Apply does: "Adds a text box
+   citing 5 notes; nothing summarised changes". Runs left in mono. Apply,
+   Discard.
+4. **A refusal:** as for clustering, with "summarise" in the decline.
+
+Apply puts one text box beside the frame or the selection, never over it: the
+title as a bold large line (rich text has no headings), each point a bullet.
+Each note a point cites is linked by a `cites` relation, so the record panel's
+"stands on" lists them and the Markdown export writes them. The box is
+selected and revealed; it is one undo step (ADR 0022).
+
 ### Zoom Cluster
 
 Bottom-right, mono throughout. 30px buttons (`--of-hit-sm`) carrying 16px
