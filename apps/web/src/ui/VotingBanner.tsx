@@ -648,8 +648,14 @@ function MoreActions({
                 className="of-menu__item"
                 data-testid={action.id}
                 onClick={() => {
-                  // Closed first, so the action's own hand-off of focus wins.
-                  setOpen(false)
+                  /*
+                   * Closed first. An action that hands the keyboard on (End,
+                   * Reveal) names where; one that does not (a mode, Results)
+                   * gives it back to this button, or it fell to the page
+                   * with the item it was on (Codex, on #102).
+                   */
+                  if (action.next === undefined) close()
+                  else setOpen(false)
                   onChoose(action)
                 }}
               >

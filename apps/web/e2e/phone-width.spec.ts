@@ -369,7 +369,11 @@ test.describe('surfaces at phone width', () => {
     await expect(page.getByTestId('voting-status')).toHaveText('5 of 5 left')
     await page.getByTestId('voting-more').click()
     await expect(page.getByTestId('voting-more-heading')).toHaveText('Dot voting')
-    await expect(page.getByRole('menuitemcheckbox', { name: 'Take back dots' })).toBeVisible()
+    await page.getByRole('menuitemcheckbox', { name: 'Take back dots' }).click()
+    // A mode, not a hand-off: the keyboard goes back to the menu's button.
+    await expect(page.getByTestId('voting-more')).toBeFocused()
+    await expect(page.getByTestId('voting-vote')).toHaveText('Taking back')
+    await page.getByTestId('voting-more').click()
     await expect(page.getByRole('menuitem', { name: 'Reveal' })).toBeVisible()
     await page.getByRole('menuitem', { name: 'End' }).click()
     await expect(page.getByTestId('voting-status')).toHaveText('Voting ended')
