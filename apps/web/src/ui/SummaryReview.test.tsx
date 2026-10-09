@@ -102,4 +102,50 @@ describe('asking the AI to summarise', () => {
     expect(board.runtime.store.getDocument().objects.size).toBe(IDS.length)
     board.unmount()
   })
+
+  it('starts again when opened on other notes, rather than citing them with the old answer', async () => {
+    const { board, ai, find } = await mounted()
+    board.act(() => find<HTMLButtonElement>('summary-ask')?.click())
+    await board.settle()
+    expect(find('summary-review')?.getAttribute('data-stage')).toBe('review')
+    board.act(() => {
+      useInteractionStore.getState().openSummaryReview([IDS[1]!, IDS[2]!])
+    })
+    expect(find('summary-review')?.getAttribute('data-stage')).toBe('confirm')
+    expect(find('summary-review')?.textContent).toContain('2 notes')
+    expect(ai.summarise).toHaveBeenCalledTimes(1)
+    board.unmount()
+  })
+
+  it('refuses to apply when a note it cites has gone, and keeps the sheet open', async () => {
+    const { board, find } = await mounted()
+    board.act(() => find<HTMLButtonElement>('summary-ask')?.click())
+    await board.settle()
+    board.act(() => {
+      board.runtime.dispatcher.dispatch({ kind: 'DeleteObjects', ids: [IDS[0]!] })
+    })
+    board.act(() => find<HTMLButtonElement>('summary-apply')?.click())
+    const doc = board.runtime.store.getDocument()
+    expect([...doc.objects.values()].some((object) => object.type === 'text')).toBe(false)
+    expect(useInteractionStore.getState().toast).toBe('A note it cites is gone')
+    expect(find('summary-review')).not.toBeNull()
+    board.unmount()
+  })
+
+  it('counts the citations Apply will make, after a point is emptied', async () => {
+    const { board, find } = await mounted()
+    board.act(() => find<HTMLButtonElement>('summary-ask')?.click())
+    await board.settle()
+    expect(find('summary-adds')?.textContent).toBe(
+      'Adds a text box citing 2 notes; nothing summarised changes',
+    )
+    const points = board.container.querySelectorAll<HTMLTextAreaElement>(
+      '[data-testid="summary-point"]',
+    )
+    board.type(points[0]!, '')
+    expect(find('summary-adds')?.textContent).toBe(
+      'Adds a text box citing no notes; nothing summarised changes',
+    )
+    board.unmount()
+  })
 })

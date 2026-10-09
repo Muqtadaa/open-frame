@@ -20,7 +20,13 @@ const REFUSED = aiRefusals('cluster', MIN_CLUSTER_NOTES)
 export function ClusterReview() {
   const ids = useInteractionStore((state) => state.clusterReview)
   if (ids === null) return null
-  return <ClusterPanel ids={ids} />
+  /*
+   * Keyed by what it is about, so opening it on other notes starts it again —
+   * and the unmount aborts any request still out. Kept, an answer about the
+   * old notes was shown, and applied, with its refs read against the new ones
+   * (Codex, on #103).
+   */
+  return <ClusterPanel key={ids.join(' ')} ids={ids} />
 }
 
 function ClusterPanel({ ids }: { readonly ids: readonly ObjectId[] }) {

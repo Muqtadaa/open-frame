@@ -21,7 +21,13 @@ const REFUSED = aiRefusals('summarise', MIN_SUMMARY_NOTES)
 export function SummaryReview() {
   const ids = useInteractionStore((state) => state.summaryReview)
   if (ids === null) return null
-  return <SummaryPanel ids={ids} />
+  /*
+   * Keyed by what it is about, so opening it on other notes starts it again —
+   * and the unmount aborts any request still out. Kept, an answer about the
+   * old notes was shown, and applied, with its refs read against the new ones
+   * (Codex, on #103).
+   */
+  return <SummaryPanel key={ids.join(' ')} ids={ids} />
 }
 
 function SummaryPanel({ ids }: { readonly ids: readonly ObjectId[] }) {
@@ -93,7 +99,12 @@ function SummaryForm({
     const note = notes.get(ref)
     return note === undefined ? '' : runtime.registry.describeObject(note).gist
   }
-  const cited = new Set(summary.points.flatMap((point) => point.refs)).size
+  // What Apply will cite: the notes of the points still holding words.
+  const cited = new Set(
+    summary.points.flatMap((point, index) =>
+      (points[index] ?? '').trim() === '' ? [] : point.refs,
+    ),
+  ).size
 
   return (
     <form
@@ -160,7 +171,8 @@ function SummaryForm({
       </ol>
       {/* What Apply does, said before it is pressed. */}
       <p className="of-ai-sheet__note" data-testid="summary-adds">
-        Adds a text box citing {notesNoun(cited)}; nothing summarised changes
+        Adds a text box citing {cited === 0 ? 'no notes' : notesNoun(cited)}; nothing summarised
+        changes
       </p>
       <ReviewActions name="summary" remaining={remaining} onDiscard={onDiscard} />
     </form>

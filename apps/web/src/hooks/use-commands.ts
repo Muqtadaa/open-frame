@@ -582,11 +582,22 @@ export function useCommands(): BoardCommands {
 
       applySummary(summary, sent, from) {
         const doc = runtime.store.getDocument()
-        // As the notes are NOW: a citation of a note deleted meanwhile would be refused.
+        // As the notes are NOW, since somebody may have changed the board while the AI thought.
         const notes = new Map<string, AnyOpenFrameObject>()
         for (const [ref, note] of sent) {
           const current = doc.objects.get(note.id)
           if (current !== undefined) notes.set(ref, current)
+        }
+        /*
+         * A point resting on a note somebody deleted meanwhile would be laid
+         * out without that citation — a claim whose evidence quietly went
+         * missing (Codex, on #103). Refused instead; the sheet stays open, so
+         * the point can be emptied or the summary discarded.
+         */
+        const cites = summary.points.flatMap((point) => point.refs)
+        if (cites.some((ref) => !notes.has(ref))) {
+          useInteractionStore.getState().showToast('A note it cites is gone')
+          return null
         }
         // Beside what was chosen: the frame, when a frame was summarised.
         const chosen = from
