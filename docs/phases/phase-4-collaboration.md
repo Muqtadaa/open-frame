@@ -501,7 +501,8 @@ this browser", whatever is sitting in IndexedDB under its id.
   It is deliberately NOT a link. Accepted as `k` it would sit in the page URL,
   and a URL copied out of the address bar and passed on would carry the board's
   password with it — the one thing the password exists to prevent. It travels
-  as `o` on the socket, and a test asserts it never reaches the page URL.
+  in the socket's first message (since 2026-10-09; it was `o` on the socket's
+  address), and a test asserts it never reaches the page URL.
 
   What this is NOT is a verified identity. "Owner" means the holder of a key
   only the owner is ever handed, enforced by row-level security — the same
