@@ -12,7 +12,7 @@ import {
   type HistoryBucket,
   type VersionRecord,
 } from './history.js'
-import { MemoryStorage } from './test-storage.js'
+import { MemoryStorage } from './testing.js'
 
 const T0 = Date.UTC(2026, 9, 6, 9, 0, 0)
 const BOARD = 'brd_one'

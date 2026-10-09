@@ -2,7 +2,7 @@ import { BoardRoom, documentFromSnapshot } from '@openframe/collab'
 import { describe, expect, it } from 'vitest'
 
 import { COMPACT_AFTER, DocumentStore, PART_BYTES } from './document-store.js'
-import { MemoryStorage } from './test-storage.js'
+import { MemoryStorage } from './testing.js'
 
 /** The SQLite backend's largest value. */
 const VALUE_CAP = 2 * 1024 * 1024
