@@ -48,5 +48,6 @@ keyboard into and out of the preview, restore with undo, naming and deleting,
 no Delete on an automatic version and Tab kept inside;
 `e2e-rooms/history.spec.ts` holds the room's versions; `navigation-bar.spec.ts`
 holds the menu opening it on paper in both worlds; `phone-width.spec.ts` holds
-the bar wrapping. No golden shows it yet. Critique 2026-10-07: 25/40.
+the bar wrapping; `VersionHistory.test.tsx` holds the list a page at a time;
+the "version history" golden holds the sheet in both worlds. Critique 2026-10-07: 25/40.
 DESIGN.md: Version History. ADR 0019.

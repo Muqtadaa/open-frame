@@ -350,6 +350,37 @@ test.describe('surfaces at phone width', () => {
     expect(meets(banner, note)).toBe(false)
   })
 
+  /*
+   * One line on a phone (owner, 10-09): the round's title, what you have
+   * left and the Vote switch, with Reveal, Results, End and Clear in a menu.
+   * Wrapped over three rows it covered the top of the board, and a tap there
+   * landed on the banner rather than on a note.
+   */
+  test('the voting banner is one line, with the rest in its menu', async ({ page }) => {
+    await seedBoard(page, notes)
+    await page.locator(CANVAS).click({ button: 'right', position: { x: 360, y: 530 } })
+    await page.getByRole('menuitem', { name: 'Start dot voting…' }).click()
+    await page.getByTestId('voting-hidden').check()
+    await page.getByTestId('voting-start').click()
+    // One line: no taller than one row of finger-sized controls and its edge.
+    const row = (await boxOf(page.getByTestId('voting-vote'))).height
+    expect((await docked(page, 'voting')).height).toBeLessThan(2 * row)
+    await expect(page.getByTestId('voting-end')).toHaveCount(0)
+    await expect(page.getByTestId('voting-status')).toHaveText('5 of 5 left')
+    await page.getByTestId('voting-more').click()
+    await expect(page.getByTestId('voting-more-heading')).toHaveText('Dot voting')
+    await page.getByRole('menuitemcheckbox', { name: 'Take back dots' }).click()
+    // A mode, not a hand-off: the keyboard goes back to the menu's button.
+    await expect(page.getByTestId('voting-more')).toBeFocused()
+    await expect(page.getByTestId('voting-vote')).toHaveText('Taking back')
+    await page.getByTestId('voting-more').click()
+    await expect(page.getByRole('menuitem', { name: 'Reveal' })).toBeVisible()
+    await page.getByRole('menuitem', { name: 'End' }).click()
+    await expect(page.getByTestId('voting-status')).toHaveText('Voting ended')
+    await expect(page.getByTestId('voting-more')).toBeFocused()
+    expect((await docked(page, 'voting')).height).toBeLessThan(2 * row)
+  })
+
   test('the board overview starts after the rail', async ({ page }) => {
     await seedBoard(page, notes)
     await page.locator(CANVAS).focus()
@@ -505,3 +536,36 @@ for (const width of [390, 320]) {
     })
   })
 }
+
+/*
+ * A phone held sideways (owner, 10-09): too short for the panel to float
+ * beside a selection, which it then lay on. It docks down the right edge
+ * instead, and a selection it would cover slides left into the room beside
+ * it, once — as portrait docks along the bottom and slides up.
+ */
+test.describe('a phone held sideways', () => {
+  test.use({ viewport: { width: 844, height: 390 }, hasTouch: true, isMobile: true })
+
+  test("the record panel docks at the side and leaves a poll's answers in reach", async ({
+    page,
+  }) => {
+    await seedBoard(
+      page,
+      buildBoard((board) => {
+        board.add('poll', { x: 620, y: 220 }, { text: [{ text: 'Cats or dogs?' }] })
+      }),
+    )
+    await page.locator('[data-object-type="poll"]').getByTestId('poll-question').click()
+    const panel = await boxOf(page.getByTestId('inspector'))
+    expect(panel.x + panel.width).toBeGreaterThanOrEqual(844 - 1)
+    for (const testId of ['poll-option-o1', 'poll-option-o2', 'poll-close']) {
+      const box = await boxOf(page.getByTestId(testId))
+      const hit = await page.evaluate(
+        ({ x, y, id }) =>
+          document.elementFromPoint(x, y)?.closest(`[data-testid="${id}"]`) !== null,
+        { x: box.x + box.width / 2, y: box.y + box.height / 2, id: testId },
+      )
+      expect(hit, `${testId} under the panel`).toBe(true)
+    }
+  })
+})

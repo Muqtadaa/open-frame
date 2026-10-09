@@ -40,5 +40,6 @@ beside your own account.
 FINISH: `e2e-rooms/shared-board.spec.ts` holds counting everyone, faces as
 side-by-side targets, following from the list behind the count, riding the
 followed viewport and Stop, and refusing to follow somebody who is already
-following; `scene/presence.test.ts` holds who can be followed. No golden shows
-it yet. Critique 2026-10-07: 26/40. DESIGN.md: People and Following.
+following; `scene/presence.test.ts` holds who can be followed; the "people on a
+board" golden holds the list in both worlds, four people faked over a refused
+room. Critique 2026-10-07: 26/40. DESIGN.md: People and Following.

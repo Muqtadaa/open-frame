@@ -13,6 +13,13 @@ import type { Size } from '../scene/anchoring.js'
 import { versionTime } from './version-time.js'
 
 /**
+ * Versions drawn at a time. A board edited for months keeps about a thousand,
+ * and the sheet used to draw every row at once (audit 2026-10-08); the newest
+ * are what people look back for, and the rest are a press away.
+ */
+const PAGE = 50
+
+/**
  * The board's earlier versions (ADR 0019), opened from the menu on the
  * board's name.
  *
@@ -85,6 +92,9 @@ export function VersionList({
    * second does it.
    */
   const [doomed, setDoomed] = useState<string | null>(null)
+  const [shown, setShown] = useState(PAGE)
+  /** The first row a "Show earlier" press revealed, which then takes the keyboard. */
+  const revealFrom = useRef<number | null>(null)
   const list = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
@@ -108,6 +118,15 @@ export function VersionList({
       list.current?.querySelector<HTMLElement>('input, button')
     target?.focus()
   }, [ready, versions])
+
+  useEffect(() => {
+    // The button that was pressed may be gone once the last page is out, and
+    // focus with it; the first row it brought in is where reading carries on.
+    const from = revealFrom.current
+    if (from === null) return
+    revealFrom.current = null
+    list.current?.querySelectorAll<HTMLElement>('[data-testid="history-version"]')[from]?.focus()
+  }, [shown])
 
   if (history === null || history === undefined) return null
 
@@ -213,20 +232,20 @@ export function VersionList({
         </form>
       )}
       {versions === 'loading' ? (
-        <p className="of-mentions__where" role="status">
+        <p className="of-history__status" role="status">
           Loading versions
         </p>
       ) : versions === null ? (
-        <p className="of-mentions__where" role="status">
+        <p className="of-history__status" role="status">
           The versions could not be reached.
         </p>
       ) : versions.length === 0 ? (
-        <p className="of-mentions__where" role="status">
+        <p className="of-history__status" role="status">
           No earlier versions yet.
         </p>
       ) : (
-        <ul className="of-mentions__list" data-testid="history-list">
-          {versions.map((version) => (
+        <ul className="of-history__list" data-testid="history-list">
+          {versions.slice(0, shown).map((version) => (
             <li key={version.id} className="of-history__row">
               <button
                 type="button"
@@ -236,9 +255,9 @@ export function VersionList({
                   void choose(version)
                 }}
               >
-                <span className="of-mentions__who">{version.name ?? versionTime(version.at)}</span>
+                <span className="of-history__label">{version.name ?? versionTime(version.at)}</span>
                 {version.name !== undefined && (
-                  <span className="of-mentions__where">{versionTime(version.at)}</span>
+                  <span className="of-history__when">{versionTime(version.at)}</span>
                 )}
               </button>
               {canEdit && version.kind === 'named' && (
@@ -262,10 +281,25 @@ export function VersionList({
               )}
             </li>
           ))}
+          {versions.length > shown && (
+            <li className="of-history__more">
+              <button
+                type="button"
+                className="of-button of-button--ghost"
+                data-testid="history-more"
+                onClick={() => {
+                  revealFrom.current = shown
+                  setShown((count) => count + PAGE)
+                }}
+              >
+                Show earlier versions
+              </button>
+            </li>
+          )}
         </ul>
       )}
       {failed !== null && (
-        <p className="of-mentions__where" role="alert" data-testid="history-failed">
+        <p className="of-history__status" role="alert" data-testid="history-failed">
           {failed}
         </p>
       )}

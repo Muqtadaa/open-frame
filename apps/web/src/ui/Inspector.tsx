@@ -33,7 +33,7 @@ import {
 } from 'react'
 import { createPortal } from 'react-dom'
 
-import { AnchoredSurface } from '../controls/AnchoredSurface.js'
+import { AnchoredSurface, CHROME_MOVED } from '../controls/AnchoredSurface.js'
 import {
   FURNITURE_MOVED,
   furnitureBands,
@@ -86,6 +86,18 @@ const MARGIN_PX = 12
 const DOCK_BELOW_PX = 560
 /** A docked sheet takes at most this much of the window's height. */
 const DOCK_SHARE = 0.5
+/*
+ * Below this HEIGHT, on a window wide enough not to dock along the bottom —
+ * a phone held sideways — the panel docks down the right edge (owner, 10-09).
+ * Floating, it had no room above or below a selection, so it lay beside it at
+ * best and on it at worst: a poll's answers and its Close under the panel
+ * describing the poll (audit 2026-10-08).
+ */
+const SIDE_BELOW_PX = 520
+/** The side sheet's width: the panel's controls, without its floating air. */
+const SIDE_WIDTH = 320
+
+type Dock = 'bottom' | 'side' | null
 /*
  * There WAS a PANEL_HEIGHT_PX here — 420, "roughly the panel's tallest form" —
  * because the placement it fed could not measure. A guess that must never
@@ -186,10 +198,19 @@ export function Inspector() {
    */
   const [bands, setBands] = useState(furnitureBands)
   useEffect(() => watchFurnitureBands(setBands), [])
-  const docked = canvasSize.width > 0 && canvasSize.width < DOCK_BELOW_PX
-  const tallest = docked
-    ? Math.floor(canvasSize.height * DOCK_SHARE)
-    : Math.max(120, canvasSize.height - bands.top - bands.bottom - 2 * MARGIN_PX)
+  const dock: Dock =
+    canvasSize.width <= 0
+      ? null
+      : canvasSize.width < DOCK_BELOW_PX
+        ? 'bottom'
+        : canvasSize.height < SIDE_BELOW_PX
+          ? 'side'
+          : null
+  const docked = dock !== null
+  const tallest =
+    dock === 'bottom'
+      ? Math.floor(canvasSize.height * DOCK_SHARE)
+      : Math.max(120, canvasSize.height - bands.top - bands.bottom - 2 * MARGIN_PX)
   const panel = useRef<HTMLDivElement | null>(null)
 
   /*
@@ -572,7 +593,7 @@ export function Inspector() {
 
   return (
     <PanelPlace
-      docked={docked}
+      dock={dock}
       anchor={selectionBox}
       surface={canvasSize}
       /*
@@ -591,14 +612,16 @@ export function Inspector() {
           selectionKey={selectionKey}
           firstReveal={firstReveal}
           bounds={bounds}
-          width={canvasSize.width}
-          room={canvasSize.height - tallest - MARGIN_PX}
+          // The room the sheet leaves: above it along the bottom, beside it
+          // down the side.
+          width={dock === 'side' ? canvasSize.width - SIDE_WIDTH - MARGIN_PX : canvasSize.width}
+          room={dock === 'side' ? canvasSize.height : canvasSize.height - tallest - MARGIN_PX}
         />
       )}
       <div
         ref={placePanel}
         className={`of-inspector of-surface${yielding || measuring ? ' of-inspector--yielding' : ''}${
-          docked ? ' of-inspector--docked' : ''
+          dock === 'bottom' ? ' of-inspector--docked' : dock === 'side' ? ' of-inspector--side' : ''
         }${scrolls ? ' of-inspector--scrolls' : ''}`}
         data-testid="inspector"
         role="group"
@@ -973,11 +996,11 @@ export function Inspector() {
  * editor chrome, so a press inside it is never read as a board gesture.
  */
 function PanelPlace({
-  docked,
+  dock,
   children,
   ...surface
-}: { readonly docked: boolean } & ComponentProps<typeof AnchoredSurface>) {
-  if (!docked) return <AnchoredSurface {...surface}>{children}</AnchoredSurface>
+}: { readonly dock: Dock } & ComponentProps<typeof AnchoredSurface>) {
+  if (dock === null) return <AnchoredSurface {...surface}>{children}</AnchoredSurface>
   const layer =
     typeof window === 'undefined'
       ? null
@@ -985,14 +1008,22 @@ function PanelPlace({
   if (layer === null || surface.anchor === null) return null
   return createPortal(
     /*
-     * Docked, the panel is furniture along the bottom, like the zoom cluster:
+     * Docked, the panel is furniture, like the zoom cluster. Along the bottom,
      * what is anchored to the selection — the reaction bar, the format bar —
      * keeps above it rather than being placed under half a screen of panel.
+     * Down the side it runs between the bars at the top and the bottom, and
+     * what floats beside a selection keeps off it as it keeps off the floating
+     * panel (`useOptionsPanelRect`).
      */
     <div
-      className="of-chrome of-editor-chrome of-inspector-dock"
+      className={`of-chrome of-editor-chrome of-inspector-dock${
+        dock === 'side' ? ' of-inspector-dock--side' : ''
+      }`}
       data-testid={surface.testId ?? 'object-chrome'}
-      data-keep-clear="bottom"
+      data-keep-clear={dock === 'bottom' ? 'bottom' : undefined}
+      // Where it runs from and to is the stylesheet's, between the bands the
+      // bars take (`--of-nav-band`, `--of-zoom-band`); only how wide is here.
+      style={dock === 'side' ? { width: `${String(SIDE_WIDTH)}px` } : undefined}
     >
       <SaysItMoved />
       {children}
@@ -1027,13 +1058,20 @@ function RevealAboveDock({
   return null
 }
 
-/** Tells the furniture watchers when the docked panel comes and goes. */
+/**
+ * Tells the furniture watchers when the docked panel comes and goes — and the
+ * surfaces that keep off the panel, which read where it is (CHROME_MOVED).
+ */
 function SaysItMoved() {
   useEffect(() => {
-    window.dispatchEvent(new Event(FURNITURE_MOVED))
+    const say = (): void => {
+      window.dispatchEvent(new Event(FURNITURE_MOVED))
+      window.dispatchEvent(new Event(CHROME_MOVED))
+    }
+    say()
     return () => {
       // After it has gone from the page, so it is not measured on the way out.
-      requestAnimationFrame(() => window.dispatchEvent(new Event(FURNITURE_MOVED)))
+      requestAnimationFrame(say)
     }
   }, [])
   return null

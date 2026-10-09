@@ -1322,3 +1322,27 @@ and people, which had been described only in passing inside the navigation bar.
 
 The design programme that started at C1 is closed. What stays open is in the
 [2026-10-08 audit's standing items](audit-2026-10-08.md).
+
+## The audit's standing items (2026-10-09)
+
+Four of the five items the 2026-10-08 audit left standing are fixed, each
+with a test seen failing first:
+
+- **The voting banner on a phone is one line:** the count and the Vote switch,
+  with Take back, Reveal, Results, End, Reopen and Clear in a menu beside them
+  (owner's choice). It was 136px over three rows and covered the top of the
+  board; it is one row of finger-sized controls now. `phone-width.spec.ts`.
+- **The record panel on a phone held sideways docks down the right edge**
+  between the navigation bar and the zoom cluster, and slides a selection it
+  would cover to the left (owner's choice). A poll's answers and Close were
+  under it. Placed by the stylesheet (`--of-zoom-band` beside
+  `--of-nav-band`), so `chrome-contract` still finds nothing that computes a
+  position of its own.
+- **The version list draws fifty at a time,** and has its own classes rather
+  than the mentions list's. `VersionHistory.test.tsx`.
+- **Goldens for version history, the board overview and people,** in both
+  worlds; the people sheet's four people are presence frames sent over a
+  refused room.
+
+Standing still, by decision: reaction chips and the flyout chevrons pass the
+24px minimum and scale with the board.

@@ -1054,7 +1054,9 @@ paper, hung from the menu. An editor gets "Name this version" and Save; then
 the versions, newest first, each a full-width row reading its name or its
 time — "14:05 today", "yesterday", "Wed, 7 Oct", the year only when it is
 not this one — with the time under a name. A named version has Delete, which
-asks again as "Delete for good"; an automatic one has none. "Loading
+asks again as "Delete for good"; an automatic one has none. The newest fifty
+are drawn, and "Show earlier versions" brings the next fifty, the keyboard
+landing on the first of them. "Loading
 versions", "No earlier versions yet." and a failure that names what failed
 are the only other things it ever says. The keyboard lands on the newest
 version and stays inside until Escape hands it back to the menu.
@@ -1213,7 +1215,11 @@ and Clear ask in the bar first ("Show everyone the counts?"), with the keyboard
 on the answer that does it. Putting down the last vote lets go of the tool and
 the bar reads "All 5 votes placed". A viewer
 reads "Voting open · view only". The banner is furniture: a selection's floating
-apparatus keeps clear of it. Results lists the notes by dots, most first —
+apparatus keeps clear of it. Below 520px wide the round is one line — "3 of 5
+left" and the Vote switch — and the rest is in a menu beside them: Take back
+dots, Reveal, Results, End, Reopen and Clear, under a line naming the round and
+how many have voted. There the results wait to be asked for rather than opening
+on End, since the list would take back the top of the board the line gives. Results lists the notes by dots, most first —
 each with its place (ties share one) and an ink wash for its share of the top
 count — each a row that selects and shows its note, with "Select top 3" (ties
 with third come too). Ending a round opens the results for everybody: they
@@ -1320,7 +1326,10 @@ selection has room for it — it docks as a sheet along the bottom, on the chrom
 layer, taking at most half the window. A newly selected thing the sheet would
 cover is slid up into the half above it — the smallest pan, never a zoom, and
 never mid-gesture — so a poll's own Close is not under the panel describing
-the poll. When it goes (Escape, Delete, a click away) and the keyboard was in
+the poll. Below 520px tall on a wider window — a phone held sideways — it
+docks down the right edge instead, 320px wide, between the navigation bar and
+the zoom cluster (`--of-nav-band`, `--of-zoom-band`), and a selection it would
+cover slides left the same way. When it goes (Escape, Delete, a click away) and the keyboard was in
 it, the keyboard goes back to the board.
 
 **On a phone, surfaces dock to the edges.** Below 520px wide, everything that
