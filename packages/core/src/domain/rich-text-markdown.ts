@@ -25,7 +25,7 @@ export function richTextToMarkdown(rich: RichText): string {
   let previousWasItem = false
 
   for (const paragraph of paragraphs) {
-    const words = paragraph.spans.map(inline).join('')
+    const words = linked(paragraph.spans)
     if (paragraph.list === undefined) {
       if (lines.length > 0) lines.push('')
       lines.push(escapeLineStart(words))
@@ -59,6 +59,36 @@ const WRAP: readonly (readonly [Mark, string])[] = [
   ['italic', '*'],
   ['strike', '~~'],
 ]
+
+/**
+ * A paragraph's runs, with each stretch that goes to one place written as one
+ * Markdown link — "[the **pricing**](…)", not a link per change of mark.
+ */
+function linked(spans: readonly TextSpan[]): string {
+  let out = ''
+  let index = 0
+  while (index < spans.length) {
+    const href = spans[index]?.link
+    let end = index + 1
+    while (href !== undefined && end < spans.length && spans[end]?.link === href) end += 1
+    const words = spans.slice(index, end).map(inline).join('')
+    out += href === undefined || words.trim() === '' ? words : `[${words}](${destination(href)})`
+    index = end
+  }
+  return out
+}
+
+/**
+ * A target as an unbracketed Markdown destination. Parentheses and backslashes
+ * are escaped; `<` and `>` are percent-encoded instead, because an HTML-aware
+ * renderer reads `<…` as a tag, and encoded they are the same address.
+ */
+function destination(href: string): string {
+  return href
+    .replace(/[\\()]/g, (char) => `\\${char}`)
+    .replace(/</g, '%3C')
+    .replace(/>/g, '%3E')
+}
 
 function inline(span: TextSpan): string {
   const escaped = escapeInline(span.text)

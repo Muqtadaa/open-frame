@@ -1178,6 +1178,14 @@ function TableEditor({
               if (editing !== null) field.current?.toggleList(kind)
               else toggleRangeList(kind)
             }}
+            // A link needs words to be on: only while a cell is being typed in.
+            {...(editing === null
+              ? {}
+              : {
+                  onLinkOpen: () => field.current?.holdSelection(),
+                  onLink: (href: string | undefined) => field.current?.setLink(href),
+                  linkScope: `${String(editing.cell.row)}:${String(editing.cell.col)}`,
+                })}
           />
           <div className="of-cellbar__head">
             <span className="of-cellbar__count" data-testid="table-selection-count">

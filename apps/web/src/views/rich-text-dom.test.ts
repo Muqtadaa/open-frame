@@ -336,3 +336,31 @@ describe('the selection a field opens with', () => {
     expect(range.toString()).toBe('onetwo')
   })
 })
+
+describe('links in the editor (ADR 0021)', () => {
+  const HREF = 'https://example.com/pricing'
+
+  it('reads a link as the target of its words, marks and all', () => {
+    expect(parse(`See <a href="${HREF}">the <strong>price</strong></a>`)).toEqual([
+      { text: 'See ' },
+      { text: 'the ', link: HREF },
+      { text: 'price', marks: ['bold'], link: HREF },
+    ])
+  })
+
+  it('reads a link a board may not hold as words with no target', () => {
+    expect(parse('<a href="javascript:alert(1)">click</a>')).toEqual([{ text: 'click' }])
+    expect(parse('<a href="/relative">here</a>')).toEqual([{ text: 'here' }])
+  })
+
+  it('writes a link back as an anchor that leaves nothing behind it', () => {
+    const text: RichText = [{ text: 'See ' }, { text: 'price', marks: ['bold'], link: HREF }]
+    const host = document.createElement('div')
+    renderSpansInto(host, text)
+    const anchor = host.querySelector('a')
+    expect(anchor?.getAttribute('href')).toBe(HREF)
+    expect(anchor?.rel).toBe('noopener noreferrer')
+    expect(anchor?.target).toBe('_blank')
+    expect(spansFromElement(host)).toEqual(text)
+  })
+})

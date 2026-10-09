@@ -1,13 +1,16 @@
 import {
+  applyLink,
   applyMark,
   applySize,
   indentBy,
+  linkOf,
   listOf,
   markCovers,
   markTouches,
   paragraphsOf,
   DEFAULT_SIZE,
   plainTextOf,
+  safeLink,
   setList,
   SIZE_TOKENS,
   spliceText,
@@ -47,6 +50,8 @@ export interface FormatState {
   readonly list: ListKind | undefined
   /** The size the next step starts from; undefined when the text disagrees. */
   readonly size: SizeToken | undefined
+  /** Where the selection goes, when all of it goes to one place. */
+  readonly link?: string | undefined
 }
 
 /** The commands a format bar sends to whichever field it is driving. */
@@ -58,6 +63,17 @@ export interface RichTextFieldHandle {
   readonly read: () => RichText
   /** Takes the keyboard back, with the selection it had — Escape from the bar. */
   readonly focus: () => void
+  /**
+   * Remembers the selection before the keyboard leaves for the link field,
+   * which takes the browser's selection with it.
+   */
+  readonly holdSelection: () => void
+  /**
+   * Links what was selected when the link field opened, or takes the link
+   * off it (`undefined`). A caret with nothing selected inserts the address
+   * itself as its own words, or, for `undefined`, unlinks the link it is in.
+   */
+  readonly setLink: (href: string | undefined) => void
 }
 
 interface Props {
@@ -173,6 +189,7 @@ export function RichTextField({
       ),
       list: listOf(text, from, to),
       size: sizeReadout(text, sized.from, sized.to),
+      link: linkOf(text, from, to),
     })
   }
 
@@ -268,10 +285,37 @@ export function RichTextField({
    */
   const lastSelection = useRef<{ from: number; to: number } | null>(null)
 
+  const setLink = (href: string | undefined): void => {
+    const element = ref.current
+    if (element === null) return
+    const text = spansFromElement(element)
+    const at = lastSelection.current ?? selectionOffsets(element) ?? { from: 0, to: 0 }
+    lastSelection.current = null
+    element.focus()
+    if (at.to > at.from) {
+      redraw(applyLink(text, at.from, at.to, href), at.from, at.to)
+      return
+    }
+    if (href !== undefined) {
+      const end = at.from + href.length
+      redraw(spliceText(text, at.from, at.from, [{ text: href, link: href }]), end, end)
+      return
+    }
+    const run = linkRunAt(text, at.from)
+    if (run === null) setSelectionOffsets(element, at.from, at.to)
+    else redraw(applyLink(text, run.from, run.to, undefined), at.from, at.from)
+  }
+
   useImperativeHandle(handle, () => ({
     toggleMark,
     resize,
     toggleList,
+    setLink,
+    holdSelection: () => {
+      const element = ref.current
+      const at = element === null ? null : selectionOffsets(element)
+      if (at !== null) lastSelection.current = at
+    },
     read: () => (ref.current === null ? initialText : spansFromElement(ref.current)),
     focus: () => {
       const element = ref.current
@@ -327,6 +371,24 @@ export function RichTextField({
       if (event.code === 'Period' || event.code === 'Comma') {
         event.preventDefault()
         resize(event.code === 'Period' ? 1 : -1)
+        return
+      }
+    }
+
+    /*
+     * Mod+K: the link field, as every editor that has links binds it. The
+     * field lives in the bar, so this is the bar's Link button pressed from
+     * the text, with the selection remembered for when the address comes back.
+     */
+    if (mod && !event.shiftKey && !event.altKey && event.key.toLowerCase() === 'k') {
+      const button = ref.current?.ownerDocument.querySelector<HTMLElement>(
+        '[data-testid="format-link"]',
+      )
+      if (button !== null && button !== undefined) {
+        event.preventDefault()
+        const element = ref.current
+        lastSelection.current = element === null ? null : selectionOffsets(element)
+        button.click()
         return
       }
     }
@@ -455,6 +517,28 @@ export function RichTextField({
          */
         event.preventDefault()
         const element = event.currentTarget
+        const plain = event.clipboardData.getData('text/plain')
+        /*
+         * An address pasted over selected words links them, as in every
+         * editor with links; pasted at a caret it arrives as its own words,
+         * already linked (ADR 0021).
+         */
+        const address = /\s/.test(plain.trim()) ? null : safeLink(plain)
+        if (address !== null) {
+          const at = selectionOffsets(element) ?? { from: 0, to: 0 }
+          const text = spansFromElement(element)
+          if (at.to > at.from) {
+            redraw(applyLink(text, at.from, at.to, address), at.from, at.to)
+          } else {
+            const caret = at.from + address.length
+            redraw(
+              spliceText(text, at.from, at.from, [{ text: address, link: address }]),
+              caret,
+              caret,
+            )
+          }
+          return
+        }
         const html = event.clipboardData.getData('text/html')
         if (html !== '') {
           /*
@@ -478,6 +562,25 @@ export function RichTextField({
       }}
     />
   )
+}
+
+/** The whole run of one link that a caret sits in, or null. */
+export function linkRunAt(text: RichText, at: number): { from: number; to: number } | null {
+  const href = linkOf(text, at, at)
+  if (href === undefined) return null
+  let run: { from: number; to: number } | null = null
+  let seen = 0
+  for (const span of text) {
+    const start = seen
+    seen += span.text.length
+    if (span.link !== href) {
+      if (run !== null && run.from <= at && at <= run.to) return run
+      run = null
+      continue
+    }
+    run = run === null ? { from: start, to: seen } : { from: run.from, to: seen }
+  }
+  return run !== null && run.from <= at && at <= run.to ? run : null
 }
 
 /**

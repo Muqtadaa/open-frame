@@ -543,7 +543,7 @@ export function KeyIcon({ className }: IconProps) {
   )
 }
 
-/** A link, for the one that lets people watch without changing anything. */
+/** A link: a share link, or words that go somewhere (ADR 0021). */
 export function LinkIcon({ className }: IconProps) {
   return (
     <svg {...base} className={className}>

@@ -313,6 +313,11 @@ consequences.
     for every object on the board.
   - `e2e-rooms/content-security.spec.ts` runs a shared board against a
     production build served with these headers.
+- **Links in the words** (ADR 0021): a span's target is checked at the
+  boundary by `safeLink` — `http:`, `https:` and `mailto:` only, so
+  `javascript:` and `data:` never reach a document — and again before
+  `window.open`. Drawn with `rel="noopener noreferrer"`; followed only by
+  Mod+click or keyboard activation, in a new tab. The CSP is unchanged.
 - **Links in URLs:** the page URL carries the link (`?k=`). The socket URL
   carries the link, the token and the owner key (`collab/src/room-url.ts:62-76`).
   HTTP endpoints take credentials in the body or headers instead.

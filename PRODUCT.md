@@ -73,7 +73,8 @@ architecture here spent its first phase on, ahead of anything visible.
 shape kinds, frames, connectors, images, groups; selection, resize, rotation,
 z-order, clipboard, undo/redo; snap-to-grid and alignment guides; local
 persistence with schema versioning and migrations; image upload validated by
-content; inline rich text; tables and code blocks.
+content; inline rich text with lists and links; tables and code blocks; paste
+special, which makes notes of a pasted list or a table of pasted rows.
 
 **The shared half:** a board is shared by link and edited live by several
 people at once, with presence, comments and mentions. Creating and sharing a

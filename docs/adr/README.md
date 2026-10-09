@@ -30,6 +30,7 @@ Format: Status · Context · Decision · Alternatives considered · Consequences
 | [0018](0018-ai-clustering-on-the-room-server.md)        | **AI clustering runs on the room server, and proposes copies**      | Accepted           |
 | [0019](0019-version-history.md)                         | **Version history: whole snapshots, thinned, restored as an edit**  | Accepted           |
 | [0020](0020-export-as-a-readout.md)                     | **Export is a readout first: Markdown, with provenance**            | Accepted           |
+| [0021](0021-links-in-text.md)                           | **A link is a span's target, not a mark**                           | Accepted           |
 
 ## Writing a new one
 

@@ -33,6 +33,7 @@ import { SelectionOverlay } from './SelectionOverlay.js'
 import { useCanvasGestures } from './use-canvas-gestures.js'
 import { useClipboardEvents } from '../hooks/use-clipboard-events.js'
 import { useImageDrop } from './use-image-drop.js'
+import { useFollowLink } from './use-follow-link.js'
 import { useWheelGesture } from './use-wheel-gesture.js'
 import { useCanvasSize } from './use-canvas-size.js'
 import { useMoving } from './use-moving.js'
@@ -95,6 +96,7 @@ export function Canvas() {
   // Wheel is handled by a native non-passive listener rather than an onWheel
   // prop — see use-wheel-gesture.ts for why that is not optional.
   useWheelGesture(containerRef)
+  useFollowLink(containerRef)
   useKeyboardShortcuts(gestures.setSpaceHeld)
   useClipboardEvents()
   const imageDrop = useImageDrop(containerRef)

@@ -228,3 +228,38 @@
   color: var(--of-ink-muted);
   text-align: center;
 }
+
+/*
+ * The link field opens in the bar itself, beside the button that opened it:
+ * an address is short work, and a second surface would hide the words being
+ * linked (ADR 0021).
+ */
+.of-format-bar__link {
+  display: flex;
+  gap: var(--of-space-4);
+  align-items: center;
+}
+
+.of-format-bar__address {
+  width: 240px;
+}
+
+.of-format-bar__refused {
+  font-size: var(--of-type-record);
+  color: var(--of-danger);
+}
+
+/*
+ * A link in the words (ADR 0021): the text's own ink, underlined in the
+ * accent, so it reads as a link without becoming a second text colour that
+ * every note's contrast would have to answer for. The pointer stays the
+ * board's — a plain click selects; Mod+click follows.
+ */
+.of-link {
+  color: inherit;
+  text-decoration: underline;
+  text-decoration-color: var(--of-accent);
+  text-decoration-thickness: 1px;
+  text-underline-offset: 2px;
+  cursor: inherit;
+}

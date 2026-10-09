@@ -1,6 +1,7 @@
-import { SIZE_TOKENS, type ListKind, type Mark, type SizeToken } from '@openframe/core'
+import { safeLink, SIZE_TOKENS, type ListKind, type Mark, type SizeToken } from '@openframe/core'
+import { useState } from 'react'
 
-import { BulletListIcon, NumberListIcon } from '../controls/icons.js'
+import { BulletListIcon, LinkIcon, NumberListIcon } from '../controls/icons.js'
 import { ariaKeys, formatKeys } from '../scene/shortcuts.js'
 import type { FormatState } from './RichTextField.js'
 
@@ -65,6 +66,9 @@ export function FormatBar({
   onResize,
   onReturn,
   onLeave,
+  onLinkOpen,
+  onLink,
+  linkScope,
 }: {
   readonly state: FormatState
   /**
@@ -82,7 +86,36 @@ export function FormatBar({
    * text — which, for an object, is leaving the edit.
    */
   readonly onLeave?: ((to: Element | null) => void) | undefined
+  /**
+   * The link field is opening: the text should remember its selection, which
+   * the field is about to take (ADR 0021).
+   */
+  readonly onLinkOpen?: (() => void) | undefined
+  /** Links the selection to a safe address, or unlinks it (`undefined`). No link control without it. */
+  readonly onLink?: ((href: string | undefined) => void) | undefined
+  /**
+   * Which text the link field belongs to, where the bar outlives it — a
+   * table's cell bar stays while the edit moves from cell to cell.
+   */
+  readonly linkScope?: string | undefined
 }) {
+  const [linking, setLinking] = useState(false)
+  const [address, setAddress] = useState('')
+  const [refused, setRefused] = useState(false)
+  /*
+   * A field left open is put away when the text it was for goes: otherwise the
+   * next cell to be typed in opens with the last one's address, and Enter
+   * writes it in with no selection held. Adjusted during render, not in an
+   * effect, so the stale field is never drawn even once.
+   */
+  const scope = onLink === undefined ? null : (linkScope ?? '')
+  const [linkFor, setLinkFor] = useState(scope)
+  if (linkFor !== scope) {
+    setLinkFor(scope)
+    setLinking(false)
+    setAddress('')
+    setRefused(false)
+  }
   const active = state.marks
   const mixed = state.mixed ?? []
   const list = state.list
@@ -95,6 +128,8 @@ export function FormatBar({
    * then apply a mark to a selection that no longer existed.
    */
   const keepFocus = (event: React.MouseEvent): void => {
+    // Except the link field, which has to take the keyboard to be typed in.
+    if (event.target instanceof HTMLInputElement) return
     event.preventDefault()
   }
 
@@ -114,6 +149,8 @@ export function FormatBar({
   const onKeyDown = (event: React.KeyboardEvent<HTMLDivElement>): void => {
     // The board's keymap must not read these as nudges, tools or deselection.
     event.stopPropagation()
+    // The link field keeps its arrows for its own caret, and its own Escape.
+    if (event.target instanceof HTMLInputElement) return
     const buttons = [...event.currentTarget.querySelectorAll<HTMLElement>('button')]
     const current = buttons.indexOf(event.target as HTMLElement)
     const go = (index: number): void => {
@@ -251,6 +288,94 @@ export function FormatBar({
           <Icon />
         </button>
       ))}
+
+      {onLink !== undefined && (
+        <>
+          <span className="of-format-bar__rule" aria-hidden="true" />
+          <button
+            type="button"
+            className="of-icon-button of-format-bar__button"
+            aria-label="Link"
+            aria-pressed={state.link !== undefined}
+            aria-expanded={linking}
+            aria-keyshortcuts={ariaKeys('Mod+K')}
+            data-tip={tip('Link', 'Mod+K')}
+            data-testid="format-link"
+            onMouseDown={keepFocus}
+            onClick={() => {
+              if (linking) {
+                setLinking(false)
+                onReturn?.()
+                return
+              }
+              onLinkOpen?.()
+              setAddress(state.link ?? '')
+              setRefused(false)
+              setLinking(true)
+            }}
+          >
+            <LinkIcon />
+          </button>
+          {linking && (
+            <form
+              className="of-format-bar__link"
+              onSubmit={(event) => {
+                event.preventDefault()
+                // An emptied field takes the link off; anything else must be
+                // somewhere a board may send people.
+                const href = address.trim() === '' ? undefined : safeLink(address)
+                if (href === null) {
+                  setRefused(true)
+                  return
+                }
+                setLinking(false)
+                onLink(href)
+              }}
+            >
+              <input
+                className="of-input of-format-bar__address"
+                type="url"
+                inputMode="url"
+                autoFocus
+                placeholder="https://"
+                aria-label="Link address"
+                aria-invalid={refused ? true : undefined}
+                aria-describedby={refused ? 'of-link-refused' : undefined}
+                data-testid="format-link-field"
+                value={address}
+                onChange={(event) => {
+                  setAddress(event.target.value)
+                  setRefused(false)
+                }}
+                onKeyDown={(event) => {
+                  if (event.key !== 'Escape') return
+                  event.preventDefault()
+                  setLinking(false)
+                  onReturn?.()
+                }}
+              />
+              {state.link !== undefined && (
+                <button
+                  type="button"
+                  className="of-button of-button--ghost"
+                  data-testid="format-unlink"
+                  onClick={() => {
+                    setLinking(false)
+                    onLink(undefined)
+                  }}
+                >
+                  Remove link
+                </button>
+              )}
+              {refused && (
+                <span id="of-link-refused" className="of-format-bar__refused" role="alert">
+                  Not a web or mail address
+                </span>
+              )}
+            </form>
+          )}
+        </>
+      )}
     </div>
   )
 }
