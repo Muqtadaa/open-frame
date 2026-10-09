@@ -1,4 +1,5 @@
 import { expect, test, type Page, type WebSocketRoute } from '@playwright/test'
+import { encodeRole, MESSAGE_AWARENESS } from '@openframe/collab'
 import { MUSIC_GENRES } from '@openframe/core/facilitation'
 
 import { buildBoard } from './boards.js'
@@ -51,6 +52,55 @@ async function openSharedBoard(page: Page): Promise<void> {
   await page.routeWebSocket(/\/room\//, () => undefined)
   await goto(page, `/?room=${BOARD}&k=${KEY}`)
   await page.waitForSelector('[data-testid="status-bar"]')
+}
+
+/**
+ * A shared board with other people on it, offline: the room answers with the
+ * role and with each person's presence, as a room catches a newcomer up, and
+ * says nothing else.
+ */
+async function openSharedBoardWith(page: Page, names: readonly string[]): Promise<void> {
+  await signedIn(page, [{ id: BOARD, title: 'Pricing research', role: 'owner' }])
+  await page.routeWebSocket(/\/room\//, (ws) => {
+    ws.send(Buffer.from(encodeRole('editor')))
+    // Fixed client ids, so the faces come out in the same order every time.
+    ws.send(
+      Buffer.from(presenceOf(names.map((name, index) => [1000 + index, { name, hue: index % 8 }]))),
+    )
+  })
+  await goto(page, `/?room=${BOARD}&k=${KEY}`)
+  await page.waitForSelector('[data-testid="status-bar"]')
+}
+
+/**
+ * A presence message for the given people, written out byte by byte: a count,
+ * then each client's id, clock and state as JSON (y-protocols' awareness
+ * update), inside the room's awareness frame. By hand because the suite does
+ * not depend on Yjs, and the format is four varints and a string.
+ */
+function presenceOf(people: readonly (readonly [number, object])[]): Uint8Array {
+  const uint = (into: number[], value: number): void => {
+    let rest = value
+    while (rest > 0x7f) {
+      into.push((rest & 0x7f) | 0x80)
+      rest >>>= 7
+    }
+    into.push(rest)
+  }
+  const update: number[] = []
+  uint(update, people.length)
+  for (const [client, state] of people) {
+    const json = new TextEncoder().encode(JSON.stringify(state))
+    uint(update, client)
+    uint(update, 1)
+    uint(update, json.length)
+    update.push(...json)
+  }
+  const message: number[] = []
+  uint(message, MESSAGE_AWARENESS)
+  uint(message, update.length)
+  message.push(...update)
+  return Uint8Array.from(message)
 }
 
 async function placeSticky(page: Page, text: string): Promise<void> {
@@ -294,6 +344,55 @@ for (const world of WORLDS) {
       await expect(page.getByTestId('votes')).toHaveAttribute('data-count', '2')
       await page.getByTestId('voting-results').click()
       await snap(page, `${world}-dot-voting`)
+    })
+
+    // The board's earlier versions, two of them named, from the board's menu.
+    test('version history', async ({ page }) => {
+      await page.clock.install({ time: new Date('2026-10-08T09:30:00Z') })
+      await openLocalBoard(page)
+      await placeSticky(page, 'Kickoff notes')
+      await page.getByTestId('board-menu').click()
+      await page.getByTestId('board-menu-history').click()
+      const field = page.getByRole('textbox', { name: 'Version name' })
+      for (const name of ['After the interviews', 'Before the workshop']) {
+        await field.fill(name)
+        await page.getByTestId('history-name-save').click()
+        await expect(page.getByTestId('history-version').first()).toContainText(name)
+        await page.clock.runFor(90 * 60_000)
+      }
+      await expect(page.getByTestId('history-version')).toHaveCount(2)
+      await snap(page, `${world}-version-history`)
+    })
+
+    // The board as a list: two frames and what is in them, and one loose note.
+    test('the board overview', async ({ page }) => {
+      await seedBoard(
+        page,
+        buildBoard((board) => {
+          const research = board.add('frame', { x: 560, y: 440 }, { name: [{ text: 'Research' }] })
+          for (const [text, x] of [
+            ['Price shown late', 400],
+            ['Returns unclear', 640],
+          ] as const) {
+            board.add('sticky', { x, y: 440 }, { text: [{ text }] }, undefined, research)
+          }
+          board.add('frame', { x: 1600, y: 440 }, { name: [{ text: 'Ideas' }] })
+          board.note('Live chat at checkout', { x: 1060, y: 560 })
+        }),
+      )
+      await page.getByTestId('board-menu').click()
+      await page.getByTestId('board-menu-overview').click()
+      await expect(page.getByTestId('board-overview')).toBeVisible()
+      await snap(page, `${world}-board-overview`)
+    })
+
+    // Everyone on a shared board, opened from the count past the faces.
+    test('the people on a board', async ({ page }) => {
+      await openSharedBoardWith(page, ['Ada', 'Bram', 'Chiara', 'Dev'])
+      await expect(page.getByTestId('room-people')).toHaveAttribute('data-count', '5')
+      await page.getByTestId('room-more').click()
+      await expect(page.getByTestId('people-sheet').locator('li')).toHaveCount(5)
+      await snap(page, `${world}-people`)
     })
 
     // An uncoloured frame on the world's paper, with a note laid on it.

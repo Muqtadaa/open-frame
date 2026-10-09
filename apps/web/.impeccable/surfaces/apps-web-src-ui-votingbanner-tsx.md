@@ -47,12 +47,14 @@ NOT: a badge on a note; a count shown while the round is hidden; a tool that
 stays armed with no open round; a double-click or a right-click that votes; a
 control that only a pointer can reach.
 
-STANDING: the banner still covers the top of the board at phone width (audit
-2026-10-08, standing items).
+PHONE: below 520px the round is one line — the count ("3 of 5 left") and the
+Vote switch — with a menu beside it holding Take back dots, Reveal, Results,
+End, Reopen and Clear under the round's title and turnout (owner, 10-09). The
+results do not open by themselves on End there.
 
 FINISH: `dot-voting.spec.ts` holds the round's life from setup to clear, the
 keyboard path, Take back, scope by frame, group and selection, the dots on the
 corner and only new dots inked in; `e2e-rooms/dot-voting.spec.ts` holds two
 people voting at once and a viewer refused; `phone-width.spec.ts` holds the
-banner docked; the "dot voting" golden holds its look in both worlds.
+banner docked and one line; the "dot voting" golden holds its look in both worlds.
 Critique 2026-10-07: 26/40. DESIGN.md: Dot Voting; Motion, The session.

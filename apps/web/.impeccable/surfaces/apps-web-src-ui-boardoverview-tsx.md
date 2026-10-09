@@ -41,5 +41,5 @@ FINISH: `board-overview.spec.ts` holds the summary and going to a choice, Tab
 kept inside, Escape, grounds, a crowded board listed in part, opening from the
 menu and the board, and a frame's row against its arrow;
 `navigation-bar.spec.ts` holds the keyboard walk; `phone-width.spec.ts` holds
-it starting after the rail; `keymap.test.ts` holds Alt+S. No golden shows it
-yet. Critique 2026-10-07: 22/36. DESIGN.md: Board Overview.
+it starting after the rail; `keymap.test.ts` holds Alt+S; the "board overview"
+golden holds its look in both worlds. Critique 2026-10-07: 22/36. DESIGN.md: Board Overview.
