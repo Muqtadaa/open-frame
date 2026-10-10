@@ -30,9 +30,11 @@ const MOST_ROWS = 8
 interface Props {
   readonly size: TableSize
   readonly onChoose: (size: TableSize) => void
+  /** Tab leaves the grid, which closes it rather than leaving it open behind. */
+  readonly onLeave: () => void
 }
 
-export function TableSizePicker({ size, onChoose }: Props) {
+export function TableSizePicker({ size, onChoose, onLeave }: Props) {
   /*
    * What the pointer is over, or null when it is not over the grid at all.
    * The CHOSEN size is what shows then, so the control always says what
@@ -53,6 +55,11 @@ export function TableSizePicker({ size, onChoose }: Props) {
   }, [])
 
   const move = (event: React.KeyboardEvent<HTMLDivElement>): void => {
+    if (event.key === 'Tab') {
+      event.preventDefault()
+      onLeave()
+      return
+    }
     const [columns, rows] =
       event.key === 'ArrowRight'
         ? [shown.columns + 1, shown.rows]

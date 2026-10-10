@@ -2,6 +2,7 @@ import { searchBoard, type SearchResult } from '@openframe/core'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 
 import { useEscapeToClose } from '../controls/escape-stack.js'
+import { stepIndex } from '../controls/roving.js'
 import { useCommands } from '../hooks/use-commands.js'
 import { useBoardDocument } from '../hooks/use-document-object.js'
 import { useInteractionStore } from '../interaction/interaction-store.js'
@@ -133,14 +134,9 @@ export function SearchPanel() {
           // The board's own shortcuts must not fire while typing a query.
           event.stopPropagation()
           if (event.key === 'Enter') go(active)
-          if (event.key === 'ArrowDown') {
-            event.preventDefault()
-            setActive((n) => Math.min(shown.length - 1, n + 1))
-          }
-          if (event.key === 'ArrowUp') {
-            event.preventDefault()
-            setActive((n) => Math.max(0, n - 1))
-          }
+          // Up and Down stop at the ends; Home and End stay the caret's.
+          const to = stepIndex(event, active, shown.length, { wrap: false, homeEnd: false })
+          if (to !== null) setActive(to)
         }}
       />
 

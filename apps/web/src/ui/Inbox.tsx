@@ -3,6 +3,7 @@ import { useCallback, useEffect, useId, useRef, useState } from 'react'
 import { AnchoredSurface } from '../controls/AnchoredSurface.js'
 import { InboxIcon } from '../controls/icons.js'
 import { useAnchoredTo } from '../controls/use-anchor.js'
+import { stepFocus } from '../controls/roving.js'
 import { useDismiss } from '../controls/use-dismiss.js'
 import { useMentions } from '../hooks/use-mentions.js'
 import { AgentChangeItems, useAgentChanges } from './AgentChanges.js'
@@ -111,13 +112,12 @@ export function Inbox() {
             tabIndex={-1}
             onKeyDown={(event) => {
               wrapTab(event)
-              // Up and down everything in it, wrapping, as every list here does.
-              if (event.key !== 'ArrowDown' && event.key !== 'ArrowUp') return
-              event.preventDefault()
-              const stops = [...event.currentTarget.querySelectorAll<HTMLElement>('a, button')]
-              const at = stops.indexOf(event.target as HTMLElement)
-              const step = event.key === 'ArrowDown' ? 1 : -1
-              stops[(at + step + stops.length) % stops.length]?.focus()
+              /*
+               * Up and down everything in it, wrapping, as every list here
+               * does — and the board does not see the press: it read the
+               * arrows as a nudge to the note selected underneath.
+               */
+              stepFocus(event, { items: 'a, button' })
             }}
           >
             {mentions.mentions.length > 0 && (

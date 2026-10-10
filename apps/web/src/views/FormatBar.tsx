@@ -2,6 +2,7 @@ import { safeLink, SIZE_TOKENS, type ListKind, type Mark, type SizeToken } from 
 import { useState } from 'react'
 
 import { BulletListIcon, LinkIcon, NumberListIcon } from '../controls/icons.js'
+import { stepFocus } from '../controls/roving.js'
 import { ariaKeys, formatKeys } from '../scene/shortcuts.js'
 import type { FormatState } from './RichTextField.js'
 
@@ -151,17 +152,9 @@ export function FormatBar({
     event.stopPropagation()
     // The link field keeps its arrows for its own caret, and its own Escape.
     if (event.target instanceof HTMLInputElement) return
-    const buttons = [...event.currentTarget.querySelectorAll<HTMLElement>('button')]
-    const current = buttons.indexOf(event.target as HTMLElement)
-    const go = (index: number): void => {
-      event.preventDefault()
-      buttons[(index + buttons.length) % buttons.length]?.focus()
-    }
-    if (event.key === 'ArrowRight') go(current + 1)
-    else if (event.key === 'ArrowLeft') go(current - 1)
-    else if (event.key === 'Home') go(0)
-    else if (event.key === 'End') go(buttons.length - 1)
-    else if (event.key === 'Escape' && onReturn !== undefined) {
+    // A toolbar is a row: Left and Right walk it, wrapping, with Home and End.
+    if (stepFocus(event, { items: 'button', orientation: 'horizontal' }) !== null) return
+    if (event.key === 'Escape' && onReturn !== undefined) {
       event.preventDefault()
       onReturn()
     }

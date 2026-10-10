@@ -234,6 +234,9 @@ export function Toolbar() {
                   setTool(spec.id)
                   close(false)
                 }}
+                dismiss={() => {
+                  close(true)
+                }}
               />
             </div>
           </AnchoredSurface>

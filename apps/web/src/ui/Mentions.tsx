@@ -7,6 +7,7 @@ import { useEscapeToClose } from '../controls/escape-stack.js'
 import { Ago } from './Ago.js'
 import { plainMentionText } from '../hooks/use-comments.js'
 import { useAnchoredTo } from '../controls/use-anchor.js'
+import { stepFocus } from '../controls/roving.js'
 import { useMentions } from '../hooks/use-mentions.js'
 import { counted } from '../controls/counted.js'
 
@@ -115,12 +116,7 @@ export function Mentions() {
             aria-label="Mentions"
             onKeyDown={(event) => {
               // Up and down the list, wrapping, as every other list here does.
-              if (event.key !== 'ArrowDown' && event.key !== 'ArrowUp') return
-              event.preventDefault()
-              const links = [...event.currentTarget.querySelectorAll<HTMLElement>('a')]
-              const at = links.indexOf(event.target as HTMLElement)
-              const step = event.key === 'ArrowDown' ? 1 : -1
-              links[(at + step + links.length) % links.length]?.focus()
+              stepFocus(event, { items: 'a' })
             }}
           >
             <MentionItems

@@ -1391,9 +1391,9 @@ const tableTool: ObjectTool<TableSize> = {
     label: 'Choose table size',
     popup: 'grid',
     testIds: { disclosure: 'table-menu', surface: 'table-size-flyout' },
-    Picker: ({ options, choose }) => (
+    Picker: ({ options, choose, dismiss }) => (
       <div className="of-flyout of-flyout--wide">
-        <TableSizePicker size={options} onChoose={choose} />
+        <TableSizePicker size={options} onChoose={choose} onLeave={dismiss} />
       </div>
     ),
   },

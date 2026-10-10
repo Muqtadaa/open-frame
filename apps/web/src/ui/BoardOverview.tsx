@@ -24,6 +24,7 @@ import { countOfType, typeTitle } from '../scene/type-noun.js'
 import { useEscapeToClose } from '../controls/escape-stack.js'
 import { wrapTab } from '../controls/wrap-tab.js'
 import { counted } from '../controls/counted.js'
+import { stepIndex } from '../controls/roving.js'
 
 /**
  * How many objects one level of the list shows before the rest are a single
@@ -303,19 +304,14 @@ export function BoardOverview() {
             }
             if (current === undefined) return
             const at = indexOf(current.key)
+            // Up, Down, Home and End move through the rows, stopping at the ends.
+            const to = stepIndex(event, at, rows.length, { wrap: false })
+            if (to !== null) {
+              go(to)
+              return
+            }
+            // Right and Left open and close a frame, as a tree's do.
             switch (event.key) {
-              case 'ArrowDown':
-                go(at + 1)
-                break
-              case 'ArrowUp':
-                go(at - 1)
-                break
-              case 'Home':
-                go(0)
-                break
-              case 'End':
-                go(rows.length - 1)
-                break
               case 'ArrowRight':
                 if (current.expanded === false) setExpanded((now) => toggled(now, current.key))
                 else if (current.expanded === true) go(at + 1)

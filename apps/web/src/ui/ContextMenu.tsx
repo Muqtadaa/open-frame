@@ -14,6 +14,7 @@ import { MIN_CLUSTER_NOTES, MIN_SUMMARY_NOTES } from '@openframe/core/ai'
 import { AnchoredSurface } from '../controls/AnchoredSurface.js'
 import { useEscapeToClose } from '../controls/escape-stack.js'
 import { DisclosureIcon } from '../controls/icons.js'
+import { stepFocus } from '../controls/roving.js'
 import { useViewportSize } from '../controls/use-viewport-size.js'
 import { useCanEdit } from '../hooks/use-can-edit.js'
 import { useCommands, type PasteAs } from '../hooks/use-commands.js'
@@ -53,10 +54,11 @@ const PASTE_AS: readonly (readonly [string, PasteAs])[] = [
 ]
 
 /** The items a keyboard can land on in ONE menu, in order, disabled ones included. */
+/** A menu's own items, not those of a submenu inside it. */
+const ITEMS = ':scope > .of-menu__group > [role="menuitem"]'
+
 function itemsIn(menu: HTMLElement | null): HTMLElement[] {
-  return menu === null
-    ? []
-    : [...menu.querySelectorAll<HTMLElement>(':scope > .of-menu__group > [role="menuitem"]')]
+  return menu === null ? [] : [...menu.querySelectorAll<HTMLElement>(ITEMS)]
 }
 
 /** A type as a word: "journey stage", not "journey-stage". */
@@ -730,53 +732,20 @@ function MenuList({
 
   const onKeyDown = (event: KeyboardEvent<HTMLDivElement>): void => {
     event.stopPropagation()
-    const items = itemsIn(list.current)
-    const current = items.indexOf(document.activeElement as HTMLElement)
-    const go = (index: number): void => {
-      event.preventDefault()
-      items[(index + items.length) % items.length]?.focus()
-    }
-    switch (event.key) {
-      case 'ArrowDown':
-        go(current + 1)
-        return
-      case 'ArrowUp':
-        go(current < 0 ? items.length - 1 : current - 1)
-        return
-      case 'Home':
-        go(0)
-        return
-      case 'End':
-        go(items.length - 1)
-        return
-      case 'ArrowRight': {
-        const element = items[current]
-        if (element?.getAttribute('aria-haspopup') === 'menu') {
-          event.preventDefault()
-          element.click()
-        }
-        return
-      }
-      case 'ArrowLeft':
-        if (closeOnLeft) {
-          event.preventDefault()
-          onClose()
-        }
-        return
-      case 'Tab':
+    // Up, Down, Home, End and a letter walk the items; Tab leaves, and closes.
+    if (stepFocus(event, { items: ITEMS, typeahead: true, onTab }) !== null) return
+    const current = document.activeElement
+    // Right and Left are the submenu's: into one, and back out of it.
+    if (event.key === 'ArrowRight') {
+      if (current instanceof HTMLElement && current.getAttribute('aria-haspopup') === 'menu') {
         event.preventDefault()
-        onTab(event.shiftKey)
-        return
-    }
-    if (event.key.length === 1 && /\S/.test(event.key) && !event.metaKey && !event.ctrlKey) {
-      const letter = event.key.toLowerCase()
-      for (let step = 1; step <= items.length; step++) {
-        const index = (current + step) % items.length
-        if (items[index]?.textContent?.trim().toLowerCase().startsWith(letter) === true) {
-          go(index)
-          return
-        }
+        current.click()
       }
+      return
+    }
+    if (event.key === 'ArrowLeft' && closeOnLeft) {
+      event.preventDefault()
+      onClose()
     }
   }
 

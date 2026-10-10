@@ -28,6 +28,7 @@ import { Ago } from './Ago.js'
 import { MentionPicker } from './MentionPicker.js'
 import { MentionText } from './MentionText.js'
 import { counted } from '../controls/counted.js'
+import { stepIndex } from '../controls/roving.js'
 
 /**
  * Reading and writing one conversation.
@@ -595,14 +596,11 @@ export function CommentPanel({ author }: { readonly author: string | null }) {
                * something here — Enter is a newline, Escape closes the panel.
                */
               if (picking) {
-                if (event.key === 'ArrowDown' || event.key === 'ArrowUp') {
-                  event.preventDefault()
-                  const step = event.key === 'ArrowDown' ? 1 : -1
-                  // Wraps, because a menu of three that stops at the bottom
-                  // makes you travel back up through all of them.
-                  setHighlight(
-                    (current) => (current + step + candidates.length) % candidates.length,
-                  )
+                // Wraps, because a menu of three that stops at the bottom
+                // makes you travel back up through all of them.
+                const to = stepIndex(event, highlight, candidates.length, { homeEnd: false })
+                if (to !== null) {
+                  setHighlight(to)
                   return
                 }
                 if (event.key === 'Escape') {
