@@ -18,7 +18,7 @@ import {
 
 import { AnchoredSurface } from '../controls/AnchoredSurface.js'
 import { ExpandIcon } from '../controls/icons.js'
-import { stepMenu } from '../controls/menu-keys.js'
+import { MENU_ITEMS, stepFocus } from '../controls/roving.js'
 import { useAnchoredTo } from '../controls/use-anchor.js'
 import { useDismiss } from '../controls/use-dismiss.js'
 import { useViewportSize } from '../controls/use-viewport-size.js'
@@ -632,7 +632,7 @@ function MoreActions({
             role="menu"
             aria-label="Voting actions"
             onKeyDown={(event) => {
-              stepMenu(event, close)
+              stepFocus(event, { items: MENU_ITEMS, onTab: close })
             }}
           >
             <p className="of-menu__label" data-testid="voting-more-heading">
