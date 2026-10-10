@@ -253,11 +253,14 @@ export interface ToolOptionsPicker<TOptions> {
   readonly testIds: { readonly disclosure: string; readonly surface: string }
   /**
    * The picker itself. It takes focus when it opens; `choose` arms the tool
-   * with what was picked and closes it.
+   * with what was picked and closes it. `dismiss` closes it with nothing
+   * chosen and gives the keyboard back to the tool: Tab leaving a picker is
+   * Tab closing it, or it stayed open behind with nothing focused in it.
    */
   readonly Picker: ComponentType<{
     readonly options: TOptions
     readonly choose: (options: TOptions) => void
+    readonly dismiss: () => void
   }>
 }
 

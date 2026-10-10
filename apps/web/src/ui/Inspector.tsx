@@ -39,6 +39,7 @@ import {
   furnitureBands,
   watchFurnitureBands,
 } from '../controls/screen-furniture.js'
+import { RADIOS, stepFocus } from '../controls/roving.js'
 import { useCommands } from '../hooks/use-commands.js'
 import { useBoardDocument } from '../hooks/use-document-object.js'
 import { useInteractionStore } from '../interaction/interaction-store.js'
@@ -1122,25 +1123,15 @@ function Choice<T extends string>({
   onPick,
   render,
 }: ChoiceProps<T>) {
+  /*
+   * The press is the group's alone: the board's keymap reads an arrow as a
+   * nudge, and stepping through a row of alignments once walked the selected
+   * object across the board as well, writing twice per press.
+   */
   const step = (event: React.KeyboardEvent<HTMLDivElement>): void => {
-    const forward = event.key === 'ArrowRight' || event.key === 'ArrowDown'
-    const back = event.key === 'ArrowLeft' || event.key === 'ArrowUp'
-    const edge = event.key === 'Home' ? 0 : event.key === 'End' ? options.length - 1 : null
-    if (!forward && !back && edge === null) return
-    event.preventDefault()
-    /*
-     * The board's own keymap listens on the window, and to it an arrow is a
-     * nudge: without this, stepping through a row of alignments also walked
-     * the selected object across the board, and each press wrote twice.
-     */
-    event.stopPropagation()
-    const at = options.indexOf(current)
-    const to = edge ?? (at + (forward ? 1 : -1) + options.length) % options.length
-    const next = options[to]
-    if (next === undefined) return
-    onPick(next)
-    const buttons = event.currentTarget.querySelectorAll<HTMLButtonElement>('[role="radio"]')
-    buttons[to]?.focus()
+    const moved = stepFocus(event, { items: RADIOS, orientation: 'both' })
+    const next = moved === null ? undefined : options[moved.index]
+    if (next !== undefined) onPick(next)
   }
 
   return (

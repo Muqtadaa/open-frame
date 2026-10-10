@@ -1,6 +1,7 @@
 import { useId, useState, type KeyboardEvent } from 'react'
 
 import { applyTheme, readTheme, type Theme } from '../app/theme.js'
+import { RADIOS, stepFocus } from '../controls/roving.js'
 
 const WORLDS: readonly { readonly theme: Theme; readonly name: string }[] = [
   { theme: 'notebook', name: 'Notebook' },
@@ -23,19 +24,9 @@ export function WorldSwitch() {
     applyTheme(next)
   }
   const step = (event: KeyboardEvent<HTMLDivElement>): void => {
-    if (!['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown'].includes(event.key)) return
-    event.preventDefault()
-    // The board's keymap would read an arrow as a nudge.
-    event.stopPropagation()
-    // From the option the keyboard is on, as any radio group moves.
-    const buttons = [...event.currentTarget.querySelectorAll<HTMLElement>('[role="radio"]')]
-    const at = Math.max(0, buttons.indexOf(document.activeElement as HTMLElement))
-    const by = event.key === 'ArrowLeft' || event.key === 'ArrowUp' ? -1 : 1
-    const to = (at + by + WORLDS.length) % WORLDS.length
-    const next = WORLDS[to]
-    if (next === undefined) return
-    choose(next.theme)
-    buttons[to]?.focus()
+    const moved = stepFocus(event, { items: RADIOS, orientation: 'both' })
+    const next = moved === null ? undefined : WORLDS[moved.index]
+    if (next !== undefined) choose(next.theme)
   }
   return (
     <div className="of-theme-choice">

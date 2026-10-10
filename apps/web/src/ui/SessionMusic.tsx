@@ -15,6 +15,7 @@ import {
 import { useCallback, useEffect, useRef, useState, useSyncExternalStore } from 'react'
 
 import { CloseIcon, NextTrackIcon, PreviousTrackIcon } from '../controls/icons.js'
+import { RADIOS, stepFocus } from '../controls/roving.js'
 import { useCanEdit } from '../hooks/use-can-edit.js'
 import { useMe } from '../hooks/use-me.js'
 import { useTick } from '../hooks/use-tick.js'
@@ -376,19 +377,10 @@ export function MusicPanel({ panel }: { readonly panel: MusicPanelProps }) {
          * own Tab stop and the arrows did nothing.
          */
         onKeyDown={(event) => {
-          const step =
-            event.key === 'ArrowRight' || event.key === 'ArrowDown'
-              ? 1
-              : event.key === 'ArrowLeft' || event.key === 'ArrowUp'
-                ? -1
-                : 0
-          if (step === 0) return
-          event.preventDefault()
-          const at = genres.indexOf(music.genre)
-          const next = genres[(at + step + genres.length) % genres.length]
-          if (next === undefined) return
-          choose(next)
-          event.currentTarget.querySelector<HTMLElement>(`[data-genre="${next}"]`)?.focus()
+          // Taken from the board too: an arrow here nudged the selected note.
+          const moved = stepFocus(event, { items: RADIOS, orientation: 'both' })
+          const next = moved === null ? undefined : genres[moved.index]
+          if (next !== undefined) choose(next)
         }}
       >
         {genres.map((genre, index) => (

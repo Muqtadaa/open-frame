@@ -1,6 +1,8 @@
 import { type KeyboardEvent, type ReactNode } from 'react'
 import { type AlignToken, type VAlignToken } from '@openframe/core'
 
+import { RADIOS, stepFocus } from '../../controls/roving.js'
+
 export const ALIGN_NAMES: Readonly<Record<AlignToken | VAlignToken, string>> = {
   start: 'Left',
   center: 'Centre',
@@ -29,15 +31,11 @@ export function CellChoice<T extends AlignToken | VAlignToken>({
   readonly onPick: (token: T) => void
   readonly render: (token: T) => ReactNode
 }) {
+  // A row, so Left and Right; Up and Down stay the table's.
   const step = (event: KeyboardEvent<HTMLDivElement>): void => {
-    const by = event.key === 'ArrowRight' ? 1 : event.key === 'ArrowLeft' ? -1 : 0
-    if (by === 0) return
-    event.preventDefault()
-    const next = options[(options.indexOf(current) + by + options.length) % options.length]
-    if (next === undefined) return
-    onPick(next)
-    const button = event.currentTarget.querySelector<HTMLElement>(`[data-testid="${name}-${next}"]`)
-    button?.focus()
+    const moved = stepFocus(event, { items: RADIOS, orientation: 'horizontal' })
+    const next = moved === null ? undefined : options[moved.index]
+    if (next !== undefined) onPick(next)
   }
   return (
     <div className="of-choice" role="radiogroup" aria-label={label} onKeyDown={step}>

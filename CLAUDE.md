@@ -663,6 +663,16 @@ own Escape, because there it takes an edit back rather than closing anything,
 and a drag in flight takes the press before any surface, and stops it there.
 `escape-guard.test.ts` lists every keydown listener on the window, with why.
 
+**Arrow keys** — a list of controls (a menu, a radio group, a toolbar, a list
+in a dialog) is walked with `stepFocus` from `controls/roving.ts`, and a list
+whose focus stays in a field (search, the mention picker, the overview tree)
+moves its index with `stepIndex`. Both take the press from the board only when
+the list used it: a list that let an arrow through nudged the selected note
+underneath, and one that let Tab walk out stayed open behind. A menu that Tab
+leaves passes `onTab` and closes. `keys-guard.test.ts` lists the few files
+that name an arrow key themselves — grids, a tree, submenus, the spreadsheet —
+with why.
+
 **Comments** — explain _why_, especially where a non-obvious choice prevents a
 specific failure. Do not narrate what the code already says.
 
