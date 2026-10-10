@@ -13,6 +13,7 @@ import {
   type LibraryEmoji,
   type LibraryGroup,
 } from './emoji-library.js'
+import { useEscapeToClose } from '../controls/escape-stack.js'
 import { wrapTab } from '../controls/wrap-tab.js'
 
 /** Emoji per row, which is also how far Up and Down move. */
@@ -80,6 +81,10 @@ function Picker({
     if (back instanceof HTMLElement && back.isConnected) back.focus()
   }
 
+  // Escape through the one stack: a field or a cell, it closes the picker and
+  // nothing opened before it.
+  useEscapeToClose(dismiss)
+
   useEffect(() => {
     const outside = (event: PointerEvent): void => {
       if (event.target instanceof Node && root.current?.contains(event.target)) return
@@ -110,12 +115,6 @@ function Picker({
 
   const onKeyDown = (event: KeyboardEvent<HTMLDivElement>): void => {
     wrapTab(event)
-    if (event.key === 'Escape') {
-      event.preventDefault()
-      event.stopPropagation()
-      dismiss()
-      return
-    }
     const all = cells()
     const at = all.indexOf(document.activeElement as HTMLButtonElement)
     const step =

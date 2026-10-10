@@ -2,6 +2,7 @@ import { screenToWorld } from '@openframe/core'
 import { Fragment, useEffect, useRef, useState, type ReactNode } from 'react'
 
 import { AnchoredSurface } from '../controls/AnchoredSurface.js'
+import { useEscapeToClose } from '../controls/escape-stack.js'
 import { useImageImport } from '../hooks/use-image-import.js'
 import { useScrollEdges } from '../hooks/use-scroll-edges.js'
 import { useInteractionStore } from '../interaction/interaction-store.js'
@@ -93,20 +94,18 @@ export function Toolbar() {
 
   /*
    * A menu that closed only when something in it was chosen was a trap: Escape
-   * and the board both ignored it. Escape now closes it (and stops there, so
-   * the board does not ALSO drop the selection), and a press anywhere but the
+   * and the board both ignored it. Escape now closes it, through the one stack,
+   * so the board does not ALSO drop the selection and a sheet opened before it
+   * stays open (a listener of its own closed both). A press anywhere but the
    * menu or the rail closes it too — the rail's own buttons decide for
    * themselves, or pressing the disclosure would close and reopen it.
    */
+  useEscapeToClose(() => {
+    setOpenMenu(null)
+    opener.current?.focus()
+  }, openMenu !== null)
   useEffect(() => {
     if (openMenu === null) return
-    const onKey = (event: KeyboardEvent): void => {
-      if (event.key !== 'Escape') return
-      event.stopPropagation()
-      event.preventDefault()
-      setOpenMenu(null)
-      opener.current?.focus()
-    }
     const onPress = (event: PointerEvent): void => {
       const target = event.target
       if (!(target instanceof Node)) return
@@ -114,10 +113,8 @@ export function Toolbar() {
       if (target instanceof Element && target.closest('.of-rail') !== null) return
       setOpenMenu(null)
     }
-    window.addEventListener('keydown', onKey, true)
     window.addEventListener('pointerdown', onPress, true)
     return () => {
-      window.removeEventListener('keydown', onKey, true)
       window.removeEventListener('pointerdown', onPress, true)
     }
   }, [openMenu])

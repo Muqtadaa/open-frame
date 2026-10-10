@@ -21,6 +21,7 @@ import { useInteractionStore } from '../interaction/interaction-store.js'
 import { useOpenFrame } from '../runtime/context.js'
 import { readingOrder } from '../scene/reading-order.js'
 import { countOfType, typeTitle } from '../scene/type-noun.js'
+import { useEscapeToClose } from '../controls/escape-stack.js'
 import { wrapTab } from '../controls/wrap-tab.js'
 import { counted } from '../controls/counted.js'
 
@@ -114,6 +115,11 @@ export function BoardOverview() {
     },
     [setOpen],
   )
+
+  // Escape through the one stack, from anywhere in the panel or its tree.
+  useEscapeToClose(() => {
+    close('back')
+  }, open)
 
   useEffect(() => {
     if (!open) return
@@ -264,13 +270,7 @@ export function BoardOverview() {
       aria-describedby="of-overview-summary"
       aria-modal="true"
       tabIndex={-1}
-      onKeyDown={(event) => {
-        wrapTab(event)
-        if (event.key !== 'Escape') return
-        event.stopPropagation()
-        event.preventDefault()
-        close('back')
-      }}
+      onKeyDown={wrapTab}
     >
       <h2 className="of-overview__title">{document.meta.title}</h2>
       <div id="of-overview-summary">
@@ -326,9 +326,6 @@ export function BoardOverview() {
                 break
               case 'Enter':
                 choose(current)
-                break
-              case 'Escape':
-                close('back')
                 break
               default:
                 return

@@ -106,14 +106,18 @@ export function useCanvasGestures(containerRef: RefObject<HTMLElement | null>) {
    * drag carried on and committed on release.
    *
    * Capture phase on the window, so this runs before the keymap's own Escape
-   * and can keep it from also letting go of the selection.
+   * and can keep it from also letting go of the selection. And stopped
+   * IMMEDIATELY: the Escape stack listens on the window too, and plain
+   * `stopPropagation` does not stop a listener on the same target, so a press
+   * that put a drag back also closed whatever had been opened mid-drag
+   * (Codex, on #108). Registered with the canvas, this always runs first.
    */
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent): void => {
       if (event.key !== 'Escape' || gesture.current === null) return
       abandon()
       event.preventDefault()
-      event.stopPropagation()
+      event.stopImmediatePropagation()
     }
     /*
      * A window that loses focus mid-gesture — a system dialog, a switch of

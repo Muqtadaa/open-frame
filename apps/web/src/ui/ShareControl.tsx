@@ -3,6 +3,7 @@ import { createPortal } from 'react-dom'
 
 import { AnchoredSurface } from '../controls/AnchoredSurface.js'
 import { useAnchoredTo } from '../controls/use-anchor.js'
+import { useEscapeToClose } from '../controls/escape-stack.js'
 import { useDismiss, useFocusOnOpen } from '../controls/use-dismiss.js'
 import { accessKey, COLLAB_ENABLED, shareLink } from '../app/collab-config.js'
 import { guestIdentity } from '../app/guest.js'
@@ -682,16 +683,11 @@ function ShareConfirm({
 }) {
   const confirm = useRef<HTMLButtonElement>(null)
 
-  useEffect(() => {
-    const onKey = (event: globalThis.KeyboardEvent): void => {
-      if (event.key !== 'Escape' || moving) return
-      event.preventDefault()
-      event.stopPropagation()
-      onCancel()
-    }
-    window.addEventListener('keydown', onKey, true)
-    return () => window.removeEventListener('keydown', onKey, true)
-  }, [moving, onCancel])
+  // Escape cancels, through the one stack; while the move is under way it is
+  // still taken, so it cannot fall through to whatever is underneath.
+  useEscapeToClose(() => {
+    if (!moving) onCancel()
+  })
 
   const app = document.querySelector('.of-app')
   if (app === null) return null

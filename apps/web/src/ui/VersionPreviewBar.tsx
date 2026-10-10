@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 
 import { versionPreview, type Previewed } from '../app/version-preview.js'
+import { useEscapeToClose } from '../controls/escape-stack.js'
 import { useCanEdit } from '../hooks/use-can-edit.js'
 import { useInteractionStore } from '../interaction/interaction-store.js'
 import { useOpenFrame } from '../runtime/context.js'
@@ -40,18 +41,9 @@ export function VersionPreviewBar({ preview }: { readonly preview: Previewed }) 
     focusTheBoard()
   }
 
-  useEffect(() => {
-    const escape = (event: KeyboardEvent): void => {
-      if (event.key !== 'Escape') return
-      event.preventDefault()
-      event.stopPropagation()
-      back()
-    }
-    window.addEventListener('keydown', escape, true)
-    return () => {
-      window.removeEventListener('keydown', escape, true)
-    }
-  }, [])
+  // Escape goes back to now, through the one stack: anything opened over the
+  // preview closes first, and only then the preview itself.
+  useEscapeToClose(back)
 
   const restore = async (): Promise<void> => {
     if (history === null || history === undefined) return

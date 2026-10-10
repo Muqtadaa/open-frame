@@ -1,6 +1,7 @@
 import { searchBoard, type SearchResult } from '@openframe/core'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 
+import { useEscapeToClose } from '../controls/escape-stack.js'
 import { useCommands } from '../hooks/use-commands.js'
 import { useBoardDocument } from '../hooks/use-document-object.js'
 import { useInteractionStore } from '../interaction/interaction-store.js'
@@ -58,6 +59,13 @@ export function SearchPanel() {
     setActive(0)
     returnTo.current?.focus()
   }, [setOpen])
+
+  /*
+   * Escape closes it through the one stack. Read in the field instead, it came
+   * too late: the stack had already closed whatever was opened before the
+   * panel, and the panel stayed open with the keyboard taken from it.
+   */
+  useEscapeToClose(close, open)
 
   /*
    * A press anywhere else closes it, like every other surface that is
@@ -124,10 +132,6 @@ export function SearchPanel() {
         onKeyDown={(event) => {
           // The board's own shortcuts must not fire while typing a query.
           event.stopPropagation()
-          if (event.key === 'Escape') {
-            event.preventDefault()
-            close()
-          }
           if (event.key === 'Enter') go(active)
           if (event.key === 'ArrowDown') {
             event.preventDefault()
