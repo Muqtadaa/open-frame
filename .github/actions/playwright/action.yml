@@ -22,15 +22,25 @@ runs:
 
     # Keyed on the browser list too: a job that needs WebKit must not be handed
     # a cache that only ever held Chromium and then find nothing to launch.
+    #
+    # And on the OS release, because Playwright downloads a different WebKit
+    # per Ubuntu release, linked against that release's system libraries.
+    # `runner.os` is just "Linux": when `ubuntu-latest` moved from 24.04 to
+    # 26.04, the 24.04 WebKit came back out of the cache, asked for ICU 74 and
+    # libxml2.so.2, which 26.04 does not ship, and every WebKit test in the
+    # nightly failed to launch. Chromium and Firefox kept passing only because
+    # their builds happen to be the same on both releases.
     - id: key
       shell: bash
-      run: echo "browsers=$(echo '${{ inputs.browsers }}' | tr ' ' '-')" >> "$GITHUB_OUTPUT"
+      run: |
+        echo "browsers=$(echo '${{ inputs.browsers }}' | tr ' ' '-')" >> "$GITHUB_OUTPUT"
+        echo "release=$(. /etc/os-release && echo "${ID}${VERSION_ID}")" >> "$GITHUB_OUTPUT"
 
     - id: cache
       uses: actions/cache@v4
       with:
         path: ~/.cache/ms-playwright
-        key: playwright-${{ runner.os }}-${{ steps.version.outputs.version }}-${{ steps.key.outputs.browsers }}
+        key: playwright-${{ runner.os }}-${{ steps.key.outputs.release }}-${{ steps.version.outputs.version }}-${{ steps.key.outputs.browsers }}
 
     - if: steps.cache.outputs.cache-hit != 'true'
       shell: bash
